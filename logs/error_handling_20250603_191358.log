@@ -1,0 +1,24 @@
+2025-06-03 19:14:09,705 - trading.utils.error_handling - ERROR - Unexpected error in generate_explanation: ExplanationEngine.generate_explanation() missing 1 required positional argument: 'analyses'
+2025-06-03 19:14:09,707 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\utils\error_handling.py", line 126, in wrapper
+    return func(*args, **kwargs)
+TypeError: ExplanationEngine.generate_explanation() missing 1 required positional argument: 'analyses'
+
+2025-06-03 19:14:10,132 - trading.utils.error_handling - ERROR - Unexpected error in generate_explanation: ExplanationEngine.generate_explanation() missing 1 required positional argument: 'analyses'
+2025-06-03 19:14:10,134 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\utils\error_handling.py", line 126, in wrapper
+    return func(*args, **kwargs)
+TypeError: ExplanationEngine.generate_explanation() missing 1 required positional argument: 'analyses'
+
+2025-06-03 19:14:10,205 - trading.utils.error_handling - ERROR - Unexpected error in generate_explanation: ExplanationEngine.generate_explanation() missing 1 required positional argument: 'analyses'
+2025-06-03 19:14:10,206 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\utils\error_handling.py", line 126, in wrapper
+    return func(*args, **kwargs)
+TypeError: ExplanationEngine.generate_explanation() missing 1 required positional argument: 'analyses'
+
+2025-06-03 19:14:10,366 - trading.utils.error_handling - ERROR - Unexpected error in generate_explanation: ExplanationEngine.generate_explanation() missing 1 required positional argument: 'analyses'
+2025-06-03 19:14:10,367 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\utils\error_handling.py", line 126, in wrapper
+    return func(*args, **kwargs)
+TypeError: ExplanationEngine.generate_explanation() missing 1 required positional argument: 'analyses'
+

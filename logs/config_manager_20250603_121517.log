@@ -1,0 +1,11 @@
+2025-06-03 12:15:17,317 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
+2025-06-03 12:15:23,427 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
+2025-06-03 12:15:23,434 - trading.utils.config_manager - ERROR - Missing required configuration section: web
+2025-06-03 12:15:23,440 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
+2025-06-03 12:15:23,445 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
+2025-06-03 12:15:23,449 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
+2025-06-03 12:15:23,454 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
+2025-06-03 12:15:23,461 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
+2025-06-03 12:15:23,466 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
+2025-06-03 12:15:23,581 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
+2025-06-03 12:15:23,584 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml

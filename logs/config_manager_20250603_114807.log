@@ -1,0 +1,2 @@
+2025-06-03 11:48:07,997 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
+2025-06-03 11:52:34,170 - trading.utils.config_manager - ERROR - Error loading configuration: Configuration file not found: config/main_config.yaml
