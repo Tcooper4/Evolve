@@ -1,0 +1,43 @@
+2025-06-03 14:07:40,650 - trading_dashboard - ERROR - Error: ValueError - Unknown normalization method: invalid
+Context: {
+  "method": "invalid",
+  "window": null
+}
+Traceback: Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\dashboard\utils\data_validation.py", line 77, in normalize_prices
+    raise ValueError(f"Unknown normalization method: {method}")
+ValueError: Unknown normalization method: invalid
+
+2025-06-03 14:07:40,668 - trading_dashboard - ERROR - Error: KeyError - 5
+Context: {
+  "window": 3,
+  "volatility_threshold": 0.02
+}
+Traceback: Traceback (most recent call last):
+  File "C:\Users\Thomas\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\indexes\range.py", line 345, in get_loc
+    return self._range.index(new_key)
+ValueError: 5 is not in range
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\dashboard\utils\data_validation.py", line 98, in detect_market_regime
+    if volatility[i] > volatility_threshold:
+  File "C:\Users\Thomas\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\series.py", line 1007, in __getitem__
+    return self._get_value(key)
+  File "C:\Users\Thomas\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\series.py", line 1116, in _get_value
+    loc = self.index.get_loc(label)
+  File "C:\Users\Thomas\AppData\Local\Programs\Python\Python310\lib\site-packages\pandas\core\indexes\range.py", line 347, in get_loc
+    raise KeyError(key) from err
+KeyError: 5
+
+2025-06-03 14:08:22,250 - trading_dashboard - ERROR - Error: ValueError - Unknown normalization method: invalid
+Context: {
+  "method": "invalid",
+  "window": null
+}
+Traceback: Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\dashboard\utils\data_validation.py", line 105, in normalize_prices
+    raise ValueError(f"Unknown normalization method: {method}")
+ValueError: Unknown normalization method: invalid
+
