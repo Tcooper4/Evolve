@@ -1,0 +1,720 @@
+2025-06-03 19:16:32,419 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:32,422 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:32,424 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:32,425 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:32,426 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:32,427 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:32,428 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:32,430 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,280 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,282 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,283 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,286 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,287 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,289 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,290 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,291 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,395 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,397 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,399 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,400 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,402 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,404 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,405 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,407 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,715 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,718 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,719 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,722 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,723 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,725 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,727 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,729 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,731 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,733 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,734 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,736 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,738 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,740 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,741 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,743 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,745 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,747 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,748 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,750 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,753 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,754 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
+2025-06-03 19:16:33,756 - trading.utils.error_handling - ERROR - OpenAI inference failed: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+2025-06-03 19:16:33,757 - trading.utils.error_handling - ERROR - Traceback (most recent call last):
+  File "C:\Users\Thomas\OneDrive\Desktop\Dashboard\evolve_clean\trading\llm\llm_manager.py", line 210, in _run_openai
+    response = self.providers[ProviderType.OPENAI]['client'].ChatCompletion.create(
+        model="gpt-4",
+    ...<2 lines>...
+        max_tokens=100
+    )
+  File "C:\Users\Thomas\AppData\Roaming\Python\Python313\site-packages\openai\lib\_old_api.py", line 39, in __call__
+    raise APIRemovedInV1(symbol=self._symbol)
+openai.lib._old_api.APIRemovedInV1: 
+
+You tried to access openai.ChatCompletion, but this is no longer supported in openai>=1.0.0 - see the README at https://github.com/openai/openai-python for the API.
+
+You can run `openai migrate` to automatically upgrade your codebase to use the 1.0.0 interface. 
+
+Alternatively, you can pin your installation to the old version, e.g. `pip install openai==0.28`
+
+A detailed migration guide is available here: https://github.com/openai/openai-python/discussions/742
+
+
