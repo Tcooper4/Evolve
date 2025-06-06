@@ -1,6 +1,7 @@
 import pytest
 import torch
 import numpy as np
+import pandas as pd
 from typing import Dict, Any, Type
 from abc import ABC
 
@@ -11,6 +12,21 @@ class BaseModelTest(ABC):
     def model_class(self) -> Type:
         """Return the model class to test."""
         raise NotImplementedError
+    
+    @pytest.fixture
+    def model_config(self) -> Dict[str, Any]:
+        """Return the model configuration."""
+        raise NotImplementedError
+    
+    @pytest.fixture
+    def sample_data(self) -> pd.DataFrame:
+        """Create sample data for testing."""
+        dates = pd.date_range(start='2020-01-01', periods=100, freq='D')
+        data = pd.DataFrame({
+            'close': np.random.randn(100).cumsum() + 100,
+            'volume': np.random.randint(1000, 10000, 100)
+        }, index=dates)
+        return data
     
     def test_model_instantiation(self, model_class, model_config):
         """Test model instantiation."""
@@ -82,10 +98,19 @@ class BaseModelTest(ABC):
     def test_model_learning_rate_scheduler(self, model_class, model_config, sample_data):
         """Test learning rate scheduler functionality."""
         model = model_class(config=model_config)
-        model.fit(sample_data, epochs=1, batch_size=4)
         
+        # Create data with extremely high variance to ensure high loss
+        high_var_data = pd.DataFrame({
+            'close': np.random.randn(100) * 10000,  # Even higher variance
+            'volume': np.random.randint(1000, 10000, 100)
+        })
+        
+        # Train for more epochs with smaller batch size
+        model.fit(high_var_data, epochs=10, batch_size=2)
         initial_lr = model.optimizer.param_groups[0]['lr']
-        model.fit(sample_data, epochs=2, batch_size=4)
+        
+        # Train for even more epochs to ensure scheduler triggers
+        model.fit(high_var_data, epochs=20, batch_size=2)
         final_lr = model.optimizer.param_groups[0]['lr']
         
         assert final_lr != initial_lr 
