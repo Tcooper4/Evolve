@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime
 import json
 from typing import Dict, Any, Optional
+import logging.handlers
 
 class LogManager:
     """Base class for managing logging operations."""
@@ -180,4 +181,35 @@ class PerformanceLogger(LogManager):
         Args:
             value (float): Current portfolio value
         """
-        self.logger.info("Portfolio Value: %.2f", value) 
+        self.logger.info("Portfolio Value: %.2f", value)
+
+def setup_logging(log_dir: str = 'logs', log_level: int = logging.INFO):
+    """Set up logging configuration with rotating file handler and console handler."""
+    log_dir = Path(log_dir)
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / 'trading.log'
+    
+    # Create a logger
+    logger = logging.getLogger('trading')
+    logger.setLevel(log_level)
+    
+    # Create a rotating file handler
+    file_handler = logging.handlers.RotatingFileHandler(
+        log_file, maxBytes=10*1024*1024, backupCount=5
+    )
+    file_handler.setLevel(log_level)
+    
+    # Create a console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    
+    # Create a formatter
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+    
+    # Add handlers to the logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger 
