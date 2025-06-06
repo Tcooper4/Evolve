@@ -7,7 +7,9 @@ from trading.config.configuration import (
     ConfigManager,
     ModelConfig,
     DataConfig,
-    TrainingConfig
+    TrainingConfig,
+    WebConfig,
+    MonitoringConfig
 )
 
 class TestConfiguration:
@@ -46,7 +48,29 @@ class TestConfiguration:
             batch_size=32,
             validation_split=0.2,
             early_stopping_patience=10,
-            learning_rate_scheduler='reduce_on_plateau'
+            learning_rate_scheduler=True
+        )
+        
+    @pytest.fixture
+    def web_config(self):
+        return WebConfig(
+            host='localhost',
+            port=5000,
+            debug=True,
+            static_folder='static',
+            template_folder='templates'
+        )
+        
+    @pytest.fixture
+    def monitoring_config(self):
+        return MonitoringConfig(
+            enabled=True,
+            log_level='INFO',
+            metrics_port=9090,
+            prometheus_enabled=True,
+            grafana_enabled=True,
+            alerting_enabled=True,
+            alert_email='test@example.com'
         )
     
     def test_config_manager_initialization(self, config_manager):
@@ -134,6 +158,37 @@ class TestConfiguration:
         
         with pytest.raises(ValueError):
             invalid_config.validate()
+            
+    def test_web_config_validation(self, web_config):
+        """Test web config validation."""
+        # Test valid config
+        assert web_config.validate()
+        
+        # Test invalid config
+        invalid_config = WebConfig(
+            port=70000,  # Invalid port
+            ssl_cert='nonexistent.crt',  # Invalid certificate
+            ssl_key='nonexistent.key'  # Invalid key
+        )
+        
+        with pytest.raises(ValueError):
+            invalid_config.validate()
+            
+    def test_monitoring_config_validation(self, monitoring_config):
+        """Test monitoring config validation."""
+        # Test valid config
+        assert monitoring_config.validate()
+        
+        # Test invalid config
+        invalid_config = MonitoringConfig(
+            log_level='INVALID',  # Invalid log level
+            metrics_port=70000,  # Invalid port
+            alerting_enabled=True,  # Missing alert settings
+            alert_email='invalid-email'  # Invalid email
+        )
+        
+        with pytest.raises(ValueError):
+            invalid_config.validate()
     
     def test_config_serialization(self, model_config):
         """Test config serialization."""
@@ -150,9 +205,9 @@ class TestConfiguration:
     def test_config_environment_variables(self, config_manager, tmp_path):
         """Test config environment variables."""
         # Set environment variables
-        os.environ['MODEL_TYPE'] = 'transformer'
-        os.environ['D_MODEL'] = '64'
-        os.environ['NHEAD'] = '8'
+        os.environ['TRADING_MODEL_TYPE'] = 'transformer'
+        os.environ['TRADING_D_MODEL'] = '64'
+        os.environ['TRADING_NHEAD'] = '8'
         
         # Create config from environment
         config = config_manager.create_config_from_env()
@@ -185,6 +240,18 @@ class TestConfiguration:
         default_training_config = TrainingConfig()
         assert default_training_config.epochs == 100
         assert default_training_config.batch_size == 32
+        
+        # Test web config defaults
+        default_web_config = WebConfig()
+        assert default_web_config.host == 'localhost'
+        assert default_web_config.port == 5000
+        assert default_web_config.debug is False
+        
+        # Test monitoring config defaults
+        default_monitoring_config = MonitoringConfig()
+        assert default_monitoring_config.enabled is True
+        assert default_monitoring_config.log_level == 'INFO'
+        assert default_monitoring_config.metrics_port == 9090
     
     def test_config_file_operations(self, config_manager, model_config, tmp_path):
         """Test config file operations."""

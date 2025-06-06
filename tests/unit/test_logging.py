@@ -6,7 +6,8 @@ from trading.utils.logging import (
     LogManager,
     ModelLogger,
     DataLogger,
-    PerformanceLogger
+    PerformanceLogger,
+    setup_logging
 )
 
 class TestLogging:
@@ -214,4 +215,26 @@ class TestLogging:
         
         # Check if logs are cleaned up
         log_files = list(Path(log_manager.log_dir).glob('*.log'))
-        assert len(log_files) == 0 
+        assert len(log_files) == 0
+
+def test_setup_logging():
+    """Test that logging setup creates a logger with the correct handlers."""
+    log_dir = 'test_logs'
+    logger = setup_logging(log_dir=log_dir, log_level=logging.DEBUG)
+    
+    # Check that the logger has the correct level
+    assert logger.level == logging.DEBUG
+    
+    # Check that the logger has two handlers (file and console)
+    assert len(logger.handlers) == 2
+    
+    # Check that the log directory and file are created
+    log_file = Path(log_dir) / 'trading.log'
+    assert log_file.exists()
+    
+    # Clean up
+    for handler in logger.handlers:
+        handler.close()
+    logger.handlers = []
+    log_file.unlink()
+    Path(log_dir).rmdir() 
