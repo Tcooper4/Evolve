@@ -1,0 +1,30 @@
+# API Documentation
+
+## Overview
+This document provides detailed information about the API endpoints, their parameters, and responses.
+
+## Endpoints
+
+{% for doc in api_docs %}
+### {{ doc.name }}
+**Type**: {{ doc.type }}
+
+**Signature**: `{{ doc.signature }}`
+
+**Description**:
+{{ doc.docstring }}
+
+{% endfor %}
+
+## Error Codes
+- 400: Bad Request
+- 401: Unauthorized
+- 403: Forbidden
+- 404: Not Found
+- 500: Internal Server Error
+
+## Rate Limiting
+API requests are limited to 100 requests per minute per API key.
+
+## Authentication
+All API requests must include a valid API key in the `X-API-Key` header. 
