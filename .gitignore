@@ -57,21 +57,18 @@ build/
 .DS_Store
 Thumbs.db
 
-# Model checkpoints
+# Model checkpoints (but keep the models directory)
 *.pt
 *.pth
 *.ckpt
-models/
 test_model_save/
 
-# Data
-data/
+# Data (but keep the mock_data directory structure)
 *.csv
 *.json
 *.parquet
 *.h5
 *.hdf5
-mock_data/
 
 # Temporary files
 tmp/
