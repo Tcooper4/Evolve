@@ -22,20 +22,23 @@ wheels/
 
 # Virtual Environment
 venv/
-ENV/
 env/
-.env
-venv310/
+ENV/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-.DS_Store
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Logs
+*.log
+logs/
+
+# Local development
+.env
+.env.local
+.env.*.local
 
 # Testing
 .coverage
@@ -43,9 +46,16 @@ htmlcov/
 .pytest_cache/
 .tox/
 
-# Logs
-logs/
-*.log
+# Distribution
+dist/
+build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# System Files
+.DS_Store
+Thumbs.db
 
 # Model checkpoints
 *.pt

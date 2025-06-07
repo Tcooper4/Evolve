@@ -1,0 +1,125 @@
+# Code Documentation
+
+## Overview
+This document provides detailed information about the code structure, classes, functions, and dependencies.
+
+## File Information
+- **Path**: {{ path }}
+- **Language**: {{ language }}
+
+## Classes
+{% for class in classes %}
+### {{ class.name }}
+**Bases**: {{ class.bases|join(', ') }}
+
+**Description**:
+{{ class.docstring }}
+
+#### Methods
+{% for method in class.methods %}
+##### {{ method.name }}
+**Signature**: `{{ method.name }}({{ method.args|join(', ') }})`
+
+**Returns**: {{ method.returns or 'None' }}
+
+**Description**:
+{{ method.docstring }}
+
+{% endfor %}
+
+{% endfor %}
+
+## Functions
+{% for func in functions %}
+### {{ func.name }}
+**Signature**: `{{ func.name }}({{ func.args|join(', ') }})`
+
+**Returns**: {{ func.returns or 'None' }}
+
+**Description**:
+{{ func.docstring }}
+
+{% endfor %}
+
+## Dependencies
+### Imports
+{% for imp in imports %}
+- {{ imp }}
+{% endfor %}
+
+### External Dependencies
+{% for dep in dependencies %}
+- {{ dep }}
+{% endfor %}
+
+## Code Structure
+### File Organization
+- Main module
+- Utility functions
+- Class definitions
+- Constants
+- Type definitions
+
+### Design Patterns
+- Singleton
+- Factory
+- Observer
+- Strategy
+- Decorator
+
+## Best Practices
+### Code Style
+- PEP 8 compliance
+- Type hints
+- Docstrings
+- Error handling
+- Logging
+
+### Testing
+- Unit tests
+- Integration tests
+- Performance tests
+- Security tests
+
+### Documentation
+- Inline comments
+- Function documentation
+- Class documentation
+- Module documentation
+
+## Performance Considerations
+### Optimization
+- Algorithm efficiency
+- Memory usage
+- CPU utilization
+- I/O operations
+
+### Caching
+- Result caching
+- Resource caching
+- Query caching
+
+## Security
+### Input Validation
+- Type checking
+- Range validation
+- Format validation
+- Sanitization
+
+### Error Handling
+- Exception handling
+- Error logging
+- Recovery procedures
+
+## Maintenance
+### Code Review
+- Style checking
+- Static analysis
+- Security scanning
+- Performance profiling
+
+### Refactoring
+- Code organization
+- Function extraction
+- Class hierarchy
+- Interface design 
