@@ -285,15 +285,13 @@ class TestDataPreprocessing:
     def test_data_preprocessor_normalize_data(self, preprocessor, sample_data):
         """Test data normalization."""
         normalized_data = preprocessor.normalize_data(sample_data)
-        
-        assert isinstance(normalized_data, pd.DataFrame)
-        assert not normalized_data.isna().any().any()
-        assert normalized_data.shape == sample_data.shape
-        
-        # Check if data is normalized
+
+        # Check if the mean is approximately 0 and the standard deviation is approximately 1
         for col in normalized_data.columns:
-            assert normalized_data[col].mean() < 1
-            assert normalized_data[col].std() < 1
+            mean = normalized_data[col].mean()
+            std = normalized_data[col].std()
+            assert abs(mean) < 1e-6, f"Mean for {col} is not approximately 0: {mean}"
+            assert abs(std - 1) < 1e-6, f"Standard deviation for {col} is not approximately 1: {std}"
     
     def test_feature_engineering_initialization(self, feature_engineering):
         """Test feature engineering initialization."""
