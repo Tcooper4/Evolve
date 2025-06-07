@@ -4,9 +4,15 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Any, Type
 from abc import ABC
+from pathlib import Path
 
 class BaseModelTest(ABC):
     """Base class for model testing."""
+    
+    @pytest.fixture
+    def temp_dir(self, tmp_path):
+        """Create a temporary directory for model saving/loading tests."""
+        return tmp_path
     
     @pytest.fixture
     def model_class(self) -> Type:
@@ -101,7 +107,7 @@ class BaseModelTest(ABC):
         
         # Create data with extremely high variance to ensure high loss
         high_var_data = pd.DataFrame({
-            'close': np.random.randn(100) * 10000,  # Even higher variance
+            'close': np.random.randn(100) * 1000000,  # Even higher variance
             'volume': np.random.randint(1000, 10000, 100)
         })
         
@@ -113,4 +119,5 @@ class BaseModelTest(ABC):
         model.fit(high_var_data, epochs=20, batch_size=2)
         final_lr = model.optimizer.param_groups[0]['lr']
         
-        assert final_lr != initial_lr 
+        # Check if learning rate changed
+        assert final_lr < initial_lr, f"Learning rate did not decrease: {initial_lr} -> {final_lr}" 
