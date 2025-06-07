@@ -25,6 +25,7 @@ venv/
 ENV/
 env/
 .env
+venv310/
 
 # IDE
 .idea/
@@ -51,6 +52,7 @@ logs/
 *.pth
 *.ckpt
 models/
+test_model_save/
 
 # Data
 data/
@@ -59,7 +61,12 @@ data/
 *.parquet
 *.h5
 *.hdf5
+mock_data/
 
 # Temporary files
 tmp/
-temp/ 
+temp/
+
+# Project specific
+trading_dashboard.egg-info/
+alerts/ 
