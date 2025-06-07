@@ -75,5 +75,4 @@ tmp/
 temp/
 
 # Project specific
-trading_dashboard.egg-info/
-alerts/ 
+trading_dashboard.egg-info/ 
