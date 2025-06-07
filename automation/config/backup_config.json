@@ -1,0 +1,37 @@
+{
+    "backup_dirs": [
+        "trading",
+        "models",
+        "config",
+        "alerts",
+        "feature_engineering",
+        "automation"
+    ],
+    "exclude_patterns": [
+        "*.pyc",
+        "__pycache__",
+        "*.log",
+        "*.tmp",
+        "*.bak",
+        "venv*",
+        ".git",
+        ".pytest_cache"
+    ],
+    "backup_location": "backups",
+    "max_backups": 7,
+    "compression": "gz",
+    "schedule": {
+        "daily": true,
+        "time": "23:00",
+        "days_of_week": [0, 1, 2, 3, 4, 5, 6]
+    },
+    "notifications": {
+        "enabled": true,
+        "email": {
+            "smtp_server": "smtp.gmail.com",
+            "smtp_port": 587,
+            "sender_email": "",
+            "recipient_email": ""
+        }
+    }
+} 
