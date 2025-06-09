@@ -1,0 +1,222 @@
+# Notification System Configuration
+version: "1.0.0"
+environment: "${ENVIRONMENT:-production}"
+
+# Email Configuration
+email:
+  smtp:
+    host: "smtp.gmail.com"
+    port: 587
+    username: "${EMAIL_USERNAME}"
+    password: "${EMAIL_PASSWORD}"
+    from_email: "${EMAIL_FROM}"
+    use_tls: true
+    use_ssl: false
+    timeout: 30
+    max_connections: 5
+    retry_attempts: 3
+    retry_delay: 5
+  security:
+    require_tls: true
+    verify_ssl: true
+    allowed_domains: []
+    blocked_domains: []
+    max_recipients: 100
+    rate_limit: 100  # per minute
+  templates:
+    subject_template: "[{priority}] {title}"
+    body_template: "templates/email/notification.html"
+    footer_template: "templates/email/footer.html"
+    header_template: "templates/email/header.html"
+
+# Slack Configuration
+slack:
+  webhook:
+    url: "${SLACK_WEBHOOK_URL}"
+    timeout: 10
+    retry_attempts: 3
+    retry_delay: 5
+  channels:
+    default: "#notifications"
+    allowed: []
+    blocked: []
+  security:
+    verify_webhook: true
+    rate_limit: 50  # per minute
+    max_message_length: 4000
+  templates:
+    message_template: "templates/slack/notification.json"
+    block_template: "templates/slack/blocks.json"
+    modal_template: "templates/slack/modal.json"
+
+# Webhook Configuration
+webhook:
+  timeout: 30
+  retry_attempts: 3
+  retry_delay: 5
+  security:
+    verify_ssl: true
+    allowed_ips: []
+    blocked_ips: []
+    rate_limit: 100  # per minute
+    max_payload_size: 1048576  # 1MB
+  templates:
+    payload_template: "templates/webhook/notification.json"
+    error_template: "templates/webhook/error.json"
+
+# Notification Settings
+settings:
+  retention:
+    days: 30
+    max_size: 1073741824  # 1GB
+    cleanup_interval: 3600  # seconds
+  delivery:
+    max_retries: 3
+    retry_delay: 300  # seconds
+    timeout: 30
+    batch_size: 100
+  validation:
+    required_fields: ["id", "title", "message", "type", "priority"]
+    max_title_length: 200
+    max_message_length: 5000
+    allowed_types: ["info", "warning", "error", "success"]
+    allowed_priorities: ["low", "medium", "high", "critical"]
+
+# Priority Settings
+priorities:
+  low:
+    retry_attempts: 1
+    retry_delay: 600
+    timeout: 60
+    rate_limit: 100  # per minute
+  medium:
+    retry_attempts: 2
+    retry_delay: 300
+    timeout: 30
+    rate_limit: 50  # per minute
+  high:
+    retry_attempts: 3
+    retry_delay: 60
+    timeout: 15
+    rate_limit: 25  # per minute
+  critical:
+    retry_attempts: 5
+    retry_delay: 30
+    timeout: 10
+    rate_limit: 10  # per minute
+
+# Channel Settings
+channels:
+  email:
+    enabled: true
+    max_retries: 3
+    timeout: 30
+    security:
+      require_tls: true
+      verify_ssl: true
+      rate_limit: 100  # per minute
+  slack:
+    enabled: true
+    max_retries: 2
+    timeout: 10
+    security:
+      verify_webhook: true
+      rate_limit: 50  # per minute
+  webhook:
+    enabled: true
+    max_retries: 3
+    timeout: 30
+    security:
+      verify_ssl: true
+      rate_limit: 100  # per minute
+  sms:
+    enabled: false
+    max_retries: 2
+    timeout: 10
+    security:
+      rate_limit: 10  # per minute
+  teams:
+    enabled: false
+    max_retries: 2
+    timeout: 10
+    security:
+      verify_webhook: true
+      rate_limit: 50  # per minute
+  discord:
+    enabled: false
+    max_retries: 2
+    timeout: 10
+    security:
+      verify_webhook: true
+      rate_limit: 50  # per minute
+
+# Monitoring Settings
+monitoring:
+  enabled: true
+  metrics:
+    - name: "notification_sent_total"
+      type: "counter"
+      labels: ["channel", "type", "priority", "status"]
+      description: "Total number of notifications sent"
+    - name: "notification_failed_total"
+      type: "counter"
+      labels: ["channel", "type", "priority", "error"]
+      description: "Total number of failed notifications"
+    - name: "notification_retry_total"
+      type: "counter"
+      labels: ["channel", "type", "priority"]
+      description: "Total number of notification retries"
+    - name: "notification_duration_seconds"
+      type: "histogram"
+      labels: ["channel", "type", "priority"]
+      description: "Notification delivery duration"
+    - name: "notification_queue_size"
+      type: "gauge"
+      labels: ["channel", "priority"]
+      description: "Current size of notification queue"
+    - name: "notification_rate_limit_hits"
+      type: "counter"
+      labels: ["channel", "priority"]
+      description: "Number of rate limit hits"
+  alerts:
+    - name: "high_failure_rate"
+      condition: "rate(notification_failed_total[5m]) > 0.1"
+      severity: "warning"
+      description: "High notification failure rate"
+    - name: "high_retry_rate"
+      condition: "rate(notification_retry_total[5m]) > 0.2"
+      severity: "warning"
+      description: "High notification retry rate"
+    - name: "notification_delay"
+      condition: "notification_duration_seconds > 30"
+      severity: "warning"
+      description: "Notification delivery delay"
+    - name: "queue_size_high"
+      condition: "notification_queue_size > 1000"
+      severity: "warning"
+      description: "High notification queue size"
+    - name: "rate_limit_hits_high"
+      condition: "rate(notification_rate_limit_hits[5m]) > 10"
+      severity: "warning"
+      description: "High rate limit hits"
+
+# Logging Settings
+logging:
+  level: "INFO"
+  format: "json"
+  handlers:
+    - type: "file"
+      path: "logs/notifications.log"
+      max_size: 10485760  # 10MB
+      backup_count: 5
+    - type: "syslog"
+      facility: "local0"
+    - type: "stream"
+      stream: "stdout"
+  filters:
+    - name: "security"
+      level: "WARNING"
+    - name: "performance"
+      level: "INFO"
+    - name: "audit"
+      level: "INFO" 

@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: automation
+  namespace: automation
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: automation
+  template:
+    metadata:
+      labels:
+        app: automation
+    spec:
+      containers:
+      - name: automation
+        image: automation:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+          name: web
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: automation-config
+              key: redis_host
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: automation-config
+              key: redis_port
+        - name: RAY_ADDRESS
+          valueFrom:
+            configMapKeyRef:
+              name: automation-config
+              key: ray_address
+        - name: RAY_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: automation-config
+              key: ray_port
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: web
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: web
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: logs
+          mountPath: /app/automation/logs
+      volumes:
+      - name: logs
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: automation
+  namespace: automation
+spec:
+  selector:
+    app: automation
+  ports:
+  - name: web
+    port: 80
+    targetPort: 5000
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: automation-config
+  namespace: automation
+data:
+  redis_host: "redis"
+  redis_port: "6379"
+  ray_address: "ray"
+  ray_port: "10001"
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: automation
+  namespace: automation
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: automation.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: automation
+            port:
+              number: 80 

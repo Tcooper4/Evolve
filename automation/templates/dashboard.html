@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment"></script>
+    <style>
+        .loading {
+            position: relative;
+        }
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading::before {
+            content: 'Loading...';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+        .error-message {
+            display: none;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.5rem;
+            background-color: #FEE2E2;
+            color: #B91C1C;
+        }
+        .error-message.show {
+            display: block;
+        }
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <h1 class="text-xl font-bold">System Dashboard</h1>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-gray-500" id="last-update"></span>
+                        <button id="refresh-btn" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Error Message -->
+        <div id="error-message" class="error-message max-w-7xl mx-auto px-4">
+            <p class="font-medium">Error</p>
+            <p id="error-details"></p>
+        </div>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Alerts Section -->
+            <div class="mb-8">
+                <h2 class="text-lg font-semibold mb-4">Active Alerts</h2>
+                <div id="alerts" class="grid grid-cols-1 gap-4">
+                    <!-- Alerts will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Metrics Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <!-- CPU Usage -->
+                <div class="bg-white rounded-lg shadow p-4 loading" id="cpu-card">
+                    <h3 class="text-sm font-medium text-gray-500">CPU Usage</h3>
+                    <div class="mt-2 flex items-baseline">
+                        <p class="text-2xl font-semibold" id="cpu-usage">--</p>
+                        <p class="ml-2 text-sm text-gray-500">%</p>
+                    </div>
+                    <div class="mt-4">
+                        <div class="relative pt-1">
+                            <div class="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
+                                <div id="cpu-bar" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Memory Usage -->
+                <div class="bg-white rounded-lg shadow p-4 loading" id="memory-card">
+                    <h3 class="text-sm font-medium text-gray-500">Memory Usage</h3>
+                    <div class="mt-2 flex items-baseline">
+                        <p class="text-2xl font-semibold" id="memory-usage">--</p>
+                        <p class="ml-2 text-sm text-gray-500">%</p>
+                    </div>
+                    <div class="mt-4">
+                        <div class="relative pt-1">
+                            <div class="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
+                                <div id="memory-bar" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500 transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Disk Usage -->
+                <div class="bg-white rounded-lg shadow p-4 loading" id="disk-card">
+                    <h3 class="text-sm font-medium text-gray-500">Disk Usage</h3>
+                    <div class="mt-2 flex items-baseline">
+                        <p class="text-2xl font-semibold" id="disk-usage">--</p>
+                        <p class="ml-2 text-sm text-gray-500">%</p>
+                    </div>
+                    <div class="mt-4">
+                        <div class="relative pt-1">
+                            <div class="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
+                                <div id="disk-bar" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-yellow-500 transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Network I/O -->
+                <div class="bg-white rounded-lg shadow p-4 loading" id="network-card">
+                    <h3 class="text-sm font-medium text-gray-500">Network I/O</h3>
+                    <div class="mt-2 flex items-baseline">
+                        <p class="text-2xl font-semibold" id="network-io">--</p>
+                        <p class="ml-2 text-sm text-gray-500">MB/s</p>
+                    </div>
+                    <div class="mt-4">
+                        <div class="relative pt-1">
+                            <div class="overflow-hidden h-2 text-xs flex rounded bg-gray-200">
+                                <div id="network-bar" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-purple-500 transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- CPU Usage Chart -->
+                <div class="bg-white rounded-lg shadow p-4 loading" id="cpu-chart-card">
+                    <h3 class="text-lg font-semibold mb-4">CPU Usage History</h3>
+                    <div class="chart-container">
+                        <canvas id="cpu-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Memory Usage Chart -->
+                <div class="bg-white rounded-lg shadow p-4 loading" id="memory-chart-card">
+                    <h3 class="text-lg font-semibold mb-4">Memory Usage History</h3>
+                    <div class="chart-container">
+                        <canvas id="memory-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Disk Usage Chart -->
+                <div class="bg-white rounded-lg shadow p-4 loading" id="disk-chart-card">
+                    <h3 class="text-lg font-semibold mb-4">Disk Usage History</h3>
+                    <div class="chart-container">
+                        <canvas id="disk-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Network I/O Chart -->
+                <div class="bg-white rounded-lg shadow p-4 loading" id="network-chart-card">
+                    <h3 class="text-lg font-semibold mb-4">Network I/O History</h3>
+                    <div class="chart-container">
+                        <canvas id="network-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Chart configurations
+        const chartConfig = {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'minute'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        };
+
+        // Initialize charts
+        const cpuChart = new Chart(
+            document.getElementById('cpu-chart'),
+            {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'CPU Usage',
+                        data: [],
+                        borderColor: 'rgb(59, 130, 246)',
+                        tension: 0.1
+                    }]
+                }
+            }
+        );
+
+        const memoryChart = new Chart(
+            document.getElementById('memory-chart'),
+            {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Memory Usage',
+                        data: [],
+                        borderColor: 'rgb(16, 185, 129)',
+                        tension: 0.1
+                    }]
+                }
+            }
+        );
+
+        const diskChart = new Chart(
+            document.getElementById('disk-chart'),
+            {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Disk Usage',
+                        data: [],
+                        borderColor: 'rgb(245, 158, 11)',
+                        tension: 0.1
+                    }]
+                }
+            }
+        );
+
+        const networkChart = new Chart(
+            document.getElementById('network-chart'),
+            {
+                ...chartConfig,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Network I/O',
+                        data: [],
+                        borderColor: 'rgb(139, 92, 246)',
+                        tension: 0.1
+                    }]
+                }
+            }
+        );
+
+        // Show loading state
+        function showLoading() {
+            document.querySelectorAll('.loading').forEach(el => {
+                el.classList.add('loading');
+            });
+        }
+
+        // Hide loading state
+        function hideLoading() {
+            document.querySelectorAll('.loading').forEach(el => {
+                el.classList.remove('loading');
+            });
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorMessage = document.getElementById('error-message');
+            const errorDetails = document.getElementById('error-details');
+            errorDetails.textContent = message;
+            errorMessage.classList.add('show');
+            setTimeout(() => {
+                errorMessage.classList.remove('show');
+            }, 5000);
+        }
+
+        // Update metrics
+        async function updateMetrics() {
+            showLoading();
+            try {
+                const response = await fetch('/api/metrics/summary');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                // Update overview cards
+                document.getElementById('cpu-usage').textContent = data.cpu.avg.toFixed(1);
+                document.getElementById('memory-usage').textContent = data.memory.avg.toFixed(1);
+                document.getElementById('disk-usage').textContent = data.disk.avg.toFixed(1);
+                document.getElementById('network-io').textContent = (data.network.avg / 1024 / 1024).toFixed(2);
+
+                // Update progress bars
+                document.getElementById('cpu-bar').style.width = `${data.cpu.avg}%`;
+                document.getElementById('memory-bar').style.width = `${data.memory.avg}%`;
+                document.getElementById('disk-bar').style.width = `${data.disk.avg}%`;
+                document.getElementById('network-bar').style.width = `${(data.network.avg / data.network.max) * 100}%`;
+
+                // Update last update time
+                document.getElementById('last-update').textContent = `Last updated: ${moment().format('HH:mm:ss')}`;
+            } catch (error) {
+                console.error('Error updating metrics:', error);
+                showError(`Failed to update metrics: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Update charts
+        async function updateCharts() {
+            showLoading();
+            try {
+                const endTime = new Date();
+                const startTime = new Date(endTime - 3600000); // Last hour
+                const response = await fetch(`/api/metrics/history?start=${startTime.toISOString()}&end=${endTime.toISOString()}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+
+                // Update CPU chart
+                cpuChart.data.labels = data.cpu.map(d => new Date(d.timestamp));
+                cpuChart.data.datasets[0].data = data.cpu.map(d => d.value);
+                cpuChart.update();
+
+                // Update memory chart
+                memoryChart.data.labels = data.memory.map(d => new Date(d.timestamp));
+                memoryChart.data.datasets[0].data = data.memory.map(d => d.value);
+                memoryChart.update();
+
+                // Update disk chart
+                diskChart.data.labels = data.disk.map(d => new Date(d.timestamp));
+                diskChart.data.datasets[0].data = data.disk.map(d => d.value);
+                diskChart.update();
+
+                // Update network chart
+                networkChart.data.labels = data.network.map(d => new Date(d.timestamp));
+                networkChart.data.datasets[0].data = data.network.map(d => d.value / 1024 / 1024);
+                networkChart.update();
+            } catch (error) {
+                console.error('Error updating charts:', error);
+                showError(`Failed to update charts: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Update alerts
+        async function updateAlerts() {
+            showLoading();
+            try {
+                const response = await fetch('/api/alerts/active');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const alerts = await response.json();
+                const alertsContainer = document.getElementById('alerts');
+                alertsContainer.innerHTML = '';
+
+                if (alerts.length === 0) {
+                    alertsContainer.innerHTML = '<p class="text-gray-500">No active alerts</p>';
+                    return;
+                }
+
+                alerts.forEach(alert => {
+                    const alertElement = document.createElement('div');
+                    alertElement.className = `bg-white rounded-lg shadow p-4 ${alert.severity.toLowerCase()}`;
+                    alertElement.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-medium">${alert.title}</h3>
+                                <p class="text-sm text-gray-500">${alert.message}</p>
+                            </div>
+                            <span class="px-2 py-1 text-xs rounded ${getSeverityClass(alert.severity)}">
+                                ${alert.severity}
+                            </span>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500">
+                            Created: ${moment(alert.created_at).fromNow()}
+                        </div>
+                    `;
+                    alertsContainer.appendChild(alertElement);
+                });
+            } catch (error) {
+                console.error('Error updating alerts:', error);
+                showError(`Failed to update alerts: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Get severity class
+        function getSeverityClass(severity) {
+            const classes = {
+                'CRITICAL': 'bg-red-100 text-red-800',
+                'HIGH': 'bg-orange-100 text-orange-800',
+                'MEDIUM': 'bg-yellow-100 text-yellow-800',
+                'LOW': 'bg-blue-100 text-blue-800'
+            };
+            return classes[severity] || 'bg-gray-100 text-gray-800';
+        }
+
+        // Initialize
+        async function initialize() {
+            showLoading();
+            try {
+                await Promise.all([
+                    updateMetrics(),
+                    updateCharts(),
+                    updateAlerts()
+                ]);
+            } catch (error) {
+                console.error('Error initializing dashboard:', error);
+                showError(`Failed to initialize dashboard: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Event listeners
+        document.getElementById('refresh-btn').addEventListener('click', initialize);
+
+        // Start periodic updates
+        setInterval(updateMetrics, 30000); // Every 30 seconds
+        setInterval(updateCharts, 300000); // Every 5 minutes
+        setInterval(updateAlerts, 60000); // Every minute
+
+        // Initialize dashboard
+        initialize();
+    </script>
+</body>
+</html> 

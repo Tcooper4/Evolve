@@ -6,14 +6,39 @@ This document provides detailed information about the code structure, classes, f
 ## File Information
 - **Path**: {{ path }}
 - **Language**: {{ language }}
+- **Version**: {{ version|default('1.0.0') }}
+- **Last Modified**: {{ last_modified|default('Unknown') }}
+- **Author**: {{ author|default('Unknown') }}
+
+## Module Information
+### Purpose
+{{ purpose|default('No specific purpose documented.') }}
+
+### Key Features
+{% for feature in features|default([]) %}
+- {{ feature }}
+{% endfor %}
+
+### Usage Examples
+{% for example in examples|default([]) %}
+```{{ language }}
+{{ example }}
+```
+{% endfor %}
 
 ## Classes
 {% for class in classes %}
 ### {{ class.name }}
 **Bases**: {{ class.bases|join(', ') }}
+**Namespace**: {{ class.namespace|default('Global') }}
 
 **Description**:
 {{ class.docstring }}
+
+#### Class Attributes
+{% for attr in class.attributes|default([]) %}
+- **{{ attr.name }}** ({{ attr.type }}): {{ attr.docstring }}
+{% endfor %}
 
 #### Methods
 {% for method in class.methods %}
@@ -22,8 +47,32 @@ This document provides detailed information about the code structure, classes, f
 
 **Returns**: {{ method.returns or 'None' }}
 
+**Raises**:
+{% for exc in method.exceptions|default([]) %}
+- {{ exc }}
+{% endfor %}
+
 **Description**:
 {{ method.docstring }}
+
+**Example**:
+{% if method.example %}
+```{{ language }}
+{{ method.example }}
+```
+{% else %}
+No example provided.
+{% endif %}
+
+{% endfor %}
+
+#### Properties
+{% for prop in class.properties|default([]) %}
+##### {{ prop.name }}
+**Type**: {{ prop.type }}
+
+**Description**:
+{{ prop.docstring }}
 
 {% endfor %}
 
@@ -36,8 +85,22 @@ This document provides detailed information about the code structure, classes, f
 
 **Returns**: {{ func.returns or 'None' }}
 
+**Raises**:
+{% for exc in func.exceptions|default([]) %}
+- {{ exc }}
+{% endfor %}
+
 **Description**:
 {{ func.docstring }}
+
+**Example**:
+{% if func.example %}
+```{{ language }}
+{{ func.example }}
+```
+{% else %}
+No example provided.
+{% endif %}
 
 {% endfor %}
 
@@ -49,7 +112,7 @@ This document provides detailed information about the code structure, classes, f
 
 ### External Dependencies
 {% for dep in dependencies %}
-- {{ dep }}
+- {{ dep.name }} ({{ dep.version }}): {{ dep.description }}
 {% endfor %}
 
 ## Code Structure
@@ -59,6 +122,9 @@ This document provides detailed information about the code structure, classes, f
 - Class definitions
 - Constants
 - Type definitions
+- Configuration
+- Tests
+- Documentation
 
 ### Design Patterns
 - Singleton
@@ -66,6 +132,11 @@ This document provides detailed information about the code structure, classes, f
 - Observer
 - Strategy
 - Decorator
+- Command
+- Template Method
+- Chain of Responsibility
+- State
+- Proxy
 
 ## Best Practices
 ### Code Style
@@ -74,18 +145,33 @@ This document provides detailed information about the code structure, classes, f
 - Docstrings
 - Error handling
 - Logging
+- Naming conventions
+- Code organization
+- Comments
+- Whitespace
+- Line length
 
 ### Testing
 - Unit tests
 - Integration tests
 - Performance tests
 - Security tests
+- Load tests
+- Stress tests
+- Regression tests
+- Smoke tests
+- Acceptance tests
 
 ### Documentation
 - Inline comments
 - Function documentation
 - Class documentation
 - Module documentation
+- API documentation
+- Usage examples
+- Architecture diagrams
+- Sequence diagrams
+- State diagrams
 
 ## Performance Considerations
 ### Optimization
@@ -93,11 +179,20 @@ This document provides detailed information about the code structure, classes, f
 - Memory usage
 - CPU utilization
 - I/O operations
+- Network latency
+- Database queries
+- Cache usage
+- Resource pooling
 
 ### Caching
 - Result caching
 - Resource caching
 - Query caching
+- Session caching
+- Static content caching
+- API response caching
+- Database query caching
+- Object caching
 
 ## Security
 ### Input Validation
@@ -105,11 +200,30 @@ This document provides detailed information about the code structure, classes, f
 - Range validation
 - Format validation
 - Sanitization
+- Escaping
+- Encoding
+- Normalization
+- Validation rules
 
 ### Error Handling
 - Exception handling
 - Error logging
 - Recovery procedures
+- Fallback mechanisms
+- Retry logic
+- Circuit breakers
+- Timeout handling
+- Resource cleanup
+
+### Authentication & Authorization
+- User authentication
+- Role-based access
+- Permission checks
+- Token validation
+- Session management
+- OAuth integration
+- SSO support
+- MFA support
 
 ## Maintenance
 ### Code Review
@@ -117,9 +231,37 @@ This document provides detailed information about the code structure, classes, f
 - Static analysis
 - Security scanning
 - Performance profiling
+- Dependency checking
+- License compliance
+- Documentation review
+- Test coverage
 
 ### Refactoring
 - Code organization
 - Function extraction
 - Class hierarchy
-- Interface design 
+- Interface design
+- Dependency injection
+- Modularization
+- Component isolation
+- Service boundaries
+
+### Monitoring
+- Performance metrics
+- Error rates
+- Resource usage
+- Response times
+- Throughput
+- Availability
+- Reliability
+- Scalability
+
+### Deployment
+- Version control
+- Build process
+- Testing pipeline
+- Deployment strategy
+- Rollback procedures
+- Environment configuration
+- Service discovery
+- Load balancing 

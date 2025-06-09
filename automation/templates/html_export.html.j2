@@ -3,37 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{ description|default('Export from Automation System') }}">
     <title>{{ title }}</title>
     <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #3498db;
+            --background-color: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --code-background: #f8f9fa;
+            --metadata-background: #f8f9fa;
+            --tag-background: #e9ecef;
+            --tag-text: #495057;
+            --timestamp-color: #666666;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary-color: #ecf0f1;
+                --secondary-color: #bdc3c7;
+                --accent-color: #3498db;
+                --background-color: #2c3e50;
+                --text-color: #ecf0f1;
+                --border-color: #34495e;
+                --code-background: #34495e;
+                --metadata-background: #34495e;
+                --tag-background: #2c3e50;
+                --tag-text: #ecf0f1;
+                --timestamp-color: #bdc3c7;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: var(--text-color);
+            background-color: var(--background-color);
             max-width: 1200px;
             margin: 0 auto;
             padding: 2rem;
         }
         
         h1, h2, h3, h4, h5, h6 {
-            color: #2c3e50;
+            color: var(--primary-color);
             margin-top: 2rem;
             margin-bottom: 1rem;
+            line-height: 1.2;
         }
         
         h1 {
-            font-size: 2.5rem;
-            border-bottom: 2px solid #eee;
+            font-size: clamp(2rem, 5vw, 2.5rem);
+            border-bottom: 2px solid var(--border-color);
             padding-bottom: 0.5rem;
         }
         
         h2 {
-            font-size: 2rem;
-            border-bottom: 1px solid #eee;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            border-bottom: 1px solid var(--border-color);
             padding-bottom: 0.3rem;
         }
         
         h3 {
-            font-size: 1.5rem;
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
         }
         
         p {
@@ -41,7 +80,7 @@
         }
         
         code {
-            background-color: #f8f9fa;
+            background-color: var(--code-background);
             padding: 0.2rem 0.4rem;
             border-radius: 3px;
             font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
@@ -49,10 +88,11 @@
         }
         
         pre {
-            background-color: #f8f9fa;
+            background-color: var(--code-background);
             padding: 1rem;
             border-radius: 5px;
             overflow-x: auto;
+            margin: 1rem 0;
         }
         
         pre code {
@@ -61,89 +101,189 @@
         }
         
         blockquote {
-            border-left: 4px solid #ddd;
-            margin: 0;
-            padding-left: 1rem;
-            color: #666;
+            border-left: 4px solid var(--border-color);
+            margin: 1rem 0;
+            padding: 0.5rem 1rem;
+            color: var(--secondary-color);
+            background-color: var(--metadata-background);
+            border-radius: 0 5px 5px 0;
         }
         
         table {
             border-collapse: collapse;
             width: 100%;
             margin-bottom: 1rem;
+            overflow-x: auto;
+            display: block;
         }
         
         th, td {
-            border: 1px solid #ddd;
-            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
             text-align: left;
         }
         
         th {
-            background-color: #f8f9fa;
+            background-color: var(--metadata-background);
+            font-weight: 600;
+        }
+        
+        tr:nth-child(even) {
+            background-color: var(--metadata-background);
         }
         
         .metadata {
-            background-color: #f8f9fa;
-            padding: 1rem;
+            background-color: var(--metadata-background);
+            padding: 1.5rem;
             border-radius: 5px;
             margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         .tags {
             margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
         }
         
         .tag {
             display: inline-block;
-            background-color: #e9ecef;
-            padding: 0.2rem 0.5rem;
+            background-color: var(--tag-background);
+            color: var(--tag-text);
+            padding: 0.3rem 0.6rem;
             border-radius: 3px;
-            margin-right: 0.5rem;
-            margin-bottom: 0.5rem;
             font-size: 0.9em;
+            transition: background-color 0.2s ease;
+        }
+        
+        .tag:hover {
+            background-color: var(--accent-color);
+            color: white;
         }
         
         .timestamp {
-            color: #666;
+            color: var(--timestamp-color);
             font-size: 0.9em;
+            margin-bottom: 1rem;
+        }
+        
+        .metadata-details {
+            margin-top: 1rem;
+        }
+        
+        .content {
+            margin-top: 2rem;
+        }
+        
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        
+        a:hover {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .metadata {
+                padding: 1rem;
+            }
+            
+            table {
+                font-size: 0.9em;
+            }
+            
+            th, td {
+                padding: 0.5rem;
+            }
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+                max-width: none;
+            }
+            
+            .metadata {
+                box-shadow: none;
+                border: 1px solid var(--border-color);
+            }
+            
+            a {
+                text-decoration: underline;
+            }
+            
+            .tag:hover {
+                background-color: var(--tag-background);
+                color: var(--tag-text);
+            }
         }
     </style>
 </head>
 <body>
-    <h1>{{ title }}</h1>
+    <header>
+        <h1>{{ title }}</h1>
+    </header>
     
-    <div class="metadata">
-        <div class="timestamp">
-            Created: {{ created_at }}<br>
-            Updated: {{ updated_at }}
-        </div>
-        
-        {% if tags %}
-        <div class="tags">
-            {% for tag in tags %}
-            <span class="tag">{{ tag }}</span>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        {% if metadata %}
-        <div class="metadata-details">
-            <h3>Metadata</h3>
-            <table>
-                {% for key, value in metadata.items() %}
-                <tr>
-                    <th>{{ key }}</th>
-                    <td>{{ value }}</td>
-                </tr>
+    <main>
+        <section class="metadata" aria-label="Document metadata">
+            <div class="timestamp">
+                <p>Created: {{ created_at }}</p>
+                <p>Updated: {{ updated_at }}</p>
+            </div>
+            
+            {% if tags %}
+            <div class="tags" role="list" aria-label="Document tags">
+                {% for tag in tags %}
+                <span class="tag" role="listitem">{{ tag }}</span>
                 {% endfor %}
-            </table>
-        </div>
-        {% endif %}
-    </div>
+            </div>
+            {% endif %}
+            
+            {% if metadata %}
+            <div class="metadata-details">
+                <h3>Metadata</h3>
+                <table role="grid" aria-label="Document metadata details">
+                    <thead>
+                        <tr>
+                            <th scope="col">Key</th>
+                            <th scope="col">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key, value in metadata.items() %}
+                        <tr>
+                            <th scope="row">{{ key }}</th>
+                            <td>{{ value }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </section>
+        
+        <article class="content">
+            {{ content|safe }}
+        </article>
+    </main>
     
-    <div class="content">
-        {{ content|safe }}
-    </div>
+    <footer>
+        <p class="timestamp">Generated by Automation System</p>
+    </footer>
 </body>
 </html> 

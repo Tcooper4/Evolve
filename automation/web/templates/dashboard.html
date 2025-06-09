@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/boxicons@2.0.7/css/boxicons.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .dashboard-container {
+            padding: 20px;
+        }
+        .metric-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            padding: 20px;
+        }
+        .metric-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3498db;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .status-active {
+            background-color: #2ecc71;
+        }
+        .status-warning {
+            background-color: #f1c40f;
+        }
+        .status-error {
+            background-color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class='bx bx-line-chart'></i> Monitoring Dashboard
+            </a>
+            <div class="d-flex">
+                <span class="navbar-text me-3">
+                    Last Updated: <span id="last-updated">-</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="row">
+            <!-- System Metrics -->
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-title">CPU Usage</div>
+                    <div class="metric-value" id="cpu-usage">-</div>
+                    <div class="progress mt-2">
+                        <div class="progress-bar" id="cpu-progress" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-title">Memory Usage</div>
+                    <div class="metric-value" id="memory-usage">-</div>
+                    <div class="progress mt-2">
+                        <div class="progress-bar" id="memory-progress" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-title">Active Tasks</div>
+                    <div class="metric-value" id="active-tasks">-</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-title">System Status</div>
+                    <div class="metric-value" id="system-status">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <div class="metric-title">Task Status Distribution</div>
+                    <div class="chart-container">
+                        <canvas id="task-status-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="metric-card">
+                    <div class="metric-title">Resource Usage Over Time</div>
+                    <div class="chart-container">
+                        <canvas id="resource-usage-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Tasks Table -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="metric-card">
+                    <div class="metric-title">Active Tasks</div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Task ID</th>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th>Start Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="active-tasks-table">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize charts
+        const taskStatusChart = new Chart(
+            document.getElementById('task-status-chart'),
+            {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pending', 'Running', 'Completed', 'Failed'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#ffeeba', '#b8daff', '#c3e6cb', '#f5c6cb']
+                    }]
+                }
+            }
+        );
+
+        const resourceUsageChart = new Chart(
+            document.getElementById('resource-usage-chart'),
+            {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'CPU Usage',
+                            data: [],
+                            borderColor: '#3498db',
+                            fill: false
+                        },
+                        {
+                            label: 'Memory Usage',
+                            data: [],
+                            borderColor: '#2ecc71',
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            }
+        );
+
+        function updateLastUpdated() {
+            const now = new Date();
+            document.getElementById('last-updated').textContent = now.toLocaleString();
+        }
+
+        function updateSystemMetrics(metrics) {
+            // Update CPU usage
+            const cpuUsage = metrics.cpu_usage;
+            document.getElementById('cpu-usage').textContent = `${cpuUsage.toFixed(1)}%`;
+            document.getElementById('cpu-progress').style.width = `${cpuUsage}%`;
+            document.getElementById('cpu-progress').setAttribute('aria-valuenow', cpuUsage);
+
+            // Update memory usage
+            const memoryUsage = metrics.memory_usage;
+            document.getElementById('memory-usage').textContent = `${memoryUsage.toFixed(1)}%`;
+            document.getElementById('memory-progress').style.width = `${memoryUsage}%`;
+            document.getElementById('memory-progress').setAttribute('aria-valuenow', memoryUsage);
+
+            // Update active tasks
+            document.getElementById('active-tasks').textContent = metrics.active_tasks;
+
+            // Update system status
+            const systemStatus = document.getElementById('system-status');
+            systemStatus.textContent = metrics.system_status;
+            systemStatus.className = `metric-value ${metrics.system_status.toLowerCase()}`;
+        }
+
+        function updateTaskStatusChart(tasks) {
+            const statusCounts = {
+                pending: 0,
+                running: 0,
+                completed: 0,
+                failed: 0
+            };
+
+            tasks.forEach(task => {
+                statusCounts[task.status]++;
+            });
+
+            taskStatusChart.data.datasets[0].data = Object.values(statusCounts);
+            taskStatusChart.update();
+        }
+
+        function updateResourceUsageChart(metrics) {
+            const timestamp = new Date().toLocaleTimeString();
+            
+            resourceUsageChart.data.labels.push(timestamp);
+            resourceUsageChart.data.datasets[0].data.push(metrics.cpu_usage);
+            resourceUsageChart.data.datasets[1].data.push(metrics.memory_usage);
+
+            // Keep only last 10 data points
+            if (resourceUsageChart.data.labels.length > 10) {
+                resourceUsageChart.data.labels.shift();
+                resourceUsageChart.data.datasets[0].data.shift();
+                resourceUsageChart.data.datasets[1].data.shift();
+            }
+
+            resourceUsageChart.update();
+        }
+
+        function updateActiveTasksTable(tasks) {
+            const tbody = document.getElementById('active-tasks-table');
+            tbody.innerHTML = '';
+
+            tasks.forEach(task => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${task.task_id}</td>
+                    <td>${task.name}</td>
+                    <td>${task.task_type}</td>
+                    <td>
+                        <span class="status-indicator status-${task.status}"></span>
+                        ${task.status}
+                    </td>
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: ${task.progress || 0}%" 
+                                 aria-valuenow="${task.progress || 0}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                ${task.progress || 0}%
+                            </div>
+                        </div>
+                    </td>
+                    <td>${new Date(task.start_time).toLocaleString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="viewTaskDetails('${task.task_id}')">
+                            <i class='bx bx-detail'></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="stopTask('${task.task_id}')">
+                            <i class='bx bx-stop'></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function fetchMetrics() {
+            try {
+                const response = await fetch('/api/metrics');
+                if (!response.ok) throw new Error('Failed to fetch metrics');
+                
+                const metrics = await response.json();
+                updateSystemMetrics(metrics);
+                updateResourceUsageChart(metrics);
+                updateLastUpdated();
+            } catch (error) {
+                console.error('Error fetching metrics:', error);
+            }
+        }
+
+        async function fetchTasks() {
+            try {
+                const response = await fetch('/api/tasks');
+                if (!response.ok) throw new Error('Failed to fetch tasks');
+                
+                const tasks = await response.json();
+                updateTaskStatusChart(tasks);
+                updateActiveTasksTable(tasks.filter(task => task.status === 'running'));
+            } catch (error) {
+                console.error('Error fetching tasks:', error);
+            }
+        }
+
+        async function viewTaskDetails(taskId) {
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/metrics`);
+                if (!response.ok) throw new Error('Failed to fetch task details');
+                
+                const metrics = await response.json();
+                alert(JSON.stringify(metrics, null, 2));
+            } catch (error) {
+                console.error('Error fetching task details:', error);
+            }
+        }
+
+        async function stopTask(taskId) {
+            if (!confirm('Are you sure you want to stop this task?')) return;
+            
+            try {
+                const response = await fetch(`/api/tasks/${taskId}/stop`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) throw new Error('Failed to stop task');
+                
+                fetchTasks();
+            } catch (error) {
+                console.error('Error stopping task:', error);
+                alert('Failed to stop task: ' + error.message);
+            }
+        }
+
+        // Initial load
+        fetchMetrics();
+        fetchTasks();
+
+        // Auto-refresh every 5 seconds
+        setInterval(() => {
+            fetchMetrics();
+            fetchTasks();
+        }, 5000);
+    </script>
+</body>
+</html> 

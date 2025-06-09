@@ -1,0 +1,23 @@
+# Use base image
+FROM automation-base:latest
+
+# Set environment variables
+ENV SERVICE_NAME=worker
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p /app/logs /app/data
+
+# Set permissions
+RUN chown -R app:app /app
+
+# Switch to non-root user
+USER app
+
+# Start worker service
+CMD ["python", "-m", "worker"] 

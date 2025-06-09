@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .notification {
+            border-radius: 5px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .info {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196F3;
+        }
+        .warning {
+            background-color: #fff3e0;
+            border-left: 4px solid #FFA000;
+        }
+        .error {
+            background-color: #ffebee;
+            border-left: 4px solid #F44336;
+        }
+        .success {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+        }
+        .alert {
+            background-color: #fce4ec;
+            border-left: 4px solid #E91E63;
+        }
+        .header {
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+        }
+        .priority {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .priority-low {
+            background-color: #E0E0E0;
+            color: #424242;
+        }
+        .priority-medium {
+            background-color: #FFE082;
+            color: #F57F17;
+        }
+        .priority-high {
+            background-color: #FFAB91;
+            color: #D84315;
+        }
+        .priority-critical {
+            background-color: #EF9A9A;
+            color: #B71C1C;
+        }
+        .message {
+            margin-bottom: 20px;
+        }
+        .metadata {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .metadata-item {
+            margin-bottom: 5px;
+        }
+        .metadata-label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .footer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 12px;
+            color: #666;
+        }
+        .error-section {
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        .error-title {
+            color: #F44336;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .validation-section {
+            background-color: #e8f5e9;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        .validation-title {
+            color: #4CAF50;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .delivery-section {
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 3px;
+            margin: 10px 0;
+        }
+        .delivery-title {
+            color: #2196F3;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="notification {{ type }}">
+            <div class="header">
+                <h1 class="title">{{ title }}</h1>
+                <span class="priority priority-{{ priority }}">{{ priority }}</span>
+            </div>
+            <div class="message">
+                {{ message }}
+            </div>
+            {% if metadata %}
+            <div class="metadata">
+                {% for key, value in metadata.items() %}
+                <div class="metadata-item">
+                    <span class="metadata-label">{{ key }}:</span>
+                    <span class="metadata-value">{{ value }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if error %}
+            <div class="error-section">
+                <div class="error-title">Error</div>
+                <div class="error-message">{{ error }}</div>
+            </div>
+            {% endif %}
+            {% if validation_errors %}
+            <div class="validation-section">
+                <div class="validation-title">Validation</div>
+                <div class="validation-errors">
+                    {% for error in validation_errors %}
+                    <div class="validation-error">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            <div class="delivery-section">
+                <div class="delivery-title">Delivery Status</div>
+                <div class="delivery-info">
+                    <div>Attempts: {{ delivery_attempts }}/{{ max_retries }}</div>
+                    <div>Last Attempt: {{ last_attempt }}</div>
+                    <div>Next Attempt: {{ next_attempt }}</div>
+                </div>
+            </div>
+            <div class="footer">
+                <p>This notification was sent by the Automation System v{{ version }}.</p>
+                <p>Sent at: {{ sent_at }}</p>
+                <p>ID: {{ id }}</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

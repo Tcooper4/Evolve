@@ -1,37 +1,214 @@
 {
-    "backup_dirs": [
-        "trading",
-        "models",
-        "config",
-        "alerts",
-        "feature_engineering",
-        "automation"
-    ],
-    "exclude_patterns": [
-        "*.pyc",
-        "__pycache__",
-        "*.log",
-        "*.tmp",
-        "*.bak",
-        "venv*",
-        ".git",
-        ".pytest_cache"
-    ],
-    "backup_location": "backups",
-    "max_backups": 7,
-    "compression": "gz",
-    "schedule": {
-        "daily": true,
-        "time": "23:00",
-        "days_of_week": [0, 1, 2, 3, 4, 5, 6]
-    },
-    "notifications": {
-        "enabled": true,
-        "email": {
-            "smtp_server": "smtp.gmail.com",
-            "smtp_port": 587,
-            "sender_email": "",
-            "recipient_email": ""
+    "version": "1.0.0",
+    "last_updated": "2024-03-19T12:00:00Z",
+    "environment": "production",
+    "backup": {
+        "directories": [
+            {
+                "path": "trading",
+                "priority": "high",
+                "retention_days": 30,
+                "compression_level": 9,
+                "exclude_patterns": [
+                    "*.tmp",
+                    "*.log",
+                    "*.bak"
+                ]
+            },
+            {
+                "path": "models",
+                "priority": "critical",
+                "retention_days": 90,
+                "compression_level": 9,
+                "exclude_patterns": [
+                    "*.tmp",
+                    "*.log",
+                    "*.bak",
+                    "checkpoints/*"
+                ]
+            },
+            {
+                "path": "config",
+                "priority": "high",
+                "retention_days": 30,
+                "compression_level": 9,
+                "exclude_patterns": [
+                    "*.tmp",
+                    "*.log",
+                    "*.bak"
+                ]
+            },
+            {
+                "path": "alerts",
+                "priority": "medium",
+                "retention_days": 14,
+                "compression_level": 6,
+                "exclude_patterns": [
+                    "*.tmp",
+                    "*.log",
+                    "*.bak"
+                ]
+            },
+            {
+                "path": "feature_engineering",
+                "priority": "high",
+                "retention_days": 30,
+                "compression_level": 9,
+                "exclude_patterns": [
+                    "*.tmp",
+                    "*.log",
+                    "*.bak",
+                    "temp/*"
+                ]
+            },
+            {
+                "path": "automation",
+                "priority": "high",
+                "retention_days": 30,
+                "compression_level": 9,
+                "exclude_patterns": [
+                    "*.tmp",
+                    "*.log",
+                    "*.bak"
+                ]
+            }
+        ],
+        "global_exclude_patterns": [
+            "*.pyc",
+            "__pycache__",
+            "*.log",
+            "*.tmp",
+            "*.bak",
+            "venv*",
+            ".git",
+            ".pytest_cache",
+            "node_modules",
+            "*.swp",
+            "*.swo",
+            ".DS_Store",
+            "Thumbs.db"
+        ],
+        "storage": {
+            "type": "local",
+            "path": "backups",
+            "max_size_gb": 100,
+            "compression": {
+                "format": "gz",
+                "level": 9,
+                "threads": 4
+            },
+            "encryption": {
+                "enabled": true,
+                "algorithm": "AES-256-GCM",
+                "key_rotation_days": 30
+            },
+            "replication": {
+                "enabled": true,
+                "locations": [
+                    {
+                        "type": "s3",
+                        "bucket": "${BACKUP_S3_BUCKET}",
+                        "region": "${BACKUP_S3_REGION}",
+                        "path": "backups/${ENVIRONMENT}",
+                        "retention_days": 90
+                    }
+                ]
+            }
+        },
+        "schedule": {
+            "daily": {
+                "enabled": true,
+                "time": "23:00",
+                "days_of_week": [0, 1, 2, 3, 4, 5, 6],
+                "retention_days": 7
+            },
+            "weekly": {
+                "enabled": true,
+                "day": 0,
+                "time": "00:00",
+                "retention_days": 30
+            },
+            "monthly": {
+                "enabled": true,
+                "day": 1,
+                "time": "00:00",
+                "retention_days": 365
+            }
+        },
+        "validation": {
+            "enabled": true,
+            "verify_checksums": true,
+            "test_restore": true,
+            "max_validation_time_minutes": 60
+        },
+        "notifications": {
+            "enabled": true,
+            "channels": {
+                "email": {
+                    "enabled": true,
+                    "smtp_server": "smtp.gmail.com",
+                    "smtp_port": 587,
+                    "use_tls": true,
+                    "sender_email": "${BACKUP_EMAIL_SENDER}",
+                    "recipient_email": "${BACKUP_EMAIL_RECIPIENT}",
+                    "on_success": true,
+                    "on_failure": true,
+                    "on_warning": true
+                },
+                "slack": {
+                    "enabled": true,
+                    "webhook_url": "${BACKUP_SLACK_WEBHOOK}",
+                    "channel": "#backup-notifications",
+                    "on_success": true,
+                    "on_failure": true,
+                    "on_warning": true
+                }
+            }
+        },
+        "monitoring": {
+            "enabled": true,
+            "metrics": {
+                "backup_size": true,
+                "backup_duration": true,
+                "compression_ratio": true,
+                "storage_usage": true,
+                "validation_status": true
+            },
+            "alerts": {
+                "backup_failure": {
+                    "enabled": true,
+                    "threshold": 1,
+                    "cooldown_minutes": 60
+                },
+                "storage_warning": {
+                    "enabled": true,
+                    "threshold_gb": 80,
+                    "cooldown_minutes": 1440
+                },
+                "validation_failure": {
+                    "enabled": true,
+                    "threshold": 1,
+                    "cooldown_minutes": 60
+                }
+            }
+        },
+        "logging": {
+            "level": "INFO",
+            "format": "json",
+            "rotation": {
+                "max_size_mb": 100,
+                "backup_count": 5
+            },
+            "handlers": [
+                {
+                    "type": "file",
+                    "path": "logs/backup.log"
+                },
+                {
+                    "type": "syslog",
+                    "facility": "local0"
+                }
+            ]
         }
     }
 } 

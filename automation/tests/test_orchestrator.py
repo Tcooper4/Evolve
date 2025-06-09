@@ -1,8 +1,234 @@
 import pytest
+import asyncio
+import json
+from pathlib import Path
+from unittest.mock import patch, MagicMock, AsyncMock
 from datetime import datetime
 from typing import Dict, Any
 
+from automation.core.orchestrator import Orchestrator, Task
 from .base_test import BaseTest
+
+@pytest.fixture
+def test_config(tmp_path):
+    config = {
+        "redis": {
+            "host": "localhost",
+            "port": 6379,
+            "db": 0,
+            "password": None
+        },
+        "ray": {
+            "address": "auto",
+            "namespace": "test",
+            "runtime_env": {
+                "working_dir": ".",
+                "py_modules": ["trading", "automation"]
+            }
+        },
+        "kubernetes": {
+            "in_cluster": False,
+            "namespace": "test",
+            "config_path": "~/.kube/config"
+        }
+    }
+    config_path = tmp_path / "test_config.json"
+    with open(config_path, 'w') as f:
+        json.dump(config, f)
+    return str(config_path)
+
+@pytest.fixture
+def mock_redis():
+    with patch('redis.Redis') as mock:
+        mock_instance = AsyncMock()
+        mock.return_value = mock_instance
+        yield mock_instance
+
+@pytest.fixture
+def mock_ray():
+    with patch('ray.init') as mock_init, \
+         patch('ray.serve.start') as mock_serve:
+        yield mock_init, mock_serve
+
+@pytest.fixture
+def mock_kubernetes():
+    with patch('kubernetes.config.load_kube_config') as mock_config, \
+         patch('kubernetes.client.CoreV1Api') as mock_api:
+        mock_instance = MagicMock()
+        mock_api.return_value = mock_instance
+        yield mock_instance
+
+@pytest.fixture
+def orchestrator(test_config, mock_redis, mock_ray, mock_kubernetes):
+    return Orchestrator(config_path=test_config)
+
+@pytest.fixture
+def sample_task():
+    return Task(
+        id="test_task_001",
+        name="Test Task",
+        type="model_training",
+        parameters={
+            "model_type": "lstm",
+            "epochs": 10,
+            "batch_size": 32
+        }
+    )
+
+@pytest.mark.asyncio
+async def test_orchestrator_initialization(orchestrator):
+    """Test orchestrator initialization."""
+    assert orchestrator.config is not None
+    assert orchestrator.redis_client is not None
+    assert orchestrator.tasks == {}
+    assert orchestrator.running is False
+
+@pytest.mark.asyncio
+async def test_create_task(orchestrator, sample_task):
+    """Test task creation."""
+    task_id = await orchestrator.create_task(sample_task)
+    assert task_id == sample_task.id
+    assert sample_task.id in orchestrator.tasks
+    orchestrator.redis_client.hset.assert_called_once()
+    orchestrator.redis_client.zadd.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_get_task(orchestrator, sample_task):
+    """Test task retrieval."""
+    # Setup mock response
+    orchestrator.redis_client.hget.return_value = sample_task.json()
+    
+    # Get task
+    task = await orchestrator.get_task(sample_task.id)
+    assert task is not None
+    assert task.id == sample_task.id
+    assert task.name == sample_task.name
+    orchestrator.redis_client.hget.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_update_task_status(orchestrator, sample_task):
+    """Test task status update."""
+    # Setup mock response
+    orchestrator.redis_client.hget.return_value = sample_task.json()
+    
+    # Update status
+    await orchestrator.update_task_status(sample_task.id, "running")
+    orchestrator.redis_client.hset.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_execute_task(orchestrator, sample_task):
+    """Test task execution."""
+    # Setup mock handler
+    mock_handler = AsyncMock()
+    orchestrator._get_task_handler = MagicMock(return_value=mock_handler)
+    
+    # Execute task
+    await orchestrator.execute_task(sample_task)
+    mock_handler.assert_called_once_with(sample_task)
+    orchestrator.redis_client.hset.assert_called()
+
+@pytest.mark.asyncio
+async def test_process_dependencies(orchestrator):
+    """Test dependency processing."""
+    # Create parent task
+    parent_task = Task(
+        id="parent_task",
+        name="Parent Task",
+        type="data_collection"
+    )
+    
+    # Create dependent task
+    child_task = Task(
+        id="child_task",
+        name="Child Task",
+        type="model_training",
+        dependencies=["parent_task"]
+    )
+    
+    # Add tasks to orchestrator
+    orchestrator.tasks = {
+        parent_task.id: parent_task,
+        child_task.id: child_task
+    }
+    
+    # Process dependencies
+    await orchestrator._process_dependencies(parent_task)
+    assert child_task.status == "completed"
+
+@pytest.mark.asyncio
+async def test_start_stop(orchestrator):
+    """Test orchestrator start and stop."""
+    # Start orchestrator
+    start_task = asyncio.create_task(orchestrator.start())
+    
+    # Wait a bit
+    await asyncio.sleep(0.1)
+    
+    # Stop orchestrator
+    await orchestrator.stop()
+    await start_task
+    
+    assert not orchestrator.running
+
+@pytest.mark.asyncio
+async def test_task_handlers(orchestrator, sample_task):
+    """Test task handlers."""
+    # Test data collection handler
+    result = await orchestrator._handle_data_collection(sample_task)
+    assert result is None
+    
+    # Test model training handler
+    result = await orchestrator._handle_model_training(sample_task)
+    assert result is None
+    
+    # Test model evaluation handler
+    result = await orchestrator._handle_model_evaluation(sample_task)
+    assert result is None
+    
+    # Test model deployment handler
+    result = await orchestrator._handle_model_deployment(sample_task)
+    assert result is None
+    
+    # Test backtesting handler
+    result = await orchestrator._handle_backtesting(sample_task)
+    assert result is None
+    
+    # Test optimization handler
+    result = await orchestrator._handle_optimization(sample_task)
+    assert result is None
+
+@pytest.mark.asyncio
+async def test_error_handling(orchestrator, sample_task):
+    """Test error handling."""
+    # Setup mock to raise exception
+    orchestrator.redis_client.hset.side_effect = Exception("Test error")
+    
+    # Test error in create_task
+    with pytest.raises(Exception):
+        await orchestrator.create_task(sample_task)
+    
+    # Test error in get_task
+    orchestrator.redis_client.hget.side_effect = Exception("Test error")
+    with pytest.raises(Exception):
+        await orchestrator.get_task(sample_task.id)
+    
+    # Test error in update_task_status
+    with pytest.raises(Exception):
+        await orchestrator.update_task_status(sample_task.id, "failed", "Test error")
+
+@pytest.mark.asyncio
+async def test_invalid_task_type(orchestrator):
+    """Test handling of invalid task type."""
+    invalid_task = Task(
+        id="invalid_task",
+        name="Invalid Task",
+        type="invalid_type"
+    )
+    
+    # Test execution of invalid task
+    await orchestrator.execute_task(invalid_task)
+    assert invalid_task.status == "failed"
+    assert "No handler found" in invalid_task.error
 
 class TestOrchestrator(BaseTest):
     """Test suite for the orchestrator component."""
@@ -216,4 +442,7 @@ class TestOrchestrator(BaseTest):
         # Verify resource usage was monitored
         assert "cpu_usage" in updated_health
         assert "memory_usage" in updated_health
-        assert "gpu_usage" in updated_health 
+        assert "gpu_usage" in updated_health
+
+if __name__ == "__main__":
+    pytest.main([__file__]) 

@@ -3,28 +3,240 @@
 ## Overview
 This document provides detailed information about the API endpoints, their parameters, and responses.
 
+## API Information
+- **Version**: {{ api.version|default('1.0.0') }}
+- **Base URL**: {{ api.base_url|default('https://api.example.com/v1') }}
+- **Format**: {{ api.format|default('JSON') }}
+- **Authentication**: {{ api.auth_type|default('API Key') }}
+
+## Authentication
+### API Key
+All API requests must include a valid API key in the `X-API-Key` header.
+
+### OAuth 2.0
+For OAuth 2.0 authentication, include the access token in the `Authorization` header:
+```
+Authorization: Bearer <access_token>
+```
+
+### JWT
+For JWT authentication, include the token in the `Authorization` header:
+```
+Authorization: Bearer <jwt_token>
+```
+
+## Rate Limiting
+- **Requests**: 100 requests per minute per API key
+- **Burst**: 10 requests per second
+- **Headers**:
+  - `X-RateLimit-Limit`: Maximum requests per window
+  - `X-RateLimit-Remaining`: Remaining requests in current window
+  - `X-RateLimit-Reset`: Time when the rate limit resets
+
 ## Endpoints
 
 {% for doc in api_docs %}
 ### {{ doc.name }}
 **Type**: {{ doc.type }}
-
-**Signature**: `{{ doc.signature }}`
+**Path**: `{{ doc.path }}`
+**Method**: {{ doc.method }}
+**Version**: {{ doc.version|default('1.0.0') }}
 
 **Description**:
 {{ doc.docstring }}
 
+**Authentication**:
+{{ doc.auth|default('Required') }}
+
+**Rate Limit**:
+{{ doc.rate_limit|default('Standard') }}
+
+**Parameters**:
+{% for param in doc.parameters|default([]) %}
+- **{{ param.name }}** ({{ param.type }})
+  - Required: {{ param.required|default('No') }}
+  - Default: {{ param.default|default('None') }}
+  - Description: {{ param.description }}
+  - Example: {{ param.example|default('None') }}
 {% endfor %}
 
-## Error Codes
+**Request Body**:
+{% if doc.request_body %}
+```json
+{{ doc.request_body }}
+```
+{% else %}
+No request body required.
+{% endif %}
+
+**Response**:
+{% if doc.response %}
+```json
+{{ doc.response }}
+```
+{% else %}
+No response body.
+{% endif %}
+
+**Status Codes**:
+{% for code in doc.status_codes|default([]) %}
+- {{ code.code }}: {{ code.description }}
+{% endfor %}
+
+**Examples**:
+{% for example in doc.examples|default([]) %}
+```bash
+{{ example }}
+```
+{% endfor %}
+
+**Notes**:
+{{ doc.notes|default('No additional notes.') }}
+
+{% endfor %}
+
+## Error Handling
+### Error Codes
 - 400: Bad Request
 - 401: Unauthorized
 - 403: Forbidden
 - 404: Not Found
+- 405: Method Not Allowed
+- 406: Not Acceptable
+- 409: Conflict
+- 422: Unprocessable Entity
+- 429: Too Many Requests
 - 500: Internal Server Error
+- 502: Bad Gateway
+- 503: Service Unavailable
+- 504: Gateway Timeout
 
-## Rate Limiting
-API requests are limited to 100 requests per minute per API key.
+### Error Response Format
+```json
+{
+    "error": {
+        "code": "ERROR_CODE",
+        "message": "Human readable error message",
+        "details": {
+            "field": "Additional error details"
+        }
+    }
+}
+```
 
-## Authentication
-All API requests must include a valid API key in the `X-API-Key` header. 
+## Pagination
+### Parameters
+- `page`: Page number (default: 1)
+- `per_page`: Items per page (default: 20, max: 100)
+
+### Response Headers
+- `X-Total-Count`: Total number of items
+- `X-Total-Pages`: Total number of pages
+- `X-Current-Page`: Current page number
+- `X-Per-Page`: Items per page
+
+## Filtering
+### Operators
+- `eq`: Equal to
+- `ne`: Not equal to
+- `gt`: Greater than
+- `gte`: Greater than or equal to
+- `lt`: Less than
+- `lte`: Less than or equal to
+- `in`: In list
+- `nin`: Not in list
+- `like`: Like pattern
+- `ilike`: Case-insensitive like pattern
+
+### Examples
+```
+?filter[status]=eq:active
+?filter[created_at]=gte:2023-01-01
+?filter[type]=in:type1,type2
+```
+
+## Sorting
+### Parameters
+- `sort`: Field to sort by
+- `order`: Sort order (asc/desc)
+
+### Examples
+```
+?sort=created_at&order=desc
+?sort=name&order=asc
+```
+
+## Field Selection
+### Parameters
+- `fields`: Comma-separated list of fields to include
+
+### Examples
+```
+?fields=id,name,status
+?fields=created_at,updated_at
+```
+
+## Versioning
+### URL Versioning
+```
+https://api.example.com/v1/resource
+https://api.example.com/v2/resource
+```
+
+### Header Versioning
+```
+Accept: application/vnd.example.v1+json
+Accept: application/vnd.example.v2+json
+```
+
+## Webhooks
+### Events
+{% for event in webhook_events|default([]) %}
+- {{ event.name }}: {{ event.description }}
+{% endfor %}
+
+### Payload Format
+```json
+{
+    "event": "event_name",
+    "timestamp": "2023-01-01T00:00:00Z",
+    "data": {
+        "id": "resource_id",
+        "type": "resource_type",
+        "attributes": {
+            "field": "value"
+        }
+    }
+}
+```
+
+### Security
+- Webhook signatures
+- IP whitelisting
+- Retry mechanism
+- Error handling
+
+## SDKs
+### Available SDKs
+{% for sdk in sdks|default([]) %}
+- {{ sdk.name }} ({{ sdk.version }}): {{ sdk.description }}
+{% endfor %}
+
+### Installation
+{% for sdk in sdks|default([]) %}
+#### {{ sdk.name }}
+```bash
+{{ sdk.installation }}
+```
+{% endfor %}
+
+## Support
+### Contact
+- Email: {{ support.email|default('support@example.com') }}
+- Phone: {{ support.phone|default('+1-555-555-5555') }}
+- Hours: {{ support.hours|default('24/7') }}
+
+### Documentation
+- API Reference: {{ docs.api_reference|default('https://docs.example.com/api') }}
+- Guides: {{ docs.guides|default('https://docs.example.com/guides') }}
+- Examples: {{ docs.examples|default('https://docs.example.com/examples') }} 

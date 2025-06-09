@@ -1,0 +1,65 @@
+groups:
+  - name: automation_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High CPU usage detected
+          description: CPU usage is above 80% for 5 minutes
+
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High memory usage detected
+          description: Memory usage is above 85% for 5 minutes
+
+      - alert: TaskExecutionFailure
+        expr: automation_task_execution_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Task execution failures detected
+          description: One or more tasks have failed to execute
+
+      - alert: AgentHeartbeatFailure
+        expr: automation_agent_heartbeat_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Agent heartbeat failures detected
+          description: One or more agents have failed to send heartbeats
+
+      - alert: HighTaskQueueSize
+        expr: automation_task_queue_size > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High task queue size detected
+          description: Task queue size is above 100 for 5 minutes
+
+      - alert: RedisConnectionFailure
+        expr: automation_redis_connection_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Redis connection failures detected
+          description: Failed to connect to Redis server
+
+      - alert: RayClusterFailure
+        expr: automation_ray_cluster_failures_total > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Ray cluster failures detected
+          description: Ray cluster is experiencing issues 
