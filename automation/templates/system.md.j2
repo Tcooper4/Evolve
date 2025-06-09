@@ -3,19 +3,56 @@
 ## Overview
 This document provides a comprehensive overview of the system architecture, components, and configuration.
 
+## System Information
+- **Name**: {{ system.name|default('Automation System') }}
+- **Version**: {{ system.version|default('1.0.0') }}
+- **Environment**: {{ system.environment|default('Production') }}
+- **Last Updated**: {{ system.last_updated|default('Unknown') }}
+
 ## System Architecture
 {{ architecture.description }}
+
+### High-Level Design
+{{ architecture.high_level_design|default('No high-level design documented.') }}
+
+### Component Diagram
+{{ architecture.component_diagram|default('No component diagram available.') }}
+
+### Data Flow
+{{ architecture.data_flow|default('No data flow documented.') }}
 
 ### Components
 {% for component in components %}
 #### {{ component.name }}
 **Type**: {{ component.type }}
+**Status**: {{ component.status|default('Active') }}
+**Version**: {{ component.version|default('1.0.0') }}
 
 **Description**: {{ component.description }}
 
+**Responsibilities**:
+{% for resp in component.responsibilities|default([]) %}
+- {{ resp }}
+{% endfor %}
+
 **Dependencies**:
 {% for dep in component.dependencies %}
-- {{ dep }}
+- {{ dep.name }} ({{ dep.version }}): {{ dep.description }}
+{% endfor %}
+
+**Configuration**:
+{% for key, value in component.configuration|default({}).items() %}
+- {{ key }}: {{ value }}
+{% endfor %}
+
+**Health Checks**:
+{% for check in component.health_checks|default([]) %}
+- {{ check.name }}: {{ check.description }}
+{% endfor %}
+
+**Metrics**:
+{% for metric in component.metrics|default([]) %}
+- {{ metric.name }}: {{ metric.description }}
 {% endfor %}
 
 {% endfor %}
@@ -26,10 +63,25 @@ This document provides a comprehensive overview of the system architecture, comp
 - {{ key }}: {{ value }}
 {% endfor %}
 
+### Environment Variables
+{% for var in environment_variables|default([]) %}
+- {{ var.name }}: {{ var.description }}
+{% endfor %}
+
+### Feature Flags
+{% for flag in feature_flags|default([]) %}
+- {{ flag.name }}: {{ flag.description }}
+{% endfor %}
+
 ## Dependencies
 ### Required Packages
 {% for dep in dependencies %}
-- {{ dep.name }} ({{ dep.version }})
+- {{ dep.name }} ({{ dep.version }}): {{ dep.description }}
+{% endfor %}
+
+### External Services
+{% for service in external_services|default([]) %}
+- {{ service.name }}: {{ service.description }}
 {% endfor %}
 
 ## Deployment
@@ -37,6 +89,14 @@ This document provides a comprehensive overview of the system architecture, comp
 - Python 3.8+
 - Node.js 14+
 - PostgreSQL 12+
+- Redis 6+
+- Docker 20+
+- Kubernetes 1.20+
+
+### Infrastructure
+- Cloud Provider: {{ infrastructure.cloud_provider|default('AWS') }}
+- Region: {{ infrastructure.region|default('us-east-1') }}
+- Environment: {{ infrastructure.environment|default('Production') }}
 
 ### Installation
 1. Clone the repository
@@ -44,6 +104,15 @@ This document provides a comprehensive overview of the system architecture, comp
 3. Configure environment variables
 4. Run migrations: `python manage.py migrate`
 5. Start the server: `python manage.py runserver`
+
+### Deployment Process
+1. Build Docker images
+2. Run tests
+3. Deploy to staging
+4. Run integration tests
+5. Deploy to production
+6. Verify deployment
+7. Monitor metrics
 
 ## Monitoring
 ### Metrics
@@ -53,40 +122,104 @@ This document provides a comprehensive overview of the system architecture, comp
 - Network Traffic
 - Response Time
 - Error Rate
+- Request Rate
+- Queue Length
+- Cache Hit Rate
+- Database Connections
 
 ### Alerts
 - High CPU Usage (>80%)
 - High Memory Usage (>90%)
 - High Error Rate (>1%)
 - Slow Response Time (>500ms)
+- High Latency (>1000ms)
+- Service Unavailable
+- Database Issues
+- Cache Issues
+- Queue Issues
+- Disk Space Issues
+
+### Logging
+- Application Logs
+- Access Logs
+- Error Logs
+- Audit Logs
+- Security Logs
+- Performance Logs
+- Debug Logs
+- System Logs
 
 ## Security
 ### Authentication
 - JWT-based authentication
 - API key authentication
 - OAuth 2.0 support
+- SAML 2.0 support
+- LDAP integration
+- MFA support
+- SSO support
+- Password policies
 
 ### Authorization
 - Role-based access control
 - Permission-based access control
 - Resource-level permissions
+- API access control
+- Service access control
+- Data access control
+- Feature access control
+- Audit logging
 
 ### Encryption
 - TLS 1.3
 - AES-256 encryption
 - Secure password hashing
+- Key management
+- Certificate management
+- Data at rest
+- Data in transit
+- Secure storage
+
+### Security Policies
+- Password policy
+- Access policy
+- Data policy
+- Network policy
+- Backup policy
+- Recovery policy
+- Incident response
+- Security updates
 
 ## Backup and Recovery
 ### Backup Strategy
 - Daily full backups
 - Hourly incremental backups
 - Offsite storage
+- Point-in-time recovery
+- Database backups
+- Configuration backups
+- Log backups
+- State backups
 
 ### Recovery Procedures
 1. Stop the application
 2. Restore from backup
 3. Run integrity checks
 4. Start the application
+5. Verify functionality
+6. Monitor metrics
+7. Update documentation
+8. Notify stakeholders
+
+### Disaster Recovery
+- Recovery time objective
+- Recovery point objective
+- Failover procedures
+- Data recovery
+- Service recovery
+- Infrastructure recovery
+- Communication plan
+- Testing procedures
 
 ## Maintenance
 ### Regular Tasks
@@ -94,9 +227,37 @@ This document provides a comprehensive overview of the system architecture, comp
 - Database optimization
 - Security updates
 - Performance monitoring
+- Capacity planning
+- Health checks
+- Backup verification
+- Configuration review
 
 ### Troubleshooting
 - Check logs
 - Monitor metrics
 - Verify configuration
-- Test connectivity 
+- Test connectivity
+- Check dependencies
+- Review alerts
+- Analyze errors
+- Debug issues
+
+### Performance Optimization
+- Code optimization
+- Database optimization
+- Cache optimization
+- Network optimization
+- Resource optimization
+- Load balancing
+- Scaling strategy
+- Monitoring strategy
+
+### Capacity Planning
+- Resource forecasting
+- Growth planning
+- Scaling thresholds
+- Cost optimization
+- Performance targets
+- Availability targets
+- Recovery targets
+- Maintenance windows 

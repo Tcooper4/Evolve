@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"  # Web interface
+      - "9090:9090"  # Prometheus metrics
+    volumes:
+      - .:/app
+      - ./automation/logs:/app/automation/logs
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RAY_ADDRESS=ray
+      - RAY_PORT=10001
+    depends_on:
+      - redis
+      - ray
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  ray:
+    image: rayproject/ray:latest
+    ports:
+      - "10001:10001"
+    volumes:
+      - ray_data:/tmp/ray
+    command: ray start --head --port=10001 --redis-password=password
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+
+volumes:
+  redis_data:
+  ray_data:
+  prometheus_data:
+  grafana_data: 

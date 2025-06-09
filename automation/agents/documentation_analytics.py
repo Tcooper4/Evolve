@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Union, Any, Set, Callable
 from pathlib import Path
 import re
 from datetime import datetime, timedelta
@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import aiohttp
 import asyncio
 import elasticsearch
@@ -84,6 +84,46 @@ import pmdarima as pm
 from statsmodels.tsa.seasonal import seasonal_decompose
 import jinja2
 import pdfkit
+from pydantic import BaseModel, Field, validator
+from cachetools import TTLCache, LRUCache
+import jwt
+import bleach
+from ratelimit import limits, sleep_and_retry
+import hashlib
+import uuid
+from typing_extensions import TypedDict
+
+class AnalyticsValidationError(Exception):
+    """Raised when analytics validation fails."""
+    pass
+
+class AnalyticsAccessError(Exception):
+    """Raised when access to analytics is denied."""
+    pass
+
+class AnalyticsHealth(BaseModel):
+    """Health status of analytics system."""
+    status: str
+    last_check: datetime
+    errors: List[str] = []
+    warnings: List[str] = []
+    metrics: Dict[str, Any] = {}
+
+class AnalyticsPlugin(BaseModel):
+    """Plugin for extending analytics functionality."""
+    name: str
+    version: str
+    description: str
+    metrics: List[str]
+    visualizations: List[str]
+    handler: Callable
+
+class AnalyticsRetention(BaseModel):
+    """Data retention policy."""
+    metric_type: str
+    retention_days: int
+    archive_after_days: int
+    delete_after_days: int
 
 @dataclass
 class AnalyticsMetric:
@@ -91,6 +131,9 @@ class AnalyticsMetric:
     value: float
     timestamp: datetime
     metadata: Dict[str, Any]
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+    retention_policy: Optional[AnalyticsRetention] = None
 
 @dataclass
 class AnalyticsReport:
@@ -99,6 +142,9 @@ class AnalyticsReport:
     visualizations: List[Dict[str, Any]]
     insights: List[str]
     generated_at: datetime
+    generated_by: str
+    access_control: Dict[str, List[str]] = field(default_factory=dict)
+    retention_policy: Optional[AnalyticsRetention] = None
 
 class DocumentationAnalytics:
     def __init__(self, config: Dict):
@@ -107,9 +153,18 @@ class DocumentationAnalytics:
         self.analytics_config = config.get('documentation', {}).get('analytics', {})
         self.setup_prometheus()
         self.setup_nlp()
+        self.setup_caching()
+        self.setup_security()
+        self.setup_plugins()
+        self.setup_retention()
         self.metrics: List[AnalyticsMetric] = []
         self.reports: List[AnalyticsReport] = []
+        self.plugins: Dict[str, AnalyticsPlugin] = {}
         self.lock = asyncio.Lock()
+        self.health = AnalyticsHealth(
+            status="initializing",
+            last_check=datetime.now()
+        )
 
     def setup_logging(self):
         """Configure logging for the analytics system."""
@@ -152,6 +207,296 @@ class DocumentationAnalytics:
         self.experiment_conversions = Counter('documentation_experiment_conversions_total', 'Total experiment conversions')
         self.experiment_success_rate = Gauge('documentation_experiment_success_rate', 'Experiment success rate')
 
+        # New metrics for system health
+        self.system_errors = Counter('documentation_analytics_errors_total', 'Total system errors')
+        self.system_warnings = Counter('documentation_analytics_warnings_total', 'Total system warnings')
+        self.operation_latency = Histogram('documentation_analytics_operation_latency_seconds', 'Operation latency')
+        self.cache_hits = Counter('documentation_analytics_cache_hits_total', 'Total cache hits')
+        self.cache_misses = Counter('documentation_analytics_cache_misses_total', 'Total cache misses')
+        self.plugin_executions = Counter('documentation_analytics_plugin_executions_total', 'Total plugin executions')
+        self.data_retention_operations = Counter('documentation_analytics_retention_operations_total', 'Total retention operations')
+
+    def setup_caching(self):
+        """Setup caching for expensive operations."""
+        self.metric_cache = TTLCache(
+            maxsize=self.analytics_config.get('cache_size', 1000),
+            ttl=self.analytics_config.get('cache_ttl', 3600)
+        )
+        self.visualization_cache = LRUCache(
+            maxsize=self.analytics_config.get('visualization_cache_size', 100)
+        )
+        self.insight_cache = TTLCache(
+            maxsize=self.analytics_config.get('insight_cache_size', 100),
+            ttl=self.analytics_config.get('insight_cache_ttl', 1800)
+        )
+
+    def setup_security(self):
+        """Setup security features."""
+        self.jwt_secret = self.analytics_config.get('jwt_secret', 'your-secret-key')
+        self.access_control = self.analytics_config.get('access_control', {})
+        self.rate_limits = self.analytics_config.get('rate_limits', {})
+        self.audit_log = []
+
+    def setup_plugins(self):
+        """Setup analytics plugins."""
+        plugin_config = self.analytics_config.get('plugins', {})
+        for name, config in plugin_config.items():
+            try:
+                plugin = AnalyticsPlugin(
+                    name=name,
+                    version=config.get('version', '1.0.0'),
+                    description=config.get('description', ''),
+                    metrics=config.get('metrics', []),
+                    visualizations=config.get('visualizations', []),
+                    handler=config.get('handler')
+                )
+                self.plugins[name] = plugin
+            except Exception as e:
+                self.logger.error(f"Plugin setup error for {name}: {str(e)}")
+
+    def setup_retention(self):
+        """Setup data retention policies."""
+        retention_config = self.analytics_config.get('retention', {})
+        self.retention_policies = {}
+        for metric_type, policy in retention_config.items():
+            try:
+                self.retention_policies[metric_type] = AnalyticsRetention(
+                    metric_type=metric_type,
+                    retention_days=policy.get('retention_days', 90),
+                    archive_after_days=policy.get('archive_after_days', 30),
+                    delete_after_days=policy.get('delete_after_days', 365)
+                )
+            except Exception as e:
+                self.logger.error(f"Retention policy setup error for {metric_type}: {str(e)}")
+
+    def validate_input(self, data: Any, schema: Dict) -> bool:
+        """Validate input data against schema."""
+        try:
+            for field, rules in schema.items():
+                if field not in data:
+                    if rules.get('required', False):
+                        raise AnalyticsValidationError(f"Missing required field: {field}")
+                    continue
+                
+                value = data[field]
+                if 'type' in rules and not isinstance(value, rules['type']):
+                    raise AnalyticsValidationError(f"Invalid type for {field}: expected {rules['type']}")
+                
+                if 'min' in rules and value < rules['min']:
+                    raise AnalyticsValidationError(f"Value too small for {field}: {value} < {rules['min']}")
+                
+                if 'max' in rules and value > rules['max']:
+                    raise AnalyticsValidationError(f"Value too large for {field}: {value} > {rules['max']}")
+                
+                if 'pattern' in rules and not re.match(rules['pattern'], str(value)):
+                    raise AnalyticsValidationError(f"Invalid format for {field}: {value}")
+            
+            return True
+        except Exception as e:
+            self.logger.error(f"Input validation error: {str(e)}")
+            return False
+
+    def check_access(self, user_id: str, resource: str, action: str) -> bool:
+        """Check if user has access to perform action on resource."""
+        try:
+            if user_id not in self.access_control:
+                return False
+            
+            user_permissions = self.access_control[user_id]
+            required_permission = f"{resource}:{action}"
+            
+            return required_permission in user_permissions or 'admin' in user_permissions
+        except Exception as e:
+            self.logger.error(f"Access check error: {str(e)}")
+            return False
+
+    def sanitize_content(self, content: str) -> str:
+        """Sanitize user-generated content."""
+        try:
+            # Remove potentially harmful HTML
+            sanitized = bleach.clean(content)
+            
+            # Remove control characters
+            sanitized = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', sanitized)
+            
+            # Normalize whitespace
+            sanitized = ' '.join(sanitized.split())
+            
+            return sanitized
+        except Exception as e:
+            self.logger.error(f"Content sanitization error: {str(e)}")
+            return content
+
+    def audit_log_operation(self, user_id: str, action: str, resource: str, status: str):
+        """Log an audit event."""
+        try:
+            event = {
+                'timestamp': datetime.now().isoformat(),
+                'user_id': user_id,
+                'action': action,
+                'resource': resource,
+                'status': status
+            }
+            self.audit_log.append(event)
+            
+            # Export to external audit system if configured
+            if self.analytics_config.get('audit_export'):
+                # Export logic here
+                pass
+        except Exception as e:
+            self.logger.error(f"Audit logging error: {str(e)}")
+
+    @sleep_and_retry
+    @limits(calls=100, period=60)
+    async def track_page_view(self, page: str, user: str, metadata: Optional[Dict] = None):
+        """Track a page view with rate limiting and validation."""
+        try:
+            # Validate input
+            if not self.validate_input({'page': page, 'user': user}, {
+                'page': {'type': str, 'required': True},
+                'user': {'type': str, 'required': True}
+            }):
+                raise AnalyticsValidationError("Invalid input for page view tracking")
+            
+            # Check access
+            if not self.check_access(user, 'analytics', 'track'):
+                raise AnalyticsAccessError(f"User {user} does not have permission to track page views")
+            
+            # Sanitize input
+            page = self.sanitize_content(page)
+            user = self.sanitize_content(user)
+            metadata = {k: self.sanitize_content(str(v)) for k, v in (metadata or {}).items()}
+            
+            async with self.lock:
+                self.page_views.inc()
+                metric = AnalyticsMetric(
+                    name='page_view',
+                    value=1.0,
+                    timestamp=datetime.now(),
+                    metadata={'page': page, 'user': user, **(metadata or {})},
+                    user_id=user,
+                    session_id=metadata.get('session_id'),
+                    retention_policy=self.retention_policies.get('page_view')
+                )
+                self.metrics.append(metric)
+                
+                # Audit log
+                self.audit_log_operation(user, 'track_page_view', page, 'success')
+                
+                self.logger.info(f"Tracked page view: {page} by {user}")
+        except Exception as e:
+            self.logger.error(f"Page view tracking error: {str(e)}")
+            self.system_errors.inc()
+            self.audit_log_operation(user, 'track_page_view', page, 'error')
+
+    async def check_health(self) -> AnalyticsHealth:
+        """Check the health of the analytics system."""
+        try:
+            health = AnalyticsHealth(
+                status="healthy",
+                last_check=datetime.now()
+            )
+            
+            # Check Prometheus metrics
+            try:
+                prometheus_client.generate_latest()
+            except Exception as e:
+                health.status = "degraded"
+                health.errors.append(f"Prometheus error: {str(e)}")
+            
+            # Check Elasticsearch connection
+            try:
+                await self.es.ping()
+            except Exception as e:
+                health.status = "degraded"
+                health.errors.append(f"Elasticsearch error: {str(e)}")
+            
+            # Check Grafana connection
+            try:
+                self.grafana.health.check()
+            except Exception as e:
+                health.status = "degraded"
+                health.errors.append(f"Grafana error: {str(e)}")
+            
+            # Check cache health
+            if len(self.metric_cache) > self.metric_cache.maxsize * 0.9:
+                health.warnings.append("Metric cache near capacity")
+            
+            # Check disk space
+            try:
+                disk_usage = Path("automation/logs/documentation").stat().st_size
+                if disk_usage > 1e9:  # 1GB
+                    health.warnings.append("Log directory size exceeds 1GB")
+            except Exception as e:
+                health.warnings.append(f"Disk space check error: {str(e)}")
+            
+            # Update metrics
+            health.metrics = {
+                'cache_size': len(self.metric_cache),
+                'metrics_count': len(self.metrics),
+                'reports_count': len(self.reports),
+                'plugins_count': len(self.plugins)
+            }
+            
+            self.health = health
+            return health
+        except Exception as e:
+            self.logger.error(f"Health check error: {str(e)}")
+            return AnalyticsHealth(
+                status="error",
+                last_check=datetime.now(),
+                errors=[str(e)]
+            )
+
+    async def apply_retention_policies(self):
+        """Apply data retention policies."""
+        try:
+            now = datetime.now()
+            for metric in self.metrics:
+                if not metric.retention_policy:
+                    continue
+                
+                age_days = (now - metric.timestamp).days
+                
+                if age_days > metric.retention_policy.delete_after_days:
+                    # Delete metric
+                    self.metrics.remove(metric)
+                    self.data_retention_operations.inc()
+                elif age_days > metric.retention_policy.archive_after_days:
+                    # Archive metric
+                    # Archive logic here
+                    self.data_retention_operations.inc()
+            
+            self.logger.info("Applied retention policies")
+        except Exception as e:
+            self.logger.error(f"Retention policy application error: {str(e)}")
+
+    async def register_plugin(self, plugin: AnalyticsPlugin):
+        """Register a new analytics plugin."""
+        try:
+            if plugin.name in self.plugins:
+                raise ValueError(f"Plugin {plugin.name} already exists")
+            
+            self.plugins[plugin.name] = plugin
+            self.logger.info(f"Registered plugin: {plugin.name}")
+        except Exception as e:
+            self.logger.error(f"Plugin registration error: {str(e)}")
+
+    async def execute_plugin(self, plugin_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute an analytics plugin."""
+        try:
+            if plugin_name not in self.plugins:
+                raise ValueError(f"Plugin {plugin_name} not found")
+            
+            plugin = self.plugins[plugin_name]
+            result = await plugin.handler(data)
+            
+            self.plugin_executions.inc()
+            return result
+        except Exception as e:
+            self.logger.error(f"Plugin execution error: {str(e)}")
+            return {}
+
     def setup_nlp(self):
         """Setup NLP tools."""
         nltk.download('punkt')
@@ -173,22 +518,6 @@ class DocumentationAnalytics:
         self.es = elasticsearch.AsyncElasticsearch(
             hosts=self.analytics_config.get('elasticsearch', {}).get('hosts')
         )
-
-    async def track_page_view(self, page: str, user: str, metadata: Optional[Dict] = None):
-        """Track a page view."""
-        try:
-            async with self.lock:
-                self.page_views.inc()
-                metric = AnalyticsMetric(
-                    name='page_view',
-                    value=1.0,
-                    timestamp=datetime.now(),
-                    metadata={'page': page, 'user': user, **(metadata or {})}
-                )
-                self.metrics.append(metric)
-                self.logger.info(f"Tracked page view: {page} by {user}")
-        except Exception as e:
-            self.logger.error(f"Page view tracking error: {str(e)}")
 
     async def track_search_query(self, query: str, user: str, metadata: Optional[Dict] = None):
         """Track a search query."""
@@ -322,7 +651,8 @@ class DocumentationAnalytics:
                     metrics=self.metrics,
                     visualizations=visualizations,
                     insights=insights,
-                    generated_at=datetime.now()
+                    generated_at=datetime.now(),
+                    generated_by=self.config.get('user', 'unknown')
                 )
                 self.reports.append(report)
                 self.logger.info(f"Generated report: {title}")
