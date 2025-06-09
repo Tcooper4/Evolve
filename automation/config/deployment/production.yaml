@@ -1,0 +1,84 @@
+deployment:
+  environment:
+    name: production
+    type: kubernetes
+    namespace: prod
+    replicas: 3
+    resources:
+      cpu: 2
+      memory: 4Gi
+    storage:
+      type: persistent
+      size: 100Gi
+    networking:
+      ingress:
+        enabled: true
+        tls: true
+      service:
+        type: LoadBalancer
+        port: 443
+
+  strategy:
+    type: rolling
+    max_surge: 1
+    max_unavailable: 0
+    timeout: 10m
+    health_check:
+      path: /health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  monitoring:
+    enabled: true
+    metrics:
+      - deployment_time
+      - success_rate
+      - error_count
+      - resource_usage
+      - service_health
+    alerts:
+      - name: deployment_failure
+        condition: error_count > 0
+        severity: critical
+      - name: high_resource_usage
+        condition: cpu_usage > 80%
+        severity: warning
+
+  backup:
+    enabled: true
+    schedule: "0 0 * * *"  # Daily at midnight
+    retention: 30d
+    storage:
+      type: s3
+      bucket: automation-backups
+      path: production
+
+  rollback:
+    enabled: true
+    automatic: true
+    triggers:
+      - deployment_failure
+      - health_check_failure
+    retention: 5  # Number of versions to keep
+
+  validation:
+    enabled: true
+    checks:
+      - resource_availability
+      - network_connectivity
+      - service_health
+      - security_compliance
+    timeout: 5m
+
+  logging:
+    level: info
+    format: json
+    output:
+      - stdout
+      - file
+    retention: 30d
+    storage:
+      type: s3
+      bucket: automation-logs
+      path: production 

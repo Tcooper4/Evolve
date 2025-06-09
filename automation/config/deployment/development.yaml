@@ -1,0 +1,83 @@
+deployment:
+  environment:
+    name: development
+    type: kubernetes
+    namespace: dev
+    replicas: 1
+    resources:
+      cpu: 0.5
+      memory: 1Gi
+    storage:
+      type: persistent
+      size: 20Gi
+    networking:
+      ingress:
+        enabled: true
+        tls: false
+      service:
+        type: NodePort
+        port: 8080
+
+  strategy:
+    type: rolling
+    max_surge: 1
+    max_unavailable: 0
+    timeout: 3m
+    health_check:
+      path: /health
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  monitoring:
+    enabled: true
+    metrics:
+      - deployment_time
+      - success_rate
+      - error_count
+      - resource_usage
+      - service_health
+    alerts:
+      - name: deployment_failure
+        condition: error_count > 0
+        severity: warning
+      - name: high_resource_usage
+        condition: cpu_usage > 90%
+        severity: info
+
+  backup:
+    enabled: true
+    schedule: "0 0 * * 0"  # Weekly on Sunday
+    retention: 3d
+    storage:
+      type: s3
+      bucket: automation-backups
+      path: development
+
+  rollback:
+    enabled: true
+    automatic: false
+    triggers:
+      - deployment_failure
+      - health_check_failure
+    retention: 2  # Number of versions to keep
+
+  validation:
+    enabled: true
+    checks:
+      - resource_availability
+      - network_connectivity
+      - service_health
+    timeout: 2m
+
+  logging:
+    level: debug
+    format: json
+    output:
+      - stdout
+      - file
+    retention: 3d
+    storage:
+      type: s3
+      bucket: automation-logs
+      path: development 
