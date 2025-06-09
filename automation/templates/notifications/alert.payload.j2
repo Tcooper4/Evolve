@@ -1,0 +1,31 @@
+{
+    "alert": {
+        "name": "{{ alert_name }}",
+        "severity": "{{ severity|upper }}",
+        "timestamp": "{{ timestamp|format_datetime }}",
+        "source": "{{ source }}",
+        "description": "{{ description }}"
+    },
+    {% if metrics %}
+    "metrics": [
+        {% for metric in metrics %}
+        {
+            "name": "{{ metric.name }}",
+            "value": {{ metric.value|format_number(2) }},
+            "unit": "{{ metric.unit }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    {% endif %}
+    {% if actions %}
+    "actions": [
+        {% for action in actions %}
+        "{{ action }}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ],
+    {% endif %}
+    "links": {
+        "dashboard": "{{ dashboard_url }}",
+        "alert": "{{ alert_url }}"
+    }
+} 

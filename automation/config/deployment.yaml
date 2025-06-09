@@ -1,0 +1,179 @@
+# Deployment Configuration
+
+# Service configurations
+services:
+  api:
+    name: automation-api
+    registry: ${DOCKER_REGISTRY}
+    dockerfile_path: ./api
+    replicas: 2
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - LOG_LEVEL=INFO
+    networks:
+      - automation-network
+    volumes:
+      - type: volume
+        source: api-logs
+        target: /app/logs
+    ports:
+      - target: 8000
+        published: 8000
+        protocol: tcp
+        mode: host
+
+  worker:
+    name: automation-worker
+    registry: ${DOCKER_REGISTRY}
+    dockerfile_path: ./worker
+    replicas: 3
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
+      - LOG_LEVEL=INFO
+    networks:
+      - automation-network
+    volumes:
+      - type: volume
+        source: worker-logs
+        target: /app/logs
+
+  scheduler:
+    name: automation-scheduler
+    registry: ${DOCKER_REGISTRY}
+    dockerfile_path: ./scheduler
+    replicas: 1
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - LOG_LEVEL=INFO
+    networks:
+      - automation-network
+    volumes:
+      - type: volume
+        source: scheduler-logs
+        target: /app/logs
+
+  web:
+    name: automation-web
+    registry: ${DOCKER_REGISTRY}
+    dockerfile_path: ./web
+    replicas: 2
+    environment:
+      - API_URL=${API_URL}
+      - LOG_LEVEL=INFO
+    networks:
+      - automation-network
+    volumes:
+      - type: volume
+        source: web-logs
+        target: /app/logs
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+
+# Health check configurations
+health_checks:
+  api:
+    endpoint: http://localhost:8000/health
+    max_retries: 3
+    retry_delay: 10
+    timeout: 5
+
+  worker:
+    endpoint: http://localhost:8000/worker/health
+    max_retries: 3
+    retry_delay: 10
+    timeout: 5
+
+  scheduler:
+    endpoint: http://localhost:8000/scheduler/health
+    max_retries: 3
+    retry_delay: 10
+    timeout: 5
+
+  web:
+    endpoint: http://localhost/health
+    max_retries: 3
+    retry_delay: 10
+    timeout: 5
+
+# Rollback configuration
+rollback:
+  enabled: true
+  max_history: 5
+  auto_rollback: true
+  rollback_timeout: 300  # 5 minutes
+
+# Network configuration
+networks:
+  automation-network:
+    driver: overlay
+    attachable: true
+    driver_opts:
+      encrypted: "true"
+
+# Volume configurations
+volumes:
+  api-logs:
+    driver: local
+  worker-logs:
+    driver: local
+  scheduler-logs:
+    driver: local
+  web-logs:
+    driver: local
+
+# Resource limits
+resources:
+  api:
+    limits:
+      cpus: '1'
+      memory: 1G
+    reservations:
+      cpus: '0.5'
+      memory: 512M
+
+  worker:
+    limits:
+      cpus: '2'
+      memory: 2G
+    reservations:
+      cpus: '1'
+      memory: 1G
+
+  scheduler:
+    limits:
+      cpus: '0.5'
+      memory: 512M
+    reservations:
+      cpus: '0.2'
+      memory: 256M
+
+  web:
+    limits:
+      cpus: '1'
+      memory: 1G
+    reservations:
+      cpus: '0.5'
+      memory: 512M
+
+# Update configuration
+update:
+  order: start-first
+  failure_action: rollback
+  monitor: 60s
+  max_failure_ratio: 0.2
+  delay: 10s
+
+# Restart policy
+restart:
+  condition: on-failure
+  delay: 5s
+  max_attempts: 3
+  window: 120s 

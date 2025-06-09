@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }}</title>
+    <style>
+        :root {
+            {% for color_name, color_value in theme.colors.items() %}
+            --color-{{ color_name }}: {{ color_value }};
+            {% endfor %}
+            
+            {% for prop_name, prop_value in theme.typography.items() %}
+            --{{ prop_name }}: {{ prop_value }};
+            {% endfor %}
+            
+            {% for prop_name, prop_value in theme.spacing.items() %}
+            --{{ prop_name }}: {{ prop_value }};
+            {% endfor %}
+        }
+        
+        body {
+            font-family: var(--font_family);
+            font-size: var(--font_size);
+            line-height: var(--line_height);
+            margin: 0;
+            padding: 0;
+            background-color: var(--color-light);
+            color: var(--color-dark);
+        }
+        
+        .page-container {
+            padding: var(--container_padding);
+        }
+        
+        .page-title {
+            font-family: var(--heading_font);
+            color: var(--color-primary);
+            margin-bottom: var(--component_margin);
+        }
+        
+        {% if page.layout.type == 'grid' %}
+        .page-content {
+            display: grid;
+            grid-template-columns: repeat({{ page.layout.columns }}, 1fr);
+            gap: {{ page.layout.gap }};
+            padding: {{ page.layout.padding }};
+        }
+        {% elif page.layout.type == 'stack' %}
+        .page-content {
+            display: flex;
+            flex-direction: {{ page.layout.direction }};
+            gap: {{ page.layout.gap }};
+            padding: {{ page.layout.padding }};
+        }
+        {% endif %}
+        
+        .component {
+            margin-bottom: var(--component_margin);
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: var(--container_padding);
+        }
+        
+        @media (max-width: {{ theme.breakpoints.sm }}) {
+            .page-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <h1 class="page-title">{{ page.title }}</h1>
+        <div class="page-content">
+            {% for component in page.components %}
+            <div class="component" id="{{ component.id }}">
+                <!-- Component content will be rendered here -->
+                {{ component.properties.content|safe if component.properties.content else '' }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <script>
+        // Component event handlers
+        {% for component in page.components %}
+        {% for event in component.events %}
+        document.getElementById('{{ component.id }}').addEventListener('{{ event.type }}', function(e) {
+            {{ event.handler|safe }}
+        });
+        {% endfor %}
+        {% endfor %}
+        
+        // Component state management
+        const componentStates = {
+            {% for component in page.components %}
+            '{{ component.id }}': {{ component.state|tojson }},
+            {% endfor %}
+        };
+        
+        function updateComponentState(componentId, newState) {
+            if (componentStates[componentId]) {
+                componentStates[componentId] = { ...componentStates[componentId], ...newState };
+                // Trigger re-render or update UI as needed
+            }
+        }
+    </script>
+</body>
+</html> 
