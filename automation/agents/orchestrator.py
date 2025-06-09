@@ -17,6 +17,8 @@ from .error_handler import ErrorHandler
 from .monitor import SystemMonitor
 from .documentation_manager import DocumentationManager
 from .deployment_manager import DeploymentManager
+from automation.web.websocket import WebSocketManager
+from automation.notifications.notification_manager import NotificationManager
 
 # Configure logging
 logging.basicConfig(
@@ -37,7 +39,7 @@ class Task(BaseModel):
     metadata: Dict[str, Any] = {}
 
 class DevelopmentOrchestrator:
-    def __init__(self, config_path: str = "automation/config/config.json"):
+    def __init__(self, config_path: str = "automation/config/config.json", notification_manager: NotificationManager):
         """Initialize the development orchestrator with enhanced features."""
         self.config_path = config_path
         self.config = self._load_config()
@@ -60,6 +62,8 @@ class DevelopmentOrchestrator:
         
         # Initialize FastAPI for microservices
         self.app = FastAPI(title="Development Orchestrator API")
+        self.notification_manager = notification_manager
+        self.websocket_manager = WebSocketManager(self.notification_manager)
         self._setup_routes()
         
         # Load environment variables
@@ -79,39 +83,23 @@ class DevelopmentOrchestrator:
         @self.app.get("/tasks/{task_id}")
         async def get_task(task_id: str):
             return self.get_task_status(task_id)
-        
-        @self.app.websocket("/ws")
-        async def websocket_endpoint(websocket: WebSocket):
-            await websocket.accept()
-            while True:
-                try:
-                    data = await websocket.receive_text()
-                    # Handle real-time updates
-                    await self._handle_websocket_message(data, websocket)
-                except Exception as e:
-                    logger.error(f"WebSocket error: {str(e)}")
-                    break
 
-    async def _handle_websocket_message(self, message: str, websocket: WebSocket):
-        """Handle real-time WebSocket messages."""
-        try:
-            data = json.loads(message)
-            if data["type"] == "task_update":
-                await self._broadcast_task_update(data["task_id"])
-            elif data["type"] == "system_health":
-                await self._broadcast_system_health()
-        except Exception as e:
-            logger.error(f"Error handling WebSocket message: {str(e)}")
-
-    async def _broadcast_task_update(self, task_id: str):
+    async def broadcast_task_update(self, task_id: str):
         """Broadcast task updates to all connected clients."""
-        # Implementation for broadcasting task updates
-        pass
+        task_status = self.get_task_status(task_id)
+        await self.websocket_manager.broadcast({
+            "type": "task_update",
+            "task_id": task_id,
+            "status": task_status
+        })
 
-    async def _broadcast_system_health(self):
+    async def broadcast_system_health(self):
         """Broadcast system health updates to all connected clients."""
-        # Implementation for broadcasting system health
-        pass
+        health_status = self.get_system_health()
+        await self.websocket_manager.broadcast({
+            "type": "system_health",
+            "status": health_status
+        })
 
     def _load_config(self) -> Dict:
         """Load configuration from JSON file with enhanced settings."""
