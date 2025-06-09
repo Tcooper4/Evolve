@@ -1,0 +1,36 @@
+[
+    {
+        "color": "{% if severity == 'critical' %}#FF0000{% elif severity == 'warning' %}#FFA500{% else %}#00FF00{% endif %}",
+        "blocks": [
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Alert Details*"
+                }
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "*Severity:*\n{{ severity|upper }}"
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": "*Source:*\n{{ source }}"
+                    }
+                ]
+            }
+            {% if metrics %}
+            ,{
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Metrics:*\n{% for metric in metrics %}• {{ metric.name }}: `{{ metric.value|format_number(2) }} {{ metric.unit }}`\n{% endfor %}"
+                }
+            }
+            {% endif %}
+        ]
+    }
+] 

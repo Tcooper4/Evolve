@@ -1,0 +1,21 @@
+🚨 *{{ alert_name }}* - {{ severity|upper }}
+_{{ description|truncate(200) }}_
+
+*Source:* {{ source }}
+*Time:* {{ timestamp|format_datetime }}
+
+{% if metrics %}
+*Metrics:*
+{% for metric in metrics %}
+• {{ metric.name }}: `{{ metric.value|format_number(2) }} {{ metric.unit }}`
+{% endfor %}
+{% endif %}
+
+{% if actions %}
+*Recommended Actions:*
+{% for action in actions %}
+{{ loop.index }}. {{ action }}
+{% endfor %}
+{% endif %}
+
+<{{ dashboard_url }}|View Dashboard> | <{{ alert_url }}|View Alert Details> 
