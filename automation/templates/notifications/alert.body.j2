@@ -1,0 +1,25 @@
+Alert Details:
+---------------
+Name: {{ alert_name }}
+Severity: {{ severity|upper }}
+Timestamp: {{ timestamp|format_datetime }}
+Source: {{ source }}
+Description: {{ description }}
+
+{% if metrics %}
+Metrics:
+--------
+{% for metric in metrics %}
+- {{ metric.name }}: {{ metric.value|format_number(2) }} {{ metric.unit }}
+{% endfor %}
+{% endif %}
+
+{% if actions %}
+Recommended Actions:
+------------------
+{% for action in actions %}
+{{ loop.index }}. {{ action }}
+{% endfor %}
+{% endif %}
+
+For more details, please check the dashboard at: {{ dashboard_url }} 

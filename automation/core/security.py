@@ -9,13 +9,15 @@ import os
 import jwt
 import time
 import logging
+import secrets
 from typing import Optional, Dict, Any, List
 from functools import wraps
 from datetime import datetime, timedelta
 import redis
-from fastapi import HTTPException, Security, Depends
+from fastapi import HTTPException, Security, Depends, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,12 +30,48 @@ class SecurityConfig:
     JWT_EXPIRATION = 3600  # 1 hour
     RATE_LIMIT_WINDOW = 3600  # 1 hour
     RATE_LIMIT_MAX_REQUESTS = 100
+    CSRF_TOKEN_HEADER = "X-CSRF-Token"
+    CSRF_TOKEN_COOKIE = "csrf_token"
+    CSRF_TOKEN_EXPIRY = 3600  # 1 hour
 
 class TokenData(BaseModel):
     """Token data model."""
     user_id: str
     role: str
     permissions: List[str]
+
+class InputValidator:
+    """Input validation utilities."""
+    
+    @staticmethod
+    def sanitize_string(value: str) -> str:
+        """Sanitize string input."""
+        # Remove potentially dangerous characters
+        value = re.sub(r'[<>]', '', value)
+        # Remove control characters
+        value = ''.join(char for char in value if ord(char) >= 32)
+        return value.strip()
+    
+    @staticmethod
+    def validate_email(email: str) -> bool:
+        """Validate email format."""
+        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        return bool(re.match(pattern, email))
+    
+    @staticmethod
+    def validate_password(password: str) -> bool:
+        """Validate password strength."""
+        if len(password) < 8:
+            return False
+        if not re.search(r'[A-Z]', password):
+            return False
+        if not re.search(r'[a-z]', password):
+            return False
+        if not re.search(r'\d', password):
+            return False
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            return False
+        return True
 
 class SecurityManager:
     def __init__(self):
@@ -45,6 +83,7 @@ class SecurityManager:
             ssl=os.getenv("REDIS_SSL", "true").lower() == "true"
         )
         self.security = HTTPBearer()
+        self.validator = InputValidator()
     
     def create_access_token(self, user_id: str, role: str, permissions: List[str]) -> str:
         """Create a new JWT access token."""
@@ -91,6 +130,45 @@ class SecurityManager:
         """Check if a user has the required permission."""
         return required_permission in user_permissions
     
+    def generate_csrf_token(self) -> str:
+        """Generate a new CSRF token."""
+        return secrets.token_urlsafe(32)
+    
+    def validate_csrf_token(self, request: Request, response: Response) -> bool:
+        """Validate CSRF token from request."""
+        token = request.headers.get(SecurityConfig.CSRF_TOKEN_HEADER)
+        cookie_token = request.cookies.get(SecurityConfig.CSRF_TOKEN_COOKIE)
+        
+        if not token or not cookie_token:
+            return False
+        
+        if token != cookie_token:
+            return False
+        
+        # Refresh token
+        new_token = self.generate_csrf_token()
+        response.set_cookie(
+            SecurityConfig.CSRF_TOKEN_COOKIE,
+            new_token,
+            max_age=SecurityConfig.CSRF_TOKEN_EXPIRY,
+            httponly=True,
+            secure=True,
+            samesite='strict'
+        )
+        return True
+    
+    def set_csrf_token(self, response: Response) -> None:
+        """Set CSRF token in response."""
+        token = self.generate_csrf_token()
+        response.set_cookie(
+            SecurityConfig.CSRF_TOKEN_COOKIE,
+            token,
+            max_age=SecurityConfig.CSRF_TOKEN_EXPIRY,
+            httponly=True,
+            secure=True,
+            samesite='strict'
+        )
+    
     async def get_current_user(self, credentials: HTTPAuthorizationCredentials = Security(HTTPBearer())) -> TokenData:
         """Get the current user from the JWT token."""
         return self.verify_token(credentials.credentials)
@@ -127,6 +205,30 @@ class SecurityManager:
                 return await func(*args, current_user=current_user, **kwargs)
             return wrapper
         return decorator
+    
+    def validate_input(self):
+        """Decorator to validate and sanitize input."""
+        def decorator(func):
+            @wraps(func)
+            async def wrapper(*args, **kwargs):
+                # Sanitize string inputs
+                for key, value in kwargs.items():
+                    if isinstance(value, str):
+                        kwargs[key] = self.validator.sanitize_string(value)
+                return await func(*args, **kwargs)
+            return wrapper
+        return decorator
+    
+    def require_csrf(self):
+        """Decorator to require CSRF token validation."""
+        def decorator(func):
+            @wraps(func)
+            async def wrapper(request: Request, response: Response, *args, **kwargs):
+                if not self.validate_csrf_token(request, response):
+                    raise HTTPException(status_code=403, detail="Invalid CSRF token")
+                return await func(request, response, *args, **kwargs)
+            return wrapper
+        return decorator
 
 # Create a global security manager instance
 security_manager = SecurityManager()
@@ -135,4 +237,6 @@ security_manager = SecurityManager()
 require_permission = security_manager.require_permission
 require_role = security_manager.require_role
 rate_limit = security_manager.rate_limit
+validate_input = security_manager.validate_input
+require_csrf = security_manager.require_csrf
 get_current_user = security_manager.get_current_user 

@@ -75,4 +75,31 @@ tmp/
 temp/
 
 # Project specific
-trading_dashboard.egg-info/ 
+trading_dashboard.egg-info/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# SSL Certificates and Keys
+certs/
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.p12
+*.pfx
+
+# Configuration files with sensitive data
+config/*.local.yaml
+config/*.local.json
+config/*.local.py
+config/secrets/
+config/credentials/
+
+# Test configuration with sensitive data
+tests/config/
+tests/secrets/
+tests/credentials/ 
