@@ -1,166 +1,157 @@
-# Automation System
+# Evolve Clean
 
-A comprehensive automation system for managing and executing tasks, with real-time monitoring and a modern web interface.
+## Overview
+Evolve Clean is a comprehensive automation and trading dashboard project designed to streamline and enhance trading operations through automation, monitoring, and analytics. This project integrates various components including automation services, a web dashboard, monitoring systems, and extensive documentation.
 
-## Features
+## Project Structure
 
-- **Task Management**
-  - Create, update, and delete tasks
-  - Task dependency management
-  - Task execution and monitoring
-  - Task metrics and history
+### Root Directory
+- **.gitignore**: Configuration file to exclude sensitive and unnecessary files from version control.
+- **.env**: Environment variables file (not tracked in git).
+- **docker-compose.yml**: Docker Compose configuration for orchestrating services.
+- **Dockerfile**: Base Dockerfile for building the application.
+- **config.example.json**: Example configuration file for the application.
+- **requirements.txt**: Python dependencies for the project.
+- **setup.py**: Setup script for the project.
+- **issues.md**: Document tracking project issues and tasks.
 
-- **Agent System**
-  - Distributed task execution
-  - Agent health monitoring
-  - Automatic task distribution
-  - Agent metrics collection
+### Automation
+The `automation` directory contains the core automation logic and services.
 
-- **Monitoring Dashboard**
-  - Real-time system metrics
-  - Task status visualization
-  - Resource usage tracking
-  - Performance analytics
+#### Core Components
+- **core/**: Contains core automation logic including security, integration testing, logging, UI handling, performance handling, RBAC, service management, template engine, step handlers, workflow engine, task manager, orchestrator, and task handlers.
+- **services/**: Contains various automation services including task management, health checks, metrics, security, logging, configuration, CLI, API, scheduler, notification, monitoring, workflows, tasks, and core services.
+- **agents/**: Contains agents for documentation, analytics, versioning, management, orchestration, data collection, and more.
+- **models/**: Contains automation models.
+- **notifications/**: Contains notification services, cleanup, and handlers for webhooks, Slack, and email.
+- **web/**: Contains web application components including dashboard, app, routes, templates, and static files.
+- **api/**: Contains API endpoints for metrics and tasks.
+- **monitoring/**: Contains alert management and metrics collection.
+- **config/**: Contains deployment, test, notification, and backup configurations.
+- **scripts/**: Contains deployment, monitoring setup, service deployment, secret management, backup system, environment setup, and pipeline scripts.
+- **docs/**: Contains comprehensive documentation including contributing guidelines, versioning, support, changelog, troubleshooting, testing, deployment, security, performance, UI, integration testing, notification, data processing, logging, monitoring, RBAC, service management, and API documentation.
+- **templates/**: Contains templates for notifications, API, system, code, HTML export, dashboard, webhook, Slack, and email.
+- **tests/**: Contains integration, performance, chaos, stress, and various test suites for automation services, notifications, web app, metrics API, task API, alert manager, agents, orchestrator, data processing, model training, and documentation.
+- **grafana/**: Contains Grafana dashboards, datasources, and provisioning configurations.
+- **prometheus/**: Contains Prometheus configuration and alert rules.
 
-- **Web Interface**
-  - Modern, responsive design
-  - Real-time updates
-  - Interactive task management
-  - System monitoring
+### Dashboard
+The `dashboard` directory contains the web dashboard components.
 
-## Architecture
+- **App.js**: Main application component.
+- **index.js**: Entry point for the dashboard.
+- **pages/**: Contains various pages for the dashboard.
+- **components/**: Contains reusable components for the dashboard.
+- **utils/**: Contains utility functions for the dashboard.
+- **logs/**: Contains log files for the dashboard.
 
-The system is built with a modular architecture:
+### Scripts
+The `scripts` directory contains deployment scripts for Kubernetes and local environments.
 
-- **Core Components**
-  - Orchestrator: Manages task execution and coordination
-  - Task Handlers: Process different types of tasks
-  - Agent System: Handles distributed execution
-  - Metrics Collector: Gathers system and task metrics
+- **deploy_kubernetes.sh**: Script for deploying to Kubernetes.
+- **deploy_local.sh**: Script for deploying locally.
 
-- **Web Components**
-  - Flask-based API server
-  - WebSocket support for real-time updates
-  - Modern frontend with Bootstrap and Chart.js
-  - Responsive monitoring dashboard
+### Kubernetes
+The `kubernetes` directory contains Kubernetes deployment configurations.
 
-## Installation
+- **deployment.yaml**: Kubernetes deployment configuration.
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/automation-system.git
-   cd automation-system
-   ```
+### Rules
+The `rules` directory contains alert rules.
 
-2. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+- **alerts.yml**: Alert rules configuration.
 
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Alerts
+The `alerts` directory contains alert management components.
 
-4. Configure the system:
-   - Copy `config.example.json` to `config.json`
-   - Update the configuration with your settings
+- **README.md**: Documentation for alerts.
+- **test_alert_manager.py**: Tests for the alert manager.
+- **alert_manager.py**: Alert management logic.
 
-## Usage
+### Config
+The `config` directory contains configuration files.
 
-1. Start the system:
-   ```bash
-   python -m automation.web.app
-   ```
+- **config.json**: Main configuration file.
 
-2. Access the web interface:
-   - Task Management: http://localhost:5000
-   - Monitoring Dashboard: http://localhost:5000/dashboard
+### Tests
+The `tests` directory contains various test suites.
 
-3. API Endpoints:
-   - Tasks: `/api/tasks`
-   - Metrics: `/api/metrics`
-   - Agents: `/api/agents`
+- **benchmark/**: Contains benchmark tests.
+- **integration/**: Contains integration tests.
+- **unit/**: Contains unit tests.
+- **implementation/**: Contains implementation tests.
 
-## Development
+### Trading
+The `trading` directory contains trading-related components.
 
-### Project Structure
-```
-automation/
-├── api/            # API endpoints
-├── core/           # Core system components
-├── agents/         # Agent implementations
-├── monitoring/     # Monitoring components
-├── web/           # Web interface
-│   ├── templates/ # HTML templates
-│   └── static/    # Static assets
-└── tests/         # Test suite
-```
+- **models/**: Contains trading models.
+- **web/**: Contains web components for trading.
+- **visualization/**: Contains visualization components for trading.
+- **risk/**: Contains risk management components.
+- **portfolio/**: Contains portfolio management components.
+- **utils/**: Contains utility functions for trading.
+- **nlp/**: Contains natural language processing components for trading.
+- **execution/**: Contains execution components for trading.
+- **evaluation/**: Contains evaluation components for trading.
+- **data/**: Contains data components for trading.
+- **config/**: Contains configuration for trading.
+- **backtesting/**: Contains backtesting components for trading.
+- **strategies/**: Contains trading strategies.
+- **optimizers/**: Contains optimization components for trading.
+- **llm/**: Contains language model components for trading.
+- **feature_engineering/**: Contains feature engineering components for trading.
+- **analysis/**: Contains analysis components for trading.
+- **agents/**: Contains agents for trading.
+- **admin/**: Contains admin components for trading.
+- **optimization/**: Contains optimization components for trading.
+- **visuals/**: Contains visual components for trading.
+- **cache/**: Contains cache components for trading.
+- **logs/**: Contains log files for trading.
 
-### Running Tests
-```bash
-pytest automation/tests/
-```
+### Mock Data
+The `mock_data` directory contains mock data for testing and development.
 
-### Code Style
-The project uses:
-- Black for code formatting
-- Flake8 for linting
-- MyPy for type checking
-- isort for import sorting
+- **portfolio/**: Contains mock portfolio data.
+- **market/**: Contains mock market data.
+- **integration/**: Contains mock integration data.
+- **implementation/**: Contains mock implementation data.
+- **backtest/**: Contains mock backtest data.
+- **alerts/**: Contains mock alert data.
+- **db/**: Contains mock database data.
+- **api/**: Contains mock API data.
+- **indicators/**: Contains mock indicator data.
+- **ml/**: Contains mock machine learning data.
 
-Run the style checks:
-```bash
-black automation/
-flake8 automation/
-mypy automation/
-isort automation/
-```
+### Models
+The `models` directory contains model files.
 
-## Configuration
+### Test Model Save
+The `test_model_save` directory contains saved model files.
 
-The system is configured through `config.json`:
+- **tcn_model.pt**: Saved TCN model.
 
-```json
-{
-  "redis": {
-    "host": "localhost",
-    "port": 6379,
-    "db": 0
-  },
-  "ray": {
-    "address": "auto",
-    "namespace": "automation"
-  },
-  "kubernetes": {
-    "in_cluster": false,
-    "namespace": "automation"
-  },
-  "logging": {
-    "level": "INFO",
-    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    "file": "automation/logs/orchestrator.log"
-  }
-}
-```
+### Trading Dashboard Egg Info
+The `trading_dashboard.egg-info` directory contains egg info for the trading dashboard.
+
+- **SOURCES.txt**: Source files for the trading dashboard.
+- **top_level.txt**: Top-level modules for the trading dashboard.
+- **requires.txt**: Required dependencies for the trading dashboard.
+- **dependency_links.txt**: Dependency links for the trading dashboard.
+- **PKG-INFO**: Package information for the trading dashboard.
+
+## Getting Started
+To get started with Evolve Clean, follow these steps:
+
+1. **Clone the Repository**: Clone the repository to your local machine.
+2. **Install Dependencies**: Install the required dependencies using `pip install -r requirements.txt`.
+3. **Set Up Environment Variables**: Copy `config.example.json` to `config.json` and update the environment variables in `.env`.
+4. **Run the Application**: Use Docker Compose to run the application with `docker-compose up`.
 
 ## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+Please read the [contributing guidelines](automation/docs/contributing.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## License
-
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
-
-- Flask for the web framework
-- Redis for task queue management
-- Ray for distributed computing
-- Chart.js for data visualization
-- Bootstrap for the UI framework
+- Thanks to all contributors who have helped in the development of this project.

@@ -57,10 +57,11 @@ class DeploymentConfig:
 class DeploymentManager:
     """Manages the deployment process."""
     
-    def __init__(self, config: DeploymentConfig):
+    def __init__(self, config: DeploymentConfig, dry_run: bool = False):
         self.config = config
         self.deployment_history = []
         self.current_deployment = None
+        self.dry_run = dry_run
     
     def deploy_service(self, service_name: str, version: str) -> bool:
         """Deploy a single service."""
@@ -69,6 +70,11 @@ class DeploymentManager:
             if not service_config:
                 logger.error(f"Service {service_name} not found in configuration")
                 return False
+            
+            if self.dry_run:
+                logger.info(f"[DRY RUN] Would deploy service {service_name} version {version}")
+                logger.info(f"[DRY RUN] Service configuration: {json.dumps(service_config, indent=2)}")
+                return True
             
             # Build and push Docker image
             if not self._build_and_push_image(service_name, version):
@@ -97,6 +103,11 @@ class DeploymentManager:
             dockerfile_path = service_config.get('dockerfile_path')
             registry = service_config.get('registry')
             
+            if self.dry_run:
+                logger.info(f"[DRY RUN] Would build and push image {registry}/{service_name}:{version}")
+                logger.info(f"[DRY RUN] Using Dockerfile at {dockerfile_path}")
+                return True
+            
             # Build image
             image_name = f"{registry}/{service_name}:{version}"
             logger.info(f"Building image {image_name}")
@@ -123,6 +134,12 @@ class DeploymentManager:
             service_config = self.config.get_service_config(service_name)
             registry = service_config.get('registry')
             image_name = f"{registry}/{service_name}:{version}"
+            
+            if self.dry_run:
+                logger.info(f"[DRY RUN] Would deploy service {service_name}")
+                logger.info(f"[DRY RUN] Using image {image_name}")
+                logger.info(f"[DRY RUN] Service configuration: {json.dumps(service_config, indent=2)}")
+                return True
             
             # Create or update service
             service_spec = {
@@ -170,6 +187,11 @@ class DeploymentManager:
                 logger.warning(f"No health check configured for {service_name}")
                 return True
             
+            if self.dry_run:
+                logger.info(f"[DRY RUN] Would verify deployment for {service_name}")
+                logger.info(f"[DRY RUN] Health check configuration: {json.dumps(health_check, indent=2)}")
+                return True
+            
             endpoint = health_check.get('endpoint')
             max_retries = health_check.get('max_retries', 3)
             retry_delay = health_check.get('retry_delay', 10)
@@ -207,6 +229,10 @@ class DeploymentManager:
     def rollback(self, service_name: str) -> bool:
         """Rollback a service to its previous version."""
         try:
+            if self.dry_run:
+                logger.info(f"[DRY RUN] Would rollback service {service_name}")
+                return True
+                
             # Find previous deployment
             previous_deployment = None
             for deployment in reversed(self.deployment_history):
@@ -248,23 +274,22 @@ def main():
     parser.add_argument('--service', required=True, help='Service to deploy')
     parser.add_argument('--version', required=True, help='Version to deploy')
     parser.add_argument('--rollback', action='store_true', help='Rollback service')
+    parser.add_argument('--dry-run', action='store_true', help='Perform a dry run without making changes')
     
     args = parser.parse_args()
     
-    # Check deployment configuration
     if not check_deployment_config(args.config):
         sys.exit(1)
     
-    # Initialize deployment
     config = DeploymentConfig(args.config)
-    manager = DeploymentManager(config)
+    manager = DeploymentManager(config, dry_run=args.dry_run)
     
     if args.rollback:
-        success = manager.rollback(args.service)
+        if not manager.rollback(args.service):
+            sys.exit(1)
     else:
-        success = manager.deploy_service(args.service, args.version)
-    
-    sys.exit(0 if success else 1)
+        if not manager.deploy_service(args.service, args.version):
+            sys.exit(1)
 
 if __name__ == '__main__':
     main() 
