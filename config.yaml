@@ -1,0 +1,204 @@
+# Trading System Configuration
+
+# Data settings
+data:
+  source: "yahoo"  # Data source (yahoo, alpha_vantage, etc.)
+  symbols:
+    - "AAPL"
+    - "MSFT"
+    - "GOOGL"
+    - "AMZN"
+    - "META"
+  timeframe: "1d"  # Data timeframe
+  start_date: "2020-01-01"
+  end_date: "2023-12-31"
+  features:
+    - "open"
+    - "high"
+    - "low"
+    - "close"
+    - "volume"
+    - "adj_close"
+
+# Feature engineering settings
+feature_engineering:
+  technical_indicators:
+    - name: "SMA"
+      windows: [20, 50, 200]
+    - name: "EMA"
+      windows: [12, 26]
+    - name: "RSI"
+      window: 14
+    - name: "MACD"
+      fast_period: 12
+      slow_period: 26
+      signal_period: 9
+    - name: "Bollinger Bands"
+      window: 20
+      num_std: 2
+  statistical_features:
+    - name: "returns"
+      method: "log"
+    - name: "volatility"
+      window: 252
+    - name: "skewness"
+      window: 252
+    - name: "kurtosis"
+      window: 252
+  market_microstructure:
+    - name: "bid_ask_spread"
+      window: 20
+    - name: "order_flow_imbalance"
+      window: 20
+    - name: "volume_profile"
+      num_bins: 10
+  time_features:
+    - name: "hour"
+    - name: "day_of_week"
+    - name: "month"
+    - name: "is_month_end"
+    - name: "is_quarter_end"
+    - name: "is_year_end"
+
+# Model settings
+model:
+  type: "dqn"  # Model type (dqn, lstm, transformer)
+  state_dim: 50  # State dimension
+  action_dim: 3  # Action dimension (buy, sell, hold)
+  hidden_size: 128
+  learning_rate: 0.001
+  batch_size: 64
+  gamma: 0.99
+  epsilon_start: 1.0
+  epsilon_end: 0.01
+  epsilon_decay: 0.995
+  memory_size: 10000
+  target_update: 10
+  gradient_clip: 1.0
+  dropout: 0.2
+  num_layers: 2
+  num_heads: 4  # For transformer
+  warmup_steps: 1000
+  max_epochs: 1000
+  early_stopping:
+    patience: 10
+    min_delta: 0.001
+
+# Strategy settings
+strategy:
+  type: "ensemble"  # Strategy type (single, ensemble)
+  strategies:
+    - name: "trend_following"
+      weight: 0.4
+    - name: "mean_reversion"
+      weight: 0.3
+    - name: "breakout"
+      weight: 0.3
+  position_sizing:
+    method: "kelly"  # Position sizing method (fixed, kelly, optimal)
+    max_position_size: 0.2  # Maximum position size as fraction of portfolio
+    risk_per_trade: 0.02  # Risk per trade as fraction of portfolio
+
+# Risk management settings
+risk:
+  position_limits:
+    max_position_size: 0.2
+    max_leverage: 2.0
+    max_correlation: 0.7
+  risk_limits:
+    max_drawdown: 0.2
+    max_volatility: 0.3
+    min_sharpe_ratio: 1.0
+    var_confidence: 0.95
+  portfolio_limits:
+    max_sector_exposure: 0.3
+    max_country_exposure: 0.4
+    min_diversification: 0.7
+
+# Portfolio management settings
+portfolio:
+  initial_cash: 100000
+  rebalance_frequency: "monthly"
+  rebalance_threshold: 0.1
+  transaction_cost: 0.001
+  slippage: 0.0005
+  tax_rate: 0.15
+  dividend_reinvestment: true
+
+# Optimization settings
+optimization:
+  method: "bayesian"  # Optimization method (grid, random, bayesian)
+  objective: "sharpe_ratio"  # Optimization objective
+  constraints:
+    - "max_drawdown < 0.2"
+    - "volatility < 0.3"
+    - "sharpe_ratio > 1.0"
+  parameters:
+    - name: "lookback_window"
+      min: 10
+      max: 200
+    - name: "entry_threshold"
+      min: 0.01
+      max: 0.1
+    - name: "exit_threshold"
+      min: 0.01
+      max: 0.1
+    - name: "stop_loss"
+      min: 0.01
+      max: 0.1
+    - name: "take_profit"
+      min: 0.01
+      max: 0.2
+
+# Backtesting settings
+backtesting:
+  start_date: "2020-01-01"
+  end_date: "2023-12-31"
+  initial_cash: 100000
+  transaction_cost: 0.001
+  slippage: 0.0005
+  benchmark: "SPY"
+  metrics:
+    - "total_return"
+    - "annualized_return"
+    - "volatility"
+    - "sharpe_ratio"
+    - "sortino_ratio"
+    - "max_drawdown"
+    - "win_rate"
+    - "profit_factor"
+    - "calmar_ratio"
+    - "information_ratio"
+
+# Logging settings
+logging:
+  level: "INFO"
+  log_dir: "logs"
+  log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  log_rotation: "daily"
+  max_log_size: 10485760  # 10MB
+  backup_count: 10
+
+# API settings
+api:
+  yahoo:
+    retry_count: 3
+    timeout: 30
+  alpha_vantage:
+    api_key: ""  # Add your API key here
+    retry_count: 3
+    timeout: 30
+  polygon:
+    api_key: ""  # Add your API key here
+    retry_count: 3
+    timeout: 30
+
+# System settings
+system:
+  num_workers: 4
+  use_gpu: true
+  seed: 42
+  cache_dir: "cache"
+  results_dir: "results"
+  checkpoint_dir: "checkpoints"
+  tensorboard_dir: "tensorboard" 

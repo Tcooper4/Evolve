@@ -1,0 +1,123 @@
+# Application Configuration
+
+# Server Settings
+server:
+  host: "0.0.0.0"
+  port: 8501
+  debug: false
+  workers: 4
+  timeout: 60
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/app.log"
+  max_size: 10485760  # 10MB
+  backup_count: 5
+
+# Database Settings
+database:
+  redis:
+    host: "localhost"
+    port: 6379
+    db: 0
+    password: null
+    ssl: false
+
+# Market Data Settings
+market_data:
+  default_timeframe: "1d"
+  default_assets: ["BTC", "ETH", "SOL"]
+  cache_ttl: 300  # 5 minutes
+  max_retries: 3
+  retry_delay: 1
+
+# Model Settings
+models:
+  forecast:
+    horizon: 30  # days
+    confidence_interval: 0.95
+    min_training_samples: 1000
+    update_frequency: 3600  # 1 hour
+  technical:
+    indicators:
+      - name: "RSI"
+        period: 14
+      - name: "MACD"
+        fast_period: 12
+        slow_period: 26
+        signal_period: 9
+      - name: "BB"
+        period: 20
+        std_dev: 2
+
+# Strategy Settings
+strategies:
+  default:
+    position_size: 0.1
+    stop_loss: 0.02
+    take_profit: 0.04
+    max_positions: 5
+  optimization:
+    method: "bayesian"
+    n_trials: 100
+    cv_folds: 5
+
+# Risk Management
+risk:
+  max_drawdown: 0.2
+  max_leverage: 3
+  position_limits:
+    BTC: 0.3
+    ETH: 0.3
+    SOL: 0.2
+    default: 0.1
+  correlation_threshold: 0.7
+
+# NLP Settings
+nlp:
+  confidence_threshold: 0.7
+  max_tokens: 1000
+  temperature: 0.7
+  cache_ttl: 3600  # 1 hour
+  templates:
+    forecast: "trading/nlp/config/response_templates.json"
+    visualization: "trading/nlp/config/viz_settings.json"
+    entities: "trading/nlp/config/entity_patterns.json"
+    intents: "trading/nlp/config/intent_patterns.json"
+
+# API Settings
+api:
+  rate_limit: 100  # requests per minute
+  timeout: 30
+  max_retries: 3
+  cache_ttl: 300  # 5 minutes
+
+# Performance Monitoring
+monitoring:
+  metrics:
+    - name: "response_time"
+      threshold: 2.0  # seconds
+    - name: "memory_usage"
+      threshold: 1024  # MB
+    - name: "cpu_usage"
+      threshold: 80  # percent
+  alert:
+    email: "alerts@example.com"
+    slack: "https://hooks.slack.com/services/xxx/yyy/zzz"
+
+# Security Settings
+security:
+  ssl:
+    enabled: false
+    cert_file: null
+    key_file: null
+  cors:
+    allowed_origins: ["*"]
+    allowed_methods: ["GET", "POST"]
+    allowed_headers: ["*"]
+  rate_limiting:
+    enabled: true
+    window: 60  # seconds
+    max_requests: 100 

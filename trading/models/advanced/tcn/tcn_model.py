@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from typing import Dict, Any, Optional, List, Union
 import numpy as np
 import pandas as pd
-from ...base_model import BaseModel
+from trading.models.base_model import BaseModel
 
 class TemporalBlock(nn.Module):
     """Temporal block for TCN."""
