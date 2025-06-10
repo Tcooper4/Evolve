@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from typing import List, Dict, Any, Optional
-from ...base_model import BaseModel
+from trading.models.base_model import BaseModel
 import pandas as pd
 
 class EnsembleForecaster(BaseModel):
