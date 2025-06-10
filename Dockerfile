@@ -1,5 +1,5 @@
-# Use Python 3.11 slim image as base
-FROM python:3.11-slim
+# Use Python 3.10 slim image as base
+FROM python:3.10-slim
 
 # Set working directory
 WORKDIR /app
@@ -8,9 +8,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
+    software-properties-common \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker cache
+# Copy requirements file
 COPY requirements.txt .
 
 # Install Python dependencies
@@ -19,19 +21,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p automation/logs
+# Create non-root user
+RUN useradd -m -u 1000 appuser
+RUN chown -R appuser:appuser /app
+USER appuser
 
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-# Expose ports
-EXPOSE 5000 9090
+# Expose port for Streamlit
+EXPOSE 8501
 
-# Create non-root user
-RUN useradd -m appuser && chown -R appuser:appuser /app
-USER appuser
-
-# Start the application
-CMD ["python", "-m", "automation.web.app"] 
+# Run the application
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"] 

@@ -1,232 +1,412 @@
 import torch
 import torch.nn as nn
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, Union, List
-import numpy as np
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
 import pandas as pd
-from pathlib import Path
-import json
+import numpy as np
+from typing import Dict, List, Optional, Union, Any, Tuple
 import logging
+from datetime import datetime
+import json
+from pathlib import Path
+from abc import ABC, abstractmethod
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+import joblib
 
-class BaseModel(nn.Module, ABC):
-    """Base class for all forecasting models."""
+class TimeSeriesDataset(Dataset):
+    """Dataset for time series data."""
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize base model.
+    def __init__(self, data: pd.DataFrame, sequence_length: int, target_col: str,
+                 feature_cols: List[str], scaler: Optional[StandardScaler] = None):
+        """Initialize dataset.
+        
+        Args:
+            data: Input data
+            sequence_length: Length of input sequences
+            target_col: Name of target column
+            feature_cols: List of feature column names
+            scaler: Optional scaler for features
+        """
+        self.sequence_length = sequence_length
+        self.target_col = target_col
+        self.feature_cols = feature_cols
+        
+        # Scale features
+        if scaler is None:
+            self.scaler = StandardScaler()
+            self.features = self.scaler.fit_transform(data[feature_cols])
+        else:
+            self.scaler = scaler
+            self.features = self.scaler.transform(data[feature_cols])
+        
+        # Get targets
+        self.targets = data[target_col].values
+        
+        # Create sequences
+        self.sequences = []
+        self.sequence_targets = []
+        
+        for i in range(len(data) - sequence_length):
+            self.sequences.append(self.features[i:i + sequence_length])
+            self.sequence_targets.append(self.targets[i + sequence_length])
+    
+    def __len__(self) -> int:
+        return len(self.sequences)
+    
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        return (
+            torch.FloatTensor(self.sequences[idx]),
+            torch.FloatTensor([self.sequence_targets[idx]])
+        )
+
+class BaseModel(ABC):
+    """Base class for all ML models."""
+    
+    def __init__(self, config: Optional[Dict] = None):
+        """Initialize model.
         
         Args:
             config: Model configuration dictionary
         """
-        super().__init__()
         self.config = config or {}
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = None
-        self.optimizer = None
-        self.scheduler = None
-        self.history = []
-        self.best_loss = float('inf')
-        self.patience = self.config.get('patience', 5)
-        self.patience_counter = 0
-        self.early_stopping = self.config.get('early_stopping', True)
-        self._setup_logging()
-        
-    def _setup_logging(self):
-        """Setup logging configuration."""
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(logging.INFO)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
-            
-    @abstractmethod
-    def _setup_model(self) -> None:
-        """Setup the model architecture. Must be implemented by subclasses."""
-        raise NotImplementedError("Subclasses must implement _setup_model method")
         
+        # Create results directory
+        self.results_dir = Path("model_results")
+        self.results_dir.mkdir(exist_ok=True)
+        
+        # Initialize model components
+        self.model = None
+        self.optimizer = None
+        self.criterion = None
+        self.scaler = StandardScaler()
+        
+        # Training state
+        self.train_losses = []
+        self.val_losses = []
+        self.best_val_loss = float('inf')
+        self.best_model_state = None
+    
     @abstractmethod
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass of the model.
+    def build_model(self) -> nn.Module:
+        """Build the neural network model.
+        
+        Returns:
+            PyTorch model
+        """
+        pass
+    
+    def prepare_data(self, data: pd.DataFrame, target_col: str,
+                    feature_cols: List[str], sequence_length: int,
+                    test_size: float = 0.2, val_size: float = 0.1,
+                    batch_size: int = 32) -> Tuple[DataLoader, DataLoader, DataLoader]:
+        """Prepare data for training.
         
         Args:
-            x: Input tensor
+            data: Input data
+            target_col: Name of target column
+            feature_cols: List of feature column names
+            sequence_length: Length of input sequences
+            test_size: Proportion of data to use for testing
+            val_size: Proportion of training data to use for validation
+            batch_size: Batch size for training
             
         Returns:
-            Output tensor
+            Tuple of (train_loader, val_loader, test_loader)
         """
-        raise NotImplementedError("Subclasses must implement forward method")
+        # Split data
+        train_data, test_data = train_test_split(
+            data, test_size=test_size, shuffle=False
+        )
+        train_data, val_data = train_test_split(
+            train_data, test_size=val_size, shuffle=False
+        )
         
-    def fit(self, data: pd.DataFrame, epochs: int = 10, batch_size: int = 32) -> None:
+        # Create datasets
+        train_dataset = TimeSeriesDataset(
+            train_data, sequence_length, target_col, feature_cols, self.scaler
+        )
+        val_dataset = TimeSeriesDataset(
+            val_data, sequence_length, target_col, feature_cols, train_dataset.scaler
+        )
+        test_dataset = TimeSeriesDataset(
+            test_data, sequence_length, target_col, feature_cols, train_dataset.scaler
+        )
+        
+        # Create data loaders
+        train_loader = DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True
+        )
+        val_loader = DataLoader(
+            val_dataset, batch_size=batch_size, shuffle=False
+        )
+        test_loader = DataLoader(
+            test_dataset, batch_size=batch_size, shuffle=False
+        )
+        
+        return train_loader, val_loader, test_loader
+    
+    def train(self, train_loader: DataLoader, val_loader: DataLoader,
+              epochs: int = 100, patience: int = 10) -> Dict[str, List[float]]:
         """Train the model.
         
         Args:
-            data: Input data as pandas DataFrame
+            train_loader: Training data loader
+            val_loader: Validation data loader
             epochs: Number of training epochs
-            batch_size: Batch size for training
+            patience: Number of epochs to wait for improvement before early stopping
+            
+        Returns:
+            Dictionary of training and validation losses
         """
         if self.model is None:
-            raise ValueError("Model not initialized")
-            
-        self.model.train()
-        X, y = self._prepare_data(data, is_training=True)
+            self.model = self.build_model()
         
-        # Initialize optimizer if not already done
         if self.optimizer is None:
-            self.optimizer = torch.optim.Adam(self.model.parameters())
-            
-        # Initialize scheduler if enabled
-        if self.config.get('use_lr_scheduler', False) and self.scheduler is None:
-            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-                self.optimizer, mode='min', factor=0.5, patience=2
-            )
-            
+            self.optimizer = optim.Adam(self.model.parameters())
+        
+        if self.criterion is None:
+            self.criterion = nn.MSELoss()
+        
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model.to(device)
+        
         # Training loop
+        best_epoch = 0
         for epoch in range(epochs):
-            epoch_loss = 0
-            for i in range(0, len(X), batch_size):
-                batch_X = X[i:i + batch_size]
-                batch_y = y[i:i + batch_size]
+            # Training phase
+            self.model.train()
+            train_loss = 0.0
+            for batch_x, batch_y in train_loader:
+                batch_x, batch_y = batch_x.to(device), batch_y.to(device)
                 
-                # Forward pass
                 self.optimizer.zero_grad()
-                output = self.model(batch_X)
-                loss = nn.MSELoss()(output, batch_y)
-                
-                # Backward pass
+                outputs = self.model(batch_x)
+                loss = self.criterion(outputs, batch_y)
                 loss.backward()
                 self.optimizer.step()
                 
-                epoch_loss += loss.item()
-                
-            # Update learning rate if scheduler is enabled
-            if self.scheduler is not None:
-                self.scheduler.step(epoch_loss / (len(X) / batch_size))
-                
-            # Update history
-            self._update_history(epoch_loss / (len(X) / batch_size))
+                train_loss += loss.item()
             
-            # Early stopping check
-            if self.early_stopping:
-                if self._check_early_stopping(epoch_loss / (len(X) / batch_size)):
-                    break
-                    
-    def predict(self, data: pd.DataFrame) -> Dict[str, np.ndarray]:
-        """Make predictions.
+            train_loss /= len(train_loader)
+            self.train_losses.append(train_loss)
+            
+            # Validation phase
+            self.model.eval()
+            val_loss = 0.0
+            with torch.no_grad():
+                for batch_x, batch_y in val_loader:
+                    batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+                    outputs = self.model(batch_x)
+                    loss = self.criterion(outputs, batch_y)
+                    val_loss += loss.item()
+            
+            val_loss /= len(val_loader)
+            self.val_losses.append(val_loss)
+            
+            # Log progress
+            self.logger.info(
+                f"Epoch {epoch+1}/{epochs} - "
+                f"Train Loss: {train_loss:.4f} - "
+                f"Val Loss: {val_loss:.4f}"
+            )
+            
+            # Early stopping
+            if val_loss < self.best_val_loss:
+                self.best_val_loss = val_loss
+                self.best_model_state = self.model.state_dict().copy()
+                best_epoch = epoch
+            elif epoch - best_epoch >= patience:
+                self.logger.info(f"Early stopping at epoch {epoch+1}")
+                break
+        
+        # Restore best model
+        if self.best_model_state is not None:
+            self.model.load_state_dict(self.best_model_state)
+        
+        return {
+            'train_losses': self.train_losses,
+            'val_losses': self.val_losses
+        }
+    
+    def evaluate(self, test_loader: DataLoader) -> Dict[str, float]:
+        """Evaluate the model.
         
         Args:
-            data: Input data as pandas DataFrame
+            test_loader: Test data loader
             
         Returns:
-            Dictionary containing predictions
+            Dictionary of evaluation metrics
         """
         if self.model is None:
-            raise ValueError("Model not initialized")
-            
+            raise ValueError("Model not trained")
+        
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model.to(device)
         self.model.eval()
-        X, _ = self._prepare_data(data, is_training=False)
+        
+        predictions = []
+        targets = []
         
         with torch.no_grad():
-            predictions = self.model(X).cpu().numpy()
-            return {'predictions': predictions}
-            
-    def save(self, path: str) -> None:
-        """Save model state.
+            for batch_x, batch_y in test_loader:
+                batch_x = batch_x.to(device)
+                outputs = self.model(batch_x)
+                predictions.extend(outputs.cpu().numpy())
+                targets.extend(batch_y.numpy())
+        
+        predictions = np.array(predictions).flatten()
+        targets = np.array(targets).flatten()
+        
+        # Calculate metrics
+        mse = np.mean((predictions - targets) ** 2)
+        rmse = np.sqrt(mse)
+        mae = np.mean(np.abs(predictions - targets))
+        r2 = 1 - np.sum((targets - predictions) ** 2) / np.sum((targets - np.mean(targets)) ** 2)
+        
+        metrics = {
+            'mse': mse,
+            'rmse': rmse,
+            'mae': mae,
+            'r2': r2
+        }
+        
+        self.logger.info("Evaluation metrics:")
+        for metric, value in metrics.items():
+            self.logger.info(f"{metric.upper()}: {value:.4f}")
+        
+        return metrics
+    
+    def predict(self, data: pd.DataFrame, feature_cols: List[str],
+                sequence_length: int) -> np.ndarray:
+        """Generate predictions.
         
         Args:
-            path: Path to save model state
+            data: Input data
+            feature_cols: List of feature column names
+            sequence_length: Length of input sequences
+            
+        Returns:
+            Array of predictions
         """
         if self.model is None:
-            raise ValueError("Model not initialized")
-            
-        state = {
+            raise ValueError("Model not trained")
+        
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model.to(device)
+        self.model.eval()
+        
+        # Scale features
+        features = self.scaler.transform(data[feature_cols])
+        
+        # Create sequences
+        sequences = []
+        for i in range(len(data) - sequence_length):
+            sequences.append(features[i:i + sequence_length])
+        
+        # Generate predictions
+        predictions = []
+        with torch.no_grad():
+            for sequence in sequences:
+                x = torch.FloatTensor(sequence).unsqueeze(0).to(device)
+                output = self.model(x)
+                predictions.append(output.cpu().numpy())
+        
+        return np.array(predictions).flatten()
+    
+    def save(self, filepath: str) -> None:
+        """Save model to disk.
+        
+        Args:
+            filepath: Path to save model
+        """
+        if self.model is None:
+            raise ValueError("No model to save")
+        
+        # Create save directory
+        save_dir = Path(filepath).parent
+        save_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save model state
+        torch.save({
             'model_state': self.model.state_dict(),
             'optimizer_state': self.optimizer.state_dict() if self.optimizer else None,
-            'scheduler_state': self.scheduler.state_dict() if self.scheduler else None,
-            'config': self.config,
-            'history': self.history,
-            'best_loss': self.best_loss
-        }
-        torch.save(state, path)
+            'train_losses': self.train_losses,
+            'val_losses': self.val_losses,
+            'best_val_loss': self.best_val_loss,
+            'config': self.config
+        }, filepath)
         
-    def load(self, path: str) -> None:
-        """Load model state.
+        # Save scaler
+        scaler_path = Path(filepath).with_suffix('.scaler')
+        joblib.dump(self.scaler, scaler_path)
+        
+        self.logger.info(f"Saved model to {filepath}")
+    
+    def load(self, filepath: str) -> None:
+        """Load model from disk.
         
         Args:
-            path: Path to load model state from
+            filepath: Path to saved model
         """
-        state = torch.load(path)
-        self.config = state['config']
-        self.history = state['history']
-        self.best_loss = state['best_loss']
+        # Load model state
+        checkpoint = torch.load(filepath)
         
-        if self.model is not None:
-            self.model.load_state_dict(state['model_state'])
-            
-        if self.optimizer is not None and state['optimizer_state'] is not None:
-            self.optimizer.load_state_dict(state['optimizer_state'])
-            
-        if self.scheduler is not None and state['scheduler_state'] is not None:
-            self.scheduler.load_state_dict(state['scheduler_state'])
-            
-    @abstractmethod
-    def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> tuple:
-        """Prepare data for training or prediction.
+        # Build model
+        self.model = self.build_model()
+        self.model.load_state_dict(checkpoint['model_state'])
+        
+        # Load optimizer state
+        if checkpoint['optimizer_state'] is not None:
+            self.optimizer = optim.Adam(self.model.parameters())
+            self.optimizer.load_state_dict(checkpoint['optimizer_state'])
+        
+        # Load training state
+        self.train_losses = checkpoint['train_losses']
+        self.val_losses = checkpoint['val_losses']
+        self.best_val_loss = checkpoint['best_val_loss']
+        self.config = checkpoint['config']
+        
+        # Load scaler
+        scaler_path = Path(filepath).with_suffix('.scaler')
+        self.scaler = joblib.load(scaler_path)
+        
+        self.logger.info(f"Loaded model from {filepath}")
+    
+    def save_results(self, results: Dict[str, Any], filename: str) -> None:
+        """Save model results to disk.
         
         Args:
-            data: Input data as pandas DataFrame
-            is_training: Whether data is for training
+            results: Results to save
+            filename: Output filename
+        """
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filepath = self.results_dir / f"{filename}_{timestamp}.json"
+        
+        with open(filepath, 'w') as f:
+            json.dump(results, f, indent=4)
+        self.logger.info(f"Saved results to {filepath}")
+    
+    def load_results(self, filename: str) -> Dict[str, Any]:
+        """Load model results from disk.
+        
+        Args:
+            filename: Input filename
             
         Returns:
-            Tuple of (X, y) tensors
+            Loaded results
         """
-        raise NotImplementedError("Subclasses must implement _prepare_data method")
+        filepath = self.results_dir / filename
         
-    def _validate_data(self, data: pd.DataFrame) -> None:
-        """Validate input data.
+        with open(filepath, 'r') as f:
+            results = json.load(f)
+        self.logger.info(f"Loaded results from {filepath}")
         
-        Args:
-            data: Input data as pandas DataFrame
-        """
-        required_columns = ['close', 'volume']
-        if not all(col in data.columns for col in required_columns):
-            raise ValueError(f"Data must contain columns: {required_columns}")
-            
-        if data.isnull().any().any():
-            raise ValueError("Data contains missing values")
-            
-    def _to_device(self, tensor: torch.Tensor) -> torch.Tensor:
-        """Move tensor to device.
-        
-        Args:
-            tensor: Input tensor
-            
-        Returns:
-            Tensor on correct device
-        """
-        return tensor.to(self.device)
-        
-    def _update_history(self, loss: float) -> None:
-        """Update training history.
-        
-        Args:
-            loss: Current loss value
-        """
-        self.history.append(loss)
-        
-    def _check_early_stopping(self, loss: float) -> bool:
-        """Check if training should stop early.
-        
-        Args:
-            loss: Current loss value
-            
-        Returns:
-            Whether to stop training
-        """
-        if loss < self.best_loss:
-            self.best_loss = loss
-            self.patience_counter = 0
-            return False
-        else:
-            self.patience_counter += 1
-            return self.patience_counter >= self.patience 
+        return results 

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from typing import Dict, Any, Optional, Tuple
-from ...base_model import BaseModel
+from trading.models.base_model import BaseModel
 import pandas as pd
 
 class SimpleGNN(nn.Module):
