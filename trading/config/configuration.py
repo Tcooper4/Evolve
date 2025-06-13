@@ -23,19 +23,41 @@ class ConfigManager:
         if env_config:
             self.config.update(env_config)
         
-    def load_config(self, config_type: str) -> Dict[str, Any]:
+    def _parse_config(self, name: str, data: Dict[str, Any]) -> Any:
+        """Instantiate a config object based on file name."""
+        lower = name.lower()
+        if "model" in lower:
+            return ModelConfig.from_dict(data)
+        if "data" in lower:
+            return DataConfig.from_dict(data)
+        if "training" in lower:
+            return TrainingConfig.from_dict(data)
+        if "web" in lower:
+            return WebConfig.from_dict(data)
+        if "monitor" in lower:
+            return MonitoringConfig.from_dict(data)
+        return data
+
+    def load_config(self, config_type: str) -> Any:
         """Load configuration settings.
-        
+
         Args:
-            config_type: Type of configuration to load
-            
+            config_type: Configuration type name or path to config file
+
         Returns:
             Configuration dictionary
         """
+        path = Path(config_type)
+        if path.suffix in {".json", ".yaml", ".yml"} and path.exists():
+            with open(path, "r") as f:
+                data = yaml.safe_load(f) if path.suffix in {".yaml", ".yml"} else json.load(f)
+            return self._parse_config(path.name, data)
+
         config_path = self.config_dir / f"{config_type}.json"
         if config_path.exists():
-            with open(config_path, 'r') as f:
-                return json.load(f)
+            with open(config_path, "r") as f:
+                data = json.load(f)
+            return self._parse_config(config_path.name, data)
         return {}
         
     def save_config(self, config: Any, config_path: str) -> None:
@@ -95,11 +117,11 @@ class ConfigManager:
 
 class ModelConfig:
     """Configuration class for model settings."""
-    
+
     def __init__(self, model_type: str = 'transformer', model_name: str = None,
                  d_model: int = 512, nhead: int = 8, num_layers: int = 6,
                  dropout: float = 0.1, batch_size: int = 32,
-                 learning_rate: float = 0.001, **kwargs):
+                 learning_rate: float = 0.001, version: str = '1.0', **kwargs):
         """Initialize model configuration.
         
         Args:
@@ -121,6 +143,7 @@ class ModelConfig:
         self.dropout = dropout
         self.batch_size = batch_size
         self.learning_rate = learning_rate
+        self.version = version
         self.parameters = kwargs
         
     def validate(self) -> bool:
@@ -166,6 +189,7 @@ class ModelConfig:
             'dropout': self.dropout,
             'batch_size': self.batch_size,
             'learning_rate': self.learning_rate,
+            'version': self.version,
             **self.parameters
         }
         
@@ -179,7 +203,21 @@ class ModelConfig:
         Returns:
             ModelConfig instance
         """
-        return cls(**config_dict)
+        return cls(
+            model_type=config_dict.get('model_type', 'transformer'),
+            model_name=config_dict.get('model_name'),
+            d_model=config_dict.get('d_model', 512),
+            nhead=config_dict.get('nhead', 8),
+            num_layers=config_dict.get('num_layers', 6),
+            dropout=config_dict.get('dropout', 0.1),
+            batch_size=config_dict.get('batch_size', 32),
+            learning_rate=config_dict.get('learning_rate', 0.001),
+            version=config_dict.get('version', '1.0'),
+            **{k: v for k, v in config_dict.items() if k not in {
+                'model_type', 'model_name', 'd_model', 'nhead',
+                'num_layers', 'dropout', 'batch_size', 'learning_rate', 'version'
+            }}
+        )
         
     def merge(self, other: Any) -> Dict[str, Any]:
         """Merge with another configuration.
@@ -199,11 +237,11 @@ class ModelConfig:
 
 class DataConfig:
     """Configuration class for data settings."""
-    
+
     def __init__(self, data_source: str = 'yfinance', symbols: list = None,
                  start_date: str = None, end_date: str = None,
                  features: list = None, target: str = None,
-                 frequency: str = '1d'):
+                 frequency: str = '1d', version: str = '1.0'):
         """Initialize data configuration.
         
         Args:
@@ -222,6 +260,7 @@ class DataConfig:
         self.features = features or ['Close']
         self.target = target
         self.frequency = frequency
+        self.version = version
         
     def validate(self) -> bool:
         """Validate the configuration.
@@ -264,7 +303,8 @@ class DataConfig:
             'end_date': self.end_date,
             'features': self.features,
             'target': self.target,
-            'frequency': self.frequency
+            'frequency': self.frequency,
+            'version': self.version
         }
         
     @classmethod
@@ -277,7 +317,16 @@ class DataConfig:
         Returns:
             DataConfig instance
         """
-        return cls(**config_dict)
+        return cls(
+            data_source=config_dict.get('data_source', 'yfinance'),
+            symbols=config_dict.get('symbols', []),
+            start_date=config_dict.get('start_date'),
+            end_date=config_dict.get('end_date'),
+            features=config_dict.get('features', ['Close']),
+            target=config_dict.get('target'),
+            frequency=config_dict.get('frequency', '1d'),
+            version=config_dict.get('version', '1.0')
+        )
         
     def merge(self, other: Any) -> Dict[str, Any]:
         """Merge with another configuration.
@@ -297,13 +346,14 @@ class DataConfig:
 
 class TrainingConfig:
     """Configuration class for model training settings."""
-    
+
     def __init__(self, epochs: int = 100, batch_size: int = 32,
                  learning_rate: float = 0.001, optimizer: str = 'adam',
                  loss_function: str = 'mse', validation_split: float = 0.2,
                  early_stopping: bool = True, early_stopping_patience: int = 10,
                  learning_rate_scheduler: bool = True, scheduler_patience: int = 5,
-                 gradient_clipping: bool = True, max_grad_norm: float = 1.0):
+                 gradient_clipping: bool = True, max_grad_norm: float = 1.0,
+                 version: str = '1.0'):
         """Initialize training configuration.
         
         Args:
@@ -332,6 +382,7 @@ class TrainingConfig:
         self.scheduler_patience = scheduler_patience
         self.gradient_clipping = gradient_clipping
         self.max_grad_norm = max_grad_norm
+        self.version = version
         
     def validate(self) -> bool:
         """Validate the configuration.
@@ -385,7 +436,8 @@ class TrainingConfig:
             'learning_rate_scheduler': self.learning_rate_scheduler,
             'scheduler_patience': self.scheduler_patience,
             'gradient_clipping': self.gradient_clipping,
-            'max_grad_norm': self.max_grad_norm
+            'max_grad_norm': self.max_grad_norm,
+            'version': self.version
         }
         
     @classmethod
@@ -398,7 +450,21 @@ class TrainingConfig:
         Returns:
             TrainingConfig instance
         """
-        return cls(**config_dict)
+        return cls(
+            epochs=config_dict.get('epochs', 100),
+            batch_size=config_dict.get('batch_size', 32),
+            learning_rate=config_dict.get('learning_rate', 0.001),
+            optimizer=config_dict.get('optimizer', 'adam'),
+            loss_function=config_dict.get('loss_function', 'mse'),
+            validation_split=config_dict.get('validation_split', 0.2),
+            early_stopping=config_dict.get('early_stopping', True),
+            early_stopping_patience=config_dict.get('early_stopping_patience', 10),
+            learning_rate_scheduler=config_dict.get('learning_rate_scheduler', True),
+            scheduler_patience=config_dict.get('scheduler_patience', 5),
+            gradient_clipping=config_dict.get('gradient_clipping', True),
+            max_grad_norm=config_dict.get('max_grad_norm', 1.0),
+            version=config_dict.get('version', '1.0')
+        )
         
     def merge(self, other: Any) -> Dict[str, Any]:
         """Merge with another configuration.
@@ -422,7 +488,7 @@ class WebConfig:
     def __init__(self, host: str = 'localhost', port: int = 5000,
                  debug: bool = False, secret_key: str = None,
                  static_folder: str = 'static', template_folder: str = 'templates',
-                 ssl_cert: str = None, ssl_key: str = None):
+                 ssl_cert: str = None, ssl_key: str = None, version: str = '1.0'):
         """Initialize web configuration.
         
         Args:
@@ -443,6 +509,7 @@ class WebConfig:
         self.template_folder = template_folder
         self.ssl_cert = ssl_cert
         self.ssl_key = ssl_key
+        self.version = version
         
     def validate(self) -> bool:
         """Validate the configuration.
@@ -480,7 +547,8 @@ class WebConfig:
             'static_folder': self.static_folder,
             'template_folder': self.template_folder,
             'ssl_cert': self.ssl_cert,
-            'ssl_key': self.ssl_key
+            'ssl_key': self.ssl_key,
+            'version': self.version
         }
         
     @classmethod
@@ -493,7 +561,17 @@ class WebConfig:
         Returns:
             WebConfig instance
         """
-        return cls(**config_dict)
+        return cls(
+            host=config_dict.get('host', 'localhost'),
+            port=config_dict.get('port', 5000),
+            debug=config_dict.get('debug', False),
+            secret_key=config_dict.get('secret_key'),
+            static_folder=config_dict.get('static_folder', 'static'),
+            template_folder=config_dict.get('template_folder', 'templates'),
+            ssl_cert=config_dict.get('ssl_cert'),
+            ssl_key=config_dict.get('ssl_key'),
+            version=config_dict.get('version', '1.0')
+        )
         
     def merge(self, other: Any) -> Dict[str, Any]:
         """Merge with another configuration.
@@ -517,7 +595,8 @@ class MonitoringConfig:
     def __init__(self, enabled: bool = True, log_level: str = 'INFO',
                  metrics_port: int = 9090, prometheus_enabled: bool = True,
                  grafana_enabled: bool = True, alerting_enabled: bool = True,
-                 alert_email: str = None, alert_webhook: str = None):
+                 alert_email: str = None, alert_webhook: str = None,
+                 version: str = '1.0'):
         """Initialize monitoring configuration.
         
         Args:
@@ -538,6 +617,7 @@ class MonitoringConfig:
         self.alerting_enabled = alerting_enabled
         self.alert_email = alert_email
         self.alert_webhook = alert_webhook
+        self.version = version
         
     def validate(self) -> bool:
         """Validate the configuration.
@@ -575,7 +655,8 @@ class MonitoringConfig:
             'grafana_enabled': self.grafana_enabled,
             'alerting_enabled': self.alerting_enabled,
             'alert_email': self.alert_email,
-            'alert_webhook': self.alert_webhook
+            'alert_webhook': self.alert_webhook,
+            'version': self.version
         }
         
     @classmethod
@@ -588,7 +669,17 @@ class MonitoringConfig:
         Returns:
             MonitoringConfig instance
         """
-        return cls(**config_dict)
+        return cls(
+            enabled=config_dict.get('enabled', True),
+            log_level=config_dict.get('log_level', 'INFO'),
+            metrics_port=config_dict.get('metrics_port', 9090),
+            prometheus_enabled=config_dict.get('prometheus_enabled', True),
+            grafana_enabled=config_dict.get('grafana_enabled', True),
+            alerting_enabled=config_dict.get('alerting_enabled', True),
+            alert_email=config_dict.get('alert_email'),
+            alert_webhook=config_dict.get('alert_webhook'),
+            version=config_dict.get('version', '1.0')
+        )
         
     def merge(self, other: Any) -> Dict[str, Any]:
         """Merge with another configuration.
