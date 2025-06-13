@@ -3,10 +3,13 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Union
 from scipy import stats
-import talib
+import pandas_ta as ta
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger(__name__)
 
 class FeatureEngineer(FeatureEngineering):
     def __init__(self, config: Optional[Dict] = None):
@@ -49,47 +52,153 @@ class FeatureEngineer(FeatureEngineering):
         # Scale features
         features = self._scale_features(features)
         
+        # Verify indicators
+        self._verify_indicators(features)
+        
         return features
     
-    def _calculate_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Calculate technical indicators."""
-        features = pd.DataFrame(index=data.index)
+    def _verify_indicators(self, features: pd.DataFrame) -> None:
+        """Verify that all indicators are being calculated correctly.
         
-        # Price-based features
+        Args:
+            features: DataFrame containing all calculated features
+        """
+        expected_indicators = {
+            # Trend Indicators
+            'SMA_20', 'SMA_50', 'SMA_200',
+            'EMA_20', 'EMA_50', 'EMA_200',
+            'MACD_12_26_9', 'MACDh_12_26_9', 'MACDs_12_26_9',
+            'ADX_14',
+            'ICHIMOKU_9_26_52', 'ICHIMOKU_9_26_52_26', 'ICHIMOKU_9_26_52_52',
+            'PSAR_0.02_0.02_0.2',
+            'SUPERT_10_3.0',
+            
+            # Momentum Indicators
+            'RSI_14',
+            'STOCH_14_3_3', 'STOCHk_14_3_3', 'STOCHd_14_3_3',
+            'CCI_14',
+            'WILLR_14',
+            'MOM_10',
+            'ROC_10',
+            'MFI_14',
+            'TRIX_18_9',
+            'MASSI_9',
+            'DPO_20',
+            'KST_10_15_20_30_10_10_10_15',
+            
+            # Volatility Indicators
+            'BBL_20_2.0', 'BBM_20_2.0', 'BBU_20_2.0', 'BBB_20_2.0', 'BBP_20_2.0',
+            'ATR_14',
+            'NATR_14',
+            'TRUERANGE_1',
+            
+            # Volume Indicators
+            'OBV',
+            'VWAP',
+            'PVT',
+            'EFI_13',
+            'CFI_14',
+            'EBSW_10',
+            
+            # Custom Indicators
+            'TSI_13_25',
+            'UO_7_14_28',
+            'AO_5_34',
+            'BOP',
+            'CMO_14',
+            'PPO_12_26_9'
+        }
+        
+        # Check for missing indicators
+        missing_indicators = expected_indicators - set(features.columns)
+        if missing_indicators:
+            logger.warning(f"Missing indicators: {missing_indicators}")
+        
+        # Check for NaN values
+        nan_columns = features.columns[features.isna().any()].tolist()
+        if nan_columns:
+            logger.warning(f"Columns with NaN values: {nan_columns}")
+        
+        # Check for infinite values
+        inf_columns = features.columns[np.isinf(features).any()].tolist()
+        if inf_columns:
+            logger.warning(f"Columns with infinite values: {inf_columns}")
+        
+        # Log summary
+        logger.info(f"Total indicators calculated: {len(features.columns)}")
+        logger.info(f"Expected indicators: {len(expected_indicators)}")
+        logger.info(f"Missing indicators: {len(missing_indicators)}")
+        logger.info(f"Columns with NaN values: {len(nan_columns)}")
+        logger.info(f"Columns with infinite values: {len(inf_columns)}")
+    
+    def _calculate_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Calculate technical indicators using pandas_ta."""
+        # Create a custom strategy
+        custom_strategy = ta.Strategy(
+            name="custom_strategy",
+            description="Custom technical analysis strategy",
+            ta=[
+                # Trend Indicators
+                {"kind": "sma", "length": 20},
+                {"kind": "sma", "length": 50},
+                {"kind": "sma", "length": 200},
+                {"kind": "ema", "length": 20},
+                {"kind": "ema", "length": 50},
+                {"kind": "ema", "length": 200},
+                {"kind": "macd", "fast": 12, "slow": 26, "signal": 9},
+                {"kind": "adx", "length": 14},
+                {"kind": "ichimoku", "tenkan": 9, "kijun": 26, "senkou": 52},
+                {"kind": "psar", "af0": 0.02, "af": 0.02, "max_af": 0.2},
+                {"kind": "supertrend", "length": 10, "multiplier": 3},
+                
+                # Momentum Indicators
+                {"kind": "rsi", "length": 14},
+                {"kind": "stoch", "k": 14, "d": 3},
+                {"kind": "cci", "length": 14},
+                {"kind": "willr", "length": 14},
+                {"kind": "mom", "length": 10},
+                {"kind": "roc", "length": 10},
+                {"kind": "mfi", "length": 14},
+                {"kind": "trix", "length": 18, "signal": 9},
+                {"kind": "massi", "length": 9},
+                {"kind": "dpo", "length": 20},
+                {"kind": "kst", "roc1": 10, "roc2": 15, "roc3": 20, "roc4": 30, "sma1": 10, "sma2": 10, "sma3": 10, "sma4": 15},
+                
+                # Volatility Indicators
+                {"kind": "bbands", "length": 20, "std": 2},
+                {"kind": "atr", "length": 14},
+                {"kind": "natr", "length": 14},
+                {"kind": "tr"},
+                {"kind": "true_range"},
+                
+                # Volume Indicators
+                {"kind": "obv"},
+                {"kind": "vwap"},
+                {"kind": "pvt"},
+                {"kind": "efi", "length": 13},
+                {"kind": "cfi", "length": 14},
+                {"kind": "ebsw", "length": 10},
+                
+                # Custom Indicators
+                {"kind": "tsi", "fast": 13, "slow": 25},
+                {"kind": "uo", "fast": 7, "medium": 14, "slow": 28},
+                {"kind": "ao", "fast": 5, "slow": 34},
+                {"kind": "bop"},
+                {"kind": "cmo", "length": 14},
+                {"kind": "ppo", "fast": 12, "slow": 26, "signal": 9}
+            ]
+        )
+
+        # Add the strategy to the DataFrame
+        data.ta.strategy(custom_strategy)
+        
+        # Get all the technical indicators
+        features = data.ta.indicators()
+        
+        # Add basic price-based features
         features['returns'] = data['close'].pct_change()
         features['log_returns'] = np.log(data['close'] / data['close'].shift(1))
-        
-        # Moving averages
-        for window in [20, 50, 200]:
-            features[f'SMA_{window}'] = data['close'].rolling(window=window).mean()
-        
-        # Volatility
         features['volatility'] = features['returns'].rolling(window=20).std()
-        
-        # RSI
-        delta = data['close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        features['RSI'] = 100 - (100 / (1 + rs))
-        
-        # MACD
-        exp1 = data['close'].ewm(span=12, adjust=False).mean()
-        exp2 = data['close'].ewm(span=26, adjust=False).mean()
-        features['MACD'] = exp1 - exp2
-        features['Signal_Line'] = features['MACD'].ewm(span=9, adjust=False).mean()
-        
-        # Bollinger Bands
-        features['BB_Middle'] = features['close'].rolling(window=20).mean()
-        features['BB_Upper'] = features['BB_Middle'] + 2 * features['close'].rolling(window=20).std()
-        features['BB_Lower'] = features['BB_Middle'] - 2 * features['close'].rolling(window=20).std()
-        
-        # Volume features
-        features['volume_ma'] = data['volume'].rolling(window=20).mean()
-        features['volume_std'] = data['volume'].rolling(window=20).std()
-        
-        # Price momentum
-        features['momentum'] = data['close'] / data['close'].shift(10) - 1
         
         return features
     

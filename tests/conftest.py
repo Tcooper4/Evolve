@@ -1,8 +1,11 @@
+"""Test configuration and fixtures."""
+
 import pytest
 import pandas as pd
 import numpy as np
 import torch
 from typing import Dict, Any
+from tests.fixtures.mock_data import setup_mock_env, teardown_mock_env, MOCK_CONFIG, MOCK_USERS
 
 @pytest.fixture
 def sample_data():
@@ -38,4 +41,36 @@ def device():
 @pytest.fixture
 def temp_dir(tmp_path):
     """Create a temporary directory for test files."""
-    return tmp_path 
+    return tmp_path
+
+@pytest.fixture(autouse=True)
+def mock_env():
+    """Set up and tear down mock environment variables for all tests."""
+    setup_mock_env()
+    yield
+    teardown_mock_env()
+
+@pytest.fixture
+def mock_config():
+    """Provide mock configuration for tests."""
+    return MOCK_CONFIG
+
+@pytest.fixture
+def mock_users():
+    """Provide mock user data for tests."""
+    return MOCK_USERS
+
+@pytest.fixture
+def mock_email_config():
+    """Provide mock email configuration for tests."""
+    return MOCK_CONFIG['email']
+
+@pytest.fixture
+def mock_slack_config():
+    """Provide mock Slack configuration for tests."""
+    return MOCK_CONFIG['slack']
+
+@pytest.fixture
+def mock_security_config():
+    """Provide mock security configuration for tests."""
+    return MOCK_CONFIG['security'] 

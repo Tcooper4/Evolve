@@ -6,37 +6,58 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import pandas as pd
 from typing import Optional, Dict, Any, Tuple, List, Union
 from .base_model import BaseModel
-import torch.serialization
 from sklearn.preprocessing import StandardScaler
 
-# Add numpy._core.multiarray._reconstruct to safe globals
-torch.serialization.add_safe_globals([np._core.multiarray._reconstruct])
-
 class LSTMModel(nn.Module):
-    """LSTM model architecture."""
-    def __init__(self, input_size: int, hidden_size: int, num_layers: int, dropout: float):
-        super().__init__()
-        self.lstm = nn.LSTM(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            num_layers=num_layers,
-            dropout=dropout if num_layers > 1 else 0,
-            batch_first=True
-        )
-        self.fc = nn.Linear(hidden_size, 1)
+    """A class to handle LSTM model for time series prediction."""
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass of the model.
-        
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int):
+        """Initialize the LSTM model.
+
         Args:
-            x: Input tensor of shape (batch_size, seq_len, input_size)
-            
+            input_dim (int): The input dimension.
+            hidden_dim (int): The hidden dimension.
+            output_dim (int): The output dimension.
+        """
+        super(LSTMModel, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, x):
+        """Forward pass of the LSTM model.
+
+        Args:
+            x: The input tensor.
+
         Returns:
-            Output tensor of shape (batch_size, 1)
+            The output tensor.
         """
         lstm_out, _ = self.lstm(x)
-        out = self.fc(lstm_out[:, -1, :])  # Take last time step
-        return out
+        return self.fc(lstm_out[:, -1, :])
+
+    def train_model(self, data: pd.DataFrame, target: pd.Series, epochs: int) -> None:
+        """Train the LSTM model.
+
+        Args:
+            data (pd.DataFrame): The input data.
+            target (pd.Series): The target data.
+            epochs (int): The number of epochs to train for.
+        """
+        # Placeholder for training logic
+        pass
+
+    def predict(self, data: pd.DataFrame) -> torch.Tensor:
+        """Predict using the LSTM model.
+
+        Args:
+            data (pd.DataFrame): The input data.
+
+        Returns:
+            torch.Tensor: The predicted output.
+        """
+        # Placeholder for prediction logic
+        return torch.tensor([])
 
 class LSTMForecaster(BaseModel):
     """LSTM-based forecasting model with advanced features."""

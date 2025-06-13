@@ -13,6 +13,17 @@ from abc import ABC, abstractmethod
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import joblib
+from logging.handlers import RotatingFileHandler
+import os
+import yaml
+
+class ValidationError(Exception):
+    """Custom exception for validation errors."""
+    pass
+
+class ModelError(Exception):
+    """Custom exception for model errors."""
+    pass
 
 class TimeSeriesDataset(Dataset):
     """Dataset for time series data."""
@@ -93,6 +104,22 @@ class BaseModel(ABC):
         self.val_losses = []
         self.best_val_loss = float('inf')
         self.best_model_state = None
+        
+        # Setup logging
+        self._setup_logging()
+    
+    def _setup_logging(self) -> None:
+        """Setup logging configuration."""
+        log_handler = RotatingFileHandler(
+            os.getenv('LOG_FILE', 'trading.log'),
+            maxBytes=int(os.getenv('LOG_MAX_SIZE', 10485760)),
+            backupCount=int(os.getenv('LOG_BACKUP_COUNT', 5))
+        )
+        log_handler.setFormatter(logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        ))
+        self.logger.addHandler(log_handler)
+        self.logger.setLevel(os.getenv('LOG_LEVEL', 'INFO'))
     
     @abstractmethod
     def build_model(self) -> nn.Module:

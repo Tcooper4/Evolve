@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 import json
 from pathlib import Path
+import os
 
 class RiskManager:
     """Risk management and portfolio optimization."""
@@ -14,11 +15,32 @@ class RiskManager:
         """Initialize risk manager.
         
         Args:
-            config: Configuration dictionary
+            config: Configuration dictionary containing:
+                - risk_limits: Dictionary of risk limits
+                    - max_drawdown: Maximum drawdown limit (default: 0.2)
+                    - max_volatility: Maximum volatility limit (default: 0.3)
+                    - min_sharpe_ratio: Minimum Sharpe ratio limit (default: 1.0)
+                - results_dir: Directory for saving results (default: risk_results)
+                - log_level: Logging level (default: INFO)
         """
-        self.config = {} if config is None else config
+        # Load configuration from environment variables with defaults
+        self.config = {
+            'risk_limits': {
+                'max_drawdown': float(os.getenv('RISK_MAX_DRAWDOWN', 0.2)),
+                'max_volatility': float(os.getenv('RISK_MAX_VOLATILITY', 0.3)),
+                'min_sharpe_ratio': float(os.getenv('RISK_MIN_SHARPE_RATIO', 1.0))
+            },
+            'results_dir': os.getenv('RISK_RESULTS_DIR', 'risk_results'),
+            'log_level': os.getenv('RISK_LOG_LEVEL', 'INFO')
+        }
+        
+        # Update with provided config
+        if config is not None and not config.empty:
+            self.config.update(config)
+            
+        # Setup logging
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(logging.INFO)
+        self.logger.setLevel(getattr(logging, self.config['log_level']))
         if not self.logger.handlers:
             handler = logging.StreamHandler()
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -26,7 +48,7 @@ class RiskManager:
             self.logger.addHandler(handler)
         
         # Create results directory
-        self.results_dir = Path("risk_results")
+        self.results_dir = Path(self.config['results_dir'])
         self.results_dir.mkdir(exist_ok=True)
         
         # Initialize metrics tracking
@@ -37,6 +59,13 @@ class RiskManager:
             'sharpe_ratio': [],
             'max_drawdown': []
         }
+        
+        # Initialize risk metrics
+        self.var_95 = None
+        self.var_99 = None
+        self.beta = None
+        self.correlation = None
+        self.returns = None
     
     def calculate_position_size(self, asset_price: float, volatility: float,
                               account_value: float, risk_per_trade: float) -> float:
@@ -229,16 +258,7 @@ class RiskManager:
             results = json.load(f)
         self.logger.info(f"Loaded results from {filepath}")
         
-        return results 
-
-    def __init__(self, returns: pd.Series):
-        """Initialize the risk manager with historical returns."""
-        self.returns = returns
-        self.var_95 = None
-        self.var_99 = None
-        self.beta = None
-        self.correlation = None
-        self._calculate_risk_metrics()
+        return results
     
     def _calculate_risk_metrics(self):
         """Calculate risk metrics."""
@@ -258,14 +278,33 @@ class RiskManager:
         }
     
     def update_returns(self, new_returns: pd.Series):
-        """Update returns and recalculate risk metrics."""
+        """Update historical returns and recalculate risk metrics.
+        
+        Args:
+            new_returns: New returns series
+        """
         self.returns = new_returns
         self._calculate_risk_metrics()
+        self.logger.info("Updated returns and risk metrics")
     
     def get_position_limits(self, portfolio_value: float) -> Dict[str, float]:
-        """Calculate position limits based on risk metrics."""
-        var_limit = abs(self.var_95) if self.var_95 is not None else 0.02
+        """Calculate position size limits based on risk parameters.
+        
+        Args:
+            portfolio_value: Current portfolio value
+            
+        Returns:
+            Dictionary of position limits
+        """
+        if not self.returns is not None:
+            self.logger.warning("No returns data available for position limits")
+            return {}
+            
+        volatility = self.returns.std() * np.sqrt(252)
+        var = self._calculate_var(self.returns, 0.95)
+        
         return {
-            'max_position_size': portfolio_value * var_limit,
-            'max_leverage': 1 / var_limit if var_limit > 0 else 1.0
+            'max_position_size': portfolio_value * self.config['risk_limits']['max_drawdown'],
+            'max_leverage': 1 / (volatility * 2),  # Conservative leverage limit
+            'max_var_exposure': abs(var) * portfolio_value
         } 
