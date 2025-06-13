@@ -20,6 +20,7 @@ class OrderType(Enum):
     STOP = "stop"
     STOP_LIMIT = "stop_limit"
     TRAILING_STOP = "trailing_stop"
+    FILL_OR_KILL = "fill_or_kill"
 
 class OrderStatus(Enum):
     PENDING = "pending"
@@ -240,8 +241,11 @@ class ExecutionEngine:
                 return self.execute_stop_order(asset, quantity, kwargs['stop_price'], 
                                              kwargs.get('limit_price'), kwargs.get('metadata'))
             elif order_type == OrderType.TRAILING_STOP:
-                return self.execute_trailing_stop(asset, quantity, kwargs['trail_percent'], 
+                return self.execute_trailing_stop(asset, quantity, kwargs['trail_percent'],
                                                 kwargs.get('metadata'))
+            elif order_type == OrderType.FILL_OR_KILL:
+                return self.execute_fill_or_kill(asset, quantity, kwargs['limit_price'],
+                                               kwargs.get('metadata'))
             else:
                 raise ExecutionError(f"Unsupported order type: {order_type}")
                 
@@ -506,9 +510,57 @@ class ExecutionEngine:
             stop_price = current_price * (1 - trail_percent)
             
             return self.execute_stop_order(asset, quantity, stop_price, metadata=metadata)
-            
+
         except Exception as e:
             raise ExecutionError(f"Failed to execute trailing stop order: {str(e)}")
+
+    def execute_fill_or_kill(self, asset: str, quantity: float, limit_price: float,
+                             metadata: Optional[Dict] = None) -> Optional[Dict]:
+        """Execute a fill-or-kill order.
+
+        The order is executed immediately at or below the limit price. If the
+        price is above the limit, the order is cancelled.
+
+        Args:
+            asset: Asset symbol
+            quantity: Order quantity
+            limit_price: Maximum acceptable price
+            metadata: Additional order metadata
+
+        Returns:
+            Trade details dictionary if filled, None if cancelled
+        """
+        try:
+            current_price = self._get_current_price(asset)
+
+            trade = {
+                'asset': asset,
+                'quantity': quantity,
+                'price': current_price,
+                'timestamp': datetime.utcnow().isoformat(),
+                'type': OrderType.FILL_OR_KILL.value,
+                'limit_price': limit_price,
+                'metadata': metadata or {}
+            }
+
+            if current_price <= limit_price:
+                trade['status'] = OrderStatus.FILLED.value
+            else:
+                trade['status'] = OrderStatus.CANCELLED.value
+
+            trade_id = f"{asset}_{trade['timestamp']}"
+            self.redis_client.hset('trades', trade_id, json.dumps(trade))
+            self._save_trade(trade)
+
+            if trade['status'] == OrderStatus.FILLED.value:
+                self.logger.info(f"Executed fill-or-kill order: {trade}")
+                return trade
+
+            self.logger.info(f"Fill-or-kill order cancelled: {trade}")
+            return None
+
+        except Exception as e:
+            raise ExecutionError(f"Failed to execute fill-or-kill order: {str(e)}")
 
     def cancel_order(self, order_id: str) -> bool:
         """Cancel a pending order.
