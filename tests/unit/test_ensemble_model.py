@@ -48,3 +48,18 @@ class TestEnsembleModel(BaseModelTest):
         width_90 = (preds_90['upper'] - preds_90['lower']).mean().item()
 
         assert width_95 > width_90
+
+    def test_original_configs_not_modified(self):
+        """Ensure model configs remain unchanged after initialization."""
+
+        class DummyModel:
+            def __init__(self, config=None):
+                self.config = config or {}
+
+        configs = [
+            {'class': DummyModel, 'id': 1},
+            {'class': DummyModel, 'id': 2},
+        ]
+        original = [dict(c) for c in configs]
+        EnsembleForecaster(config={'models': configs})
+        assert configs == original
