@@ -9,6 +9,7 @@ from sklearn.decomposition import PCA
 from datetime import datetime, timedelta
 import logging
 from trading.utils.common import normalize_indicator_name
+from . import indicators
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,16 @@ class FeatureEngineer(FeatureEngineering):
         self.custom_indicators: Dict[
             str, Callable[[pd.DataFrame], Union[pd.Series, pd.DataFrame]]
         ] = {}
+
+        # Register built-in custom indicators
+        try:
+            self.register_custom_indicator(
+                "ROLLING_ZSCORE",
+                lambda df: indicators.rolling_zscore(df["close"], window=20),
+            )
+            self.register_custom_indicator("PRICE_RATIOS", indicators.price_ratios)
+        except Exception as exc:  # pragma: no cover - log and continue
+            logger.warning("Failed to register default indicators: %s", exc)
 
     def register_custom_indicator(
         self, name: str, func: Callable[[pd.DataFrame], Union[pd.Series, pd.DataFrame]]
@@ -56,17 +67,29 @@ class FeatureEngineer(FeatureEngineering):
 
         features = pd.DataFrame(index=data.index)
 
-        # Technical indicators
-        features = pd.concat([features, self._calculate_technical_indicators(data)], axis=1)
+        try:
+            tech = self._calculate_technical_indicators(data)
+            features = pd.concat([features, tech], axis=1)
+        except Exception as exc:  # pragma: no cover - log and continue
+            logger.error("Technical indicator calculation failed: %s", exc)
 
-        # Statistical features
-        features = pd.concat([features, self._calculate_statistical_features(data)], axis=1)
+        try:
+            stats_features = self._calculate_statistical_features(data)
+            features = pd.concat([features, stats_features], axis=1)
+        except Exception as exc:  # pragma: no cover - log and continue
+            logger.error("Statistical feature calculation failed: %s", exc)
 
-        # Market microstructure features
-        features = pd.concat([features, self._calculate_microstructure_features(data)], axis=1)
+        try:
+            micro = self._calculate_microstructure_features(data)
+            features = pd.concat([features, micro], axis=1)
+        except Exception as exc:  # pragma: no cover - log and continue
+            logger.error("Microstructure feature calculation failed: %s", exc)
 
-        # Time-based features
-        features = pd.concat([features, self._calculate_time_features(data)], axis=1)
+        try:
+            time_feats = self._calculate_time_features(data)
+            features = pd.concat([features, time_feats], axis=1)
+        except Exception as exc:  # pragma: no cover - log and continue
+            logger.error("Time feature calculation failed: %s", exc)
 
         # Fill NaN values
         features = features.fillna(method="ffill").fillna(0)
@@ -158,6 +181,15 @@ class FeatureEngineer(FeatureEngineering):
         inf_columns = features.columns[np.isinf(features).any()].tolist()
         if inf_columns:
             logger.warning(f"Columns with infinite values: {inf_columns}")
+
+        # Check for extreme values that may indicate calculation errors
+        extreme_columns = []
+        for col in features.select_dtypes(include=[np.number]).columns:
+            series = features[col]
+            if series.abs().max() > 1e6:
+                extreme_columns.append(col)
+        if extreme_columns:
+            logger.warning("Columns with extreme values: %s", extreme_columns)
 
         # Log summary
         logger.info(f"Total indicators calculated: {len(features.columns)}")
