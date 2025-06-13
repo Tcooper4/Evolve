@@ -22,6 +22,7 @@ from .portfolio import PortfolioManager
 from .risk import RiskManager
 from .utils import LogManager, ModelLogger, DataLogger, PerformanceLogger
 from .memory import PerformanceMemory
+from .agents.updater import ModelUpdater
 from .nlp import NLInterface, PromptProcessor, ResponseFormatter, LLMProcessor
 from .market import MarketData, MarketIndicators
 from .evaluation import ModelEvaluator, RegressionMetrics, ClassificationMetrics, TimeSeriesMetrics, RiskMetrics
@@ -76,3 +77,4 @@ if OPTIMIZATION_AVAILABLE:
     __all__.append('DQNStrategyOptimizer')
 
 __all__.append('PerformanceMemory')
+__all__.append('ModelUpdater')
