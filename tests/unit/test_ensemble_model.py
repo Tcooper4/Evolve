@@ -32,4 +32,19 @@ class TestEnsembleModel(BaseModelTest):
         model.fit(sample_data, epochs=2, batch_size=4)
         predictions = model.predict(sample_data)
         assert 'predictions' in predictions
-        assert len(predictions['predictions']) > 0 
+        assert len(predictions['predictions']) > 0
+
+    def test_predict_with_confidence_alpha(self, model_class, model_config, sample_data):
+        """Test confidence interval width changes with alpha."""
+        model = model_class(config=model_config)
+        model.fit(sample_data, epochs=2, batch_size=4)
+
+        X, _ = model._prepare_data(sample_data, is_training=False)
+
+        preds_95 = model.predict_with_confidence(X, alpha=0.05)
+        preds_90 = model.predict_with_confidence(X, alpha=0.10)
+
+        width_95 = (preds_95['upper'] - preds_95['lower']).mean().item()
+        width_90 = (preds_90['upper'] - preds_90['lower']).mean().item()
+
+        assert width_95 > width_90
