@@ -388,4 +388,83 @@ reporting:
 ## License
 
 This documentation is part of the Automation System.
-Copyright (c) 2024 Your Organization. All rights reserved. 
+Copyright (c) 2024 Your Organization. All rights reserved.
+
+# Testing Guide
+
+## Environment Setup
+
+Before running tests, set up your environment variables:
+
+```bash
+# Required environment variables for testing
+export ALPHA_VANTAGE_API_KEY=your_test_api_key
+export EMAIL_USERNAME=test@example.com
+export EMAIL_PASSWORD=test_password
+export EMAIL_FROM=test@example.com
+export SMTP_HOST=smtp.gmail.com
+export SMTP_PORT=587
+export SLACK_WEBHOOK_URL=your_test_webhook_url
+export SLACK_DEFAULT_CHANNEL=#test-notifications
+export JWT_SECRET=test_secret
+export ENVIRONMENT=test
+```
+
+## Running Tests
+
+To run the test suite:
+
+```bash
+pytest tests/
+```
+
+For specific test categories:
+
+```bash
+# Run unit tests
+pytest tests/unit/
+
+# Run integration tests
+pytest tests/integration/
+
+# Run with coverage
+pytest --cov=automation tests/
+```
+
+## Test Configuration
+
+The test configuration uses environment variables to manage sensitive data. Never commit real credentials to the repository.
+
+### Test Data
+
+Test data is stored in `tests/fixtures/` and should be used for all tests. Do not use real credentials or sensitive data in tests.
+
+### Mocking
+
+Use the provided mock objects and fixtures for testing external services:
+
+```python
+from tests.fixtures.mock_data import mock_email_config, mock_slack_config
+
+def test_notification_system(mock_email_config, mock_slack_config):
+    # Test implementation
+    pass
+```
+
+## Best Practices
+
+1. Always use environment variables for sensitive data
+2. Use mock objects for external services
+3. Clean up test data after each test
+4. Use fixtures for common test setup
+5. Write tests that are independent of each other
+
+## Troubleshooting
+
+If tests fail due to missing environment variables:
+
+1. Check that all required environment variables are set
+2. Verify that test configuration files are present
+3. Ensure mock data is properly configured
+
+For more help, see the [Contributing Guide](CONTRIBUTING.md). 

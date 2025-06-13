@@ -3,98 +3,198 @@ import logging
 from typing import Dict, Set, Optional
 from fastapi import WebSocket, WebSocketDisconnect
 from automation.notifications.notification_manager import NotificationManager
+from ..auth.user_manager import UserManager
+import os
+import jwt
+from datetime import datetime, timedelta
+from logging.handlers import RotatingFileHandler
+
+# Setup logging
+log_handler = RotatingFileHandler(
+    os.getenv('LOG_FILE', 'trading.log'),
+    maxBytes=int(os.getenv('LOG_MAX_SIZE', 10485760)),
+    backupCount=int(os.getenv('LOG_BACKUP_COUNT', 5))
+)
+log_handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+))
+logger = logging.getLogger('websocket')
+logger.addHandler(log_handler)
+logger.setLevel(os.getenv('LOG_LEVEL', 'INFO'))
 
 class WebSocketManager:
-    def __init__(self, notification_manager: NotificationManager):
-        self.notification_manager = notification_manager
-        self.active_connections: Dict[str, Set[WebSocket]] = {}
-        self.logger = logging.getLogger(__name__)
-    
-    async def connect(self, websocket: WebSocket, user_id: str) -> None:
-        """Connect a new WebSocket client."""
-        await websocket.accept()
+    def __init__(self):
+        self.active_connections: Dict[str, WebSocket] = {}
+        self.user_sessions: Dict[str, Dict] = {}
         
-        if user_id not in self.active_connections:
-            self.active_connections[user_id] = set()
+    async def connect(self, websocket: WebSocket, token: str) -> bool:
+        """Connect a new WebSocket client with authentication.
         
-        self.active_connections[user_id].add(websocket)
-        
-        # Subscribe to notifications
-        await self.notification_manager.subscribe(user_id, self._notification_callback)
-        
-        self.logger.info(f"WebSocket client connected for user {user_id}")
-    
-    async def disconnect(self, websocket: WebSocket, user_id: str) -> None:
-        """Disconnect a WebSocket client."""
-        if user_id in self.active_connections:
-            self.active_connections[user_id].remove(websocket)
+        Args:
+            websocket: WebSocket connection
+            token: JWT token for authentication
             
-            if not self.active_connections[user_id]:
-                del self.active_connections[user_id]
-                await self.notification_manager.unsubscribe(user_id)
+        Returns:
+            bool: True if connection successful, False otherwise
+        """
+        try:
+            # Verify token
+            data = jwt.decode(
+                token,
+                os.getenv('JWT_SECRET'),
+                algorithms=['HS256']
+            )
+            username = data['username']
+            
+            # Store connection
+            self.active_connections[username] = websocket
+            self.user_sessions[username] = {
+                'connected_at': datetime.utcnow(),
+                'last_activity': datetime.utcnow(),
+                'is_admin': data.get('is_admin', False)
+            }
+            
+            await websocket.accept()
+            logger.info(f"User {username} connected")
+            return True
+            
+        except jwt.ExpiredSignatureError:
+            logger.warning("Connection attempt with expired token")
+            return False
+        except jwt.InvalidTokenError:
+            logger.warning("Connection attempt with invalid token")
+            return False
+        except Exception as e:
+            logger.error(f"Error during WebSocket connection: {str(e)}")
+            return False
+            
+    def disconnect(self, username: str) -> None:
+        """Disconnect a WebSocket client.
         
-        self.logger.info(f"WebSocket client disconnected for user {user_id}")
-    
-    async def _notification_callback(self, data: Dict) -> None:
-        """Callback for notification updates."""
-        user_id = data.get("user_id")
-        if not user_id:
-            return
+        Args:
+            username: Username of the client to disconnect
+        """
+        if username in self.active_connections:
+            del self.active_connections[username]
+            del self.user_sessions[username]
+            logger.info(f"User {username} disconnected")
+            
+    async def broadcast(self, message: str) -> None:
+        """Broadcast a message to all connected clients.
         
-        if user_id in self.active_connections:
-            for connection in self.active_connections[user_id]:
-                try:
-                    await connection.send_json(data)
-                except Exception as e:
-                    self.logger.error(f"Error sending notification to WebSocket client: {str(e)}")
-                    await self.disconnect(connection, user_id)
-    
-    async def broadcast(self, message: Dict, user_id: Optional[str] = None) -> None:
-        """Broadcast a message to all connected clients or a specific user."""
-        if user_id:
-            if user_id in self.active_connections:
-                for connection in self.active_connections[user_id]:
-                    try:
-                        await connection.send_json(message)
-                    except Exception as e:
-                        self.logger.error(f"Error broadcasting message to WebSocket client: {str(e)}")
-                        await self.disconnect(connection, user_id)
-        else:
-            for user_connections in self.active_connections.values():
-                for connection in user_connections:
-                    try:
-                        await connection.send_json(message)
-                    except Exception as e:
-                        self.logger.error(f"Error broadcasting message to WebSocket client: {str(e)}")
-                        await self.disconnect(connection, user_id)
+        Args:
+            message: Message to broadcast
+        """
+        disconnected = []
+        for username, connection in self.active_connections.items():
+            try:
+                await connection.send_text(message)
+                self.user_sessions[username]['last_activity'] = datetime.utcnow()
+            except WebSocketDisconnect:
+                disconnected.append(username)
+            except Exception as e:
+                logger.error(f"Error broadcasting to {username}: {str(e)}")
+                disconnected.append(username)
+                
+        # Clean up disconnected clients
+        for username in disconnected:
+            self.disconnect(username)
+            
+    async def send_personal_message(self, username: str, message: str) -> bool:
+        """Send a message to a specific client.
+        
+        Args:
+            username: Username of the target client
+            message: Message to send
+            
+        Returns:
+            bool: True if message sent successfully, False otherwise
+        """
+        if username not in self.active_connections:
+            logger.warning(f"Attempt to send message to disconnected user {username}")
+            return False
+            
+        try:
+            await self.active_connections[username].send_text(message)
+            self.user_sessions[username]['last_activity'] = datetime.utcnow()
+            return True
+        except WebSocketDisconnect:
+            self.disconnect(username)
+            return False
+        except Exception as e:
+            logger.error(f"Error sending message to {username}: {str(e)}")
+            return False
+            
+    def get_active_users(self) -> Dict[str, Dict]:
+        """Get information about active users.
+        
+        Returns:
+            Dict containing information about active users
+        """
+        return {
+            username: {
+                'connected_at': session['connected_at'].isoformat(),
+                'last_activity': session['last_activity'].isoformat(),
+                'is_admin': session['is_admin']
+            }
+            for username, session in self.user_sessions.items()
+        }
+        
+    def cleanup_inactive_sessions(self, max_inactive_time: int = 3600) -> None:
+        """Clean up inactive sessions.
+        
+        Args:
+            max_inactive_time: Maximum time in seconds before session is considered inactive
+        """
+        now = datetime.utcnow()
+        inactive = [
+            username for username, session in self.user_sessions.items()
+            if (now - session['last_activity']).total_seconds() > max_inactive_time
+        ]
+        
+        for username in inactive:
+            self.disconnect(username)
+            logger.info(f"Cleaned up inactive session for user {username}")
 
 class WebSocketHandler:
-    def __init__(self, websocket_manager: WebSocketManager):
-        self.websocket_manager = websocket_manager
-        self.logger = logging.getLogger(__name__)
-    
-    async def handle_websocket(self, websocket: WebSocket, user_id: str) -> None:
-        """Handle WebSocket connection."""
-        try:
-            await self.websocket_manager.connect(websocket, user_id)
+    def __init__(self, manager: WebSocketManager):
+        self.manager = manager
+        
+    async def handle_connection(self, websocket: WebSocket, token: str) -> None:
+        """Handle a new WebSocket connection.
+        
+        Args:
+            websocket: WebSocket connection
+            token: JWT token for authentication
+        """
+        if not await self.manager.connect(websocket, token):
+            await websocket.close(code=1008)  # Policy Violation
+            return
             
+        try:
             while True:
+                data = await websocket.receive_text()
                 try:
-                    # Wait for messages from the client
-                    data = await websocket.receive_text()
-                    
-                    # Handle client messages if needed
                     message = json.loads(data)
-                    if message.get("type") == "ping":
-                        await websocket.send_json({"type": "pong"})
+                    if message.get('type') == 'ping':
+                        await websocket.send_json({'type': 'pong'})
+                    else:
+                        await self.manager.broadcast(json.dumps(message))
+                except json.JSONDecodeError:
+                    logger.warning(f"Received invalid JSON: {data}")
                     
-                except WebSocketDisconnect:
-                    break
-                except Exception as e:
-                    self.logger.error(f"Error handling WebSocket message: {str(e)}")
-                    break
-                    
+        except WebSocketDisconnect:
+            pass
         except Exception as e:
-            self.logger.error(f"Error in WebSocket handler: {str(e)}")
+            logger.error(f"Error handling WebSocket connection: {str(e)}")
         finally:
-            await self.websocket_manager.disconnect(websocket, user_id) 
+            # Get username from token
+            try:
+                data = jwt.decode(
+                    token,
+                    os.getenv('JWT_SECRET'),
+                    algorithms=['HS256']
+                )
+                self.manager.disconnect(data['username'])
+            except:
+                pass 

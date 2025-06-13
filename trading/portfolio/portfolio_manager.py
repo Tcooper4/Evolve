@@ -1,9 +1,15 @@
+import os
+import json
+import redis
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from enum import Enum
+import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
 class PositionType(Enum):
     LONG = "LONG"
@@ -42,90 +48,452 @@ class Position:
         """Calculate position holding period."""
         return self.current_time - self.entry_time
 
+class PortfolioError(Exception):
+    """Custom exception for portfolio errors."""
+    pass
+
 class PortfolioManager:
-    def __init__(self):
-        """Initialize the portfolio manager."""
-        self.positions = pd.DataFrame(columns=['symbol', 'quantity', 'avg_price', 'current_price', 'pnl', 'pnl_pct'])
-        self.cash = 1000000.0  # Starting cash
-        self.trades = []
+    """Manages trading positions and portfolio value."""
     
-    def add_position(self, symbol: str, quantity: int, price: float):
-        """Add a new position or update existing one."""
-        if symbol in self.positions['symbol'].values:
-            # Update existing position
-            idx = self.positions[self.positions['symbol'] == symbol].index[0]
-            old_quantity = self.positions.loc[idx, 'quantity']
-            old_avg_price = self.positions.loc[idx, 'avg_price']
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize portfolio manager.
+        
+        Args:
+            config: Configuration dictionary containing:
+                - redis_host: Redis host (default: localhost)
+                - redis_port: Redis port (default: 6379)
+                - redis_db: Redis database (default: 0)
+                - redis_password: Redis password
+                - redis_ssl: Whether to use SSL (default: false)
+                - max_positions: Maximum number of positions (default: 100)
+                - position_size_limit: Maximum position size (default: 100000)
+                - risk_limit: Maximum risk per position (default: 0.02)
+        """
+        if config is None:
+            config = {}
             
-            new_quantity = old_quantity + quantity
-            new_avg_price = ((old_quantity * old_avg_price) + (quantity * price)) / new_quantity
-            
-            self.positions.loc[idx, 'quantity'] = new_quantity
-            self.positions.loc[idx, 'avg_price'] = new_avg_price
-            self.positions.loc[idx, 'current_price'] = price
-        else:
-            # Add new position
-            new_position = pd.DataFrame({
-                'symbol': [symbol],
-                'quantity': [quantity],
-                'avg_price': [price],
-                'current_price': [price],
-                'pnl': [0.0],
-                'pnl_pct': [0.0]
-            })
-            self.positions = pd.concat([self.positions, new_position], ignore_index=True)
+        # Initialize Redis connection
+        self.redis_client = redis.Redis(
+            host=os.getenv('REDIS_HOST', 'localhost'),
+            port=int(os.getenv('REDIS_PORT', 6379)),
+            db=int(os.getenv('REDIS_DB', 0)),
+            password=os.getenv('REDIS_PASSWORD'),
+            ssl=os.getenv('REDIS_SSL', 'false').lower() == 'true'
+        )
         
-        # Update cash
-        self.cash -= quantity * price
+        # Setup logging
+        self._setup_logging()
         
-        # Record trade
-        self.trades.append({
-            'timestamp': datetime.now(),
-            'symbol': symbol,
-            'quantity': quantity,
-            'price': price,
-            'type': 'buy' if quantity > 0 else 'sell'
-        })
-    
-    def update_prices(self, prices: Dict[str, float]):
-        """Update current prices and calculate P&L."""
-        for symbol, price in prices.items():
-            if symbol in self.positions['symbol'].values:
-                idx = self.positions[self.positions['symbol'] == symbol].index[0]
-                self.positions.loc[idx, 'current_price'] = price
-                
-                # Calculate P&L
-                quantity = self.positions.loc[idx, 'quantity']
-                avg_price = self.positions.loc[idx, 'avg_price']
-                pnl = quantity * (price - avg_price)
-                pnl_pct = (price - avg_price) / avg_price * 100
-                
-                self.positions.loc[idx, 'pnl'] = pnl
-                self.positions.loc[idx, 'pnl_pct'] = pnl_pct
-    
-    def get_portfolio_value(self) -> float:
-        """Calculate total portfolio value."""
-        positions_value = (self.positions['quantity'] * self.positions['current_price']).sum()
-        return positions_value + self.cash
-    
-    def get_portfolio_summary(self) -> Dict[str, float]:
-        """Get portfolio summary statistics."""
-        total_value = self.get_portfolio_value()
-        total_pnl = self.positions['pnl'].sum()
-        total_pnl_pct = (total_pnl / (total_value - total_pnl)) * 100 if total_value > total_pnl else 0
-        
-        return {
-            'total_value': total_value,
-            'cash': self.cash,
-            'positions_value': total_value - self.cash,
-            'total_pnl': total_pnl,
-            'total_pnl_pct': total_pnl_pct,
-            'num_positions': len(self.positions)
+        # Load configuration
+        self.config = {
+            'max_positions': int(os.getenv('MAX_POSITIONS', 100)),
+            'position_size_limit': float(os.getenv('POSITION_SIZE_LIMIT', 100000)),
+            'risk_limit': float(os.getenv('RISK_LIMIT', 0.02))
         }
-    
-    def get_recent_trades(self, n: int = 5) -> List[Dict]:
-        """Get n most recent trades."""
-        return self.trades[-n:]
+        self.config.update(config)
+        
+    def _setup_logging(self) -> None:
+        """Setup logging configuration."""
+        log_handler = RotatingFileHandler(
+            os.getenv('LOG_FILE', 'trading.log'),
+            maxBytes=int(os.getenv('LOG_MAX_SIZE', 10485760)),
+            backupCount=int(os.getenv('LOG_BACKUP_COUNT', 5))
+        )
+        log_handler.setFormatter(logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        ))
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.addHandler(log_handler)
+        self.logger.setLevel(os.getenv('LOG_LEVEL', 'INFO'))
+        
+    def _validate_position(self, position: Dict[str, Any]) -> None:
+        """Validate position data.
+        
+        Args:
+            position: Position data to validate
+            
+        Raises:
+            PortfolioError: If position data is invalid
+        """
+        required_fields = ['symbol', 'quantity', 'entry_price', 'entry_time']
+        if not all(field in position for field in required_fields):
+            raise PortfolioError(f"Position missing required fields: {required_fields}")
+            
+        if position['quantity'] <= 0:
+            raise PortfolioError("Position quantity must be positive")
+            
+        if position['entry_price'] <= 0:
+            raise PortfolioError("Entry price must be positive")
+            
+        try:
+            datetime.fromisoformat(position['entry_time'])
+        except ValueError:
+            raise PortfolioError("Invalid entry time format")
+            
+    def add_position(self, position: Dict[str, Any]) -> str:
+        """Add a new position.
+        
+        Args:
+            position: Position data
+            
+        Returns:
+            Position ID
+            
+        Raises:
+            PortfolioError: If position cannot be added
+        """
+        try:
+            self._validate_position(position)
+            
+            # Check position limits
+            if len(self.get_positions()) >= self.config['max_positions']:
+                raise PortfolioError("Maximum number of positions reached")
+                
+            position_value = position['quantity'] * position['entry_price']
+            if position_value > self.config['position_size_limit']:
+                raise PortfolioError("Position size exceeds limit")
+                
+            # Generate position ID
+            position_id = f"{position['symbol']}_{datetime.utcnow().isoformat()}"
+            
+            # Store position
+            self.redis_client.hset(
+                'positions',
+                position_id,
+                json.dumps(position)
+            )
+            
+            self.logger.info(f"Added position {position_id}")
+            return position_id
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to add position: {str(e)}")
+            
+    def update_position(self, position_id: str, updates: Dict[str, Any]) -> None:
+        """Update an existing position.
+        
+        Args:
+            position_id: Position ID
+            updates: Position updates
+            
+        Raises:
+            PortfolioError: If position cannot be updated
+        """
+        try:
+            position = self.get_position(position_id)
+            if not position:
+                raise PortfolioError(f"Position {position_id} not found")
+                
+            # Update position
+            position.update(updates)
+            self._validate_position(position)
+            
+            # Store updated position
+            self.redis_client.hset(
+                'positions',
+                position_id,
+                json.dumps(position)
+            )
+            
+            self.logger.info(f"Updated position {position_id}")
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to update position: {str(e)}")
+            
+    def remove_position(self, position_id: str) -> None:
+        """Remove a position.
+        
+        Args:
+            position_id: Position ID
+            
+        Raises:
+            PortfolioError: If position cannot be removed
+        """
+        try:
+            if not self.redis_client.hexists('positions', position_id):
+                raise PortfolioError(f"Position {position_id} not found")
+                
+            self.redis_client.hdel('positions', position_id)
+            self.logger.info(f"Removed position {position_id}")
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to remove position: {str(e)}")
+            
+    def get_position(self, position_id: str) -> Optional[Dict[str, Any]]:
+        """Get a position by ID.
+        
+        Args:
+            position_id: Position ID
+            
+        Returns:
+            Position data if found, None otherwise
+            
+        Raises:
+            PortfolioError: If position cannot be retrieved
+        """
+        try:
+            position_data = self.redis_client.hget('positions', position_id)
+            if position_data:
+                return json.loads(position_data)
+            return None
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to get position: {str(e)}")
+            
+    def get_positions(self) -> List[Dict[str, Any]]:
+        """Get all positions.
+        
+        Returns:
+            List of position data
+            
+        Raises:
+            PortfolioError: If positions cannot be retrieved
+        """
+        try:
+            positions = []
+            for position_data in self.redis_client.hgetall('positions').values():
+                positions.append(json.loads(position_data))
+            return positions
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to get positions: {str(e)}")
+            
+    def update_prices(self, prices: Dict[str, float]) -> None:
+        """Update position prices.
+        
+        Args:
+            prices: Dictionary of symbol to price mappings
+            
+        Raises:
+            PortfolioError: If prices cannot be updated
+        """
+        try:
+            positions = self.get_positions()
+            for position in positions:
+                symbol = position['symbol']
+                if symbol in prices:
+                    position['current_price'] = prices[symbol]
+                    self.redis_client.hset(
+                        'positions',
+                        f"{symbol}_{position['entry_time']}",
+                        json.dumps(position)
+                    )
+                    
+            self.logger.info("Updated position prices")
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to update prices: {str(e)}")
+            
+    def calculate_portfolio_value(self) -> float:
+        """Calculate total portfolio value.
+        
+        Returns:
+            Total portfolio value
+            
+        Raises:
+            PortfolioError: If portfolio value cannot be calculated
+        """
+        try:
+            positions = self.get_positions()
+            total_value = 0
+            
+            for position in positions:
+                if 'current_price' in position:
+                    total_value += position['quantity'] * position['current_price']
+                else:
+                    total_value += position['quantity'] * position['entry_price']
+                    
+            return total_value
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to calculate portfolio value: {str(e)}")
+            
+    def calculate_position_pnl(self, position_id: str) -> float:
+        """Calculate position P&L.
+        
+        Args:
+            position_id: Position ID
+            
+        Returns:
+            Position P&L
+            
+        Raises:
+            PortfolioError: If P&L cannot be calculated
+        """
+        try:
+            position = self.get_position(position_id)
+            if not position:
+                raise PortfolioError(f"Position {position_id} not found")
+                
+            if 'current_price' not in position:
+                return 0
+                
+            return (position['current_price'] - position['entry_price']) * position['quantity']
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to calculate P&L: {str(e)}")
+            
+    def calculate_portfolio_pnl(self) -> float:
+        """Calculate total portfolio P&L.
+        
+        Returns:
+            Total portfolio P&L
+            
+        Raises:
+            PortfolioError: If P&L cannot be calculated
+        """
+        try:
+            positions = self.get_positions()
+            total_pnl = 0
+            
+            for position in positions:
+                if 'current_price' in position:
+                    total_pnl += (position['current_price'] - position['entry_price']) * position['quantity']
+                    
+            return total_pnl
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to calculate portfolio P&L: {str(e)}")
+            
+    def get_portfolio_summary(self) -> Dict[str, Any]:
+        """Get portfolio summary.
+        
+        Returns:
+            Portfolio summary dictionary
+            
+        Raises:
+            PortfolioError: If summary cannot be generated
+        """
+        try:
+            positions = self.get_positions()
+            total_value = self.calculate_portfolio_value()
+            total_pnl = self.calculate_portfolio_pnl()
+            
+            return {
+                'total_positions': len(positions),
+                'total_value': total_value,
+                'total_pnl': total_pnl,
+                'positions': positions
+            }
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to generate portfolio summary: {str(e)}")
+            
+    def save_portfolio(self, path: str) -> None:
+        """Save portfolio to file.
+        
+        Args:
+            path: Path to save portfolio
+            
+        Raises:
+            PortfolioError: If portfolio cannot be saved
+        """
+        try:
+            portfolio_data = {
+                'positions': self.get_positions(),
+                'config': self.config,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            
+            save_path = Path(path)
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(save_path, 'w') as f:
+                json.dump(portfolio_data, f, indent=4)
+                
+            self.logger.info(f"Saved portfolio to {path}")
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to save portfolio: {str(e)}")
+            
+    def load_portfolio(self, path: str) -> None:
+        """Load portfolio from file.
+        
+        Args:
+            path: Path to load portfolio from
+            
+        Raises:
+            PortfolioError: If portfolio cannot be loaded
+        """
+        try:
+            with open(path, 'r') as f:
+                portfolio_data = json.load(f)
+                
+            # Clear existing positions
+            self.redis_client.delete('positions')
+            
+            # Load positions
+            for position in portfolio_data['positions']:
+                self._validate_position(position)
+                self.redis_client.hset(
+                    'positions',
+                    f"{position['symbol']}_{position['entry_time']}",
+                    json.dumps(position)
+                )
+                
+            # Update configuration
+            self.config.update(portfolio_data['config'])
+            
+            self.logger.info(f"Loaded portfolio from {path}")
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to load portfolio: {str(e)}")
+            
+    def export_to_csv(self, path: str) -> None:
+        """Export portfolio to CSV.
+        
+        Args:
+            path: Path to save CSV
+            
+        Raises:
+            PortfolioError: If portfolio cannot be exported
+        """
+        try:
+            positions = self.get_positions()
+            df = pd.DataFrame(positions)
+            
+            save_path = Path(path)
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            df.to_csv(save_path, index=False)
+            self.logger.info(f"Exported portfolio to {path}")
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to export portfolio: {str(e)}")
+            
+    def import_from_csv(self, path: str) -> None:
+        """Import portfolio from CSV.
+        
+        Args:
+            path: Path to load CSV from
+            
+        Raises:
+            PortfolioError: If portfolio cannot be imported
+        """
+        try:
+            df = pd.read_csv(path)
+            required_columns = ['symbol', 'quantity', 'entry_price', 'entry_time']
+            
+            if not all(col in df.columns for col in required_columns):
+                raise PortfolioError(f"CSV missing required columns: {required_columns}")
+                
+            # Clear existing positions
+            self.redis_client.delete('positions')
+            
+            # Import positions
+            for _, row in df.iterrows():
+                position = row.to_dict()
+                self._validate_position(position)
+                self.redis_client.hset(
+                    'positions',
+                    f"{position['symbol']}_{position['entry_time']}",
+                    json.dumps(position)
+                )
+                
+            self.logger.info(f"Imported portfolio from {path}")
+            
+        except Exception as e:
+            raise PortfolioError(f"Failed to import portfolio: {str(e)}")
 
     def open_position(self,
                      symbol: str,
@@ -149,7 +517,7 @@ class PortfolioManager:
         """
         # Check if we have enough cash
         required_margin = self._calculate_required_margin(symbol, size, price)
-        if required_margin > self.cash:
+        if required_margin > self.calculate_portfolio_value():
             return False
         
         # Create and store position
@@ -165,20 +533,7 @@ class PortfolioManager:
             take_profit=take_profit
         )
         
-        self.positions.loc[len(self.positions)] = [
-            symbol, size, price, price, 0.0, 0.0
-        ]
-        
-        self.cash -= required_margin
-        
-        # Record trade
-        self.trades.append({
-            'timestamp': datetime.now(),
-            'symbol': symbol,
-            'quantity': size,
-            'price': price,
-            'type': 'buy' if size > 0 else 'sell'
-        })
+        self.add_position(position.dict())
         
         return True
     
@@ -192,29 +547,17 @@ class PortfolioManager:
         Returns:
             Realized P&L if position closed successfully, None otherwise
         """
-        if symbol not in self.positions['symbol'].values:
+        if symbol not in self.get_positions():
             return None
         
-        idx = self.positions[self.positions['symbol'] == symbol].index[0]
-        quantity = self.positions.loc[idx, 'quantity']
-        avg_price = self.positions.loc[idx, 'avg_price']
-        realized_pnl = quantity * (price - avg_price)
+        position = self.get_position(symbol)
+        if not position:
+            return None
+        
+        realized_pnl = position['quantity'] * (price - position['entry_price'])
         
         # Update cash
-        self.cash += self._calculate_required_margin(symbol, quantity, price)
-        self.cash += realized_pnl
-        
-        # Record trade
-        self.trades.append({
-            'timestamp': datetime.now(),
-            'symbol': symbol,
-            'quantity': -quantity,
-            'price': price,
-            'type': 'sell' if quantity > 0 else 'buy'
-        })
-        
-        # Remove position
-        self.positions.drop(idx, inplace=True)
+        self.update_position(symbol, {'current_price': price})
         
         return realized_pnl
     
@@ -227,27 +570,27 @@ class PortfolioManager:
         current_time = datetime.now()
         positions_to_close = []
         
-        for symbol, position in self.positions.iterrows():
-            if symbol not in prices:
+        for position in self.get_positions():
+            if position['symbol'] not in prices:
                 continue
                 
-            current_price = prices[symbol]
+            current_price = prices[position['symbol']]
             
             # Check stop loss
             if position['stop_loss'] is not None:
                 if (position['type'] == PositionType.LONG and current_price <= position['stop_loss']) or \
                    (position['type'] == PositionType.SHORT and current_price >= position['stop_loss']):
-                    positions_to_close.append((symbol, current_price))
+                    positions_to_close.append(position['symbol'])
             
             # Check take profit
             if position['take_profit'] is not None:
                 if (position['type'] == PositionType.LONG and current_price >= position['take_profit']) or \
                    (position['type'] == PositionType.SHORT and current_price <= position['take_profit']):
-                    positions_to_close.append((symbol, current_price))
+                    positions_to_close.append(position['symbol'])
         
         # Close positions that hit stop loss or take profit
-        for symbol, price in positions_to_close:
-            self.close_position(symbol, price)
+        for symbol in positions_to_close:
+            self.close_position(symbol, prices[symbol])
     
     def calculate_performance_metrics(self, prices: Dict[str, float]) -> Dict:
         """Calculate portfolio performance metrics.
@@ -258,7 +601,7 @@ class PortfolioManager:
         Returns:
             Dictionary of performance metrics
         """
-        total_value = self.get_portfolio_value()
+        total_value = self.calculate_portfolio_value()
         
         # Calculate returns
         total_return = (total_value - 1000000.0) / 1000000.0
@@ -270,7 +613,7 @@ class PortfolioManager:
                 'unrealized_pnl_pct': position['pnl_pct'],
                 'holding_period': (datetime.now() - position['timestamp']).total_seconds() / 3600  # hours
             }
-            for symbol, position in self.positions.iterrows()
+            for symbol, position in self.get_positions().items()
         }
         
         # Calculate trade metrics
@@ -278,7 +621,7 @@ class PortfolioManager:
         
         return {
             'total_value': total_value,
-            'cash': self.cash,
+            'cash': self.calculate_portfolio_value() - total_value,
             'total_return': total_return,
             'position_metrics': position_metrics,
             'trade_metrics': trade_metrics
@@ -296,7 +639,7 @@ class PortfolioManager:
         Returns:
             List of rebalancing trades (symbol, size, price)
         """
-        current_value = self.get_portfolio_value()
+        current_value = self.calculate_portfolio_value()
         rebalance_trades = []
         
         # Calculate target positions
@@ -306,14 +649,14 @@ class PortfolioManager:
         }
         
         # Close positions not in target weights
-        for symbol in list(self.positions['symbol'].values):
+        for symbol in list(self.get_positions()):
             if symbol not in target_weights:
-                rebalance_trades.append((symbol, -self.positions[self.positions['symbol'] == symbol].iloc[0]['quantity'], prices[symbol]))
-                self.close_position(symbol, prices[symbol])
+                rebalance_trades.append((symbol, -self.get_position(symbol)['quantity'], prices[symbol]))
+                self.remove_position(symbol)
         
         # Adjust existing positions
         for symbol, target_size in target_positions.items():
-            current_size = self.positions[self.positions['symbol'] == symbol].iloc[0]['quantity'] if symbol in self.positions['symbol'].values else 0
+            current_size = self.get_position(symbol)['quantity'] if symbol in self.get_positions() else 0
             size_diff = target_size - current_size
             
             if abs(size_diff) > 1e-6:  # Avoid tiny trades
@@ -334,18 +677,18 @@ class PortfolioManager:
     
     def _calculate_trade_metrics(self) -> Dict:
         """Calculate trade performance metrics."""
-        if len(self.trades) == 0:
+        if len(self.get_positions()) == 0:
             return {}
         
         # Calculate basic metrics
-        total_trades = len(self.trades)
-        winning_trades = sum(1 for trade in self.trades if trade['type'] == 'buy')
-        losing_trades = sum(1 for trade in self.trades if trade['type'] == 'sell')
+        total_trades = len(self.get_positions())
+        winning_trades = sum(1 for position in self.get_positions().values() if position['type'] == PositionType.LONG)
+        losing_trades = sum(1 for position in self.get_positions().values() if position['type'] == PositionType.SHORT)
         
         # Calculate P&L metrics
-        total_pnl = sum(trade['pnl'] for trade in self.trades)
-        avg_win = np.mean([trade['pnl'] for trade in self.trades if trade['type'] == 'buy']) if winning_trades > 0 else 0
-        avg_loss = np.mean([trade['pnl'] for trade in self.trades if trade['type'] == 'sell']) if losing_trades > 0 else 0
+        total_pnl = sum(position['pnl'] for position in self.get_positions().values())
+        avg_win = np.mean([position['pnl'] for position in self.get_positions().values() if position['type'] == PositionType.LONG]) if winning_trades > 0 else 0
+        avg_loss = np.mean([position['pnl'] for position in self.get_positions().values() if position['type'] == PositionType.SHORT]) if losing_trades > 0 else 0
         
         return {
             'total_trades': total_trades,

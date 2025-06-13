@@ -50,12 +50,12 @@ class SecurityConfig(BaseModel):
 
 class EmailConfig(BaseModel):
     """Email notification configuration."""
-    smtp_server: str
-    smtp_port: int
+    smtp_server: str = Field(default_factory=lambda: os.getenv('SMTP_HOST', 'smtp.gmail.com'))
+    smtp_port: int = Field(default_factory=lambda: int(os.getenv('SMTP_PORT', '587')))
     use_tls: bool = True
     use_ssl: bool = False
-    sender_email: str
-    sender_password: str
+    sender_email: str = Field(default_factory=lambda: os.getenv('EMAIL_FROM', ''))
+    sender_password: str = Field(default_factory=lambda: os.getenv('EMAIL_PASSWORD', ''))
     timeout: int = 30
     max_connections: int = 5
     retry_attempts: int = 3
@@ -71,8 +71,8 @@ class EmailConfig(BaseModel):
 
 class SlackConfig(BaseModel):
     """Slack notification configuration."""
-    webhook_url: str
-    channel: str = "#notifications"
+    webhook_url: str = Field(default_factory=lambda: os.getenv('SLACK_WEBHOOK_URL', ''))
+    channel: str = Field(default_factory=lambda: os.getenv('SLACK_DEFAULT_CHANNEL', '#notifications'))
     username: str = "Automation Bot"
     timeout: int = 10
     retry_attempts: int = 3

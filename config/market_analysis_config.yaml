@@ -1,0 +1,65 @@
+# Market Analysis Configuration
+
+# Market conditions settings
+market_conditions:
+  trend_threshold: 0.02  # 2% threshold for trend detection
+  volatility_threshold: 0.015  # 1.5% threshold for volatility
+  volume_threshold: 1.5  # 1.5x average volume threshold
+  regime_thresholds:
+    bull_market: 0.05  # 5% threshold for bull market
+    bear_market: -0.05  # -5% threshold for bear market
+    neutral_market: 0.02  # 2% threshold for neutral market
+
+# Analysis settings
+analysis_settings:
+  technical_indicators:
+    sma_periods: [20, 50, 200]
+    ema_periods: [12, 26]
+    rsi_period: 14
+    macd:
+      fast_period: 12
+      slow_period: 26
+      signal_period: 9
+    bollinger_bands:
+      period: 20
+      std_dev: 2.0
+  support_resistance:
+    lookback_period: 20
+    sensitivity: 0.02
+  momentum:
+    roc_period: 14
+    mfi_period: 14
+
+# Visualization settings
+visualization_settings:
+  style: 'seaborn'
+  figure_size: [12, 6]
+  dpi: 100
+  colors:
+    price: 'blue'
+    volume: 'gray'
+    indicators:
+      sma: ['green', 'orange', 'red']
+      ema: ['purple', 'brown']
+      macd: ['blue', 'red', 'green']
+  save_format: 'png'
+  save_directory: 'plots'
+
+# Pipeline settings
+pipeline_settings:
+  data_loading:
+    file_format: 'csv'
+    date_column: 'date'
+    index_column: 'date'
+  preprocessing:
+    missing_data_method: 'ffill'
+    remove_outliers: true
+    outlier_columns: ['close', 'volume']
+    outlier_std: 3.0
+    normalize: true
+    normalize_columns: ['close', 'volume']
+    normalize_method: 'zscore'
+  validation:
+    required_columns: ['open', 'high', 'low', 'close', 'volume']
+    min_data_points: 100
+    max_missing_ratio: 0.1 
