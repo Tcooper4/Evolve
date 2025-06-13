@@ -24,4 +24,6 @@ prophet==1.1.5
 statsmodels==0.14.1
 arch==6.3.0
 pyfolio==0.9.2
-empyrical==0.5.5 
+empyrical==0.5.5
+
+streamlit-multipage>=0.1.0
