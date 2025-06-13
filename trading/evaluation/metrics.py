@@ -3,36 +3,54 @@ from typing import Union, List, Dict, Any
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 class RegressionMetrics:
-    def __init__(self):
-        pass
+    """Metrics for regression models."""
 
-    def calculate_accuracy(self, predictions, actuals):
-        """Calculate the accuracy of predictions."""
-        return 0.0
+    def mean_squared_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """Return Mean Squared Error."""
+        return float(mean_squared_error(actuals, predictions))
 
-    def calculate_precision(self, predictions, actuals):
-        """Calculate the precision of predictions."""
-        return 0.0
+    def root_mean_squared_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """Return Root Mean Squared Error."""
+        return float(np.sqrt(mean_squared_error(actuals, predictions)))
 
-    def calculate_recall(self, predictions, actuals):
-        """Calculate the recall of predictions."""
-        return 0.0
+    def mean_absolute_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """Return Mean Absolute Error."""
+        return float(mean_absolute_error(actuals, predictions))
+
+    def r2_score(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """Return R squared score."""
+        return float(r2_score(actuals, predictions))
 
 class ClassificationMetrics:
-    def __init__(self):
-        pass
+    """Metrics for classification models."""
 
-    def calculate_accuracy(self, predictions, actuals):
-        """Calculate the accuracy of predictions."""
-        return 0.0
+    def accuracy(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """Classification accuracy."""
+        actuals = np.asarray(actuals)
+        predictions = np.asarray(predictions)
+        return float(np.mean(actuals == predictions))
 
-    def calculate_precision(self, predictions, actuals):
-        """Calculate the precision of predictions."""
-        return 0.0
+    def precision(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """Precision score for binary labels."""
+        actuals = np.asarray(actuals)
+        predictions = np.asarray(predictions)
+        tp = np.sum((predictions == 1) & (actuals == 1))
+        fp = np.sum((predictions == 1) & (actuals == 0))
+        return float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
 
-    def calculate_recall(self, predictions, actuals):
-        """Calculate the recall of predictions."""
-        return 0.0 
+    def recall(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """Recall score for binary labels."""
+        actuals = np.asarray(actuals)
+        predictions = np.asarray(predictions)
+        tp = np.sum((predictions == 1) & (actuals == 1))
+        fn = np.sum((predictions == 0) & (actuals == 1))
+        return float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0
+
+    def f1_score(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """F1 score for binary labels."""
+        prec = self.precision(actuals, predictions)
+        rec = self.recall(actuals, predictions)
+        return 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
 
 class TimeSeriesMetrics:
     """Class for calculating time series specific metrics."""
@@ -40,6 +58,31 @@ class TimeSeriesMetrics:
     def __init__(self):
         """Initialize the metrics calculator."""
         self.metrics = {}
+
+    def mean_absolute_percentage_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """Return MAPE."""
+        actuals = np.asarray(actuals)
+        predictions = np.asarray(predictions)
+        mask = actuals != 0
+        return float(np.mean(np.abs((actuals[mask] - predictions[mask]) / actuals[mask])) * 100)
+
+    def symmetric_mean_absolute_percentage_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """Return SMAPE."""
+        actuals = np.asarray(actuals)
+        predictions = np.asarray(predictions)
+        denominator = (np.abs(actuals) + np.abs(predictions)) / 2
+        mask = denominator != 0
+        return float(np.mean(np.abs(actuals[mask] - predictions[mask]) / denominator[mask]) * 100)
+
+    def mean_absolute_scaled_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+        """Return MASE using naive forecast for scaling."""
+        actuals = np.asarray(actuals)
+        predictions = np.asarray(predictions)
+        naive_forecast = actuals[:-1]
+        denom = np.mean(np.abs(actuals[1:] - naive_forecast))
+        if denom == 0:
+            return float('inf')
+        return float(np.mean(np.abs(actuals - predictions)) / denom)
         
     def calculate_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
         """Calculate all time series metrics.
@@ -56,22 +99,12 @@ class TimeSeriesMetrics:
             'rmse': np.sqrt(mean_squared_error(y_true, y_pred)),
             'mae': mean_absolute_error(y_true, y_pred),
             'r2': r2_score(y_true, y_pred),
-            'mape': self._calculate_mape(y_true, y_pred)
+            'mape': self.mean_absolute_percentage_error(y_true, y_pred),
+            'smape': self.symmetric_mean_absolute_percentage_error(y_true, y_pred),
+            'mase': self.mean_absolute_scaled_error(y_true, y_pred)
         }
         return self.metrics
         
-    def _calculate_mape(self, y_true: np.ndarray, y_pred: np.ndarray) -> float:
-        """Calculate Mean Absolute Percentage Error.
-        
-        Args:
-            y_true: True values
-            y_pred: Predicted values
-            
-        Returns:
-            MAPE value
-        """
-        mask = y_true != 0
-        return np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
         
     def get_metric(self, metric_name: str) -> float:
         """Get a specific metric value.
@@ -118,40 +151,51 @@ class RiskMetrics:
         Returns:
             Dictionary of risk metrics
         """
-        # Calculate basic statistics
-        mean_return = np.mean(returns)
-        std_return = np.std(returns)
-        
-        # Calculate annualized metrics
-        annualized_return = (1 + mean_return) ** window - 1
-        annualized_volatility = std_return * np.sqrt(window)
-        
-        # Calculate Sharpe ratio
-        excess_return = annualized_return - risk_free_rate
-        sharpe_ratio = excess_return / annualized_volatility if annualized_volatility != 0 else 0
-        
-        # Calculate maximum drawdown
-        cumulative_returns = (1 + returns).cumprod()
-        rolling_max = np.maximum.accumulate(cumulative_returns)
-        drawdowns = (cumulative_returns - rolling_max) / rolling_max
-        max_drawdown = np.min(drawdowns)
-        
-        # Calculate Value at Risk (VaR)
-        var_95 = np.percentile(returns, 5)
-        
-        # Calculate Expected Shortfall (ES)
+        annualized_return = (1 + np.mean(returns)) ** window - 1
+        annualized_volatility = np.std(returns) * np.sqrt(window)
+
+        sharpe_ratio = self.sharpe_ratio(returns, risk_free_rate)
+        sortino_ratio = self.sortino_ratio(returns, risk_free_rate)
+        max_drawdown = self.maximum_drawdown(returns)
+        var_95 = self.value_at_risk(returns)
         es_95 = np.mean(returns[returns <= var_95])
         
         self.metrics = {
             'annualized_return': annualized_return,
             'annualized_volatility': annualized_volatility,
             'sharpe_ratio': sharpe_ratio,
+            'sortino_ratio': sortino_ratio,
             'max_drawdown': max_drawdown,
             'var_95': var_95,
             'expected_shortfall_95': es_95
         }
         
         return self.metrics
+
+    def sharpe_ratio(self, returns: np.ndarray, risk_free_rate: float = 0.0) -> float:
+        """Calculate the Sharpe ratio."""
+        excess = returns - risk_free_rate / len(returns)
+        return float(np.sqrt(252) * excess.mean() / excess.std()) if excess.std() != 0 else 0.0
+
+    def sortino_ratio(self, returns: np.ndarray, risk_free_rate: float = 0.0) -> float:
+        """Calculate the Sortino ratio."""
+        downside = returns[returns < 0]
+        downside_std = downside.std()
+        if downside_std == 0:
+            return 0.0
+        excess = returns.mean() - risk_free_rate / len(returns)
+        return float(np.sqrt(252) * excess / downside_std)
+
+    def maximum_drawdown(self, returns: np.ndarray) -> float:
+        """Calculate maximum drawdown."""
+        cumulative = (1 + returns).cumprod()
+        running_max = np.maximum.accumulate(cumulative)
+        drawdowns = cumulative / running_max - 1
+        return float(drawdowns.min())
+
+    def value_at_risk(self, returns: np.ndarray, confidence: float = 0.95) -> float:
+        """Calculate Value at Risk (historical)."""
+        return float(np.percentile(returns, (1 - confidence) * 100))
         
     def get_metric(self, metric_name: str) -> float:
         """Get a specific risk metric value.
