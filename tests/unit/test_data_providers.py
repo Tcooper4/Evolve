@@ -1,6 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
+import os
 from datetime import datetime, timedelta
 from trading.data.providers.yfinance_provider import YFinanceProvider
 from trading.data.providers.alpha_vantage_provider import AlphaVantageProvider
@@ -14,7 +15,9 @@ class TestDataProviders:
     
     @pytest.fixture
     def alpha_vantage_provider(self):
-        return AlphaVantageProvider(api_key='test_key')
+        # Use environment variable with fallback for testing
+        api_key = os.getenv('ALPHA_VANTAGE_API_KEY', 'test_key')
+        return AlphaVantageProvider(api_key=api_key)
     
     def test_yfinance_provider_initialization(self, yfinance_provider):
         """Test YFinance provider initialization."""

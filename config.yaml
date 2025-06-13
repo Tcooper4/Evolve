@@ -172,12 +172,10 @@ backtesting:
 
 # Logging settings
 logging:
-  level: "INFO"
-  log_dir: "logs"
-  log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  log_rotation: "daily"
-  max_log_size: 10485760  # 10MB
-  backup_count: 10
+  level: "${LOG_LEVEL:-INFO}"
+  file: "${LOG_FILE:-trading.log}"
+  max_size: "${LOG_MAX_SIZE:-10485760}"
+  backup_count: "${LOG_BACKUP_COUNT:-5}"
 
 # API settings
 api:
@@ -185,11 +183,11 @@ api:
     retry_count: 3
     timeout: 30
   alpha_vantage:
-    api_key: ""  # Add your API key here
+    api_key: "${ALPHA_VANTAGE_API_KEY}"
     retry_count: 3
     timeout: 30
   polygon:
-    api_key: ""  # Add your API key here
+    api_key: "${POLYGON_API_KEY}"
     retry_count: 3
     timeout: 30
 
@@ -201,4 +199,55 @@ system:
   cache_dir: "cache"
   results_dir: "results"
   checkpoint_dir: "checkpoints"
-  tensorboard_dir: "tensorboard" 
+  tensorboard_dir: "tensorboard"
+
+api_keys:
+  alpha_vantage: "${ALPHA_VANTAGE_API_KEY}"
+  polygon: "${POLYGON_API_KEY}"
+  finnhub: "${FINNHUB_API_KEY}"
+  iex: "${IEX_API_KEY}"
+  twilio: "${TWILIO_API_KEY}"
+  sendgrid: "${SENDGRID_API_KEY}"
+
+redis:
+  host: "${REDIS_HOST:-localhost}"
+  port: "${REDIS_PORT:-6379}"
+  db: "${REDIS_DB:-0}"
+  password: "${REDIS_PASSWORD}"
+  ssl: "${REDIS_SSL:-false}"
+
+ray:
+  address: "${RAY_ADDRESS:-auto}"
+  redis_password: "${RAY_REDIS_PASSWORD}"
+  num_cpus: "${RAY_NUM_CPUS:-4}"
+  num_gpus: "${RAY_NUM_GPUS:-0}"
+
+kubernetes:
+  namespace: "${K8S_NAMESPACE:-default}"
+  service_account: "${K8S_SERVICE_ACCOUNT:-default}"
+
+metrics:
+  enabled: "${METRICS_ENABLED:-true}"
+  port: "${METRICS_PORT:-9090}"
+  path: "${METRICS_PATH:-/metrics}"
+
+agents:
+  max_workers: "${MAX_WORKERS:-10}"
+  timeout: "${AGENT_TIMEOUT:-300}"
+  retry_attempts: "${RETRY_ATTEMPTS:-3}"
+
+tasks:
+  max_concurrent: "${MAX_CONCURRENT_TASKS:-5}"
+  default_timeout: "${TASK_TIMEOUT:-3600}"
+
+web:
+  host: "${WEB_HOST:-0.0.0.0}"
+  port: "${WEB_PORT:-5000}"
+  debug: "${WEB_DEBUG:-false}"
+  secret_key: "${WEB_SECRET_KEY}"
+  jwt_secret: "${JWT_SECRET}"
+  ssl_cert: "${SSL_CERT:-}"
+  ssl_key: "${SSL_KEY:-}"
+  cors_origins: "${CORS_ORIGINS:-*}"
+  rate_limit: "${RATE_LIMIT:-100}"
+  rate_limit_window: "${RATE_LIMIT_WINDOW:-3600}" 

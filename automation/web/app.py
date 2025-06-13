@@ -4,13 +4,20 @@ import asyncio
 import json
 from pathlib import Path
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import redis
 import ray
 from fastapi import Request, HTTPException, WebSocket
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import jwt
+from functools import wraps
+import yaml
+import uuid
 
 from ..agents.orchestrator import DevelopmentOrchestrator
 from ..agents.monitor import SystemMonitor
@@ -41,24 +48,26 @@ orchestrator = Orchestrator()
 metrics_api = MetricsAPI(orchestrator)
 
 # Load configuration
-config_path = Path("automation/config/config.json")
+config_path = Path(__file__).parent.parent.parent / 'config.yaml'
 with open(config_path) as f:
-    config = json.load(f)
+    config = yaml.safe_load(f)
 
 # Initialize components
 orchestrator = DevelopmentOrchestrator(config)
 monitor = SystemMonitor(config)
 error_handler = ErrorHandler(config)
 
-# Initialize user manager
-user_manager = UserManager(redis_client, app.config['SECRET_KEY'])
-
 # Initialize Redis client
 redis_client = redis.Redis(
-    host=config.get("redis", {}).get("host", "localhost"),
-    port=config.get("redis", {}).get("port", 6379),
-    db=config.get("redis", {}).get("db", 0)
+    host=os.getenv('REDIS_HOST', 'localhost'),
+    port=int(os.getenv('REDIS_PORT', '6379')),
+    db=int(os.getenv('REDIS_DB', '0')),
+    password=os.getenv('REDIS_PASSWORD'),
+    ssl=os.getenv('REDIS_SSL', 'false').lower() == 'true'
 )
+
+# Initialize user manager
+user_manager = UserManager(redis_client, os.getenv('JWT_SECRET'))
 
 # Initialize notification manager
 notification_manager = NotificationManager(redis_client)
@@ -67,14 +76,73 @@ notification_manager = NotificationManager(redis_client)
 websocket_manager = WebSocketManager(notification_manager)
 websocket_handler = WebSocketHandler(websocket_manager)
 
-# Initialize FastAPI app
-app = Flask(__name__)
+# Initialize Flask app
+app.config['SECRET_KEY'] = os.getenv('WEB_SECRET_KEY')
+app.config['JWT_SECRET'] = os.getenv('JWT_SECRET')
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="automation/web/static"), name="static")
+# Initialize CORS
+CORS(app, resources={
+    r"/*": {
+        "origins": os.getenv('CORS_ORIGINS', '*').split(','),
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
-# Initialize templates
-templates = Jinja2Templates(directory="automation/web/templates")
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=[f"{os.getenv('RATE_LIMIT', '100')}/hour"]
+)
+
+# Setup logging
+log_handler = logging.handlers.RotatingFileHandler(
+    os.getenv('LOG_FILE', 'trading.log'),
+    maxBytes=int(os.getenv('LOG_MAX_SIZE', 10485760)),
+    backupCount=int(os.getenv('LOG_BACKUP_COUNT', 5))
+)
+log_handler.setFormatter(logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+))
+app.logger.addHandler(log_handler)
+app.logger.setLevel(os.getenv('LOG_LEVEL', 'INFO'))
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'message': 'Token is missing'}), 401
+        try:
+            token = token.split(' ')[1]  # Remove 'Bearer ' prefix
+            data = jwt.decode(token, app.config['JWT_SECRET'], algorithms=['HS256'])
+            current_user = data['username']
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token has expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Invalid token'}), 401
+        return f(current_user, *args, **kwargs)
+    return decorated
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'message': 'Token is missing'}), 401
+        try:
+            token = token.split(' ')[1]
+            data = jwt.decode(token, app.config['JWT_SECRET'], algorithms=['HS256'])
+            if not data.get('is_admin', False):
+                return jsonify({'message': 'Admin privileges required'}), 403
+            current_user = data['username']
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token has expired'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Invalid token'}), 401
+        return f(current_user, *args, **kwargs)
+    return decorated
 
 @app.route('/')
 def index():
@@ -148,160 +216,108 @@ def update_config():
     """Update system configuration."""
     new_config = request.json
     with open(config_path, 'w') as f:
-        json.dump(new_config, f, indent=4)
+        yaml.dump(new_config, f)
     return jsonify({"status": "updated"})
 
 @app.route('/api/tasks', methods=['GET'])
-async def get_tasks():
-    try:
-        status = request.args.get('status')
-        task_type = request.args.get('task_type')
-        tasks = await task_api.get_tasks(status=status, task_type=task_type)
-        return jsonify(tasks)
-    except Exception as e:
-        logger.error(f"Error getting tasks: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+@token_required
+def get_tasks(current_user):
+    tasks = redis_client.hgetall(f'tasks:{current_user}')
+    return jsonify({k.decode(): v.decode() for k, v in tasks.items()})
 
 @app.route('/api/tasks', methods=['POST'])
-async def create_task_api():
-    try:
-        task_data = request.json
-        task = await task_api.create_task(task_data)
-        return jsonify(task), 201
-    except Exception as e:
-        logger.error(f"Error creating task: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+@token_required
+def create_task(current_user):
+    data = request.get_json()
+    task_id = str(uuid.uuid4())
+    data['created_by'] = current_user
+    data['created_at'] = datetime.utcnow().isoformat()
+    redis_client.hset(f'tasks:{current_user}', task_id, json.dumps(data))
+    return jsonify({'task_id': task_id})
 
 @app.route('/api/tasks/<task_id>', methods=['GET'])
-async def get_task(task_id):
-    try:
-        task = await task_api.get_task(task_id)
-        if task:
-            return jsonify(task)
-        return jsonify({"error": "Task not found"}), 404
-    except Exception as e:
-        logger.error(f"Error getting task: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+@token_required
+def get_task(current_user, task_id):
+    task = redis_client.hget(f'tasks:{current_user}', task_id)
+    if task:
+        return jsonify(json.loads(task))
+    return jsonify({"error": "Task not found"}), 404
 
-@app.route('/api/tasks/<task_id>', methods=['PATCH'])
-async def update_task(task_id):
-    try:
-        task_data = request.json
-        task = await task_api.update_task(task_id, task_data)
-        if task:
-            return jsonify(task)
-        return jsonify({"error": "Task not found"}), 404
-    except Exception as e:
-        logger.error(f"Error updating task: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+@app.route('/api/tasks/<task_id>', methods=['PUT'])
+@token_required
+def update_task(current_user, task_id):
+    data = request.get_json()
+    task = redis_client.hget(f'tasks:{current_user}', task_id)
+    if not task:
+        return jsonify({'message': 'Task not found'}), 404
+    task_data = json.loads(task)
+    task_data.update(data)
+    redis_client.hset(f'tasks:{current_user}', task_id, json.dumps(task_data))
+    return jsonify({'message': 'Task updated'})
 
 @app.route('/api/tasks/<task_id>', methods=['DELETE'])
-async def delete_task(task_id):
-    try:
-        success = await task_api.delete_task(task_id)
-        if success:
-            return jsonify({"message": "Task deleted successfully"})
-        return jsonify({"error": "Task not found"}), 404
-    except Exception as e:
-        logger.error(f"Error deleting task: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+@token_required
+def delete_task(current_user, task_id):
+    if redis_client.hdel(f'tasks:{current_user}', task_id):
+        return jsonify({'message': 'Task deleted'})
+    return jsonify({'message': 'Task not found'}), 404
 
 @app.route('/api/tasks/<task_id>/execute', methods=['POST'])
-async def execute_task(task_id):
-    try:
-        success = await task_api.execute_task(task_id)
-        if success:
-            return jsonify({"message": "Task execution started"})
+@token_required
+def execute_task(current_user, task_id):
+    task = redis_client.hget(f'tasks:{current_user}', task_id)
+    if not task:
         return jsonify({"error": "Task not found"}), 404
-    except Exception as e:
-        logger.error(f"Error executing task: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+    
+    success = asyncio.run(orchestrator.execute_task(task_id))
+    if success:
+        return jsonify({"message": "Task execution started"})
+    return jsonify({"error": "Task execution failed"}), 500
 
 @app.route('/api/tasks/<task_id>/metrics', methods=['GET'])
-async def get_task_metrics(task_id):
-    try:
-        metrics = await metrics_api.get_task_metrics(task_id)
-        if metrics:
-            return jsonify(metrics)
-        return jsonify({"error": "Task metrics not found"}), 404
-    except Exception as e:
-        logger.error(f"Error getting task metrics: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+@token_required
+def get_task_metrics(current_user, task_id):
+    metrics = redis_client.hget(f'metrics:{current_user}', task_id)
+    if metrics:
+        return jsonify(json.loads(metrics))
+    return jsonify({"error": "Task metrics not found"}), 404
 
 @app.route('/api/metrics', methods=['GET'])
-async def get_metrics():
-    try:
-        metrics = await metrics_api.get_all_metrics()
-        return jsonify(metrics)
-    except Exception as e:
-        logger.error(f"Error getting metrics: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+@token_required
+def get_metrics(current_user):
+    metrics = redis_client.hgetall('metrics')
+    return jsonify({k.decode(): v.decode() for k, v in metrics.items()})
 
 @app.route('/api/metrics/system', methods=['GET'])
-async def get_system_metrics():
-    try:
-        metrics = await metrics_api.get_system_metrics()
-        
-        # Check for critical conditions
-        if metrics["cpu_usage"] > 90:
-            await notification_manager.create_notification(
-                title="High CPU Usage",
-                message=f"CPU usage is at {metrics['cpu_usage']}%",
-                notification_type=NotificationType.SYSTEM,
-                priority=NotificationPriority.CRITICAL,
-                data={"metric": "cpu_usage", "value": metrics["cpu_usage"]}
-            )
-        
-        if metrics["memory_usage"] > 90:
-            await notification_manager.create_notification(
-                title="High Memory Usage",
-                message=f"Memory usage is at {metrics['memory_usage']}%",
-                notification_type=NotificationType.SYSTEM,
-                priority=NotificationPriority.CRITICAL,
-                data={"metric": "memory_usage", "value": metrics["memory_usage"]}
-            )
-        
-        if metrics["disk_usage"] > 90:
-            await notification_manager.create_notification(
-                title="High Disk Usage",
-                message=f"Disk usage is at {metrics['disk_usage']}%",
-                notification_type=NotificationType.SYSTEM,
-                priority=NotificationPriority.CRITICAL,
-                data={"metric": "disk_usage", "value": metrics["disk_usage"]}
-            )
-        
-        return metrics
-    except Exception as e:
-        logger.error(f"Error getting system metrics: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to get system metrics")
+@token_required
+def get_system_metrics(current_user):
+    metrics = redis_client.hgetall('system_metrics')
+    if metrics:
+        return jsonify(json.loads(metrics))
+    return jsonify({"error": "System metrics not found"}), 404
 
 @app.route('/api/metrics/agents', methods=['GET'])
-async def get_agent_metrics():
-    try:
-        metrics = await metrics_api.get_agent_metrics()
-        return jsonify(metrics)
-    except Exception as e:
-        logger.error(f"Error getting agent metrics: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+@token_required
+def get_agent_metrics(current_user):
+    metrics = redis_client.hgetall('agent_metrics')
+    if metrics:
+        return jsonify(json.loads(metrics))
+    return jsonify({"error": "Agent metrics not found"}), 404
 
 @app.route('/api/metrics/models', methods=['GET'])
-async def get_model_metrics():
-    try:
-        metrics = await metrics_api.get_model_metrics()
-        return jsonify(metrics)
-    except Exception as e:
-        logger.error(f"Error getting model metrics: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+@token_required
+def get_model_metrics(current_user):
+    metrics = redis_client.hgetall('model_metrics')
+    if metrics:
+        return jsonify(json.loads(metrics))
+    return jsonify({"error": "Model metrics not found"}), 404
 
 @app.route('/api/metrics/history', methods=['GET'])
-async def get_metrics_history():
-    try:
-        limit = request.args.get('limit', default=100, type=int)
-        history = await metrics_api.get_metrics_history(limit=limit)
-        return jsonify(history)
-    except Exception as e:
-        logger.error(f"Error getting metrics history: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+@token_required
+def get_metrics_history(current_user):
+    limit = request.args.get('limit', default=100, type=int)
+    history = redis_client.hgetall(f'metrics_history:{current_user}')
+    return jsonify({k.decode(): v.decode() for k, v in history.items()})
 
 @app.route('/health')
 def health_check():
@@ -355,25 +371,27 @@ def login_page():
     return render_template('login.html')
 
 @app.route('/api/auth/login', methods=['POST'])
+@limiter.limit("5/minute")
 def login():
-    """Handle user login."""
-    try:
-        data = request.get_json()
-        username = data.get('username')
-        password = data.get('password')
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return jsonify({'message': 'Missing credentials'}), 400
         
-        if not username or not password:
-            return jsonify({'error': 'Username and password are required'}), 400
+    # Verify credentials (implement your own logic)
+    if not verify_credentials(username, password):
+        return jsonify({'message': 'Invalid credentials'}), 401
         
-        token = user_manager.authenticate(username, password)
-        if not token:
-            return jsonify({'error': 'Invalid username or password'}), 401
-        
-        return jsonify({'token': token})
-        
-    except Exception as e:
-        app.logger.error(f"Login error: {str(e)}")
-        return jsonify({'error': 'Login failed'}), 500
+    # Generate token
+    token = jwt.encode({
+        'username': username,
+        'is_admin': is_admin(username),
+        'exp': datetime.utcnow() + timedelta(hours=24)
+    }, app.config['JWT_SECRET'])
+    
+    return jsonify({'token': token})
 
 @app.route('/api/auth/register', methods=['POST'])
 @admin_required
@@ -724,6 +742,35 @@ async def stop_task(request: Request, task_id: str):
     except Exception as e:
         logger.error(f"Error stopping task: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to stop task")
+
+@app.route('/api/admin/users', methods=['GET'])
+@admin_required
+def get_users(current_user):
+    users = redis_client.hgetall('users')
+    return jsonify({k.decode(): v.decode() for k, v in users.items()})
+
+@app.route('/api/admin/users', methods=['POST'])
+@admin_required
+def create_user(current_user):
+    data = request.get_json()
+    username = data.get('username')
+    if not username:
+        return jsonify({'message': 'Username is required'}), 400
+    if redis_client.hexists('users', username):
+        return jsonify({'message': 'User already exists'}), 409
+    data['created_by'] = current_user
+    data['created_at'] = datetime.utcnow().isoformat()
+    redis_client.hset('users', username, json.dumps(data))
+    return jsonify({'message': 'User created'})
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({'message': 'Rate limit exceeded'}), 429
+
+@app.errorhandler(500)
+def internal_error(e):
+    app.logger.error(f'Internal error: {str(e)}')
+    return jsonify({'message': 'Internal server error'}), 500
 
 if __name__ == '__main__':
     run_app() 

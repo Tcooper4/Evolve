@@ -16,6 +16,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any, Optional, Tuple, List
 from abc import ABC, abstractmethod
+import os
 
 class StepHandler(ABC):
     """Base class for step handlers."""
@@ -400,14 +401,16 @@ class NotificationStepHandler(StepHandler):
     async def _send_email(self, recipients: List[str], subject: str, message: str,
                          template: Optional[str], data: Dict[str, Any]) -> Dict[str, Any]:
         """Send an email notification."""
-        # TODO: Get these from configuration
-        smtp_server = "smtp.gmail.com"
-        smtp_port = 587
-        sender_email = "your-email@gmail.com"
-        sender_password = "your-password"
-
         try:
-            # Create message
+            # Get email configuration from environment
+            sender_email = os.getenv('EMAIL_FROM')
+            sender_password = os.getenv('EMAIL_PASSWORD')
+            
+            if not sender_email or not sender_password:
+                self.logger.error("Email configuration not found in environment variables")
+                return {"sent": False, "recipients": recipients}
+            
+            # Configure email settings
             msg = MIMEMultipart()
             msg["From"] = sender_email
             msg["To"] = ", ".join(recipients)
@@ -422,7 +425,8 @@ class NotificationStepHandler(StepHandler):
             msg.attach(MIMEText(message, "plain"))
 
             # Send email
-            with smtplib.SMTP(smtp_server, smtp_port) as server:
+            with smtplib.SMTP(os.getenv('SMTP_HOST', 'smtp.gmail.com'), 
+                             int(os.getenv('SMTP_PORT', '587'))) as server:
                 server.starttls()
                 server.login(sender_email, sender_password)
                 server.send_message(msg)
