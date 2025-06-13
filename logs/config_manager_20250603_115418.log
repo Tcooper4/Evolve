@@ -1,5 +1,0 @@
-2025-06-03 11:54:18,722 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
-2025-06-03 11:54:21,080 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
-2025-06-03 11:54:21,082 - trading.utils.config_manager - ERROR - Error loading configuration: Configuration file not found: config/analysis_config.yaml
-2025-06-03 12:01:39,322 - trading.utils.config_manager - INFO - Configuration loaded from config/config.yaml
-2025-06-03 12:01:39,328 - trading.utils.config_manager - ERROR - Error loading configuration: Configuration file not found: config/analysis_config.yaml
