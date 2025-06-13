@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from typing import List, Dict, Any, Optional
 import pandas as pd
+from scipy.stats import norm
 from trading.models.base_model import BaseModel
 from trading.memory.performance_memory import PerformanceMemory
 
@@ -233,13 +234,24 @@ class EnsembleForecaster(BaseModel):
         return predictions
 
     def predict_with_confidence(self, x: torch.Tensor, alpha: float = 0.05) -> Dict[str, torch.Tensor]:
-        """Return predictions with simple confidence intervals."""
+        """Return predictions with simple confidence intervals.
+
+        Args:
+            x: Input tensor
+            alpha: Significance level for the confidence interval (default 0.05 for 95% CI)
+
+        Returns:
+            Dictionary containing predictions and confidence interval bounds
+        """
         preds = self.predict(x)
         ensemble_pred = preds['ensemble']
         if ensemble_pred.ndim == 1:
             ensemble_pred = ensemble_pred.unsqueeze(-1)
         std = ensemble_pred.std(dim=0, keepdim=True)
-        z = torch.tensor(1.96)  # approx for 95%
+
+        z_value = norm.ppf(1 - alpha / 2)
+        z = torch.tensor(float(z_value))
+
         lower = ensemble_pred - z * std
         upper = ensemble_pred + z * std
         preds['lower'] = lower
