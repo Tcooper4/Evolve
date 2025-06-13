@@ -103,6 +103,7 @@ if 'llm' not in st.session_state:
     api_key = st.session_state.api_key if st.session_state.use_api else None
     st.session_state.llm = LLMInterface(api_key=api_key)
 
+
 # Initialize TradingRules
 if 'trading_rules' not in st.session_state:
     st.session_state.trading_rules = TradingRules()
@@ -137,6 +138,15 @@ if 'lstm_model' not in st.session_state:
     }
     st.session_state.lstm_model = LSTMForecaster(lstm_config)
     st.session_state.model_metrics = {}
+
+if 'router' not in st.session_state:
+    from trading.agents.router import AgentRouter
+    st.session_state.router = AgentRouter(
+        st.session_state.llm,
+        st.session_state.lstm_model,
+        st.session_state.strategy_manager,
+        st.session_state.backtest_engine,
+    )
 
 # Initialize MarketAnalyzer
 if 'market_analyzer' not in st.session_state:
@@ -465,8 +475,8 @@ user_prompt = st.sidebar.text_area(
 )
 
 if user_prompt:
-    # Process the prompt using LLM
-    response = st.session_state.llm.process_prompt(user_prompt)
+    # Route the prompt through the agent router
+    response = st.session_state.router.route(user_prompt)
     
     # Display the response in the sidebar
     st.sidebar.markdown("---")
@@ -1982,6 +1992,13 @@ elif page == "Settings":
         if api_key != st.session_state.api_key:
             st.session_state.api_key = api_key
             st.session_state.llm = LLMInterface(api_key=api_key)
+            from trading.agents.router import AgentRouter
+            st.session_state.router = AgentRouter(
+                st.session_state.llm,
+                st.session_state.lstm_model,
+                st.session_state.strategy_manager,
+                st.session_state.backtest_engine,
+            )
     st.session_state.use_api = use_api
     
     # Display current LLM status
@@ -2014,6 +2031,13 @@ elif page == "Settings":
                 st.session_state.use_api = config.get("use_api", False)
                 st.session_state.api_key = config.get("api_key", "")
                 st.session_state.llm = LLMInterface(api_key=st.session_state.api_key)
+                from trading.agents.router import AgentRouter
+                st.session_state.router = AgentRouter(
+                    st.session_state.llm,
+                    st.session_state.lstm_model,
+                    st.session_state.strategy_manager,
+                    st.session_state.backtest_engine,
+                )
                 st.success("Configuration imported successfully!")
             except Exception as e:
                 st.error(f"Error importing configuration: {str(e)}")
