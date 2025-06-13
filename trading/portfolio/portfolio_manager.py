@@ -87,9 +87,12 @@ class PortfolioManager:
         # Determine if Redis should be used. Fallback to in-memory storage if
         # disabled or connection fails. This allows the portfolio manager to be
         # used in environments where Redis is not available.
-        self.use_redis = os.getenv("USE_REDIS", "true").lower() == "true" and REDIS_AVAILABLE
+        self.use_redis = config.get("use_redis", os.getenv("USE_REDIS", "true").lower() == "true") and REDIS_AVAILABLE
         self.redis_client = None
         self.positions: Dict[str, Dict[str, Any]] = {}
+
+        # Setup logging early so connection errors are logged
+        self._setup_logging()
 
         if self.use_redis:
             try:
@@ -100,22 +103,15 @@ class PortfolioManager:
                     password=os.getenv("REDIS_PASSWORD"),
                     ssl=os.getenv("REDIS_SSL", "false").lower() == "true",
                 )
-                # Test connection
                 self.redis_client.ping()
             except Exception as e:
-                # Fall back to in-memory storage on connection failure
-                self.logger = logging.getLogger(self.__class__.__name__)
                 self.logger.warning(
                     "Redis unavailable, falling back to in-memory storage: %s",
                     str(e),
                 )
                 self.redis_client = None
         elif not REDIS_AVAILABLE:
-            self.logger = logging.getLogger(self.__class__.__name__)
             self.logger.warning("redis package not installed; using in-memory storage")
-
-        # Setup logging
-        self._setup_logging()
 
         # Load configuration
         self.config = {
@@ -151,6 +147,12 @@ class PortfolioManager:
         required_fields = ["symbol", "quantity", "entry_price", "entry_time"]
         if not all(field in position for field in required_fields):
             raise PortfolioError(f"Position missing required fields: {required_fields}")
+
+        try:
+            position["quantity"] = float(position["quantity"])
+            position["entry_price"] = float(position["entry_price"])
+        except (TypeError, ValueError):
+            raise PortfolioError("Quantity and entry_price must be numeric")
 
         if position["quantity"] <= 0:
             raise PortfolioError("Position quantity must be positive")

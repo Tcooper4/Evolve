@@ -17,6 +17,11 @@ class ConfigManager:
         self.config_dir = Path(config_dir)
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.config = {}
+
+        # Automatically load settings from environment variables
+        env_config = self.create_config_from_env()
+        if env_config:
+            self.config.update(env_config)
         
     def load_config(self, config_type: str) -> Dict[str, Any]:
         """Load configuration settings.
