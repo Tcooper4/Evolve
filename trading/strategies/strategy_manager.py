@@ -362,26 +362,34 @@ class StrategyManager:
         except Exception as e:
             raise StrategyError(f"Failed to deactivate strategy: {str(e)}")
     
-    def set_ensemble(self, weights: Dict[str, float]) -> None:
+    def set_ensemble(self, weights: Dict[str, float], strict: bool = True) -> None:
         """Set ensemble weights for active strategies.
-        
+
         Args:
             weights: Dictionary of strategy weights
-            
+            strict: If ``True``, raise an error when the weights do not sum to
+                ``1.0``. If ``False``, automatically normalise the provided
+                weights so that they sum to ``1.0``.
+
         Raises:
             StrategyError: If ensemble configuration fails
         """
         try:
             if not all(name in self.active_strategies for name in weights.keys()):
                 raise StrategyError("All strategies in weights must be active")
-            
+
             total_weight = sum(weights.values())
             if not np.isclose(total_weight, 1.0):
-                raise StrategyError("Weights must sum to 1.0")
-            
+                if strict:
+                    raise StrategyError("Weights must sum to 1.0")
+                if total_weight == 0:
+                    raise StrategyError("Sum of weights must be non-zero for normalisation")
+                weights = {name: weight / total_weight for name, weight in weights.items()}
+                self.logger.info(f"Normalised ensemble weights: {weights}")
+
             self.ensemble_weights = weights
             self.logger.info(f"Set ensemble weights: {weights}")
-            
+
         except Exception as e:
             raise StrategyError(f"Failed to set ensemble weights: {str(e)}")
     
