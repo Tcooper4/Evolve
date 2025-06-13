@@ -274,4 +274,12 @@ class TestConfiguration:
         
         # Test file deletion
         config_manager.delete_config(str(config_path))
-        assert not config_path.exists() 
+        assert not config_path.exists()
+
+    def test_config_version_roundtrip(self, config_manager, model_config, tmp_path):
+        """Ensure version field is preserved when saving and loading."""
+        config_path = tmp_path / 'version_config.json'
+        config_manager.save_config(model_config, str(config_path))
+        loaded = config_manager.load_config(str(config_path))
+        assert isinstance(loaded, ModelConfig)
+        assert loaded.version == model_config.version
