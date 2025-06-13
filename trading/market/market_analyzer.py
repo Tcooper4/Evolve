@@ -94,7 +94,12 @@ class MarketAnalyzer:
             volatility_rank = (current_volatility - historical_volatility.min()) / (historical_volatility.max() - historical_volatility.min())
             
             # Calculate volatility trend
-            volatility_trend = 'increasing' if current_volatility > historical_volatility.iloc[-2] else 'decreasing'
+            hv_non_null = historical_volatility.dropna()
+            if len(hv_non_null) > 1:
+                prev_volatility = hv_non_null.iloc[-2]
+                volatility_trend = 'increasing' if current_volatility > prev_volatility else 'decreasing'
+            else:
+                volatility_trend = 'unknown'
             
             return {
                 'current_volatility': current_volatility,
