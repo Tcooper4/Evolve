@@ -806,3 +806,19 @@ class PortfolioManager:
             "avg_loss": avg_loss,
             "profit_factor": abs(avg_win / avg_loss) if avg_loss != 0 else float("inf"),
         }
+
+    def calculate_sharpe_ratio(self, returns: pd.Series, risk_free_rate: float = 0.0) -> float:
+        """Calculate the Sharpe ratio for a return series.
+
+        Args:
+            returns: Series of periodic returns
+            risk_free_rate: Annual risk-free rate
+
+        Returns:
+            Sharpe ratio value
+        """
+        if returns.empty or returns.std() == 0:
+            return 0.0
+
+        excess = returns - risk_free_rate / 252
+        return np.sqrt(252) * excess.mean() / excess.std()
