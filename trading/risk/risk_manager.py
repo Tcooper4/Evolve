@@ -58,7 +58,8 @@ class RiskManager:
             'volatility': [],
             'sharpe_ratio': [],
             'sortino_ratio': [],
-            'max_drawdown': []
+            'max_drawdown': [],
+            'beta': []
         }
         
         # Initialize risk metrics
@@ -99,8 +100,12 @@ class RiskManager:
         
         return position_size
     
-    def calculate_portfolio_risk(self, positions: Dict[str, float],
-                               returns: pd.DataFrame) -> Dict[str, float]:
+    def calculate_portfolio_risk(
+        self,
+        positions: Dict[str, float],
+        returns: pd.DataFrame,
+        benchmark_returns: Optional[pd.Series] = None,
+    ) -> Dict[str, float]:
         """Calculate portfolio risk metrics.
         
         Args:
@@ -120,6 +125,11 @@ class RiskManager:
         sharpe_ratio = self._calculate_sharpe_ratio(portfolio_returns)
         sortino_ratio = self._calculate_sortino_ratio(portfolio_returns)
         max_drawdown = self._calculate_max_drawdown(portfolio_returns)
+        beta = (
+            self._calculate_beta(portfolio_returns, benchmark_returns)
+            if benchmark_returns is not None
+            else 0.0
+        )
         
         # Update metrics history
         self.metrics_history['var'].append(var_95)
@@ -128,6 +138,7 @@ class RiskManager:
         self.metrics_history['sharpe_ratio'].append(sharpe_ratio)
         self.metrics_history['sortino_ratio'].append(sortino_ratio)
         self.metrics_history['max_drawdown'].append(max_drawdown)
+        self.metrics_history['beta'].append(beta)
         
         return {
             'var_95': var_95,
@@ -135,7 +146,8 @@ class RiskManager:
             'volatility': volatility,
             'sharpe_ratio': sharpe_ratio,
             'sortino_ratio': sortino_ratio,
-            'max_drawdown': max_drawdown
+            'max_drawdown': max_drawdown,
+            'beta': beta
         }
     
     def optimize_portfolio(self, returns: pd.DataFrame,
@@ -255,6 +267,13 @@ class RiskManager:
         rolling_max = cumulative_returns.expanding().max()
         drawdowns = cumulative_returns / rolling_max - 1
         return drawdowns.min()
+
+    def _calculate_beta(self, portfolio_returns: pd.Series, benchmark_returns: pd.Series) -> float:
+        """Calculate beta against a benchmark."""
+        if benchmark_returns.var() == 0:
+            return 0.0
+        covariance = np.cov(portfolio_returns, benchmark_returns)[0, 1]
+        return covariance / benchmark_returns.var()
     
     def save_results(self, results: Dict, filename: str):
         """Save optimization results to disk."""

@@ -24,4 +24,8 @@ def test_execution_engine():
     trade_history = ee.get_trade_history()
     assert len(trade_history) == 2
     assert trade_history[0] == market_trade
-    assert trade_history[1] == limit_trade 
+    assert trade_history[1] == limit_trade
+
+    # Test fill or kill order - should return None if price higher than limit
+    fok_trade = ee.execute_fill_or_kill('AAPL', 1, 100.0)
+    assert fok_trade is None or fok_trade['type'] == 'fill_or_kill'
