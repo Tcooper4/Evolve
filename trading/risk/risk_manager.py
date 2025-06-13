@@ -35,7 +35,7 @@ class RiskManager:
         }
         
         # Update with provided config
-        if config is not None and not config.empty:
+        if config:
             self.config.update(config)
             
         # Setup logging
@@ -57,6 +57,7 @@ class RiskManager:
             'cvar': [],
             'volatility': [],
             'sharpe_ratio': [],
+            'sortino_ratio': [],
             'max_drawdown': []
         }
         
@@ -66,6 +67,7 @@ class RiskManager:
         self.beta = None
         self.correlation = None
         self.returns = None
+        self.sortino = None
     
     def calculate_position_size(self, asset_price: float, volatility: float,
                               account_value: float, risk_per_trade: float) -> float:
@@ -116,6 +118,7 @@ class RiskManager:
         cvar_95 = self._calculate_cvar(portfolio_returns, 0.95)
         volatility = self._calculate_portfolio_volatility(positions, returns)
         sharpe_ratio = self._calculate_sharpe_ratio(portfolio_returns)
+        sortino_ratio = self._calculate_sortino_ratio(portfolio_returns)
         max_drawdown = self._calculate_max_drawdown(portfolio_returns)
         
         # Update metrics history
@@ -123,6 +126,7 @@ class RiskManager:
         self.metrics_history['cvar'].append(cvar_95)
         self.metrics_history['volatility'].append(volatility)
         self.metrics_history['sharpe_ratio'].append(sharpe_ratio)
+        self.metrics_history['sortino_ratio'].append(sortino_ratio)
         self.metrics_history['max_drawdown'].append(max_drawdown)
         
         return {
@@ -130,6 +134,7 @@ class RiskManager:
             'cvar_95': cvar_95,
             'volatility': volatility,
             'sharpe_ratio': sharpe_ratio,
+            'sortino_ratio': sortino_ratio,
             'max_drawdown': max_drawdown
         }
     
@@ -233,6 +238,16 @@ class RiskManager:
         """Calculate Sharpe ratio."""
         excess_returns = returns - risk_free_rate/252
         return np.sqrt(252) * excess_returns.mean() / excess_returns.std()
+
+    def _calculate_sortino_ratio(self, returns: pd.Series,
+                                risk_free_rate: float = 0.0) -> float:
+        """Calculate Sortino ratio."""
+        downside = returns[returns < 0]
+        downside_std = downside.std()
+        if downside_std == 0:
+            return 0.0
+        excess = returns.mean() - risk_free_rate/252
+        return np.sqrt(252) * excess / downside_std
     
     def _calculate_max_drawdown(self, returns: pd.Series) -> float:
         """Calculate maximum drawdown."""
@@ -267,6 +282,7 @@ class RiskManager:
             self.var_99 = np.percentile(self.returns, 1)
             self.beta = self.returns.cov(self.returns) / self.returns.var()
             self.correlation = self.returns.corr(self.returns)
+            self.sortino = self._calculate_sortino_ratio(self.returns)
     
     def get_risk_metrics(self) -> Dict[str, float]:
         """Get current risk metrics."""
@@ -274,7 +290,8 @@ class RiskManager:
             'var_95': self.var_95 if self.var_95 is not None else 0.0,
             'var_99': self.var_99 if self.var_99 is not None else 0.0,
             'beta': self.beta if self.beta is not None else 0.0,
-            'correlation': self.correlation if self.correlation is not None else 0.0
+            'correlation': self.correlation if self.correlation is not None else 0.0,
+            'sortino_ratio': self.sortino if hasattr(self, 'sortino') else 0.0
         }
     
     def update_returns(self, new_returns: pd.Series):
