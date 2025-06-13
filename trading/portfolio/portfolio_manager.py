@@ -72,14 +72,32 @@ class PortfolioManager:
         if config is None:
             config = {}
             
-        # Initialize Redis connection
-        self.redis_client = redis.Redis(
-            host=os.getenv('REDIS_HOST', 'localhost'),
-            port=int(os.getenv('REDIS_PORT', 6379)),
-            db=int(os.getenv('REDIS_DB', 0)),
-            password=os.getenv('REDIS_PASSWORD'),
-            ssl=os.getenv('REDIS_SSL', 'false').lower() == 'true'
-        )
+        # Determine if Redis should be used. Fallback to in-memory storage if
+        # disabled or connection fails. This allows the portfolio manager to be
+        # used in environments where Redis is not available.
+        self.use_redis = os.getenv('USE_REDIS', 'true').lower() == 'true'
+        self.redis_client = None
+        self.positions: Dict[str, Dict[str, Any]] = {}
+
+        if self.use_redis:
+            try:
+                self.redis_client = redis.Redis(
+                    host=os.getenv('REDIS_HOST', 'localhost'),
+                    port=int(os.getenv('REDIS_PORT', 6379)),
+                    db=int(os.getenv('REDIS_DB', 0)),
+                    password=os.getenv('REDIS_PASSWORD'),
+                    ssl=os.getenv('REDIS_SSL', 'false').lower() == 'true'
+                )
+                # Test connection
+                self.redis_client.ping()
+            except Exception as e:
+                # Fall back to in-memory storage on connection failure
+                self.logger = logging.getLogger(self.__class__.__name__)
+                self.logger.warning(
+                    "Redis unavailable, falling back to in-memory storage: %s",
+                    str(e),
+                )
+                self.redis_client = None
         
         # Setup logging
         self._setup_logging()
@@ -156,12 +174,15 @@ class PortfolioManager:
             # Generate position ID
             position_id = f"{position['symbol']}_{datetime.utcnow().isoformat()}"
             
-            # Store position
-            self.redis_client.hset(
-                'positions',
-                position_id,
-                json.dumps(position)
-            )
+            # Store position either in Redis or in-memory
+            if self.redis_client:
+                self.redis_client.hset(
+                    'positions',
+                    position_id,
+                    json.dumps(position)
+                )
+            else:
+                self.positions[position_id] = position
             
             self.logger.info(f"Added position {position_id}")
             return position_id
@@ -189,11 +210,14 @@ class PortfolioManager:
             self._validate_position(position)
             
             # Store updated position
-            self.redis_client.hset(
-                'positions',
-                position_id,
-                json.dumps(position)
-            )
+            if self.redis_client:
+                self.redis_client.hset(
+                    'positions',
+                    position_id,
+                    json.dumps(position)
+                )
+            else:
+                self.positions[position_id] = position
             
             self.logger.info(f"Updated position {position_id}")
             
@@ -210,10 +234,14 @@ class PortfolioManager:
             PortfolioError: If position cannot be removed
         """
         try:
-            if not self.redis_client.hexists('positions', position_id):
-                raise PortfolioError(f"Position {position_id} not found")
-                
-            self.redis_client.hdel('positions', position_id)
+            if self.redis_client:
+                if not self.redis_client.hexists('positions', position_id):
+                    raise PortfolioError(f"Position {position_id} not found")
+                self.redis_client.hdel('positions', position_id)
+            else:
+                if position_id not in self.positions:
+                    raise PortfolioError(f"Position {position_id} not found")
+                del self.positions[position_id]
             self.logger.info(f"Removed position {position_id}")
             
         except Exception as e:
@@ -232,10 +260,13 @@ class PortfolioManager:
             PortfolioError: If position cannot be retrieved
         """
         try:
-            position_data = self.redis_client.hget('positions', position_id)
-            if position_data:
-                return json.loads(position_data)
-            return None
+            if self.redis_client:
+                position_data = self.redis_client.hget('positions', position_id)
+                if position_data:
+                    return json.loads(position_data)
+                return None
+            else:
+                return self.positions.get(position_id)
             
         except Exception as e:
             raise PortfolioError(f"Failed to get position: {str(e)}")
@@ -250,10 +281,13 @@ class PortfolioManager:
             PortfolioError: If positions cannot be retrieved
         """
         try:
-            positions = []
-            for position_data in self.redis_client.hgetall('positions').values():
-                positions.append(json.loads(position_data))
-            return positions
+            if self.redis_client:
+                positions = []
+                for position_data in self.redis_client.hgetall('positions').values():
+                    positions.append(json.loads(position_data))
+                return positions
+            else:
+                return list(self.positions.values())
             
         except Exception as e:
             raise PortfolioError(f"Failed to get positions: {str(e)}")
@@ -268,17 +302,24 @@ class PortfolioManager:
             PortfolioError: If prices cannot be updated
         """
         try:
-            positions = self.get_positions()
-            for position in positions:
-                symbol = position['symbol']
-                if symbol in prices:
-                    position['current_price'] = prices[symbol]
-                    self.redis_client.hset(
-                        'positions',
-                        f"{symbol}_{position['entry_time']}",
-                        json.dumps(position)
-                    )
-                    
+            if self.redis_client:
+                positions = self.get_positions()
+                for position in positions:
+                    symbol = position['symbol']
+                    if symbol in prices:
+                        position['current_price'] = prices[symbol]
+                        self.redis_client.hset(
+                            'positions',
+                            f"{symbol}_{position['entry_time']}",
+                            json.dumps(position)
+                        )
+            else:
+                for pid, position in list(self.positions.items()):
+                    symbol = position['symbol']
+                    if symbol in prices:
+                        position['current_price'] = prices[symbol]
+                        self.positions[pid] = position
+
             self.logger.info("Updated position prices")
             
         except Exception as e:
@@ -420,16 +461,23 @@ class PortfolioManager:
                 portfolio_data = json.load(f)
                 
             # Clear existing positions
-            self.redis_client.delete('positions')
+            if self.redis_client:
+                self.redis_client.delete('positions')
+            else:
+                self.positions.clear()
             
             # Load positions
             for position in portfolio_data['positions']:
                 self._validate_position(position)
-                self.redis_client.hset(
-                    'positions',
-                    f"{position['symbol']}_{position['entry_time']}",
-                    json.dumps(position)
-                )
+                if self.redis_client:
+                    self.redis_client.hset(
+                        'positions',
+                        f"{position['symbol']}_{position['entry_time']}",
+                        json.dumps(position)
+                    )
+                else:
+                    pid = f"{position['symbol']}_{position['entry_time']}"
+                    self.positions[pid] = position
                 
             # Update configuration
             self.config.update(portfolio_data['config'])
@@ -478,17 +526,24 @@ class PortfolioManager:
                 raise PortfolioError(f"CSV missing required columns: {required_columns}")
                 
             # Clear existing positions
-            self.redis_client.delete('positions')
+            if self.redis_client:
+                self.redis_client.delete('positions')
+            else:
+                self.positions.clear()
             
             # Import positions
             for _, row in df.iterrows():
                 position = row.to_dict()
                 self._validate_position(position)
-                self.redis_client.hset(
-                    'positions',
-                    f"{position['symbol']}_{position['entry_time']}",
-                    json.dumps(position)
-                )
+                if self.redis_client:
+                    self.redis_client.hset(
+                        'positions',
+                        f"{position['symbol']}_{position['entry_time']}",
+                        json.dumps(position)
+                    )
+                else:
+                    pid = f"{position['symbol']}_{position['entry_time']}"
+                    self.positions[pid] = position
                 
             self.logger.info(f"Imported portfolio from {path}")
             
