@@ -7,7 +7,12 @@ from trading.models.base_model import BaseModel
 from trading.memory.performance_memory import PerformanceMemory
 
 class EnsembleForecaster(BaseModel):
-    """Ensemble model that combines predictions from multiple models."""
+    """Ensemble model that combines predictions from multiple models.
+
+    The configuration passed at initialization is treated as immutable. Each
+    entry in ``config['models']`` is copied internally so the original
+    dictionaries remain unchanged after the ensemble is created.
+    """
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize ensemble model.
@@ -39,8 +44,9 @@ class EnsembleForecaster(BaseModel):
         """Setup the ensemble model architecture."""
         self.models = []
         for model_config in self.config['models']:
-            model_class = model_config.pop('class')
-            model = model_class(config=model_config)
+            cfg = dict(model_config)
+            model_class = cfg.pop('class')
+            model = model_class(config=cfg)
             self.models.append(model)
         
         # Initialize model weights
