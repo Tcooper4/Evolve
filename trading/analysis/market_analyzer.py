@@ -463,17 +463,25 @@ class MarketAnalyzer:
                 raise MarketAnalysisError(f"No data available for {symbol}")
             
             data = self.data[symbol]
+
+            if data.empty:
+                return None
+
             latest = data.iloc[-1]
-            
-            # Calculate price changes
-            daily_change = latest['Close'] - data.iloc[-2]['Close']
-            daily_change_pct = (daily_change / data.iloc[-2]['Close']) * 100
-            
-            weekly_change = latest['Close'] - data.iloc[-6]['Close']
-            weekly_change_pct = (weekly_change / data.iloc[-6]['Close']) * 100
-            
-            monthly_change = latest['Close'] - data.iloc[-21]['Close']
-            monthly_change_pct = (monthly_change / data.iloc[-21]['Close']) * 100
+
+            def _calc_change(lookback: int) -> Tuple[Optional[float], Optional[float]]:
+                if len(data) < 2:
+                    return None, None
+
+                index = -lookback if len(data) >= lookback else 0
+                prev_close = data.iloc[index]['Close']
+                change = latest['Close'] - prev_close
+                pct = (change / prev_close) * 100
+                return float(change), float(pct)
+
+            daily_change, daily_change_pct = _calc_change(2)
+            weekly_change, weekly_change_pct = _calc_change(6)
+            monthly_change, monthly_change_pct = _calc_change(21)
             
             summary = {
                 'price': {
