@@ -8,6 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from datetime import datetime, timedelta
 import logging
+from trading.utils.common import normalize_indicator_name
 
 logger = logging.getLogger(__name__)
 
@@ -238,6 +239,8 @@ class FeatureEngineer(FeatureEngineering):
 
         # Get all the technical indicators
         features = data.ta.indicators()
+        # Normalize indicator names for consistency
+        features.rename(columns=lambda c: normalize_indicator_name(c), inplace=True)
 
         # Apply user registered custom indicators
         for name, func in self.custom_indicators.items():
