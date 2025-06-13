@@ -17,6 +17,8 @@ import logging
 from functools import wraps
 import time
 
+from trading.utils.common import normalize_indicator_name
+
 # Try to import redis, but make it optional
 try:
     import redis
@@ -339,6 +341,7 @@ class MarketAnalyzer:
             
             # Get all the technical indicators
             indicators = data.ta.indicators()
+            indicators.rename(columns=lambda c: normalize_indicator_name(c), inplace=True)
             
             # Add basic price-based features
             indicators['returns'] = data['Close'].pct_change()
