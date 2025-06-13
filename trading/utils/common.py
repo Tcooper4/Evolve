@@ -306,4 +306,28 @@ def plot_rolling_metrics(metrics: pd.DataFrame):
     axes[1, 1].grid(True)
     
     plt.tight_layout()
-    plt.show() 
+    plt.show()
+
+
+def normalize_indicator_name(name: str) -> str:
+    """Normalize technical indicator names.
+
+    This helper converts indicator names to a consistent
+    ``UPPER_SNAKE_CASE`` style as commonly used by ``pandas_ta``.
+
+    Parameters
+    ----------
+    name:
+        Original indicator name.
+
+    Returns
+    -------
+    str
+        Normalized indicator name.
+    """
+
+    if not isinstance(name, str):
+        return str(name)
+
+    normalized = name.replace(" ", "_").replace("-", "_")
+    return normalized.upper()
