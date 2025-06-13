@@ -89,4 +89,5 @@ ray==2.9.0  # For distributed computing
 dask==2023.12.1  # For parallel computing
 numba==0.58.1  # For performance optimization
 cupy==12.2.0  # For GPU acceleration
-jax==0.4.20  # For alternative ML framework 
+jax==0.4.20  # For alternative ML framework
+streamlit-multipage>=0.1.0
