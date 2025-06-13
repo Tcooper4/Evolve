@@ -69,23 +69,40 @@ def load_config(config_path: Union[str, Path]) -> Dict[str, Any]:
     
     return config
 
-def save_config(config: Dict[str, Any], config_path: Union[str, Path]):
-    """Save configuration to file.
-    
-    Args:
-        config: Configuration dictionary
-        config_path: Path to save configuration
+def save_config(config: Dict[str, Any], config_path: Union[str, Path]) -> None:
+    """Save configuration to file with basic error handling.
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Configuration dictionary to persist.
+    config_path : Union[str, Path]
+        Path to the configuration file. Supported formats are ``.json`` and
+        ``.yaml``/``.yml``.
+
+    Raises
+    ------
+    IOError
+        If the file cannot be written.
+    ValueError
+        If the file extension is unsupported.
     """
+
     config_path = Path(config_path)
-    
-    if config_path.suffix == '.json':
-        with open(config_path, 'w') as f:
-            json.dump(config, f, indent=4)
-    elif config_path.suffix in ['.yaml', '.yml']:
-        with open(config_path, 'w') as f:
-            yaml.dump(config, f, default_flow_style=False)
-    else:
-        raise ValueError(f"Unsupported config file format: {config_path.suffix}")
+
+    try:
+        if config_path.suffix == ".json":
+            with open(config_path, "w") as f:
+                json.dump(config, f, indent=4)
+        elif config_path.suffix in [".yaml", ".yml"]:
+            with open(config_path, "w") as f:
+                yaml.dump(config, f, default_flow_style=False)
+        else:
+            raise ValueError(
+                f"Unsupported config file format: {config_path.suffix}"
+            )
+    except OSError as exc:
+        raise IOError(f"Failed to save config to {config_path}: {exc}") from exc
 
 def timer(func):
     """Decorator to measure function execution time."""
