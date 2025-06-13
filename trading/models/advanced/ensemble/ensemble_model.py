@@ -1,8 +1,9 @@
 import numpy as np
 import torch
 from typing import List, Dict, Any, Optional
-from trading.models.base_model import BaseModel
 import pandas as pd
+from trading.models.base_model import BaseModel
+from trading.memory.performance_memory import PerformanceMemory
 
 class EnsembleForecaster(BaseModel):
     """Ensemble model that combines predictions from multiple models."""
@@ -25,7 +26,10 @@ class EnsembleForecaster(BaseModel):
         }
         default_config.update(config)
         super().__init__(default_config)
+        self.memory = PerformanceMemory(self.config.get('memory_path', 'model_performance.json'))
         self._setup_model()
+        if 'ticker' in self.config:
+            self.update_weights_from_memory(self.config['ticker'])
         self._setup_optimizer()
         if self.config.get('use_lr_scheduler', False):
             self._setup_scheduler()
@@ -196,12 +200,14 @@ class EnsembleForecaster(BaseModel):
             Dictionary containing training history
         """
         history = {}
-        
-        # Train each model
+
+        # Train each model and log performance
         for i, model in enumerate(self.models):
             model_history = model.fit(train_data, val_data, **kwargs)
             history[f'model_{i}'] = model_history
-            
+            if isinstance(model_history, dict):
+                self.log_performance(self.config.get('ticker', 'default'), model_history, i)
+
         return history
         
     def predict(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
@@ -223,5 +229,49 @@ class EnsembleForecaster(BaseModel):
         # Get ensemble prediction
         ensemble_pred = self.forward(x)
         predictions['ensemble'] = ensemble_pred
-        
-        return predictions 
+
+        return predictions
+
+    def predict_with_confidence(self, x: torch.Tensor, alpha: float = 0.05) -> Dict[str, torch.Tensor]:
+        """Return predictions with simple confidence intervals."""
+        preds = self.predict(x)
+        ensemble_pred = preds['ensemble']
+        if ensemble_pred.ndim == 1:
+            ensemble_pred = ensemble_pred.unsqueeze(-1)
+        std = ensemble_pred.std(dim=0, keepdim=True)
+        z = torch.tensor(1.96)  # approx for 95%
+        lower = ensemble_pred - z * std
+        upper = ensemble_pred + z * std
+        preds['lower'] = lower
+        preds['upper'] = upper
+        return preds
+
+    def update_weights_from_memory(self, ticker: str, metric: str = 'mse') -> None:
+        """Update model weights using stored performance metrics."""
+        stats = self.memory.get_metrics(ticker)
+        if not stats:
+            return
+
+        values = []
+        for i, _ in enumerate(self.models):
+            model_name = f'model_{i}'
+            model_stats = stats.get(model_name, {})
+            val = model_stats.get(metric)
+            if val is None:
+                val = 1.0
+            values.append(val)
+
+        values = np.array(values, dtype=float)
+        if metric == 'mse':
+            weights = 1 / (values + 1e-8)
+        else:
+            weights = values
+
+        weights = weights / weights.sum()
+        self.model_weights = torch.tensor(weights, device=self.device, dtype=self.model_weights.dtype)
+
+    def log_performance(self, ticker: str, metrics: Dict[str, float], model_idx: int) -> None:
+        """Persist performance metrics for a model."""
+        model_name = f'model_{model_idx}'
+        self.memory.update(ticker, model_name, metrics)
+
