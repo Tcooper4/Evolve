@@ -1,5 +1,5 @@
-# Use Python 3.10 slim image as base
-FROM python:3.10-slim
+# Use Python 3.11 slim image
+FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
@@ -12,26 +12,33 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy the rest of the application
 COPY . .
+
+# Create necessary directories
+RUN mkdir -p logs data trading/memory trading/models
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Expose Streamlit port
+EXPOSE 8501
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser
 RUN chown -R appuser:appuser /app
 USER appuser
 
-# Set environment variables
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
-
-# Expose port for Streamlit
-EXPOSE 8501
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8501/_stcore/health || exit 1
 
 # Run the application
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"] 

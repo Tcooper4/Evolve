@@ -1,34 +1,70 @@
-from datetime import datetime, timedelta
+"""Backtest page for the trading dashboard."""
+
 import streamlit as st
 import pandas as pd
+from datetime import datetime, timedelta
+from trading.ui.components import (
+    create_prompt_input,
+    create_sidebar,
+    create_performance_report,
+    create_error_block,
+    create_loading_spinner
+)
 
-
-def app() -> None:
-    st.title("Backtesting")
-
-    symbol = st.text_input("Symbol", "AAPL")
-    start = st.date_input("Start", datetime.now() - timedelta(days=365))
-    end = st.date_input("End", datetime.now())
-    strategy = st.selectbox(
-        "Strategy",
-        ["Momentum", "Mean Reversion", "ML-Based"],
-    )
-
-    if st.button("Run Backtest"):
+def render_backtest_page():
+    """Render the backtest page."""
+    st.title("Strategy Backtesting")
+    
+    # Create sidebar
+    sidebar_config = create_sidebar()
+    
+    # Create prompt input
+    prompt = create_prompt_input()
+    
+    # Process prompt if provided
+    if prompt:
         try:
-            data = st.session_state.market_data.get_data(symbol, str(start), str(end))
+            with create_loading_spinner("Running backtest..."):
+                # Get backtest results from router
+                result = st.session_state.router.route(
+                    prompt,
+                    model=sidebar_config['model'],
+                    strategies=sidebar_config['strategies'],
+                    expert_mode=sidebar_config['expert_mode'],
+                    data_source=sidebar_config['data_source'],
+                    uploaded_file=sidebar_config['uploaded_file']
+                )
+                
+                if result.status == "success":
+                    # Display backtest explanation
+                    if result.explanation:
+                        st.info(result.explanation)
+                    
+                    # Display performance report
+                    if result.data:
+                        create_performance_report(result.data)
+                    
+                    # Display trade log if available
+                    if result.data and 'trade_log' in result.data:
+                        st.subheader("Trade Log")
+                        trade_log = pd.DataFrame(result.data['trade_log'])
+                        st.dataframe(trade_log)
+                        
+                        # Export trade log
+                        if st.button("Export Trade Log"):
+                            csv = trade_log.to_csv(index=False)
+                            st.download_button(
+                                label="Download CSV",
+                                data=csv,
+                                file_name="trade_log.csv",
+                                mime="text/csv"
+                            )
+                else:
+                    create_error_block(result.error or "Failed to run backtest")
+                    
         except Exception as e:
-            st.error(f"Data load failed: {e}")
-            return
+            create_error_block(str(e))
 
-        if data is None or data.empty:
-            st.warning("No data available")
-            return
-
-        st.session_state.backtest_engine.data = data
-        results = st.session_state.backtest_engine.run_backtest(strategy, {})
-        st.session_state.backtest_results = results
-        st.write(results)
-        if 'returns' in results:
-            st.line_chart(results['returns'].cumsum())
+if __name__ == "__main__":
+    render_backtest_page()
 

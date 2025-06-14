@@ -3,77 +3,218 @@ import torch
 import torch.nn as nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data import DataLoader, TensorDataset
 import pandas as pd
 from typing import Optional, Dict, Any, Tuple, List, Union
 from .base_model import BaseModel
 from sklearn.preprocessing import StandardScaler
+import logging
 
 class LSTMModel(nn.Module):
     """A class to handle LSTM model for time series prediction."""
 
-    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int):
+    def __init__(self, input_dim: int, hidden_dim: int, output_dim: int, 
+                 num_layers: int = 1, dropout: float = 0.0):
         """Initialize the LSTM model.
 
         Args:
             input_dim (int): The input dimension.
             hidden_dim (int): The hidden dimension.
             output_dim (int): The output dimension.
+            num_layers (int, optional): Number of LSTM layers. Defaults to 1.
+            dropout (float, optional): Dropout rate. Defaults to 0.0.
         """
         super(LSTMModel, self).__init__()
         self.hidden_dim = hidden_dim
-        self.lstm = nn.LSTM(input_dim, hidden_dim, batch_first=True)
+        self.num_layers = num_layers
+        
+        # Initialize LSTM with specified parameters
+        self.lstm = nn.LSTM(
+            input_size=input_dim,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True,
+            dropout=dropout if num_layers > 1 else 0
+        )
         self.fc = nn.Linear(hidden_dim, output_dim)
+        
+        # Initialize device
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.to(self.device)
+        
+        # Initialize scaler
+        self.scaler = StandardScaler()
+        
+        # Initialize logger
+        self.logger = logging.getLogger(__name__)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the LSTM model.
 
         Args:
-            x: The input tensor.
+            x (torch.Tensor): Input tensor of shape (batch_size, seq_len, input_dim)
 
         Returns:
-            The output tensor.
+            torch.Tensor: Output tensor of shape (batch_size, output_dim)
         """
+        # Move input to device
+        x = x.to(self.device)
+        
+        # LSTM forward pass
         lstm_out, _ = self.lstm(x)
+        
+        # Use only the final timestep's output for prediction
+        # This is common in sequence-to-value prediction tasks
         return self.fc(lstm_out[:, -1, :])
 
-    def train_model(self, data: pd.DataFrame, target: pd.Series, epochs: int) -> None:
+    def train_model(self, data: pd.DataFrame, target: pd.Series, 
+                   epochs: int, batch_size: int = 32, 
+                   learning_rate: float = 0.001) -> Dict[str, List[float]]:
         """Train the LSTM model.
 
         Args:
-            data (pd.DataFrame): The input data.
-            target (pd.Series): The target data.
-            epochs (int): The number of epochs to train for.
-        """
-        # Placeholder for training logic
-        pass
+            data (pd.DataFrame): Input features
+            target (pd.Series): Target values
+            epochs (int): Number of training epochs
+            batch_size (int, optional): Batch size. Defaults to 32.
+            learning_rate (float, optional): Learning rate. Defaults to 0.001.
 
-    def predict(self, data: pd.DataFrame) -> torch.Tensor:
+        Returns:
+            Dict[str, List[float]]: Training history with loss values
+        """
+        # Initialize optimizer and loss function
+        optimizer = Adam(self.parameters(), lr=learning_rate)
+        criterion = nn.MSELoss()
+        
+        # Scale the data
+        X_scaled = self.scaler.fit_transform(data)
+        y_scaled = self.scaler.fit_transform(target.values.reshape(-1, 1))
+        
+        # Convert to tensors
+        X_tensor = torch.FloatTensor(X_scaled)
+        y_tensor = torch.FloatTensor(y_scaled)
+        
+        # Create sequences
+        X_seq = self._create_sequences(X_tensor)
+        y_seq = y_tensor[self.config['sequence_length']:]
+        
+        # Create DataLoader
+        dataset = TensorDataset(X_seq, y_seq)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        
+        # Training history
+        history = {'train_loss': []}
+        
+        # Training loop
+        self.train()
+        for epoch in range(epochs):
+            epoch_loss = 0.0
+            for batch_X, batch_y in dataloader:
+                # Move batch to device
+                batch_X = batch_X.to(self.device)
+                batch_y = batch_y.to(self.device)
+                
+                # Forward pass
+                optimizer.zero_grad()
+                outputs = self(batch_X)
+                loss = criterion(outputs, batch_y)
+                
+                # Backward pass
+                loss.backward()
+                optimizer.step()
+                
+                epoch_loss += loss.item()
+            
+            # Calculate average epoch loss
+            avg_epoch_loss = epoch_loss / len(dataloader)
+            history['train_loss'].append(avg_epoch_loss)
+            
+            # Log progress
+            if (epoch + 1) % 10 == 0:
+                self.logger.info(f'Epoch [{epoch+1}/{epochs}], Loss: {avg_epoch_loss:.4f}')
+        
+        return history
+
+    def predict(self, data: pd.DataFrame) -> np.ndarray:
         """Predict using the LSTM model.
 
         Args:
-            data (pd.DataFrame): The input data.
+            data (pd.DataFrame): Input features
 
         Returns:
-            torch.Tensor: The predicted output.
+            np.ndarray: Predicted values
         """
-        # Placeholder for prediction logic
-        return torch.tensor([])
+        # Scale the data
+        X_scaled = self.scaler.transform(data)
+        
+        # Convert to tensor
+        X_tensor = torch.FloatTensor(X_scaled)
+        
+        # Create sequences
+        X_seq = self._create_sequences(X_tensor)
+        
+        # Move to device
+        X_seq = X_seq.to(self.device)
+        
+        # Set model to evaluation mode
+        self.eval()
+        
+        # Make predictions
+        with torch.no_grad():
+            predictions = self(X_seq)
+        
+        # Convert predictions to numpy array
+        predictions = predictions.cpu().numpy()
+        
+        # Inverse transform predictions
+        predictions = self.scaler.inverse_transform(predictions)
+        
+        return predictions
+
+    def _create_sequences(self, data: torch.Tensor) -> torch.Tensor:
+        """Create sequences for LSTM input.
+
+        Args:
+            data (torch.Tensor): Input tensor
+
+        Returns:
+            torch.Tensor: Sequences tensor
+        """
+        sequences = []
+        for i in range(len(data) - self.config['sequence_length']):
+            sequences.append(data[i:i + self.config['sequence_length']])
+        return torch.stack(sequences)
 
 class LSTMForecaster(BaseModel):
     """LSTM-based forecasting model with advanced features."""
     
     def __init__(self, config: Dict[str, Any]):
-        """Initialize LSTM model with configuration."""
+        """Initialize LSTM model with configuration.
+        
+        Args:
+            config (Dict[str, Any]): Model configuration dictionary
+        """
         super().__init__(config)
         self._validate_config()
+        
+        # Initialize device
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        # Initialize model
         self.model = self.build_model()
+        self.model.to(self.device)
+        
+        # Initialize weights
         self._init_weights()
+        
+        # Initialize logger
+        self.logger = logging.getLogger(__name__)
     
     def build_model(self) -> nn.Module:
         """Build and return the LSTM model.
         
         Returns:
-            nn.Module: The built LSTM model.
+            nn.Module: The built LSTM model
         """
         model = nn.Sequential(
             nn.LSTM(
@@ -147,7 +288,14 @@ class LSTMForecaster(BaseModel):
                 nn.init.zeros_(param)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass with error handling and memory management."""
+        """Forward pass with error handling and memory management.
+        
+        Args:
+            x (torch.Tensor): Input tensor
+            
+        Returns:
+            torch.Tensor: Output tensor
+        """
         try:
             # Validate input
             if not isinstance(x, torch.Tensor):
@@ -163,6 +311,9 @@ class LSTMForecaster(BaseModel):
             if 'max_batch_size' in self.config and x.size(0) > self.config['max_batch_size']:
                 raise ValueError(f"Batch size {x.size(0)} exceeds maximum allowed value of {self.config['max_batch_size']}")
             
+            # Move input to device
+            x = x.to(self.device)
+            
             return self.model(x)
             
         except RuntimeError as e:
@@ -172,8 +323,16 @@ class LSTMForecaster(BaseModel):
                 raise MemoryError("GPU out of memory during forward pass")
             raise e
     
-    def _prepare_data(self, data: pd.DataFrame, is_training: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Prepare input data for training or prediction."""
+    def _prepare_data(self, data: pd.DataFrame, is_training: bool = True) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+        """Prepare input data for training or prediction.
+        
+        Args:
+            data (pd.DataFrame): Input data
+            is_training (bool, optional): Whether this is for training. Defaults to True.
+            
+        Returns:
+            Tuple[torch.Tensor, Optional[torch.Tensor]]: Prepared input and target tensors
+        """
         try:
             # Validate input data
             if not isinstance(data, pd.DataFrame):
@@ -198,202 +357,144 @@ class LSTMForecaster(BaseModel):
             X = torch.FloatTensor(normalized_data)
             
             # Create sequences
-            X = self._create_sequences(X)
+            X_seq = self._create_sequences(X)
             
             if is_training:
                 # Get target values
-                target_idx = self.config['feature_columns'].index(self.config['target_column'])
-                y = X[:, -1, target_idx].view(-1, 1)
-                return X, y
+                y = torch.FloatTensor(normalized_data[self.config['sequence_length']:, 
+                                                    self.config['feature_columns'].index(self.config['target_column'])])
+                return X_seq, y
             else:
-                return X, None
+                return X_seq, None
+            
         except Exception as e:
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            raise e
+            self.logger.error(f"Error preparing data: {str(e)}")
+            raise
     
-    def fit(self, X: torch.Tensor, y: torch.Tensor, epochs: int = 100, batch_size: int = 32, gradient_accumulation_steps: int = 1) -> Dict[str, float]:
-        """Train the model with gradient accumulation and memory management."""
-        try:
-            # Validate inputs
-            if not isinstance(X, torch.Tensor) or not isinstance(y, torch.Tensor):
-                raise TypeError("Inputs must be torch.Tensor")
-            if X.shape[0] != y.shape[0]:
-                raise ValueError("Input and target batch sizes must match")
-            
-            # Validate epochs
-            if epochs > self.config.get('max_epochs', 100):
-                raise ValueError(f"Number of epochs {epochs} exceeds maximum allowed value of {self.config.get('max_epochs', 100)}")
-            
-            # Validate batch size
-            if batch_size > self.config.get('max_batch_size', 512):
-                raise ValueError(f"Batch size {batch_size} exceeds maximum allowed value of {self.config.get('max_batch_size', 512)}")
-            
-            self.train()
-            optimizer = torch.optim.Adam(self.parameters(), lr=self.config['learning_rate'])
-            criterion = nn.MSELoss()
-            
-            # Initialize metrics
-            metrics = {
-                'loss': float('inf'),
-                'learning_rate': self.config['learning_rate']
-            }
-            
-            # Training loop
-            for epoch in range(epochs):
-                epoch_loss = 0
-                optimizer.zero_grad()
-                
-                for i in range(0, len(X), batch_size):
-                    try:
-                        # Get batch
-                        batch_X = X[i:i+batch_size]
-                        batch_y = y[i:i+batch_size]
-                        
-                        # Forward pass
-                        pred = self(batch_X)
-                        loss = criterion(pred, batch_y)
-                        
-                        # Scale loss for gradient accumulation
-                        loss = loss / gradient_accumulation_steps
-                        loss.backward()
-                        
-                        # Update weights if we've accumulated enough gradients
-                        if (i + batch_size) % (batch_size * gradient_accumulation_steps) == 0:
-                            # Gradient clipping
-                            torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)
-                            optimizer.step()
-                            optimizer.zero_grad()
-                        
-                        epoch_loss += loss.item() * gradient_accumulation_steps
-                        
-                        # Check for NaN loss
-                        if torch.isnan(loss):
-                            raise ValueError("NaN loss detected")
-                        
-                    except RuntimeError as e:
-                        if "out of memory" in str(e):
-                            if torch.cuda.is_available():
-                                torch.cuda.empty_cache()
-                            raise MemoryError("GPU out of memory during training")
-                        raise e
-                
-                # Update metrics
-                metrics['loss'] = epoch_loss / len(X)
-                metrics['learning_rate'] = optimizer.param_groups[0]['lr']
-                
-                # Early stopping check
-                if self._check_early_stopping(metrics['loss']):
-                    break
-            
-            return metrics
-        except Exception as e:
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            raise e
-        finally:
-            # Cleanup
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-    
-    def predict(self, data: pd.DataFrame) -> np.ndarray:
-        """Make predictions with error handling."""
-        try:
-            # Validate input
-            if not isinstance(data, pd.DataFrame):
-                raise TypeError("Input data must be pandas DataFrame")
-            
-            # Check data size
-            if len(data) < self.config['sequence_length']:
-                raise ValueError(f"Data length {len(data)} is less than sequence length {self.config['sequence_length']}")
-            
-            # Prepare data
-            X, _ = self._prepare_data(data, is_training=False)
-            
-            # Make predictions
-            self.eval()
-            with torch.no_grad():
-                predictions = self(X)
-            
-            # Inverse transform predictions
-            predictions = self.scaler.inverse_transform(
-                np.column_stack([predictions.numpy(), np.zeros((len(predictions), len(self.config['feature_columns']) - 1))])
-            )[:, 0]
-            
-            return predictions
-        except Exception as e:
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            raise e
-
-    def save(self, path: str) -> None:
-        """Save model state.
-        
-        Args:
-            path: Path to save model state
-        """
-        state = {
-            'model_state': self.state_dict(),
-            'config': self.config,
-            'history': self.history,
-            'best_model_state': getattr(self, 'best_model_state', None),
-            'best_val_loss': getattr(self, 'best_val_loss', None),
-            'X_mean': getattr(self, 'X_mean', None),
-            'X_std': getattr(self, 'X_std', None),
-            'y_mean': getattr(self, 'y_mean', None),
-            'y_std': getattr(self, 'y_std', None)
-        }
-        torch.save(state, path)
-
-    def load(self, path: str) -> None:
-        """Load model state.
-        
-        Args:
-            path: Path to load model state from
-        """
-        state = torch.load(path, map_location=self.device, weights_only=False)
-        self.load_state_dict(state['model_state'])
-        self.config = state['config']
-        self.history = state['history']
-        self.best_model_state = state.get('best_model_state', None)
-        self.best_val_loss = state.get('best_val_loss', None)
-        self.X_mean = state.get('X_mean', None)
-        self.X_std = state.get('X_std', None)
-        self.y_mean = state.get('y_mean', None)
-        self.y_std = state.get('y_std', None)
-
     def _create_sequences(self, data: torch.Tensor) -> torch.Tensor:
         """Create sequences for LSTM input.
         
         Args:
-            data: Input tensor of shape (n_samples, n_features)
+            data (torch.Tensor): Input tensor
             
         Returns:
-            Tensor of shape (n_sequences, sequence_length, n_features)
+            torch.Tensor: Sequences tensor
         """
-        try:
-            # Validate input
-            if not isinstance(data, torch.Tensor):
-                raise TypeError("Input must be torch.Tensor")
-            if data.dim() != 2:
-                raise ValueError(f"Expected 2D input tensor, got {data.dim()}D")
+        sequences = []
+        for i in range(len(data) - self.config['sequence_length']):
+            sequences.append(data[i:i + self.config['sequence_length']])
+        return torch.stack(sequences)
+    
+    def fit(self, X: pd.DataFrame, y: pd.Series, 
+            epochs: int = 100, batch_size: int = 32, 
+            learning_rate: float = 0.001) -> Dict[str, List[float]]:
+        """Train the model.
+        
+        Args:
+            X (pd.DataFrame): Input features
+            y (pd.Series): Target values
+            epochs (int, optional): Number of epochs. Defaults to 100.
+            batch_size (int, optional): Batch size. Defaults to 32.
+            learning_rate (float, optional): Learning rate. Defaults to 0.001.
             
-            # Calculate number of sequences
-            n_samples = data.size(0)
-            n_sequences = n_samples - self.config['sequence_length'] + 1
+        Returns:
+            Dict[str, List[float]]: Training history
+        """
+        # Prepare data
+        X_seq, y_seq = self._prepare_data(X, is_training=True)
+        
+        # Create DataLoader
+        dataset = TensorDataset(X_seq, y_seq)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        
+        # Initialize optimizer and loss function
+        optimizer = Adam(self.model.parameters(), lr=learning_rate)
+        criterion = nn.MSELoss()
+        
+        # Training history
+        history = {'train_loss': []}
+        
+        # Training loop
+        self.model.train()
+        for epoch in range(epochs):
+            epoch_loss = 0.0
+            for batch_X, batch_y in dataloader:
+                # Move batch to device
+                batch_X = batch_X.to(self.device)
+                batch_y = batch_y.to(self.device)
+                
+                # Forward pass
+                optimizer.zero_grad()
+                outputs = self.model(batch_X)
+                loss = criterion(outputs, batch_y)
+                
+                # Backward pass
+                loss.backward()
+                optimizer.step()
+                
+                epoch_loss += loss.item()
             
-            if n_sequences <= 0:
-                raise ValueError(f"Data length {n_samples} is less than sequence length {self.config['sequence_length']}")
+            # Calculate average epoch loss
+            avg_epoch_loss = epoch_loss / len(dataloader)
+            history['train_loss'].append(avg_epoch_loss)
             
-            # Create sequences
-            sequences = []
-            for i in range(n_sequences):
-                sequence = data[i:i + self.config['sequence_length']]
-                sequences.append(sequence)
+            # Log progress
+            if (epoch + 1) % 10 == 0:
+                self.logger.info(f'Epoch [{epoch+1}/{epochs}], Loss: {avg_epoch_loss:.4f}')
+        
+        return history
+    
+    def predict(self, data: pd.DataFrame) -> np.ndarray:
+        """Make predictions.
+        
+        Args:
+            data (pd.DataFrame): Input features
             
-            # Stack sequences
-            return torch.stack(sequences)
-        except Exception as e:
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-            raise e 
+        Returns:
+            np.ndarray: Predicted values
+        """
+        # Prepare data
+        X_seq, _ = self._prepare_data(data, is_training=False)
+        
+        # Move to device
+        X_seq = X_seq.to(self.device)
+        
+        # Set model to evaluation mode
+        self.model.eval()
+        
+        # Make predictions
+        with torch.no_grad():
+            predictions = self.model(X_seq)
+        
+        # Convert predictions to numpy array
+        predictions = predictions.cpu().numpy()
+        
+        # Inverse transform predictions
+        predictions = self.scaler.inverse_transform(predictions)
+        
+        return predictions
+    
+    def save(self, path: str) -> None:
+        """Save the model.
+        
+        Args:
+            path (str): Path to save the model
+        """
+        torch.save({
+            'model_state_dict': self.model.state_dict(),
+            'config': self.config,
+            'scaler': self.scaler
+        }, path)
+    
+    def load(self, path: str) -> None:
+        """Load the model.
+        
+        Args:
+            path (str): Path to load the model from
+        """
+        checkpoint = torch.load(path)
+        self.config = checkpoint['config']
+        self.model = self.build_model()
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        self.scaler = checkpoint['scaler']
+        self.model.to(self.device) 

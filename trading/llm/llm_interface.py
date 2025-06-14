@@ -1,58 +1,277 @@
+"""Advanced LLM interface for trading system with robust prompt processing and context management."""
+
 import torch
 import torch.nn as nn
 from transformers import AutoTokenizer, AutoModelForCausalLM, AutoModelForSequenceClassification
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Union, Any, Tuple, Set
 import pandas as pd
 import numpy as np
 from datetime import datetime
 import json
 import logging
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict, field
 from collections import deque
 import re
 import os
 import random
+from jinja2 import Template
+import openai
+from huggingface_hub import HfApi
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
+from functools import lru_cache
+
+# Constants
+DEFAULT_MODEL = "gpt2"
+DEFAULT_MAX_HISTORY = 10
+DEFAULT_CONFIDENCE_THRESHOLD = 0.7
+DEFAULT_MAX_TOKENS = 500
+DEFAULT_TEMPERATURE = 0.7
+DEFAULT_TOP_P = 0.9
 
 @dataclass
 class PromptContext:
-    history: deque
-    max_history: int = 10
+    """Context management for prompts with history and metadata."""
+    history: deque = field(default_factory=lambda: deque(maxlen=DEFAULT_MAX_HISTORY))
+    max_history: int = DEFAULT_MAX_HISTORY
     current_intent: Optional[str] = None
-    entities: Dict[str, Any] = None
+    entities: Dict[str, Any] = field(default_factory=dict)
     confidence: float = 0.0
+    last_ticker: Optional[str] = None
+    last_timeframe: Optional[str] = None
+    last_strategy: Optional[str] = None
+    last_analysis: Optional[Dict[str, Any]] = None
+    last_signals: Optional[Dict[str, Any]] = None
+    last_risk_metrics: Optional[Dict[str, float]] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert context to dictionary for serialization."""
+        return {
+            'history': list(self.history),
+            'max_history': self.max_history,
+            'current_intent': self.current_intent,
+            'entities': self.entities,
+            'confidence': self.confidence,
+            'last_ticker': self.last_ticker,
+            'last_timeframe': self.last_timeframe,
+            'last_strategy': self.last_strategy,
+            'last_analysis': self.last_analysis,
+            'last_signals': self.last_signals,
+            'last_risk_metrics': self.last_risk_metrics
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'PromptContext':
+        """Create context from dictionary."""
+        history = deque(data.get('history', []), maxlen=data.get('max_history', DEFAULT_MAX_HISTORY))
+        return cls(
+            history=history,
+            max_history=data.get('max_history', DEFAULT_MAX_HISTORY),
+            current_intent=data.get('current_intent'),
+            entities=data.get('entities', {}),
+            confidence=data.get('confidence', 0.0),
+            last_ticker=data.get('last_ticker'),
+            last_timeframe=data.get('last_timeframe'),
+            last_strategy=data.get('last_strategy'),
+            last_analysis=data.get('last_analysis'),
+            last_signals=data.get('last_signals'),
+            last_risk_metrics=data.get('last_risk_metrics')
+        )
+    
+    def add_to_history(self, prompt: str, response: str) -> None:
+        """Add prompt and response to history."""
+        self.history.append({
+            'prompt': prompt,
+            'response': response,
+            'timestamp': datetime.now().isoformat()
+        })
+    
+    def clear_history(self) -> None:
+        """Clear the history."""
+        self.history.clear()
 
 class PromptProcessor:
+    """Advanced prompt processing with intent and entity extraction."""
+    
     def __init__(self):
+        """Initialize the prompt processor with enhanced patterns."""
         self.intent_patterns = {
             'forecast': r'(forecast|predict|outlook|projection)',
             'analyze': r'(analyze|analysis|examine|study)',
             'recommend': r'(recommend|suggest|advise|propose)',
-            'explain': r'(explain|describe|detail|elaborate)'
-        }
-        self.entity_patterns = {
-            'timeframe': r'(daily|weekly|monthly|quarterly|yearly|\d+\s*(day|week|month|year)s?)',
-            'metric': r'(price|volume|return|volatility|trend)',
-            'asset': r'(stock|bond|commodity|crypto|forex)',
-            'action': r'(buy|sell|hold|trade|invest)'
+            'explain': r'(explain|describe|detail|elaborate)',
+            'backtest': r'(backtest|backtesting|historical\s+test)',
+            'optimize': r'(optimize|optimization|tune|improve)',
+            'compare': r'(compare|comparison|versus|vs)',
+            'report': r'(report|summary|overview|status)',
+            'visualize': r'(visualize|plot|chart|graph)',
+            'risk': r'(risk|volatility|exposure|hedge)',
+            'portfolio': r'(portfolio|allocation|diversification|rebalance)'
         }
         
-    def extract_intent(self, text: str) -> str:
-        for intent, pattern in self.intent_patterns.items():
-            if re.search(pattern, text.lower()):
-                return intent
-        return 'unknown'
+        self.entity_patterns = {
+            'ticker': r'\b[A-Z]{1,5}\b',  # Stock ticker symbols
+            'timeframe': r'(daily|weekly|monthly|quarterly|yearly|\d+\s*(day|week|month|year)s?)',
+            'metric': r'(price|volume|return|volatility|trend|sharpe|sortino|alpha|beta)',
+            'strategy_name': r'(momentum|mean\s+reversion|ml\s+based|hybrid|adaptive)',
+            'date_range': r'(\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{2,4})',
+            'confidence': r'(high|medium|low)\s+confidence',
+            'action': r'(buy|sell|hold|trade|invest|exit|enter)',
+            'risk_level': r'(low|medium|high)\s+risk',
+            'position_size': r'(\d+%|\d+\s*(shares|contracts))',
+            'stop_loss': r'(stop\s+loss|stop\s+limit|trailing\s+stop)',
+            'take_profit': r'(take\s+profit|profit\s+target)'
+        }
+        
+        # Compile patterns for better performance
+        self.compiled_intent_patterns = {
+            intent: re.compile(pattern, re.IGNORECASE)
+            for intent, pattern in self.intent_patterns.items()
+        }
+        
+        self.compiled_entity_patterns = {
+            entity: re.compile(pattern, re.IGNORECASE)
+            for entity, pattern in self.entity_patterns.items()
+        }
+        
+        # Initialize cache for pattern matching
+        self._pattern_cache: Dict[str, List[str]] = {}
     
-    def extract_entities(self, text: str) -> Dict[str, Any]:
+    @lru_cache(maxsize=1000)
+    def extract_intent(self, text: str) -> Tuple[str, float]:
+        """Extract intent with confidence scoring.
+        
+        Args:
+            text: Input text to process
+            
+        Returns:
+            Tuple of (intent, confidence_score)
+        """
+        text = text.lower()
+        best_intent = 'explain'  # Default fallback
+        best_score = 0.0
+        
+        for intent, pattern in self.compiled_intent_patterns.items():
+            matches = pattern.findall(text)
+            if matches:
+                # Calculate score based on number and position of matches
+                score = len(matches) * 0.3  # Base score for matches
+                
+                # Bonus for matches at start of text
+                if text.startswith(matches[0]):
+                    score += 0.2
+                
+                # Bonus for multiple matches
+                if len(matches) > 1:
+                    score += 0.1
+                
+                # Bonus for specific intent patterns
+                if intent in ['forecast', 'analyze', 'backtest']:
+                    score += 0.1
+                
+                if score > best_score:
+                    best_score = score
+                    best_intent = intent
+        
+        return best_intent, min(best_score, 1.0)
+    
+    def extract_entities(self, text: str) -> Dict[str, List[str]]:
+        """Extract entities with enhanced pattern matching.
+        
+        Args:
+            text: Input text to process
+            
+        Returns:
+            Dictionary of entity types and their values
+        """
         entities = {}
-        for entity_type, pattern in self.entity_patterns.items():
-            matches = re.finditer(pattern, text.lower())
-            entities[entity_type] = [m.group() for m in matches]
+        text = text.lower()
+        
+        # Check cache first
+        if text in self._pattern_cache:
+            return self._pattern_cache[text]
+        
+        for entity_type, pattern in self.compiled_entity_patterns.items():
+            matches = pattern.findall(text)
+            if matches:
+                entities[entity_type] = matches
+        
+        # Cache the result
+        self._pattern_cache[text] = entities
         return entities
+    
+    def validate_entities(self, entities: Dict[str, List[str]]) -> Dict[str, List[str]]:
+        """Validate and clean extracted entities.
+        
+        Args:
+            entities: Dictionary of extracted entities
+            
+        Returns:
+            Cleaned and validated entities
+        """
+        validated = {}
+        
+        for entity_type, values in entities.items():
+            if entity_type == 'ticker':
+                # Validate ticker symbols
+                validated[entity_type] = [v.upper() for v in values if v.isalpha() and len(v) <= 5]
+            elif entity_type == 'timeframe':
+                # Normalize timeframe values
+                validated[entity_type] = [self._normalize_timeframe(v) for v in values]
+            elif entity_type == 'date_range':
+                # Validate and normalize dates
+                validated[entity_type] = [self._normalize_date(v) for v in values if self._is_valid_date(v)]
+            else:
+                validated[entity_type] = values
+        
+        return validated
+    
+    def _normalize_timeframe(self, timeframe: str) -> str:
+        """Normalize timeframe string to standard format."""
+        timeframe = timeframe.lower()
+        if 'day' in timeframe:
+            return 'daily'
+        elif 'week' in timeframe:
+            return 'weekly'
+        elif 'month' in timeframe:
+            return 'monthly'
+        elif 'quarter' in timeframe:
+            return 'quarterly'
+        elif 'year' in timeframe:
+            return 'yearly'
+        return timeframe
+    
+    def _is_valid_date(self, date_str: str) -> bool:
+        """Check if a string is a valid date."""
+        try:
+            datetime.strptime(date_str, '%Y-%m-%d')
+            return True
+        except ValueError:
+            try:
+                datetime.strptime(date_str, '%m/%d/%Y')
+                return True
+            except ValueError:
+                return False
+    
+    def _normalize_date(self, date_str: str) -> str:
+        """Normalize date string to YYYY-MM-DD format."""
+        try:
+            date = datetime.strptime(date_str, '%Y-%m-%d')
+        except ValueError:
+            date = datetime.strptime(date_str, '%m/%d/%Y')
+        return date.strftime('%Y-%m-%d')
 
 class LLMInterface:
-    def __init__(self, api_key: Optional[str] = None):
-        """Initialize the LLM interface."""
+    """Advanced LLM interface with multi-provider support and robust error handling."""
+    
+    def __init__(self, api_key: Optional[str] = None, model_name: str = DEFAULT_MODEL):
+        """Initialize the LLM interface with enhanced configuration.
+        
+        Args:
+            api_key: Optional API key for OpenAI
+            model_name: Name of the HuggingFace model to use
+        """
         # Set up logging
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.INFO)
@@ -64,856 +283,410 @@ class LLMInterface:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
         
-        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
-        self.is_configured = False
-        
-        # Try to import openai, but don't fail if not available
-        try:
-            import openai
-            if self.api_key:
-                openai.api_key = self.api_key
-                self.is_configured = True
-                self.logger.info("OpenAI API configured successfully")
-        except ImportError:
-            self.logger.warning("OpenAI package not installed. LLM features will be disabled.")
-        
-        # Initialize prompt processor
+        # Initialize components
         self.prompt_processor = PromptProcessor()
-        self.context = PromptContext(history=deque(maxlen=10))
+        self.context = PromptContext()
         
-        # System prompt that defines the AI's capabilities
-        self.system_prompt = """You are an advanced trading AI assistant. You can:
-1. Analyze market data and provide insights
-2. Generate trading strategies based on market conditions
-3. Assess portfolio risk and provide recommendations
-4. Explain technical indicators and their implications
-5. Provide backtesting analysis and results
-6. Optimize portfolio allocation
-7. Monitor and analyze trading performance
-
-When responding:
-- Be concise but informative
-- Include relevant data and metrics when available
-- Suggest specific actions when appropriate
-- Explain your reasoning
-- Consider risk management in all recommendations
-- Adapt to the user's experience level
-- Use technical terms appropriately but explain them when needed"""
+        # Load models
+        self._load_models(model_name)
         
-        # Initialize prompts dictionary
-        self.prompts = {
-            "market_analysis": "Analyze the following market data:\nPrice: {price}\nChange: {change}\nVolume: {volume}\nIndicators: {indicators}",
-            "trading_strategy": "Generate a trading strategy based on the following market conditions:\n{conditions}",
-            "risk_analysis": "Analyze the risk profile of the following portfolio:\n{portfolio_data}"
-        }
+        # Configure API access
+        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        self.is_configured = bool(self.api_key)
+        
+        if self.is_configured:
+            openai.api_key = self.api_key
+            self.logger.info("OpenAI API configured successfully")
+        
+        # Load templates
+        self._load_templates()
+        
+        # Initialize thread pool for async operations
+        self.thread_pool = ThreadPoolExecutor(max_workers=4)
         
         self.logger.info("LLMInterface initialized successfully")
     
-    def process_prompt(self, prompt: str) -> Dict[str, Any]:
-        """Process a natural language prompt and determine the appropriate action."""
+    def _load_models(self, model_name: str) -> None:
+        """Load and initialize language models.
+        
+        Args:
+            model_name: Name of the HuggingFace model to use
+        """
         try:
-            if not self.is_configured:
-                self.logger.info("Using mock response as API is not configured")
-                return self._get_mock_response(prompt)
-            
-            self.logger.info(f"Processing prompt: {prompt}")
-            
-            # Process the prompt to extract intent and entities
-            processed = self.prompt_processor.extract_intent(prompt)
-            entities = self.prompt_processor.extract_entities(prompt)
-            
-            self.logger.debug(f"Extracted intent: {processed}")
-            self.logger.debug(f"Extracted entities: {entities}")
-            
-            # Prepare the context-aware prompt
-            context_prompt = self._prepare_context_prompt(prompt, processed)
-            
-            # Get response from OpenAI
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": context_prompt}
-                ]
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.model = AutoModelForCausalLM.from_pretrained(model_name)
+            self.sentiment_model = AutoModelForSequenceClassification.from_pretrained(
+                "distilbert-base-uncased-finetuned-sst-2-english"
             )
+            self.logger.info(f"Loaded models: {model_name}")
+        except Exception as e:
+            self.logger.error(f"Error loading models: {e}")
+            raise
+    
+    def _load_templates(self) -> None:
+        """Load prompt templates from configuration."""
+        template_dir = Path(__file__).parent / "templates"
+        self.templates = {}
+        
+        try:
+            for template_file in template_dir.glob("*.j2"):
+                with open(template_file, "r") as f:
+                    self.templates[template_file.stem] = Template(f.read())
+        except Exception as e:
+            self.logger.error(f"Error loading templates: {e}")
+    
+    async def process_prompt_async(self, prompt: str) -> Dict[str, Any]:
+        """Process a natural language prompt asynchronously.
+        
+        Args:
+            prompt: Input prompt to process
             
-            # Extract the response content
-            content = response.choices[0].message.content
-            self.logger.debug(f"Received response: {content}")
+        Returns:
+            Dictionary containing processed results
+        """
+        try:
+            self.logger.info(f"Processing prompt asynchronously: {prompt}")
             
-            # Determine the type of response and any required actions
-            response_type = self._determine_response_type(content, processed)
-            actions = self._generate_actions(content, response_type)
-            
-            self.logger.info(f"Generated {len(actions)} actions for response type: {response_type}")
+            # Extract intent and entities
+            intent, confidence = self.prompt_processor.extract_intent(prompt)
+            entities = self.prompt_processor.extract_entities(prompt)
+            entities = self.prompt_processor.validate_entities(entities)
             
             # Update context
-            self.context.history.append({
-                'prompt': prompt,
-                'response': content,
-                'type': response_type,
-                'timestamp': datetime.now().isoformat()
-            })
+            self._update_context(intent, entities, confidence)
             
-            return {
-                'content': content,
-                'type': response_type,
-                'actions': actions,
-                'confidence': self._calculate_confidence(processed, entities)
+            # Generate response asynchronously
+            if self.is_configured:
+                response = await self._generate_openai_response_async(prompt, intent, entities)
+            else:
+                response = await self._generate_huggingface_response_async(prompt, intent, entities)
+            
+            # Structure the response
+            result = {
+                'content': response,
+                'intent': intent,
+                'confidence': confidence,
+                'entities': entities,
+                'timestamp': datetime.now().isoformat()
             }
+            
+            # Add metadata
+            if hasattr(self, 'context'):
+                result['context'] = self.context.to_dict()
+            
+            # Add to history
+            self.context.add_to_history(prompt, response)
+            
+            return result
             
         except Exception as e:
             self.logger.error(f"Error processing prompt: {str(e)}", exc_info=True)
             return {
-                'error': f"Error processing prompt: {str(e)}",
+                'error': str(e),
                 'type': 'error',
-                'actions': []
+                'timestamp': datetime.now().isoformat()
             }
     
-    def _determine_response_type(self, content: str, processed: Dict) -> str:
-        """Determine the type of response based on content and processed intent."""
-        if 'analyze' in processed.get('intent', '').lower():
-            return 'analysis'
-        elif 'strategy' in processed.get('intent', '').lower():
-            return 'strategy'
-        elif 'risk' in processed.get('intent', '').lower():
-            return 'risk'
-        elif 'explain' in processed.get('intent', '').lower():
-            return 'explanation'
-        else:
-            return 'general'
-    
-    def _generate_actions(self, content: str, response_type: str) -> List[Dict]:
-        """Generate actions based on the response type and content."""
-        actions = []
+    def process_prompt(self, prompt: str) -> Dict[str, Any]:
+        """Process a natural language prompt with enhanced context awareness.
         
-        # Extract entities and parameters from content
-        entities = self.prompt_processor.extract_entities(content)
-        
-        if response_type == 'analysis':
-            # Market analysis actions
-            actions.append({
-                'type': 'update_chart',
-                'chart_type': 'market_analysis',
-                'data': self._extract_chart_data(content)
-            })
-            actions.append({
-                'type': 'update_metrics',
-                'metrics': {
-                    'market': self._extract_metrics(content)
-                }
-            })
-            actions.append({
-                'type': 'show_analysis',
-                'analysis_type': 'market',
-                'data': self._extract_analysis_data(content)
-            })
+        Args:
+            prompt: Input prompt to process
             
-        elif response_type == 'strategy':
-            # Trading strategy actions
-            actions.append({
-                'type': 'configure_strategy',
-                'strategy_params': self._extract_strategy_params(content)
-            })
-            actions.append({
-                'type': 'update_metrics',
-                'metrics': {
-                    'strategy': self._extract_metrics(content)
-                }
-            })
-            actions.append({
-                'type': 'run_backtest',
-                'backtest_params': self._extract_backtest_params(content)
-            })
-            
-        elif response_type == 'risk':
-            # Risk analysis actions
-            actions.append({
-                'type': 'update_chart',
-                'chart_type': 'risk',
-                'data': self._extract_risk_data(content)
-            })
-            actions.append({
-                'type': 'update_metrics',
-                'metrics': {
-                    'risk': self._extract_risk_metrics(content)
-                }
-            })
-            actions.append({
-                'type': 'show_analysis',
-                'analysis_type': 'risk',
-                'data': self._extract_risk_analysis(content)
-            })
-            
-        elif response_type == 'portfolio':
-            # Portfolio management actions
-            actions.append({
-                'type': 'update_portfolio',
-                'allocation': self._extract_allocation(content)
-            })
-            actions.append({
-                'type': 'optimize_portfolio',
-                'optimization_params': self._extract_optimization_params(content)
-            })
-            actions.append({
-                'type': 'update_chart',
-                'chart_type': 'portfolio',
-                'data': self._extract_portfolio_data(content)
-            })
-            
-        elif response_type == 'ml':
-            # ML model actions
-            actions.append({
-                'type': 'update_models',
-                'model_params': self._extract_model_params(content)
-            })
-            actions.append({
-                'type': 'generate_features',
-                'feature_params': self._extract_feature_params(content)
-            })
-            actions.append({
-                'type': 'show_analysis',
-                'analysis_type': 'ml',
-                'data': self._extract_ml_analysis(content)
-            })
-        
-        return actions
-    
-    def _extract_strategy_params(self, content: str) -> Dict:
-        """Extract strategy parameters from content."""
+        Returns:
+            Dictionary containing processed results
+        """
         try:
-            # Extract strategy type, timeframe, and other parameters
-            params = {
-                'type': 'momentum',  # Default strategy type
-                'timeframe': '1d',   # Default timeframe
-                'parameters': {}
-            }
+            self.logger.info(f"Processing prompt: {prompt}")
             
-            # Look for strategy type indicators
-            if 'momentum' in content.lower():
-                params['type'] = 'momentum'
-            elif 'mean reversion' in content.lower():
-                params['type'] = 'mean_reversion'
-            elif 'trend following' in content.lower():
-                params['type'] = 'trend_following'
+            # Extract intent and entities
+            intent, confidence = self.prompt_processor.extract_intent(prompt)
+            entities = self.prompt_processor.extract_entities(prompt)
+            entities = self.prompt_processor.validate_entities(entities)
             
-            # Look for timeframe indicators
-            timeframe_patterns = {
-                '1m': r'1\s*min|1\s*minute',
-                '5m': r'5\s*min|5\s*minutes',
-                '15m': r'15\s*min|15\s*minutes',
-                '1h': r'1\s*hour|1\s*h',
-                '4h': r'4\s*hours|4\s*h',
-                '1d': r'1\s*day|1\s*d|daily'
-            }
-            
-            for tf, pattern in timeframe_patterns.items():
-                if re.search(pattern, content.lower()):
-                    params['timeframe'] = tf
-                    break
-            
-            return params
-        except Exception as e:
-            self.logger.error(f"Error extracting strategy parameters: {str(e)}")
-            return {}
-    
-    def _extract_backtest_params(self, content: str) -> Dict:
-        """Extract backtest parameters from content."""
-        try:
-            params = {
-                'start_date': None,
-                'end_date': None,
-                'assets': [],
-                'initial_capital': 100000
-            }
-            
-            # Extract date ranges
-            date_pattern = r'\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{4}'
-            dates = re.findall(date_pattern, content)
-            if len(dates) >= 2:
-                params['start_date'] = dates[0]
-                params['end_date'] = dates[1]
-            
-            # Extract assets
-            asset_pattern = r'\b[A-Z]{1,5}\b'  # Simple pattern for stock symbols
-            params['assets'] = re.findall(asset_pattern, content)
-            
-            # Extract initial capital if mentioned
-            capital_pattern = r'\$?(\d+(?:,\d+)*(?:\.\d+)?)'
-            capital_match = re.search(capital_pattern, content)
-            if capital_match:
-                params['initial_capital'] = float(capital_match.group(1).replace(',', ''))
-            
-            return params
-        except Exception as e:
-            self.logger.error(f"Error extracting backtest parameters: {str(e)}")
-            return {}
-    
-    def _extract_optimization_params(self, content: str) -> Dict:
-        """Extract optimization parameters from content."""
-        try:
-            params = {
-                'objective': 'min_risk',  # Default objective
-                'constraints': {},
-                'assets': []
-            }
-            
-            # Determine optimization objective
-            if 'maximize' in content.lower() or 'max' in content.lower():
-                if 'return' in content.lower():
-                    params['objective'] = 'max_return'
-                elif 'sharpe' in content.lower():
-                    params['objective'] = 'max_sharpe'
-            
-            # Extract constraints
-            if 'risk' in content.lower():
-                params['constraints']['max_risk'] = 0.2  # Default 20% max risk
-            
-            # Extract assets
-            asset_pattern = r'\b[A-Z]{1,5}\b'
-            params['assets'] = re.findall(asset_pattern, content)
-            
-            return params
-        except Exception as e:
-            self.logger.error(f"Error extracting optimization parameters: {str(e)}")
-            return {}
-    
-    def _extract_model_params(self, content: str) -> Dict:
-        """Extract model parameters from content."""
-        try:
-            params = {
-                'model_type': 'lstm',  # Default model type
-                'features': [],
-                'target': 'price',
-                'parameters': {}
-            }
-            
-            # Determine model type
-            if 'lstm' in content.lower():
-                params['model_type'] = 'lstm'
-            elif 'random forest' in content.lower():
-                params['model_type'] = 'random_forest'
-            elif 'xgboost' in content.lower():
-                params['model_type'] = 'xgboost'
-            
-            # Extract features
-            feature_patterns = {
-                'price': r'price|close',
-                'volume': r'volume',
-                'rsi': r'rsi',
-                'macd': r'macd',
-                'bollinger': r'bollinger|bb',
-                'stochastic': r'stochastic',
-                'atr': r'atr|average true range'
-            }
-            
-            for feature, pattern in feature_patterns.items():
-                if re.search(pattern, content.lower()):
-                    params['features'].append(feature)
-            
-            return params
-        except Exception as e:
-            self.logger.error(f"Error extracting model parameters: {str(e)}")
-            return {}
-    
-    def _extract_feature_params(self, content: str) -> Dict:
-        """Extract feature parameters from content."""
-        try:
-            params = {
-                'features': [],
-                'timeframes': ['1d'],
-                'indicators': []
-            }
-            
-            # Extract technical indicators
-            indicator_patterns = {
-                'rsi': r'rsi|relative strength',
-                'macd': r'macd',
-                'bollinger': r'bollinger|bb',
-                'stochastic': r'stochastic',
-                'atr': r'atr|average true range'
-            }
-            
-            for indicator, pattern in indicator_patterns.items():
-                if re.search(pattern, content.lower()):
-                    params['indicators'].append(indicator)
-            
-            # Extract timeframes
-            timeframe_patterns = {
-                '1m': r'1\s*min|1\s*minute',
-                '5m': r'5\s*min|5\s*minutes',
-                '15m': r'15\s*min|15\s*minutes',
-                '1h': r'1\s*hour|1\s*h',
-                '4h': r'4\s*hours|4\s*h',
-                '1d': r'1\s*day|1\s*d|daily'
-            }
-            
-            for tf, pattern in timeframe_patterns.items():
-                if re.search(pattern, content.lower()):
-                    params['timeframes'].append(tf)
-            
-            return params
-        except Exception as e:
-            self.logger.error(f"Error extracting feature parameters: {str(e)}")
-            return {}
-    
-    def _extract_ml_analysis(self, content: str) -> Dict:
-        """Extract ML analysis data from content."""
-        # This would be implemented to parse the content and extract ML analysis data
-        return {}
-    
-    def _extract_allocation(self, content: str) -> Dict:
-        """Extract portfolio allocation from content."""
-        # This would be implemented to parse the content and extract portfolio allocation
-        return {}
-    
-    def _extract_portfolio_data(self, content: str) -> Dict:
-        """Extract portfolio data from content."""
-        # This would be implemented to parse the content and extract portfolio data
-        return {}
-    
-    def _extract_analysis_data(self, content: str) -> Dict:
-        """Extract analysis data from content."""
-        # This would be implemented to parse the content and extract analysis data
-        return {}
-    
-    def _extract_risk_metrics(self, content: str) -> Dict:
-        """Extract risk metrics from content."""
-        # This would be implemented to parse the content and extract risk metrics
-        return {}
-    
-    def _extract_risk_analysis(self, content: str) -> Dict:
-        """Extract risk analysis data from content."""
-        # This would be implemented to parse the content and extract risk analysis data
-        return {}
-    
-    def _extract_risk_data(self, content: str) -> Dict:
-        """Extract risk data from the response content."""
-        try:
-            risk_data = {
-                'var': None,
-                'beta': None,
-                'sharpe': None,
-                'volatility': None,
-                'drawdown': None
-            }
-            
-            # Extract Value at Risk (VaR)
-            var_pattern = r'VaR[:\s]+(\d+\.?\d*)%'
-            var_match = re.search(var_pattern, content)
-            if var_match:
-                risk_data['var'] = float(var_match.group(1))
-            
-            # Extract Beta
-            beta_pattern = r'beta[:\s]+(\d+\.?\d*)'
-            beta_match = re.search(beta_pattern, content.lower())
-            if beta_match:
-                risk_data['beta'] = float(beta_match.group(1))
-            
-            # Extract Sharpe Ratio
-            sharpe_pattern = r'sharpe[:\s]+(\d+\.?\d*)'
-            sharpe_match = re.search(sharpe_pattern, content.lower())
-            if sharpe_match:
-                risk_data['sharpe'] = float(sharpe_match.group(1))
-            
-            # Extract Volatility
-            vol_pattern = r'volatility[:\s]+(\d+\.?\d*)%'
-            vol_match = re.search(vol_pattern, content.lower())
-            if vol_match:
-                risk_data['volatility'] = float(vol_match.group(1))
-            
-            # Extract Maximum Drawdown
-            drawdown_pattern = r'drawdown[:\s]+(\d+\.?\d*)%'
-            drawdown_match = re.search(drawdown_pattern, content.lower())
-            if drawdown_match:
-                risk_data['drawdown'] = float(drawdown_match.group(1))
-            
-            return risk_data
-        except Exception as e:
-            self.logger.error(f"Error extracting risk data: {str(e)}")
-            return {}
-    
-    def _get_mock_response(self, prompt: str) -> Dict[str, Any]:
-        """Generate a mock response when API is not available."""
-        mock_responses = {
-            'analysis': "Based on the current market data, I observe a bullish trend with increasing volume. The RSI indicates overbought conditions, suggesting a potential pullback. Consider taking profits on long positions.",
-            'strategy': "Given the current market conditions, I recommend a mean reversion strategy with tight stop losses. Look for opportunities to enter long positions on pullbacks to the 20-day moving average.",
-            'risk': "Your portfolio shows moderate risk exposure. The current beta is 1.2, and the Sharpe ratio is 1.8. Consider reducing position sizes in high-volatility assets to maintain risk targets.",
-            'explanation': "The RSI (Relative Strength Index) is a momentum oscillator that measures the speed and change of price movements. It ranges from 0 to 100, with readings above 70 indicating overbought conditions and below 30 indicating oversold conditions.",
-            'general': "I understand you're interested in trading. Could you please provide more specific information about what you'd like to know? I can help with market analysis, strategy development, risk assessment, or portfolio optimization."
-        }
-        
-        # Determine the most appropriate mock response
-        intent = self.prompt_processor.extract_intent(prompt)
-        response_type = self._determine_response_type("", {'intent': intent})
-        
-        return {
-            'content': mock_responses.get(response_type, mock_responses['general']),
-            'type': response_type,
-            'actions': [],
-            'confidence': 0.5
-        }
-    
-    def _extract_chart_data(self, content: str) -> Dict:
-        """Extract chart data from the response content."""
-        # This would be implemented to parse the content and extract relevant data
-        return {}
-    
-    def _extract_metrics(self, content: str) -> Dict:
-        """Extract metrics from the response content."""
-        # This would be implemented to parse the content and extract relevant metrics
-        return {}
-
-    def set_prompts(self, prompts: Dict[str, str]):
-        """Set custom prompts."""
-        self.prompts = prompts
-    
-    def _get_mock_analysis(self, data_type: str) -> str:
-        """Generate mock analysis when API is not available."""
-        mock_responses = {
-            "market_analysis": [
-                "Market shows strong bullish momentum with increasing volume.",
-                "Technical indicators suggest a potential reversal.",
-                "Market sentiment is mixed with conflicting signals.",
-                "Current trend appears to be consolidating."
-            ],
-            "trading_strategy": [
-                "Consider long positions with tight stop losses.",
-                "Short-term mean reversion opportunities present.",
-                "Range-bound trading recommended with clear support/resistance levels.",
-                "Wait for clearer trend confirmation before entering positions."
-            ],
-            "risk_analysis": [
-                "Portfolio shows moderate risk exposure with good diversification.",
-                "High concentration in tech sector requires monitoring.",
-                "Risk metrics indicate stable portfolio health.",
-                "Consider reducing position sizes in volatile assets."
-            ]
-        }
-        return random.choice(mock_responses.get(data_type, ["No analysis available."]))
-    
-    def analyze_market(self, market_data: Dict) -> Dict:
-        """Analyze market data using LLM."""
-        if not self.is_configured:
-            return {
-                'analysis': self._get_mock_analysis("market_analysis"),
-                'timestamp': datetime.now().isoformat()
-            }
-        
-        try:
-            import openai
-            
-            prompt = self.prompts["market_analysis"].format(
-                price=market_data.get('price', 'N/A'),
-                change=market_data.get('change', 'N/A'),
-                volume=market_data.get('volume', 'N/A'),
-                indicators=market_data.get('indicators', 'N/A')
-            )
-            
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a professional market analyst."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            
-            return {
-                'analysis': response.choices[0].message.content,
-                'timestamp': datetime.now().isoformat()
-            }
-        except Exception as e:
-            return {
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }
-    
-    def generate_trading_strategy(self, market_conditions: Dict) -> Dict:
-        """Generate trading strategy based on market conditions."""
-        if not self.is_configured:
-            return {
-                'strategy': self._get_mock_analysis("trading_strategy"),
-                'timestamp': datetime.now().isoformat()
-            }
-        
-        try:
-            import openai
-            
-            prompt = self.prompts["trading_strategy"].format(
-                trend=market_conditions.get('trend', 'N/A'),
-                volatility=market_conditions.get('volatility', 'N/A'),
-                support=market_conditions.get('support', 'N/A'),
-                resistance=market_conditions.get('resistance', 'N/A')
-            )
-            
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a professional trading strategist."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            
-            return {
-                'strategy': response.choices[0].message.content,
-                'timestamp': datetime.now().isoformat()
-            }
-        except Exception as e:
-            return {
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }
-    
-    def analyze_risk(self, portfolio_data: Dict) -> Dict:
-        """Analyze portfolio risk using LLM."""
-        if not self.is_configured:
-            return {
-                'analysis': self._get_mock_analysis("risk_analysis"),
-                'timestamp': datetime.now().isoformat()
-            }
-        
-        try:
-            import openai
-            
-            prompt = self.prompts["risk_analysis"].format(
-                total_value=portfolio_data.get('total_value', 'N/A'),
-                positions=portfolio_data.get('positions', 'N/A'),
-                exposure=portfolio_data.get('exposure', 'N/A'),
-                risk_metrics=portfolio_data.get('risk_metrics', 'N/A')
-            )
-            
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a professional risk analyst."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            
-            return {
-                'analysis': response.choices[0].message.content,
-                'timestamp': datetime.now().isoformat()
-            }
-        except Exception as e:
-            return {
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }
-    
-    def get_llm_metrics(self) -> Dict[str, str]:
-        """Get LLM interface metrics."""
-        return {
-            'api_key_configured': 'Yes' if self.is_configured else 'No',
-            'model': 'gpt-3.5-turbo' if self.is_configured else 'Mock Data',
-            'status': 'Active' if self.is_configured else 'Using Mock Data'
-        }
-
-    def _calculate_confidence(self, intent: str, entities: Dict) -> float:
-        """Calculate confidence score for the processed prompt."""
-        confidence = 0.0
-        if intent != 'unknown':
-            confidence += 0.4
-        if entities:
-            confidence += min(0.6, len(entities) * 0.1)
-        return confidence
-
-    def generate_response(self, prompt: str, max_length: int = 100) -> str:
-        """Generate response with context awareness."""
-        try:
-            # Process prompt
-            processed = self.process_prompt(prompt)
-            
-            # Check cache
-            cache_key = f"{prompt}_{processed['intent']}"
-            if cache_key in self.response_cache:
-                return self.response_cache[cache_key]
-            
-            # Prepare context-aware prompt
-            context_prompt = self._prepare_context_prompt(prompt, processed)
+            # Update context
+            self._update_context(intent, entities, confidence)
             
             # Generate response
-            inputs = self.tokenizer(context_prompt, return_tensors="pt").to(self.device)
+            if self.is_configured:
+                response = self._generate_openai_response(prompt, intent, entities)
+            else:
+                response = self._generate_huggingface_response(prompt, intent, entities)
+            
+            # Structure the response
+            result = {
+                'content': response,
+                'intent': intent,
+                'confidence': confidence,
+                'entities': entities,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            # Add metadata
+            if hasattr(self, 'context'):
+                result['context'] = self.context.to_dict()
+            
+            # Add to history
+            self.context.add_to_history(prompt, response)
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Error processing prompt: {str(e)}", exc_info=True)
+            return {
+                'error': str(e),
+                'type': 'error',
+                'timestamp': datetime.now().isoformat()
+            }
+    
+    def _update_context(self, intent: str, entities: Dict[str, List[str]], confidence: float) -> None:
+        """Update context with new information.
+        
+        Args:
+            intent: Detected intent
+            entities: Extracted entities
+            confidence: Confidence score
+        """
+        self.context.current_intent = intent
+        self.context.entities = entities
+        self.context.confidence = confidence
+        
+        # Update last known values
+        if 'ticker' in entities:
+            self.context.last_ticker = entities['ticker'][0]
+        if 'timeframe' in entities:
+            self.context.last_timeframe = entities['timeframe'][0]
+        if 'strategy_name' in entities:
+            self.context.last_strategy = entities['strategy_name'][0]
+    
+    async def _generate_openai_response_async(self, prompt: str, intent: str, entities: Dict) -> str:
+        """Generate response using OpenAI API asynchronously.
+        
+        Args:
+            prompt: Input prompt
+            intent: Detected intent
+            entities: Extracted entities
+            
+        Returns:
+            Generated response text
+        """
+        try:
+            # Prepare messages
+            messages = [
+                {"role": "system", "content": self._get_system_prompt(intent)},
+                {"role": "user", "content": self._prepare_prompt(prompt, intent, entities)}
+            ]
+            
+            # Get response asynchronously
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                self.thread_pool,
+                lambda: openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=messages,
+                    temperature=DEFAULT_TEMPERATURE,
+                    max_tokens=DEFAULT_MAX_TOKENS
+                )
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            self.logger.error(f"OpenAI API error: {e}")
+            return self._generate_fallback_response(prompt)
+    
+    def _generate_openai_response(self, prompt: str, intent: str, entities: Dict) -> str:
+        """Generate response using OpenAI API.
+        
+        Args:
+            prompt: Input prompt
+            intent: Detected intent
+            entities: Extracted entities
+            
+        Returns:
+            Generated response text
+        """
+        try:
+            # Prepare messages
+            messages = [
+                {"role": "system", "content": self._get_system_prompt(intent)},
+                {"role": "user", "content": self._prepare_prompt(prompt, intent, entities)}
+            ]
+            
+            # Get response
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                temperature=DEFAULT_TEMPERATURE,
+                max_tokens=DEFAULT_MAX_TOKENS
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            self.logger.error(f"OpenAI API error: {e}")
+            return self._generate_fallback_response(prompt)
+    
+    async def _generate_huggingface_response_async(self, prompt: str, intent: str, entities: Dict) -> str:
+        """Generate response using HuggingFace model asynchronously.
+        
+        Args:
+            prompt: Input prompt
+            intent: Detected intent
+            entities: Extracted entities
+            
+        Returns:
+            Generated response text
+        """
+        try:
+            # Prepare input
+            inputs = self.tokenizer(
+                self._prepare_prompt(prompt, intent, entities),
+                return_tensors="pt",
+                max_length=512,
+                truncation=True
+            )
+            
+            # Generate response asynchronously
+            loop = asyncio.get_event_loop()
+            outputs = await loop.run_in_executor(
+                self.thread_pool,
+                lambda: self.model.generate(
+                    **inputs,
+                    max_length=200,
+                    num_return_sequences=1,
+                    temperature=DEFAULT_TEMPERATURE,
+                    top_p=DEFAULT_TOP_P,
+                    do_sample=True
+                )
+            )
+            
+            return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+        except Exception as e:
+            self.logger.error(f"HuggingFace model error: {e}")
+            return self._generate_fallback_response(prompt)
+    
+    def _generate_huggingface_response(self, prompt: str, intent: str, entities: Dict) -> str:
+        """Generate response using HuggingFace model.
+        
+        Args:
+            prompt: Input prompt
+            intent: Detected intent
+            entities: Extracted entities
+            
+        Returns:
+            Generated response text
+        """
+        try:
+            # Prepare input
+            inputs = self.tokenizer(
+                self._prepare_prompt(prompt, intent, entities),
+                return_tensors="pt",
+                max_length=512,
+                truncation=True
+            )
+            
+            # Generate response
             outputs = self.model.generate(
                 **inputs,
-                max_length=max_length,
+                max_length=200,
                 num_return_sequences=1,
-                temperature=0.7,
-                top_p=0.9,
+                temperature=DEFAULT_TEMPERATURE,
+                top_p=DEFAULT_TOP_P,
                 do_sample=True
             )
             
-            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
             
-            # Cache response
-            self.response_cache[cache_key] = response
-            
-            return response
         except Exception as e:
-            self.logger.error(f"Error generating response: {str(e)}")
-            return ""
-
-    def _prepare_context_prompt(self, prompt: str, processed: Dict) -> str:
-        """Prepare context-aware prompt with relevant information."""
-        context_parts = []
+            self.logger.error(f"HuggingFace model error: {e}")
+            return self._generate_fallback_response(prompt)
+    
+    def _prepare_prompt(self, prompt: str, intent: str, entities: Dict) -> str:
+        """Prepare prompt with context and templates.
         
-        # Add relevant knowledge base entries
-        if processed['entities']:
-            for entity_type, entities in processed['entities'].items():
-                for entity in entities:
-                    if entity in self.knowledge_base:
-                        context_parts.append(self.knowledge_base[entity])
+        Args:
+            prompt: Input prompt
+            intent: Detected intent
+            entities: Extracted entities
+            
+        Returns:
+            Prepared prompt text
+        """
+        # Get template for intent
+        template = self.templates.get(intent, self.templates.get('default'))
         
-        # Add recent history context
-        if self.context.history:
-            recent_context = self.context.history[-1]
-            context_parts.append(f"Previous context: {recent_context['prompt']}")
+        if template:
+            return template.render(
+                prompt=prompt,
+                intent=intent,
+                entities=entities,
+                context=self.context.to_dict()
+            )
+        return prompt
+    
+    def _get_system_prompt(self, intent: str) -> str:
+        """Get system prompt based on intent.
         
-        # Combine context with current prompt
-        context = " ".join(context_parts)
-        return f"{context}\nCurrent prompt: {prompt}"
-
-    def analyze_sentiment(self, text: str) -> Dict[str, float]:
-        """Analyze sentiment with confidence scoring."""
-        try:
-            inputs = self.tokenizer(text, return_tensors="pt", truncation=True, padding=True).to(self.device)
-            outputs = self.sentiment_model(**inputs)
-            scores = torch.softmax(outputs.logits, dim=1)[0]
+        Args:
+            intent: Detected intent
             
-            confidence = float(torch.max(scores))
-            label = 'POSITIVE' if scores[1] > scores[0] else 'NEGATIVE'
-            
-            return {
-                'label': label,
-                'score': float(scores[1] if label == 'POSITIVE' else scores[0]),
-                'confidence': confidence
-            }
-        except Exception as e:
-            self.logger.error(f"Error analyzing sentiment: {str(e)}")
-            return {'label': 'ERROR', 'score': 0.0, 'confidence': 0.0}
-
-    def generate_market_analysis(self, market_data: pd.DataFrame) -> Dict[str, Any]:
-        """Generate comprehensive market analysis with confidence scoring."""
-        try:
-            # Calculate statistics
-            stats = {
-                'mean': market_data.mean().to_dict(),
-                'std': market_data.std().to_dict(),
-                'trend': 'up' if market_data.iloc[-1].mean() > market_data.iloc[0].mean() else 'down',
-                'volatility': market_data.std().mean() / market_data.mean().mean()
-            }
-            
-            # Generate analysis
-            analysis_prompt = f"""
-            Market Analysis Report:
-            Current trend: {stats['trend']}
-            Average values: {stats['mean']}
-            Volatility: {stats['std']}
-            Market volatility: {stats['volatility']}
-            
-            Provide a detailed market analysis with confidence levels:
-            """
-            
-            analysis = self.generate_response(analysis_prompt)
-            
-            # Calculate confidence based on data quality
-            confidence = self._calculate_analysis_confidence(market_data)
-            
-            return {
-                'analysis': analysis,
-                'statistics': stats,
-                'confidence': confidence,
-                'timestamp': datetime.now().isoformat()
-            }
-        except Exception as e:
-            self.logger.error(f"Error generating market analysis: {str(e)}")
-            return {
-                'analysis': "Error generating analysis",
-                'statistics': {},
-                'confidence': 0.0,
-                'timestamp': datetime.now().isoformat()
-            }
-
-    def _calculate_analysis_confidence(self, data: pd.DataFrame) -> float:
-        """Calculate confidence score for market analysis."""
-        confidence = 0.0
+        Returns:
+            System prompt text
+        """
+        prompts = {
+            'forecast': "You are a market forecasting expert. Provide clear, data-driven predictions.",
+            'analyze': "You are a market analysis expert. Provide detailed technical and fundamental analysis.",
+            'backtest': "You are a backtesting expert. Provide comprehensive strategy evaluation.",
+            'optimize': "You are an optimization expert. Provide portfolio and strategy optimization advice.",
+            'explain': "You are a trading education expert. Provide clear, detailed explanations.",
+            'risk': "You are a risk management expert. Provide detailed risk analysis and mitigation strategies.",
+            'portfolio': "You are a portfolio management expert. Provide comprehensive portfolio analysis and recommendations."
+        }
+        return prompts.get(intent, "You are a trading assistant. Provide helpful, accurate responses.")
+    
+    def _generate_fallback_response(self, prompt: str) -> str:
+        """Generate fallback response when primary methods fail.
         
-        # Data quality checks
-        if not data.empty:
-            confidence += 0.2
-        if len(data) > 100:  # Sufficient data points
-            confidence += 0.2
-        if not data.isnull().any().any():  # No missing values
-            confidence += 0.2
-        if data.std().mean() > 0:  # Non-zero variance
-            confidence += 0.2
-        if len(data.columns) > 1:  # Multiple features
-            confidence += 0.2
+        Args:
+            prompt: Input prompt
             
-        return confidence
-
-    def generate_trading_signals(self, market_data: pd.DataFrame) -> Dict[str, Any]:
-        """Generate trading signals with confidence scoring."""
-        try:
-            signals = {}
-            confidence_scores = {}
-            
-            for column in market_data.columns:
-                if 'price' in column.lower() or 'close' in column.lower():
-                    # Technical analysis
-                    sma_20 = market_data[column].rolling(window=20).mean()
-                    sma_50 = market_data[column].rolling(window=50).mean()
-                    rsi = self._calculate_rsi(market_data[column])
-                    
-                    # Generate signal
-                    signal, confidence = self._generate_signal(
-                        sma_20.iloc[-1],
-                        sma_50.iloc[-1],
-                        rsi.iloc[-1]
-                    )
-                    
-                    signals[column] = signal
-                    confidence_scores[column] = confidence
-            
-            return {
-                'signals': signals,
-                'confidence_scores': confidence_scores,
-                'timestamp': datetime.now().isoformat()
-            }
-        except Exception as e:
-            self.logger.error(f"Error generating trading signals: {str(e)}")
-            return {
-                'signals': {},
-                'confidence_scores': {},
-                'timestamp': datetime.now().isoformat()
-            }
-
-    def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
-        """Calculate Relative Strength Index."""
-        delta = prices.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-        rs = gain / loss
-        return 100 - (100 / (1 + rs))
-
-    def _generate_signal(self, sma_20: float, sma_50: float, rsi: float) -> tuple:
-        """Generate trading signal with confidence score."""
-        signal = 'HOLD'
-        confidence = 0.5  # Base confidence
+        Returns:
+            Fallback response text
+        """
+        return f"I apologize, but I'm having trouble processing your request: {prompt}. Please try rephrasing or ask for something else."
+    
+    def set_prompts(self, prompts: Dict[str, str]) -> None:
+        """Set custom system prompts.
         
-        # Trend analysis
-        if sma_20 > sma_50:
-            signal = 'BUY'
-            confidence += 0.2
-        elif sma_20 < sma_50:
-            signal = 'SELL'
-            confidence += 0.2
-            
-        # RSI analysis
-        if rsi > 70:
-            if signal == 'BUY':
-                confidence -= 0.1
-        elif rsi < 30:
-            if signal == 'SELL':
-                confidence -= 0.1
-                
-        return signal, min(max(confidence, 0.0), 1.0) 
+        Args:
+            prompts: Dictionary of intent to prompt mapping
+        """
+        self.custom_prompts = prompts
+    
+    def get_llm_metrics(self) -> Dict[str, Any]:
+        """Get LLM performance metrics.
+        
+        Returns:
+            Dictionary of metrics
+        """
+        return {
+            'model_name': self.model.config.model_type if hasattr(self, 'model') else None,
+            'is_openai_configured': self.is_configured,
+            'context_size': len(self.context.history),
+            'last_intent': self.context.current_intent,
+            'last_confidence': self.context.confidence,
+            'last_ticker': self.context.last_ticker,
+            'last_timeframe': self.context.last_timeframe,
+            'last_strategy': self.context.last_strategy
+        }
+    
+    def clear_context(self) -> None:
+        """Clear the context history."""
+        self.context.clear_history()
+    
+    def __del__(self):
+        """Cleanup resources."""
+        if hasattr(self, 'thread_pool'):
+            self.thread_pool.shutdown(wait=True) 
