@@ -66,8 +66,47 @@ class LSTMForecaster(BaseModel):
         """Initialize LSTM model with configuration."""
         super().__init__(config)
         self._validate_config()
-        self._setup_model()
+        self.model = self.build_model()
         self._init_weights()
+    
+    def build_model(self) -> nn.Module:
+        """Build and return the LSTM model.
+        
+        Returns:
+            nn.Module: The built LSTM model.
+        """
+        model = nn.Sequential(
+            nn.LSTM(
+                input_size=self.config['input_size'],
+                hidden_size=self.config['hidden_size'],
+                num_layers=self.config['num_layers'],
+                batch_first=True,
+                dropout=self.config['dropout'] if self.config['num_layers'] > 1 else 0
+            ),
+            nn.Linear(self.config['hidden_size'], 1)
+        )
+        
+        # Add attention if enabled
+        if self.config.get('use_attention', False):
+            model.add_module('attention', nn.MultiheadAttention(
+                embed_dim=self.config['hidden_size'],
+                num_heads=self.config.get('num_attention_heads', 4),
+                dropout=self.config.get('attention_dropout', 0.1)
+            ))
+        
+        # Add batch normalization if enabled
+        if self.config.get('use_batch_norm', False):
+            model.add_module('batch_norm', nn.BatchNorm1d(self.config['hidden_size']))
+        
+        # Add layer normalization if enabled
+        if self.config.get('use_layer_norm', False):
+            model.add_module('layer_norm', nn.LayerNorm(self.config['hidden_size']))
+        
+        # Add dropout if enabled
+        if self.config.get('additional_dropout', 0) > 0:
+            model.add_module('dropout', nn.Dropout(self.config['additional_dropout']))
+        
+        return model
     
     def _validate_config(self):
         """Validate model configuration."""
@@ -99,45 +138,9 @@ class LSTMForecaster(BaseModel):
         if 'max_epochs' in self.config and self.config['max_epochs'] <= 0:
             raise ValueError("max_epochs must be positive")
     
-    def _setup_model(self):
-        """Set up LSTM model architecture."""
-        # Create LSTM layers
-        self.lstm = nn.LSTM(
-            input_size=self.config['input_size'],
-            hidden_size=self.config['hidden_size'],
-            num_layers=self.config['num_layers'],
-            batch_first=True,
-            dropout=self.config['dropout'] if self.config['num_layers'] > 1 else 0
-        )
-        
-        # Create output layer
-        self.output_layer = nn.Linear(self.config['hidden_size'], 1)
-        
-        # Initialize optional features
-        if self.config.get('use_attention', False):
-            self.attention = nn.MultiheadAttention(
-                embed_dim=self.config['hidden_size'],
-                num_heads=self.config.get('num_attention_heads', 4),
-                dropout=self.config.get('attention_dropout', 0.1)
-            )
-        
-        if self.config.get('use_batch_norm', False):
-            self.batch_norm = nn.BatchNorm1d(self.config['hidden_size'])
-        
-        if self.config.get('use_layer_norm', False):
-            self.layer_norm = nn.LayerNorm(self.config['hidden_size'])
-        
-        if self.config.get('additional_dropout', 0) > 0:
-            self.dropout = nn.Dropout(self.config['additional_dropout'])
-        
-        # Initialize residual projection if needed
-        if self.config.get('use_residual', False):
-            if self.config['input_size'] != self.config['hidden_size']:
-                self.residual_proj = nn.Linear(self.config['input_size'], self.config['hidden_size'])
-    
     def _init_weights(self):
         """Initialize model weights."""
-        for name, param in self.named_parameters():
+        for name, param in self.model.named_parameters():
             if 'weight' in name and param.dim() >= 2:
                 nn.init.xavier_uniform_(param)
             elif 'bias' in name:
@@ -160,50 +163,13 @@ class LSTMForecaster(BaseModel):
             if 'max_batch_size' in self.config and x.size(0) > self.config['max_batch_size']:
                 raise ValueError(f"Batch size {x.size(0)} exceeds maximum allowed value of {self.config['max_batch_size']}")
             
-            # LSTM forward pass
-            lstm_out, _ = self.lstm(x)
+            return self.model(x)
             
-            # Apply attention if enabled
-            if self.config.get('use_attention', False):
-                try:
-                    # Reshape for attention
-                    lstm_out = lstm_out.permute(1, 0, 2)  # [seq_len, batch, hidden]
-                    attn_out, _ = self.attention(lstm_out, lstm_out, lstm_out)
-                    lstm_out = attn_out.permute(1, 0, 2)  # [batch, seq_len, hidden]
-                except RuntimeError as e:
-                    if "out of memory" in str(e):
-                        if torch.cuda.is_available():
-                            torch.cuda.empty_cache()
-                        raise MemoryError("GPU out of memory during attention")
-                    raise e
-            
-            # Get last time step
-            last_hidden = lstm_out[:, -1, :]
-            
-            # Apply normalization if enabled
-            if self.config.get('use_batch_norm', False):
-                last_hidden = self.batch_norm(last_hidden)
-            if self.config.get('use_layer_norm', False):
-                last_hidden = self.layer_norm(last_hidden)
-            
-            # Apply dropout if enabled
-            if self.config.get('additional_dropout', 0) > 0:
-                last_hidden = self.dropout(last_hidden)
-            
-            # Apply residual connection if enabled
-            if self.config.get('use_residual', False):
-                residual = x[:, -1, :]  # Get last time step of input
-                if self.config['input_size'] != self.config['hidden_size']:
-                    residual = self.residual_proj(residual)
-                last_hidden = last_hidden + residual
-            
-            # Output layer
-            output = self.output_layer(last_hidden)
-            
-            return output
-        except Exception as e:
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+        except RuntimeError as e:
+            if "out of memory" in str(e):
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                raise MemoryError("GPU out of memory during forward pass")
             raise e
     
     def _prepare_data(self, data: pd.DataFrame, is_training: bool = True) -> Tuple[torch.Tensor, torch.Tensor]:

@@ -110,5 +110,33 @@ class TradingRules:
         """
         with open(json_file, 'r') as f:
             rules_data = json.load(f)
-            for rule_name, rule_data in rules_data.items():
-                self.add_rule(rule_name, rule_data['description'], rule_data.get('category', 'General'), rule_data.get('priority', 0), rule_data.get('dependencies', [])) 
+            
+        def process_rules(data: Dict, prefix: str = "") -> None:
+            """Process rules recursively."""
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    if 'description' in value:
+                        # This is a rule
+                        rule_name = f"{prefix}{key}" if prefix else key
+                        self.add_rule(
+                            rule_name,
+                            value['description'],
+                            value.get('category', 'General'),
+                            value.get('priority', 0),
+                            value.get('dependencies', [])
+                        )
+                    # Process nested rules
+                    process_rules(value, f"{prefix}{key}.")
+                elif isinstance(value, list) and key == 'rules':
+                    # Process list of rules
+                    for i, rule in enumerate(value):
+                        rule_name = f"{prefix}rule_{i+1}"
+                        self.add_rule(
+                            rule_name,
+                            rule,
+                            'General',
+                            0,
+                            []
+                        )
+        
+        process_rules(rules_data) 

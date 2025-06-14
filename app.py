@@ -84,7 +84,16 @@ if 'api_key' not in st.session_state:
 if 'portfolio' not in st.session_state:
     st.session_state.portfolio = PortfolioManager()
 if 'risk_manager' not in st.session_state:
-    st.session_state.risk_manager = RiskManager(pd.Series(dtype=float))
+    risk_config = {
+        'risk_limits': {
+            'max_drawdown': 0.2,
+            'max_volatility': 0.3,
+            'min_sharpe_ratio': 1.0
+        },
+        'results_dir': 'risk_results',
+        'log_level': 'INFO'
+    }
+    st.session_state.risk_manager = RiskManager(risk_config)
 if 'strategy_manager' not in st.session_state:
     st.session_state.strategy_manager = StrategyManager()
 if 'backtest_engine' not in st.session_state:
@@ -115,7 +124,13 @@ if 'market_data' not in st.session_state:
 
 # Initialize ExecutionEngine
 if 'execution_engine' not in st.session_state:
-    st.session_state.execution_engine = ExecutionEngine()
+    execution_config = {
+        'market_data_provider': 'AlphaVantageProvider',
+        'market_data_config': {
+            'api_key': st.session_state.api_key if st.session_state.api_key else os.getenv('ALPHA_VANTAGE_API_KEY', '')
+        }
+    }
+    st.session_state.execution_engine = ExecutionEngine(execution_config)
 
 # Initialize MarketIndicators
 if 'market_indicators' not in st.session_state:
