@@ -1,5 +1,5 @@
 # This file is intentionally left empty to make the directory a proper Python package. 
 
-from .ensemble_model import EnsembleModel
+from .ensemble_model import EnsembleForecaster
 
-__all__ = ['EnsembleModel'] 
+__all__ = ['EnsembleForecaster'] 
