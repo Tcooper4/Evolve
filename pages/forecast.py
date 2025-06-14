@@ -1,30 +1,65 @@
-import pandas as pd
+"""Forecast page for the trading dashboard."""
+
 import streamlit as st
+import pandas as pd
+from datetime import datetime, timedelta
+from trading.ui.components import (
+    create_prompt_input,
+    create_sidebar,
+    create_forecast_chart,
+    create_error_block,
+    create_loading_spinner
+)
 
-
-def app() -> None:
-    st.title("Forecast")
-
-    symbol = st.text_input("Symbol", "AAPL")
-    days = st.number_input("Forecast days", min_value=1, max_value=30, value=5)
-
-    if st.button("Run Forecast"):
+def render_forecast_page():
+    """Render the forecast page."""
+    st.title("Price Forecasting")
+    
+    # Create sidebar
+    sidebar_config = create_sidebar()
+    
+    # Create prompt input
+    prompt = create_prompt_input()
+    
+    # Process prompt if provided
+    if prompt:
         try:
-            data = st.session_state.market_data.get_data(symbol)
+            with create_loading_spinner("Generating forecast..."):
+                # Get forecast from router
+                result = st.session_state.router.route(
+                    prompt,
+                    model=sidebar_config['model'],
+                    strategies=sidebar_config['strategies'],
+                    expert_mode=sidebar_config['expert_mode'],
+                    data_source=sidebar_config['data_source'],
+                    uploaded_file=sidebar_config['uploaded_file']
+                )
+                
+                if result.status == "success":
+                    # Display forecast chart
+                    if result.visual:
+                        st.plotly_chart(result.visual, use_container_width=True)
+                    
+                    # Display forecast explanation
+                    if result.explanation:
+                        st.info(result.explanation)
+                    
+                    # Display forecast metrics
+                    if result.data and 'metrics' in result.data:
+                        metrics = result.data['metrics']
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Predicted Price", f"${metrics.get('predicted_price', 0):.2f}")
+                        with col2:
+                            st.metric("Confidence", f"{metrics.get('confidence', 0):.1%}")
+                        with col3:
+                            st.metric("Horizon", f"{metrics.get('horizon', 'N/A')}")
+                else:
+                    create_error_block(result.error or "Failed to generate forecast")
+                    
         except Exception as e:
-            st.error(f"Unable to load data: {e}")
-            return
+            create_error_block(str(e))
 
-        if data is None or data.empty:
-            st.warning("No data available")
-            return
-
-        features = st.session_state.feature_engineer.engineer_features(data)
-        try:
-            preds = st.session_state.lstm_model.predict(features)
-            idx = pd.date_range(data.index[-1], periods=len(preds) + 1, closed="right")
-            forecast = pd.Series(preds, index=idx)
-            st.line_chart(forecast)
-        except Exception as e:
-            st.error(f"Forecast failed: {e}")
+if __name__ == "__main__":
+    render_forecast_page()
 

@@ -1,118 +1,163 @@
-# Market Analysis System
+# Advanced Financial Forecasting Platform
 
-A comprehensive market analysis system for processing, analyzing, and visualizing market data. The system includes utilities for data validation, preprocessing, analysis, and visualization.
+An intelligent, agentic trading platform built with Streamlit, featuring advanced forecasting models, strategy optimization, and natural language processing capabilities.
 
 ## Features
 
-- **Data Validation**: Robust validation of market data structure and quality
-- **Data Pipeline**: End-to-end pipeline for data loading, preprocessing, and analysis
-- **Market Analysis**: Technical analysis, market regime detection, and condition analysis
-- **Visualization**: Comprehensive plotting capabilities for market data and analysis results
-- **Configuration Management**: Flexible configuration system for customizing analysis parameters
+- 🤖 **Intelligent Agents**
+  - Forecaster: Advanced time series prediction
+  - Strategy: Dynamic trading strategy optimization
+  - Commentary: Natural language market analysis
+  - Backtester: Historical performance validation
+  - Updater: Continuous model improvement
 
-## Project Structure
+- 📊 **Advanced Analytics**
+  - Multi-timeframe analysis
+  - Technical indicators
+  - Risk metrics
+  - Performance visualization
+  - Real-time updates
 
-```
-market_analysis/
-├── config/
-│   └── market_analysis_config.yaml  # Configuration file
-├── data/
-│   └── sample_market_data.csv      # Sample market data
-├── examples/
-│   └── market_analysis_example.py  # Example usage script
-├── src/
-│   ├── analysis/
-│   │   └── market_analysis.py      # Market analysis module
-│   ├── features/
-│   │   └── feature_engineering.py  # Feature engineering module
-│   └── utils/
-│       ├── data_validation.py      # Data validation utilities
-│       ├── data_pipeline.py        # Data pipeline utilities
-│       ├── visualization.py        # Visualization utilities
-│       └── config_manager.py       # Configuration management utilities
-└── tests/
-    ├── analysis/
-    │   └── test_market_analysis.py # Market analysis tests
-    └── features/
-        └── test_feature_engineering.py  # Feature engineering tests
-```
+- 🧠 **LLM Integration**
+  - OpenAI and HuggingFace support
+  - Natural language query processing
+  - Context-aware responses
+  - Multi-step reasoning
+  - Confidence scoring
 
-## Installation
+- 🔄 **Auto-Repair System**
+  - Package dependency management
+  - DLL error handling
+  - Environment validation
+  - Automatic recovery
+  - Health monitoring
+
+## Quick Start
 
 1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/market_analysis.git
-cd market_analysis
+   ```bash
+   git clone https://github.com/yourusername/trading-platform.git
+   cd trading-platform
+   ```
+
+2. Create and activate a virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   venv\Scripts\activate     # Windows
+   ```
+
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your API keys and settings
+   ```
+
+5. Run the application:
+   ```bash
+   streamlit run app.py
+   ```
+
+## Agent Roles
+
+### Forecaster Agent
+- Time series analysis and prediction
+- Multiple model support (ARIMA, LSTM, Prophet)
+- Confidence scoring and uncertainty estimation
+- Real-time updates and adaptation
+
+### Strategy Agent
+- Technical indicator analysis
+- Risk management optimization
+- Position sizing and entry/exit rules
+- Performance monitoring and adjustment
+
+### Commentary Agent
+- Market sentiment analysis
+- News and event impact assessment
+- Natural language report generation
+- Trend and pattern identification
+
+### Backtester Agent
+- Historical data validation
+- Strategy performance testing
+- Risk metric calculation
+- Optimization parameter tuning
+
+### Updater Agent
+- Model weight optimization
+- Performance metric tracking
+- Adaptive learning
+- Memory management
+
+## Prompt Examples
+
+### Forecasting
+```
+"Forecast AAPL price for the next 7 days with high confidence"
+"Predict SPY trend for the next month using technical indicators"
+"Generate a 30-day forecast for BTC with uncertainty bounds"
 ```
 
-2. Create a virtual environment (recommended):
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+### Strategy
+```
+"Optimize a momentum strategy for MSFT with 0.8 risk tolerance"
+"Create a mean reversion strategy for ETH with stop loss"
+"Backtest a hybrid strategy combining ML and technical indicators"
 ```
 
-3. Install dependencies (includes optional visualization and reporting packages):
-```bash
-pip install -r requirements.txt
+### Analysis
+```
+"Analyze the current market conditions for tech stocks"
+"Explain the recent price movement in TSLA"
+"Compare the performance of different sectors"
 ```
 
-## Usage
+## Auto-Repair System
 
-### Basic Usage
+The platform includes a robust auto-repair system that handles common issues:
 
-1. Prepare your market data in CSV format with the following columns:
-   - date
-   - open
-   - high
-   - low
-   - close
-   - volume
+1. **Package Management**
+   - Detects missing dependencies
+   - Updates outdated packages
+   - Resolves version conflicts
+   - Handles DLL issues
 
-2. Configure your analysis parameters in `config/market_analysis_config.yaml`
+2. **Environment Validation**
+   - Checks Python version
+   - Verifies GPU availability
+   - Validates memory access
+   - Tests data loading
 
-3. Run the example script:
+3. **Error Recovery**
+   - Automatic retry logic
+   - Fallback mechanisms
+   - Error logging
+   - State recovery
+
+4. **Health Monitoring**
+   - System resource checks
+   - Agent status monitoring
+   - Performance metrics
+   - Memory usage tracking
+
+## Deployment
+
+### Docker
 ```bash
-python examples/market_analysis_example.py
+docker build -t trading-platform .
+docker run -p 8501:8501 trading-platform
 ```
 
-### Custom Analysis
-
-```python
-from src.utils.data_pipeline import DataPipeline
-from src.utils.config_manager import ConfigManager
-from src.analysis.market_analysis import MarketAnalysis
-
-# Initialize configuration
-config_manager = ConfigManager('config/market_analysis_config.yaml')
-
-# Initialize pipeline
-pipeline = DataPipeline(config_manager.get_pipeline_settings())
-
-# Load and process data
-pipeline.run_pipeline('path/to/your/data.csv')
-
-# Get processed data
-processed_data = pipeline.get_processed_data()
-
-# Perform analysis
-market_analysis = MarketAnalysis()
-analysis_results = market_analysis.analyze_market(processed_data)
-```
-
-## Configuration
-
-The system is highly configurable through the `market_analysis_config.yaml` file. Key configuration sections include:
-
-- **Market Conditions**: Thresholds for trend detection, volatility, and volume
-- **Analysis Settings**: Parameters for technical indicators and analysis methods
-- **Visualization Settings**: Plot styles, colors, and output formats
-- **Pipeline Settings**: Data loading, preprocessing, and validation parameters
-
-## Testing
-
-Run the test suite:
+### Heroku
 ```bash
-python -m pytest tests/
+heroku create your-app-name
+git push heroku main
 ```
 
 ## Contributing
@@ -125,10 +170,4 @@ python -m pytest tests/
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Thanks to all contributors
-- Inspired by various market analysis methodologies
-- Built with Python's data science ecosystem 
+MIT License - see LICENSE file for details

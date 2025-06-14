@@ -9,6 +9,8 @@ from pathlib import Path
 from dataclasses import dataclass, asdict
 from abc import ABC, abstractmethod
 import os
+import importlib.util
+import inspect
 
 # Try to import redis, but make it optional
 try:
@@ -17,13 +19,12 @@ try:
 except ImportError:
     REDIS_AVAILABLE = False
 
-class StrategyError(Exception):
-    """Custom exception for strategy errors."""
-    pass
+# Project imports
+from .exceptions import StrategyError, StrategyNotFoundError, StrategyValidationError
 
 @dataclass
 class StrategyMetrics:
-    """Strategy performance metrics."""
+    """Strategy performance metrics with validation and serialization support."""
     returns: pd.Series
     sharpe_ratio: float
     sortino_ratio: float
@@ -38,6 +39,21 @@ class StrategyMetrics:
     losing_trades: int
     timestamp: str = datetime.utcnow().isoformat()
     
+    def __post_init__(self):
+        """Validate metrics after initialization."""
+        if not isinstance(self.returns, pd.Series):
+            raise StrategyValidationError("returns must be a pandas Series")
+        if not all(isinstance(x, (int, float)) for x in [
+            self.sharpe_ratio, self.sortino_ratio, self.max_drawdown,
+            self.win_rate, self.profit_factor, self.avg_trade,
+            self.avg_win, self.avg_loss
+        ]):
+            raise StrategyValidationError("numeric metrics must be int or float")
+        if not all(isinstance(x, int) for x in [
+            self.total_trades, self.winning_trades, self.losing_trades
+        ]):
+            raise StrategyValidationError("trade counts must be integers")
+    
     def to_dict(self) -> Dict[str, Any]:
         """Convert metrics to dictionary."""
         metrics_dict = asdict(self)
@@ -50,6 +66,21 @@ class StrategyMetrics:
         returns = pd.Series(data['returns'])
         data['returns'] = returns
         return cls(**data)
+    
+    def to_json(self) -> str:
+        """Convert metrics to JSON string."""
+        return json.dumps(self.to_dict())
+    
+    @classmethod
+    def from_json(cls, json_str: str) -> 'StrategyMetrics':
+        """Create metrics from JSON string."""
+        data = json.loads(json_str)
+        return cls.from_dict(data)
+    
+    def summary(self) -> str:
+        """Return a one-line summary of key metrics."""
+        return (f"Sharpe: {self.sharpe_ratio:.2f}, Sortino: {self.sortino_ratio:.2f}, "
+                f"Win Rate: {self.win_rate:.1%}, Trades: {self.total_trades}")
 
 class Strategy(ABC):
     """Base class for all trading strategies."""
@@ -90,33 +121,31 @@ class Strategy(ABC):
             self.logger.addHandler(handler)
     
     @abstractmethod
-    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
+    def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """Generate trading signals.
         
         Args:
-            data: Market data
+            data: Market data with OHLCV columns
             
         Returns:
-            Series of trading signals (1: buy, -1: sell, 0: hold)
-            
-        Raises:
-            StrategyError: If signal generation fails
+            DataFrame with columns:
+                - Signal: Trading signals (1: buy, -1: sell, 0: hold)
+                - Position: Current position size
+                - PnL: Profit and loss
+                - Equity: Cumulative equity
         """
         pass
     
     @abstractmethod
-    def calculate_metrics(self, data: pd.DataFrame, signals: pd.Series) -> StrategyMetrics:
-        """Calculate strategy performance metrics.
+    def evaluate_performance(self, signals: pd.DataFrame, prices: pd.DataFrame) -> StrategyMetrics:
+        """Evaluate strategy performance.
         
         Args:
-            data: Market data
-            signals: Trading signals
+            signals: DataFrame with trading signals and positions
+            prices: Market data with OHLCV columns
             
         Returns:
-            StrategyMetrics object
-            
-        Raises:
-            StrategyError: If metric calculation fails
+            StrategyMetrics object with performance metrics
         """
         pass
     
@@ -158,7 +187,7 @@ class Strategy(ABC):
             raise StrategyError("Signals must be -1 (sell), 0 (hold), or 1 (buy)")
 
 class StrategyManager:
-    """Manages multiple trading strategies."""
+    """Manages multiple trading strategies with caching and dynamic loading."""
     
     def __init__(self, config: Optional[Dict] = None):
         """Initialize strategy manager.
@@ -174,6 +203,7 @@ class StrategyManager:
                 - results_dir: Directory for saving results (default: strategy_results)
                 - max_strategies: Maximum number of strategies (default: 100)
                 - min_performance_threshold: Minimum performance threshold (default: 0.5)
+                - strategy_dir: Directory for strategy modules (default: trading/strategies)
         """
         # Load configuration from environment variables with defaults
         self.config = {
@@ -185,7 +215,8 @@ class StrategyManager:
             'log_level': os.getenv('STRATEGY_MANAGER_LOG_LEVEL', 'INFO'),
             'results_dir': os.getenv('STRATEGY_RESULTS_DIR', 'strategy_results'),
             'max_strategies': int(os.getenv('MAX_STRATEGIES', 100)),
-            'min_performance_threshold': float(os.getenv('MIN_PERFORMANCE_THRESHOLD', 0.5))
+            'min_performance_threshold': float(os.getenv('MIN_PERFORMANCE_THRESHOLD', 0.5)),
+            'strategy_dir': os.getenv('STRATEGY_DIR', 'trading/strategies')
         }
         
         # Update with provided config
@@ -225,42 +256,46 @@ class StrategyManager:
         
         # Initialize strategy storage
         self.strategies: Dict[str, Strategy] = {}
-        self.active_strategies: Dict[str, bool] = {}
+        self.active_strategies: Dict[str, Strategy] = {}
         self.ensemble_weights: Dict[str, float] = {}
         
         # Load existing strategies if available
         self._load_strategies()
     
     def _load_strategies(self) -> None:
-        """Load existing strategies from storage."""
-        if self.redis_client:
-            try:
-                strategies_data = self.redis_client.get('strategies')
-                if strategies_data:
-                    strategies = json.loads(strategies_data)
-                    for name, data in strategies.items():
-                        self.active_strategies[name] = data.get('active', False)
-                        self.ensemble_weights[name] = data.get('weight', 0.0)
-            except Exception as e:
-                self.logger.warning(f"Failed to load strategies from Redis: {e}")
+        """Load strategy modules from the strategy directory."""
+        strategy_dir = Path(self.config['strategy_dir'])
+        if not strategy_dir.exists():
+            self.logger.warning(f"Strategy directory {strategy_dir} does not exist")
+            return
         
-        # Load from file as fallback
-        strategies_file = self.results_dir / 'strategies.json'
-        if strategies_file.exists():
+        for file in strategy_dir.glob('*.py'):
+            if file.name.startswith('_') or file.name == 'strategy_manager.py':
+                continue
+            
             try:
-                with open(strategies_file, 'r') as f:
-                    strategies = json.load(f)
-                    for name, data in strategies.items():
-                        self.active_strategies[name] = data.get('active', False)
-                        self.ensemble_weights[name] = data.get('weight', 0.0)
+                spec = importlib.util.spec_from_file_location(file.stem, file)
+                if spec is None or spec.loader is None:
+                    continue
+                
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                
+                for name, obj in inspect.getmembers(module):
+                    if (inspect.isclass(obj) and 
+                        issubclass(obj, Strategy) and 
+                        obj != Strategy):
+                        self.register_strategy(name, obj())
+                        self.logger.info(f"Loaded strategy: {name}")
+            
             except Exception as e:
-                self.logger.warning(f"Failed to load strategies from file: {e}")
+                self.logger.error(f"Failed to load strategy from {file}: {e}")
     
     def _save_strategies(self) -> None:
         """Save strategies to storage."""
         strategies = {
             name: {
-                'active': self.active_strategies.get(name, False),
+                'active': name in self.active_strategies,
                 'weight': self.ensemble_weights.get(name, 0.0)
             }
             for name in self.strategies.keys()
@@ -276,7 +311,7 @@ class StrategyManager:
         # Save to file as fallback
         try:
             with open(self.results_dir / 'strategies.json', 'w') as f:
-                json.dump(strategies, f)
+                json.dump(strategies, f, indent=4)
         except Exception as e:
             self.logger.warning(f"Failed to save strategies to file: {e}")
     
@@ -304,26 +339,11 @@ class StrategyManager:
         except Exception as e:
             raise StrategyError(f"Failed to register strategy: {str(e)}")
     
-    def load_strategy(self, module_path: str, class_name: str, name: str) -> None:
-        """Dynamically load a strategy from a module.
-        
-        Args:
-            module_path: Path to the strategy module
-            class_name: Name of the strategy class
-            name: Name to register the strategy under
-            
-        Raises:
-            StrategyError: If strategy loading fails
-        """
-        try:
-            module = importlib.import_module(module_path)
-            strategy_class = getattr(module, class_name)
-            strategy = strategy_class(self.config.get(name, {}))
-            self.register_strategy(name, strategy)
-            self.logger.info(f"Loaded strategy {name} from {module_path}.{class_name}")
-            
-        except Exception as e:
-            raise StrategyError(f"Failed to load strategy {name}: {str(e)}")
+    def get_strategy(self, name: str) -> Strategy:
+        """Get a strategy by name."""
+        if name not in self.strategies:
+            raise StrategyNotFoundError(f"Strategy {name} not found")
+        return self.strategies[name]
     
     def activate_strategy(self, name: str) -> None:
         """Activate a strategy.
@@ -339,7 +359,7 @@ class StrategyManager:
                 raise StrategyError(f"Strategy {name} not found")
                 
             if name not in self.active_strategies:
-                self.active_strategies[name] = True
+                self.active_strategies[name] = self.strategies[name]
                 self.logger.info(f"Activated strategy: {name}")
                 
         except Exception as e:
@@ -356,7 +376,7 @@ class StrategyManager:
         """
         try:
             if name in self.active_strategies:
-                self.active_strategies[name] = False
+                del self.active_strategies[name]
                 self.logger.info(f"Deactivated strategy: {name}")
                 
         except Exception as e:
@@ -419,18 +439,18 @@ class StrategyManager:
                     
                     # Generate signals
                     strategy_signals = strategy.generate_signals(data)
-                    strategy.validate_signals(strategy_signals)
-                    signals[name] = strategy_signals
+                    strategy.validate_signals(strategy_signals['Signal'])
+                    signals[name] = strategy_signals['Signal']
                     
                     # Calculate and store metrics
-                    metrics = strategy.calculate_metrics(data, strategy_signals)
+                    metrics = strategy.evaluate_performance(strategy_signals, data)
                     
                     # Store metrics in Redis
                     if self.redis_client:
                         self.redis_client.hset(
                             f'strategy_metrics:{name}',
                             metrics.timestamp,
-                            json.dumps(metrics.to_dict())
+                            metrics.to_json()
                         )
                     
                     self.logger.info(f"Generated signals for strategy {name}")
@@ -474,10 +494,10 @@ class StrategyManager:
                     
                     # Generate signals
                     signals = strategy.generate_signals(data)
-                    strategy.validate_signals(signals)
+                    strategy.validate_signals(signals['Signal'])
                     
                     # Calculate metrics
-                    metrics = strategy.calculate_metrics(data, signals)
+                    metrics = strategy.evaluate_performance(signals, data)
                     results[name] = metrics
                     
                     # Store metrics in Redis
@@ -485,7 +505,7 @@ class StrategyManager:
                         self.redis_client.hset(
                             f'strategy_metrics:{name}',
                             metrics.timestamp,
-                            json.dumps(metrics.to_dict())
+                            metrics.to_json()
                         )
                     
                     self.logger.info(f"Evaluated strategy {name}")
@@ -593,4 +613,80 @@ class StrategyManager:
             return results
             
         except Exception as e:
-            raise StrategyError(f"Failed to load results: {str(e)}") 
+            raise StrategyError(f"Failed to load results: {str(e)}")
+    
+    def set_cache(self, key: str, value: Any, ttl: int = 3600) -> None:
+        """Cache a value using Redis if available."""
+        if not self.redis_client:
+            self.logger.debug("Redis not available, skipping cache")
+            return
+        
+        try:
+            if isinstance(value, (pd.DataFrame, pd.Series)):
+                value = value.to_json()
+            elif isinstance(value, StrategyMetrics):
+                value = value.to_json()
+            elif not isinstance(value, (str, int, float, bool)):
+                value = json.dumps(value)
+            
+            self.redis_client.setex(key, ttl, value)
+            self.logger.debug(f"Cached value for key: {key}")
+        except Exception as e:
+            self.logger.warning(f"Failed to cache value: {e}")
+    
+    def get_cache(self, key: str) -> Optional[Any]:
+        """Get a cached value from Redis if available."""
+        if not self.redis_client:
+            self.logger.debug("Redis not available, skipping cache")
+            return None
+        
+        try:
+            value = self.redis_client.get(key)
+            if value is None:
+                return None
+            
+            value = value.decode('utf-8')
+            try:
+                # Try to parse as JSON first
+                return json.loads(value)
+            except json.JSONDecodeError:
+                # If not JSON, return as is
+                return value
+        except Exception as e:
+            self.logger.warning(f"Failed to get cached value: {e}")
+            return None
+    
+    def simulate(self, data: pd.DataFrame, strategy_name: str, config: Optional[Dict] = None) -> StrategyMetrics:
+        """Simulate a strategy run and return metrics.
+        
+        Args:
+            data: Market data with OHLCV columns
+            strategy_name: Name of the strategy to simulate
+            config: Optional configuration for the strategy
+            
+        Returns:
+            StrategyMetrics object with performance metrics
+        """
+        strategy = self.get_strategy(strategy_name)
+        
+        # Try to get cached results
+        cache_key = f"sim_{strategy_name}_{hash(str(data))}"
+        cached_metrics = self.get_cache(cache_key)
+        if cached_metrics:
+            self.logger.info(f"Using cached results for {strategy_name}")
+            return StrategyMetrics.from_dict(cached_metrics)
+        
+        # Generate signals
+        signals = strategy.generate_signals(data)
+        
+        # Evaluate performance
+        metrics = strategy.evaluate_performance(signals, data)
+        
+        # Cache results
+        self.set_cache(cache_key, metrics.to_dict())
+        
+        # Print summary
+        self.logger.info(f"Strategy {strategy_name} simulation results:")
+        self.logger.info(metrics.summary())
+        
+        return metrics 
