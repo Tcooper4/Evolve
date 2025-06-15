@@ -7,63 +7,67 @@ from datetime import datetime
 from pathlib import Path
 import json
 
-from trading.utils.auto_repair import auto_repair
+from trading.utils.system_startup import (
+    run_system_checks,
+    initialize_components,
+    get_system_status,
+    clear_session_state
+)
 from trading.utils.error_logger import error_logger
-from trading.utils.diagnostics import diagnostics
-from trading.llm.llm_interface import LLMInterface
-from trading.agents.router import AgentRouter
-from trading.agents.updater import ModelUpdater
-from trading.memory.performance_memory import PerformanceMemory
+from trading.config import config
 
 def show_startup_banner():
-    """Display system startup banner."""
-    st.markdown("""
+    """Display system startup banner with enhanced status information."""
+    status = get_system_status()
+    
+    # Determine status badge
+    if status["health_status"] == "healthy" and status["repair_status"] == "success":
+        status_badge = "🟢 Healthy"
+    else:
+        status_badge = "🔴 Needs Attention"
+    
+    st.markdown(f"""
     <div style='text-align: center; padding: 20px; background-color: #f0f2f6; border-radius: 10px;'>
         <h1>🚀 Advanced Financial Forecasting Platform</h1>
         <p style='font-size: 1.2em;'>
-            Version 1.0.0 | Python {python_version} | {platform}
+            Version 1.0.0 | Python {sys.version.split()[0]} | {platform.platform()}
         </p>
         <p style='font-size: 1.1em;'>
-            Last Build: {build_time} | Models: {model_count}
+            Last Build: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | 
+            Models: {status["model_count"]} | 
+            LLM: {status["llm_provider"]} | 
+            Status: {status_badge}
         </p>
     </div>
-    """.format(
-        python_version=sys.version.split()[0],
-        platform=platform.platform(),
-        build_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        model_count=len(list(Path("trading/models").glob("*.pkl")))
-    ), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+    
+    # System logs expander
+    with st.expander("System Logs"):
+        if status["last_check"]:
+            st.write(f"Last System Check: {status['last_check']}")
+        st.write("Health Status:", status["health_status"])
+        st.write("Repair Status:", status["repair_status"])
 
 def initialize_system():
-    """Initialize system components."""
-    # Run auto-repair
-    repair_results = auto_repair.run_repair()
-    if repair_results['status'] != 'success':
-        error_logger.log_error(
-            "System repair required",
-            context=repair_results
-        )
-    
-    # Run health check
-    health_status = diagnostics.run_health_check()
-    if health_status['status'] != 'healthy':
-        error_logger.log_error(
-            "Health check failed",
-            context=health_status
-        )
+    """Initialize system components with error handling and status tracking."""
+    # Run system checks
+    check_results = run_system_checks()
+    st.session_state["health_status"] = check_results["health"]["status"]
+    st.session_state["repair_status"] = check_results["repair"]["status"]
     
     # Initialize components
-    if 'llm' not in st.session_state:
-        st.session_state.llm = LLMInterface()
+    init_results = initialize_components()
     
-    if 'router' not in st.session_state:
-        st.session_state.router = AgentRouter()
+    # Store initialization results
+    st.session_state["init_errors"] = init_results["errors"]
+    st.session_state["last_system_check"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    if 'updater' not in st.session_state:
-        st.session_state.updater = ModelUpdater()
-    
-    if 'memory' not in st.session_state:
-        st.session_state.memory = PerformanceMemory()
+    # Show results
+    if init_results["errors"]:
+        for error in init_results["errors"]:
+            st.error(error)
+    else:
+        st.success("System initialized successfully!")
 
 def main():
     """Main application entry point."""
@@ -78,8 +82,14 @@ def main():
     # Show startup banner
     show_startup_banner()
     
-    # Initialize system
-    initialize_system()
+    # Add restart button
+    if st.button("🔄 Restart System"):
+        clear_session_state()
+        st.rerun()
+    
+    # Initialize system if not already done
+    if "health_status" not in st.session_state:
+        initialize_system()
     
     # Main content
     st.title("Trading Dashboard")
