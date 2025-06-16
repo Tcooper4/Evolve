@@ -1,8 +1,15 @@
-import torch
-import torch.nn as nn
+"""Temporal Convolutional Network for time series forecasting."""
+
+# Standard library imports
+from typing import Any, Dict, List, Optional, Tuple
+
+# Third-party imports
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional, Tuple, List
+import torch
+import torch.nn as nn
+
+# Local imports
 from .base_model import BaseModel
 
 class TemporalBlock(nn.Module):

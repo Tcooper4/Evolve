@@ -1,64 +1,82 @@
+# -*- coding: utf-8 -*-
 """Forecast page for the trading dashboard."""
 
-import streamlit as st
+# Standard library imports
+import sys
+from datetime import datetime
+from pathlib import Path
+
+# Third-party imports
 import pandas as pd
-from datetime import datetime, timedelta
+import streamlit as st
+
+# Local imports
+from trading.agents.router import AgentRouter
 from trading.ui.components import (
     create_prompt_input,
     create_sidebar,
     create_forecast_chart,
-    create_error_block,
-    create_loading_spinner
+    create_forecast_metrics,
+    create_forecast_table
 )
+from memory.performance_log import log_performance
+from memory.goals.status import load_goals
+
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.append(str(project_root))
 
 def render_forecast_page():
     """Render the forecast page."""
-    st.title("Price Forecasting")
+    st.title("📈 Price Forecast")
+    
+    # Initialize session state variables if they don't exist
+    if "signals" not in st.session_state:
+        st.session_state.signals = None
+    if "results" not in st.session_state:
+        st.session_state.results = None
+    if "forecast_results" not in st.session_state:
+        st.session_state.forecast_results = None
     
     # Create sidebar
-    sidebar_config = create_sidebar()
+    create_sidebar()
     
     # Create prompt input
     prompt = create_prompt_input()
     
-    # Process prompt if provided
     if prompt:
         try:
-            with create_loading_spinner("Generating forecast..."):
-                # Get forecast from router
-                result = st.session_state.router.route(
-                    prompt,
-                    model=sidebar_config['model'],
-                    strategies=sidebar_config['strategies'],
-                    expert_mode=sidebar_config['expert_mode'],
-                    data_source=sidebar_config['data_source'],
-                    uploaded_file=sidebar_config['uploaded_file']
-                )
+            # Initialize router
+            router = AgentRouter()
+            
+            # Get forecast
+            forecast_results = router.get_forecast(prompt)
+            st.session_state.forecast_results = forecast_results
+            
+            if forecast_results:
+                # Display forecast chart
+                create_forecast_chart(forecast_results)
                 
-                if result.status == "success":
-                    # Display forecast chart
-                    if result.visual:
-                        st.plotly_chart(result.visual, use_container_width=True)
-                    
-                    # Display forecast explanation
-                    if result.explanation:
-                        st.info(result.explanation)
-                    
-                    # Display forecast metrics
-                    if result.data and 'metrics' in result.data:
-                        metrics = result.data['metrics']
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("Predicted Price", f"${metrics.get('predicted_price', 0):.2f}")
-                        with col2:
-                            st.metric("Confidence", f"{metrics.get('confidence', 0):.1%}")
-                        with col3:
-                            st.metric("Horizon", f"{metrics.get('horizon', 'N/A')}")
-                else:
-                    create_error_block(result.error or "Failed to generate forecast")
-                    
+                # Display metrics
+                create_forecast_metrics(forecast_results)
+                
+                # Display forecast table
+                create_forecast_table(forecast_results)
+                
+                # Log performance
+                if "metrics" in forecast_results:
+                    log_performance(
+                        ticker=forecast_results.get("ticker", "unknown"),
+                        model=forecast_results.get("model", "unknown"),
+                        strategy=forecast_results.get("strategy", "unknown"),
+                        metrics=forecast_results["metrics"]
+                    )
+            else:
+                st.warning("No forecast results available.")
+                
         except Exception as e:
-            create_error_block(str(e))
+            st.error(f"Error generating forecast: {str(e)}")
+            st.session_state.forecast_results = None
 
 if __name__ == "__main__":
     render_forecast_page()
