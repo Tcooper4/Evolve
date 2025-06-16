@@ -1,3 +1,12 @@
+"""
+Metrics Collector
+
+This module implements a metrics collection system for monitoring system performance,
+task execution, agent status, and model metrics.
+
+Note: This module was adapted from the legacy automation/monitoring/metrics_collector.py file.
+"""
+
 import asyncio
 import logging
 from typing import Dict, Any, List, Optional
@@ -6,16 +15,13 @@ import psutil
 import redis
 from prometheus_client import start_http_server, Gauge, Counter, Histogram, Summary
 import json
-
-from ..config.config import load_config
-
-logger = logging.getLogger(__name__)
+from pathlib import Path
 
 class MetricsCollector:
     """Collects and exposes system metrics."""
     
-    def __init__(self, config_path: str = "automation/config/config.json"):
-        self.config = load_config(config_path)
+    def __init__(self, config: Dict = None):
+        self.config = config or {}
         self.setup_logging()
         self.setup_metrics()
         self.redis_client = None
@@ -23,14 +29,18 @@ class MetricsCollector:
         
     def setup_logging(self):
         """Setup logging for the metrics collector."""
+        log_path = Path("logs/metrics")
+        log_path.mkdir(parents=True, exist_ok=True)
+        
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             handlers=[
-                logging.FileHandler('automation/logs/metrics_collector.log'),
+                logging.FileHandler(log_path / "metrics_collector.log"),
                 logging.StreamHandler()
             ]
         )
+        self.logger = logging.getLogger(__name__)
         
     def setup_metrics(self):
         """Setup Prometheus metrics."""
@@ -49,16 +59,12 @@ class MetricsCollector:
         self.active_agents = Gauge('active_agents', 'Number of active agents')
         self.agent_heartbeats = Gauge('agent_heartbeats', 'Agent heartbeat status')
         
- #       # Redis metrics
- #       self.redis_connected = Gauge('redis_connected', 'Redis connection status')
- #       self.redis_memory_usage = Gauge('redis_memory_usage', 'Redis memory usage')
-        
         # Model metrics
         self.model_predictions = Counter('model_predictions_total', 'Total number of model predictions')
         self.model_accuracy = Gauge('model_accuracy', 'Model prediction accuracy')
         self.model_latency = Histogram('model_latency_seconds', 'Model prediction latency')
         
-        # New metrics
+        # Task execution metrics
         self.task_execution_time = Histogram(
             'task_execution_time_seconds',
             'Task execution time in seconds',
@@ -83,23 +89,25 @@ class MetricsCollector:
     async def initialize(self) -> None:
         """Initialize Redis connection and start metrics server."""
         try:
-            # Setup Redis
-            redis_config = self.config["redis"]
-            self.redis_client = redis.Redis(
-                host=redis_config["host"],
-                port=redis_config["port"],
-                db=redis_config["db"],
-                decode_responses=True
-            )
+            # Setup Redis if configured
+            if "redis" in self.config:
+                redis_config = self.config["redis"]
+                self.redis_client = redis.Redis(
+                    host=redis_config.get("host", "localhost"),
+                    port=redis_config.get("port", 6379),
+                    db=redis_config.get("db", 0),
+                    decode_responses=True
+                )
             
-            # Start Prometheus metrics server
-            metrics_config = self.config["monitoring"]
-            start_http_server(metrics_config["metrics_port"])
+            # Start Prometheus metrics server if configured
+            if "monitoring" in self.config:
+                metrics_config = self.config["monitoring"]
+                start_http_server(metrics_config.get("metrics_port", 9090))
             
-            logger.info("Metrics collector initialized")
+            self.logger.info("Metrics collector initialized")
             
         except Exception as e:
-            logger.error(f"Failed to initialize metrics collector: {str(e)}")
+            self.logger.error(f"Failed to initialize metrics collector: {str(e)}")
             raise
             
     async def collect_system_metrics(self) -> Dict[str, float]:
@@ -129,12 +137,15 @@ class MetricsCollector:
             }
             
         except Exception as e:
-            logger.error(f"Failed to collect system metrics: {str(e)}")
+            self.logger.error(f"Failed to collect system metrics: {str(e)}")
             raise
             
     async def collect_task_metrics(self) -> Dict[str, Any]:
         """Collect task-related metrics."""
         try:
+            if not self.redis_client:
+                return {"total_tasks": 0, "failed_tasks": 0, "success_rate": 0.0}
+            
             # Get task statistics from Redis
             task_stats = await self.redis_client.hgetall("task_stats")
             
@@ -149,12 +160,15 @@ class MetricsCollector:
             }
             
         except Exception as e:
-            logger.error(f"Failed to collect task metrics: {str(e)}")
+            self.logger.error(f"Failed to collect task metrics: {str(e)}")
             raise
             
     async def collect_agent_metrics(self) -> Dict[str, Any]:
         """Collect agent-related metrics."""
         try:
+            if not self.redis_client:
+                return {"active_agents": 0, "total_agents": 0}
+            
             # Get agent statistics from Redis
             agents = await self.redis_client.hgetall("agents")
             active_count = sum(1 for agent in agents.values() if agent.get("status") == "running")
@@ -174,12 +188,15 @@ class MetricsCollector:
             }
             
         except Exception as e:
-            logger.error(f"Failed to collect agent metrics: {str(e)}")
+            self.logger.error(f"Failed to collect agent metrics: {str(e)}")
             raise
             
     async def collect_model_metrics(self) -> Dict[str, Any]:
         """Collect model-related metrics."""
         try:
+            if not self.redis_client:
+                return {"predictions": 0, "accuracy": 0.0, "latency": 0.0}
+            
             # Get model statistics from Redis
             model_stats = await self.redis_client.hgetall("model_stats")
             
@@ -194,7 +211,7 @@ class MetricsCollector:
             }
             
         except Exception as e:
-            logger.error(f"Failed to collect model metrics: {str(e)}")
+            self.logger.error(f"Failed to collect model metrics: {str(e)}")
             raise
             
     async def collect_all_metrics(self) -> Dict[str, Any]:
@@ -208,17 +225,18 @@ class MetricsCollector:
                 "timestamp": datetime.now().isoformat()
             }
             
-            # Store metrics in Redis for historical tracking
-            await self.redis_client.hset(
-                "metrics_history",
-                datetime.now().strftime("%Y%m%d_%H%M%S"),
-                json.dumps(metrics)
-            )
+            # Store metrics in Redis if available
+            if self.redis_client:
+                await self.redis_client.hset(
+                    "metrics_history",
+                    datetime.now().strftime("%Y%m%d_%H%M%S"),
+                    json.dumps(metrics)
+                )
             
             return metrics
             
         except Exception as e:
-            logger.error(f"Failed to collect all metrics: {str(e)}")
+            self.logger.error(f"Failed to collect all metrics: {str(e)}")
             raise
             
     async def start(self) -> None:
@@ -226,14 +244,14 @@ class MetricsCollector:
         try:
             self.running = True
             await self.initialize()
-            logger.info("Metrics collector started")
+            self.logger.info("Metrics collector started")
             
             while self.running:
                 await self.collect_all_metrics()
-                await asyncio.sleep(self.config["monitoring"]["collection_interval"])
+                await asyncio.sleep(self.config.get("monitoring", {}).get("collection_interval", 60))
                 
         except Exception as e:
-            logger.error(f"Metrics collector failed: {str(e)}")
+            self.logger.error(f"Metrics collector failed: {str(e)}")
             raise
         finally:
             self.running = False
@@ -241,134 +259,35 @@ class MetricsCollector:
     async def stop(self) -> None:
         """Stop the metrics collector."""
         self.running = False
-        logger.info("Metrics collector stopped")
+        self.logger.info("Metrics collector stopped")
 
-    async def start_collection(self):
-        """Start metrics collection."""
-        try:
-            while True:
-                await self.collect_metrics()
-                await asyncio.sleep(self.config["monitoring"]["collection_interval"])
-                
-        except Exception as e:
-            logger.error(f"Error in metrics collection: {str(e)}")
-            raise
-            
-    async def collect_metrics(self):
-        """Collect system metrics."""
-        try:
-            # CPU metrics
-            cpu_percent = psutil.cpu_percent(interval=1)
-            self.cpu_usage.set(cpu_percent)
-            
-            # Memory metrics
-            memory = psutil.virtual_memory()
-            self.memory_usage.set(memory.percent)
-            
-            # Disk metrics
-            disk = psutil.disk_usage('/')
-            self.disk_usage.set(disk.percent)
-            
-            # Network metrics
-            net_io = psutil.net_io_counters()
-            self.network_io.set(net_io.bytes_sent + net_io.bytes_recv)
-            
-            # Store metrics in Redis
-            metrics = {
-                "timestamp": datetime.now().isoformat(),
-                "cpu_usage": cpu_percent,
-                "memory_usage": memory.percent,
-                "disk_usage": disk.percent,
-                "network_io": net_io.bytes_sent + net_io.bytes_recv
-            }
-            
-            await self.redis_client.lpush(
-                "system_metrics",
-                json.dumps(metrics)
-            )
-            
-            # Trim metrics to last 24 hours
-            await self.redis_client.ltrim(
-                "system_metrics",
-                0,
-                int(24 * 3600 / self.config["monitoring"]["collection_interval"])
-            )
-            
-        except Exception as e:
-            logger.error(f"Error collecting metrics: {str(e)}")
-            
     async def record_task_metrics(
         self,
         task_type: str,
         execution_time: float,
         success: bool
     ):
-        """Record task execution metrics."""
+        """Record metrics for a task execution."""
         try:
-            # Record execution time
-            self.task_execution_time.labels(task_type).observe(execution_time)
-            
-            # Record success/failure
+            self.task_execution_time.labels(task_type=task_type).observe(execution_time)
             if success:
-                self.task_success.labels(task_type).inc()
+                self.task_success.labels(task_type=task_type).inc()
             else:
-                self.task_failure.labels(task_type).inc()
-                
-            # Store in Redis
-            task_metrics = {
-                "timestamp": datetime.now().isoformat(),
-                "task_type": task_type,
-                "execution_time": execution_time,
-                "success": success
-            }
-            
-            await self.redis_client.lpush(
-                "task_metrics",
-                json.dumps(task_metrics)
-            )
-            
-            # Trim metrics to last 24 hours
-            await self.redis_client.ltrim(
-                "task_metrics",
-                0,
-                999  # Keep last 1000 task metrics
-            )
-            
+                self.task_failure.labels(task_type=task_type).inc()
         except Exception as e:
-            logger.error(f"Error recording task metrics: {str(e)}")
-            
+            self.logger.error(f"Failed to record task metrics: {str(e)}")
+
     async def record_api_metrics(
         self,
         endpoint: str,
         duration: float
     ):
-        """Record API request metrics."""
+        """Record metrics for an API request."""
         try:
-            # Record duration
-            self.api_request_duration.labels(endpoint).observe(duration)
-            
-            # Store in Redis
-            api_metrics = {
-                "timestamp": datetime.now().isoformat(),
-                "endpoint": endpoint,
-                "duration": duration
-            }
-            
-            await self.redis_client.lpush(
-                "api_metrics",
-                json.dumps(api_metrics)
-            )
-            
-            # Trim metrics to last 24 hours
-            await self.redis_client.ltrim(
-                "api_metrics",
-                0,
-                999  # Keep last 1000 API metrics
-            )
-            
+            self.api_request_duration.labels(endpoint=endpoint).observe(duration)
         except Exception as e:
-            logger.error(f"Error recording API metrics: {str(e)}")
-            
+            self.logger.error(f"Failed to record API metrics: {str(e)}")
+
     async def get_metrics(
         self,
         metric_type: str,
@@ -376,63 +295,56 @@ class MetricsCollector:
         end_time: Optional[datetime] = None,
         limit: int = 100
     ) -> List[Dict]:
-        """Get metrics with optional time filtering."""
+        """Get historical metrics data."""
         try:
-            # Get metrics from Redis
-            metrics = await self.redis_client.lrange(
-                f"{metric_type}_metrics",
-                0,
-                limit - 1
-            )
+            if not self.redis_client:
+                return []
             
-            # Parse and filter metrics
+            # Get metrics from Redis
+            metrics_data = await self.redis_client.hgetall(f"{metric_type}_history")
+            
+            # Filter by time range
             filtered_metrics = []
-            for metric in metrics:
-                metric_data = json.loads(metric)
-                metric_time = datetime.fromisoformat(metric_data["timestamp"])
-                
-                # Apply time filters
+            for timestamp, data in metrics_data.items():
+                metric_time = datetime.strptime(timestamp, "%Y%m%d_%H%M%S")
                 if start_time and metric_time < start_time:
                     continue
                 if end_time and metric_time > end_time:
                     continue
-                    
-                filtered_metrics.append(metric_data)
-                
-            return filtered_metrics
+                filtered_metrics.append({
+                    "timestamp": timestamp,
+                    "data": json.loads(data)
+                })
+            
+            # Sort by timestamp and limit results
+            filtered_metrics.sort(key=lambda x: x["timestamp"], reverse=True)
+            return filtered_metrics[:limit]
             
         except Exception as e:
-            logger.error(f"Error getting metrics: {str(e)}")
-            return []
-            
+            self.logger.error(f"Failed to get metrics: {str(e)}")
+            raise
+
     async def get_metric_summary(
         self,
         metric_type: str,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None
     ) -> Dict:
-        """Get metric summary statistics."""
+        """Get summary statistics for metrics."""
         try:
-            # Get metrics
-            metrics = await self.get_metrics(
-                metric_type,
-                start_time,
-                end_time,
-                limit=1000
-            )
-            
+            metrics = await self.get_metrics(metric_type, start_time, end_time)
             if not metrics:
                 return {}
-                
-            # Calculate statistics
-            values = [m["value"] for m in metrics]
+            
+            # Calculate summary statistics
+            values = [float(m["data"].get("value", 0)) for m in metrics]
             return {
                 "count": len(values),
-                "min": min(values),
-                "max": max(values),
-                "avg": sum(values) / len(values)
+                "min": min(values) if values else 0,
+                "max": max(values) if values else 0,
+                "avg": sum(values) / len(values) if values else 0
             }
             
         except Exception as e:
-            logger.error(f"Error getting metric summary: {str(e)}")
-            return {} 
+            self.logger.error(f"Failed to get metric summary: {str(e)}")
+            raise 

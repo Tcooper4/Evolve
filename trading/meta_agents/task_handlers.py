@@ -6,7 +6,7 @@ Task handlers for agentic tasks in the trading system.
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -14,6 +14,8 @@ from datetime import datetime
 import json
 import yfinance as yf
 from alpha_vantage.timeseries import TimeSeries
+import torch
+import torch.nn as nn
 
 from .task_manager import Task
 
@@ -330,4 +332,120 @@ class OptimizationHandler(BaseTaskHandler):
     async def _run_optimization(self, target: str, parameters: Dict[str, Any], constraints: Dict[str, Any]) -> Dict[str, Any]:
         """Run optimization for a target."""
         # Implementation for optimization
-        pass 
+        pass
+
+class TaskHandler:
+    """Base class for task handlers."""
+    
+    def __init__(self, config: Dict[str, Any]):
+        """Initialize task handler."""
+        self.config = config
+        self.setup_logging()
+    
+    def setup_logging(self):
+        """Configure logging for task handler."""
+        log_path = Path("logs/tasks")
+        log_path.mkdir(parents=True, exist_ok=True)
+        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_path / "task_handlers.log"),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+    
+    async def execute(self, *args, **kwargs) -> Any:
+        """Execute the task."""
+        raise NotImplementedError
+
+class CommandTaskHandler(TaskHandler):
+    """Handler for command execution tasks."""
+    
+    async def execute(self, command: str, *args, **kwargs) -> Any:
+        """Execute a command."""
+        try:
+            # TODO: Implement command execution logic
+            self.logger.info(f"Executed command: {command}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error executing command: {str(e)}")
+            raise
+
+class APITaskHandler(TaskHandler):
+    """Handler for API call tasks."""
+    
+    async def execute(
+        self,
+        url: str,
+        method: str = 'GET',
+        data: Optional[Dict[str, Any]] = None,
+        *args,
+        **kwargs
+    ) -> Any:
+        """Execute an API call."""
+        try:
+            # TODO: Implement API call logic
+            self.logger.info(f"Executed API call: {method} {url}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error executing API call: {str(e)}")
+            raise
+
+class DataProcessingTaskHandler(TaskHandler):
+    """Handler for data processing tasks."""
+    
+    async def execute(
+        self,
+        data: Any,
+        processor: str,
+        *args,
+        **kwargs
+    ) -> Any:
+        """Execute data processing."""
+        try:
+            # TODO: Implement data processing logic
+            self.logger.info(f"Processed data using {processor}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error processing data: {str(e)}")
+            raise
+
+class NotificationTaskHandler(TaskHandler):
+    """Handler for notification tasks."""
+    
+    async def execute(
+        self,
+        message: str,
+        channels: List[str],
+        *args,
+        **kwargs
+    ) -> None:
+        """Send notifications."""
+        try:
+            # TODO: Implement notification logic
+            self.logger.info(f"Sent notification to {channels}")
+        except Exception as e:
+            self.logger.error(f"Error sending notification: {str(e)}")
+            raise
+
+class TaskHandlerFactory:
+    """Factory for creating task handlers."""
+    
+    @staticmethod
+    def create_handler(handler_type: str, config: Dict[str, Any]) -> TaskHandler:
+        """Create task handler."""
+        handlers = {
+            'command': CommandTaskHandler,
+            'api': APITaskHandler,
+            'data_processing': DataProcessingTaskHandler,
+            'notification': NotificationTaskHandler
+        }
+        
+        handler_class = handlers.get(handler_type)
+        if not handler_class:
+            raise ValueError(f"Unsupported handler type: {handler_type}")
+        
+        return handler_class(config) 
