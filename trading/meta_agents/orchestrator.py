@@ -1,163 +1,175 @@
-"""Orchestrator for managing trading agents and workflows."""
+"""
+Orchestrator
+
+This module implements the orchestrator for managing and coordinating automation tasks.
+
+Note: This module was adapted from the legacy automation/core/orchestrator.py file.
+"""
 
 import logging
-from typing import Dict, Any, Optional, List
-from datetime import datetime
 import asyncio
+from typing import Dict, List, Any, Optional
 from pathlib import Path
-
-# Project imports
-from ..utils.exceptions import OrchestratorError
-from ..config.configuration import ConfigManager
-from automation.web.websocket import WebSocketManager
+from datetime import datetime
+import json
+import yaml
+from .models import Task, Workflow, TaskStatus
+from .task_manager import TaskManager
+from .workflow_engine import WorkflowEngine
+from .notification_service import NotificationService
 
 class Orchestrator:
-    """Orchestrator for managing trading agents and workflows."""
+    """Orchestrator for managing and coordinating automation tasks."""
     
-    def __init__(self, config_path: Optional[str] = None):
-        """Initialize the orchestrator.
+    def __init__(self, config: Dict[str, Any]):
+        """Initialize orchestrator."""
+        self.config = config
+        self.task_manager = TaskManager(config)
+        self.workflow_engine = WorkflowEngine(config)
+        self.notification_service = NotificationService(config)
+        self.setup_logging()
+    
+    def setup_logging(self):
+        """Configure logging for orchestrator."""
+        log_path = Path("logs/orchestrator")
+        log_path.mkdir(parents=True, exist_ok=True)
         
-        Args:
-            config_path: Optional path to configuration file
-        """
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.config = ConfigManager(config_path) if config_path else ConfigManager()
-        self.websocket = WebSocketManager()
-        self.agents = {}
-        self.tasks = {}
-        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_path / "orchestrator.log"),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+    
+    async def initialize(self) -> None:
+        """Initialize orchestrator components."""
+        try:
+            # Initialize task manager
+            await self.task_manager.initialize()
+            
+            # Initialize workflow engine
+            await self.workflow_engine.initialize()
+            
+            # Initialize notification service
+            await self.notification_service.initialize()
+            
+            self.logger.info("Orchestrator initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Error initializing orchestrator: {str(e)}")
+            raise
+    
+    async def create_workflow(
+        self,
+        name: str,
+        description: str,
+        steps: List[Dict[str, Any]]
+    ) -> str:
+        """Create a new workflow."""
+        try:
+            workflow_id = await self.workflow_engine.create_workflow(
+                name=name,
+                description=description,
+                steps=steps
+            )
+            
+            self.logger.info(f"Created workflow: {workflow_id}")
+            return workflow_id
+        except Exception as e:
+            self.logger.error(f"Error creating workflow: {str(e)}")
+            raise
+    
+    async def execute_workflow(self, workflow_id: str) -> None:
+        """Execute a workflow."""
+        try:
+            await self.workflow_engine.execute_workflow(workflow_id)
+            self.logger.info(f"Executed workflow: {workflow_id}")
+        except Exception as e:
+            self.logger.error(f"Error executing workflow: {str(e)}")
+            raise
+    
+    async def get_workflow_status(self, workflow_id: str) -> Dict[str, Any]:
+        """Get workflow status."""
+        try:
+            status = await self.workflow_engine.get_workflow_status(workflow_id)
+            return status
+        except Exception as e:
+            self.logger.error(f"Error getting workflow status: {str(e)}")
+            raise
+    
+    async def create_task(
+        self,
+        name: str,
+        handler: str,
+        args: Optional[List[Any]] = None,
+        kwargs: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """Create a new task."""
+        try:
+            task_id = await self.task_manager.register_task(
+                task_id=f"task_{int(datetime.now().timestamp()*1e6)}",
+                name=name,
+                handler=handler,
+                args=args or [],
+                kwargs=kwargs or {}
+            )
+            
+            self.logger.info(f"Created task: {task_id}")
+            return task_id
+        except Exception as e:
+            self.logger.error(f"Error creating task: {str(e)}")
+            raise
+    
+    async def execute_task(self, task_id: str) -> None:
+        """Execute a task."""
+        try:
+            await self.task_manager.execute_task(task_id)
+            self.logger.info(f"Executed task: {task_id}")
+        except Exception as e:
+            self.logger.error(f"Error executing task: {str(e)}")
+            raise
+    
+    async def get_task_status(self, task_id: str) -> Dict[str, Any]:
+        """Get task status."""
+        try:
+            status = await self.task_manager.get_task_status(task_id)
+            return status
+        except Exception as e:
+            self.logger.error(f"Error getting task status: {str(e)}")
+            raise
+    
+    async def notify_status(
+        self,
+        message: str,
+        channels: Optional[List[str]] = None
+    ) -> None:
+        """Send status notification."""
+        try:
+            await self.notification_service.send_notification(
+                {"text": message},
+                channels=channels
+            )
+            self.logger.info(f"Sent status notification: {message}")
+        except Exception as e:
+            self.logger.error(f"Error sending status notification: {str(e)}")
+            raise
+    
     async def start(self) -> None:
-        """Start the orchestrator."""
+        """Start orchestrator."""
         try:
-            # Initialize WebSocket connection
-            await self.websocket.connect()
-            
-            # Start monitoring tasks
-            self.tasks['monitor'] = asyncio.create_task(self._monitor_agents())
-            self.tasks['heartbeat'] = asyncio.create_task(self._send_heartbeat())
-            
-            self.logger.info("Orchestrator started successfully")
-            
+            await self.initialize()
+            self.logger.info("Orchestrator started")
         except Exception as e:
-            self.logger.error(f"Error starting orchestrator: {e}")
-            raise OrchestratorError(f"Failed to start orchestrator: {e}")
-            
+            self.logger.error(f"Error starting orchestrator: {str(e)}")
+            raise
+    
     async def stop(self) -> None:
-        """Stop the orchestrator."""
+        """Stop orchestrator."""
         try:
-            # Cancel all tasks
-            for task in self.tasks.values():
-                task.cancel()
-                
-            # Close WebSocket connection
-            await self.websocket.disconnect()
-            
-            self.logger.info("Orchestrator stopped successfully")
-            
+            # TODO: Implement cleanup logic
+            self.logger.info("Orchestrator stopped")
         except Exception as e:
-            self.logger.error(f"Error stopping orchestrator: {e}")
-            raise OrchestratorError(f"Failed to stop orchestrator: {e}")
-            
-    async def _monitor_agents(self) -> None:
-        """Monitor agent health and performance."""
-        while True:
-            try:
-                for agent_id, agent in self.agents.items():
-                    # Check agent health
-                    if not await agent.is_healthy():
-                        self.logger.warning(f"Agent {agent_id} is unhealthy")
-                        await self.websocket.send_message({
-                            'type': 'agent_health',
-                            'agent_id': agent_id,
-                            'status': 'unhealthy'
-                        })
-                        
-                    # Get agent metrics
-                    metrics = await agent.get_metrics()
-                    await self.websocket.send_message({
-                        'type': 'agent_metrics',
-                        'agent_id': agent_id,
-                        'metrics': metrics
-                    })
-                    
-                await asyncio.sleep(60)  # Check every minute
-                
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                self.logger.error(f"Error monitoring agents: {e}")
-                await asyncio.sleep(60)  # Wait before retrying
-                
-    async def _send_heartbeat(self) -> None:
-        """Send heartbeat to connected clients."""
-        while True:
-            try:
-                await self.websocket.send_message({
-                    'type': 'heartbeat',
-                    'timestamp': datetime.now().isoformat()
-                })
-                await asyncio.sleep(30)  # Send every 30 seconds
-                
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                self.logger.error(f"Error sending heartbeat: {e}")
-                await asyncio.sleep(30)  # Wait before retrying
-                
-    async def register_agent(self, agent_id: str, agent: Any) -> None:
-        """Register a new agent.
-        
-        Args:
-            agent_id: Unique identifier for the agent
-            agent: Agent instance
-        """
-        if agent_id in self.agents:
-            raise OrchestratorError(f"Agent {agent_id} already registered")
-            
-        self.agents[agent_id] = agent
-        await self.websocket.send_message({
-            'type': 'agent_registered',
-            'agent_id': agent_id
-        })
-        
-    async def unregister_agent(self, agent_id: str) -> None:
-        """Unregister an agent.
-        
-        Args:
-            agent_id: Agent identifier
-        """
-        if agent_id not in self.agents:
-            raise OrchestratorError(f"Agent {agent_id} not found")
-            
-        del self.agents[agent_id]
-        await self.websocket.send_message({
-            'type': 'agent_unregistered',
-            'agent_id': agent_id
-        })
-        
-    async def get_agent_status(self, agent_id: str) -> Dict[str, Any]:
-        """Get agent status.
-        
-        Args:
-            agent_id: Agent identifier
-            
-        Returns:
-            Dictionary containing agent status
-        """
-        if agent_id not in self.agents:
-            raise OrchestratorError(f"Agent {agent_id} not found")
-            
-        agent = self.agents[agent_id]
-        return {
-            'agent_id': agent_id,
-            'is_healthy': await agent.is_healthy(),
-            'metrics': await agent.get_metrics()
-        }
-        
-    async def get_all_agent_statuses(self) -> List[Dict[str, Any]]:
-        """Get status of all registered agents.
-        
-        Returns:
-            List of agent status dictionaries
-        """
-        return [await self.get_agent_status(agent_id) for agent_id in self.agents] 
+            self.logger.error(f"Error stopping orchestrator: {str(e)}")
+            raise 

@@ -20,6 +20,9 @@ from fastapi import HTTPException, Security, Depends, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, validator
 import re
+import hashlib
+from pathlib import Path
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -76,7 +79,14 @@ class InputValidator:
         return True
 
 class SecurityManager:
-    def __init__(self):
+    """Manages security-related functionality."""
+    
+    def __init__(self, config: Dict[str, Any]):
+        """Initialize security manager."""
+        self.config = config
+        self.secret_key = config.get('secret_key') or secrets.token_hex(32)
+        self.token_expiry = config.get('token_expiry', 3600)  # 1 hour
+        self.setup_logging()
         self.redis_client = redis.Redis(
             host=os.getenv("REDIS_HOST", "localhost"),
             port=int(os.getenv("REDIS_PORT", 6379)),
@@ -86,6 +96,87 @@ class SecurityManager:
         )
         self.security = HTTPBearer()
         self.validator = InputValidator()
+    
+    def setup_logging(self):
+        """Configure logging for security manager."""
+        log_path = Path("logs/security")
+        log_path.mkdir(parents=True, exist_ok=True)
+        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_path / "security.log"),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+    
+    def hash_password(self, password: str) -> str:
+        """Hash a password using SHA-256."""
+        try:
+            salt = secrets.token_hex(16)
+            hashed = hashlib.sha256(
+                (password + salt).encode()
+            ).hexdigest()
+            return f"{salt}${hashed}"
+        except Exception as e:
+            self.logger.error(f"Error hashing password: {str(e)}")
+            raise
+    
+    def verify_password(self, password: str, hashed: str) -> bool:
+        """Verify a password against its hash."""
+        try:
+            salt, stored_hash = hashed.split('$')
+            computed_hash = hashlib.sha256(
+                (password + salt).encode()
+            ).hexdigest()
+            return computed_hash == stored_hash
+        except Exception as e:
+            self.logger.error(f"Error verifying password: {str(e)}")
+            return False
+    
+    def generate_token(self, user_id: str, role: str) -> str:
+        """Generate a JWT token."""
+        try:
+            payload = {
+                'user_id': user_id,
+                'role': role,
+                'exp': datetime.utcnow() + timedelta(seconds=self.token_expiry)
+            }
+            return jwt.encode(payload, self.secret_key, algorithm='HS256')
+        except Exception as e:
+            self.logger.error(f"Error generating token: {str(e)}")
+            raise
+    
+    def verify_token(self, token: str) -> Dict[str, Any]:
+        """Verify a JWT token."""
+        try:
+            return jwt.decode(token, self.secret_key, algorithms=['HS256'])
+        except jwt.ExpiredSignatureError:
+            self.logger.error("Token has expired")
+            raise
+        except jwt.InvalidTokenError as e:
+            self.logger.error(f"Invalid token: {str(e)}")
+            raise
+    
+    def encrypt_data(self, data: str) -> str:
+        """Encrypt sensitive data."""
+        try:
+            # TODO: Implement encryption logic
+            return data
+        except Exception as e:
+            self.logger.error(f"Error encrypting data: {str(e)}")
+            raise
+    
+    def decrypt_data(self, encrypted_data: str) -> str:
+        """Decrypt sensitive data."""
+        try:
+            # TODO: Implement decryption logic
+            return encrypted_data
+        except Exception as e:
+            self.logger.error(f"Error decrypting data: {str(e)}")
+            raise
     
     def create_access_token(self, user_id: str, role: str, permissions: List[str]) -> str:
         """Create a new JWT access token."""
@@ -97,20 +188,6 @@ class SecurityManager:
             "exp": expiration
         }
         return jwt.encode(token_data, SecurityConfig.JWT_SECRET, algorithm=SecurityConfig.JWT_ALGORITHM)
-    
-    def verify_token(self, token: str) -> TokenData:
-        """Verify a JWT token."""
-        try:
-            payload = jwt.decode(token, SecurityConfig.JWT_SECRET, algorithms=[SecurityConfig.JWT_ALGORITHM])
-            return TokenData(
-                user_id=payload["sub"],
-                role=payload["role"],
-                permissions=payload["permissions"]
-            )
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Token has expired")
-        except jwt.JWTError:
-            raise HTTPException(status_code=401, detail="Invalid token")
     
     def check_rate_limit(self, user_id: str) -> bool:
         """Check if a user has exceeded their rate limit."""
