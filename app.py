@@ -1,73 +1,93 @@
-"""Main Streamlit application for the trading platform."""
-
 import streamlit as st
 import sys
 import platform
-from datetime import datetime
+import datetime
 from pathlib import Path
 import json
-
-from trading.utils.system_startup import (
-    run_system_checks,
-    initialize_components,
-    get_system_status,
-    clear_session_state
-)
-from trading.utils.error_logger import error_logger
-from trading.config import config
+import yfinance as yf
+import pandas as pd
+from optimize.rsi_optimizer import optimize_rsi
+from trading.strategies.rsi_signals import generate_rsi_signals
+from utils.system_status import get_system_scorecard
 
 def show_startup_banner():
-    """Display system startup banner with enhanced status information."""
-    status = get_system_status()
+    """Display system startup banner."""
+    st.title("Trading Platform")
+    st.markdown("---")
     
-    # Determine status badge
-    if status["health_status"] == "healthy" and status["repair_status"] == "success":
-        status_badge = "🟢 Healthy"
-    else:
-        status_badge = "🔴 Needs Attention"
-    
-    st.markdown(f"""
-    <div style='text-align: center; padding: 20px; background-color: #f0f2f6; border-radius: 10px;'>
-        <h1>🚀 Advanced Financial Forecasting Platform</h1>
-        <p style='font-size: 1.2em;'>
-            Version 1.0.0 | Python {sys.version.split()[0]} | {platform.platform()}
-        </p>
-        <p style='font-size: 1.1em;'>
-            Last Build: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | 
-            Models: {status["model_count"]} | 
-            LLM: {status["llm_provider"]} | 
-            Status: {status_badge}
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # System logs expander
-    with st.expander("System Logs"):
-        if status["last_check"]:
-            st.write(f"Last System Check: {status['last_check']}")
-        st.write("Health Status:", status["health_status"])
-        st.write("Repair Status:", status["repair_status"])
+    # System info
+    st.sidebar.markdown("### System Status")
+    st.sidebar.markdown(f"Python: {platform.python_version()}")
+    st.sidebar.markdown(f"Platform: {platform.platform()}")
+    st.sidebar.markdown(f"Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 def initialize_system():
-    """Initialize system components with error handling and status tracking."""
-    # Run system checks
-    check_results = run_system_checks()
-    st.session_state["health_status"] = check_results["health"]["status"]
-    st.session_state["repair_status"] = check_results["repair"]["status"]
+    """Initialize system components."""
+    # Create necessary directories
+    Path("memory/logs").mkdir(parents=True, exist_ok=True)
+    Path("memory/strategy_settings/rsi").mkdir(parents=True, exist_ok=True)
+
+def show_performance_log():
+    """Show performance metrics in sidebar."""
+    try:
+        log_file = Path("memory/logs/performance_log.csv")
+        if log_file.exists():
+            df = pd.read_csv(log_file)
+            
+            st.sidebar.markdown("### Performance Metrics")
+            st.sidebar.markdown(f"Total Entries: {len(df)}")
+            st.sidebar.markdown(f"Avg Sharpe: {df['sharpe'].mean():.2f}")
+            st.sidebar.markdown(f"Avg Accuracy: {df['accuracy'].mean():.2f}")
+            
+            if st.sidebar.button("View Full Log"):
+                st.dataframe(df)
+                
+            if st.sidebar.button("Clear Log"):
+                log_file.unlink()
+                st.sidebar.success("Log cleared")
+    except Exception as e:
+        st.sidebar.error(f"Error loading performance log: {str(e)}")
+
+def optimize_rsi_strategy(ticker: str):
+    """Run RSI optimization for a ticker."""
+    try:
+        with st.spinner(f"Optimizing RSI strategy for {ticker}..."):
+            # Get historical data
+            df = yf.download(ticker, period="1y")
+            
+            # Run optimization
+            optimal = optimize_rsi(df, ticker, generate_rsi_signals)
+            
+            # Display results
+            st.success(f"RSI optimization complete for {ticker}")
+            st.json(optimal)
+            
+            return optimal
+    except Exception as e:
+        st.error(f"Error optimizing RSI strategy: {str(e)}")
+        return None
+
+def show_rsi_optimizer():
+    """Show RSI optimization panel in sidebar."""
+    st.sidebar.markdown("### RSI Strategy Optimizer")
     
-    # Initialize components
-    init_results = initialize_components()
+    # Get ticker input
+    ticker = st.sidebar.text_input("Enter ticker symbol", "AAPL").upper()
     
-    # Store initialization results
-    st.session_state["init_errors"] = init_results["errors"]
-    st.session_state["last_system_check"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    # Show results
-    if init_results["errors"]:
-        for error in init_results["errors"]:
-            st.error(error)
-    else:
-        st.success("System initialized successfully!")
+    # Add optimization button
+    if st.sidebar.button("Optimize RSI Strategy"):
+        optimal = optimize_rsi_strategy(ticker)
+        if optimal:
+            st.sidebar.markdown("#### Current Settings")
+            st.sidebar.json(optimal)
+
+def show_sidebar_summary():
+    """Show a summary of key metrics in the sidebar."""
+    stats = get_system_scorecard()
+    st.sidebar.title("📈 System Status")
+    st.sidebar.metric("Sharpe (7d)", stats["sharpe_7d"])
+    st.sidebar.metric("Win Rate (%)", stats["win_rate"])
+    st.sidebar.metric("Goal Status", "✅" if stats["goal_status"].get("overall", False) else "❌")
 
 def main():
     """Main application entry point."""
@@ -75,27 +95,27 @@ def main():
     st.set_page_config(
         page_title="Trading Platform",
         page_icon="📈",
-        layout="wide",
-        initial_sidebar_state="expanded"
+        layout="wide"
     )
+    
+    # Initialize system
+    initialize_system()
     
     # Show startup banner
     show_startup_banner()
     
-    # Add restart button
-    if st.button("🔄 Restart System"):
-        clear_session_state()
-        st.rerun()
+    # Show performance log
+    show_performance_log()
     
-    # Initialize system if not already done
-    if "health_status" not in st.session_state:
-        initialize_system()
+    # Show RSI optimizer
+    show_rsi_optimizer()
     
-    # Main content
-    st.title("Trading Dashboard")
+    # Show sidebar summary
+    show_sidebar_summary()
     
-    # Add your main application content here
-    # ...
+    # Main content area
+    st.markdown("## Trading Dashboard")
+    st.markdown("Use the sidebar to optimize RSI strategies and view performance metrics.")
 
 if __name__ == "__main__":
     main()
