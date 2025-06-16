@@ -3,271 +3,211 @@
 
 Service Manager
 
-This module implements a comprehensive service management system that handles:
-- Service discovery and registration
-- Health checks and monitoring
-- Service lifecycle management
-- Dependency management
+This module implements a manager for handling service lifecycle and coordination.
+
+Note: This module was adapted from the legacy automation/core/service_manager.py file.
 """
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Set, Any
-from datetime import datetime, timedelta
-from dataclasses import dataclass, field
-from enum import Enum
-import aiohttp
+from typing import Dict, List, Any, Optional, Type
+from pathlib import Path
+from datetime import datetime
+from .base_agent import BaseAgent
 import json
 
-logger = logging.getLogger(__name__)
-
-class ServiceStatus(Enum):
-    """Service status enumeration."""
-    UNKNOWN = "unknown"
-    STARTING = "starting"
-    RUNNING = "running"
-    DEGRADED = "degraded"
-    FAILED = "failed"
-    STOPPED = "stopped"
-
-@dataclass
-class ServiceHealth:
-    """Service health information."""
-    status: ServiceStatus
-    last_check: datetime
-    response_time: float
-    error_count: int = 0
-    warnings: List[str] = field(default_factory=list)
-    metrics: Dict[str, Any] = field(default_factory=dict)
-
-@dataclass
-class ServiceInfo:
-    """Service information."""
-    name: str
-    version: str
-    description: str
-    endpoints: Dict[str, str]
-    dependencies: List[str] = field(default_factory=list)
-    health: ServiceHealth = field(default_factory=lambda: ServiceHealth(
-        status=ServiceStatus.UNKNOWN,
-        last_check=datetime.now(),
-        response_time=0.0
-    ))
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
 class ServiceManager:
-    """Service management system."""
+    """Manager for handling service lifecycle and coordination."""
+    
     def __init__(self, config: Dict[str, Any]):
         """Initialize the service manager."""
         self.config = config
-        self.services: Dict[str, ServiceInfo] = {}
-        self.health_check_interval = config.get("health_check_interval", 30)
-        self.health_check_timeout = config.get("health_check_timeout", 5)
-        self.max_retries = config.get("max_retries", 3)
-        self.retry_delay = config.get("retry_delay", 5)
-        self._health_check_task = None
-        self._session = None
-
-    async def start(self):
-        """Start the service manager."""
-        self._session = aiohttp.ClientSession()
-        self._health_check_task = asyncio.create_task(self._health_check_loop())
-        logger.info("Service manager started")
-
-    async def stop(self):
-        """Stop the service manager."""
-        if self._health_check_task:
-            self._health_check_task.cancel()
-            try:
-                await self._health_check_task
-            except asyncio.CancelledError:
-                pass
-        if self._session:
-            await self._session.close()
-        logger.info("Service manager stopped")
-
-    async def register_service(self, service: ServiceInfo) -> bool:
+        self.services: Dict[str, Dict[str, Any]] = {}
+        self.setup_logging()
+    
+    def setup_logging(self):
+        """Configure logging for service management."""
+        log_path = Path("logs/services")
+        log_path.mkdir(parents=True, exist_ok=True)
+        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(log_path / "service_manager.log"),
+                logging.StreamHandler()
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+    
+    async def register_service(
+        self,
+        name: str,
+        service: BaseAgent
+    ) -> None:
         """Register a new service."""
         try:
-            # Validate service information
-            if not self._validate_service(service):
-                return False
-
-            # Check dependencies
-            if not await self._check_dependencies(service):
-                return False
-
-            # Register service
-            self.services[service.name] = service
-            logger.info(f"Service registered: {service.name}")
-            return True
-
+            if name in self.services:
+                raise ValueError(f"Service {name} already registered")
+            
+            self.services[name] = {
+                'config': service.config,
+                'status': 'running',
+                'start_time': datetime.utcnow().isoformat()
+            }
+            self.logger.info(f"Registered service: {name}")
         except Exception as e:
-            logger.error(f"Failed to register service {service.name}: {str(e)}")
-            return False
-
-    async def unregister_service(self, service_name: str) -> bool:
+            self.logger.error(f"Error registering service {name}: {str(e)}")
+            raise
+    
+    async def unregister_service(self, name: str) -> None:
         """Unregister a service."""
         try:
-            if service_name in self.services:
-                del self.services[service_name]
-                logger.info(f"Service unregistered: {service_name}")
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"Failed to unregister service {service_name}: {str(e)}")
-            return False
-
-    async def get_service(self, service_name: str) -> Optional[ServiceInfo]:
-        """Get service information."""
-        return self.services.get(service_name)
-
-    async def get_services(self, status: Optional[ServiceStatus] = None) -> List[ServiceInfo]:
-        """Get all services, optionally filtered by status."""
-        if status is None:
-            return list(self.services.values())
-        return [s for s in self.services.values() if s.health.status == status]
-
-    async def check_service_health(self, service_name: str) -> Optional[ServiceHealth]:
-        """Check the health of a specific service."""
-        service = await self.get_service(service_name)
-        if not service:
-            return None
-
-        try:
-            health = await self._check_service_health(service)
-            service.health = health
-            return health
-        except Exception as e:
-            logger.error(f"Failed to check health for service {service_name}: {str(e)}")
-            return None
-
-    async def _health_check_loop(self):
-        """Background task for periodic health checks."""
-        while True:
-            try:
-                for service in self.services.values():
-                    await self.check_service_health(service.name)
-                await asyncio.sleep(self.health_check_interval)
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Health check loop error: {str(e)}")
-                await asyncio.sleep(self.retry_delay)
-
-    async def _check_service_health(self, service: ServiceInfo) -> ServiceHealth:
-        """Check the health of a service."""
-        start_time = datetime.now()
-        error_count = 0
-        warnings = []
-
-        try:
-            # Check health endpoint
-            if "health" in service.endpoints:
-                async with self._session.get(
-                    service.endpoints["health"],
-                    timeout=self.health_check_timeout
-                ) as response:
-                    if response.status != 200:
-                        error_count += 1
-                        warnings.append(f"Health endpoint returned status {response.status}")
-                    else:
-                        health_data = await response.json()
-                        if not health_data.get("healthy", False):
-                            error_count += 1
-                            warnings.extend(health_data.get("warnings", []))
-
-            # Check metrics endpoint
-            if "metrics" in service.endpoints:
-                async with self._session.get(
-                    service.endpoints["metrics"],
-                    timeout=self.health_check_timeout
-                ) as response:
-                    if response.status == 200:
-                        metrics = await response.json()
-                        service.health.metrics.update(metrics)
-
-            # Calculate response time
-            response_time = (datetime.now() - start_time).total_seconds()
-
-            # Determine status
-            if error_count >= self.max_retries:
-                status = ServiceStatus.FAILED
-            elif error_count > 0:
-                status = ServiceStatus.DEGRADED
+            if name in self.services:
+                await self.stop_service(name)
+                del self.services[name]
+                self.logger.info(f"Unregistered service: {name}")
             else:
-                status = ServiceStatus.RUNNING
-
-            return ServiceHealth(
-                status=status,
-                last_check=datetime.now(),
-                response_time=response_time,
-                error_count=error_count,
-                warnings=warnings,
-                metrics=service.health.metrics
-            )
-
+                raise ValueError(f"Unknown service: {name}")
         except Exception as e:
-            logger.error(f"Health check failed for service {service.name}: {str(e)}")
-            return ServiceHealth(
-                status=ServiceStatus.FAILED,
-                last_check=datetime.now(),
-                response_time=0.0,
-                error_count=error_count + 1,
-                warnings=[str(e)]
-            )
-
-    def _validate_service(self, service: ServiceInfo) -> bool:
-        """Validate service information."""
+            self.logger.error(f"Error unregistering service {name}: {str(e)}")
+            raise
+    
+    async def start_service(
+        self,
+        service_name: str,
+        service_config: Dict[str, Any]
+    ) -> None:
+        """Start a service."""
         try:
-            # Check required fields
-            if not service.name or not service.version or not service.endpoints:
-                return False
-
-            # Check endpoint URLs
-            for endpoint, url in service.endpoints.items():
-                if not url.startswith(("http://", "https://")):
-                    return False
-
-            return True
+            if service_name in self.services:
+                raise ValueError(f"Service {service_name} already exists")
+            
+            self.services[service_name] = {
+                'config': service_config,
+                'status': 'running',
+                'start_time': datetime.utcnow().isoformat()
+            }
+            
+            self.logger.info(f"Started service: {service_name}")
         except Exception as e:
-            logger.error(f"Service validation failed: {str(e)}")
-            return False
-
-    async def _check_dependencies(self, service: ServiceInfo) -> bool:
-        """Check if all service dependencies are available."""
+            self.logger.error(f"Error starting service {service_name}: {str(e)}")
+            raise
+    
+    async def stop_service(self, service_name: str) -> None:
+        """Stop a service."""
         try:
-            for dep_name in service.dependencies:
-                dep = await self.get_service(dep_name)
-                if not dep or dep.health.status != ServiceStatus.RUNNING:
-                    logger.warning(f"Dependency {dep_name} not available for service {service.name}")
-                    return False
-            return True
+            if service_name not in self.services:
+                raise ValueError(f"Service {service_name} not found")
+            
+            del self.services[service_name]
+            
+            self.logger.info(f"Stopped service: {service_name}")
         except Exception as e:
-            logger.error(f"Dependency check failed for service {service.name}: {str(e)}")
-            return False
-
-    async def get_service_dependencies(self, service_name: str) -> List[ServiceInfo]:
-        """Get all dependencies for a service."""
-        service = await self.get_service(service_name)
-        if not service:
-            return []
-        return [await self.get_service(dep) for dep in service.dependencies if await self.get_service(dep)]
-
-    async def get_dependent_services(self, service_name: str) -> List[ServiceInfo]:
-        """Get all services that depend on the specified service."""
-        return [s for s in self.services.values() if service_name in s.dependencies]
-
-    async def get_service_metrics(self, service_name: str) -> Dict[str, Any]:
-        """Get metrics for a service."""
-        service = await self.get_service(service_name)
-        if not service:
-            return {}
-        return service.health.metrics
-
-    async def get_service_warnings(self, service_name: str) -> List[str]:
-        """Get warnings for a service."""
-        service = await self.get_service(service_name)
-        if not service:
-            return []
-        return service.health.warnings 
+            self.logger.error(f"Error stopping service {service_name}: {str(e)}")
+            raise
+    
+    async def restart_service(self, service_name: str) -> None:
+        """Restart a service."""
+        try:
+            if service_name not in self.services:
+                raise ValueError(f"Service {service_name} not found")
+            
+            service_config = self.services[service_name]['config']
+            await self.stop_service(service_name)
+            await self.start_service(service_name, service_config)
+            
+            self.logger.info(f"Restarted service: {service_name}")
+        except Exception as e:
+            self.logger.error(f"Error restarting service {service_name}: {str(e)}")
+            raise
+    
+    def get_service_status(self, service_name: str) -> Dict[str, Any]:
+        """Get service status."""
+        try:
+            if service_name not in self.services:
+                raise ValueError(f"Service {service_name} not found")
+            
+            return self.services[service_name]
+        except Exception as e:
+            self.logger.error(f"Error getting service status: {str(e)}")
+            raise
+    
+    def list_services(self) -> List[str]:
+        """List all services."""
+        return list(self.services.keys())
+    
+    async def monitor_services(self, interval: int = 60):
+        """Monitor services at regular intervals."""
+        try:
+            while True:
+                for service_name in self.services:
+                    # TODO: Implement service health check
+                    pass
+                
+                await asyncio.sleep(interval)
+        except Exception as e:
+            self.logger.error(f"Error monitoring services: {str(e)}")
+            raise
+    
+    def update_service_config(
+        self,
+        service_name: str,
+        config: Dict[str, Any]
+    ) -> None:
+        """Update service configuration."""
+        try:
+            if service_name not in self.services:
+                raise ValueError(f"Service {service_name} not found")
+            
+            self.services[service_name]['config'].update(config)
+            self.logger.info(f"Updated service config: {service_name}")
+        except Exception as e:
+            self.logger.error(f"Error updating service config: {str(e)}")
+            raise
+    
+    async def start_all_services(self) -> None:
+        """Start all registered services."""
+        try:
+            for name in self.services:
+                await self.start_service(name, self.services[name]['config'])
+            self.logger.info("Started all services")
+        except Exception as e:
+            self.logger.error(f"Error starting all services: {str(e)}")
+            raise
+    
+    async def stop_all_services(self) -> None:
+        """Stop all registered services."""
+        try:
+            for name in self.services:
+                await self.stop_service(name)
+            self.logger.info("Stopped all services")
+        except Exception as e:
+            self.logger.error(f"Error stopping all services: {str(e)}")
+            raise
+    
+    async def start(self) -> None:
+        """Start the service manager."""
+        try:
+            self.logger.info("Service manager started")
+            
+            # Start all services
+            await self.start_all_services()
+            
+            # Start service monitoring
+            asyncio.create_task(self.monitor_services())
+            
+        except Exception as e:
+            self.logger.error(f"Error starting service manager: {str(e)}")
+            raise
+    
+    async def stop(self) -> None:
+        """Stop the service manager."""
+        try:
+            # Stop all services
+            await self.stop_all_services()
+            
+            self.logger.info("Service manager stopped")
+        except Exception as e:
+            self.logger.error(f"Error stopping service manager: {str(e)}")
+            raise 
