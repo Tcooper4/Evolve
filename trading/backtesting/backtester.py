@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import Dict, List, Optional, Callable, Union, Any
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+import logging
 
 # Third-party imports
 import pandas as pd
@@ -46,35 +48,67 @@ class Backtester:
                  slippage: float = DEFAULT_SLIPPAGE,
                  transaction_cost: float = DEFAULT_TRANSACTION_COST,
                  spread: float = DEFAULT_SPREAD,
-                 max_leverage: float = 1.0):
+                 max_leverage: float = 1.0,
+                 max_trades: int = 10000,  # Add maximum limit
+                 trade_log_path: Optional[str] = None):  # Add trade log path
         """Initialize backtester.
         
         Args:
-            data: Historical price data with OHLCV columns
+            data: Market data DataFrame
             initial_cash: Initial cash balance
-            slippage: Slippage percentage per trade
-            transaction_cost: Transaction cost percentage per trade
-            spread: Bid-ask spread percentage
-            max_leverage: Maximum allowed leverage
+            slippage: Slippage percentage
+            transaction_cost: Transaction cost percentage
+            spread: Spread percentage
+            max_leverage: Maximum leverage
+            max_trades: Maximum number of trades to store
+            trade_log_path: Path to store trade logs
         """
         self.data = data
         self.initial_cash = initial_cash
         self.cash = initial_cash
-        self.positions: Dict[str, float] = {}  # asset -> quantity
-        self.trades: List[Trade] = []
-        self.portfolio_values: List[float] = [initial_cash]
-        self.asset_values: Dict[str, List[float]] = {}
         self.slippage = slippage
         self.transaction_cost = transaction_cost
         self.spread = spread
         self.max_leverage = max_leverage
-        self.trade_log: List[Dict[str, Any]] = []
+        self.max_trades = max_trades
+        self.trade_log_path = trade_log_path
+        
+        # Initialize fixed-size arrays
+        self.portfolio_values = np.zeros(len(data))
+        self.trades = []
+        self.trade_log = []
+        self.positions = {}
+        self.asset_values = {}
+        
+        # Setup trade logging
+        if trade_log_path:
+            self._setup_trade_logging()
+            
+        self.logger = logging.getLogger(self.__class__.__name__)
         
         # Initialize asset value tracking
         for column in data.columns:
             if column not in ['open', 'high', 'low', 'close', 'volume']:
                 self.asset_values[column] = [0.0]
     
+    def _setup_trade_logging(self) -> None:
+        """Setup trade logging to disk."""
+        log_dir = Path(self.trade_log_path).parent
+        log_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.trade_log_file = open(self.trade_log_path, 'w')
+        self.trade_log_file.write('timestamp,asset,quantity,price,type,cost,cash_balance,portfolio_value\n')
+
+    def _log_trade(self, trade: Trade) -> None:
+        """Log trade to file if enabled."""
+        if self.trade_log_path:
+            self.trade_log_file.write(
+                f"{trade.timestamp},{trade.asset},{trade.quantity},{trade.price},"
+                f"{trade.type.value},{trade.transaction_cost},{trade.cash_balance},"
+                f"{trade.portfolio_value}\n"
+            )
+            self.trade_log_file.flush()
+
     def run_backtest(self, 
                     strategy: Union[Callable, Any], 
                     config: Optional[Dict] = None,
@@ -113,10 +147,7 @@ class Backtester:
             
             # Update portfolio value
             portfolio_value = self._calculate_portfolio_value(current_prices)
-            self.portfolio_values.append(portfolio_value)
-            
-            # Update asset values
-            self._update_asset_values(current_prices)
+            self.portfolio_values[i] = portfolio_value
         
         return self.get_performance_metrics()
     
@@ -212,10 +243,20 @@ class Backtester:
             cash_balance=self.cash,
             portfolio_value=self._calculate_portfolio_value(pd.Series({asset: price}))
         )
-        self.trades.append(trade)
+        
+        # Store trade if under limit
+        if len(self.trades) < self.max_trades:
+            self.trades.append(trade)
+        else:
+            # Remove oldest trade
+            self.trades.pop(0)
+            self.trades.append(trade)
+        
+        # Log trade
+        self._log_trade(trade)
         
         # Update trade log
-        self.trade_log.append({
+        trade_log_entry = {
             'timestamp': trade.timestamp,
             'asset': asset,
             'quantity': quantity,
@@ -224,7 +265,13 @@ class Backtester:
             'cost': cost,
             'cash_balance': self.cash,
             'portfolio_value': trade.portfolio_value
-        })
+        }
+        
+        if len(self.trade_log) < self.max_trades:
+            self.trade_log.append(trade_log_entry)
+        else:
+            self.trade_log.pop(0)
+            self.trade_log.append(trade_log_entry)
     
     def _calculate_portfolio_value(self, current_prices: pd.Series) -> float:
         """Calculate the current portfolio value."""
@@ -239,9 +286,15 @@ class Backtester:
         for asset in self.asset_values:
             if asset in current_prices and not pd.isna(current_prices[asset]):
                 value = self.positions.get(asset, 0) * current_prices[asset]
-                self.asset_values[asset].append(value)
+                if len(self.asset_values[asset]) < len(self.data):
+                    self.asset_values[asset].append(value)
+                else:
+                    self.asset_values[asset] = self.asset_values[asset][1:] + [value]
             else:
-                self.asset_values[asset].append(self.asset_values[asset][-1])
+                if len(self.asset_values[asset]) < len(self.data):
+                    self.asset_values[asset].append(self.asset_values[asset][-1])
+                else:
+                    self.asset_values[asset] = self.asset_values[asset][1:] + [self.asset_values[asset][-1]]
     
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Calculate comprehensive performance metrics."""
@@ -385,6 +438,11 @@ class Backtester:
         
         plt.tight_layout()
         plt.show()
+
+    def __del__(self):
+        """Cleanup resources."""
+        if hasattr(self, 'trade_log_file'):
+            self.trade_log_file.close()
 
 class BacktestEngine:
     def __init__(self, data: pd.DataFrame):

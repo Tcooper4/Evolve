@@ -1,12 +1,147 @@
 import pytest
 from pathlib import Path
-from trading.nlp.prompt_processor import PromptProcessor, ProcessedPrompt, EntityMatch
+import random
+import string
+from trading.nlp.prompt_processor import PromptProcessor, ProcessedPrompt, EntityMatch, PromptProcessingError
 
 @pytest.fixture
 def processor():
     """Create a PromptProcessor instance for testing."""
     config_dir = Path(__file__).parent.parent.parent / "trading" / "nlp" / "config"
     return PromptProcessor(config_dir)
+
+def generate_random_string(length=50):
+    """Generate a random string of specified length."""
+    return ''.join(random.choices(string.ascii_letters + string.digits + string.punctuation, k=length))
+
+def test_fuzz_random_characters(processor):
+    """Test processing prompts with random characters."""
+    # Test with completely random strings
+    for _ in range(10):
+        random_prompt = generate_random_string()
+        result = processor.process_prompt(random_prompt)
+        assert isinstance(result, ProcessedPrompt)
+        assert result.confidence >= 0  # Should not crash
+        assert result.confidence <= 1  # Should not crash
+    
+    # Test with random characters mixed with valid words
+    valid_words = ["forecast", "BTC", "price", "analysis", "ETH"]
+    for _ in range(10):
+        mixed_prompt = ' '.join(random.choices(valid_words, k=3) + [generate_random_string(10)])
+        result = processor.process_prompt(mixed_prompt)
+        assert isinstance(result, ProcessedPrompt)
+        assert result.confidence >= 0
+        assert result.confidence <= 1
+
+def test_fuzz_partial_sentences(processor):
+    """Test processing incomplete or partial sentences."""
+    partial_prompts = [
+        "forecast",  # Just intent
+        "BTC",  # Just asset
+        "next 7 days",  # Just timeframe
+        "should I",  # Incomplete question
+        "analyze the",  # Incomplete command
+        "compare",  # Incomplete comparison
+        "optimize",  # Incomplete optimization
+        "validate",  # Incomplete validation
+        "monitor",  # Incomplete monitoring
+        "explain",  # Incomplete explanation
+    ]
+    
+    for prompt in partial_prompts:
+        result = processor.process_prompt(prompt)
+        assert isinstance(result, ProcessedPrompt)
+        assert result.confidence >= 0
+        assert result.confidence <= 1
+        # Should not crash, but confidence should be low
+        assert result.confidence < 0.5
+
+def test_fuzz_contradictory_instructions(processor):
+    """Test processing prompts with contradictory instructions."""
+    contradictory_prompts = [
+        "Buy and sell BTC now",
+        "Forecast the past price of ETH",
+        "Compare BTC with itself",
+        "Optimize the strategy without parameters",
+        "Validate the performance without data",
+        "Monitor the portfolio without assets",
+        "Explain the future price movement",
+        "Analyze the market without indicators",
+        "Recommend both buying and selling",
+        "Forecast the price without a timeframe"
+    ]
+    
+    for prompt in contradictory_prompts:
+        result = processor.process_prompt(prompt)
+        assert isinstance(result, ProcessedPrompt)
+        assert result.confidence >= 0
+        assert result.confidence <= 1
+        # Should handle contradictions gracefully
+        assert result.confidence < 0.8
+
+def test_fuzz_edge_cases(processor):
+    """Test processing prompts with edge cases."""
+    edge_cases = [
+        "",  # Empty string
+        "   ",  # Whitespace only
+        "!@#$%^&*()",  # Special characters only
+        "1234567890",  # Numbers only
+        "a" * 1000,  # Very long string
+        "forecast" * 100,  # Repeated words
+        "BTC" + " " * 50 + "ETH",  # Large gaps
+        "forecast" + "\n" * 10 + "BTC",  # Multiple newlines
+        "forecast" + "\t" * 10 + "BTC",  # Multiple tabs
+        "forecast" + " " * 10 + "BTC" + " " * 10 + "7 days"  # Multiple large gaps
+    ]
+    
+    for prompt in edge_cases:
+        result = processor.process_prompt(prompt)
+        assert isinstance(result, ProcessedPrompt)
+        assert result.confidence >= 0
+        assert result.confidence <= 1
+
+def test_fuzz_mixed_languages(processor):
+    """Test processing prompts with mixed languages and scripts."""
+    mixed_prompts = [
+        "forecast BTC 预测",  # English + Chinese
+        "analyze ETH анализ",  # English + Russian
+        "compare BTCとETH",  # English + Japanese
+        "optimize strategy استراتيجية",  # English + Arabic
+        "validate performance प्रदर्शन",  # English + Hindi
+        "monitor portfolio 포트폴리오",  # English + Korean
+        "explain price 가격",  # English + Korean
+        "recommend buy 買う",  # English + Japanese
+        "analyze market 시장",  # English + Korean
+        "forecast price 价格"  # English + Chinese
+    ]
+    
+    for prompt in mixed_prompts:
+        result = processor.process_prompt(prompt)
+        assert isinstance(result, ProcessedPrompt)
+        assert result.confidence >= 0
+        assert result.confidence <= 1
+
+def test_fuzz_error_handling(processor):
+    """Test error handling for malformed prompts."""
+    # Test with None
+    with pytest.raises(PromptProcessingError):
+        processor.process_prompt(None)
+    
+    # Test with non-string input
+    with pytest.raises(PromptProcessingError):
+        processor.process_prompt(123)
+    
+    # Test with very large input
+    with pytest.raises(PromptProcessingError):
+        processor.process_prompt("a" * 10000)
+    
+    # Test with invalid UTF-8
+    with pytest.raises(PromptProcessingError):
+        processor.process_prompt(b"forecast BTC \xff".decode('utf-8', errors='ignore'))
+    
+    # Test with control characters
+    with pytest.raises(PromptProcessingError):
+        processor.process_prompt("forecast BTC \x00\x01\x02")
 
 def test_process_prompt_forecast(processor):
     """Test processing a forecast-related prompt."""

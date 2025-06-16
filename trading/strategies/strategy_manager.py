@@ -1,26 +1,31 @@
-from typing import List, Dict, Any, Optional, Callable, Type, Union
-import pandas as pd
-import numpy as np
-import logging
-import importlib
-from datetime import datetime
-import json
-from pathlib import Path
-from dataclasses import dataclass, asdict
-from abc import ABC, abstractmethod
-import os
-import importlib.util
-import inspect
+"""Manages multiple trading strategies with caching and dynamic loading."""
 
-# Try to import redis, but make it optional
+# Standard library imports
+import importlib
+import inspect
+import json
+import logging
+import os
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, asdict
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Type, Union
+
+# Third-party imports
+import numpy as np
+import pandas as pd
+
+# Optional imports
 try:
     import redis
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
 
-# Project imports
+# Local imports
 from .exceptions import StrategyError, StrategyNotFoundError, StrategyValidationError
+from ..core.performance import log_performance
 
 @dataclass
 class StrategyMetrics:
@@ -473,50 +478,45 @@ class StrategyManager:
             raise StrategyError(f"Failed to generate signals: {str(e)}")
     
     def evaluate_strategies(self, data: pd.DataFrame) -> Dict[str, StrategyMetrics]:
-        """Evaluate all active strategies.
+        """Evaluate all active strategies on the given data.
         
         Args:
-            data: Market data
+            data: Market data with OHLCV columns
             
         Returns:
-            Dictionary of strategy metrics
-            
-        Raises:
-            StrategyError: If strategy evaluation fails
+            Dictionary mapping strategy names to their metrics
         """
         try:
-            results = {}
-            for name in self.active_strategies:
-                strategy = self.strategies[name]
+            metrics = {}
+            for name, strategy in self.active_strategies.items():
                 try:
-                    # Validate data
-                    strategy.validate_data(data)
-                    
                     # Generate signals
                     signals = strategy.generate_signals(data)
-                    strategy.validate_signals(signals['Signal'])
                     
                     # Calculate metrics
-                    metrics = strategy.evaluate_performance(signals, data)
-                    results[name] = metrics
+                    strategy_metrics = strategy.evaluate_performance(signals, data)
                     
-                    # Store metrics in Redis
-                    if self.redis_client:
-                        self.redis_client.hset(
-                            f'strategy_metrics:{name}',
-                            metrics.timestamp,
-                            metrics.to_json()
-                        )
+                    # Log performance
+                    log_performance(
+                        ticker=data.name if hasattr(data, 'name') else 'unknown',
+                        model=name,
+                        strategy=strategy.__class__.__name__,
+                        sharpe=strategy_metrics.sharpe_ratio,
+                        drawdown=strategy_metrics.max_drawdown,
+                        notes=f"Strategy evaluation for {name}"
+                    )
                     
-                    self.logger.info(f"Evaluated strategy {name}")
+                    metrics[name] = strategy_metrics
                     
                 except Exception as e:
                     self.logger.error(f"Error evaluating strategy {name}: {str(e)}")
-            
-            return results
+                    continue
+                    
+            return metrics
             
         except Exception as e:
-            raise StrategyError(f"Failed to evaluate strategies: {str(e)}")
+            self.logger.error(f"Error evaluating strategies: {str(e)}")
+            return {}
     
     def rank_strategies(self, metrics: Dict[str, StrategyMetrics]) -> List[tuple]:
         """Rank strategies based on their performance metrics.

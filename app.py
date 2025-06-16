@@ -1,11 +1,15 @@
-import streamlit as st
-import sys
-import platform
-import datetime
+"""Main application entry point for the trading platform."""
+
+# Standard library imports
+from datetime import datetime
 from pathlib import Path
-import json
-import yfinance as yf
+
+# Third-party imports
 import pandas as pd
+import streamlit as st
+import yfinance as yf
+
+# Local imports
 from optimize.rsi_optimizer import optimize_rsi
 from trading.strategies.rsi_signals import generate_rsi_signals
 from utils.system_status import get_system_scorecard

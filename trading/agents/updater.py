@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 from concurrent.futures import ThreadPoolExecutor
 import json
+from datetime import datetime
 
 from trading.models.advanced.ensemble.ensemble_model import EnsembleForecaster
 from trading.memory import PerformanceMemory
@@ -25,7 +26,7 @@ class UpdateConfig:
 
 
 class ModelUpdater:
-    """Periodically update ensemble model weights based on stored metrics."""
+    """Manages model updates and weight calculations."""
 
     def __init__(
         self,
@@ -33,34 +34,34 @@ class ModelUpdater:
         memory: Optional[PerformanceMemory] = None,
         default_interval: int = 60,
         max_workers: int = 4,
+        max_active_tickers: int = 100,  # Add maximum limit
         on_update: Optional[Callable[[str, Dict[str, float]], None]] = None
     ):
-        """Initialize the model updater.
+        """Initialize model updater.
         
         Args:
-            model: Ensemble model to update
-            memory: Performance memory instance
+            model: Ensemble forecaster model
+            memory: Optional performance memory
             default_interval: Default update interval in seconds
             max_workers: Maximum number of worker threads
-            on_update: Optional callback function called after each update
+            max_active_tickers: Maximum number of active tickers
+            on_update: Optional callback function
         """
         self.model = model
         self.memory = memory or PerformanceMemory()
         self.default_interval = default_interval
         self.max_workers = max_workers
+        self.max_active_tickers = max_active_tickers
         self.on_update = on_update
         
-        # Threading and state management
-        self._stop_event = threading.Event()
         self._threads: Dict[str, threading.Thread] = {}
-        self._lock = threading.Lock()
-        self._executor = ThreadPoolExecutor(max_workers=max_workers)
-        
-        # Logging
-        self.logger = logging.getLogger(self.__class__.__name__)
-        
-        # Active update configurations
         self._configs: Dict[str, UpdateConfig] = {}
+        self._stop_event = threading.Event()
+        self._lock = threading.Lock()
+        self._last_update: Dict[str, datetime] = {}
+        
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self._executor = ThreadPoolExecutor(max_workers=max_workers)
 
     def update_model_weights(
         self,
@@ -142,11 +143,11 @@ class ModelUpdater:
         weight_threshold: float = 0.01,
         custom_metric_fn: Optional[Callable[[Dict[str, float]], float]] = None
     ) -> None:
-        """Start background updates of model weights.
+        """Start periodic updates for tickers.
         
         Args:
-            tickers: Single ticker or list of tickers to update
-            metric: Metric to use for updates
+            tickers: Ticker or list of tickers to update
+            metric: Metric to use for weight calculation
             interval: Update interval in seconds (optional)
             min_history: Minimum history required
             weight_threshold: Minimum weight change threshold
@@ -155,32 +156,45 @@ class ModelUpdater:
         if isinstance(tickers, str):
             tickers = [tickers]
             
-        for ticker in tickers:
-            if ticker in self._threads and self._threads[ticker].is_alive():
-                self.logger.warning(f"Update thread already running for {ticker}")
-                continue
+        with self._lock:
+            # Check if we need to remove old tickers
+            if len(self._threads) + len(tickers) > self.max_active_tickers:
+                # Sort by last update time and remove oldest
+                sorted_tickers = sorted(
+                    self._threads.keys(),
+                    key=lambda x: self._last_update.get(x, datetime.min)
+                )
+                num_to_remove = len(self._threads) + len(tickers) - self.max_active_tickers
+                for ticker in sorted_tickers[:num_to_remove]:
+                    self.stop(ticker)
+            
+            for ticker in tickers:
+                if ticker in self._threads and self._threads[ticker].is_alive():
+                    self.logger.warning(f"Update thread already running for {ticker}")
+                    continue
+                    
+                config = UpdateConfig(
+                    ticker=ticker,
+                    metric=metric,
+                    interval=interval or self.default_interval,
+                    min_history=min_history,
+                    weight_threshold=weight_threshold,
+                    custom_metric_fn=custom_metric_fn
+                )
                 
-            config = UpdateConfig(
-                ticker=ticker,
-                metric=metric,
-                interval=interval or self.default_interval,
-                min_history=min_history,
-                weight_threshold=weight_threshold,
-                custom_metric_fn=custom_metric_fn
-            )
-            
-            self._configs[ticker] = config
-            self._stop_event.clear()
-            
-            thread = threading.Thread(
-                target=self._run,
-                args=(config,),
-                daemon=True
-            )
-            self._threads[ticker] = thread
-            thread.start()
-            
-            self.logger.info(f"Started periodic updates for {ticker}")
+                self._configs[ticker] = config
+                self._stop_event.clear()
+                
+                thread = threading.Thread(
+                    target=self._run,
+                    args=(config,),
+                    daemon=True
+                )
+                self._threads[ticker] = thread
+                thread.start()
+                
+                self._last_update[ticker] = datetime.now()
+                self.logger.info(f"Started periodic updates for {ticker}")
 
     def stop(self, ticker: Optional[str] = None) -> None:
         """Stop periodic updates.

@@ -80,13 +80,12 @@ class PortfolioManager:
                 - max_positions: Maximum number of positions (default: 100)
                 - position_size_limit: Maximum position size (default: 100000)
                 - risk_limit: Maximum risk per position (default: 0.02)
+                - position_ttl: Time-to-live for positions in seconds (default: 86400)
         """
         if config is None:
             config = {}
 
-        # Determine if Redis should be used. Fallback to in-memory storage if
-        # disabled or connection fails. This allows the portfolio manager to be
-        # used in environments where Redis is not available.
+        # Determine if Redis should be used
         self.use_redis = config.get("use_redis", os.getenv("USE_REDIS", "true").lower() == "true") and REDIS_AVAILABLE
         self.redis_client = None
         self.positions: Dict[str, Dict[str, Any]] = {}
@@ -118,6 +117,7 @@ class PortfolioManager:
             "max_positions": int(os.getenv("MAX_POSITIONS", 100)),
             "position_size_limit": float(os.getenv("POSITION_SIZE_LIMIT", 100000)),
             "risk_limit": float(os.getenv("RISK_LIMIT", 0.02)),
+            "position_ttl": int(os.getenv("POSITION_TTL", 86400)),  # 24 hours
         }
         self.config.update(config)
 
@@ -165,40 +165,49 @@ class PortfolioManager:
         except ValueError:
             raise PortfolioError("Invalid entry time format")
 
-    def add_position(self, position: Dict[str, Any]) -> str:
+    def _cleanup_old_positions(self) -> None:
+        """Remove positions that have exceeded their TTL."""
+        current_time = datetime.now()
+        positions_to_remove = []
+
+        for pid, position in self.positions.items():
+            entry_time = datetime.fromisoformat(position["entry_time"])
+            if (current_time - entry_time).total_seconds() > self.config["position_ttl"]:
+                positions_to_remove.append(pid)
+
+        for pid in positions_to_remove:
+            self.remove_position(pid)
+
+    def add_position(self, position: Dict[str, Any]) -> None:
         """Add a new position.
 
         Args:
             position: Position data
 
-        Returns:
-            Position ID
-
         Raises:
             PortfolioError: If position cannot be added
         """
         try:
+            # Validate position
             self._validate_position(position)
 
             # Check position limits
-            if len(self.get_positions()) >= self.config["max_positions"]:
-                raise PortfolioError("Maximum number of positions reached")
+            if len(self.positions) >= self.config["max_positions"]:
+                # Remove oldest position
+                oldest_position = min(
+                    self.positions.items(),
+                    key=lambda x: datetime.fromisoformat(x[1]["entry_time"])
+                )
+                self.remove_position(oldest_position[0])
 
-            position_value = position["quantity"] * position["entry_price"]
-            if position_value > self.config["position_size_limit"]:
-                raise PortfolioError("Position size exceeds limit")
-
-            # Generate position ID
-            position_id = f"{position['symbol']}_{datetime.utcnow().isoformat()}"
-
-            # Store position either in Redis or in-memory
+            # Add position
+            pid = f"{position['symbol']}_{position['entry_time']}"
             if self.redis_client:
-                self.redis_client.hset("positions", position_id, json.dumps(position))
+                self.redis_client.hset("positions", pid, json.dumps(position))
             else:
-                self.positions[position_id] = position
+                self.positions[pid] = position
 
-            self.logger.info(f"Added position {position_id}")
-            return position_id
+            self.logger.info(f"Added position for {position['symbol']}")
 
         except Exception as e:
             raise PortfolioError(f"Failed to add position: {str(e)}")
@@ -756,46 +765,23 @@ class PortfolioManager:
         return size * price * margin_requirement
 
     def _calculate_trade_metrics(self) -> Dict:
-        """Calculate trade performance metrics."""
+        """Calculate trade performance metrics using vectorized operations."""
         if len(self.get_positions()) == 0:
             return {}
 
+        # Convert positions to DataFrame for vectorized operations
+        positions_df = pd.DataFrame(self.get_positions()).T
+        
         # Calculate basic metrics
-        total_trades = len(self.get_positions())
-        winning_trades = sum(
-            1 for position in self.get_positions().values() if position["type"] == PositionType.LONG
-        )
-        losing_trades = sum(
-            1
-            for position in self.get_positions().values()
-            if position["type"] == PositionType.SHORT
-        )
-
+        total_trades = len(positions_df)
+        winning_trades = (positions_df['type'] == PositionType.LONG).sum()
+        losing_trades = (positions_df['type'] == PositionType.SHORT).sum()
+        
         # Calculate P&L metrics
-        total_pnl = sum(position["pnl"] for position in self.get_positions().values())
-        avg_win = (
-            np.mean(
-                [
-                    position["pnl"]
-                    for position in self.get_positions().values()
-                    if position["type"] == PositionType.LONG
-                ]
-            )
-            if winning_trades > 0
-            else 0
-        )
-        avg_loss = (
-            np.mean(
-                [
-                    position["pnl"]
-                    for position in self.get_positions().values()
-                    if position["type"] == PositionType.SHORT
-                ]
-            )
-            if losing_trades > 0
-            else 0
-        )
-
+        total_pnl = positions_df['pnl'].sum()
+        avg_win = positions_df[positions_df['type'] == PositionType.LONG]['pnl'].mean() if winning_trades > 0 else 0
+        avg_loss = positions_df[positions_df['type'] == PositionType.SHORT]['pnl'].mean() if losing_trades > 0 else 0
+        
         return {
             "total_trades": total_trades,
             "winning_trades": winning_trades,
