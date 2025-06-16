@@ -131,19 +131,25 @@ class DocumentationDeployment:
             self.deployments[deployment_id] = deployment
             
             try:
+                # Run Docker operations in a thread pool to avoid blocking
+                loop = asyncio.get_event_loop()
+                
                 # Pull image
                 self.logger.info(f"Pulling image: {image_name}")
-                self.docker_client.images.pull(image_name)
+                await loop.run_in_executor(None, self.docker_client.images.pull, image_name)
                 
                 # Create container
                 self.logger.info(f"Creating container: {container_name}")
-                container = self.docker_client.containers.run(
-                    image_name,
-                    name=container_name,
-                    ports=ports,
-                    volumes=volumes,
-                    environment=environment,
-                    detach=True
+                container = await loop.run_in_executor(
+                    None,
+                    lambda: self.docker_client.containers.run(
+                        image_name,
+                        name=container_name,
+                        ports=ports,
+                        volumes=volumes,
+                        environment=environment,
+                        detach=True
+                    )
                 )
                 
                 # Update deployment
@@ -202,6 +208,9 @@ class DocumentationDeployment:
             self.deployments[deployment_id] = deployment
             
             try:
+                # Run Kubernetes operations in a thread pool
+                loop = asyncio.get_event_loop()
+                
                 # Create deployment
                 self.logger.info(f"Creating deployment: {deployment_name}")
                 k8s_deployment = client.V1Deployment(
@@ -254,15 +263,33 @@ class DocumentationDeployment:
                 )
                 
                 # Apply deployment
-                self.k8s_client.create_namespaced_deployment(
-                    namespace=namespace,
-                    body=k8s_deployment
+                await loop.run_in_executor(
+                    None,
+                    lambda: self.k8s_client.create_namespaced_deployment(
+                        namespace=namespace,
+                        body=k8s_deployment
+                    )
                 )
+                
+                # Wait for deployment to be ready
+                while True:
+                    deployment_status = await loop.run_in_executor(
+                        None,
+                        lambda: self.k8s_client.read_namespaced_deployment_status(
+                            name=deployment_name,
+                            namespace=namespace
+                        )
+                    )
+                    
+                    if deployment_status.status.ready_replicas == replicas:
+                        break
+                        
+                    await asyncio.sleep(1)
                 
                 # Update deployment
                 deployment.status = 'completed'
                 deployment.end_time = datetime.now().isoformat()
-                deployment.artifacts.append(f"{namespace}/{deployment_name}")
+                deployment.artifacts.append(deployment_name)
                 
                 self.logger.info(f"Deployed to Kubernetes: {deployment_name}")
                 return deployment
@@ -309,30 +336,37 @@ class DocumentationDeployment:
             self.deployments[deployment_id] = deployment
             
             try:
-                # Upload files
-                if isinstance(source_path, str):
-                    source_path = Path(source_path)
+                # Run AWS operations in a thread pool
+                loop = asyncio.get_event_loop()
                 
+                # Upload files
+                source_path = Path(source_path)
                 if source_path.is_file():
                     # Upload single file
-                    key = f"{prefix}/{source_path.name}"
-                    self.aws_client.upload_file(
-                        str(source_path),
-                        bucket,
-                        key,
-                        ExtraArgs={'ACL': acl}
+                    key = f"{prefix}/{source_path.name}" if prefix else source_path.name
+                    await loop.run_in_executor(
+                        None,
+                        lambda: self.aws_client.upload_file(
+                            str(source_path),
+                            bucket,
+                            key,
+                            ExtraArgs={'ACL': acl}
+                        )
                     )
                     deployment.artifacts.append(key)
                 else:
                     # Upload directory
-                    for file_path in source_path.rglob('*'):
+                    for file_path in source_path.rglob("*"):
                         if file_path.is_file():
-                            key = f"{prefix}/{file_path.relative_to(source_path)}"
-                            self.aws_client.upload_file(
-                                str(file_path),
-                                bucket,
-                                key,
-                                ExtraArgs={'ACL': acl}
+                            key = f"{prefix}/{file_path.relative_to(source_path)}" if prefix else str(file_path.relative_to(source_path))
+                            await loop.run_in_executor(
+                                None,
+                                lambda: self.aws_client.upload_file(
+                                    str(file_path),
+                                    bucket,
+                                    key,
+                                    ExtraArgs={'ACL': acl}
+                                )
                             )
                             deployment.artifacts.append(key)
                 
@@ -385,37 +419,53 @@ class DocumentationDeployment:
             self.deployments[deployment_id] = deployment
             
             try:
+                # Run GCS operations in a thread pool
+                loop = asyncio.get_event_loop()
+                
                 # Get bucket
-                bucket = self.gcs_client.bucket(bucket)
+                bucket_obj = await loop.run_in_executor(
+                    None,
+                    lambda: self.gcs_client.bucket(bucket)
+                )
                 
                 # Upload files
-                if isinstance(source_path, str):
-                    source_path = Path(source_path)
-                
+                source_path = Path(source_path)
                 if source_path.is_file():
                     # Upload single file
-                    blob = bucket.blob(f"{prefix}/{source_path.name}")
-                    blob.upload_from_filename(str(source_path))
+                    key = f"{prefix}/{source_path.name}" if prefix else source_path.name
+                    blob = bucket_obj.blob(key)
+                    await loop.run_in_executor(
+                        None,
+                        lambda: blob.upload_from_filename(str(source_path))
+                    )
                     if public:
-                        blob.make_public()
-                    deployment.artifacts.append(blob.name)
+                        await loop.run_in_executor(
+                            None,
+                            lambda: blob.make_public()
+                        )
+                    deployment.artifacts.append(key)
                 else:
                     # Upload directory
-                    for file_path in source_path.rglob('*'):
+                    for file_path in source_path.rglob("*"):
                         if file_path.is_file():
-                            blob = bucket.blob(
-                                f"{prefix}/{file_path.relative_to(source_path)}"
+                            key = f"{prefix}/{file_path.relative_to(source_path)}" if prefix else str(file_path.relative_to(source_path))
+                            blob = bucket_obj.blob(key)
+                            await loop.run_in_executor(
+                                None,
+                                lambda: blob.upload_from_filename(str(file_path))
                             )
-                            blob.upload_from_filename(str(file_path))
                             if public:
-                                blob.make_public()
-                            deployment.artifacts.append(blob.name)
+                                await loop.run_in_executor(
+                                    None,
+                                    lambda: blob.make_public()
+                                )
+                            deployment.artifacts.append(key)
                 
                 # Update deployment
                 deployment.status = 'completed'
                 deployment.end_time = datetime.now().isoformat()
                 
-                self.logger.info(f"Deployed to GCS: {bucket.name}")
+                self.logger.info(f"Deployed to GCS: {bucket}")
                 return deployment
                 
             except Exception as e:
@@ -460,35 +510,61 @@ class DocumentationDeployment:
             self.deployments[deployment_id] = deployment
             
             try:
-                # Get container
-                container_client = self.azure_client.get_container_client(container)
+                # Run Azure operations in a thread pool
+                loop = asyncio.get_event_loop()
+                
+                # Get container client
+                container_client = await loop.run_in_executor(
+                    None,
+                    lambda: self.azure_client.get_container_client(container)
+                )
                 
                 # Upload files
-                if isinstance(source_path, str):
-                    source_path = Path(source_path)
-                
+                source_path = Path(source_path)
                 if source_path.is_file():
                     # Upload single file
-                    blob_name = f"{prefix}/{source_path.name}"
+                    key = f"{prefix}/{source_path.name}" if prefix else source_path.name
                     with open(source_path, 'rb') as f:
-                        container_client.upload_blob(
-                            blob_name,
-                            f,
-                            overwrite=True
+                        await loop.run_in_executor(
+                            None,
+                            lambda: container_client.upload_blob(
+                                name=key,
+                                data=f,
+                                overwrite=True
+                            )
                         )
-                    deployment.artifacts.append(blob_name)
+                    if public:
+                        await loop.run_in_executor(
+                            None,
+                            lambda: container_client.set_blob_access_tier(
+                                key,
+                                access_tier='Hot'
+                            )
+                        )
+                    deployment.artifacts.append(key)
                 else:
                     # Upload directory
-                    for file_path in source_path.rglob('*'):
+                    for file_path in source_path.rglob("*"):
                         if file_path.is_file():
-                            blob_name = f"{prefix}/{file_path.relative_to(source_path)}"
+                            key = f"{prefix}/{file_path.relative_to(source_path)}" if prefix else str(file_path.relative_to(source_path))
                             with open(file_path, 'rb') as f:
-                                container_client.upload_blob(
-                                    blob_name,
-                                    f,
-                                    overwrite=True
+                                await loop.run_in_executor(
+                                    None,
+                                    lambda: container_client.upload_blob(
+                                        name=key,
+                                        data=f,
+                                        overwrite=True
+                                    )
                                 )
-                            deployment.artifacts.append(blob_name)
+                            if public:
+                                await loop.run_in_executor(
+                                    None,
+                                    lambda: container_client.set_blob_access_tier(
+                                        key,
+                                        access_tier='Hot'
+                                    )
+                                )
+                            deployment.artifacts.append(key)
                 
                 # Update deployment
                 deployment.status = 'completed'
@@ -543,64 +619,70 @@ class DocumentationDeployment:
             self.deployments[deployment_id] = deployment
             
             try:
-                # Connect to host
+                # Run SSH operations in a thread pool
+                loop = asyncio.get_event_loop()
+                
+                # Create SSH client
                 ssh = paramiko.SSHClient()
                 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 
-                if key_filename:
-                    ssh.connect(
-                        host,
+                # Connect
+                await loop.run_in_executor(
+                    None,
+                    lambda: ssh.connect(
+                        hostname=host,
                         username=username,
+                        password=password,
                         key_filename=key_filename
                     )
-                else:
-                    ssh.connect(
-                        host,
-                        username=username,
-                        password=password
-                    )
+                )
                 
                 # Execute commands
                 if commands:
-                    for command in commands:
-                        stdin, stdout, stderr = ssh.exec_command(command)
-                        deployment.logs.append(f"Command: {command}")
-                        deployment.logs.append(f"Output: {stdout.read().decode()}")
-                        if stderr.read():
-                            deployment.logs.append(f"Error: {stderr.read().decode()}")
+                    for cmd in commands:
+                        stdin, stdout, stderr = await loop.run_in_executor(
+                            None,
+                            lambda: ssh.exec_command(cmd)
+                        )
+                        output = await loop.run_in_executor(None, stdout.read)
+                        error = await loop.run_in_executor(None, stderr.read)
+                        deployment.logs.append(f"Command: {cmd}")
+                        if output:
+                            deployment.logs.append(f"Output: {output.decode()}")
+                        if error:
+                            deployment.logs.append(f"Error: {error.decode()}")
                 
                 # Transfer files
                 if source_path and target_path:
-                    sftp = ssh.open_sftp()
-                    
-                    if isinstance(source_path, str):
-                        source_path = Path(source_path)
-                    if isinstance(target_path, str):
-                        target_path = Path(target_path)
-                    
+                    sftp = await loop.run_in_executor(None, ssh.open_sftp)
+                    source_path = Path(source_path)
                     if source_path.is_file():
-                        # Transfer single file
-                        sftp.put(
-                            str(source_path),
-                            str(target_path)
+                        # Upload single file
+                        await loop.run_in_executor(
+                            None,
+                            lambda: sftp.put(
+                                str(source_path),
+                                str(target_path)
+                            )
                         )
                         deployment.artifacts.append(str(target_path))
                     else:
-                        # Transfer directory
-                        for file_path in source_path.rglob('*'):
+                        # Upload directory
+                        for file_path in source_path.rglob("*"):
                             if file_path.is_file():
                                 target_file = target_path / file_path.relative_to(source_path)
                                 target_file.parent.mkdir(parents=True, exist_ok=True)
-                                sftp.put(
-                                    str(file_path),
-                                    str(target_file)
+                                await loop.run_in_executor(
+                                    None,
+                                    lambda: sftp.put(
+                                        str(file_path),
+                                        str(target_file)
+                                    )
                                 )
                                 deployment.artifacts.append(str(target_file))
-                    
-                    sftp.close()
                 
                 # Close connection
-                ssh.close()
+                await loop.run_in_executor(None, ssh.close)
                 
                 # Update deployment
                 deployment.status = 'completed'
@@ -649,51 +731,52 @@ class DocumentationDeployment:
             self.deployments[deployment_id] = deployment
             
             try:
+                # Run Ansible operations in a thread pool
+                loop = asyncio.get_event_loop()
+                
                 # Setup Ansible
                 loader = ansible.parsing.dataloader.DataLoader()
                 inventory = ansible.inventory.manager.InventoryManager(
                     loader=loader,
                     sources=str(inventory_path)
                 )
-                
                 variable_manager = ansible.vars.manager.VariableManager(
                     loader=loader,
                     inventory=inventory
                 )
                 
+                # Add extra vars
                 if extra_vars:
                     variable_manager.extra_vars = extra_vars
                 
-                # Create callback plugin
+                # Create callback
                 class ResultCallback(ansible.plugins.callback.CallbackBase):
                     def v2_runner_on_ok(self, result, **kwargs):
-                        deployment.logs.append(
-                            f"Task {result.task_name} completed on {result.host.name}"
-                        )
-                    
+                        deployment.logs.append(f"Task {result.task_name} completed")
+                        
                     def v2_runner_on_failed(self, result, **kwargs):
-                        deployment.logs.append(
-                            f"Task {result.task_name} failed on {result.host.name}: "
-                            f"{result._result.get('msg', '')}"
-                        )
+                        deployment.logs.append(f"Task {result.task_name} failed: {result._result.get('msg', '')}")
                 
-                # Execute playbook
-                executor = ansible.executor.playbook_executor.PlaybookExecutor(
+                callback = ResultCallback()
+                
+                # Create playbook executor
+                pbex = ansible.executor.playbook_executor.PlaybookExecutor(
                     playbooks=[str(playbook_path)],
                     inventory=inventory,
                     variable_manager=variable_manager,
                     loader=loader,
                     passwords={}
                 )
+                pbex._tqm._stdout_callback = callback
                 
-                executor._tqm._stdout_callback = ResultCallback()
-                executor.run()
+                # Run playbook
+                await loop.run_in_executor(None, pbex.run)
                 
                 # Update deployment
                 deployment.status = 'completed'
                 deployment.end_time = datetime.now().isoformat()
                 
-                self.logger.info(f"Deployed using Ansible: {playbook_path}")
+                self.logger.info(f"Deployed via Ansible: {playbook_path}")
                 return deployment
                 
             except Exception as e:
@@ -703,7 +786,7 @@ class DocumentationDeployment:
                 raise
                 
         except Exception as e:
-            self.logger.error(f"Failed to deploy using Ansible: {str(e)}")
+            self.logger.error(f"Failed to deploy via Ansible: {str(e)}")
             raise
 
     def get_deployment(self, deployment_id: str) -> Optional[Deployment]:
@@ -738,140 +821,115 @@ class DocumentationDeployment:
     async def rollback_deployment(self, deployment_id: str):
         """Rollback a deployment."""
         try:
-            # Get deployment
-            deployment = self.deployments.get(deployment_id)
+            deployment = self.get_deployment(deployment_id)
             if not deployment:
-                raise ValueError(f"Deployment not found: {deployment_id}")
+                raise ValueError(f"Deployment {deployment_id} not found")
             
-            # Create rollback deployment
-            rollback_id = f"rollback_{deployment_id}"
-            rollback = Deployment(
-                id=rollback_id,
-                type=f"{deployment.type}_rollback",
-                status='in_progress',
-                start_time=datetime.now().isoformat(),
-                end_time=None,
-                config=deployment.config,
-                logs=[],
-                artifacts=[]
-            )
+            # Run rollback in a thread pool
+            loop = asyncio.get_event_loop()
             
-            self.deployments[rollback_id] = rollback
-            
-            try:
-                # Perform rollback based on deployment type
-                if deployment.type == 'docker':
-                    # Stop and remove container
-                    container = self.docker_client.containers.get(
-                        deployment.config['container_name']
+            if deployment.type == 'docker':
+                # Stop and remove container
+                for artifact in deployment.artifacts:
+                    await loop.run_in_executor(
+                        None,
+                        lambda: self.docker_client.containers.get(artifact).remove(force=True)
                     )
-                    container.stop()
-                    container.remove()
-                    
-                elif deployment.type == 'kubernetes':
-                    # Delete deployment
-                    self.k8s_client.delete_namespaced_deployment(
-                        name=deployment.config['deployment_name'],
-                        namespace=deployment.config['namespace']
+            
+            elif deployment.type == 'kubernetes':
+                # Delete deployment
+                for artifact in deployment.artifacts:
+                    await loop.run_in_executor(
+                        None,
+                        lambda: self.k8s_client.delete_namespaced_deployment(
+                            name=artifact,
+                            namespace=deployment.config['namespace']
+                        )
                     )
-                    
-                elif deployment.type == 'aws':
-                    # Delete objects
-                    for artifact in deployment.artifacts:
-                        self.aws_client.delete_object(
+            
+            elif deployment.type == 'aws':
+                # Delete objects
+                for artifact in deployment.artifacts:
+                    await loop.run_in_executor(
+                        None,
+                        lambda: self.aws_client.delete_object(
                             Bucket=deployment.config['bucket'],
                             Key=artifact
                         )
-                    
-                elif deployment.type == 'gcs':
-                    # Delete blobs
-                    bucket = self.gcs_client.bucket(deployment.config['bucket'])
-                    for artifact in deployment.artifacts:
-                        bucket.blob(artifact).delete()
-                    
-                elif deployment.type == 'azure':
-                    # Delete blobs
-                    container = self.azure_client.get_container_client(
-                        deployment.config['container']
                     )
-                    for artifact in deployment.artifacts:
-                        container.delete_blob(artifact)
-                    
-                elif deployment.type == 'ssh':
-                    # Connect to host
-                    ssh = paramiko.SSHClient()
-                    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    
-                    if 'key_filename' in deployment.config:
-                        ssh.connect(
-                            deployment.config['host'],
-                            username=deployment.config['username'],
-                            key_filename=deployment.config['key_filename']
-                        )
-                    else:
-                        ssh.connect(
-                            deployment.config['host'],
-                            username=deployment.config['username'],
-                            password=deployment.config.get('password')
-                        )
-                    
-                    # Remove files
-                    for artifact in deployment.artifacts:
-                        ssh.exec_command(f"rm -rf {artifact}")
-                    
-                    ssh.close()
-                    
-                elif deployment.type == 'ansible':
-                    # Create rollback playbook
-                    rollback_playbook = {
-                        'name': f"Rollback {deployment_id}",
-                        'hosts': 'all',
-                        'tasks': []
-                    }
-                    
-                    # Add tasks to restore previous state
-                    for log in deployment.logs:
-                        if 'changed' in log.lower():
-                            task = {
-                                'name': f"Restore {log.split()[0]}",
-                                'command': f"echo 'Restoring {log.split()[0]}'"
-                            }
-                            rollback_playbook['tasks'].append(task)
-                    
-                    # Execute rollback playbook
-                    loader = ansible.parsing.dataloader.DataLoader()
-                    inventory = ansible.inventory.manager.InventoryManager(
-                        loader=loader,
-                        sources=deployment.config['inventory_path']
+            
+            elif deployment.type == 'gcs':
+                # Delete objects
+                bucket = await loop.run_in_executor(
+                    None,
+                    lambda: self.gcs_client.bucket(deployment.config['bucket'])
+                )
+                for artifact in deployment.artifacts:
+                    blob = bucket.blob(artifact)
+                    await loop.run_in_executor(None, blob.delete)
+            
+            elif deployment.type == 'azure':
+                # Delete blobs
+                container_client = await loop.run_in_executor(
+                    None,
+                    lambda: self.azure_client.get_container_client(deployment.config['container'])
+                )
+                for artifact in deployment.artifacts:
+                    await loop.run_in_executor(
+                        None,
+                        lambda: container_client.delete_blob(artifact)
                     )
-                    
-                    variable_manager = ansible.vars.manager.VariableManager(
-                        loader=loader,
-                        inventory=inventory
+            
+            elif deployment.type == 'ssh':
+                # Connect and remove files
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                
+                await loop.run_in_executor(
+                    None,
+                    lambda: ssh.connect(
+                        hostname=deployment.config['host'],
+                        username=deployment.config['username']
                     )
-                    
-                    executor = ansible.executor.playbook_executor.PlaybookExecutor(
-                        playbooks=[rollback_playbook],
-                        inventory=inventory,
-                        variable_manager=variable_manager,
-                        loader=loader,
-                        passwords={}
+                )
+                
+                sftp = await loop.run_in_executor(None, ssh.open_sftp)
+                for artifact in deployment.artifacts:
+                    await loop.run_in_executor(
+                        None,
+                        lambda: sftp.remove(artifact)
                     )
-                    
-                    executor.run()
                 
-                # Update rollback deployment
-                rollback.status = 'completed'
-                rollback.end_time = datetime.now().isoformat()
+                await loop.run_in_executor(None, ssh.close)
+            
+            elif deployment.type == 'ansible':
+                # Run cleanup playbook
+                loader = ansible.parsing.dataloader.DataLoader()
+                inventory = ansible.inventory.manager.InventoryManager(
+                    loader=loader,
+                    sources=deployment.config['inventory_path']
+                )
+                variable_manager = ansible.vars.manager.VariableManager(
+                    loader=loader,
+                    inventory=inventory
+                )
                 
-                self.logger.info(f"Rolled back deployment: {deployment_id}")
+                pbex = ansible.executor.playbook_executor.PlaybookExecutor(
+                    playbooks=[f"{deployment.config['playbook_path']}.cleanup"],
+                    inventory=inventory,
+                    variable_manager=variable_manager,
+                    loader=loader,
+                    passwords={}
+                )
                 
-            except Exception as e:
-                rollback.status = 'failed'
-                rollback.end_time = datetime.now().isoformat()
-                rollback.logs.append(f"Rollback failed: {str(e)}")
-                raise
-                
+                await loop.run_in_executor(None, pbex.run)
+            
+            # Update deployment status
+            deployment.status = 'rolled_back'
+            deployment.end_time = datetime.now().isoformat()
+            
+            self.logger.info(f"Rolled back deployment: {deployment_id}")
+            
         except Exception as e:
             self.logger.error(f"Failed to rollback deployment: {str(e)}")
             raise 
