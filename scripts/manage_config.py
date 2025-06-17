@@ -370,7 +370,7 @@ class ConfigManager:
         print("\nConfiguration Validation Results:")
         print(f"\nTimestamp: {results['timestamp']}")
         print(f"Config Path: {results['config_path']}")
-        print(f"Valid: {'✓' if results['valid'] else '✗'}")
+        print(f"Valid: {'���' if results['valid'] else '���'}")
         
         if results["issues"]:
             print("\nIssues:")

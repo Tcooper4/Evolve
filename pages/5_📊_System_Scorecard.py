@@ -10,14 +10,14 @@ import streamlit as st
 # Local imports
 from utils.system_status import get_system_scorecard
 
-st.set_page_config(page_title="📊 System Scorecard", page_icon="📊", layout="wide")
-st.title("📊 System Scorecard")
+st.set_page_config(page_title="ğŸ“Š System Scorecard", page_icon="ğŸ“Š", layout="wide")
+st.title("ğŸ“Š System Scorecard")
 
 # Refresh button
 def refresh():
     st.session_state["scorecard_refresh"] = datetime.datetime.now().isoformat()
 
-if st.button("📥 Refresh Now"):
+if st.button("ğŸ“¥ Refresh Now"):
     refresh()
 
 # Load metrics with default values
@@ -50,19 +50,19 @@ else:
     st.info("No trade data available for chart.")
 
 # Load and display goal status
-st.subheader("🎯 Goal Status")
+st.subheader("ğŸ�¯ Goal Status")
 goals = data.get("goal_status", {})
 if goals:
     for key, value in goals.items():
         if value is True or (isinstance(value, str) and value.lower() == "pass"):
-            st.markdown(f"✅ **{key}**: <span style='color:green'>Met</span>", unsafe_allow_html=True)
+            st.markdown(f"âœ… **{key}**: <span style='color:green'>Met</span>", unsafe_allow_html=True)
         else:
-            st.markdown(f"❌ **{key}**: <span style='color:red'>Missed</span>", unsafe_allow_html=True)
+            st.markdown(f"â�Œ **{key}**: <span style='color:red'>Missed</span>", unsafe_allow_html=True)
 else:
     st.info("No goal status available.")
 
 # Table of last 10 runs
-st.subheader("📝 Last 10 Strategy/Model Runs")
+st.subheader("ğŸ“� Last 10 Strategy/Model Runs")
 last_10 = data.get("last_10_entries", pd.DataFrame())
 if isinstance(last_10, pd.DataFrame) and not last_10.empty:
     st.dataframe(last_10, use_container_width=True)

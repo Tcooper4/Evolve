@@ -92,7 +92,7 @@ class NotificationService:
         try:
             # Format alert message
             message = {
-                "text": f"🚨 Alert: {alert.get('title', 'Unknown Alert')}",
+                "text": f"ðŸš¨ Alert: {alert.get('title', 'Unknown Alert')}",
                 "attachments": [{
                     "color": self._get_severity_color(alert.get("severity", "info")),
                     "title": alert.get("title", ""),

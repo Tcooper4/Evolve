@@ -1,5 +1,5 @@
 """
-# Adapted from automation/core/task_manager.py — legacy task management logic
+# Adapted from automation/core/task_manager.py â€” legacy task management logic
 
 TaskManager for managing, queuing, and executing agentic tasks in the trading system.
 """

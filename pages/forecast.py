@@ -28,7 +28,7 @@ sys.path.append(str(project_root))
 
 def render_forecast_page():
     """Render the forecast page."""
-    st.title("📈 Price Forecast")
+    st.title("ðŸ“ˆ Price Forecast")
     
     # Initialize session state variables if they don't exist
     if "signals" not in st.session_state:

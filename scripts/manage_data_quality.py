@@ -418,17 +418,17 @@ class DataQualityManager:
         
         print("\nSchema Validation:")
         if results["schema_validation"]["success"]:
-            print("  ✓ Schema validation passed")
+            print("  ��� Schema validation passed")
         else:
-            print("  ✗ Schema validation failed")
+            print("  ��� Schema validation failed")
             for result in results["schema_validation"]["results"]:
                 print(f"    - {result['message']}")
         
         print("\nQuality Validation:")
         if results["quality_validation"]["success"]:
-            print("  ✓ Quality validation passed")
+            print("  ��� Quality validation passed")
         else:
-            print("  ✗ Quality validation failed")
+            print("  ��� Quality validation failed")
             for result in results["quality_validation"]["results"]:
                 print(f"    - {result['message']}")
 

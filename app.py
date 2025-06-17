@@ -88,17 +88,17 @@ def show_rsi_optimizer():
 def show_sidebar_summary():
     """Show a summary of key metrics in the sidebar."""
     stats = get_system_scorecard()
-    st.sidebar.title("📈 System Status")
+    st.sidebar.title("üìà System Status")
     st.sidebar.metric("Sharpe (7d)", stats["sharpe_7d"])
     st.sidebar.metric("Win Rate (%)", stats["win_rate"])
-    st.sidebar.metric("Goal Status", "✅" if stats["goal_status"].get("overall", False) else "❌")
+    st.sidebar.metric("Goal Status", "‚úÖ" if stats["goal_status"].get("overall", False) else "‚ùå")
 
 def main():
     """Main application entry point."""
     # Set page config
     st.set_page_config(
         page_title="Trading Platform",
-        page_icon="📈",
+        page_icon="üìà",
         layout="wide"
     )
     

@@ -1,5 +1,5 @@
 """
-# Adapted from automation/core/orchestrator.py — legacy agent orchestration logic
+# Adapted from automation/core/orchestrator.py â€” legacy agent orchestration logic
 
 Task orchestrator for managing and executing automated tasks in the trading system.
 Handles task scheduling, execution, and dependency management.

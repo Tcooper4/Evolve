@@ -1,5 +1,5 @@
 """
-# Adapted from automation/core/security.py — legacy security logic
+# Adapted from automation/core/security.py â€” legacy security logic
 
 Security Module
 
