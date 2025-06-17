@@ -29,7 +29,7 @@ def init_session_state() -> None:
     """Initialize Streamlit session state with core components."""
     st.set_page_config(
         page_title="Evolve Clean Trading Dashboard",
-        page_icon="📈",
+        page_icon="ðŸ“ˆ",
         layout="wide",
         initial_sidebar_state="expanded",
     )

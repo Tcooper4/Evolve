@@ -1,5 +1,5 @@
 """
-# Adapted from automation/core/service_manager.py — legacy service management logic
+# Adapted from automation/core/service_manager.py â€” legacy service management logic
 
 Service Manager
 
