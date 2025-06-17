@@ -274,7 +274,7 @@ class APIManager:
         print("\nAPI Test Results:")
         print("\nEndpoints:")
         for result in results:
-            status = "✓" if result["success"] else "✗"
+            status = "���" if result["success"] else "���"
             print(f"{status} {result['endpoint']}")
             if not result["success"]:
                 print(f"  Error: {result.get('error', 'Unknown error')}")

@@ -106,7 +106,7 @@ class ModelEvaluator:
         - MSE: {metrics['mse']:.4f}
         - RMSE: {metrics['rmse']:.4f}
         - MAE: {metrics['mae']:.4f}
-        - R²: {metrics['r2']:.4f}
+        - RÂ²: {metrics['r2']:.4f}
         - Directional Accuracy: {metrics['directional_accuracy']:.2%}
         """
         

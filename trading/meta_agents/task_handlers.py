@@ -1,5 +1,5 @@
 """
-# Adapted from automation/core/task_handlers.py — legacy task handler logic
+# Adapted from automation/core/task_handlers.py â€” legacy task handler logic
 
 Task handlers for agentic tasks in the trading system.
 """

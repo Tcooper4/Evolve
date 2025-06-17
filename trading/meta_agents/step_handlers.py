@@ -1,5 +1,5 @@
 """
-# Adapted from automation/core/step_handlers.py — legacy step execution logic
+# Adapted from automation/core/step_handlers.py â€” legacy step execution logic
 
 Step Execution Handlers
 
