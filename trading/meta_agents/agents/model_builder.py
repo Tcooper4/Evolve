@@ -14,6 +14,7 @@ for improved forecasting performance.
 import os
 import json
 import logging
+import uuid
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Union, Callable
@@ -34,6 +35,9 @@ import xgboost as xgb
 from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 import arch
+
+# Local imports
+from trading.agents.task_memory import Task, TaskMemory, TaskStatus
 
 # Optional imports with guards
 try:
@@ -85,6 +89,7 @@ class ModelBuilder:
             config_path: Path to the configuration file
         """
         self.config = self._load_config(config_path)
+        self.task_memory = TaskMemory()
         
         # Initialize model registry
         self.model_registry = {
@@ -133,6 +138,16 @@ class ModelBuilder:
         Returns:
             ModelOutput containing forecast and metrics
         """
+        task_id = str(uuid.uuid4())
+        task = Task(
+            task_id=task_id,
+            task_type="arima_training",
+            status=TaskStatus.PENDING,
+            agent=self.__class__.__name__,
+            notes="Training ARIMA model"
+        )
+        self.task_memory.add_task(task)
+
         try:
             start_time = datetime.now()
             
@@ -164,15 +179,34 @@ class ModelBuilder:
                 timestamp=datetime.now().isoformat()
             )
             
-            return ModelOutput(
+            output = ModelOutput(
                 forecast=forecast,
                 metrics=metrics,
                 model_name="ARIMA",
                 model_params={"order": (5,1,0)}
             )
+
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.COMPLETED,
+                notes=f"Successfully trained ARIMA model with MSE: {mse:.4f}",
+                metadata={
+                    'mse': mse,
+                    'sharpe_ratio': sharpe,
+                    'max_drawdown': drawdown,
+                    'training_time': metrics.training_time
+                }
+            )
+            
+            return output
             
         except Exception as e:
             logger.error(f"Error in ARIMA model: {e}")
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.FAILED,
+                notes=f"Failed to train ARIMA model: {str(e)}"
+            )
             raise
 
     async def run_lstm(self, data: pd.DataFrame) -> ModelOutput:
@@ -185,6 +219,16 @@ class ModelBuilder:
         Returns:
             ModelOutput containing forecast and metrics
         """
+        task_id = str(uuid.uuid4())
+        task = Task(
+            task_id=task_id,
+            task_type="lstm_training",
+            status=TaskStatus.PENDING,
+            agent=self.__class__.__name__,
+            notes="Training LSTM model"
+        )
+        self.task_memory.add_task(task)
+
         try:
             start_time = datetime.now()
             
@@ -256,7 +300,7 @@ class ModelBuilder:
                 timestamp=datetime.now().isoformat()
             )
             
-            return ModelOutput(
+            output = ModelOutput(
                 forecast=forecast.flatten(),
                 metrics=metrics,
                 model_name="LSTM",
@@ -265,9 +309,28 @@ class ModelBuilder:
                     "epochs": self.config.get("lstm_epochs", 50)
                 }
             )
+
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.COMPLETED,
+                notes=f"Successfully trained LSTM model with MSE: {mse:.4f}",
+                metadata={
+                    'mse': mse,
+                    'sharpe_ratio': sharpe,
+                    'max_drawdown': drawdown,
+                    'training_time': metrics.training_time
+                }
+            )
+            
+            return output
             
         except Exception as e:
             logger.error(f"Error in LSTM model: {e}")
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.FAILED,
+                notes=f"Failed to train LSTM model: {str(e)}"
+            )
             raise
 
     async def run_xgboost(self, data: pd.DataFrame) -> ModelOutput:
@@ -280,33 +343,37 @@ class ModelBuilder:
         Returns:
             ModelOutput containing forecast and metrics
         """
+        task_id = str(uuid.uuid4())
+        task = Task(
+            task_id=task_id,
+            task_type="xgboost_training",
+            status=TaskStatus.PENDING,
+            agent=self.__class__.__name__,
+            notes="Training XGBoost model"
+        )
+        self.task_memory.add_task(task)
+
         try:
             start_time = datetime.now()
             
-            # Prepare data
+            # Create features
             def create_features(df):
                 df = df.copy()
-                df['lag_1'] = df['value'].shift(1)
-                df['lag_2'] = df['value'].shift(2)
-                df['lag_3'] = df['value'].shift(3)
-                df['rolling_mean'] = df['value'].rolling(window=7).mean()
-                df['rolling_std'] = df['value'].rolling(window=7).std()
-                return df
+                for i in range(1, 6):
+                    df[f'lag_{i}'] = df['value'].shift(i)
+                df['rolling_mean'] = df['value'].rolling(window=5).mean()
+                df['rolling_std'] = df['value'].rolling(window=5).std()
+                return df.dropna()
             
-            data = create_features(data)
-            data = data.dropna()
+            # Prepare data
+            df = create_features(data)
+            X = df.drop(['value'], axis=1)
+            y = df['value']
             
             # Split data
-            train_size = int(len(data) * 0.8)
-            train = data[:train_size]
-            test = data[train_size:]
-            
-            # Prepare features
-            feature_cols = ['lag_1', 'lag_2', 'lag_3', 'rolling_mean', 'rolling_std']
-            X_train = train[feature_cols]
-            y_train = train['value']
-            X_test = test[feature_cols]
-            y_test = test['value']
+            train_size = int(len(X) * 0.8)
+            X_train, X_test = X[:train_size], X[train_size:]
+            y_train, y_test = y[:train_size], y[train_size:]
             
             # Train model
             model = xgb.XGBRegressor(
@@ -318,22 +385,16 @@ class ModelBuilder:
             
             # Generate forecast
             forecast_steps = self.config.get("forecast_steps", 30)
+            last_data = df.iloc[-1:].copy()
             forecast = []
-            last_data = data.iloc[-1:].copy()
             
             for _ in range(forecast_steps):
-                # Update features
+                pred = model.predict(last_data.drop(['value'], axis=1))
+                forecast.append(pred[0])
+                
+                # Update features for next prediction
+                last_data['value'] = pred[0]
                 last_data = create_features(last_data)
-                X_pred = last_data[feature_cols]
-                
-                # Make prediction
-                pred = model.predict(X_pred)[0]
-                forecast.append(pred)
-                
-                # Update last_data for next iteration
-                last_data['value'] = pred
-            
-            forecast = np.array(forecast)
             
             # Calculate metrics
             mse = mean_squared_error(y_test, model.predict(X_test))
@@ -350,8 +411,8 @@ class ModelBuilder:
                 timestamp=datetime.now().isoformat()
             )
             
-            return ModelOutput(
-                forecast=forecast,
+            output = ModelOutput(
+                forecast=np.array(forecast),
                 metrics=metrics,
                 model_name="XGBoost",
                 model_params={
@@ -360,17 +421,36 @@ class ModelBuilder:
                     "max_depth": 5
                 }
             )
+
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.COMPLETED,
+                notes=f"Successfully trained XGBoost model with MSE: {mse:.4f}",
+                metadata={
+                    'mse': mse,
+                    'sharpe_ratio': sharpe,
+                    'max_drawdown': drawdown,
+                    'training_time': metrics.training_time
+                }
+            )
+            
+            return output
             
         except Exception as e:
             logger.error(f"Error in XGBoost model: {e}")
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.FAILED,
+                notes=f"Failed to train XGBoost model: {str(e)}"
+            )
             raise
 
     async def run_prophet(self, data: pd.DataFrame) -> ModelOutput:
         """
-        Run Prophet model for time series forecasting.
+        Run Prophet model.
         
         Args:
-            data: DataFrame with 'Close' column and datetime index
+            data: Input time series data
             
         Returns:
             ModelOutput containing forecast and metrics
@@ -378,36 +458,35 @@ class ModelBuilder:
         if not PROPHET_AVAILABLE:
             raise ImportError("Prophet is not available")
             
+        task_id = str(uuid.uuid4())
+        task = Task(
+            task_id=task_id,
+            task_type="prophet_training",
+            status=TaskStatus.PENDING,
+            agent=self.__class__.__name__,
+            notes="Training Prophet model"
+        )
+        self.task_memory.add_task(task)
+
         try:
             start_time = datetime.now()
             
-            # Prepare data for Prophet
+            # Prepare data
             df = data.reset_index()
             df.columns = ['ds', 'y']
             
             # Split data
             train_size = int(len(df) * 0.8)
-            train = df[:train_size]
-            test = df[train_size:]
+            train_df = df[:train_size]
+            test_df = df[train_size:]
             
-            # Configure and fit Prophet model
+            # Train model
             model = Prophet(
                 yearly_seasonality=True,
                 weekly_seasonality=True,
-                daily_seasonality=True,
-                changepoint_prior_scale=0.05,
-                seasonality_prior_scale=10.0
+                daily_seasonality=True
             )
-            
-            # Add custom seasonality if needed
-            if self.config.get("prophet_custom_seasonality"):
-                model.add_seasonality(
-                    name='custom',
-                    period=365.25,
-                    fourier_order=5
-                )
-            
-            model.fit(train)
+            model.fit(train_df)
             
             # Generate forecast
             forecast_steps = self.config.get("forecast_steps", 30)
@@ -415,7 +494,7 @@ class ModelBuilder:
             forecast = model.predict(future)
             
             # Calculate metrics
-            mse = mean_squared_error(test['y'], forecast['yhat'][train_size:])
+            mse = mean_squared_error(test_df['y'], forecast['yhat'][train_size:])
             returns = np.diff(forecast['yhat'][-forecast_steps:]) / forecast['yhat'][-forecast_steps:-1]
             sharpe = np.sqrt(252) * np.mean(returns) / np.std(returns)
             drawdown = np.min(np.cumsum(returns))
@@ -429,82 +508,88 @@ class ModelBuilder:
                 timestamp=datetime.now().isoformat()
             )
             
-            return ModelOutput(
+            output = ModelOutput(
                 forecast=forecast['yhat'][-forecast_steps:].values,
                 metrics=metrics,
                 model_name="Prophet",
                 model_params={
                     "yearly_seasonality": True,
                     "weekly_seasonality": True,
-                    "daily_seasonality": True,
-                    "changepoint_prior_scale": 0.05,
-                    "seasonality_prior_scale": 10.0
-                },
-                confidence_intervals=(
-                    forecast['yhat_lower'][-forecast_steps:].values,
-                    forecast['yhat_upper'][-forecast_steps:].values
-                )
+                    "daily_seasonality": True
+                }
             )
+
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.COMPLETED,
+                notes=f"Successfully trained Prophet model with MSE: {mse:.4f}",
+                metadata={
+                    'mse': mse,
+                    'sharpe_ratio': sharpe,
+                    'max_drawdown': drawdown,
+                    'training_time': metrics.training_time
+                }
+            )
+            
+            return output
             
         except Exception as e:
             logger.error(f"Error in Prophet model: {e}")
-            # Return dummy forecast with high MSE
-            return self._create_dummy_output("Prophet", e)
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.FAILED,
+                notes=f"Failed to train Prophet model: {str(e)}"
+            )
+            raise
 
     async def run_garch(self, data: pd.DataFrame) -> ModelOutput:
         """
-        Run GARCH model for volatility forecasting.
+        Run GARCH model.
         
         Args:
-            data: DataFrame with 'Close' column and datetime index
+            data: Input time series data
             
         Returns:
             ModelOutput containing forecast and metrics
         """
+        task_id = str(uuid.uuid4())
+        task = Task(
+            task_id=task_id,
+            task_type="garch_training",
+            status=TaskStatus.PENDING,
+            agent=self.__class__.__name__,
+            notes="Training GARCH model"
+        )
+        self.task_memory.add_task(task)
+
         try:
             start_time = datetime.now()
             
-            # Calculate returns
-            returns = np.diff(data['Close']) / data['Close'][:-1]
+            # Prepare data
+            returns = np.diff(data['value']) / data['value'][:-1]
             
             # Split data
             train_size = int(len(returns) * 0.8)
-            train = returns[:train_size]
-            test = returns[train_size:]
+            train_returns = returns[:train_size]
+            test_returns = returns[train_size:]
             
-            # Fit GARCH(1,1) model
+            # Train model
             model = arch.arch_model(
-                train,
+                train_returns,
                 vol='GARCH',
                 p=1,
-                q=1,
-                mean='Zero',
-                dist='normal'
+                q=1
             )
             model_fit = model.fit(disp='off')
             
-            # Generate volatility forecast
+            # Generate forecast
             forecast_steps = self.config.get("forecast_steps", 30)
-            vol_forecast = model_fit.forecast(horizon=forecast_steps)
-            
-            # Generate synthetic price forecast
-            last_price = data['Close'].iloc[-1]
-            price_forecast = [last_price]
-            
-            for i in range(forecast_steps):
-                # Generate random return based on forecasted volatility
-                vol = vol_forecast.variance['h.1'].iloc[i]
-                ret = np.random.normal(0, np.sqrt(vol))
-                next_price = price_forecast[-1] * (1 + ret)
-                price_forecast.append(next_price)
-            
-            price_forecast = np.array(price_forecast[1:])  # Remove initial price
+            forecast = model_fit.forecast(horizon=forecast_steps)
             
             # Calculate metrics
-            mse = mean_squared_error(test, model_fit.forecast(horizon=len(test)).mean['h.1'])
-            returns = np.diff(price_forecast) / price_forecast[:-1]
-            sharpe = np.sqrt(252) * np.mean(returns) / np.std(returns)
-            drawdown = np.min(np.cumsum(returns))
+            mse = mean_squared_error(test_returns, model_fit.conditional_volatility[train_size:])
+            sharpe = np.sqrt(252) * np.mean(forecast.mean['h.1']) / np.std(forecast.mean['h.1'])
+            drawdown = np.min(np.cumsum(forecast.mean['h.1']))
             
             metrics = ModelMetrics(
                 mse=mse,
@@ -515,28 +600,42 @@ class ModelBuilder:
                 timestamp=datetime.now().isoformat()
             )
             
-            return ModelOutput(
-                forecast=price_forecast,
+            output = ModelOutput(
+                forecast=forecast.mean['h.1'].values,
                 metrics=metrics,
                 model_name="GARCH",
-                model_params={
-                    "p": 1,
-                    "q": 1,
-                    "mean": "Zero",
-                    "dist": "normal"
+                model_params={"p": 1, "q": 1}
+            )
+
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.COMPLETED,
+                notes=f"Successfully trained GARCH model with MSE: {mse:.4f}",
+                metadata={
+                    'mse': mse,
+                    'sharpe_ratio': sharpe,
+                    'max_drawdown': drawdown,
+                    'training_time': metrics.training_time
                 }
             )
             
+            return output
+            
         except Exception as e:
             logger.error(f"Error in GARCH model: {e}")
-            return self._create_dummy_output("GARCH", e)
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.FAILED,
+                notes=f"Failed to train GARCH model: {str(e)}"
+            )
+            raise
 
     async def run_ridge(self, data: pd.DataFrame) -> ModelOutput:
         """
-        Run Ridge regression model for time series forecasting.
+        Run Ridge model.
         
         Args:
-            data: DataFrame with 'Close' column and datetime index
+            data: Input time series data
             
         Returns:
             ModelOutput containing forecast and metrics
@@ -544,58 +643,54 @@ class ModelBuilder:
         if not RIDGE_AVAILABLE:
             raise ImportError("Ridge is not available")
             
+        task_id = str(uuid.uuid4())
+        task = Task(
+            task_id=task_id,
+            task_type="ridge_training",
+            status=TaskStatus.PENDING,
+            agent=self.__class__.__name__,
+            notes="Training Ridge model"
+        )
+        self.task_memory.add_task(task)
+
         try:
             start_time = datetime.now()
             
-            # Create lag features
+            # Create features
             def create_features(df, n_lags=5):
                 df = df.copy()
                 for i in range(1, n_lags + 1):
-                    df[f'lag_{i}'] = df['Close'].shift(i)
-                return df
+                    df[f'lag_{i}'] = df['value'].shift(i)
+                df['rolling_mean'] = df['value'].rolling(window=5).mean()
+                df['rolling_std'] = df['value'].rolling(window=5).std()
+                return df.dropna()
             
             # Prepare data
-            data = create_features(data)
-            data = data.dropna()
+            df = create_features(data)
+            X = df.drop(['value'], axis=1)
+            y = df['value']
             
             # Split data
-            train_size = int(len(data) * 0.8)
-            train = data[:train_size]
-            test = data[train_size:]
+            train_size = int(len(X) * 0.8)
+            X_train, X_test = X[:train_size], X[train_size:]
+            y_train, y_test = y[:train_size], y[train_size:]
             
-            # Prepare features
-            feature_cols = [f'lag_{i}' for i in range(1, 6)]
-            X_train = train[feature_cols]
-            y_train = train['Close']
-            X_test = test[feature_cols]
-            y_test = test['Close']
-            
-            # Train Ridge model
-            model = Ridge(
-                alpha=1.0,
-                fit_intercept=True,
-                normalize=True
-            )
+            # Train model
+            model = Ridge(alpha=1.0)
             model.fit(X_train, y_train)
             
             # Generate forecast
             forecast_steps = self.config.get("forecast_steps", 30)
+            last_data = df.iloc[-1:].copy()
             forecast = []
-            last_data = data.iloc[-1:].copy()
             
             for _ in range(forecast_steps):
-                # Update features
+                pred = model.predict(last_data.drop(['value'], axis=1))
+                forecast.append(pred[0])
+                
+                # Update features for next prediction
+                last_data['value'] = pred[0]
                 last_data = create_features(last_data)
-                X_pred = last_data[feature_cols]
-                
-                # Make prediction
-                pred = model.predict(X_pred)[0]
-                forecast.append(pred)
-                
-                # Update last_data for next iteration
-                last_data['Close'] = pred
-            
-            forecast = np.array(forecast)
             
             # Calculate metrics
             mse = mean_squared_error(y_test, model.predict(X_test))
@@ -612,36 +707,60 @@ class ModelBuilder:
                 timestamp=datetime.now().isoformat()
             )
             
-            return ModelOutput(
-                forecast=forecast,
+            output = ModelOutput(
+                forecast=np.array(forecast),
                 metrics=metrics,
                 model_name="Ridge",
-                model_params={
-                    "alpha": 1.0,
-                    "fit_intercept": True,
-                    "normalize": True,
-                    "n_lags": 5
+                model_params={"alpha": 1.0}
+            )
+
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.COMPLETED,
+                notes=f"Successfully trained Ridge model with MSE: {mse:.4f}",
+                metadata={
+                    'mse': mse,
+                    'sharpe_ratio': sharpe,
+                    'max_drawdown': drawdown,
+                    'training_time': metrics.training_time
                 }
             )
             
+            return output
+            
         except Exception as e:
             logger.error(f"Error in Ridge model: {e}")
-            return self._create_dummy_output("Ridge", e)
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.FAILED,
+                notes=f"Failed to train Ridge model: {str(e)}"
+            )
+            raise
 
     async def run_hybrid(self, data: pd.DataFrame) -> ModelOutput:
         """
-        Run hybrid model combining multiple models.
+        Run Hybrid model combining multiple models.
         
         Args:
-            data: DataFrame with 'Close' column and datetime index
+            data: Input time series data
             
         Returns:
-            ModelOutput containing combined forecast and metrics
+            ModelOutput containing forecast and metrics
         """
+        task_id = str(uuid.uuid4())
+        task = Task(
+            task_id=task_id,
+            task_type="hybrid_training",
+            status=TaskStatus.PENDING,
+            agent=self.__class__.__name__,
+            notes="Training Hybrid model"
+        )
+        self.task_memory.add_task(task)
+
         try:
             start_time = datetime.now()
             
-            # Run all available models
+            # Train individual models
             model_outputs = []
             for model_name, model_func in self.model_registry.items():
                 if model_name != "Hybrid":
@@ -649,52 +768,66 @@ class ModelBuilder:
                         output = await model_func(data)
                         model_outputs.append(output)
                     except Exception as e:
-                        logger.warning(f"Error running {model_name}: {e}")
+                        logger.warning(f"Model {model_name} failed: {e}")
             
             if not model_outputs:
-                raise ValueError("No models successfully ran")
+                raise ValueError("No models successfully trained")
             
-            # Calculate weights based on MSE
-            mses = [output.metrics.mse for output in model_outputs]
-            weights = 1 / np.array(mses)
-            weights = weights / np.sum(weights)
+            # Combine forecasts using weighted average
+            weights = np.array([1/output.metrics.mse for output in model_outputs])
+            weights = weights / weights.sum()
             
-            # Combine forecasts
-            forecast_steps = self.config.get("forecast_steps", 30)
-            combined_forecast = np.zeros(forecast_steps)
-            
+            combined_forecast = np.zeros_like(model_outputs[0].forecast)
             for output, weight in zip(model_outputs, weights):
-                combined_forecast += output.forecast * weight
+                combined_forecast += weight * output.forecast
             
             # Calculate combined metrics
-            returns = np.diff(combined_forecast) / combined_forecast[:-1]
-            sharpe = np.sqrt(252) * np.mean(returns) / np.std(returns)
-            drawdown = np.min(np.cumsum(returns))
+            mse = np.average([output.metrics.mse for output in model_outputs], weights=weights)
+            sharpe = np.average([output.metrics.sharpe_ratio for output in model_outputs], weights=weights)
+            drawdown = np.average([output.metrics.max_drawdown for output in model_outputs], weights=weights)
             
             metrics = ModelMetrics(
-                mse=np.mean(mses),
+                mse=mse,
                 sharpe_ratio=sharpe,
                 max_drawdown=drawdown,
                 training_time=(datetime.now() - start_time).total_seconds(),
-                forecast_steps=forecast_steps,
+                forecast_steps=len(combined_forecast),
                 timestamp=datetime.now().isoformat()
             )
             
-            return ModelOutput(
+            output = ModelOutput(
                 forecast=combined_forecast,
                 metrics=metrics,
                 model_name="Hybrid",
                 model_params={
-                    "weights": dict(zip(
-                        [output.model_name for output in model_outputs],
-                        weights.tolist()
-                    ))
+                    "weights": weights.tolist(),
+                    "models": [output.model_name for output in model_outputs]
+                }
+            )
+
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.COMPLETED,
+                notes=f"Successfully trained Hybrid model with MSE: {mse:.4f}",
+                metadata={
+                    'mse': mse,
+                    'sharpe_ratio': sharpe,
+                    'max_drawdown': drawdown,
+                    'training_time': metrics.training_time,
+                    'models': [output.model_name for output in model_outputs]
                 }
             )
             
+            return output
+            
         except Exception as e:
             logger.error(f"Error in Hybrid model: {e}")
-            return self._create_dummy_output("Hybrid", e)
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.FAILED,
+                notes=f"Failed to train Hybrid model: {str(e)}"
+            )
+            raise
 
     def _create_dummy_output(self, model_name: str, error: Exception) -> ModelOutput:
         """
@@ -728,34 +861,58 @@ class ModelBuilder:
 
     async def select_best_model(self, data: pd.DataFrame) -> ModelOutput:
         """
-        Select the best performing model.
+        Select the best performing model from all available models.
         
         Args:
-            data: DataFrame with 'Close' column and datetime index
+            data: Input time series data
             
         Returns:
             ModelOutput from the best performing model
         """
+        task_id = str(uuid.uuid4())
+        task = Task(
+            task_id=task_id,
+            task_type="model_selection",
+            status=TaskStatus.PENDING,
+            agent=self.__class__.__name__,
+            notes="Selecting best performing model"
+        )
+        self.task_memory.add_task(task)
+
         try:
-            best_mse = float('inf')
-            best_output = None
-            
+            results = []
             for model_name, model_func in self.model_registry.items():
                 try:
                     output = await model_func(data)
-                    if output.metrics.mse < best_mse:
-                        best_mse = output.metrics.mse
-                        best_output = output
+                    results.append(output)
                 except Exception as e:
-                    logger.warning(f"Error running {model_name}: {e}")
+                    logger.warning(f"Model {model_name} failed: {e}")
+                    results.append(self._create_dummy_output(model_name, e))
             
-            if best_output is None:
-                raise ValueError("No models successfully ran")
+            # Select best model based on MSE
+            best_output = min(results, key=lambda x: x.metrics.mse)
+            
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.COMPLETED,
+                notes=f"Selected {best_output.model_name} as best model with MSE: {best_output.metrics.mse:.4f}",
+                metadata={
+                    'selected_model': best_output.model_name,
+                    'mse': best_output.metrics.mse,
+                    'sharpe_ratio': best_output.metrics.sharpe_ratio,
+                    'max_drawdown': best_output.metrics.max_drawdown
+                }
+            )
             
             return best_output
             
         except Exception as e:
-            logger.error(f"Error selecting best model: {e}")
+            logger.error(f"Error in model selection: {e}")
+            self.task_memory.update_task(
+                task_id,
+                status=TaskStatus.FAILED,
+                notes=f"Failed to select best model: {str(e)}"
+            )
             raise
 
     def export_model_config(self, output: ModelOutput) -> Dict:
