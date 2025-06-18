@@ -1,0 +1,66 @@
+{
+    "data": {
+        "providers": {
+            "alpha_vantage": {
+                "api_key": "",
+                "base_url": "https://www.alphavantage.co/query"
+            },
+            "yfinance": {
+                "base_url": "https://query1.finance.yahoo.com/v8/finance"
+            }
+        },
+        "storage": {
+            "path": "data",
+            "format": "parquet",
+            "compression": "snappy"
+        }
+    },
+    "models": {
+        "lstm": {
+            "hidden_size": 128,
+            "num_layers": 2,
+            "dropout": 0.2,
+            "batch_size": 32,
+            "learning_rate": 0.001
+        },
+        "transformer": {
+            "d_model": 256,
+            "nhead": 8,
+            "num_layers": 6,
+            "dropout": 0.1,
+            "batch_size": 32,
+            "learning_rate": 0.0001
+        },
+        "tcn": {
+            "num_channels": [64, 128, 256],
+            "kernel_size": 3,
+            "dropout": 0.2,
+            "batch_size": 32,
+            "learning_rate": 0.001
+        }
+    },
+    "training": {
+        "validation_split": 0.2,
+        "test_split": 0.1,
+        "early_stopping_patience": 10,
+        "max_epochs": 100,
+        "checkpoint_dir": "models/checkpoints"
+    },
+    "alerts": {
+        "email": {
+            "smtp_server": "smtp.gmail.com",
+            "smtp_port": 587,
+            "sender_email": "",
+            "recipient_email": ""
+        },
+        "thresholds": {
+            "prediction_confidence": 0.8,
+            "model_performance": 0.7
+        }
+    },
+    "logging": {
+        "level": "INFO",
+        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        "file": "logs/trading.log"
+    }
+} 

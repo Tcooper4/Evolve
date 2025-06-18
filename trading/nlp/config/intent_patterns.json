@@ -1,0 +1,98 @@
+{
+    "forecast": [
+        "(forecast|predict|outlook|projection)",
+        "(what|how) (will|would) (.*) (perform|move|change)",
+        "(future|upcoming) (price|value|trend)",
+        "(price|value) (prediction|forecast)",
+        "(market|trading) (outlook|projection)",
+        "(technical|fundamental) (analysis|prediction)",
+        "(trend|pattern) (analysis|prediction)",
+        "(support|resistance) (level|zone)",
+        "(breakout|breakdown) (prediction|forecast)",
+        "(momentum|volatility) (forecast|prediction)"
+    ],
+    "analyze": [
+        "(analyze|analysis|examine|study)",
+        "(what|how) (is|are) (.*) (performing|moving|changing)",
+        "(current|present) (situation|condition|state)",
+        "(market|trading) (analysis|study)",
+        "(technical|fundamental) (analysis|study)",
+        "(trend|pattern) (analysis|study)",
+        "(support|resistance) (analysis|study)",
+        "(breakout|breakdown) (analysis|study)",
+        "(momentum|volatility) (analysis|study)",
+        "(correlation|relationship) (analysis|study)"
+    ],
+    "recommend": [
+        "(recommend|suggest|advise|propose)",
+        "(what|how) (should|could) (.*) (do|trade|invest)",
+        "(best|optimal) (action|strategy|approach)",
+        "(entry|exit) (point|level)",
+        "(position|trade) (size|amount)",
+        "(stop loss|take profit) (level|point)",
+        "(risk|reward) (ratio|level)",
+        "(portfolio|allocation) (recommendation|suggestion)",
+        "(hedging|protection) (strategy|approach)",
+        "(scaling|pyramiding) (strategy|approach)"
+    ],
+    "explain": [
+        "(explain|describe|detail|elaborate)",
+        "(why|how) (did|does) (.*) (happen|occur|change)",
+        "(reason|cause|factor) (for|behind)",
+        "(market|trading) (explanation|description)",
+        "(technical|fundamental) (explanation|description)",
+        "(trend|pattern) (explanation|description)",
+        "(support|resistance) (explanation|description)",
+        "(breakout|breakdown) (explanation|description)",
+        "(momentum|volatility) (explanation|description)",
+        "(correlation|relationship) (explanation|description)"
+    ],
+    "compare": [
+        "(compare|comparison|contrast)",
+        "(difference|similarity) (between|among)",
+        "(relative|comparative) (performance|analysis)",
+        "(correlation|relationship) (between|among)",
+        "(strength|weakness) (comparison|analysis)",
+        "(risk|reward) (comparison|analysis)",
+        "(volatility|momentum) (comparison|analysis)",
+        "(trend|pattern) (comparison|analysis)",
+        "(support|resistance) (comparison|analysis)",
+        "(breakout|breakdown) (comparison|analysis)"
+    ],
+    "optimize": [
+        "(optimize|optimization|improve|enhance)",
+        "(best|optimal) (parameter|setting)",
+        "(performance|efficiency) (optimization|improvement)",
+        "(risk|reward) (optimization|improvement)",
+        "(portfolio|allocation) (optimization|improvement)",
+        "(strategy|approach) (optimization|improvement)",
+        "(entry|exit) (optimization|improvement)",
+        "(position|trade) (optimization|improvement)",
+        "(stop loss|take profit) (optimization|improvement)",
+        "(scaling|pyramiding) (optimization|improvement)"
+    ],
+    "validate": [
+        "(validate|validation|verify|check)",
+        "(test|testing|evaluation|assessment)",
+        "(performance|efficiency) (validation|verification)",
+        "(strategy|approach) (validation|verification)",
+        "(parameter|setting) (validation|verification)",
+        "(risk|reward) (validation|verification)",
+        "(portfolio|allocation) (validation|verification)",
+        "(entry|exit) (validation|verification)",
+        "(position|trade) (validation|verification)",
+        "(stop loss|take profit) (validation|verification)"
+    ],
+    "monitor": [
+        "(monitor|track|watch|observe)",
+        "(status|condition|state) (monitoring|tracking)",
+        "(performance|efficiency) (monitoring|tracking)",
+        "(risk|reward) (monitoring|tracking)",
+        "(portfolio|allocation) (monitoring|tracking)",
+        "(position|trade) (monitoring|tracking)",
+        "(stop loss|take profit) (monitoring|tracking)",
+        "(alert|notification) (monitoring|tracking)",
+        "(threshold|level) (monitoring|tracking)",
+        "(deviation|change) (monitoring|tracking)"
+    ]
+} 

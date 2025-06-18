@@ -1,0 +1,26 @@
+{
+    "version": "1.0",
+    "id": "{{ id }}",
+    "title": "{{ title }}",
+    "message": "{{ message }}",
+    "type": "{{ type }}",
+    "priority": "{{ priority }}",
+    "channel": "{{ channel }}",
+    "recipient": "{{ recipient }}",
+    "created_at": "{{ created_at }}",
+    "sent_at": "{{ sent_at }}",
+    "metadata": {{ metadata | tojson }},
+    "status": "{{ status }}",
+    "retry_count": {{ retry_count }},
+    "max_retries": {{ max_retries }},
+    "error": {{ error | default('null') | tojson }},
+    "validation": {
+        "is_valid": {{ is_valid | default(true) | tojson }},
+        "errors": {{ validation_errors | default([]) | tojson }}
+    },
+    "delivery": {
+        "attempts": {{ delivery_attempts | default(0) | tojson }},
+        "last_attempt": {{ last_attempt | default('null') | tojson }},
+        "next_attempt": {{ next_attempt | default('null') | tojson }}
+    }
+} 

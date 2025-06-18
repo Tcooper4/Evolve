@@ -1,0 +1,224 @@
+{
+    "version": "1.0.0",
+    "last_updated": "2024-03-19T12:00:00Z",
+    "environment": "production",
+    "tasks": [
+        {
+            "id": "TASK-001",
+            "type": "feature_implementation",
+            "title": "Data Preprocessing Pipeline Enhancement",
+            "description": "Implement a new data preprocessing pipeline for handling missing values",
+            "priority": "high",
+            "status": "pending",
+            "assignee": null,
+            "created_at": "2024-03-19T10:00:00Z",
+            "updated_at": "2024-03-19T10:00:00Z",
+            "due_date": "2024-03-26T18:00:00Z",
+            "dependencies": [],
+            "estimated_effort": "4h",
+            "actual_effort": null,
+            "requirements": [
+                "Handle missing values using multiple strategies",
+                "Support both numerical and categorical data",
+                "Include data validation",
+                "Add unit tests"
+            ],
+            "acceptance_criteria": [
+                "Pipeline handles all common missing value scenarios",
+                "Performance impact is within acceptable limits",
+                "Test coverage > 90%",
+                "Documentation is complete and clear"
+            ],
+            "tags": ["data-processing", "feature", "high-priority"],
+            "notifications": {
+                "on_start": true,
+                "on_complete": true,
+                "on_delay": true,
+                "channels": ["email", "slack"]
+            },
+            "metrics": {
+                "complexity": "medium",
+                "risk_level": "low",
+                "business_value": "high"
+            }
+        },
+        {
+            "id": "TASK-002",
+            "type": "bug_fix",
+            "title": "Memory Leak Resolution",
+            "description": "Fix memory leak in data loading process",
+            "priority": "critical",
+            "status": "pending",
+            "assignee": null,
+            "created_at": "2024-03-19T10:30:00Z",
+            "updated_at": "2024-03-19T10:30:00Z",
+            "due_date": "2024-03-20T18:00:00Z",
+            "dependencies": [],
+            "estimated_effort": "2h",
+            "actual_effort": null,
+            "requirements": [
+                "Identify source of memory leak",
+                "Implement proper resource cleanup",
+                "Add memory usage monitoring",
+                "Update documentation"
+            ],
+            "acceptance_criteria": [
+                "Memory usage remains stable under load",
+                "No memory leaks detected in stress tests",
+                "Monitoring alerts are properly configured",
+                "Documentation is updated with new monitoring details"
+            ],
+            "tags": ["bug", "critical", "performance"],
+            "notifications": {
+                "on_start": true,
+                "on_complete": true,
+                "on_delay": true,
+                "channels": ["email", "slack", "webhook"]
+            },
+            "metrics": {
+                "complexity": "high",
+                "risk_level": "high",
+                "business_value": "critical"
+            }
+        },
+        {
+            "id": "TASK-003",
+            "type": "code_review",
+            "title": "Model Training Pipeline Optimization",
+            "description": "Review and optimize model training pipeline",
+            "priority": "medium",
+            "status": "pending",
+            "assignee": null,
+            "created_at": "2024-03-19T11:00:00Z",
+            "updated_at": "2024-03-19T11:00:00Z",
+            "due_date": "2024-03-22T18:00:00Z",
+            "dependencies": [],
+            "estimated_effort": "3h",
+            "actual_effort": null,
+            "requirements": [
+                "Check for performance bottlenecks",
+                "Review error handling",
+                "Verify logging implementation",
+                "Suggest optimizations"
+            ],
+            "acceptance_criteria": [
+                "All identified bottlenecks are addressed",
+                "Error handling is robust and consistent",
+                "Logging provides sufficient detail for debugging",
+                "Performance improvements are measurable"
+            ],
+            "tags": ["review", "optimization", "medium-priority"],
+            "notifications": {
+                "on_start": true,
+                "on_complete": true,
+                "on_delay": true,
+                "channels": ["email", "slack"]
+            },
+            "metrics": {
+                "complexity": "medium",
+                "risk_level": "low",
+                "business_value": "medium"
+            }
+        },
+        {
+            "id": "TASK-004",
+            "type": "feature_implementation",
+            "title": "Real-time Data Streaming Support",
+            "description": "Add support for real-time data streaming",
+            "priority": "high",
+            "status": "pending",
+            "assignee": null,
+            "created_at": "2024-03-19T11:30:00Z",
+            "updated_at": "2024-03-19T11:30:00Z",
+            "due_date": "2024-03-28T18:00:00Z",
+            "dependencies": ["TASK-001"],
+            "estimated_effort": "6h",
+            "actual_effort": null,
+            "requirements": [
+                "Implement WebSocket connection",
+                "Add data buffering",
+                "Handle connection errors",
+                "Add monitoring and alerts"
+            ],
+            "acceptance_criteria": [
+                "WebSocket connection is stable and secure",
+                "Data buffering handles high load gracefully",
+                "Error recovery is automatic and reliable",
+                "Monitoring provides real-time insights"
+            ],
+            "tags": ["feature", "streaming", "high-priority"],
+            "notifications": {
+                "on_start": true,
+                "on_complete": true,
+                "on_delay": true,
+                "channels": ["email", "slack", "webhook"]
+            },
+            "metrics": {
+                "complexity": "high",
+                "risk_level": "medium",
+                "business_value": "high"
+            }
+        },
+        {
+            "id": "TASK-005",
+            "type": "bug_fix",
+            "title": "Portfolio Optimization Fix",
+            "description": "Fix incorrect calculation in portfolio optimization",
+            "priority": "high",
+            "status": "pending",
+            "assignee": null,
+            "created_at": "2024-03-19T12:00:00Z",
+            "updated_at": "2024-03-19T12:00:00Z",
+            "due_date": "2024-03-21T18:00:00Z",
+            "dependencies": [],
+            "estimated_effort": "3h",
+            "actual_effort": null,
+            "requirements": [
+                "Identify calculation error",
+                "Fix optimization algorithm",
+                "Add validation tests",
+                "Update documentation"
+            ],
+            "acceptance_criteria": [
+                "Calculations match expected results",
+                "Algorithm handles edge cases correctly",
+                "Validation tests cover all scenarios",
+                "Documentation is clear and accurate"
+            ],
+            "tags": ["bug", "optimization", "high-priority"],
+            "notifications": {
+                "on_start": true,
+                "on_complete": true,
+                "on_delay": true,
+                "channels": ["email", "slack"]
+            },
+            "metrics": {
+                "complexity": "medium",
+                "risk_level": "medium",
+                "business_value": "high"
+            }
+        }
+    ],
+    "metadata": {
+        "total_tasks": 5,
+        "priority_distribution": {
+            "critical": 1,
+            "high": 3,
+            "medium": 1,
+            "low": 0
+        },
+        "type_distribution": {
+            "feature_implementation": 2,
+            "bug_fix": 2,
+            "code_review": 1
+        },
+        "estimated_total_effort": "18h",
+        "dependencies_graph": {
+            "TASK-001": [],
+            "TASK-002": [],
+            "TASK-003": [],
+            "TASK-004": ["TASK-001"],
+            "TASK-005": []
+        }
+    }
+} 

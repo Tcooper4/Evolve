@@ -1,0 +1,100 @@
+{
+    "ticker": {
+        "patterns": [
+            "\\b[A-Z]{1,5}\\b",
+            "\\b[A-Z]{1,5}\\.[A-Z]{1,2}\\b"
+        ],
+        "examples": ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"]
+    },
+    "date": {
+        "patterns": [
+            "\\b\\d{4}-\\d{2}-\\d{2}\\b",
+            "\\b\\d{1,2}/\\d{1,2}/\\d{2,4}\\b",
+            "\\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \\d{1,2}(?:st|nd|rd|th)?,? \\d{4}\\b",
+            "\\b(?:yesterday|today|tomorrow)\\b",
+            "\\b(?:last|next) (?:week|month|year)\\b"
+        ],
+        "examples": ["2024-03-15", "3/15/24", "March 15, 2024", "yesterday", "next week"]
+    },
+    "timeframe": {
+        "patterns": [
+            "\\b(?:1|5|15|30|60|240|D|W|M|Y)(?:min|hour|day|week|month|year)?\\b",
+            "\\b(?:intraday|daily|weekly|monthly|yearly)\\b"
+        ],
+        "examples": ["1min", "5min", "1hour", "daily", "weekly"]
+    },
+    "indicator": {
+        "patterns": [
+            "\\b(?:SMA|EMA|RSI|MACD|BB|ATR|VWAP)(?:\\s+\\d+)?\\b",
+            "\\b(?:Moving Average|Relative Strength|Bollinger Bands|Average True Range)\\b"
+        ],
+        "examples": ["SMA 20", "RSI 14", "MACD", "Bollinger Bands"]
+    },
+    "economic_indicator": {
+        "patterns": [
+            "\\b(?:GDP|CPI|PMI|PPI|NFP|Unemployment|Retail Sales|Inflation|Interest Rate|FOMC|ISM)\\b",
+            "\\b(?:Gross Domestic Product|Consumer Price Index|Purchasing Managers' Index|Producer Price Index|Nonfarm Payrolls)\\b"
+        ],
+        "examples": ["GDP", "CPI", "PMI", "Unemployment"]
+    },
+    "event_type": {
+        "patterns": [
+            "\\b(?:earnings|split|dividend|guidance|IPO|merger|acquisition|bankruptcy|upgrade|downgrade|buyback)\\b"
+        ],
+        "examples": ["earnings", "split", "guidance", "IPO"]
+    },
+    "sector": {
+        "patterns": [
+            "\\b(?:Tech|Technology|Finance|Financials|Healthcare|Energy|Utilities|Consumer|Industrials|Materials|Real Estate|Telecom|Communication|Discretionary|Staples)\\b"
+        ],
+        "examples": ["Tech", "Finance", "Healthcare", "Energy"]
+    },
+    "country": {
+        "patterns": [
+            "\\b(?:USA|United States|US|China|Eurozone|Europe|Germany|France|UK|Japan|India|Brazil|Canada|Australia|Russia|South Korea|Mexico|Africa|Middle East)\\b"
+        ],
+        "examples": ["USA", "China", "Eurozone", "Japan"]
+    },
+    "action": {
+        "patterns": [
+            "\\b(?:buy|sell|hold|short|cover|exit|enter|close)\\b",
+            "\\b(?:long|short)\\s+position\\b"
+        ],
+        "examples": ["buy", "sell", "hold", "short position"]
+    },
+    "price": {
+        "patterns": [
+            "\\$\\d+(?:\\.\\d{2})?\\b",
+            "\\b\\d+(?:\\.\\d{2})?\\s*(?:dollars|USD)\\b"
+        ],
+        "examples": ["$150.25", "100 dollars"]
+    },
+    "percentage": {
+        "patterns": [
+            "\\b\\d+(?:\\.\\d{1,2})?%\\b",
+            "\\b(?:\\d+(?:\\.\\d{1,2})?)\\s*(?:percent|percentage points)\\b"
+        ],
+        "examples": ["5%", "2.5 percent"]
+    },
+    "model": {
+        "patterns": [
+            "\\b(?:LSTM|Transformer|GNN|TCN|Prophet|Autoformer|CatBoost|Ensemble)\\b",
+            "\\b(?:Long Short Term Memory|Graph Neural Network|Temporal Convolutional Network)\\b"
+        ],
+        "examples": ["LSTM", "Transformer", "GNN", "Ensemble"]
+    },
+    "metric": {
+        "patterns": [
+            "\\b(?:MSE|RMSE|MAE|MAPE|R2|Sharpe|Sortino|Calmar)\\b",
+            "\\b(?:Mean Squared Error|Root Mean Squared Error|Mean Absolute Error|Mean Absolute Percentage Error|R-squared|Sharpe Ratio|Sortino Ratio|Calmar Ratio)\\b"
+        ],
+        "examples": ["MSE", "RMSE", "Sharpe Ratio", "R-squared"]
+    },
+    "sentiment": {
+        "patterns": [
+            "\\b(?:bullish|bearish|neutral)\\b",
+            "\\b(?:positive|negative|mixed)\\b"
+        ],
+        "examples": ["bullish", "bearish", "neutral"]
+    }
+} 

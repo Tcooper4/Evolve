@@ -1,0 +1,36 @@
+{
+    "light": {
+        "background_color": "#ffffff",
+        "text_color": "#000000",
+        "grid_color": "#e0e0e0",
+        "plot_colors": [
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22",
+            "#17becf"
+        ]
+    },
+    "dark": {
+        "background_color": "#1e1e1e",
+        "text_color": "#ffffff",
+        "grid_color": "#404040",
+        "plot_colors": [
+            "#1f77b4",
+            "#ff7f0e",
+            "#2ca02c",
+            "#d62728",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#bcbd22",
+            "#17becf"
+        ]
+    }
+} 

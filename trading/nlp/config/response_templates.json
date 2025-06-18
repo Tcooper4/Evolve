@@ -1,0 +1,89 @@
+{
+    "forecast": {
+        "template": "Forecast Analysis:\nTimeframe: {timeframe}\nAsset: {asset}\nPrediction: {prediction}\nConfidence: {confidence}%\nKey Factors: {factors}",
+        "visualization": {
+            "type": "line",
+            "components": [
+                "historical_data",
+                "forecast_line",
+                "confidence_intervals"
+            ]
+        }
+    },
+    "analysis": {
+        "template": "Market Analysis:\nAsset: {asset}\nTimeframe: {timeframe}\nCurrent State: {state}\nKey Indicators: {indicators}\nConfidence: {confidence}%",
+        "visualization": {
+            "type": "candlestick",
+            "components": [
+                "price_data",
+                "technical_indicators",
+                "volume"
+            ]
+        }
+    },
+    "recommendation": {
+        "template": "Trading Recommendation:\nAsset: {asset}\nAction: {action}\nEntry: {entry}\nStop Loss: {stop_loss}\nTake Profit: {take_profit}\nConfidence: {confidence}%\nRationale: {rationale}",
+        "visualization": {
+            "type": "scatter",
+            "components": [
+                "price_data",
+                "entry_point",
+                "stop_loss",
+                "take_profit"
+            ]
+        }
+    },
+    "explanation": {
+        "template": "Market Explanation:\nTopic: {topic}\nAnalysis: {analysis}\nKey Points: {points}\nConfidence: {confidence}%",
+        "visualization": {
+            "type": "bar",
+            "components": [
+                "key_points",
+                "comparison_data"
+            ]
+        }
+    },
+    "compare": {
+        "template": "Comparison Analysis:\nAssets: {assets}\nTimeframe: {timeframe}\nComparison: {comparison}\nKey Differences: {differences}\nConfidence: {confidence}%",
+        "visualization": {
+            "type": "line",
+            "components": [
+                "multiple_assets",
+                "correlation_matrix"
+            ]
+        }
+    },
+    "optimize": {
+        "template": "Optimization Results:\nStrategy: {strategy}\nParameters: {parameters}\nPerformance: {performance}\nImprovements: {improvements}\nConfidence: {confidence}%",
+        "visualization": {
+            "type": "scatter",
+            "components": [
+                "parameter_space",
+                "performance_metrics",
+                "optimization_path"
+            ]
+        }
+    },
+    "validate": {
+        "template": "Validation Results:\nTest: {test}\nResults: {results}\nAccuracy: {accuracy}\nConfidence: {confidence}%",
+        "visualization": {
+            "type": "bar",
+            "components": [
+                "test_results",
+                "accuracy_metrics",
+                "error_analysis"
+            ]
+        }
+    },
+    "monitor": {
+        "template": "Monitoring Report:\nAsset: {asset}\nStatus: {status}\nPerformance: {performance}\nAlerts: {alerts}\nConfidence: {confidence}%",
+        "visualization": {
+            "type": "line",
+            "components": [
+                "performance_tracking",
+                "alert_thresholds",
+                "status_indicators"
+            ]
+        }
+    }
+} 
