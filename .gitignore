@@ -31,9 +31,15 @@ ENV/
 *.swp
 *.swo
 
-# Logs
+# Logs and Archives
 *.log
-logs/
+logs/*.log
+trading/logs/*.log
+trading/logs/*.jsonl
+*.zip
+trading/*.zip
+trading/agents.zip
+trading/logs.zip
 
 # Local development
 .env
