@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Strategy Performance Report</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        :root {
+            --background-color: {{ theme.background_color }};
+            --text-color: {{ theme.text_color }};
+            --grid-color: {{ theme.grid_color }};
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .toc {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+        
+        .toc ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .toc li {
+            margin: 10px 0;
+        }
+        
+        .toc a {
+            color: var(--text-color);
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.02);
+            border-radius: 5px;
+        }
+        
+        .section h2 {
+            margin-top: 0;
+            border-bottom: 2px solid var(--grid-color);
+            padding-bottom: 10px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .chart-container {
+            margin: 20px 0;
+        }
+        
+        .insights {
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--grid-color);
+            font-size: 0.9em;
+            color: rgba(0, 0, 0, 0.6);
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            .section {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Trading Strategy Performance Report</h1>
+            <p>Generated on {{ run_metadata.run_time }}</p>
+        </div>
+        
+        <div class="toc">
+            <h2>Table of Contents</h2>
+            <ul>
+                {% if 'equity_curve' in charts %}
+                <li><a href="#equity-curve">Equity Curve</a></li>
+                {% endif %}
+                {% if 'drawdown' in charts %}
+                <li><a href="#drawdown">Drawdown Analysis</a></li>
+                {% endif %}
+                {% if 'returns_distribution' in charts %}
+                <li><a href="#returns-distribution">Returns Distribution</a></li>
+                {% endif %}
+                {% if 'rolling_metrics' in charts %}
+                <li><a href="#rolling-metrics">Rolling Metrics</a></li>
+                {% endif %}
+                <li><a href="#strategy-metrics">Strategy Metrics</a></li>
+                <li><a href="#insights">Performance Insights</a></li>
+                {% if strategy_params %}
+                <li><a href="#strategy-params">Strategy Parameters</a></li>
+                {% endif %}
+            </ul>
+        </div>
+        
+        {% if 'equity_curve' in charts %}
+        <div id="equity-curve" class="section">
+            <h2>Equity Curve</h2>
+            <div class="chart-container">
+                {{ charts.equity_curve | safe }}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if 'drawdown' in charts %}
+        <div id="drawdown" class="section">
+            <h2>Drawdown Analysis</h2>
+            <div class="chart-container">
+                {{ charts.drawdown | safe }}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if 'returns_distribution' in charts %}
+        <div id="returns-distribution" class="section">
+            <h2>Returns Distribution</h2>
+            <div class="chart-container">
+                {{ charts.returns_distribution | safe }}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if 'rolling_metrics' in charts %}
+        <div id="rolling-metrics" class="section">
+            <h2>Rolling Metrics</h2>
+            <div class="chart-container">
+                {{ charts.rolling_metrics | safe }}
+            </div>
+        </div>
+        {% endif %}
+        
+        <div id="strategy-metrics" class="section">
+            <h2>Strategy Metrics</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div>Sharpe Ratio</div>
+                    <div class="metric-value">{{ "%.2f"|format(metrics.sharpe_ratio) }}</div>
+                </div>
+                <div class="metric-card">
+                    <div>Win Rate</div>
+                    <div class="metric-value">{{ "%.1f"|format(metrics.win_rate * 100) }}%</div>
+                </div>
+                <div class="metric-card">
+                    <div>Max Drawdown</div>
+                    <div class="metric-value">{{ "%.1f"|format(metrics.max_drawdown * 100) }}%</div>
+                </div>
+                <div class="metric-card">
+                    <div>Total Return</div>
+                    <div class="metric-value">{{ "%.1f"|format(metrics.total_return * 100) }}%</div>
+                </div>
+                <div class="metric-card">
+                    <div>Average Trade</div>
+                    <div class="metric-value">{{ "%.1f"|format(metrics.avg_trade * 100) }}%</div>
+                </div>
+                <div class="metric-card">
+                    <div>Profit Factor</div>
+                    <div class="metric-value">{{ "%.2f"|format(metrics.profit_factor) }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="insights" class="section">
+            <h2>Performance Insights</h2>
+            <div class="insights">
+                {{ insights | safe }}
+            </div>
+        </div>
+        
+        {% if strategy_params %}
+        <div id="strategy-params" class="section">
+            <h2>Strategy Parameters</h2>
+            <pre>{{ strategy_params | tojson(indent=2) }}</pre>
+        </div>
+        {% endif %}
+        
+        <div class="footer">
+            <p>
+                Generated by {{ run_metadata.user }} using {{ run_metadata.strategy_name }} (v{{ run_metadata.model_version }})
+                <br>
+                Report generated on {{ run_metadata.run_time }}
+            </p>
+        </div>
+    </div>
+</body>
+</html> 
