@@ -1,7 +1,44 @@
 #!/usr/bin/env python3
 """
 Application management script.
-Provides commands for managing the application lifecycle.
+Provides commands for managing the application lifecycle, including installation, testing, linting, formatting, Docker builds, and cleaning.
+
+This script supports:
+- Installing dependencies
+- Running tests
+- Linting and formatting code
+- Building and running Docker containers
+- Cleaning build artifacts
+
+Usage:
+    python manage.py <command> [options]
+
+Commands:
+    install     Install dependencies
+    test        Run tests
+    lint        Run code linting
+    format      Format code
+    docker      Build and run Docker containers
+    clean       Clean build artifacts
+
+Examples:
+    # Install dependencies
+    python manage.py install
+
+    # Run tests
+    python manage.py test
+
+    # Lint code
+    python manage.py lint
+
+    # Format code
+    python manage.py format
+
+    # Build Docker image
+    python manage.py docker --build
+
+    # Clean build artifacts
+    python manage.py clean
 """
 
 import os
@@ -15,14 +52,39 @@ from pathlib import Path
 from typing import List, Optional
 
 class ApplicationManager:
+    """Application manager for handling lifecycle commands.
+
+    This class provides methods for installing dependencies, running tests,
+    linting, formatting, building Docker images, and cleaning up temporary files.
+
+    Example:
+        manager = ApplicationManager()
+        manager.install_dependencies()
+        manager.run_tests()
+    """
+
     def __init__(self, config_path: str = "config/app_config.yaml"):
-        """Initialize the application manager."""
+        """Initialize the application manager.
+
+        Args:
+            config_path: Path to the application configuration file
+        """
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
 
     def _load_config(self, config_path: str) -> dict:
-        """Load application configuration."""
+        """Load application configuration.
+
+        Args:
+            config_path: Path to the configuration file
+
+        Returns:
+            Configuration dictionary
+
+        Raises:
+            SystemExit: If the configuration file is not found
+        """
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
@@ -31,7 +93,11 @@ class ApplicationManager:
             return yaml.safe_load(f)
 
     def setup_logging(self):
-        """Initialize logging configuration."""
+        """Initialize logging configuration.
+
+        Raises:
+            SystemExit: If the logging configuration file is not found
+        """
         log_config_path = Path("config/logging_config.yaml")
         if not log_config_path.exists():
             print("Error: logging_config.yaml not found")
@@ -43,7 +109,15 @@ class ApplicationManager:
         logging.config.dictConfig(log_config)
 
     def run_command(self, command: List[str], cwd: Optional[str] = None) -> int:
-        """Run a shell command and return its exit code."""
+        """Run a shell command and return its exit code.
+
+        Args:
+            command: List of command arguments
+            cwd: Working directory for the command
+
+        Returns:
+            Exit code of the command
+        """
         try:
             process = subprocess.run(
                 command,
@@ -59,7 +133,11 @@ class ApplicationManager:
             return e.returncode
 
     def install_dependencies(self):
-        """Install application dependencies."""
+        """Install application dependencies.
+
+        Returns:
+            True if installation is successful, False otherwise
+        """
         self.logger.info("Installing dependencies...")
         
         # Install main dependencies
@@ -76,7 +154,11 @@ class ApplicationManager:
         return True
 
     def run_tests(self):
-        """Run application tests."""
+        """Run application tests.
+
+        Returns:
+            True if tests pass, False otherwise
+        """
         self.logger.info("Running tests...")
         
         if self.run_command(["pytest", "tests/", "-v"]) != 0:
@@ -87,7 +169,11 @@ class ApplicationManager:
         return True
 
     def run_linting(self):
-        """Run code linting."""
+        """Run code linting.
+
+        Returns:
+            True if linting passes, False otherwise
+        """
         self.logger.info("Running linting...")
         
         # Run flake8
@@ -114,7 +200,11 @@ class ApplicationManager:
         return True
 
     def format_code(self):
-        """Format code using black and isort."""
+        """Format code using black and isort.
+
+        Returns:
+            True if formatting is successful, False otherwise
+        """
         self.logger.info("Formatting code...")
         
         # Run black
@@ -131,7 +221,11 @@ class ApplicationManager:
         return True
 
     def build_docker(self):
-        """Build Docker image."""
+        """Build Docker image.
+
+        Returns:
+            True if build is successful, False otherwise
+        """
         self.logger.info("Building Docker image...")
         
         if self.run_command(["docker", "build", "-t", "trading-app", "."]) != 0:
@@ -142,7 +236,11 @@ class ApplicationManager:
         return True
 
     def run_docker(self):
-        """Run Docker container."""
+        """Run Docker container.
+
+        Returns:
+            True if container runs successfully, False otherwise
+        """
         self.logger.info("Running Docker container...")
         
         if self.run_command([
@@ -158,7 +256,11 @@ class ApplicationManager:
         return True
 
     def stop_docker(self):
-        """Stop Docker container."""
+        """Stop Docker container.
+
+        Returns:
+            True if container stops successfully, False otherwise
+        """
         self.logger.info("Stopping Docker container...")
         
         if self.run_command(["docker", "stop", "trading-app"]) != 0:
@@ -169,7 +271,11 @@ class ApplicationManager:
         return True
 
     def clean(self):
-        """Clean up temporary files and caches."""
+        """Clean up temporary files and caches.
+
+        Returns:
+            True if cleanup is successful, False otherwise
+        """
         self.logger.info("Cleaning up...")
         
         # Remove Python cache files
@@ -200,34 +306,36 @@ def main():
             "test",
             "lint",
             "format",
-            "build-docker",
-            "run-docker",
-            "stop-docker",
+            "docker",
             "clean"
         ],
-        help="Command to execute"
+        help="Command to run"
     )
-    
+    parser.add_argument(
+        "--help",
+        action="store_true",
+        help="Show usage examples"
+    )
     args = parser.parse_args()
+
+    if args.help:
+        print(__doc__)
+        return
+
     manager = ApplicationManager()
-    
-    commands = {
-        "install": manager.install_dependencies,
-        "test": manager.run_tests,
-        "lint": manager.run_linting,
-        "format": manager.format_code,
-        "build-docker": manager.build_docker,
-        "run-docker": manager.run_docker,
-        "stop-docker": manager.stop_docker,
-        "clean": manager.clean
-    }
-    
-    if args.command in commands:
-        success = commands[args.command]()
-        sys.exit(0 if success else 1)
-    else:
-        parser.print_help()
-        sys.exit(1)
+    if args.command == "install":
+        manager.install_dependencies()
+    elif args.command == "test":
+        manager.run_tests()
+    elif args.command == "lint":
+        manager.run_linting()
+    elif args.command == "format":
+        manager.format_code()
+    elif args.command == "docker":
+        manager.build_docker()
+        manager.run_docker()
+    elif args.command == "clean":
+        manager.clean()
 
 if __name__ == "__main__":
     main() 

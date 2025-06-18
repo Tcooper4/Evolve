@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Data quality management script.
-Provides commands for managing data validation and cleaning.
+Provides commands for assessing and improving data quality, including profiling, fixing, and reporting issues.
+
+This script supports:
+- Profiling data quality
+- Fixing data quality issues
+- Generating data quality reports
+
+Usage:
+    python manage_data_quality.py <command> [options]
+
+Commands:
+    profile     Profile data quality
+    fix         Fix data quality issues
+    report      Generate data quality report
+
+Examples:
+    # Profile data quality
+    python manage_data_quality.py profile --file data/input.csv
+
+    # Fix data quality issues
+    python manage_data_quality.py fix --file data/input.csv --output data/fixed.csv
+
+    # Generate data quality report
+    python manage_data_quality.py report --file data/input.csv --output reports/data_quality.json
 """
 
 import os

@@ -1,0 +1,80 @@
+{
+    "optimizer_settings": {
+        "optimizer_type": "bayesian",
+        "n_initial_points": 5,
+        "n_iterations": 50,
+        "grid_search_points": 100,
+        "early_stopping_patience": 5,
+        "learning_rate": 0.01,
+        "batch_size": 32
+    },
+    "strategies": {
+        "SMA": {
+            "window": [10, 20, 50, 100],
+            "threshold": [0.1, 0.2, 0.3, 0.4, 0.5]
+        },
+        "RSI": {
+            "window": [7, 14, 21],
+            "overbought": [70, 75, 80],
+            "oversold": [20, 25, 30]
+        },
+        "MACD": {
+            "fast_period": [8, 12, 16],
+            "slow_period": [21, 26, 30],
+            "signal_period": [7, 9, 11]
+        },
+        "Bollinger": {
+            "window": [10, 20, 30],
+            "num_std": [1.5, 2.0, 2.5]
+        }
+    },
+    "metrics": {
+        "primary": "sharpe_ratio",
+        "secondary": ["win_rate", "max_drawdown"],
+        "weights": {
+            "sharpe_ratio": 0.6,
+            "win_rate": 0.3,
+            "max_drawdown": 0.1
+        },
+        "thresholds": {
+            "min_sharpe": 1.0,
+            "min_win_rate": 0.5,
+            "max_drawdown": -0.2
+        }
+    },
+    "market_conditions": {
+        "volatility_threshold": 0.02,
+        "trend_threshold": 0.01,
+        "volume_threshold": 1000000
+    },
+    "hybrid_strategies": {
+        "enabled": true,
+        "max_strategies": 3,
+        "confidence_threshold": 0.7
+    },
+    "memory": {
+        "max_size": 1000,
+        "cleanup_threshold": 0.8
+    },
+    "overfitting_detection": {
+        "enabled": true,
+        "cross_validation_folds": 5,
+        "stability_threshold": 0.8
+    },
+    "logging": {
+        "level": "DEBUG",
+        "metrics_to_log": [
+            "sharpe_ratio",
+            "win_rate",
+            "max_drawdown",
+            "mse",
+            "alpha"
+        ],
+        "plot_metrics": true
+    },
+    "advanced_options": {
+        "use_llm_explanations": true,
+        "auto_strategy_override": true,
+        "verbose_mode": false
+    }
+} 

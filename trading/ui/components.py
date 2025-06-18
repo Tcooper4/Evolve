@@ -1,11 +1,316 @@
-"""Shared UI components for the trading dashboard."""
+"""Base UI components for the trading system.
 
+This module provides reusable UI components that can be used across different pages
+and can be integrated with agentic systems for monitoring and control.
+"""
+
+from typing import Dict, List, Optional, Tuple, Union, Any
 import streamlit as st
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from typing import Dict, List, Optional, Union
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
+from pathlib import Path
+import logging
+import json
+
+from .config.registry import registry, ModelConfig, StrategyConfig
+
+logger = logging.getLogger(__name__)
+
+def create_date_range_selector(
+    default_days: int = 30,
+    min_days: int = 1,
+    max_days: int = 365,
+    key: str = "date_range"
+) -> Tuple[datetime, datetime]:
+    """Create a date range selector with validation.
+    
+    Args:
+        default_days: Default number of days to look back
+        min_days: Minimum allowed days
+        max_days: Maximum allowed days
+        key: Unique key for the Streamlit component
+        
+    Returns:
+        Tuple of (start_date, end_date)
+    """
+    end_date = datetime.now()
+    start_date = end_date - timedelta(days=default_days)
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input(
+            "Start Date",
+            value=start_date,
+            min_value=end_date - timedelta(days=max_days),
+            max_value=end_date,
+            key=f"{key}_start"
+        )
+    with col2:
+        end_date = st.date_input(
+            "End Date",
+            value=end_date,
+            min_value=start_date,
+            max_value=datetime.now(),
+            key=f"{key}_end"
+        )
+    
+    # Validate date range
+    if (end_date - start_date).days < min_days:
+        st.warning(f"Date range must be at least {min_days} days")
+        return None, None
+    
+    return start_date, end_date
+
+def create_model_selector(
+    category: Optional[str] = None,
+    default_model: Optional[str] = None,
+    key: str = "model_selector"
+) -> Optional[str]:
+    """Create a model selector with dynamic options from registry.
+    
+    Args:
+        category: Optional category to filter models
+        default_model: Optional default model to select
+        key: Unique key for the Streamlit component
+        
+    Returns:
+        Selected model name or None if no selection
+    """
+    models = registry.get_available_models(category)
+    if not models:
+        st.warning("No models available for the selected category")
+        return None
+    
+    model_names = [model.name for model in models]
+    selected_model = st.selectbox(
+        "Select Model",
+        options=model_names,
+        index=model_names.index(default_model) if default_model in model_names else 0,
+        key=key
+    )
+    
+    # Log selection for agentic monitoring
+    logger.info(f"Model selected: {selected_model}")
+    
+    return selected_model
+
+def create_strategy_selector(
+    category: Optional[str] = None,
+    default_strategy: Optional[str] = None,
+    key: str = "strategy_selector"
+) -> Optional[str]:
+    """Create a strategy selector with dynamic options from registry.
+    
+    Args:
+        category: Optional category to filter strategies
+        default_strategy: Optional default strategy to select
+        key: Unique key for the Streamlit component
+        
+    Returns:
+        Selected strategy name or None if no selection
+    """
+    strategies = registry.get_available_strategies(category)
+    if not strategies:
+        st.warning("No strategies available for the selected category")
+        return None
+    
+    strategy_names = [strategy.name for strategy in strategies]
+    selected_strategy = st.selectbox(
+        "Select Strategy",
+        options=strategy_names,
+        index=strategy_names.index(default_strategy) if default_strategy in strategy_names else 0,
+        key=key
+    )
+    
+    # Log selection for agentic monitoring
+    logger.info(f"Strategy selected: {selected_strategy}")
+    
+    return selected_strategy
+
+def create_parameter_inputs(
+    parameters: Dict[str, Union[str, float, int, bool]],
+    key_prefix: str = "param"
+) -> Dict[str, Any]:
+    """Create input fields for model or strategy parameters.
+    
+    Args:
+        parameters: Dictionary of parameter names and default values
+        key_prefix: Prefix for Streamlit component keys
+        
+    Returns:
+        Dictionary of parameter values
+    """
+    values = {}
+    for param_name, default_value in parameters.items():
+        key = f"{key_prefix}_{param_name}"
+        
+        if isinstance(default_value, bool):
+            values[param_name] = st.checkbox(param_name, value=default_value, key=key)
+        elif isinstance(default_value, int):
+            values[param_name] = st.number_input(
+                param_name,
+                value=default_value,
+                step=1,
+                key=key
+            )
+        elif isinstance(default_value, float):
+            values[param_name] = st.number_input(
+                param_name,
+                value=default_value,
+                step=0.01,
+                key=key
+            )
+        else:
+            values[param_name] = st.text_input(param_name, value=str(default_value), key=key)
+    
+    # Log parameter changes for agentic monitoring
+    logger.info(f"Parameters updated: {values}")
+    
+    return values
+
+def create_asset_selector(
+    assets: List[str],
+    default_asset: Optional[str] = None,
+    key: str = "asset_selector"
+) -> Optional[str]:
+    """Create an asset selector with validation.
+    
+    Args:
+        assets: List of available assets
+        default_asset: Optional default asset to select
+        key: Unique key for the Streamlit component
+        
+    Returns:
+        Selected asset symbol or None if no selection
+    """
+    if not assets:
+        st.warning("No assets available")
+        return None
+    
+    selected_asset = st.selectbox(
+        "Select Asset",
+        options=assets,
+        index=assets.index(default_asset) if default_asset in assets else 0,
+        key=key
+    )
+    
+    # Log selection for agentic monitoring
+    logger.info(f"Asset selected: {selected_asset}")
+    
+    return selected_asset
+
+def create_timeframe_selector(
+    timeframes: List[str],
+    default_timeframe: Optional[str] = None,
+    key: str = "timeframe_selector"
+) -> Optional[str]:
+    """Create a timeframe selector with validation.
+    
+    Args:
+        timeframes: List of available timeframes
+        default_timeframe: Optional default timeframe to select
+        key: Unique key for the Streamlit component
+        
+    Returns:
+        Selected timeframe or None if no selection
+    """
+    if not timeframes:
+        st.warning("No timeframes available")
+        return None
+    
+    selected_timeframe = st.selectbox(
+        "Select Timeframe",
+        options=timeframes,
+        index=timeframes.index(default_timeframe) if default_timeframe in timeframes else 0,
+        key=key
+    )
+    
+    # Log selection for agentic monitoring
+    logger.info(f"Timeframe selected: {selected_timeframe}")
+    
+    return selected_timeframe
+
+def create_confidence_interval(
+    data: pd.DataFrame,
+    confidence_level: float = 0.95
+) -> Tuple[pd.Series, pd.Series]:
+    """Calculate confidence intervals for predictions.
+    
+    Args:
+        data: DataFrame containing predictions and standard errors
+        confidence_level: Confidence level for the interval
+        
+    Returns:
+        Tuple of (lower_bound, upper_bound)
+    """
+    z_score = 1.96  # 95% confidence interval
+    lower_bound = data['prediction'] - z_score * data['std_error']
+    upper_bound = data['prediction'] + z_score * data['std_error']
+    return lower_bound, upper_bound
+
+def create_benchmark_overlay(
+    data: pd.DataFrame,
+    benchmark_column: str,
+    prediction_column: str
+) -> go.Figure:
+    """Create a plot with benchmark overlay.
+    
+    Args:
+        data: DataFrame containing predictions and benchmark data
+        benchmark_column: Name of the benchmark column
+        prediction_column: Name of the prediction column
+        
+    Returns:
+        Plotly figure with benchmark overlay
+    """
+    fig = go.Figure()
+    
+    # Add prediction line
+    fig.add_trace(go.Scatter(
+        x=data.index,
+        y=data[prediction_column],
+        name='Prediction',
+        line=dict(color='blue')
+    ))
+    
+    # Add benchmark line
+    fig.add_trace(go.Scatter(
+        x=data.index,
+        y=data[benchmark_column],
+        name='Benchmark',
+        line=dict(color='gray', dash='dash')
+    ))
+    
+    # Add confidence interval if available
+    if 'std_error' in data.columns:
+        lower, upper = create_confidence_interval(data)
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=upper,
+            fill=None,
+            mode='lines',
+            line_color='rgba(0,100,80,0.2)',
+            name='Upper Bound'
+        ))
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=lower,
+            fill='tonexty',
+            mode='lines',
+            line_color='rgba(0,100,80,0.2)',
+            name='Lower Bound'
+        ))
+    
+    fig.update_layout(
+        title='Prediction with Benchmark Overlay',
+        xaxis_title='Date',
+        yaxis_title='Value',
+        hovermode='x unified'
+    )
+    
+    return fig
 
 def create_prompt_input() -> str:
     """Create the top-level prompt input bar.

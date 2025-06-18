@@ -5,8 +5,8 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
-from .risk_analyzer import RiskAnalyzer
-from .risk_metrics import calculate_rolling_metrics
+from trading.risk_analyzer import RiskAnalyzer
+from trading.risk_metrics import calculate_rolling_metrics
 
 # Configure logging
 logging.basicConfig(

@@ -1,66 +1,65 @@
 {
-    "data": {
-        "providers": {
-            "alpha_vantage": {
-                "api_key": "",
-                "base_url": "https://www.alphavantage.co/query"
-            },
-            "yfinance": {
-                "base_url": "https://query1.finance.yahoo.com/v8/finance"
-            }
-        },
-        "storage": {
-            "path": "data",
-            "format": "parquet",
-            "compression": "snappy"
-        }
-    },
-    "models": {
-        "lstm": {
-            "hidden_size": 128,
-            "num_layers": 2,
-            "dropout": 0.2,
-            "batch_size": 32,
-            "learning_rate": 0.001
-        },
-        "transformer": {
-            "d_model": 256,
-            "nhead": 8,
-            "num_layers": 6,
-            "dropout": 0.1,
-            "batch_size": 32,
-            "learning_rate": 0.0001
-        },
-        "tcn": {
-            "num_channels": [64, 128, 256],
-            "kernel_size": 3,
-            "dropout": 0.2,
-            "batch_size": 32,
-            "learning_rate": 0.001
-        }
-    },
-    "training": {
-        "validation_split": 0.2,
-        "test_split": 0.1,
-        "early_stopping_patience": 10,
-        "max_epochs": 100,
-        "checkpoint_dir": "models/checkpoints"
-    },
-    "alerts": {
-        "email": {
-            "smtp_server": "smtp.gmail.com",
-            "smtp_port": 587,
-            "sender_email": "",
-            "recipient_email": ""
-        },
-        "thresholds": {
-            "prediction_confidence": 0.8,
-            "model_performance": 0.7
-        }
+    "environment": {
+        "env": "${TRADING_ENV}",
+        "debug": "${DEBUG}"
     },
     "logging": {
-        "level": "INFO",
-        "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        "file": "logs/trading.log"
+        "log_dir": "${LOG_DIR}",
+        "log_level": "${LOG_LEVEL}",
+        "agent_log_level": "${AGENT_LOG_LEVEL}",
+        "model_log_level": "${MODEL_LOG_LEVEL}",
+        "data_log_level": "${DATA_LOG_LEVEL}",
+        "root_log_level": "${ROOT_LOG_LEVEL}"
+    },
+    "api_keys": {
+        "alpha_vantage": "${ALPHA_VANTAGE_API_KEY}",
+        "polygon": "${POLYGON_API_KEY}",
+        "openai": "${OPENAI_API_KEY}"
+    },
+    "database": {
+        "host": "${DB_HOST}",
+        "port": "${DB_PORT}",
+        "name": "${DB_NAME}",
+        "user": "${DB_USER}",
+        "password": "${DB_PASSWORD}"
+    },
+    "redis": {
+        "host": "${REDIS_HOST}",
+        "port": "${REDIS_PORT}",
+        "db": "${REDIS_DB}",
+        "password": "${REDIS_PASSWORD}"
+    },
+    "model": {
+        "model_dir": "${MODEL_DIR}",
+        "default_model": "${DEFAULT_MODEL}",
+        "batch_size": "${BATCH_SIZE}",
+        "learning_rate": "${LEARNING_RATE}"
+    },
+    "data": {
+        "data_dir": "${DATA_DIR}",
+        "cache_dir": "${CACHE_DIR}",
+        "default_tickers": "${DEFAULT_TICKERS}"
+    },
+    "web": {
+        "host": "${WEB_HOST}",
+        "port": "${WEB_PORT}",
+        "debug": "${WEB_DEBUG}",
+        "secret_key": "${WEB_SECRET_KEY}"
+    },
+    "monitoring": {
+        "prometheus_port": "${PROMETHEUS_PORT}",
+        "grafana_port": "${GRAFANA_PORT}",
+        "alert_email": "${ALERT_EMAIL}",
+        "alert_webhook": "${ALERT_WEBHOOK}"
+    },
+    "agent": {
+        "timeout": "${AGENT_TIMEOUT}",
+        "max_concurrent": "${MAX_CONCURRENT_AGENTS}",
+        "memory_size": "${AGENT_MEMORY_SIZE}"
+    },
+    "strategy": {
+        "strategy_dir": "${STRATEGY_DIR}",
+        "default_strategy": "${DEFAULT_STRATEGY}",
+        "backtest_days": "${BACKTEST_DAYS}"
     }
 } 

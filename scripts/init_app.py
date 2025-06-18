@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Application initialization script.
-Creates necessary directories, sets up logging, and validates configuration.
+Provides commands for initializing the application, including environment setup and initial configuration.
+
+This script supports:
+- Initializing the application environment
+- Setting up initial configuration
+- Running initial setup tasks
+
+Usage:
+    python init_app.py <command> [options]
+
+Commands:
+    env         Initialize environment
+    config      Set up initial configuration
+    setup       Run initial setup tasks
+
+Examples:
+    # Initialize environment
+    python init_app.py env
+
+    # Set up initial configuration
+    python init_app.py config
+
+    # Run initial setup tasks
+    python init_app.py setup
 """
 
 import os

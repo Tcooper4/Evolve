@@ -13,9 +13,9 @@ from pathlib import Path
 from datetime import datetime
 import json
 import yaml
-from .models import Task, TaskStatus
-from .task_manager import TaskManager
-from .notification_service import NotificationService
+from trading.models import Task, TaskStatus
+from trading.task_manager import TaskManager
+from trading.notification_service import NotificationService
 
 class AutomationTasks:
     """Common automation tasks."""

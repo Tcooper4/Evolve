@@ -21,6 +21,7 @@ from trading.models.base_model import ModelRegistry
 from trading.data.data_loader import load_market_data
 from trading.utils.visualization import plot_forecast, plot_attention_heatmap, plot_shap_values, plot_model_components, plot_model_comparison, plot_performance_over_time, plot_backtest_results
 from trading.utils.metrics import calculate_metrics
+from trading.utils.system_status import get_system_status
 import json
 import os
 
@@ -36,6 +37,8 @@ def initialize_session_state():
         st.session_state.start_date = datetime.now().date()
     if "end_date" not in st.session_state:
         st.session_state.end_date = datetime.now().date()
+    if "last_updated" not in st.session_state:
+        st.session_state.last_updated = datetime.now()
 
 def load_model_configs():
     """Load model configurations from JSON files."""
@@ -58,6 +61,15 @@ def get_model_summary(model):
         model.summary()
     return f.getvalue()
 
+def get_status_badge(status):
+    """Get HTML badge for system status."""
+    colors = {
+        "operational": "green",
+        "degraded": "orange",
+        "down": "red"
+    }
+    return f'<span style="color: {colors[status]}; font-weight: bold;">●</span> {status.title()}'
+
 def main():
     st.set_page_config(
         page_title="Forecast & Trade",
@@ -65,7 +77,24 @@ def main():
         layout="wide"
     )
 
-    st.title("Forecast & Trade")
+    # Get system status
+    system_status = get_system_status()
+    
+    # Header with status and timestamp
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.title("Forecast & Trade")
+    with col2:
+        st.markdown(
+            f"""
+            <div style="text-align: right;">
+                <p>System Status: {get_status_badge(system_status['status'])}</p>
+                <p>Last Updated: {st.session_state.last_updated.strftime('%Y-%m-%d %H:%M:%S')}</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    
     st.markdown("Generate forecasts and execute trades based on model predictions.")
 
     # Initialize session state
@@ -357,6 +386,34 @@ def calculate_win_rate(forecast_data):
     """Calculate win rate from forecast data."""
     # Placeholder implementation
     return np.random.uniform(0.5, 0.7)
+
+def generate_forecast(ticker, selected_model):
+    """Generate forecast for selected ticker and model."""
+    try:
+        # Update last updated timestamp
+        st.session_state.last_updated = datetime.now()
+        
+        # Load market data
+        data = load_market_data(ticker)
+        if data is None:
+            st.error(f"Failed to load data for {ticker}")
+            return None
+            
+        # Initialize router
+        router = ForecastRouter()
+        
+        # Get forecast
+        forecast = router.get_forecast(
+            data=data,
+            model_type=selected_model,
+            forecast_horizon=30
+        )
+        
+        return forecast
+        
+    except Exception as e:
+        st.error(f"Error generating forecast: {str(e)}")
+        return None
 
 if __name__ == "__main__":
     main() 

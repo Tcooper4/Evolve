@@ -13,10 +13,10 @@ from pathlib import Path
 from datetime import datetime
 import json
 import yaml
-from .models import Task, Workflow, TaskStatus
-from .task_manager import TaskManager
-from .workflow_engine import WorkflowEngine
-from .notification_service import NotificationService
+from trading.models import Task, Workflow, TaskStatus
+from trading.task_manager import TaskManager
+from trading.workflow_engine import WorkflowEngine
+from trading.notification_service import NotificationService
 
 class Orchestrator:
     """Orchestrator for managing and coordinating automation tasks."""

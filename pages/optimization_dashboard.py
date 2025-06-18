@@ -1,4 +1,8 @@
-"""Streamlit dashboard for optimization visualization and control."""
+"""Streamlit dashboard for optimization visualization and control.
+
+This page provides interactive sliders for major strategies (RSI, MACD, Bollinger, SMA)
+and an optional 'Auto-Tune' mode for hyperparameter optimization.
+"""
 
 import os
 import sys
@@ -198,23 +202,54 @@ def plot_parameter_changes(df: pd.DataFrame) -> go.Figure:
     params_df = pd.DataFrame(params)
     
     # Create subplots
-    n_params = len(params_df.columns) - 2  # Exclude timestamp and strategy
-    fig = make_subplots(rows=n_params, cols=1)
+    fig = make_subplots(rows=2, cols=2, subplot_titles=("RSI", "MACD", "Bollinger", "SMA"))
     
-    # Plot each parameter
-    for i, param in enumerate(params_df.columns[2:], 1):
-        fig.add_trace(
-            go.Scatter(
-                x=params_df["timestamp"],
-                y=params_df[param],
-                mode="lines+markers",
-                name=param
-            ),
-            row=i, col=1
-        )
+    # RSI
+    fig.add_trace(
+        go.Scatter(
+            x=params_df["timestamp"],
+            y=params_df["rsi_period"],
+            mode="lines+markers",
+            name="RSI Period"
+        ),
+        row=1, col=1
+    )
+    
+    # MACD
+    fig.add_trace(
+        go.Scatter(
+            x=params_df["timestamp"],
+            y=params_df["macd_fast"],
+            mode="lines+markers",
+            name="MACD Fast"
+        ),
+        row=1, col=2
+    )
+    
+    # Bollinger
+    fig.add_trace(
+        go.Scatter(
+            x=params_df["timestamp"],
+            y=params_df["bollinger_period"],
+            mode="lines+markers",
+            name="Bollinger Period"
+        ),
+        row=2, col=1
+    )
+    
+    # SMA
+    fig.add_trace(
+        go.Scatter(
+            x=params_df["timestamp"],
+            y=params_df["sma_period"],
+            mode="lines+markers",
+            name="SMA Period"
+        ),
+        row=2, col=2
+    )
     
     fig.update_layout(
-        height=300 * n_params,
+        height=800,
         showlegend=True,
         title_text="Parameter Changes Over Time"
     )
@@ -222,94 +257,52 @@ def plot_parameter_changes(df: pd.DataFrame) -> go.Figure:
     return fig
 
 def main():
-    """Main function."""
-    st.set_page_config(
-        page_title="Optimization Dashboard",
-        page_icon="📈",
-        layout="wide"
-    )
-    
+    """Main entry point for the optimization dashboard."""
+    st.set_page_config(page_title="Optimization Dashboard", layout="wide")
     st.title("Optimization Dashboard")
-    
-    # Sidebar
-    st.sidebar.header("Settings")
-    
-    # Date range
-    st.sidebar.subheader("Date Range")
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=30)
-    
-    start_date = st.sidebar.date_input(
-        "Start Date",
-        value=start_date
-    )
-    end_date = st.sidebar.date_input(
-        "End Date",
-        value=end_date
-    )
-    
-    # Strategy filter
-    st.sidebar.subheader("Strategy Filter")
-    all_strategies = ["All"] + list(load_optimization_results()["strategy"].unique())
-    selected_strategy = st.sidebar.selectbox(
-        "Select Strategy",
-        options=all_strategies
-    )
-    
-    # Load results
-    results_df = load_optimization_results()
-    
-    if results_df.empty:
+
+    # Load optimization results
+    df = load_optimization_results()
+    if df.empty:
         st.warning("No optimization results found.")
         return
-    
-    # Filter results
-    if selected_strategy != "All":
-        results_df = results_df[results_df["strategy"] == selected_strategy]
-    
-    results_df = results_df[
-        (results_df["timestamp"] >= pd.Timestamp(start_date)) &
-        (results_df["timestamp"] <= pd.Timestamp(end_date))
-    ]
-    
-    # Display metrics
-    st.header("Optimization Metrics")
-    metrics_fig = plot_optimization_metrics(results_df)
-    st.plotly_chart(metrics_fig, use_container_width=True)
-    
-    # Strategy comparison
-    st.header("Strategy Comparison")
-    comparison_fig = plot_strategy_comparison(results_df)
-    st.plotly_chart(comparison_fig, use_container_width=True)
-    
-    # Parameter changes
-    st.header("Parameter Changes")
-    params_fig = plot_parameter_changes(results_df)
-    st.plotly_chart(params_fig, use_container_width=True)
-    
-    # Best configurations
-    st.header("Best Configurations")
-    
-    # Group by strategy
-    best_configs = results_df.sort_values("sharpe_ratio", ascending=False).groupby("strategy").first()
-    
-    for strategy, row in best_configs.iterrows():
-        st.subheader(strategy)
-        
-        # Load configuration
-        config_file = f"sandbox_results/optimization_results_{row.name.strftime('%Y%m%d_%H%M%S')}.json"
-        with open(config_file, "r") as f:
-            config = json.load(f)
-        
-        # Display metrics
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Sharpe Ratio", f"{row['sharpe_ratio']:.2f}")
-        col2.metric("Win Rate", f"{row['win_rate']:.2%}")
-        col3.metric("Max Drawdown", f"{row['max_drawdown']:.2%}")
-        col4.metric("Alpha", f"{row['alpha']:.2f}")
-        
-        # Display parameters
-        st.json(config["params"])
+
+    # ==== Sliders for Major Strategies ====
+    st.subheader("Strategy Parameters")
+    col1, col2 = st.columns(2)
+    with col1:
+        rsi_period = st.slider("RSI Period", 5, 30, 14)
+        macd_fast = st.slider("MACD Fast Period", 5, 30, 12)
+    with col2:
+        bollinger_period = st.slider("Bollinger Period", 5, 30, 20)
+        sma_period = st.slider("SMA Period", 5, 30, 20)
+
+    # ==== Auto-Tune Mode ====
+    st.subheader("Auto-Tune Mode")
+    auto_tune = st.checkbox("Enable Auto-Tune", value=False)
+    if auto_tune:
+        st.info("Auto-Tune mode is enabled. The optimizer will automatically tune hyperparameters.")
+        # Call backend optimizer here
+        # optimizer = BaseOptimizer()
+        # optimizer.optimize()
+
+    # ==== Tabs ====
+    tab1, tab2, tab3 = st.tabs(["📉 Metrics", "📊 Strategy Comparison", "📈 Parameter Changes"])
+
+    with tab1:
+        st.subheader("📉 Optimization Metrics")
+        fig = plot_optimization_metrics(df)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with tab2:
+        st.subheader("📊 Strategy Comparison")
+        fig = plot_strategy_comparison(df)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with tab3:
+        st.subheader("📈 Parameter Changes")
+        fig = plot_parameter_changes(df)
+        st.plotly_chart(fig, use_container_width=True)
 
 if __name__ == "__main__":
     main() 

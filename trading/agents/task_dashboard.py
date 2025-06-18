@@ -9,10 +9,10 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 import json
 import os
-from .task_memory import TaskMemory, Task, TaskStatus
+from trading.task_memory import TaskMemory, Task, TaskStatus
 
 class TaskDashboard:
     """Dashboard for monitoring and managing tasks."""
@@ -33,6 +33,8 @@ class TaskDashboard:
             st.session_state.last_refresh = datetime.now()
         if 'auto_refresh' not in st.session_state:
             st.session_state.auto_refresh = True
+        if 'selected_task' not in st.session_state:
+            st.session_state.selected_task = None
             
     def render(self):
         """Render the task dashboard."""
@@ -66,6 +68,9 @@ class TaskDashboard:
         # Display task statistics
         self._show_statistics()
         
+        # Display task timeline
+        self._show_task_timeline()
+        
         # Display task list
         self._show_task_list()
         
@@ -94,6 +99,50 @@ class TaskDashboard:
         col3.metric("Pending", pending_tasks)
         col4.metric("Failed", failed_tasks)
         
+        # Show completion rate
+        if total_tasks > 0:
+            completion_rate = (completed_tasks / total_tasks) * 100
+            st.progress(completion_rate / 100)
+            st.text(f"Completion Rate: {completion_rate:.1f}%")
+            
+    def _show_task_timeline(self):
+        """Display task timeline."""
+        st.subheader("Task Timeline")
+        
+        # Convert tasks to DataFrame
+        tasks_data = []
+        for task in self.task_memory.tasks.values():
+            tasks_data.append({
+                'Task': task.task_id,
+                'Type': task.task_type,
+                'Status': task.status.value,
+                'Agent': task.agent,
+                'Start': task.created_at,
+                'End': task.updated_at if task.status == TaskStatus.COMPLETED else datetime.now()
+            })
+            
+        if tasks_data:
+            df = pd.DataFrame(tasks_data)
+            
+            # Create timeline
+            fig = px.timeline(df, 
+                            x_start="Start", 
+                            x_end="End", 
+                            y="Task",
+                            color="Status",
+                            hover_data=["Type", "Agent"])
+            
+            fig.update_layout(
+                title="Task Timeline",
+                xaxis_title="Time",
+                yaxis_title="Task",
+                height=400
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No tasks available for timeline")
+            
     def _show_task_list(self):
         """Display the list of tasks."""
         st.subheader("Task List")
@@ -105,60 +154,113 @@ class TaskDashboard:
                 'ID': task.task_id,
                 'Type': task.task_type,
                 'Status': task.status.value,
-                'Agent': task.agent_name,
+                'Agent': task.agent,
                 'Created': task.created_at.isoformat(),
                 'Updated': task.updated_at.isoformat()
             })
             
         if tasks_data:
             df = pd.DataFrame(tasks_data)
-            st.dataframe(df)
+            
+            # Add task selection
+            selected_rows = st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True,
+                on_click=self._on_task_select
+            )
         else:
             st.info("No tasks found")
+            
+    def _on_task_select(self, selected_rows):
+        """Handle task selection.
+        
+        Args:
+            selected_rows: Selected rows from dataframe
+        """
+        if selected_rows:
+            st.session_state.selected_task = selected_rows[0]['ID']
             
     def _show_task_details(self):
         """Display detailed information for selected tasks."""
         st.subheader("Task Details")
         
-        # Get task IDs
-        task_ids = list(self.task_memory.tasks.keys())
-        
-        if task_ids:
-            # Task selector
-            selected_id = st.selectbox(
-                "Select a task to view details",
-                task_ids
-            )
-            
-            # Display task details
-            task = self.task_memory.tasks[selected_id]
-            
-            st.write("### Task Information")
-            st.json({
-                'ID': task.task_id,
-                'Type': task.task_type,
-                'Status': task.status.value,
-                'Agent': task.agent_name,
-                'Created': task.created_at.isoformat(),
-                'Updated': task.updated_at.isoformat(),
-                'Notes': task.notes,
-                'Metadata': task.metadata
-            })
-            
-            # Add task management controls
-            if task.status == TaskStatus.PENDING:
-                if st.button("Mark as Completed"):
-                    task.status = TaskStatus.COMPLETED
-                    self.task_memory.update_task(task)
-                    st.experimental_rerun()
+        if st.session_state.selected_task:
+            task = self.task_memory.get_task(st.session_state.selected_task)
+            if task:
+                # Display task information
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write("### Basic Information")
+                    st.json({
+                        'ID': task.task_id,
+                        'Type': task.task_type,
+                        'Status': task.status.value,
+                        'Agent': task.agent,
+                        'Created': task.created_at.isoformat(),
+                        'Updated': task.updated_at.isoformat()
+                    })
                     
-                if st.button("Mark as Failed"):
-                    task.status = TaskStatus.FAILED
-                    self.task_memory.update_task(task)
-                    st.experimental_rerun()
+                with col2:
+                    st.write("### Additional Information")
+                    st.json({
+                        'Notes': task.notes,
+                        'Metadata': task.metadata
+                    })
+                    
+                # Add task management controls
+                if task.status == TaskStatus.PENDING:
+                    st.write("### Task Management")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        if st.button("Mark as Completed"):
+                            task.status = TaskStatus.COMPLETED
+                            self.task_memory.update_task(task)
+                            st.experimental_rerun()
+                            
+                    with col2:
+                        if st.button("Mark as Failed"):
+                            task.status = TaskStatus.FAILED
+                            self.task_memory.update_task(task)
+                            st.experimental_rerun()
         else:
-            st.info("No tasks available for detailed view")
+            st.info("Select a task to view details")
             
+def get_active_tasks() -> List[Dict[str, Any]]:
+    """Get list of active tasks for frontend integration.
+    
+    Returns:
+        List of active task dictionaries
+    """
+    task_memory = TaskMemory()
+    active_tasks = task_memory.get_tasks_by_status([
+        TaskStatus.PENDING,
+        TaskStatus.IN_PROGRESS
+    ])
+    
+    return [task.to_dict() for task in active_tasks]
+    
+def get_task_log(days: int = 7) -> List[Dict[str, Any]]:
+    """Get task log for frontend integration.
+    
+    Args:
+        days: Number of days of history to retrieve
+        
+    Returns:
+        List of task dictionaries
+    """
+    task_memory = TaskMemory()
+    cutoff = datetime.now() - timedelta(days=days)
+    
+    tasks = [
+        task for task in task_memory.tasks.values()
+        if task.updated_at >= cutoff
+    ]
+    
+    return [task.to_dict() for task in tasks]
+    
 def run_dashboard():
     """Run the task dashboard."""
     # Initialize task memory

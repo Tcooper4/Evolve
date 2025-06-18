@@ -13,7 +13,7 @@ import logging
 from typing import Dict, List, Any, Optional, Type
 from pathlib import Path
 from datetime import datetime
-from .base_agent import BaseAgent
+from trading.base_agent import BaseAgent
 import json
 
 class ServiceManager:
