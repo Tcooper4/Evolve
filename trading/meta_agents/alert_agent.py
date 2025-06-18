@@ -12,8 +12,8 @@ import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pathlib import Path
-from .base_agent import BaseAgent
-from .alert_manager import AlertManager
+from trading.base_agent import BaseAgent
+from trading.alert_manager import AlertManager
 
 class AlertAgent(BaseAgent):
     """Agent responsible for managing alerts and notifications."""

@@ -1,7 +1,35 @@
 #!/usr/bin/env python3
 """
 Data management script.
-Provides commands for managing the application's data files and directories.
+Provides commands for managing datasets, including import, export, validation, and cleaning.
+
+This script supports:
+- Importing datasets
+- Exporting datasets
+- Validating data quality
+- Cleaning data
+
+Usage:
+    python manage_data.py <command> [options]
+
+Commands:
+    import      Import a dataset
+    export      Export a dataset
+    validate    Validate data quality
+    clean       Clean data
+
+Examples:
+    # Import a dataset
+    python manage_data.py import --file data/input.csv
+
+    # Export a dataset
+    python manage_data.py export --file data/output.csv
+
+    # Validate data quality
+    python manage_data.py validate --file data/input.csv
+
+    # Clean data
+    python manage_data.py clean --file data/input.csv --output data/cleaned.csv
 """
 
 import os

@@ -30,63 +30,96 @@ ENV/
 .vscode/
 *.swp
 *.swo
-
-# Logs and Archives
-*.log
-logs/*.log
-trading/logs/*.log
-trading/logs/*.jsonl
-*.zip
-trading/*.zip
-trading/agents.zip
-trading/logs.zip
-
-# Local development
-.env
-.env.local
-.env.*.local
+.project
+.pydevproject
+.settings/
 
 # Testing
 .coverage
 htmlcov/
 .pytest_cache/
 .tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
 
-# Distribution
-dist/
-build/
+# Documentation
+docs/_build/
+site/
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Logs (only ignore specific log files)
+*.log
+logs/*.log
+trading/logs/*.log
+trading/logs/*.jsonl
 
-# System Files
-.DS_Store
-Thumbs.db
+# Data (only ignore specific data files)
+data/private/
+data/sensitive/
+data/temp/
+*.private.csv
+*.private.json
+*.private.pkl
+*.private.h5
+*.private.db
+*.private.sqlite3
 
-# Model checkpoints (but keep the models directory)
-*.pt
-*.pth
-*.ckpt
-test_model_save/
-
-# Data (but keep the mock_data directory structure)
-*.csv
-*.json
-*.parquet
-*.h5
-*.hdf5
-
-# Temporary files
-tmp/
-temp/
-
-# Project specific
-trading_dashboard.egg-info/
+# Models (only ignore specific model files)
+models/private/
+models/sensitive/
+models/temp/
+*.private.h5
+*.private.pkl
+*.private.joblib
 
 # Environment variables
 .env
 .env.*
 !.env.example
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# System
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Cache
+.cache/
+.mypy_cache/
+.ruff_cache/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*~
+
+# Security
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.p12
+*.pfx
+*.p7b
+*.p7c
+*.p7m
+*.p7s
+*.p8
+*.p10
+
+# Project specific
+trading_dashboard.egg-info/
 
 # SSL Certificates and Keys
 certs/

@@ -2,6 +2,43 @@
 """
 ML pipeline management script.
 Provides commands for managing machine learning pipelines and model versioning.
+
+This script supports:
+- Model training and optimization
+- Hyperparameter tuning
+- Model evaluation and deployment
+- Model monitoring and versioning
+- Integration with MLflow, Ray, and other ML platforms
+
+Usage:
+    python manage_ml.py <command> [options]
+
+Commands:
+    train       Train a new model
+    optimize    Optimize model hyperparameters
+    evaluate    Evaluate model performance
+    deploy      Deploy model to production
+    monitor     Monitor model performance
+    version     Manage model versions
+
+Examples:
+    # Train a new model
+    python manage_ml.py train --model-type pytorch --data-path data/train.csv --params '{"learning_rate": 0.001}'
+
+    # Optimize model hyperparameters
+    python manage_ml.py optimize --model-type xgboost --data-path data/train.csv --param-grid '{"max_depth": [3,5,7]}'
+
+    # Evaluate model performance
+    python manage_ml.py evaluate --model-path models/model.pkl --data-path data/test.csv
+
+    # Deploy model to production
+    python manage_ml.py deploy --model-path models/model.pkl --deployment-type mlflow
+
+    # Monitor model performance
+    python manage_ml.py monitor --model-path models/model.pkl --data-path data/live.csv --duration 3600
+
+    # Manage model versions
+    python manage_ml.py version --action list
 """
 
 import os
@@ -89,8 +126,34 @@ import mlflow.paddle
 import mlflow.pyspark.ml
 
 class MLManager:
+    """Manager for machine learning pipeline operations.
+
+    This class provides methods for training, optimizing, evaluating, deploying,
+    and monitoring machine learning models. It supports various model types and
+    integrates with MLflow for experiment tracking and model versioning.
+
+    Attributes:
+        config (dict): Application configuration
+        logger (logging.Logger): Logger instance
+        models_dir (Path): Directory for storing models
+        experiments_dir (Path): Directory for storing experiments
+        mlflow_dir (Path): Directory for MLflow tracking
+
+    Example:
+        manager = MLManager()
+        model = await manager.train_model("pytorch", "data/train.csv")
+        metrics = await manager.evaluate_model(model, "data/test.csv")
+    """
+
     def __init__(self, config_path: str = "config/app_config.yaml"):
-        """Initialize the ML manager."""
+        """Initialize the ML manager.
+
+        Args:
+            config_path: Path to the application configuration file
+
+        Raises:
+            SystemExit: If the configuration file is not found
+        """
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
@@ -103,7 +166,17 @@ class MLManager:
         mlflow.set_tracking_uri(str(self.mlflow_dir))
 
     def _load_config(self, config_path: str) -> dict:
-        """Load application configuration."""
+        """Load application configuration.
+
+        Args:
+            config_path: Path to the configuration file
+
+        Returns:
+            Configuration dictionary
+
+        Raises:
+            SystemExit: If the configuration file is not found
+        """
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
@@ -112,7 +185,11 @@ class MLManager:
             return yaml.safe_load(f)
 
     def setup_logging(self):
-        """Initialize logging configuration."""
+        """Initialize logging configuration.
+
+        Raises:
+            SystemExit: If the logging configuration file is not found
+        """
         log_config_path = Path("config/logging_config.yaml")
         if not log_config_path.exists():
             print("Error: logging_config.yaml not found")
@@ -124,7 +201,19 @@ class MLManager:
         logging.config.dictConfig(log_config)
 
     async def train_model(self, model_type: str, data_path: str, params: Optional[Dict[str, Any]] = None):
-        """Train a machine learning model."""
+        """Train a machine learning model.
+
+        Args:
+            model_type: Type of model to train (e.g., "pytorch", "tensorflow", "xgboost")
+            data_path: Path to the training data
+            params: Optional model parameters
+
+        Returns:
+            Trained model
+
+        Raises:
+            Exception: If model training fails
+        """
         self.logger.info(f"Training {model_type} model with data from {data_path}")
         
         try:
@@ -167,7 +256,19 @@ class MLManager:
             raise
 
     async def optimize_model(self, model_type: str, data_path: str, param_grid: Dict[str, List[Any]]):
-        """Optimize model hyperparameters."""
+        """Optimize model hyperparameters.
+
+        Args:
+            model_type: Type of model to optimize
+            data_path: Path to the training data
+            param_grid: Dictionary of parameter grids for optimization
+
+        Returns:
+            Optimized model
+
+        Raises:
+            Exception: If model optimization fails
+        """
         self.logger.info(f"Optimizing {model_type} model with data from {data_path}")
         
         try:
@@ -750,17 +851,17 @@ class MLManager:
             raise
 
 def main():
-    """Main function."""
-    parser = argparse.ArgumentParser(description="ML Manager")
+    """Main entry point for the ML management script."""
+    parser = argparse.ArgumentParser(description="ML Pipeline Manager")
     parser.add_argument(
         "command",
-        choices=["train", "optimize", "evaluate", "deploy", "monitor"],
-        help="Command to execute"
+        choices=["train", "optimize", "evaluate", "deploy", "monitor", "version"],
+        help="Command to run"
     )
     parser.add_argument(
         "--model-type",
-        choices=["pytorch", "tensorflow", "keras", "sklearn", "xgboost", "lightgbm", "catboost"],
-        help="Type of model to use"
+        choices=["pytorch", "tensorflow", "keras", "xgboost", "lightgbm", "catboost"],
+        help="Type of model"
     )
     parser.add_argument(
         "--data-path",
@@ -771,45 +872,52 @@ def main():
         help="Path to model file"
     )
     parser.add_argument(
+        "--params",
+        type=json.loads,
+        help="Model parameters as JSON string"
+    )
+    parser.add_argument(
+        "--param-grid",
+        type=json.loads,
+        help="Parameter grid for optimization as JSON string"
+    )
+    parser.add_argument(
         "--deployment-type",
         choices=["local", "mlflow", "ray", "bentoml", "seldon", "kserve", "triton", "torchserve"],
         default="local",
-        help="Type of deployment to use"
+        help="Type of deployment"
     )
     parser.add_argument(
         "--duration",
         type=int,
         default=300,
-        help="Duration for monitoring in seconds"
+        help="Monitoring duration in seconds"
     )
-    
+    parser.add_argument(
+        "--help",
+        action="store_true",
+        help="Show usage examples"
+    )
     args = parser.parse_args()
+
+    if args.help:
+        print(__doc__)
+        return
+
     manager = MLManager()
-    
-    commands = {
-        "train": lambda: asyncio.run(
-            manager.train_model(args.model_type, args.data_path)
-        ),
-        "optimize": lambda: asyncio.run(
-            manager.optimize_model(args.model_type, args.data_path, {})
-        ),
-        "evaluate": lambda: asyncio.run(
-            manager.evaluate_model(args.model_path, args.data_path)
-        ),
-        "deploy": lambda: asyncio.run(
-            manager.deploy_model(args.model_path, args.deployment_type)
-        ),
-        "monitor": lambda: asyncio.run(
-            manager.monitor_model(args.model_path, args.data_path, args.duration)
-        )
-    }
-    
-    if args.command in commands:
-        success = commands[args.command]()
-        sys.exit(0 if success else 1)
-    else:
-        parser.print_help()
-        sys.exit(1)
+    if args.command == "train":
+        asyncio.run(manager.train_model(args.model_type, args.data_path, args.params))
+    elif args.command == "optimize":
+        asyncio.run(manager.optimize_model(args.model_type, args.data_path, args.param_grid))
+    elif args.command == "evaluate":
+        asyncio.run(manager.evaluate_model(args.model_path, args.data_path))
+    elif args.command == "deploy":
+        asyncio.run(manager.deploy_model(args.model_path, args.deployment_type))
+    elif args.command == "monitor":
+        asyncio.run(manager.monitor_model(args.model_path, args.data_path, args.duration))
+    elif args.command == "version":
+        # Implement version management
+        pass
 
 if __name__ == "__main__":
     main() 

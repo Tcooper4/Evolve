@@ -1,0 +1,54 @@
+[
+    {
+        "name": "LSTM",
+        "description": "Long Short-Term Memory neural network for time series forecasting",
+        "category": "forecasting",
+        "parameters": {
+            "hidden_size": 64,
+            "num_layers": 2,
+            "dropout": 0.2,
+            "learning_rate": 0.001,
+            "batch_size": 32,
+            "epochs": 100
+        },
+        "required_data": ["price", "volume", "technical_indicators"],
+        "output_type": "regression",
+        "confidence_available": true,
+        "benchmark_support": true
+    },
+    {
+        "name": "Transformer",
+        "description": "Transformer model for sequence modeling and forecasting",
+        "category": "forecasting",
+        "parameters": {
+            "d_model": 128,
+            "nhead": 8,
+            "num_layers": 4,
+            "dropout": 0.1,
+            "learning_rate": 0.0001,
+            "batch_size": 64,
+            "epochs": 100
+        },
+        "required_data": ["price", "volume", "technical_indicators"],
+        "output_type": "regression",
+        "confidence_available": true,
+        "benchmark_support": true
+    },
+    {
+        "name": "GNN",
+        "description": "Graph Neural Network for market structure analysis",
+        "category": "analysis",
+        "parameters": {
+            "hidden_channels": 64,
+            "num_layers": 3,
+            "dropout": 0.2,
+            "learning_rate": 0.001,
+            "batch_size": 32,
+            "epochs": 100
+        },
+        "required_data": ["price", "volume", "market_structure"],
+        "output_type": "regression",
+        "confidence_available": true,
+        "benchmark_support": false
+    }
+] 

@@ -1,4 +1,4 @@
-from .plotting import (
+from trading.plotting import (
     TimeSeriesPlotter,
     PerformancePlotter,
     FeatureImportancePlotter,

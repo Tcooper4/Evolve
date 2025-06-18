@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Documentation management script.
-Provides commands for managing the application's documentation.
+Provides commands for generating, building, and serving project documentation.
+
+This script supports:
+- Generating documentation
+- Building documentation
+- Serving documentation locally
+
+Usage:
+    python manage_docs.py <command> [options]
+
+Commands:
+    generate    Generate documentation
+    build       Build documentation
+    serve       Serve documentation locally
+
+Examples:
+    # Generate documentation
+    python manage_docs.py generate
+
+    # Build documentation
+    python manage_docs.py build
+
+    # Serve documentation locally
+    python manage_docs.py serve --port 8000
 """
 
 import os

@@ -13,9 +13,9 @@ import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pathlib import Path
-from .base_agent import BaseAgent
-from .task_manager import TaskManager
-from .task_handlers import TaskHandlerFactory
+from trading.base_agent import BaseAgent
+from trading.task_manager import TaskManager
+from trading.task_handlers import TaskHandlerFactory
 
 class TaskAgent(BaseAgent):
     """Agent responsible for managing and executing tasks."""

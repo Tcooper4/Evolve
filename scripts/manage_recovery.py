@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
-Disaster recovery management script.
-Provides commands for managing system recovery and resilience.
+Recovery management script.
+Provides commands for managing application recovery, backup, and restore operations.
+
+This script supports:
+- Creating and managing backups
+- Restoring from backups
+- Recovery operations
+
+Usage:
+    python manage_recovery.py <command> [options]
+
+Commands:
+    backup      Create a backup
+    restore     Restore from a backup
+    status      Show recovery status
+
+Examples:
+    # Create a backup
+    python manage_recovery.py backup --output backup_2023_01_01.zip
+
+    # Restore from a backup
+    python manage_recovery.py restore --input backup_2023_01_01.zip
+
+    # Show recovery status
+    python manage_recovery.py status
 """
 
 import os

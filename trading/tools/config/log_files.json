@@ -1,0 +1,17 @@
+[
+    {
+        "filename": "app.log",
+        "format": "text",
+        "template": "[{timestamp}] System initialized"
+    },
+    {
+        "filename": "audit.log",
+        "format": "text",
+        "template": "[{timestamp}] Audit system initialized"
+    },
+    {
+        "filename": "metrics.jsonl",
+        "format": "jsonl",
+        "template": {"timestamp": "{timestamp}", "status": "initialized"}
+    }
+] 

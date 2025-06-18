@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Dependency management script.
-Provides commands for managing the application's Python dependencies.
+Provides commands for managing project dependencies, including installation, updating, and listing packages.
+
+This script supports:
+- Installing dependencies
+- Updating dependencies
+- Listing installed packages
+
+Usage:
+    python manage_deps.py <command> [options]
+
+Commands:
+    install     Install dependencies
+    update      Update dependencies
+    list        List installed packages
+
+Examples:
+    # Install dependencies
+    python manage_deps.py install
+
+    # Update dependencies
+    python manage_deps.py update
+
+    # List installed packages
+    python manage_deps.py list
 """
 
 import os

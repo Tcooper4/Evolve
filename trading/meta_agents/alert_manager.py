@@ -19,7 +19,7 @@ import aiohttp
 import redis
 from pathlib import Path
 from dataclasses import dataclass
-from .metrics_collector import MetricsCollector
+from trading.metrics_collector import MetricsCollector
 
 @dataclass
 class AlertRule:

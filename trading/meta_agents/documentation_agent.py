@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 import json
 import yaml
-from .base_agent import BaseAgent
+from trading.base_agent import BaseAgent
 
 class DocumentationAgent(BaseAgent):
     """Agent responsible for documentation management."""

@@ -12,8 +12,8 @@ from typing import Dict, List, Any, Optional
 from pathlib import Path
 from datetime import datetime
 import json
-from .notification_service import NotificationService
-from .notification_handlers import NotificationHandlerFactory
+from trading.notification_service import NotificationService
+from trading.notification_handlers import NotificationHandlerFactory
 
 class NotificationManager:
     """Manages notifications and their delivery."""

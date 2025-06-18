@@ -24,7 +24,7 @@ except ImportError:
     REDIS_AVAILABLE = False
 
 # Local imports
-from .exceptions import StrategyError, StrategyNotFoundError, StrategyValidationError
+from trading.exceptions import StrategyError, StrategyNotFoundError, StrategyValidationError
 from ..core.performance import log_performance
 
 @dataclass

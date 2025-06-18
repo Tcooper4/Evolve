@@ -1,3 +1,9 @@
+"""
+DEPRECATED: This file is redundant or for development purposes only.
+Please use strategy_optimizer.py for optimization functionality.
+Last updated: 2025-06-18 13:06:26
+"""
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -8,7 +14,7 @@ from pathlib import Path
 import json
 from datetime import datetime
 import os
-from .strategy_optimizer import StrategyOptimizer
+from trading.strategy_optimizer import StrategyOptimizer
 
 class OptimizationError(Exception):
     """Custom exception for optimization errors."""

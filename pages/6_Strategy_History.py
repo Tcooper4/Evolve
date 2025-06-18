@@ -3,6 +3,7 @@ Strategy History Page
 
 This page provides visualization of strategy selection history and performance metrics,
 including timeframe analysis, model comparisons, and performance breakdowns.
+It supports global state tracking for ticker/model selection and allows optional GPT-based summaries for agentic insights.
 """
 
 import streamlit as st
@@ -19,10 +20,20 @@ import matplotlib.pyplot as plt
 from fpdf import FPDF
 import io
 from PIL import Image
+from llm.llm_summary import generate_strategy_commentary
 
 # Constants
 LOG_PATH = "memory/strategy_override_log.json"
 PERF_LOG = "memory/performance_log.json"
+
+def initialize_session_state():
+    """Ensure global state for ticker/model selection is initialized."""
+    if "selected_ticker" not in st.session_state:
+        st.session_state.selected_ticker = None
+    if "selected_model" not in st.session_state:
+        st.session_state.selected_model = None
+    if "date_range" not in st.session_state:
+        st.session_state.date_range = None
 
 def load_strategy_log():
     """Load and process strategy log data."""
@@ -283,186 +294,76 @@ def plot_sector_performance(df, group_by):
     return fig
 
 def main():
-    st.set_page_config(
-        page_title="Strategy History",
-        page_icon="📊",
-        layout="wide"
-    )
-    
+    """Main entry point for the strategy history dashboard."""
+    st.set_page_config(page_title="Strategy History", layout="wide")
     st.title("Strategy History")
-    st.markdown("View and analyze strategy selection history and performance metrics.")
-    
-    # Load data
-    perf_df = load_strategy_log()
-    
-    if perf_df is None:
-        st.warning("No strategy log found. Please run some strategies first.")
+
+    initialize_session_state()
+    df = load_strategy_log()
+    if df is None:
+        st.warning("No strategy log data found.")
         return
-    
-    # Timeframe filter
-    timeframe = st.selectbox("⏱️ Select Timeframe", ["All", "Last 7 Days", "Last 30 Days", "Last 90 Days"])
-    if timeframe != "All":
-        days = int(timeframe.split(" ")[1])
-        cutoff = pd.Timestamp.utcnow() - timedelta(days=days)
-        perf_df = perf_df[perf_df["timestamp"] >= cutoff]
-    
-    # Sidebar filters
-    with st.sidebar:
-        st.header("Filters")
-        
-        # Ticker selection
-        tickers = sorted(perf_df["ticker"].unique())
-        selected_ticker = st.selectbox("Select Ticker", ["All"] + list(tickers))
-        
-        # Model selection
-        models = sorted(perf_df["model"].unique())
-        selected_models = st.multiselect(
-            "Select Models",
-            options=models,
-            default=models
-        )
-        
-        # Agentic filter
-        agentic_filter = st.multiselect(
-            "Strategy Type",
-            options=["Agentic", "Manual"],
-            default=["Agentic", "Manual"]
-        )
-        
-        # Metric selection
-        metrics = ["sharpe", "accuracy", "win_rate"]
-        selected_metric = st.selectbox("Select Metric", metrics)
-        
-        # Group by selection
-        group_by = st.selectbox(
-            "Group By",
-            ["None", "sector", "asset_class"]
-        )
-        
-        # Regime selection
-        regimes = sorted(perf_df["regime"].unique())
-        selected_regime = st.selectbox(
-            "Select Regime",
-            ["All"] + list(regimes)
-        )
-    
-    # Apply filters
-    filtered_df = perf_df.copy()
-    if selected_ticker != "All":
-        filtered_df = filtered_df[filtered_df["ticker"] == selected_ticker]
-    if selected_models:
-        filtered_df = filtered_df[filtered_df["model"].isin(selected_models)]
-    if agentic_filter:
-        filtered_df = filtered_df[filtered_df["agentic_label"].isin(agentic_filter)]
-    if selected_regime != "All":
-        filtered_df = filtered_df[filtered_df["regime"] == selected_regime]
-    
-    # Main content
-    if not filtered_df.empty:
-        # Summary metrics
-        st.subheader("Strategy Summary")
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric(
-                "Total Decisions",
-                len(filtered_df)
+
+    # Use global state for ticker selection
+    tickers = df["ticker"].unique()
+    selected_ticker = st.selectbox("📈 Select Ticker", tickers, index=tickers.tolist().index(st.session_state.selected_ticker) if st.session_state.selected_ticker in tickers else 0)
+    st.session_state.selected_ticker = selected_ticker
+
+    # Filter data for selected ticker
+    df = df[df["ticker"] == selected_ticker]
+
+    # Use global state for date range
+    min_date, max_date = df["timestamp"].min(), df["timestamp"].max()
+    date_range = st.date_input("📅 Date Filter", [min_date, max_date])
+    st.session_state.date_range = date_range
+    if len(date_range) == 2:
+        df = df[(df["timestamp"] >= pd.to_datetime(date_range[0])) & 
+                (df["timestamp"] <= pd.to_datetime(date_range[1]))]
+
+    # ==== Tabs ====
+    tab1, tab2, tab3, tab4 = st.tabs(["📉 Metrics", "📊 Leaderboard", "📈 Regime Analysis", "📁 Export"])
+
+    with tab1:
+        st.subheader("📉 Performance Metrics")
+        selected_metric = st.selectbox("Select Metric", ["sharpe", "accuracy", "win_rate"])
+        fig = plot_metric_timeseries(df, selected_metric, "All Time")
+        st.plotly_chart(fig, use_container_width=True)
+
+    with tab2:
+        st.subheader("📊 Performance Leaderboard")
+        top_models = get_top_models(df)
+        st.write("Top Models:", top_models)
+        leaderboard_df = df.groupby("model").agg({
+            "sharpe": "mean",
+            "accuracy": "mean",
+            "win_rate": "mean"
+        }).round(3)
+        st.dataframe(leaderboard_df)
+
+    with tab3:
+        st.subheader("📈 Regime Analysis")
+        regime = st.selectbox("Select Regime", df["regime"].unique())
+        fig = plot_regime_comparison(df, regime)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with tab4:
+        st.subheader("📁 Export Report")
+        if st.button("Generate PDF Report"):
+            pdf_bytes = generate_pdf_report(df, "All Time", selected_metric, top_models, leaderboard_df)
+            st.download_button(
+                "⬇ Download PDF",
+                pdf_bytes,
+                file_name=f"{selected_ticker}_strategy_report.pdf",
+                mime="application/pdf"
             )
-        with col2:
-            st.metric(
-                "Agentic Decisions",
-                len(filtered_df[filtered_df["agentic"]])
-            )
-        with col3:
-            st.metric(
-                "Manual Overrides",
-                len(filtered_df[~filtered_df["agentic"]])
-            )
-        with col4:
-            st.metric(
-                "Average Confidence",
-                f"{filtered_df['confidence'].mean():.2%}"
-            )
-        
-        # Top Models Summary
-        st.subheader("🥇 Top Models by Metric")
-        top_models = get_top_models(filtered_df)
-        st.markdown(f"""
-        - **Best Sharpe**: {top_models['sharpe']}  
-        - **Best Accuracy**: {top_models['accuracy']}  
-        - **Best Win Rate**: {top_models['win_rate']}  
-        """)
-        
-        # Create tabs for different visualizations
-        tab1, tab2, tab3, tab4 = st.tabs(["Time Series", "Distribution", "Sector Analysis", "Regime Analysis"])
-        
-        with tab1:
-            # Time series plot
-            fig = plot_metric_timeseries(filtered_df, selected_metric, timeframe)
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with tab2:
-            # Distribution plot
-            fig = plot_metric_distribution(filtered_df, selected_metric, timeframe)
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with tab3:
-            if group_by != "None":
-                # Sector/Asset Class performance
-                fig = plot_sector_performance(filtered_df, group_by)
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("Select a grouping option in the sidebar to view sector/asset class analysis.")
-        
-        with tab4:
-            if selected_regime != "All":
-                # Regime comparison
-                fig = plot_regime_comparison(filtered_df, selected_regime)
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("Select a regime in the sidebar to view performance comparison.")
-        
-        # Export section
-        st.subheader("📄 Export Options")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Export CSV
-            if st.button("📤 Export Data (CSV)"):
-                csv = filtered_df.to_csv(index=False).encode("utf-8")
-                st.download_button(
-                    "Download CSV",
-                    csv,
-                    f"strategy_history_{datetime.now().strftime('%Y%m%d')}.csv",
-                    "text/csv"
-                )
-        
-        with col2:
-            # Export PDF
-            if st.button("📑 Export Full Report (PDF)"):
-                # Generate leaderboard
-                leaderboard_df = filtered_df.groupby("model").agg({
-                    selected_metric: ["mean", "std", "count"]
-                }).round(3)
-                
-                # Generate PDF
-                pdf_bytes = generate_pdf_report(
-                    filtered_df,
-                    timeframe,
-                    selected_metric,
-                    top_models,
-                    leaderboard_df
-                )
-                
-                # Download button
-                st.download_button(
-                    "Download PDF Report",
-                    pdf_bytes,
-                    f"strategy_report_{datetime.now().strftime('%Y%m%d')}.pdf",
-                    "application/pdf"
-                )
+
+    # ==== AI Commentary (GPT-based, optional) ====
+    st.subheader("🧠 AI Strategy Commentary")
+    show_gpt = st.checkbox("Generate GPT-based summary", value=False)
+    if show_gpt:
+        st.markdown("```text\n" + generate_strategy_commentary(df) + "\n```")
     else:
-        st.warning("No data available for the selected filters.")
+        st.info("Enable the checkbox to generate a GPT-based summary of strategy performance.")
 
 if __name__ == "__main__":
     main() 

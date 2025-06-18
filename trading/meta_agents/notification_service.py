@@ -11,7 +11,7 @@ import logging
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 from datetime import datetime
-from .notification_handlers import NotificationHandler, SlackHandler, WebhookHandler
+from trading.notification_handlers import NotificationHandler, SlackHandler, WebhookHandler
 
 class NotificationService:
     """Service for managing and sending notifications."""

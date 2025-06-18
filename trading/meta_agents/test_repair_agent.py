@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Any
 import pytest
 import coverage
 
-from .base_agent import BaseMetaAgent
+from trading.base_agent import BaseMetaAgent
 from trading.tests import conftest
 
 class TestRepairAgent(BaseMetaAgent):

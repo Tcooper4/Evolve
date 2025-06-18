@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Application monitoring script.
-Monitors system resources, application performance, and sends alerts if needed.
+Provides commands for monitoring the running application and reporting status.
+
+This script supports:
+- Monitoring application status
+- Reporting application health
+- Exporting monitoring data
+
+Usage:
+    python monitor_app.py <command> [options]
+
+Commands:
+    status      Show application status
+    health      Report application health
+    export      Export monitoring data
+
+Examples:
+    # Show application status
+    python monitor_app.py status
+
+    # Report application health
+    python monitor_app.py health
+
+    # Export monitoring data
+    python monitor_app.py export --output monitoring.json
 """
 
 import os

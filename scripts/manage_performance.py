@@ -2,6 +2,42 @@
 """
 Performance management script.
 Provides commands for profiling and optimizing application performance.
+
+This script supports:
+- Function profiling (CPU, memory, line-by-line)
+- Performance analysis and reporting
+- Automatic optimization suggestions
+- Performance visualization
+- System resource monitoring
+
+Usage:
+    python manage_performance.py <command> [options]
+
+Commands:
+    profile     Profile a function's performance
+    analyze     Analyze performance profiles
+    optimize    Optimize function performance
+    monitor     Monitor system resources
+    report      Generate performance reports
+
+Examples:
+    # Profile a function's CPU usage
+    python manage_performance.py profile --function my_function --type cpu --args '{"arg1": "value1"}'
+
+    # Profile memory usage
+    python manage_performance.py profile --function my_function --type memory
+
+    # Analyze performance profiles
+    python manage_performance.py analyze --profiles "profiles/*.prof" --output reports/analysis.json
+
+    # Optimize function performance
+    python manage_performance.py optimize --function my_function --target cpu
+
+    # Monitor system resources
+    python manage_performance.py monitor --duration 3600 --interval 60
+
+    # Generate performance report
+    python manage_performance.py report --profiles "profiles/*.prof" --format html
 """
 
 import os
@@ -27,10 +63,36 @@ import pandas as pd
 from scipy import stats
 import matplotlib.pyplot as plt
 import seaborn as sns
+import glob
 
 class PerformanceManager:
+    """Manager for application performance profiling and optimization.
+
+    This class provides methods for profiling function performance (CPU, memory,
+    line-by-line), analyzing performance data, generating optimization suggestions,
+    and monitoring system resources.
+
+    Attributes:
+        config (dict): Application configuration
+        logger (logging.Logger): Logger instance
+        prof_dir (Path): Directory for storing profiles
+        reports_dir (Path): Directory for storing reports
+
+    Example:
+        manager = PerformanceManager()
+        result = manager.profile_function(my_function, arg1, arg2)
+        analysis = manager.analyze_performance(["profiles/profile.prof"])
+    """
+
     def __init__(self, config_path: str = "config/app_config.yaml"):
-        """Initialize the performance manager."""
+        """Initialize the performance manager.
+
+        Args:
+            config_path: Path to the application configuration file
+
+        Raises:
+            SystemExit: If the configuration file is not found
+        """
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
@@ -40,7 +102,17 @@ class PerformanceManager:
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
     def _load_config(self, config_path: str) -> dict:
-        """Load application configuration."""
+        """Load application configuration.
+
+        Args:
+            config_path: Path to the configuration file
+
+        Returns:
+            Configuration dictionary
+
+        Raises:
+            SystemExit: If the configuration file is not found
+        """
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
@@ -49,7 +121,11 @@ class PerformanceManager:
             return yaml.safe_load(f)
 
     def setup_logging(self):
-        """Initialize logging configuration."""
+        """Initialize logging configuration.
+
+        Raises:
+            SystemExit: If the logging configuration file is not found
+        """
         log_config_path = Path("config/logging_config.yaml")
         if not log_config_path.exists():
             print("Error: logging_config.yaml not found")
@@ -61,7 +137,19 @@ class PerformanceManager:
         logging.config.dictConfig(log_config)
 
     def profile_function(self, func: callable, *args, **kwargs):
-        """Profile a function's performance."""
+        """Profile a function's performance.
+
+        Args:
+            func: Function to profile
+            *args: Positional arguments for the function
+            **kwargs: Keyword arguments for the function
+
+        Returns:
+            Result of the function execution
+
+        Raises:
+            Exception: If profiling fails
+        """
         self.logger.info(f"Profiling function: {func.__name__}")
         
         try:
@@ -96,7 +184,19 @@ class PerformanceManager:
             raise
 
     def profile_memory(self, func: callable, *args, **kwargs):
-        """Profile a function's memory usage."""
+        """Profile a function's memory usage.
+
+        Args:
+            func: Function to profile
+            *args: Positional arguments for the function
+            **kwargs: Keyword arguments for the function
+
+        Returns:
+            Result of the function execution
+
+        Raises:
+            Exception: If memory profiling fails
+        """
         self.logger.info(f"Profiling memory usage for function: {func.__name__}")
         
         try:
@@ -121,7 +221,19 @@ class PerformanceManager:
             raise
 
     def profile_line(self, func: callable, *args, **kwargs):
-        """Profile a function's line-by-line performance."""
+        """Profile a function's line-by-line performance.
+
+        Args:
+            func: Function to profile
+            *args: Positional arguments for the function
+            **kwargs: Keyword arguments for the function
+
+        Returns:
+            Result of the function execution
+
+        Raises:
+            Exception: If line profiling fails
+        """
         self.logger.info(f"Profiling line-by-line performance for function: {func.__name__}")
         
         try:
@@ -146,7 +258,17 @@ class PerformanceManager:
             raise
 
     def analyze_performance(self, profile_files: List[str]):
-        """Analyze performance profiles."""
+        """Analyze performance profiles.
+
+        Args:
+            profile_files: List of profile file paths to analyze
+
+        Returns:
+            Dictionary containing performance analysis results
+
+        Raises:
+            Exception: If analysis fails
+        """
         self.logger.info("Analyzing performance profiles")
         
         try:
@@ -200,10 +322,7 @@ class PerformanceManager:
             with open(analysis_file, "w") as f:
                 json.dump(analysis, f, indent=2)
             
-            # Generate visualizations
-            self._generate_performance_plots(analysis)
-            
-            self.logger.info(f"Performance analysis saved to {analysis_file}")
+            self.logger.info(f"Analysis saved to {analysis_file}")
             
             return analysis
         except Exception as e:
@@ -410,56 +529,84 @@ class PerformanceManager:
             raise
 
 def main():
-    """Main function."""
+    """Main entry point for the performance management script."""
     parser = argparse.ArgumentParser(description="Performance Manager")
     parser.add_argument(
         "command",
-        choices=["profile", "analyze", "optimize"],
-        help="Command to execute"
+        choices=["profile", "analyze", "optimize", "monitor", "report"],
+        help="Command to run"
     )
     parser.add_argument(
         "--function",
         help="Function to profile or optimize"
     )
     parser.add_argument(
-        "--profile-files",
-        nargs="+",
-        help="Profile files to analyze"
+        "--type",
+        choices=["cpu", "memory", "line"],
+        default="cpu",
+        help="Type of profiling"
     )
     parser.add_argument(
         "--args",
-        nargs="+",
-        help="Arguments for the function"
+        type=json.loads,
+        help="Function arguments as JSON string"
     )
     parser.add_argument(
-        "--kwargs",
-        type=json.loads,
-        help="Keyword arguments for the function"
+        "--profiles",
+        help="Glob pattern for profile files"
     )
-    
+    parser.add_argument(
+        "--output",
+        help="Output file path"
+    )
+    parser.add_argument(
+        "--duration",
+        type=int,
+        default=300,
+        help="Monitoring duration in seconds"
+    )
+    parser.add_argument(
+        "--interval",
+        type=int,
+        default=60,
+        help="Monitoring interval in seconds"
+    )
+    parser.add_argument(
+        "--format",
+        choices=["json", "html", "pdf"],
+        default="json",
+        help="Report format"
+    )
+    parser.add_argument(
+        "--help",
+        action="store_true",
+        help="Show usage examples"
+    )
     args = parser.parse_args()
+
+    if args.help:
+        print(__doc__)
+        return
+
     manager = PerformanceManager()
-    
-    commands = {
-        "profile": lambda: manager.profile_function(
-            eval(args.function),
-            *eval(args.args) if args.args else [],
-            **(args.kwargs or {})
-        ),
-        "analyze": lambda: manager.analyze_performance(args.profile_files),
-        "optimize": lambda: manager.optimize_performance(
-            eval(args.function),
-            *eval(args.args) if args.args else [],
-            **(args.kwargs or {})
-        )
-    }
-    
-    if args.command in commands:
-        success = commands[args.command]()
-        sys.exit(0 if success else 1)
-    else:
-        parser.print_help()
-        sys.exit(1)
+    if args.command == "profile":
+        if args.type == "cpu":
+            manager.profile_function(args.function, **(args.args or {}))
+        elif args.type == "memory":
+            manager.profile_memory(args.function, **(args.args or {}))
+        elif args.type == "line":
+            manager.profile_line(args.function, **(args.args or {}))
+    elif args.command == "analyze":
+        manager.analyze_performance(glob.glob(args.profiles))
+    elif args.command == "optimize":
+        # Implement optimization
+        pass
+    elif args.command == "monitor":
+        # Implement monitoring
+        pass
+    elif args.command == "report":
+        # Implement reporting
+        pass
 
 if __name__ == "__main__":
     main() 

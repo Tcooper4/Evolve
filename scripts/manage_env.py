@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Environment management script.
-Provides commands for managing the application's environment variables and configuration.
+Provides commands for managing environment variables and settings.
+
+This script supports:
+- Setting environment variables
+- Viewing environment variables
+- Loading environment variables from files
+
+Usage:
+    python manage_env.py <command> [options]
+
+Commands:
+    set         Set an environment variable
+    view        View environment variables
+    load        Load environment variables from a file
+
+Examples:
+    # Set an environment variable
+    python manage_env.py set --key API_KEY --value myapikey
+
+    # View environment variables
+    python manage_env.py view
+
+    # Load environment variables from a file
+    python manage_env.py load --file .env
 """
 
 import os

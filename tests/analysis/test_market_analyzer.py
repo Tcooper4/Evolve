@@ -14,7 +14,12 @@ import os
 import shutil
 import tempfile
 from unittest.mock import patch, MagicMock
-from trading.analysis.market_analyzer import MarketAnalyzer, MarketAnalysisError
+import sys
+
+# Add the project root to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from trading.market.market_analyzer import MarketAnalyzer, MarketAnalysisError
 
 class TestMarketAnalyzer(unittest.TestCase):
     """Test cases for MarketAnalyzer."""
@@ -182,5 +187,96 @@ class TestMarketAnalyzer(unittest.TestCase):
         results = self.analyzer.analyze('INVALID', period='1y', interval='1d')
         self.assertIn('error', results.get('pca', {}))
         
+    def test_analyze_trend(self):
+        """Test trend analysis functionality."""
+        # Create sample data
+        dates = pd.date_range(start='2024-01-01', periods=100)
+        data = pd.DataFrame({
+            'Close': np.random.normal(100, 10, 100)
+        }, index=dates)
+        
+        # Test trend analysis
+        result = self.analyzer.analyze_trend(data)
+        
+        # Verify result structure
+        self.assertIn('trend_direction', result)
+        self.assertIn('trend_strength', result)
+        self.assertIn('trend_duration', result)
+        self.assertIn('ma_short', result)
+        self.assertIn('ma_long', result)
+        
+    def test_analyze_volatility(self):
+        """Test volatility analysis functionality."""
+        # Create sample data
+        dates = pd.date_range(start='2024-01-01', periods=100)
+        data = pd.DataFrame({
+            'Close': np.random.normal(100, 10, 100)
+        }, index=dates)
+        
+        # Test volatility analysis
+        result = self.analyzer.analyze_volatility(data)
+        
+        # Verify result structure
+        self.assertIn('current_volatility', result)
+        self.assertIn('volatility_rank', result)
+        self.assertIn('volatility_trend', result)
+        self.assertIn('historical_volatility', result)
+        
+    def test_analyze_correlation(self):
+        """Test correlation analysis functionality."""
+        # Create sample data
+        dates = pd.date_range(start='2024-01-01', periods=100)
+        data = pd.DataFrame({
+            'Close': np.random.normal(100, 10, 100)
+        }, index=dates)
+        market_data = pd.DataFrame({
+            'Close': np.random.normal(100, 10, 100)
+        }, index=dates)
+        
+        # Test correlation analysis
+        result = self.analyzer.analyze_correlation(data, market_data)
+        
+        # Verify result structure
+        self.assertIn('correlation', result)
+        self.assertIn('correlation_trend', result)
+        self.assertIn('rolling_correlation', result)
+        
+    def test_analyze_market_conditions(self):
+        """Test overall market conditions analysis."""
+        # Create sample data
+        dates = pd.date_range(start='2024-01-01', periods=100)
+        data = pd.DataFrame({
+            'Close': np.random.normal(100, 10, 100)
+        }, index=dates)
+        market_data = pd.DataFrame({
+            'Close': np.random.normal(100, 10, 100)
+        }, index=dates)
+        
+        # Test market conditions analysis
+        result = self.analyzer.analyze_market_conditions(data, market_data)
+        
+        # Verify result structure
+        self.assertIn('trend', result)
+        self.assertIn('volatility', result)
+        self.assertIn('correlation', result)
+        self.assertIn('timestamp', result)
+        
+    def test_invalid_data(self):
+        """Test handling of invalid data."""
+        # Test with empty DataFrame
+        empty_df = pd.DataFrame()
+        with self.assertRaises(KeyError):
+            self.analyzer.analyze_trend(empty_df)
+            
+        # Test with missing required column
+        invalid_df = pd.DataFrame({'Open': [1, 2, 3]})
+        with self.assertRaises(KeyError):
+            self.analyzer.analyze_trend(invalid_df)
+            
+        # Test with insufficient data
+        small_df = pd.DataFrame({'Close': [1]})
+        with self.assertRaises(ValueError):
+            self.analyzer.analyze_trend(small_df)
+
 if __name__ == '__main__':
     unittest.main() 

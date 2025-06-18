@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 API management script.
-Provides commands for managing API endpoints, versioning, testing, and documentation.
+Provides commands for managing the application's API server, including starting, stopping, and checking status.
+
+This script supports:
+- Starting the API server
+- Stopping the API server
+- Checking API server status
+
+Usage:
+    python manage_api.py <command> [options]
+
+Commands:
+    start       Start the API server
+    stop        Stop the API server
+    status      Check API server status
+
+Examples:
+    # Start the API server
+    python manage_api.py start
+
+    # Stop the API server
+    python manage_api.py stop
+
+    # Check API server status
+    python manage_api.py status
 """
 
 import os

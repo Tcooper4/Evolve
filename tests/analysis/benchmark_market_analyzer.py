@@ -19,7 +19,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import matplotlib.pyplot as plt
 import seaborn as sns
-from trading.analysis.market_analyzer import MarketAnalyzer
+from trading.market.market_analyzer import MarketAnalyzer
 import yfinance as yf
 import pandas_ta as ta
 import talib

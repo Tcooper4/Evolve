@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Monitoring management script.
-Provides commands for managing the application's monitoring and metrics.
+Provides commands for monitoring application health, metrics, and alerts.
+
+This script supports:
+- Monitoring application health
+- Viewing and exporting metrics
+- Managing alerts
+
+Usage:
+    python manage_monitor.py <command> [options]
+
+Commands:
+    health      Check application health
+    metrics     View or export metrics
+    alerts      Manage alerts
+
+Examples:
+    # Check application health
+    python manage_monitor.py health
+
+    # View metrics
+    python manage_monitor.py metrics --output metrics.json
+
+    # Manage alerts
+    python manage_monitor.py alerts --action list
 """
 
 import os

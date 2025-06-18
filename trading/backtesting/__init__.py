@@ -1,3 +1,3 @@
-from .backtester import Backtester as BacktestEngine
+from trading.backtester import Backtester as BacktestEngine
 
 __all__ = ['BacktestEngine'] 

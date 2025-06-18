@@ -9,9 +9,9 @@ from datetime import datetime
 import yaml
 from dataclasses import dataclass, field
 import openai
-from .model_loader import ModelLoader, ModelConfig
-from .memory import MemoryManager
-from .tools import ToolRegistry
+from trading.model_loader import ModelLoader, ModelConfig
+from trading.memory import MemoryManager
+from trading.tools import ToolRegistry
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from ..task_memory import Task, TaskMemory, TaskStatus
-from .utils import (
+from trading.utils import (
     check_model_performance,
     detect_model_drift,
     validate_update_result,
@@ -23,7 +23,7 @@ from .utils import (
     save_ensemble_weights,
     check_data_quality
 )
-from .scheduler import UpdateScheduler
+from trading.scheduler import UpdateScheduler
 
 logger = logging.getLogger("UpdaterAgent")
 

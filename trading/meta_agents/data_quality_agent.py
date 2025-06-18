@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-from .base_agent import BaseMetaAgent
+from trading.base_agent import BaseMetaAgent
 from trading.data.data_loader import DataLoader
 from trading.data.data_processor import DataProcessor
 

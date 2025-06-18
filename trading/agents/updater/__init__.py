@@ -5,6 +5,6 @@ This module provides the UpdaterAgent class for managing model updates and rewei
 The agent is responsible for detecting model drift and triggering necessary updates.
 """
 
-from .agent import UpdaterAgent
+from trading.agent import UpdaterAgent
 
 __all__ = ['UpdaterAgent'] 

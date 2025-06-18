@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Dashboard management script.
-Provides commands for managing monitoring dashboards.
+Provides commands for managing the application dashboard, including launching, updating, and monitoring dashboard status.
+
+This script supports:
+- Launching the dashboard
+- Updating dashboard components
+- Monitoring dashboard status
+
+Usage:
+    python manage_dashboard.py <command> [options]
+
+Commands:
+    launch      Launch the dashboard
+    update      Update dashboard components
+    status      Monitor dashboard status
+
+Examples:
+    # Launch the dashboard
+    python manage_dashboard.py launch
+
+    # Update dashboard components
+    python manage_dashboard.py update
+
+    # Monitor dashboard status
+    python manage_dashboard.py status
 """
 
 import os

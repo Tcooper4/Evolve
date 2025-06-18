@@ -2,10 +2,10 @@
 
 __version__ = '0.1.0'
 
-from .analysis import MarketAnalyzer
-from .data import DataPreprocessor, FeatureEngineering, DataValidator, DataScaler
+from trading.market import MarketAnalyzer, MarketData, MarketIndicators
+from .data.preprocessing import DataPreprocessor, FeatureEngineering, DataValidator, DataScaler
 from .data.providers import AlphaVantageProvider, YFinanceProvider
-from .models import (
+from trading.models import (
     BaseModel,
     LSTMModel,
     TCNModel,
@@ -14,26 +14,27 @@ from .models import (
     DQNStrategyOptimizer
 )
 try:
-    from .optimization import Optimizer
+    from trading.optimization import Optimizer
     OPTIMIZATION_AVAILABLE = True
 except ImportError:
     OPTIMIZATION_AVAILABLE = False
-from .portfolio import PortfolioManager
-from .risk import RiskManager
-from .utils import LogManager, ModelLogger, DataLogger, PerformanceLogger
-from .memory import PerformanceMemory
+from trading.portfolio import PortfolioManager
+from trading.risk import RiskManager
+from trading.utils import LogManager, ModelLogger, DataLogger, PerformanceLogger
+from trading.memory import PerformanceMemory
 from .agents.updater import ModelUpdater
-from .nlp import NLInterface, PromptProcessor, ResponseFormatter, LLMProcessor
-from .market import MarketData, MarketIndicators
-from .evaluation import ModelEvaluator, RegressionMetrics, ClassificationMetrics, TimeSeriesMetrics, RiskMetrics
-from .visualization import TimeSeriesPlotter, PerformancePlotter, FeatureImportancePlotter, PredictionPlotter
-from .strategies import StrategyManager
-from .execution import ExecutionEngine
-from .config import ConfigManager
-from .knowledge_base import TradingRules
+from trading.nlp import NLInterface, PromptProcessor, ResponseFormatter, LLMProcessor
+from trading.evaluation import ModelEvaluator, RegressionMetrics, ClassificationMetrics, TimeSeriesMetrics, RiskMetrics
+from trading.visualization import TimeSeriesPlotter, PerformancePlotter, FeatureImportancePlotter, PredictionPlotter
+from trading.strategies import StrategyManager
+from trading.execution import ExecutionEngine
+from trading.config import ConfigManager
+from trading.knowledge_base import TradingRules
 
 __all__ = [
     'MarketAnalyzer',
+    'MarketData',
+    'MarketIndicators',
     'DataPreprocessor',
     'FeatureEngineering',
     'DataValidator',
@@ -56,8 +57,6 @@ __all__ = [
     'PromptProcessor',
     'ResponseFormatter',
     'LLMProcessor',
-    'MarketData',
-    'MarketIndicators',
     'ModelEvaluator',
     'RegressionMetrics',
     'ClassificationMetrics',

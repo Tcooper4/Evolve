@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Backup management script.
-Provides commands for orchestrating backup and restore operations.
+Provides commands for creating, restoring, and managing application backups.
+
+This script supports:
+- Creating backups
+- Restoring from backups
+- Listing and managing backup files
+
+Usage:
+    python manage_backup.py <command> [options]
+
+Commands:
+    create      Create a backup
+    restore     Restore from a backup
+    list        List available backups
+
+Examples:
+    # Create a backup
+    python manage_backup.py create --output backup_2023_01_01.zip
+
+    # Restore from a backup
+    python manage_backup.py restore --input backup_2023_01_01.zip
+
+    # List available backups
+    python manage_backup.py list
 """
 
 import os

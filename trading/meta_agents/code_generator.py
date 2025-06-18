@@ -8,7 +8,7 @@ from pathlib import Path
 import openai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from .base_agent import BaseMetaAgent, Task
+from trading.base_agent import BaseMetaAgent, Task
 
 class CodeGeneratorAgent(BaseMetaAgent):
     """Agent for generating Python code and tests using OpenAI's GPT model."""
