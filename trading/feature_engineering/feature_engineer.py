@@ -51,6 +51,54 @@ class FeatureEngineer(FeatureEngineering):
         """
         self.custom_indicators[name] = func
 
+    def apply_registered_indicator(self, name: str, df: pd.DataFrame, **kwargs) -> Union[pd.Series, pd.DataFrame]:
+        """Apply a registered indicator by name.
+        
+        Args:
+            name: Name of the indicator to apply
+            df: Input DataFrame
+            **kwargs: Additional arguments for the indicator
+            
+        Returns:
+            Series or DataFrame with indicator values
+            
+        Raises:
+            ValueError: If indicator name is not found in registry
+        """
+        # Check if indicator exists in registry
+        if name not in indicators.INDICATOR_REGISTRY:
+            raise ValueError(f"Indicator '{name}' not found in registry")
+            
+        try:
+            # Get indicator function and apply it
+            indicator_func = indicators.INDICATOR_REGISTRY[name]
+            result = indicator_func(df, **kwargs)
+            
+            # Log success
+            logger.info(f"Successfully applied indicator: {name}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error applying indicator {name}: {str(e)}")
+            raise
+
+    def feature_descriptions(self) -> Dict[str, str]:
+        """Get descriptions for all available indicators.
+        
+        Returns:
+            Dictionary mapping indicator names to descriptions
+        """
+        # Get descriptions from indicators module
+        descriptions = indicators.get_indicator_descriptions()
+        
+        # Add descriptions for custom indicators
+        for name, func in self.custom_indicators.items():
+            if name not in descriptions:
+                descriptions[name] = func.__doc__ or f"Custom indicator: {name}"
+                
+        return descriptions
+
     def engineer_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Engineer all features from the input data.
 
