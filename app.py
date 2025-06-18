@@ -1,125 +1,62 @@
-"""Main application entry point for the trading platform."""
+"""
+Main Streamlit Application
 
-# Standard library imports
-from datetime import datetime
-from pathlib import Path
+This is the entry point for the Agentic Forecasting System dashboard.
+"""
 
-# Third-party imports
-import pandas as pd
 import streamlit as st
-import yfinance as yf
+import importlib
 
-# Local imports
-from optimize.rsi_optimizer import optimize_rsi
-from trading.strategies.rsi_signals import generate_rsi_signals
-from utils.system_status import get_system_scorecard
+# Page configuration
+st.set_page_config(page_title="Agentic Forecasting", layout="wide")
 
-def show_startup_banner():
-    """Display system startup banner."""
-    st.title("Trading Platform")
-    st.markdown("---")
+# Navigation
+PAGES = {
+    "Home": "home",
+    "Forecasting": "forecast",
+    "Performance Tracker": "performance_tracker",
+    "Strategy": "strategy",
+    "System Scorecard": "5_📊_System_Scorecard",
+    "Settings": "settings"
+}
+
+# Sidebar navigation
+st.sidebar.title("🔮 Navigation")
+selection = st.sidebar.radio("🔍 Navigate", list(PAGES.keys()))
+selected_page = PAGES[selection]
+
+# Main content area
+if selection == "Home":
+    st.title("🔮 Agentic Forecasting System")
+    st.markdown("""
+    Welcome to the Agentic Forecasting System! Use the sidebar to navigate through different features:
     
-    # System info
-    st.sidebar.markdown("### System Status")
-    st.sidebar.markdown(f"Python: {platform.python_version()}")
-    st.sidebar.markdown(f"Platform: {platform.platform()}")
-    st.sidebar.markdown(f"Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
-def initialize_system():
-    """Initialize system components."""
-    # Create necessary directories
-    Path("memory/logs").mkdir(parents=True, exist_ok=True)
-    Path("memory/strategy_settings/rsi").mkdir(parents=True, exist_ok=True)
-
-def show_performance_log():
-    """Show performance metrics in sidebar."""
+    - 📈 **Forecasting**: Generate and analyze market predictions
+    - 📊 **Performance Tracker**: Monitor model performance metrics
+    - 🎯 **Strategy**: View and manage trading strategies
+    - 📋 **System Scorecard**: Check overall system health
+    - ⚙️ **Settings**: Configure system parameters
+    """)
+else:
+    # Dynamic view loader
     try:
-        log_file = Path("memory/logs/performance_log.csv")
-        if log_file.exists():
-            df = pd.read_csv(log_file)
-            
-            st.sidebar.markdown("### Performance Metrics")
-            st.sidebar.markdown(f"Total Entries: {len(df)}")
-            st.sidebar.markdown(f"Avg Sharpe: {df['sharpe'].mean():.2f}")
-            st.sidebar.markdown(f"Avg Accuracy: {df['accuracy'].mean():.2f}")
-            
-            if st.sidebar.button("View Full Log"):
-                st.dataframe(df)
-                
-            if st.sidebar.button("Clear Log"):
-                log_file.unlink()
-                st.sidebar.success("Log cleared")
+        if selected_page == "performance_tracker":
+            from pages import performance_tracker
+            performance_tracker.main()
+        elif selected_page == "forecast":
+            from pages import forecast
+            forecast.main()
+        elif selected_page == "strategy":
+            from pages import strategy
+            strategy.main()
+        elif selected_page == "5_📊_System_Scorecard":
+            scorecard = importlib.import_module("pages.5_📊_System_Scorecard")
+            scorecard.main()
+        elif selected_page == "settings":
+            from pages import settings
+            settings.main()
+        else:
+            st.error(f"Page '{selected_page}' not found")
     except Exception as e:
-        st.sidebar.error(f"Error loading performance log: {str(e)}")
-
-def optimize_rsi_strategy(ticker: str):
-    """Run RSI optimization for a ticker."""
-    try:
-        with st.spinner(f"Optimizing RSI strategy for {ticker}..."):
-            # Get historical data
-            df = yf.download(ticker, period="1y")
-            
-            # Run optimization
-            optimal = optimize_rsi(df, ticker, generate_rsi_signals)
-            
-            # Display results
-            st.success(f"RSI optimization complete for {ticker}")
-            st.json(optimal)
-            
-            return optimal
-    except Exception as e:
-        st.error(f"Error optimizing RSI strategy: {str(e)}")
-        return None
-
-def show_rsi_optimizer():
-    """Show RSI optimization panel in sidebar."""
-    st.sidebar.markdown("### RSI Strategy Optimizer")
-    
-    # Get ticker input
-    ticker = st.sidebar.text_input("Enter ticker symbol", "AAPL").upper()
-    
-    # Add optimization button
-    if st.sidebar.button("Optimize RSI Strategy"):
-        optimal = optimize_rsi_strategy(ticker)
-        if optimal:
-            st.sidebar.markdown("#### Current Settings")
-            st.sidebar.json(optimal)
-
-def show_sidebar_summary():
-    """Show a summary of key metrics in the sidebar."""
-    stats = get_system_scorecard()
-    st.sidebar.title("üìà System Status")
-    st.sidebar.metric("Sharpe (7d)", stats["sharpe_7d"])
-    st.sidebar.metric("Win Rate (%)", stats["win_rate"])
-    st.sidebar.metric("Goal Status", "‚úÖ" if stats["goal_status"].get("overall", False) else "‚ùå")
-
-def main():
-    """Main application entry point."""
-    # Set page config
-    st.set_page_config(
-        page_title="Trading Platform",
-        page_icon="üìà",
-        layout="wide"
-    )
-    
-    # Initialize system
-    initialize_system()
-    
-    # Show startup banner
-    show_startup_banner()
-    
-    # Show performance log
-    show_performance_log()
-    
-    # Show RSI optimizer
-    show_rsi_optimizer()
-    
-    # Show sidebar summary
-    show_sidebar_summary()
-    
-    # Main content area
-    st.markdown("## Trading Dashboard")
-    st.markdown("Use the sidebar to optimize RSI strategies and view performance metrics.")
-
-if __name__ == "__main__":
-    main()
+        st.error(f"Error loading page: {str(e)}")
+        st.info("Please ensure the page module exists and has a main() function.")
