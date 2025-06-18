@@ -8,34 +8,65 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import shap
 
 # Local imports
-from .base_model import BaseModel
+from .base_model import BaseModel, ValidationError, ModelRegistry
 
 class TemporalBlock(nn.Module):
+    """Temporal block for TCN."""
+    
     def __init__(self, n_inputs: int, n_outputs: int, kernel_size: int, stride: int,
                  dilation: int, padding: int, dropout: float = 0.2):
-        super(TemporalBlock, self).__init__()
-        self.conv1 = nn.utils.weight_norm(nn.Conv1d(n_inputs, n_outputs, kernel_size,
-                                           stride=stride, padding=padding, dilation=dilation))
+        """Initialize temporal block.
+        
+        Args:
+            n_inputs: Number of input channels
+            n_outputs: Number of output channels
+            kernel_size: Size of convolutional kernel
+            stride: Stride of convolution
+            dilation: Dilation factor
+            padding: Padding size
+            dropout: Dropout rate
+        """
+        super().__init__()
+        self.conv1 = nn.utils.weight_norm(nn.Conv1d(
+            n_inputs, n_outputs, kernel_size,
+            stride=stride, padding=padding, dilation=dilation
+        ))
         self.bn1 = nn.BatchNorm1d(n_outputs)
         self.dropout1 = nn.Dropout(dropout)
         
-        self.conv2 = nn.utils.weight_norm(nn.Conv1d(n_outputs, n_outputs, kernel_size,
-                                           stride=stride, padding=padding, dilation=dilation))
+        self.conv2 = nn.utils.weight_norm(nn.Conv1d(
+            n_outputs, n_outputs, kernel_size,
+            stride=stride, padding=padding, dilation=dilation
+        ))
         self.bn2 = nn.BatchNorm1d(n_outputs)
         self.dropout2 = nn.Dropout(dropout)
         
-        self.net = nn.Sequential(self.conv1, self.bn1, nn.ReLU(), self.dropout1,
-                               self.conv2, self.bn2, nn.ReLU(), self.dropout2)
+        self.net = nn.Sequential(
+            self.conv1, self.bn1, nn.ReLU(), self.dropout1,
+            self.conv2, self.bn2, nn.ReLU(), self.dropout2
+        )
+        
         self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
         self.relu = nn.ReLU()
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass through temporal block.
+        
+        Args:
+            x: Input tensor of shape (batch_size, n_inputs, seq_len)
+            
+        Returns:
+            Output tensor of shape (batch_size, n_outputs, seq_len)
+        """
         out = self.net(x)
         res = x if self.downsample is None else self.downsample(x)
         return self.relu(out + res)
 
+@ModelRegistry.register('TCN')
 class TCNModel(BaseModel):
     """Temporal Convolutional Network for time series forecasting."""
     
@@ -52,49 +83,80 @@ class TCNModel(BaseModel):
                 - sequence_length: Length of input sequences (default: 10)
                 - feature_columns: List of column names to use as features (default: ['close', 'volume'])
                 - target_column: Column name to predict (default: 'close')
+                - learning_rate: Learning rate (default: 0.001)
+                - use_lr_scheduler: Whether to use learning rate scheduler (default: True)
         """
-        super().__init__(config)
+        if config is None:
+            config = {}
+        
+        # Set default configuration
+        default_config = {
+            'input_size': 2,
+            'output_size': 1,
+            'num_channels': [64, 128, 256],
+            'kernel_size': 3,
+            'dropout': 0.2,
+            'sequence_length': 10,
+            'feature_columns': ['close', 'volume'],
+            'target_column': 'close',
+            'learning_rate': 0.001,
+            'use_lr_scheduler': True
+        }
+        default_config.update(config)
+        
+        super().__init__(default_config)
         self._validate_config()
         self._setup_model()
-        
+    
     def _validate_config(self) -> None:
-        """Validate model configuration."""
-        self.input_size = self.config.get('input_size', 2)
-        self.output_size = self.config.get('output_size', 1)
-        self.num_channels = self.config.get('num_channels', [64, 128, 256])
-        self.kernel_size = self.config.get('kernel_size', 3)
-        self.dropout = self.config.get('dropout', 0.2)
-        self.sequence_length = self.config.get('sequence_length', 10)
-        self.feature_columns = self.config.get('feature_columns', ['close', 'volume'])
-        self.target_column = self.config.get('target_column', 'close')
+        """Validate model configuration.
         
-        # Validate sequence length
-        if self.sequence_length < 2:
-            raise ValueError("Sequence length must be at least 2")
-            
-        # Validate feature columns
-        if len(self.feature_columns) != self.input_size:
-            raise ValueError(f"Number of feature columns ({len(self.feature_columns)}) must match input_size ({self.input_size})")
-            
-        # Validate target column
-        if self.target_column not in self.feature_columns:
-            raise ValueError(f"Target column {self.target_column} must be in feature_columns")
-            
+        Raises:
+            ValidationError: If configuration is invalid
+        """
+        # Validate required parameters
+        required_params = ['input_size', 'output_size', 'num_channels', 'kernel_size',
+                         'dropout', 'sequence_length', 'feature_columns', 'target_column']
+        for param in required_params:
+            if param not in self.config:
+                raise ValidationError(f"Missing required parameter: {param}")
+        
+        # Validate parameter values
+        if self.config['input_size'] <= 0:
+            raise ValidationError("input_size must be positive")
+        if self.config['output_size'] <= 0:
+            raise ValidationError("output_size must be positive")
+        if not self.config['num_channels']:
+            raise ValidationError("num_channels cannot be empty")
+        if self.config['kernel_size'] <= 0:
+            raise ValidationError("kernel_size must be positive")
+        if not 0 <= self.config['dropout'] <= 1:
+            raise ValidationError("dropout must be between 0 and 1")
+        if self.config['sequence_length'] < 2:
+            raise ValidationError("sequence_length must be at least 2")
+        if not self.config['feature_columns']:
+            raise ValidationError("feature_columns cannot be empty")
+        if len(self.config['feature_columns']) != self.config['input_size']:
+            raise ValidationError(f"Number of feature columns ({len(self.config['feature_columns'])}) "
+                                f"must match input_size ({self.config['input_size']})")
+    
     def _setup_model(self) -> None:
         """Setup the TCN model architecture."""
         layers = []
-        num_levels = len(self.num_channels)
+        num_levels = len(self.config['num_channels'])
         for i in range(num_levels):
             dilation = 2 ** i
-            in_channels = self.input_size if i == 0 else self.num_channels[i-1]
-            out_channels = self.num_channels[i]
-            layers += [TemporalBlock(in_channels, out_channels, self.kernel_size,
-                                   stride=1, dilation=dilation,
-                                   padding=(self.kernel_size-1) * dilation,
-                                   dropout=self.dropout)]
+            in_channels = self.config['input_size'] if i == 0 else self.config['num_channels'][i-1]
+            out_channels = self.config['num_channels'][i]
+            layers += [TemporalBlock(
+                in_channels, out_channels, self.config['kernel_size'],
+                stride=1, dilation=dilation,
+                padding=(self.config['kernel_size']-1) * dilation,
+                dropout=self.config['dropout']
+            )]
         
         self.tcn = nn.Sequential(*layers)
-        self.linear = nn.Linear(self.num_channels[-1], self.output_size)
+        self.linear = nn.Linear(self.config['num_channels'][-1], self.config['output_size'])
         self.model = nn.Sequential(self.tcn, self.linear)
         self.model = self.model.to(self.device)
         
@@ -126,27 +188,29 @@ class TCNModel(BaseModel):
                 y: Shape (batch_size, output_size)
         """
         # Validate data
-        self._validate_data(data)
+        if data.isnull().any().any():
+            raise ValidationError("Data contains missing values")
         
         # Check if all required columns exist
-        missing_cols = [col for col in self.feature_columns if col not in data.columns]
+        missing_cols = [col for col in self.config['feature_columns'] 
+                       if col not in data.columns]
         if missing_cols:
-            raise ValueError(f"Missing required columns: {missing_cols}")
+            raise ValidationError(f"Missing required columns: {missing_cols}")
             
         # Convert to numpy arrays
-        X = data[self.feature_columns].values
-        y = data[self.target_column].values[self.sequence_length:]  # Predict next value after sequence
+        X = data[self.config['feature_columns']].values
+        y = data[self.config['target_column']].values[self.config['sequence_length']:]
         
         # Create sequences
         X_sequences = []
-        for i in range(len(X) - self.sequence_length):
-            X_sequences.append(X[i:i + self.sequence_length])
+        for i in range(len(X) - self.config['sequence_length']):
+            X_sequences.append(X[i:i + self.config['sequence_length']])
         X = np.array(X_sequences)
         
         # Normalize
         if is_training:
-            self.X_mean = X.mean(axis=(0, 1))  # Mean across batch and sequence
-            self.X_std = X.std(axis=(0, 1))    # Std across batch and sequence
+            self.X_mean = X.mean(axis=(0, 1))
+            self.X_std = X.std(axis=(0, 1))
             self.y_mean = y.mean()
             self.y_std = y.std()
             
@@ -158,7 +222,31 @@ class TCNModel(BaseModel):
         y = torch.FloatTensor(y).unsqueeze(-1)
         
         # Move to device
-        X = self._to_device(X)
-        y = self._to_device(y)
+        X = X.to(self.device)
+        y = y.to(self.device)
         
-        return X, y 
+        return X, y
+
+    def summary(self):
+        super().summary()
+
+    def infer(self):
+        super().infer()
+
+    def shap_interpret(self, X_sample):
+        """Run SHAP interpretability on a sample batch."""
+        explainer = shap.DeepExplainer(self.model, X_sample)
+        shap_values = explainer.shap_values(X_sample)
+        shap.summary_plot(shap_values, X_sample.cpu().numpy())
+
+    def test_synthetic(self):
+        """Test model on synthetic data."""
+        import numpy as np, pandas as pd
+        n = 100
+        df = pd.DataFrame({
+            'close': np.sin(np.linspace(0, 10, n)),
+            'volume': np.random.rand(n)
+        })
+        self.fit(df.iloc[:80], df.iloc[80:])
+        y_pred = self.predict(df.iloc[80:])
+        print('Synthetic test MSE:', ((y_pred.flatten() - df['close'].iloc[80:].values) ** 2).mean()) 

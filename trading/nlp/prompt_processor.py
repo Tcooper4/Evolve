@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 import json
 from pathlib import Path
+import os
 
 @dataclass
 class EntityMatch:
@@ -31,41 +32,53 @@ class Intent:
     entities: Dict[str, Any]
     context: Dict[str, Any]
 
+# Setup logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# Add file handler for debug logs
+debug_handler = logging.FileHandler('trading/nlp/logs/nlp_debug.log')
+debug_handler.setLevel(logging.DEBUG)
+debug_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+debug_handler.setFormatter(debug_formatter)
+logger.addHandler(debug_handler)
+
+MEMORY_LOG_PATH = os.path.join(os.path.dirname(__file__), "memory_log.jsonl")
+
 class PromptProcessor:
-    """Class to process natural language prompts and extract entities and intent."""
+    """Processes and generates prompts for the LLM."""
     
-    def __init__(self, config_dir: Optional[str] = None):
-        """Initialize the prompt processor.
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize prompt processor.
         
         Args:
-            config_dir: Directory containing configuration files
+            config: Configuration dictionary
         """
-        self.logger = logging.getLogger(__name__)
-        self.config_dir = Path(config_dir) if config_dir else Path(__file__).parent / "config"
-        
-        # Load entity patterns and intent patterns
+        self.config = config or {}
         self.entity_patterns = self._load_entity_patterns()
-        self.intent_patterns = self._load_intent_patterns()
+        logger.info("PromptProcessor initialized with entity patterns")
         
         # Initialize context
         self.context = {}
         
-    def _load_entity_patterns(self) -> Dict[str, List[str]]:
-        """Load entity patterns from JSON file."""
+    def _load_entity_patterns(self) -> Dict[str, Any]:
+        """Load entity patterns from JSON file.
+        
+        Returns:
+            Dictionary of entity patterns
+        """
         try:
-            with open(self.config_dir / "entity_patterns.json", "r") as f:
-                return json.load(f)
+            patterns_path = os.path.join('trading', 'nlp', 'configs', 'entity_patterns.json')
+            if os.path.exists(patterns_path):
+                with open(patterns_path, 'r') as f:
+                    patterns = json.load(f)
+                logger.debug(f"Loaded {len(patterns)} entity patterns")
+                return patterns
+            else:
+                logger.warning(f"Entity patterns file not found at {patterns_path}")
+                return {}
         except Exception as e:
-            self.logger.error(f"Error loading entity patterns: {e}")
-            return {}
-            
-    def _load_intent_patterns(self) -> Dict[str, List[str]]:
-        """Load intent patterns from JSON file."""
-        try:
-            with open(self.config_dir / "intent_patterns.json", "r") as f:
-                return json.load(f)
-        except Exception as e:
-            self.logger.error(f"Error loading intent patterns: {e}")
+            logger.error(f"Error loading entity patterns: {str(e)}", exc_info=True)
             return {}
             
     def process_prompt(self, text: str) -> ProcessedPrompt:
@@ -140,7 +153,7 @@ class PromptProcessor:
         best_intent = "unknown"
         best_confidence = 0.0
         
-        for intent, patterns in self.intent_patterns.items():
+        for intent, patterns in self.entity_patterns.items():
             for pattern in patterns:
                 if re.search(pattern, text, re.IGNORECASE):
                     # Calculate confidence based on pattern match and entity presence
@@ -292,4 +305,261 @@ class PromptProcessor:
     
     def _format_explanation_response(self, intent: Intent, response: str) -> str:
         """Format explanation response."""
-        return f"Explanation:\n{response}" 
+        return f"Explanation:\n{response}"
+    
+    def create_intent_prompt(self, query: str) -> str:
+        """Create prompt for intent detection.
+        
+        Args:
+            query: User query string
+            
+        Returns:
+            Formatted prompt string
+        """
+        prompt = f"""Analyze the following query and determine the user's intent:
+
+Query: {query}
+
+Please respond with a JSON object containing:
+1. intent: The primary intent (e.g., "forecast", "analyze", "compare", "explain")
+2. confidence: A float between 0 and 1 indicating confidence in the intent detection
+3. reasoning: Brief explanation of why this intent was chosen
+
+Example response:
+{{
+    "intent": "forecast",
+    "confidence": 0.95,
+    "reasoning": "User is asking for future price predictions"
+}}
+"""
+        logger.debug(f"Created intent prompt for query: {query}")
+        return prompt
+    
+    def create_response_prompt(self, query: str, intent: str, entities: Dict[str, Any],
+                             session_state: Optional[Dict[str, Any]] = None) -> str:
+        """Create prompt for response generation.
+        
+        Args:
+            query: Original user query
+            intent: Detected intent
+            entities: Extracted entities
+            session_state: Optional session state
+            
+        Returns:
+            Formatted prompt string
+        """
+        # Add context from session state
+        context = ""
+        if session_state:
+            if 'previous_queries' in session_state:
+                context += "\nPrevious queries:\n"
+                for prev_query in session_state['previous_queries'][-3:]:
+                    context += f"- {prev_query}\n"
+            if 'user_preferences' in session_state:
+                context += "\nUser preferences:\n"
+                for pref, value in session_state['user_preferences'].items():
+                    context += f"- {pref}: {value}\n"
+        
+        prompt = f"""Generate a response to the following query:
+
+Query: {query}
+Intent: {intent}
+Entities: {json.dumps(entities, indent=2)}
+{context}
+
+Please respond with a JSON object containing:
+1. response: The main response text
+2. visualizations: List of visualizations to include (if any)
+3. confidence: A float between 0 and 1 indicating confidence in the response
+4. metadata: Additional information about the response
+
+Example response:
+{{
+    "response": "Based on the analysis, I predict...",
+    "visualizations": [
+        {{
+            "type": "forecast_plot",
+            "data": {{...}},
+            "narrative": "The forecast shows..."
+        }}
+    ],
+    "confidence": 0.9,
+    "metadata": {{
+        "timeframe": "1 week",
+        "model_used": "LSTM"
+    }}
+}}
+"""
+        logger.debug(f"Created response prompt for intent: {intent}")
+        return prompt
+    
+    def extract_entities(self, query: str, intent: str) -> Dict[str, Any]:
+        """Extract entities from query using patterns.
+        
+        Args:
+            query: User query string
+            intent: Detected intent
+            
+        Returns:
+            Dictionary of extracted entities
+        """
+        entities = {}
+        
+        try:
+            # Get relevant patterns for intent
+            intent_patterns = self.entity_patterns.get(intent, {})
+            
+            # Extract entities using patterns
+            for entity_type, pattern in intent_patterns.items():
+                if pattern in query.lower():
+                    entities[entity_type] = {
+                        'value': pattern,
+                        'confidence': 0.8,  # Base confidence
+                        'source': 'pattern_match'
+                    }
+            
+            # Log extraction results
+            logger.debug(f"Extracted entities: {entities}")
+            
+            return entities
+            
+        except Exception as e:
+            logger.error(f"Error extracting entities: {str(e)}", exc_info=True)
+            return {}
+    
+    def expand_entities(self, entities: Dict[str, Any]) -> Dict[str, Any]:
+        """Expand entities with synonyms and clarifications.
+        
+        Args:
+            entities: Dictionary of extracted entities
+            
+        Returns:
+            Expanded entities dictionary
+        """
+        expanded = {}
+        
+        try:
+            for entity_type, data in entities.items():
+                # Get entity patterns
+                patterns = self.entity_patterns.get(entity_type, {})
+                
+                # Add synonyms
+                if 'synonyms' in patterns:
+                    data['synonyms'] = patterns['synonyms']
+                
+                # Add clarifications
+                if 'clarifications' in patterns:
+                    data['clarifications'] = patterns['clarifications']
+                
+                # Add expanded value if available
+                if 'expanded' in patterns:
+                    data['expanded_value'] = patterns['expanded']
+                
+                expanded[entity_type] = data
+            
+            # Log expansion results
+            logger.debug(f"Expanded entities: {expanded}")
+            
+            return expanded
+            
+        except Exception as e:
+            logger.error(f"Error expanding entities: {str(e)}", exc_info=True)
+            return entities 
+
+    def route_to_agent(self, entities: dict, intent: str = None) -> dict:
+        """
+        Route parsed entities (and optional intent) to the agentic routing system.
+        Returns a dict with routed action, reasoning, and confidence.
+        Also logs the routing to memory_log.jsonl.
+        """
+        # Dummy routing logic for demonstration
+        # In production, replace with actual agent/ForecastAgent logic
+        action = None
+        reasoning = ""
+        confidence = 0.8
+        if intent:
+            if intent == "forecast":
+                action = "run_forecast"
+                reasoning = "Intent classified as forecast."
+            elif intent == "backtest":
+                action = "run_backtest"
+                reasoning = "Intent classified as backtest."
+            elif intent == "compare":
+                action = "compare_models"
+                reasoning = "Intent classified as compare."
+            else:
+                action = "unknown"
+                reasoning = f"Unknown intent: {intent}"
+        else:
+            # Fallback: infer from entities
+            if "ticker" in entities and "timeframe" in entities:
+                action = "run_forecast"
+                reasoning = "Ticker and timeframe present. Defaulting to forecast."
+            else:
+                action = "insufficient_info"
+                reasoning = "Missing required entities."
+                confidence = 0.3
+        routed = {
+            "action": action,
+            "reasoning": reasoning,
+            "confidence": confidence
+        }
+        # Log to memory
+        self.log_memory(
+            prompt=getattr(self, "last_prompt", None),
+            entities=entities,
+            routed=routed
+        )
+        return routed
+
+    def log_memory(self, prompt: str, entities: dict, routed: dict):
+        """
+        Append a memory log entry: prompt ➜ entities ➜ routed action/reasoning/confidence.
+        """
+        entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "prompt": prompt,
+            "entities": entities,
+            "routed": routed
+        }
+        try:
+            with open(MEMORY_LOG_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry) + "\n")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to write memory log: {e}")
+
+    def process_and_route(self, prompt: str) -> dict:
+        """
+        Full pipeline: extract entities, classify intent, route to agent, and log memory.
+        Returns dict with entities, intent, routed action, reasoning, and confidence.
+        """
+        self.last_prompt = prompt
+        entities = self.extract_entities(prompt)
+        intent = self.classify_intent(prompt) if hasattr(self, "classify_intent") else None
+        routed = self.route_to_agent(entities, intent)
+        return {
+            "entities": entities,
+            "intent": intent,
+            "routed": routed
+        } 
+
+    def classify_intent(self, prompt: str) -> str:
+        """
+        Classify the intent of the prompt (forecast, backtest, compare, interpret, explain, etc).
+        Returns a string intent label.
+        """
+        prompt_lower = prompt.lower()
+        if any(word in prompt_lower for word in ["forecast", "predict", "projection", "outlook"]):
+            return "forecast"
+        if any(word in prompt_lower for word in ["backtest", "historical performance", "simulate"]):
+            return "backtest"
+        if any(word in prompt_lower for word in ["compare", "versus", "vs.", "better than"]):
+            return "compare"
+        if any(word in prompt_lower for word in ["interpret", "explain", "why", "how"]):
+            return "interpret"
+        if any(word in prompt_lower for word in ["summarize", "summary", "overview"]):
+            return "summarize"
+        if any(word in prompt_lower for word in ["analyze", "analysis", "insight"]):
+            return "analyze"
+        return "unknown" 

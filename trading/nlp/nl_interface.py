@@ -4,6 +4,9 @@ from dataclasses import dataclass
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import os
+import json
+from datetime import datetime
 
 from .prompt_processor import PromptProcessor, ProcessedPrompt
 from .response_formatter import ResponseFormatter, ResponseData
@@ -12,6 +15,7 @@ from ..strategies.strategy_manager import StrategyManager
 from ..risk.risk_manager import RiskManager
 from ..portfolio.portfolio_manager import PortfolioManager
 from ..market.market_analyzer import MarketAnalyzer
+from .llm_processor import LLMProcessor
 
 @dataclass
 class NLResponse:
@@ -19,6 +23,20 @@ class NLResponse:
     text: str
     visualization: Optional[Any] = None
     metadata: Optional[Dict[str, Any]] = None
+
+# Setup logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# Create logs directory if it doesn't exist
+os.makedirs('trading/nlp/logs', exist_ok=True)
+
+# Add file handler for debug logs
+debug_handler = logging.FileHandler('trading/nlp/logs/nlp_debug.log')
+debug_handler.setLevel(logging.DEBUG)
+debug_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+debug_handler.setFormatter(debug_formatter)
+logger.addHandler(debug_handler)
 
 class NLInterface:
     """Class to handle natural language interactions with the trading system."""
@@ -35,6 +53,7 @@ class NLInterface:
         # Initialize components
         self.prompt_processor = PromptProcessor(self.config_dir)
         self.response_formatter = ResponseFormatter(self.config_dir)
+        self.llm_processor = LLMProcessor()
         
         # Initialize trading components
         self.model = BaseModel()
@@ -43,74 +62,287 @@ class NLInterface:
         self.portfolio_manager = PortfolioManager()
         self.market_analyzer = MarketAnalyzer()
         
-    def process_query(self, query: str) -> NLResponse:
+        # Load confidence thresholds
+        self.confidence_thresholds = {
+            'intent_detection': 0.6,
+            'entity_extraction': 0.7,
+            'response_generation': 0.8
+        }
+        
+        # Load fallback prompts
+        self.fallback_prompts = {
+            'intent_clarification': "I'm not sure what you're asking about. Could you please clarify?",
+            'entity_clarification': "I need more information about {entity}. Could you provide more details?",
+            'response_fallback': "I'm having trouble generating a complete response. Here's what I can tell you: {partial_response}"
+        }
+        
+        logger.info("NLInterface initialized with confidence thresholds and fallback prompts")
+        
+    def process_query(self, query: str, session_state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Process a natural language query.
         
         Args:
-            query: The input query to process
+            query: User query string
+            session_state: Optional session state for context
             
         Returns:
-            NLResponse object containing formatted response and visualization
+            Dictionary containing processed response
         """
+        logger.debug(f"Processing query: {query}")
+        
         try:
-            # Process the prompt
-            processed_prompt = self.prompt_processor.process_prompt(query)
+            # Extract intent and entities
+            intent, intent_confidence = self._detect_intent(query)
+            logger.debug(f"Detected intent: {intent} (confidence: {intent_confidence:.2f})")
             
-            # Validate the prompt
-            is_valid, missing_entities = self.prompt_processor.validate_prompt(processed_prompt)
-            if not is_valid:
-                return self._create_error_response(f"Missing required information: {', '.join(missing_entities)}")
-                
-            # Generate response based on intent
-            response_data = self._generate_response(processed_prompt)
+            # Check intent confidence
+            if intent_confidence < self.confidence_thresholds['intent_detection']:
+                logger.warning(f"Low intent confidence: {intent_confidence:.2f}")
+                return self._handle_low_confidence('intent', query)
             
-            # Format the response
-            formatted_text = self.response_formatter.format_response(response_data)
+            # Extract and expand entities
+            entities = self._extract_entities(query, intent)
+            logger.debug(f"Extracted entities: {entities}")
             
-            # Create visualization
-            visualization = self.response_formatter.create_visualization(response_data)
+            # Check entity confidence
+            if not self._validate_entities(entities):
+                logger.warning("Missing or low confidence entities")
+                return self._handle_missing_entities(entities, query)
             
-            return NLResponse(
-                text=formatted_text,
-                visualization=visualization,
-                metadata=response_data.metadata
-            )
+            # Generate response
+            response = self._generate_response(query, intent, entities, session_state)
+            
+            # Format response
+            formatted_response = self._format_response(response, session_state)
+            
+            return formatted_response
+            
         except Exception as e:
-            self.logger.error(f"Error processing query: {e}")
-            return self._create_error_response(str(e))
-            
-    def _generate_response(self, prompt: ProcessedPrompt) -> ResponseData:
-        """Generate response based on processed prompt.
+            logger.error(f"Error processing query: {str(e)}", exc_info=True)
+            return self._handle_error(str(e))
+    
+    def _detect_intent(self, query: str) -> Tuple[str, float]:
+        """Detect intent from query.
         
         Args:
-            prompt: ProcessedPrompt object containing intent and entities
+            query: User query string
             
         Returns:
-            ResponseData object containing response content and metadata
+            Tuple of (intent, confidence)
         """
         try:
-            if prompt.intent == "forecast":
-                return self._generate_forecast(prompt)
-            elif prompt.intent == "analyze":
-                return self._generate_analysis(prompt)
-            elif prompt.intent == "recommend":
-                return self._generate_recommendation(prompt)
-            elif prompt.intent == "explain":
-                return self._generate_explanation(prompt)
-            elif prompt.intent == "compare":
-                return self._generate_comparison(prompt)
-            elif prompt.intent == "optimize":
-                return self._generate_optimization(prompt)
-            elif prompt.intent == "validate":
-                return self._generate_validation(prompt)
-            elif prompt.intent == "monitor":
-                return self._generate_monitoring(prompt)
-            else:
-                return self._create_error_response("Unknown intent")
-        except Exception as e:
-            self.logger.error(f"Error generating response: {e}")
-            return self._create_error_response(str(e))
+            # Process query with LLM
+            prompt = self.prompt_processor.create_intent_prompt(query)
+            response = self.llm_processor.process(prompt)
             
+            # Parse intent and confidence
+            intent_data = json.loads(response)
+            return intent_data['intent'], float(intent_data['confidence'])
+            
+        except Exception as e:
+            logger.error(f"Error detecting intent: {str(e)}", exc_info=True)
+            return "unknown", 0.0
+    
+    def _extract_entities(self, query: str, intent: str) -> Dict[str, Any]:
+        """Extract and expand entities from query.
+        
+        Args:
+            query: User query string
+            intent: Detected intent
+            
+        Returns:
+            Dictionary of extracted entities
+        """
+        try:
+            # Extract base entities
+            entities = self.prompt_processor.extract_entities(query, intent)
+            
+            # Expand entities with synonyms and clarifications
+            expanded_entities = self.prompt_processor.expand_entities(entities)
+            
+            return expanded_entities
+            
+        except Exception as e:
+            logger.error(f"Error extracting entities: {str(e)}", exc_info=True)
+            return {}
+    
+    def _validate_entities(self, entities: Dict[str, Any]) -> bool:
+        """Validate extracted entities.
+        
+        Args:
+            entities: Dictionary of extracted entities
+            
+        Returns:
+            True if entities are valid, False otherwise
+        """
+        if not entities:
+            return False
+            
+        # Check confidence for each entity
+        for entity, data in entities.items():
+            if 'confidence' in data and data['confidence'] < self.confidence_thresholds['entity_extraction']:
+                return False
+                
+        return True
+    
+    def _generate_response(self, query: str, intent: str, entities: Dict[str, Any],
+                          session_state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Generate response based on intent and entities.
+        
+        Args:
+            query: Original user query
+            intent: Detected intent
+            entities: Extracted entities
+            session_state: Optional session state
+            
+        Returns:
+            Dictionary containing response data
+        """
+        try:
+            # Create response prompt
+            prompt = self.prompt_processor.create_response_prompt(
+                query, intent, entities, session_state
+            )
+            
+            # Generate response with streaming
+            response_stream = self.llm_processor.process_stream(prompt)
+            
+            # Collect and validate response
+            response = ""
+            for chunk in response_stream:
+                response += chunk
+                
+                # Check for unsafe content
+                if self.llm_processor.is_unsafe_content(chunk):
+                    logger.warning("Detected unsafe content in response")
+                    return self._handle_unsafe_content()
+            
+            # Parse response
+            response_data = json.loads(response)
+            
+            # Check response confidence
+            if response_data.get('confidence', 0) < self.confidence_thresholds['response_generation']:
+                logger.warning("Low response confidence")
+                return self._handle_low_confidence('response', response_data)
+            
+            return response_data
+            
+        except Exception as e:
+            logger.error(f"Error generating response: {str(e)}", exc_info=True)
+            return self._handle_error(str(e))
+    
+    def _format_response(self, response: Dict[str, Any],
+                        session_state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Format response for output.
+        
+        Args:
+            response: Response data dictionary
+            session_state: Optional session state
+            
+        Returns:
+            Formatted response dictionary
+        """
+        try:
+            # Get output format from session state or default to text
+            output_format = session_state.get('output_format', 'text') if session_state else 'text'
+            
+            # Get theme from session state or default to light
+            theme = session_state.get('theme', 'light') if session_state else 'light'
+            
+            # Format response
+            formatted = self.response_formatter.format(
+                response,
+                output_format=output_format,
+                theme=theme
+            )
+            
+            return formatted
+            
+        except Exception as e:
+            logger.error(f"Error formatting response: {str(e)}", exc_info=True)
+            return self._handle_error(str(e))
+    
+    def _handle_low_confidence(self, component: str, data: Any) -> Dict[str, Any]:
+        """Handle low confidence in any component.
+        
+        Args:
+            component: Component with low confidence
+            data: Original data
+            
+        Returns:
+            Fallback response
+        """
+        if component == 'intent':
+            return {
+                'type': 'clarification',
+                'message': self.fallback_prompts['intent_clarification'],
+                'original_query': data
+            }
+        elif component == 'response':
+            return {
+                'type': 'partial',
+                'message': self.fallback_prompts['response_fallback'].format(
+                    partial_response=data.get('partial', '')
+                ),
+                'confidence': data.get('confidence', 0)
+            }
+        else:
+            return self._handle_error(f"Unknown component: {component}")
+    
+    def _handle_missing_entities(self, entities: Dict[str, Any], query: str) -> Dict[str, Any]:
+        """Handle missing or low confidence entities.
+        
+        Args:
+            entities: Extracted entities
+            query: Original query
+            
+        Returns:
+            Clarification response
+        """
+        missing = []
+        for entity, data in entities.items():
+            if 'confidence' not in data or data['confidence'] < self.confidence_thresholds['entity_extraction']:
+                missing.append(entity)
+        
+        if missing:
+            return {
+                'type': 'clarification',
+                'message': self.fallback_prompts['entity_clarification'].format(
+                    entity=', '.join(missing)
+                ),
+                'missing_entities': missing,
+                'original_query': query
+            }
+        else:
+            return self._handle_error("No entities found")
+    
+    def _handle_unsafe_content(self) -> Dict[str, Any]:
+        """Handle unsafe content in response.
+        
+        Returns:
+            Error response
+        """
+        return {
+            'type': 'error',
+            'message': "I cannot process this request as it may contain unsafe content.",
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    def _handle_error(self, error: str) -> Dict[str, Any]:
+        """Handle general errors.
+        
+        Args:
+            error: Error message
+            
+        Returns:
+            Error response
+        """
+        return {
+            'type': 'error',
+            'message': f"An error occurred: {error}",
+            'timestamp': datetime.now().isoformat()
+        }
+
     def _generate_forecast(self, prompt: ProcessedPrompt) -> ResponseData:
         """Generate forecast response."""
         try:
