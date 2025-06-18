@@ -1,3 +1,10 @@
+"""
+Market Indicators Module
+
+This module provides technical analysis indicators for market data, with both CPU and GPU implementations.
+It includes robust error handling, logging, and performance monitoring.
+"""
+
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Union, Any, Tuple
@@ -7,15 +14,17 @@ import torch
 from scipy import stats
 from numba import jit
 import warnings
+import talib
+from trading.logs.logger import log_metrics
 
 class MarketIndicators:
-    """Class for calculating market indicators."""
+    """Class for calculating technical analysis indicators with GPU/CPU support."""
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize the market indicators calculator.
         
         Args:
-            config: Configuration dictionary
+            config: Configuration dictionary with indicator parameters
         """
         self.config = config or {}
         self._validate_config()
@@ -28,7 +37,15 @@ class MarketIndicators:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
-            
+        
+        # Initialize performance tracking
+        self.performance_metrics = {
+            'total_calculations': 0,
+            'gpu_calculations': 0,
+            'cpu_calculations': 0,
+            'errors': 0
+        }
+        
         # Check for GPU availability
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         if self.device.type == 'cuda':
@@ -38,34 +55,23 @@ class MarketIndicators:
             
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
-        if 'rsi_period' in self.config:
-            if not isinstance(self.config['rsi_period'], int) or self.config['rsi_period'] <= 0:
-                raise ValueError("rsi_period must be a positive integer")
-                
-        if 'macd_fast' in self.config:
-            if not isinstance(self.config['macd_fast'], int) or self.config['macd_fast'] <= 0:
-                raise ValueError("macd_fast must be a positive integer")
-                
-        if 'macd_slow' in self.config:
-            if not isinstance(self.config['macd_slow'], int) or self.config['macd_slow'] <= 0:
-                raise ValueError("macd_slow must be a positive integer")
-                
-        if 'macd_signal' in self.config:
-            if not isinstance(self.config['macd_signal'], int) or self.config['macd_signal'] <= 0:
-                raise ValueError("macd_signal must be a positive integer")
-                
-        if 'bb_period' in self.config:
-            if not isinstance(self.config['bb_period'], int) or self.config['bb_period'] <= 0:
-                raise ValueError("bb_period must be a positive integer")
-                
-        if 'bb_std' in self.config:
-            if not isinstance(self.config['bb_std'], (int, float)) or self.config['bb_std'] <= 0:
-                raise ValueError("bb_std must be a positive number")
-                
-        if 'use_gpu' in self.config:
-            if not isinstance(self.config['use_gpu'], bool):
-                raise ValueError("use_gpu must be a boolean")
-                
+        required_fields = ['rsi_window', 'macd_fast', 'macd_slow', 'macd_signal']
+        for field in required_fields:
+            if field not in self.config:
+                raise ValueError(f"Missing required config field: {field}")
+        
+        if not isinstance(self.config['rsi_window'], int) or self.config['rsi_window'] <= 0:
+            raise ValueError("rsi_window must be a positive integer")
+        
+        if not isinstance(self.config['macd_fast'], int) or self.config['macd_fast'] <= 0:
+            raise ValueError("macd_fast must be a positive integer")
+        
+        if not isinstance(self.config['macd_slow'], int) or self.config['macd_slow'] <= 0:
+            raise ValueError("macd_slow must be a positive integer")
+        
+        if not isinstance(self.config['macd_signal'], int) or self.config['macd_signal'] <= 0:
+            raise ValueError("macd_signal must be a positive integer")
+
     def _validate_data(self, data: pd.DataFrame) -> None:
         """Validate input data.
         
@@ -133,185 +139,257 @@ class MarketIndicators:
             
         return rsi
             
-    def calculate_rsi(self, data: pd.DataFrame, period: Optional[int] = None) -> pd.Series:
+    def calculate_rsi(self, data: pd.DataFrame, window: Optional[int] = None) -> pd.Series:
         """Calculate Relative Strength Index (RSI).
         
         Args:
-            data: DataFrame with OHLCV data
-            period: RSI period (default: from config or 14)
+            data: DataFrame with 'Close' prices
+            window: RSI window period (defaults to config value)
             
         Returns:
-            Series with RSI values
+            Series containing RSI values
         """
         try:
-            self._validate_data(data)
-            period = period or self.config.get('rsi_period', 14)
+            window = window or self.config['rsi_window']
+            if 'Close' not in data.columns:
+                raise ValueError("Data must contain 'Close' column")
             
-            if self.device.type == 'cuda':
-                # GPU implementation
-                prices = torch.tensor(data['Close'].values, device=self.device)
-                deltas = torch.diff(prices)
-                gains = torch.where(deltas > 0, deltas, torch.zeros_like(deltas))
-                losses = torch.where(deltas < 0, -deltas, torch.zeros_like(deltas))
-                
-                avg_gains = torch.zeros_like(prices)
-                avg_losses = torch.zeros_like(prices)
-                
-                # Initialize first values
-                avg_gains[period] = gains[:period].mean()
-                avg_losses[period] = losses[:period].mean()
-                
-                # Calculate subsequent values
-                for i in range(period + 1, len(prices)):
-                    avg_gains[i] = (avg_gains[i-1] * (period-1) + gains[i-1]) / period
-                    avg_losses[i] = (avg_losses[i-1] * (period-1) + losses[i-1]) / period
-                    
-                rs = avg_gains / avg_losses
-                rsi = 100 - (100 / (1 + rs))
-                return pd.Series(rsi.cpu().numpy(), index=data.index)
-            else:
-                # CPU implementation with Numba
-                return pd.Series(
-                    self._calculate_rsi_fast(data['Close'].values, period),
-                    index=data.index
-                )
+            start_time = datetime.now()
+            rsi = talib.RSI(data['Close'].values, timeperiod=window)
+            calculation_time = (datetime.now() - start_time).total_seconds()
+            
+            self.performance_metrics['total_calculations'] += 1
+            self.performance_metrics['cpu_calculations'] += 1
+            
+            if self.config.get('metrics_enabled', False):
+                log_metrics("indicator_calculation", {
+                    'indicator': 'RSI',
+                    'window': window,
+                    'calculation_time': calculation_time,
+                    'data_points': len(data),
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+            
+            return pd.Series(rsi, index=data.index)
             
         except Exception as e:
+            self.performance_metrics['errors'] += 1
             self.logger.error(f"Error calculating RSI: {str(e)}")
             raise
-            
-    def calculate_macd(self, data: pd.DataFrame, fast_period: Optional[int] = None,
-                      slow_period: Optional[int] = None, signal_period: Optional[int] = None) -> pd.DataFrame:
+
+    def calculate_macd(self, data: pd.DataFrame) -> Dict[str, pd.Series]:
         """Calculate Moving Average Convergence Divergence (MACD).
         
         Args:
-            data: DataFrame with OHLCV data
-            fast_period: Fast period (default: from config or 12)
-            slow_period: Slow period (default: from config or 26)
-            signal_period: Signal period (default: from config or 9)
+            data: DataFrame with 'Close' prices
             
         Returns:
-            DataFrame with MACD, Signal, and Histogram
+            Dictionary containing MACD line, signal line, and histogram
         """
         try:
-            self._validate_data(data)
+            if 'Close' not in data.columns:
+                raise ValueError("Data must contain 'Close' column")
             
-            fast_period = fast_period or self.config.get('macd_fast', 12)
-            slow_period = slow_period or self.config.get('macd_slow', 26)
-            signal_period = signal_period or self.config.get('macd_signal', 9)
+            start_time = datetime.now()
+            macd, signal, hist = talib.MACD(
+                data['Close'].values,
+                fastperiod=self.config['macd_fast'],
+                slowperiod=self.config['macd_slow'],
+                signalperiod=self.config['macd_signal']
+            )
+            calculation_time = (datetime.now() - start_time).total_seconds()
             
-            if self.device.type == 'cuda':
-                # GPU implementation
-                prices = torch.tensor(data['Close'].values, device=self.device)
-                
-                # Calculate MACD line
-                exp1 = torch.zeros_like(prices)
-                exp2 = torch.zeros_like(prices)
-                
-                # Initialize first values
-                exp1[0] = prices[0]
-                exp2[0] = prices[0]
-                
-                # Calculate subsequent values
-                for i in range(1, len(prices)):
-                    exp1[i] = (prices[i] * (2/(fast_period+1)) + 
-                              exp1[i-1] * (1 - 2/(fast_period+1)))
-                    exp2[i] = (prices[i] * (2/(slow_period+1)) + 
-                              exp2[i-1] * (1 - 2/(slow_period+1)))
-                    
-                macd = exp1 - exp2
-                
-                # Calculate signal line
-                signal = torch.zeros_like(macd)
-                signal[0] = macd[0]
-                
-                for i in range(1, len(macd)):
-                    signal[i] = (macd[i] * (2/(signal_period+1)) + 
-                               signal[i-1] * (1 - 2/(signal_period+1)))
-                    
-                histogram = macd - signal
-                
-                return pd.DataFrame({
-                    'MACD': macd.cpu().numpy(),
-                    'Signal': signal.cpu().numpy(),
-                    'Histogram': histogram.cpu().numpy()
-                }, index=data.index)
-            else:
-                # CPU implementation
-                exp1 = data['Close'].ewm(span=fast_period, adjust=False).mean()
-                exp2 = data['Close'].ewm(span=slow_period, adjust=False).mean()
-                macd = exp1 - exp2
-                signal = macd.ewm(span=signal_period, adjust=False).mean()
-                histogram = macd - signal
-                
-                return pd.DataFrame({
-                    'MACD': macd,
-                    'Signal': signal,
-                    'Histogram': histogram
+            self.performance_metrics['total_calculations'] += 1
+            self.performance_metrics['cpu_calculations'] += 1
+            
+            if self.config.get('metrics_enabled', False):
+                log_metrics("indicator_calculation", {
+                    'indicator': 'MACD',
+                    'calculation_time': calculation_time,
+                    'data_points': len(data),
+                    'timestamp': datetime.utcnow().isoformat()
                 })
             
+            return {
+                'macd': pd.Series(macd, index=data.index),
+                'signal': pd.Series(signal, index=data.index),
+                'histogram': pd.Series(hist, index=data.index)
+            }
+            
         except Exception as e:
+            self.performance_metrics['errors'] += 1
             self.logger.error(f"Error calculating MACD: {str(e)}")
             raise
+
+    def calculate_sma(self, data: pd.DataFrame, window: int) -> pd.Series:
+        """Calculate Simple Moving Average (SMA).
+        
+        Args:
+            data: DataFrame with 'Close' prices
+            window: SMA window period
             
-    def calculate_bollinger_bands(self, data: pd.DataFrame, period: Optional[int] = None,
-                                std_dev: Optional[float] = None) -> pd.DataFrame:
+        Returns:
+            Series containing SMA values
+        """
+        try:
+            if 'Close' not in data.columns:
+                raise ValueError("Data must contain 'Close' column")
+            
+            start_time = datetime.now()
+            sma = talib.SMA(data['Close'].values, timeperiod=window)
+            calculation_time = (datetime.now() - start_time).total_seconds()
+            
+            self.performance_metrics['total_calculations'] += 1
+            self.performance_metrics['cpu_calculations'] += 1
+            
+            if self.config.get('metrics_enabled', False):
+                log_metrics("indicator_calculation", {
+                    'indicator': 'SMA',
+                    'window': window,
+                    'calculation_time': calculation_time,
+                    'data_points': len(data),
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+            
+            return pd.Series(sma, index=data.index)
+            
+        except Exception as e:
+            self.performance_metrics['errors'] += 1
+            self.logger.error(f"Error calculating SMA: {str(e)}")
+            raise
+
+    def calculate_ema(self, data: pd.DataFrame, window: int) -> pd.Series:
+        """Calculate Exponential Moving Average (EMA).
+        
+        Args:
+            data: DataFrame with 'Close' prices
+            window: EMA window period
+            
+        Returns:
+            Series containing EMA values
+        """
+        try:
+            if 'Close' not in data.columns:
+                raise ValueError("Data must contain 'Close' column")
+            
+            start_time = datetime.now()
+            ema = talib.EMA(data['Close'].values, timeperiod=window)
+            calculation_time = (datetime.now() - start_time).total_seconds()
+            
+            self.performance_metrics['total_calculations'] += 1
+            self.performance_metrics['cpu_calculations'] += 1
+            
+            if self.config.get('metrics_enabled', False):
+                log_metrics("indicator_calculation", {
+                    'indicator': 'EMA',
+                    'window': window,
+                    'calculation_time': calculation_time,
+                    'data_points': len(data),
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+            
+            return pd.Series(ema, index=data.index)
+            
+        except Exception as e:
+            self.performance_metrics['errors'] += 1
+            self.logger.error(f"Error calculating EMA: {str(e)}")
+            raise
+
+    def calculate_bollinger_bands(self, data: pd.DataFrame, window: int = 20, num_std: float = 2.0) -> Dict[str, pd.Series]:
         """Calculate Bollinger Bands.
         
         Args:
-            data: DataFrame with OHLCV data
-            period: Moving average period (default: from config or 20)
-            std_dev: Number of standard deviations (default: from config or 2.0)
+            data: DataFrame with 'Close' prices
+            window: BB window period
+            num_std: Number of standard deviations
             
         Returns:
-            DataFrame with Middle, Upper, and Lower bands
+            Dictionary containing upper band, middle band, and lower band
         """
         try:
-            self._validate_data(data)
+            if 'Close' not in data.columns:
+                raise ValueError("Data must contain 'Close' column")
             
-            period = period or self.config.get('bb_period', 20)
-            std_dev = std_dev or self.config.get('bb_std', 2.0)
+            start_time = datetime.now()
+            upper, middle, lower = talib.BBANDS(
+                data['Close'].values,
+                timeperiod=window,
+                nbdevup=num_std,
+                nbdevdn=num_std
+            )
+            calculation_time = (datetime.now() - start_time).total_seconds()
             
-            if self.device.type == 'cuda':
-                # GPU implementation
-                prices = torch.tensor(data['Close'].values, device=self.device)
-                
-                # Calculate middle band (SMA)
-                middle = torch.zeros_like(prices)
-                for i in range(period-1, len(prices)):
-                    middle[i] = prices[i-period+1:i+1].mean()
-                    
-                # Calculate standard deviation
-                std = torch.zeros_like(prices)
-                for i in range(period-1, len(prices)):
-                    std[i] = prices[i-period+1:i+1].std()
-                    
-                # Calculate bands
-                upper = middle + (std * std_dev)
-                lower = middle - (std * std_dev)
-                
-                return pd.DataFrame({
-                    'Middle': middle.cpu().numpy(),
-                    'Upper': upper.cpu().numpy(),
-                    'Lower': lower.cpu().numpy()
-                }, index=data.index)
-            else:
-                # CPU implementation
-                middle = data['Close'].rolling(window=period).mean()
-                std = data['Close'].rolling(window=period).std()
-                upper = middle + (std * std_dev)
-                lower = middle - (std * std_dev)
-                
-                return pd.DataFrame({
-                    'Middle': middle,
-                    'Upper': upper,
-                    'Lower': lower
+            self.performance_metrics['total_calculations'] += 1
+            self.performance_metrics['cpu_calculations'] += 1
+            
+            if self.config.get('metrics_enabled', False):
+                log_metrics("indicator_calculation", {
+                    'indicator': 'Bollinger Bands',
+                    'window': window,
+                    'num_std': num_std,
+                    'calculation_time': calculation_time,
+                    'data_points': len(data),
+                    'timestamp': datetime.utcnow().isoformat()
                 })
             
+            return {
+                'upper': pd.Series(upper, index=data.index),
+                'middle': pd.Series(middle, index=data.index),
+                'lower': pd.Series(lower, index=data.index)
+            }
+            
         except Exception as e:
+            self.performance_metrics['errors'] += 1
             self.logger.error(f"Error calculating Bollinger Bands: {str(e)}")
             raise
+
+    def calculate_all_indicators(self, data: pd.DataFrame) -> Dict[str, Union[pd.Series, Dict[str, pd.Series]]]:
+        """Calculate all technical indicators for the given data.
+        
+        Args:
+            data: DataFrame with market data
             
+        Returns:
+            Dictionary containing all calculated indicators
+        """
+        try:
+            if 'Close' not in data.columns:
+                raise ValueError("Data must contain 'Close' column")
+            
+            start_time = datetime.now()
+            
+            # Calculate indicators
+            indicators = {
+                'rsi': self.calculate_rsi(data),
+                'macd': self.calculate_macd(data),
+                'sma_20': self.calculate_sma(data, 20),
+                'sma_50': self.calculate_sma(data, 50),
+                'ema_20': self.calculate_ema(data, 20),
+                'ema_50': self.calculate_ema(data, 50),
+                'bollinger_bands': self.calculate_bollinger_bands(data)
+            }
+            
+            calculation_time = (datetime.now() - start_time).total_seconds()
+            
+            if self.config.get('metrics_enabled', False):
+                log_metrics("indicator_calculation", {
+                    'indicator': 'All Indicators',
+                    'calculation_time': calculation_time,
+                    'data_points': len(data),
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+            
+            return indicators
+            
+        except Exception as e:
+            self.performance_metrics['errors'] += 1
+            self.logger.error(f"Error calculating all indicators: {str(e)}")
+            raise
+
+    def get_performance_metrics(self) -> Dict[str, int]:
+        """Get performance metrics for indicator calculations."""
+        return self.performance_metrics.copy()
+
     def calculate_stochastic(self, data: pd.DataFrame, k_period: int = 14,
                            d_period: int = 3) -> pd.DataFrame:
         """Calculate Stochastic Oscillator.
@@ -516,72 +594,4 @@ class MarketIndicators:
             
         except Exception as e:
             self.logger.error(f"Error calculating Ichimoku Cloud: {str(e)}")
-            raise
-            
-    def calculate_all_indicators(self, data: pd.DataFrame) -> Dict[str, Union[pd.Series, pd.DataFrame]]:
-        """Calculate all market indicators.
-        
-        Args:
-            data: DataFrame with OHLCV data
-            
-        Returns:
-            Dictionary with all indicator values
-        """
-        try:
-            self._validate_data(data)
-            
-            indicators = {}
-            
-            # Calculate basic indicators
-            indicators['RSI'] = self.calculate_rsi(data)
-            indicators['MACD'] = self.calculate_macd(data)
-            indicators['Bollinger Bands'] = self.calculate_bollinger_bands(data)
-            indicators['Stochastic'] = self.calculate_stochastic(data)
-            indicators['ATR'] = self.calculate_atr(data)
-            indicators['Ichimoku'] = self.calculate_ichimoku(data)
-            
-            return indicators
-            
-        except Exception as e:
-            self.logger.error(f"Error calculating all indicators: {str(e)}")
-            raise
-
-    def calculate_sma(self, data: pd.DataFrame, window: int) -> pd.Series:
-        """Calculate Simple Moving Average.
-
-        Args:
-            data (pd.DataFrame): The market data.
-            window (int): The window size for the SMA.
-
-        Returns:
-            pd.Series: The calculated SMA.
-        """
-        return data['Close'].rolling(window=window).mean()
-
-    def calculate_ema(self, data: pd.DataFrame, window: int) -> pd.Series:
-        """Calculate Exponential Moving Average.
-
-        Args:
-            data (pd.DataFrame): The market data.
-            window (int): The window size for the EMA.
-
-        Returns:
-            pd.Series: The calculated EMA.
-        """
-        return data['Close'].ewm(span=window, adjust=False).mean()
-
-    def calculate_rsi(self, data: pd.DataFrame, window: int) -> pd.Series:
-        """Calculate Relative Strength Index.
-
-        Args:
-            data (pd.DataFrame): The market data.
-            window (int): The window size for the RSI.
-
-        Returns:
-            pd.Series: The calculated RSI.
-        """
-        delta = data['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-        rs = gain / loss
-        return 100 - (100 / (1 + rs)) 
+            raise 
