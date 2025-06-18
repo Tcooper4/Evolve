@@ -1,3 +1,10 @@
+"""
+Market Analyzer for financial data analysis.
+
+This module provides comprehensive market analysis capabilities including
+technical indicators, regime detection, and pattern recognition.
+"""
+
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Tuple, Union, Any
@@ -7,6 +14,7 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import silhouette_score
 import networkx as nx
 import yfinance as yf
 from datetime import datetime, timedelta
@@ -16,6 +24,8 @@ from pathlib import Path
 import logging
 from functools import wraps
 import time
+import joblib
+from alpha_vantage.timeseries import TimeSeries
 
 # Try to import redis, but make it optional
 try:
@@ -89,6 +99,10 @@ class MarketAnalyzer:
                 - results_dir: Directory for saving results (default: market_analysis)
                 - max_symbols: Maximum number of symbols to analyze (default: 100)
                 - min_data_points: Minimum data points required (default: 100)
+                - debug_mode: Enable debug mode (default: false)
+                - skip_pca: Skip PCA analysis (default: false)
+                - alpha_vantage_key: API key for Alpha Vantage
+                - use_alpha_vantage: Use Alpha Vantage as fallback (default: false)
         """
         # Load configuration from environment variables with defaults
         self.config = {
@@ -101,7 +115,11 @@ class MarketAnalyzer:
             'cache_ttl': int(os.getenv('MARKET_ANALYZER_CACHE_TTL', 3600)),
             'results_dir': os.getenv('MARKET_ANALYZER_RESULTS_DIR', 'market_analysis'),
             'max_symbols': int(os.getenv('MARKET_ANALYZER_MAX_SYMBOLS', 100)),
-            'min_data_points': int(os.getenv('MARKET_ANALYZER_MIN_DATA_POINTS', 100))
+            'min_data_points': int(os.getenv('MARKET_ANALYZER_MIN_DATA_POINTS', 100)),
+            'debug_mode': os.getenv('MARKET_ANALYZER_DEBUG', 'false').lower() == 'true',
+            'skip_pca': os.getenv('MARKET_ANALYZER_SKIP_PCA', 'false').lower() == 'true',
+            'alpha_vantage_key': os.getenv('ALPHA_VANTAGE_KEY'),
+            'use_alpha_vantage': os.getenv('USE_ALPHA_VANTAGE', 'false').lower() == 'true'
         }
         
         # Update with provided config
@@ -132,7 +150,7 @@ class MarketAnalyzer:
                 self.redis_client.ping()
                 self.logger.info("Redis connection established")
             except Exception as e:
-                self.logger.warning(f"Failed to connect to Redis: {str(e)}")
+                self.logger.error(f"Failed to connect to Redis: {str(e)}")
                 self.redis_client = None
         
         # Create results directory
@@ -143,6 +161,10 @@ class MarketAnalyzer:
         self.cache_dir = self.results_dir / 'cache'
         self.cache_dir.mkdir(exist_ok=True)
         
+        # Create models directory
+        self.models_dir = self.results_dir / 'models'
+        self.models_dir.mkdir(exist_ok=True)
+        
         # Initialize data storage
         self.data = {}
         self.indicators = {}
@@ -152,6 +174,35 @@ class MarketAnalyzer:
         self.regime_model = KMeans(n_clusters=3, random_state=42)
         self.pca = PCA(n_components=0.95)  # Keep 95% of variance
         self.feature_columns = []
+        
+        # Load cached models if available
+        self._load_cached_models()
+        
+    def _load_cached_models(self):
+        """Load cached PCA and KMeans models if available."""
+        try:
+            pca_path = self.models_dir / 'pca_model.joblib'
+            kmeans_path = self.models_dir / 'kmeans_model.joblib'
+            
+            if pca_path.exists():
+                self.pca = joblib.load(pca_path)
+                self.logger.info("Loaded cached PCA model")
+                
+            if kmeans_path.exists():
+                self.regime_model = joblib.load(kmeans_path)
+                self.logger.info("Loaded cached KMeans model")
+                
+        except Exception as e:
+            self.logger.warning(f"Failed to load cached models: {str(e)}")
+            
+    def _save_models(self):
+        """Save PCA and KMeans models."""
+        try:
+            joblib.dump(self.pca, self.models_dir / 'pca_model.joblib')
+            joblib.dump(self.regime_model, self.models_dir / 'kmeans_model.joblib')
+            self.logger.info("Saved PCA and KMeans models")
+        except Exception as e:
+            self.logger.warning(f"Failed to save models: {str(e)}")
     
     def _get_cached_data(self, cache_key: str) -> Optional[pd.DataFrame]:
         """Get data from cache (Redis or file).
@@ -161,15 +212,21 @@ class MarketAnalyzer:
             
         Returns:
             Cached data if available, None otherwise
+            
+        Raises:
+            MarketAnalysisError: If cache is malformed
         """
         # Try Redis first if available
         if self.redis_client:
             try:
                 cached_data = self.redis_client.get(cache_key)
                 if cached_data:
-                    return pd.read_json(cached_data)
+                    try:
+                        return pd.read_json(cached_data)
+                    except Exception as e:
+                        raise MarketAnalysisError(f"Malformed Redis cache: {str(e)}")
             except Exception as e:
-                self.logger.warning(f"Redis cache error: {str(e)}")
+                self.logger.error(f"Redis cache error: {str(e)}")
         
         # Try file cache
         cache_file = self.cache_dir / f"{cache_key}.json"
@@ -177,9 +234,12 @@ class MarketAnalyzer:
             try:
                 # Check if cache is still valid
                 if time.time() - cache_file.stat().st_mtime < self.config['cache_ttl']:
-                    return pd.read_json(cache_file)
+                    try:
+                        return pd.read_json(cache_file)
+                    except Exception as e:
+                        raise MarketAnalysisError(f"Malformed file cache: {str(e)}")
             except Exception as e:
-                self.logger.warning(f"File cache error: {str(e)}")
+                self.logger.error(f"File cache error: {str(e)}")
         
         return None
     
@@ -199,14 +259,14 @@ class MarketAnalyzer:
                     data.to_json()
                 )
             except Exception as e:
-                self.logger.warning(f"Redis cache error: {str(e)}")
+                self.logger.error(f"Redis cache error: {str(e)}")
         
         # Always store in file cache as backup
         try:
             cache_file = self.cache_dir / f"{cache_key}.json"
             data.to_json(cache_file)
         except Exception as e:
-            self.logger.warning(f"File cache error: {str(e)}")
+            self.logger.error(f"File cache error: {str(e)}")
     
     @retry_on_error(max_retries=3)
     def fetch_data(self, symbol: str, period: str = '1y', interval: str = '1d') -> pd.DataFrame:
@@ -240,26 +300,133 @@ class MarketAnalyzer:
                 self.logger.info(f"Using cached data for {symbol}")
                 return cached_data
             
-            # Fetch new data
-            ticker = yf.Ticker(symbol)
-            data = ticker.history(period=period, interval=interval)
+            # Try primary data source (yfinance)
+            try:
+                ticker = yf.Ticker(symbol)
+                data = ticker.history(period=period, interval=interval)
+            except Exception as e:
+                self.logger.warning(f"yfinance fetch failed for {symbol}: {str(e)}")
+                data = None
+            
+            # Try fallback (Alpha Vantage) if configured
+            if data is None and self.config['use_alpha_vantage'] and self.config['alpha_vantage_key']:
+                try:
+                    ts = TimeSeries(key=self.config['alpha_vantage_key'])
+                    data, _ = ts.get_daily(symbol=symbol, outputsize='full')
+                    data = pd.DataFrame(data).astype(float)
+                    data.index = pd.to_datetime(data.index)
+                except Exception as e:
+                    self.logger.error(f"Alpha Vantage fetch failed for {symbol}: {str(e)}")
+                    raise MarketAnalysisError(f"Failed to fetch data for {symbol}")
             
             # Validate data
+            if data is None:
+                raise MarketAnalysisError(f"Failed to fetch data for {symbol}")
+                
             validate_dataframe(data, ['Open', 'High', 'Low', 'Close', 'Volume'])
             
             if len(data) < self.config['min_data_points']:
                 raise MarketAnalysisError(f"Insufficient data points for {symbol}")
             
-            # Store in cache
+            # Cache the data
             self._set_cached_data(cache_key, data)
             
-            self.data[symbol] = data
-            self.logger.info(f"Fetched data for {symbol}")
             return data
             
         except Exception as e:
+            self.logger.error(f"Error fetching data for {symbol}: {str(e)}")
             raise MarketAnalysisError(f"Failed to fetch data for {symbol}: {str(e)}")
-    
+            
+    def analyze(self, symbol: str, period: str = '1y', interval: str = '1d') -> Dict[str, Any]:
+        """Analyze market data for a symbol.
+        
+        Args:
+            symbol: Stock symbol
+            period: Data period (default: 1y)
+            interval: Data interval (default: 1d)
+            
+        Returns:
+            Dictionary containing analysis results
+            
+        Raises:
+            MarketAnalysisError: If analysis fails
+        """
+        results = {}
+        
+        try:
+            # Fetch data
+            try:
+                data = self.fetch_data(symbol, period, interval)
+            except Exception as e:
+                self.logger.error(f"Data fetch failed: {str(e)}")
+                raise
+                
+            # Perform PCA if not skipped
+            if not self.config['skip_pca']:
+                try:
+                    # Check if we can reuse existing PCA model
+                    if hasattr(self.pca, 'n_features_in_') and data.shape[1] == self.pca.n_features_in_:
+                        self.logger.info("Reusing existing PCA model")
+                    else:
+                        self.logger.info("Fitting new PCA model")
+                        self.pca.fit(data)
+                        self._save_models()
+                        
+                    # Transform data
+                    data_pca = self.pca.transform(data)
+                    results['pca'] = {
+                        'n_components': self.pca.n_components_,
+                        'explained_variance_ratio': self.pca.explained_variance_ratio_.tolist()
+                    }
+                except Exception as e:
+                    self.logger.error(f"PCA failed: {str(e)}")
+                    if self.config['debug_mode']:
+                        raise
+                    results['pca'] = {'error': str(e)}
+            else:
+                self.logger.info("Skipping PCA analysis")
+                data_pca = data
+                
+            # Perform KMeans clustering
+            try:
+                self.regime_model.fit(data_pca)
+                labels = self.regime_model.labels_
+                
+                # Calculate metrics
+                inertia = self.regime_model.inertia_
+                silhouette = silhouette_score(data_pca, labels) if len(np.unique(labels)) > 1 else 0
+                
+                # Log metrics
+                self.logger.info(f"KMeans metrics - Inertia: {inertia:.2f}, Silhouette: {silhouette:.2f}")
+                
+                # Count regimes
+                regime_counts = pd.Series(labels).value_counts().to_dict()
+                self.logger.info(f"Regime counts: {regime_counts}")
+                
+                # Save model
+                self._save_models()
+                
+                results['regime'] = {
+                    'labels': labels.tolist(),
+                    'inertia': inertia,
+                    'silhouette_score': silhouette,
+                    'regime_counts': regime_counts
+                }
+            except Exception as e:
+                self.logger.error(f"KMeans failed: {str(e)}")
+                if self.config['debug_mode']:
+                    raise
+                results['regime'] = {'error': str(e)}
+                
+            # Add other analysis results
+            results.update(self.analyze_market(data))
+            
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Analysis failed for {symbol}: {str(e)}")
+            raise MarketAnalysisError(f"Analysis failed for {symbol}: {str(e)}")
+            
     def calculate_technical_indicators(self, symbol: str) -> pd.DataFrame:
         """Calculate technical indicators for a symbol.
         
@@ -1163,4 +1330,128 @@ class MarketAnalyzer:
                     'source': 'ml'
                 }
         
-        return combined 
+        return combined
+
+    def analyze_batch(self, symbols: List[str], period: str = '1y', interval: str = '1d',
+                     batch_size: int = 5, max_workers: int = 4) -> Dict[str, Dict[str, Any]]:
+        """Analyze multiple symbols in batches.
+        
+        Args:
+            symbols: List of stock symbols to analyze
+            period: Data period (default: 1y)
+            interval: Data interval (default: 1d)
+            batch_size: Number of symbols to process in each batch (default: 5)
+            max_workers: Maximum number of parallel workers (default: 4)
+            
+        Returns:
+            Dictionary mapping symbols to their analysis results
+            
+        Raises:
+            MarketAnalysisError: If batch processing fails
+        """
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        from itertools import islice
+        
+        results = {}
+        failed_symbols = []
+        
+        try:
+            # Validate inputs
+            if not isinstance(symbols, list) or not symbols:
+                raise MarketAnalysisError("Invalid symbols list")
+            if not isinstance(batch_size, int) or batch_size < 1:
+                raise MarketAnalysisError("Invalid batch size")
+            if not isinstance(max_workers, int) or max_workers < 1:
+                raise MarketAnalysisError("Invalid max workers")
+                
+            # Process symbols in batches
+            for i in range(0, len(symbols), batch_size):
+                batch = list(islice(symbols, i, i + batch_size))
+                self.logger.info(f"Processing batch {i//batch_size + 1}: {batch}")
+                
+                # Process batch in parallel
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    future_to_symbol = {
+                        executor.submit(self.analyze, symbol, period, interval): symbol
+                        for symbol in batch
+                    }
+                    
+                    # Collect results
+                    for future in as_completed(future_to_symbol):
+                        symbol = future_to_symbol[future]
+                        try:
+                            result = future.result()
+                            results[symbol] = result
+                            self.logger.info(f"Successfully analyzed {symbol}")
+                        except Exception as e:
+                            self.logger.error(f"Failed to analyze {symbol}: {str(e)}")
+                            failed_symbols.append(symbol)
+                            if self.config['debug_mode']:
+                                raise
+                            results[symbol] = {'error': str(e)}
+                            
+            # Log summary
+            self.logger.info(f"Batch processing completed. "
+                           f"Successfully analyzed {len(results) - len(failed_symbols)} symbols. "
+                           f"Failed: {len(failed_symbols)}")
+            
+            if failed_symbols:
+                self.logger.warning(f"Failed symbols: {failed_symbols}")
+                
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Batch processing failed: {str(e)}")
+            raise MarketAnalysisError(f"Batch processing failed: {str(e)}")
+            
+    def analyze_market_batch(self, symbols: List[str], period: str = '1y',
+                           interval: str = '1d') -> Dict[str, Dict[str, Any]]:
+        """Analyze market data for multiple symbols.
+        
+        Args:
+            symbols: List of stock symbols to analyze
+            period: Data period (default: 1y)
+            interval: Data interval (default: 1d)
+            
+        Returns:
+            Dictionary mapping symbols to their market analysis results
+            
+        Raises:
+            MarketAnalysisError: If market analysis fails
+        """
+        results = {}
+        
+        try:
+            # Fetch data for all symbols
+            data_dict = {}
+            for symbol in symbols:
+                try:
+                    data = self.fetch_data(symbol, period, interval)
+                    data_dict[symbol] = data
+                except Exception as e:
+                    self.logger.error(f"Failed to fetch data for {symbol}: {str(e)}")
+                    if self.config['debug_mode']:
+                        raise
+                    results[symbol] = {'error': str(e)}
+                    continue
+                    
+            # Calculate technical indicators for all symbols
+            for symbol, data in data_dict.items():
+                try:
+                    indicators = self.calculate_technical_indicators(symbol)
+                    results[symbol] = {
+                        'indicators': indicators.to_dict(),
+                        'market_state': self.detect_market_state(data),
+                        'patterns': self.identify_patterns(data)
+                    }
+                except Exception as e:
+                    self.logger.error(f"Failed to analyze {symbol}: {str(e)}")
+                    if self.config['debug_mode']:
+                        raise
+                    results[symbol] = {'error': str(e)}
+                    
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Market analysis failed: {str(e)}")
+            raise MarketAnalysisError(f"Market analysis failed: {str(e)}") 

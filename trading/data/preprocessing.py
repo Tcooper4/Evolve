@@ -1,17 +1,22 @@
 import logging
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Union, Any, Callable
 from functools import lru_cache
 from concurrent.futures import ThreadPoolExecutor
 import warnings
+from pathlib import Path
+from datetime import datetime
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+log_file = Path("memory/logs/preprocessing.log")
+log_file.parent.mkdir(parents=True, exist_ok=True)
+handler = logging.FileHandler(log_file)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+if not logger.hasHandlers():
+    logger.addHandler(handler)
 
 class DataPreprocessor:
     """Data preprocessing class."""
@@ -843,3 +848,113 @@ class DataScaler:
             self.scaling_method = params['scaling_method']
         
         return self 
+
+def remove_outliers(df: pd.DataFrame, method: str = 'iqr', columns: Optional[list] = None) -> pd.DataFrame:
+    """Remove outliers using IQR or Z-score method.
+    
+    Args:
+        df: Input DataFrame
+        method: 'iqr' or 'zscore'
+        columns: List of columns to process (default: all numeric)
+        
+    Returns:
+        DataFrame with outliers removed
+    """
+    df = df.copy()
+    if columns is None:
+        columns = df.select_dtypes(include=[np.number]).columns
+    
+    logger.info(f"Removing outliers using {method} method for columns: {columns}")
+    
+    for col in columns:
+        if method == 'iqr':
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            lower_bound = Q1 - 1.5 * IQR
+            upper_bound = Q3 + 1.5 * IQR
+            mask = (df[col] >= lower_bound) & (df[col] <= upper_bound)
+        else:  # zscore
+            z_scores = np.abs((df[col] - df[col].mean()) / df[col].std())
+            mask = z_scores < 3
+        
+        outliers = (~mask).sum()
+        if outliers > 0:
+            logger.info(f"Removed {outliers} outliers from {col}")
+            df = df[mask]
+    
+    return df
+
+def apply_agent_transformations(df: pd.DataFrame, agent_config: Optional[Dict[str, Any]] = None) -> pd.DataFrame:
+    """Apply custom transformations defined by agents.
+    
+    Args:
+        df: Input DataFrame
+        agent_config: Optional configuration dict for agent-specific transformations
+        
+    Returns:
+        Transformed DataFrame
+    """
+    df = df.copy()
+    logger.info("Applying agent transformations")
+    
+    if agent_config is None:
+        return df
+        
+    # Example agent transformations (extend as needed)
+    if 'custom_scaling' in agent_config:
+        scale_factor = agent_config['custom_scaling']
+        logger.info(f"Applying custom scaling factor: {scale_factor}")
+        df = df * scale_factor
+        
+    if 'custom_filters' in agent_config:
+        for col, condition in agent_config['custom_filters'].items():
+            if col in df.columns:
+                logger.info(f"Applying custom filter to {col}")
+                df = df[eval(f"df['{col}'] {condition}")]
+    
+    return df
+
+def preprocess_data(
+    df: pd.DataFrame,
+    remove_outliers_method: Optional[str] = 'iqr',
+    agent_config: Optional[Dict[str, Any]] = None,
+    transformations: Optional[list[Callable]] = None
+) -> pd.DataFrame:
+    """Main preprocessing function with logging and agent support.
+    
+    Args:
+        df: Input DataFrame
+        remove_outliers_method: Method for outlier removal ('iqr' or 'zscore')
+        agent_config: Optional configuration for agent transformations
+        transformations: Optional list of custom transformation functions
+        
+    Returns:
+        Preprocessed DataFrame
+    """
+    logger.info("Starting data preprocessing")
+    df = df.copy()
+    
+    # Log initial state
+    logger.info(f"Input shape: {df.shape}")
+    logger.info(f"Missing values:\n{df.isnull().sum()}")
+    
+    # Remove outliers if requested
+    if remove_outliers_method:
+        df = remove_outliers(df, method=remove_outliers_method)
+        logger.info(f"Shape after outlier removal: {df.shape}")
+    
+    # Apply standard transformations
+    if transformations:
+        for transform in transformations:
+            logger.info(f"Applying transformation: {transform.__name__}")
+            df = transform(df)
+    
+    # Apply agent transformations
+    df = apply_agent_transformations(df, agent_config)
+    
+    # Log final state
+    logger.info(f"Final shape: {df.shape}")
+    logger.info(f"Final missing values:\n{df.isnull().sum()}")
+    
+    return df 

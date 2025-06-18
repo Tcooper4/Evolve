@@ -13,6 +13,10 @@ from functools import lru_cache
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 import threading
+import pickle
+import random
+import yfinance as yf
+from .yfinance_provider import YFinanceProvider
 
 # Try to import redis, but make it optional
 try:
@@ -53,129 +57,113 @@ class RateLimiter:
                     
             self.calls.append(now)
 
-class AlphaVantageProvider:
-    """Provider for fetching data from Alpha Vantage."""
+# Configure logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+log_file = Path("memory/logs/alpha_vantage.log")
+log_file.parent.mkdir(parents=True, exist_ok=True)
+handler = logging.FileHandler(log_file)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+if not logger.hasHandlers():
+    logger.addHandler(handler)
+
+# Cache configuration
+CACHE_DIR = Path("memory/cache/alpha_vantage")
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
+CACHE_EXPIRY = 3600  # 1 hour in seconds
+
+# Rate limit configuration
+MAX_RETRIES = 5
+INITIAL_BACKOFF = 1  # seconds
+MAX_BACKOFF = 32  # seconds
+
+def log_data_request(symbol: str, success: bool, error: Optional[str] = None) -> None:
+    """Log data request details.
     
-    def __init__(self, api_key: str, delay: float = 12.0, cache_ttl: int = 3600,
-                 redis_config: Optional[Dict] = None):
+    Args:
+        symbol: Stock symbol
+        success: Whether request was successful
+        error: Optional error message
+    """
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "symbol": symbol,
+        "success": success,
+        "error": error
+    }
+    
+    log_path = Path("memory/logs/data_requests.log")
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    with open(log_path, "a") as f:
+        f.write(f"{log_entry}\n")
+
+def get_cached_data(symbol: str) -> Optional[pd.DataFrame]:
+    """Get cached data if available and not expired.
+    
+    Args:
+        symbol: Stock symbol
+        
+    Returns:
+        Cached DataFrame or None if not available/expired
+    """
+    cache_path = CACHE_DIR / f"{symbol}.pkl"
+    if not cache_path.exists():
+        return None
+        
+    try:
+        with open(cache_path, "rb") as f:
+            cache_data = pickle.load(f)
+            
+        if time.time() - cache_data["timestamp"] > CACHE_EXPIRY:
+            logger.info(f"Cache expired for {symbol}")
+            return None
+            
+        logger.info(f"Using cached data for {symbol}")
+        return cache_data["data"]
+    except Exception as e:
+        logger.error(f"Error reading cache for {symbol}: {e}")
+        return None
+
+def cache_data(symbol: str, data: pd.DataFrame) -> None:
+    """Cache data with timestamp.
+    
+    Args:
+        symbol: Stock symbol
+        data: DataFrame to cache
+    """
+    try:
+        cache_data = {
+            "timestamp": time.time(),
+            "data": data
+        }
+        
+        cache_path = CACHE_DIR / f"{symbol}.pkl"
+        with open(cache_path, "wb") as f:
+            pickle.dump(cache_data, f)
+            
+        logger.info(f"Cached data for {symbol}")
+    except Exception as e:
+        logger.error(f"Error caching data for {symbol}: {e}")
+
+class AlphaVantageProvider:
+    """Provider for fetching data from Alpha Vantage with fallback to Yahoo Finance."""
+    
+    def __init__(self, api_key: str, delay: float = 1.0):
         """Initialize the provider.
         
         Args:
             api_key: Alpha Vantage API key
-            delay: Delay in seconds between requests (default: 12.0 for free tier)
-            cache_ttl: Cache TTL in seconds (default: 3600)
-            redis_config: Redis configuration dictionary
+            delay: Delay in seconds between requests
         """
         self.api_key = api_key
         self.delay = delay
-        self.cache_ttl = cache_ttl
-        self.base_url = "https://www.alphavantage.co/query"
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
+        self.yfinance_provider = YFinanceProvider()
         
-        # Initialize rate limiter (5 calls per minute for free tier)
-        self.rate_limiter = RateLimiter(calls_per_minute=5)
-        
-        # Initialize Redis cache if configured and available
-        self.redis_client = None
-        if redis_config and REDIS_AVAILABLE:
-            try:
-                self.redis_client = redis.Redis(**redis_config)
-                # Test connection
-                self.redis_client.ping()
-                self.logger.info("Redis connection established")
-            except Exception as e:
-                self.logger.warning(f"Failed to connect to Redis: {str(e)}")
-                self.redis_client = None
-            
-        # Setup logging
-        self.logger = logging.getLogger(self.__class__.__name__)
-        if not self.logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
-            
-        # Create cache directory
-        self.cache_dir = Path("cache/alpha_vantage")
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-            
-    def _get_cache_key(self, symbol: str, interval: str) -> str:
-        """Generate cache key for data.
-        
-        Args:
-            symbol: Stock symbol
-            interval: Data interval
-            
-        Returns:
-            Cache key string
-        """
-        return f"{symbol}_{interval}"
-        
-    def _get_cached_data(self, symbol: str, interval: str) -> Optional[pd.DataFrame]:
-        """Get cached data if available and valid.
-        
-        Args:
-            symbol: Stock symbol
-            interval: Data interval
-            
-        Returns:
-            Cached DataFrame if valid, None otherwise
-        """
-        cache_key = self._get_cache_key(symbol, interval)
-        
-        # Try Redis cache first
-        if self.redis_client:
-            try:
-                cached_data = self.redis_client.get(cache_key)
-                if cached_data:
-                    return pd.read_json(cached_data)
-            except Exception as e:
-                self.logger.warning(f"Redis cache error: {str(e)}")
-                
-        # Try file cache
-        cache_file = self.cache_dir / f"{cache_key}.csv"
-        if cache_file.exists():
-            try:
-                df = pd.read_csv(cache_file, index_col=0, parse_dates=True)
-                if (datetime.now() - df.index[-1]).total_seconds() < self.cache_ttl:
-                    return df
-            except Exception as e:
-                self.logger.warning(f"File cache error: {str(e)}")
-                
-        return None
-        
-    def _save_to_cache(self, symbol: str, interval: str, data: pd.DataFrame) -> None:
-        """Save data to cache.
-        
-        Args:
-            symbol: Stock symbol
-            interval: Data interval
-            data: DataFrame to cache
-        """
-        cache_key = self._get_cache_key(symbol, interval)
-        
-        # Save to Redis cache
-        if self.redis_client:
-            try:
-                self.redis_client.setex(
-                    cache_key,
-                    self.cache_ttl,
-                    data.to_json()
-                )
-            except Exception as e:
-                self.logger.warning(f"Redis cache error: {str(e)}")
-                
-        # Save to file cache
-        try:
-            cache_file = self.cache_dir / f"{cache_key}.csv"
-            data.to_csv(cache_file)
-        except Exception as e:
-            self.logger.warning(f"File cache error: {str(e)}")
-            
     def _validate_data(self, data: pd.DataFrame) -> None:
         """Validate the fetched data.
         
@@ -183,193 +171,160 @@ class AlphaVantageProvider:
             data: DataFrame to validate
             
         Raises:
-            AlphaVantageError: If data is invalid
+            ValueError: If data is invalid
         """
         if data.empty:
-            raise AlphaVantageError("No data received")
+            raise ValueError("No data received")
             
-        required_columns = ['open', 'high', 'low', 'close', 'volume']
+        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
         missing_columns = [col for col in required_columns if col not in data.columns]
         if missing_columns:
-            raise AlphaVantageError(f"Missing required columns: {missing_columns}")
+            raise ValueError(f"Missing required columns: {missing_columns}")
             
         if data.isnull().any().any():
-            raise AlphaVantageError("Data contains missing values")
+            raise ValueError("Data contains missing values")
             
-    def _parse_time_series(self, response: Dict[str, Any]) -> pd.DataFrame:
-        """Parse time series data from API response.
+    def _handle_rate_limit(self, response: requests.Response) -> bool:
+        """Check for rate limit in response.
         
         Args:
-            response: API response dictionary
+            response: API response
             
         Returns:
-            DataFrame with OHLCV data
-            
-        Raises:
-            AlphaVantageError: If response is invalid
+            True if rate limited, False otherwise
         """
-        try:
-            # Check for API errors
-            if "Error Message" in response:
-                raise AlphaVantageError(response["Error Message"])
-                
-            if "Note" in response:
-                self.logger.warning(response["Note"])
-                
-            # Get time series data
-            time_series_key = next((k for k in response.keys() if "Time Series" in k), None)
-            if not time_series_key:
-                raise AlphaVantageError("No time series data found in response")
-                
-            # Convert to DataFrame
-            data = pd.DataFrame.from_dict(response[time_series_key], orient='index')
-            data.index = pd.to_datetime(data.index)
-            data = data.astype(float)
+        if "Note" in response.json():
+            note = response.json()["Note"]
+            if "API call frequency" in note or "premium" in note.lower():
+                return True
+        return False
+        
+    def _exponential_backoff(self, attempt: int) -> float:
+        """Calculate backoff time with jitter.
+        
+        Args:
+            attempt: Current attempt number
             
-            # Rename columns
-            column_map = {
-                '1. open': 'open',
-                '2. high': 'high',
-                '3. low': 'low',
-                '4. close': 'close',
-                '5. volume': 'volume'
-            }
-            data = data.rename(columns=column_map)
-            
-            return data
-            
-        except Exception as e:
-            raise AlphaVantageError(f"Error parsing time series data: {str(e)}")
-            
-    def fetch_data(self, symbol: str, interval: str = 'daily') -> pd.DataFrame:
-        """Fetch data from Alpha Vantage.
+        Returns:
+            Backoff time in seconds
+        """
+        backoff = min(INITIAL_BACKOFF * (2 ** attempt), MAX_BACKOFF)
+        jitter = backoff * 0.1 * (2 * random.random() - 1)
+        return backoff + jitter
+        
+    def get_data(self, symbol: str, start_date: Optional[str] = None,
+                end_date: Optional[str] = None, interval: str = '1d') -> pd.DataFrame:
+        """Get data from Alpha Vantage with exponential backoff and fallback.
         
         Args:
             symbol: Stock symbol
-            interval: Data interval (daily, weekly, monthly)
+            start_date: Start date in YYYY-MM-DD format
+            end_date: End date in YYYY-MM-DD format
+            interval: Data interval (1d, 1h, etc.)
             
         Returns:
             DataFrame with OHLCV data
             
         Raises:
-            AlphaVantageError: If data fetching fails
+            RuntimeError: If data fetching fails
         """
         try:
             # Check cache first
-            cached_data = self._get_cached_data(symbol, interval)
+            cached_data = get_cached_data(symbol)
             if cached_data is not None:
+                log_data_request(symbol, True)
                 return cached_data
                 
-            # Validate interval
-            valid_intervals = ['daily', 'weekly', 'monthly']
-            if interval not in valid_intervals:
-                raise AlphaVantageError(f"Invalid interval. Must be one of {valid_intervals}")
-                
-            # Wait for rate limit
-            self.rate_limiter.wait_if_needed()
-                
-            # Prepare request
-            params = {
-                'function': f'TIME_SERIES_{interval.upper()}',
-                'symbol': symbol,
-                'apikey': self.api_key,
-                'outputsize': 'full'
-            }
-            
-            # Make request
-            response = self.session.get(self.base_url, params=params)
-            response.raise_for_status()
-            data = response.json()
-            
-            # Parse response
-            df = self._parse_time_series(data)
-            
-            # Validate data
-            self._validate_data(df)
-            
-            # Save to cache
-            self._save_to_cache(symbol, interval, df)
-            
-            # Add delay between requests
-            time.sleep(self.delay)
-            
-            return df
-            
-        except requests.exceptions.RequestException as e:
-            raise AlphaVantageError(f"API request failed: {str(e)}")
+            # Try Alpha Vantage with exponential backoff
+            for attempt in range(MAX_RETRIES):
+                try:
+                    url = f"https://www.alphavantage.co/query"
+                    params = {
+                        "function": "TIME_SERIES_DAILY",
+                        "symbol": symbol,
+                        "apikey": self.api_key,
+                        "outputsize": "full"
+                    }
+                    
+                    response = self.session.get(url, params=params)
+                    response.raise_for_status()
+                    
+                    # Check for rate limit
+                    if self._handle_rate_limit(response):
+                        backoff = self._exponential_backoff(attempt)
+                        logger.warning(f"Rate limited, backing off for {backoff:.2f} seconds")
+                        time.sleep(backoff)
+                        continue
+                        
+                    # Parse response
+                    data = response.json()
+                    if "Time Series (Daily)" not in data:
+                        raise ValueError("Invalid response format")
+                        
+                    # Convert to DataFrame
+                    df = pd.DataFrame.from_dict(data["Time Series (Daily)"], orient="index")
+                    df.index = pd.to_datetime(df.index)
+                    df.columns = [col.split(". ")[1] for col in df.columns]
+                    
+                    # Filter date range
+                    if start_date:
+                        df = df[df.index >= start_date]
+                    if end_date:
+                        df = df[df.index <= end_date]
+                        
+                    # Validate data
+                    self._validate_data(df)
+                    
+                    # Cache the data
+                    cache_data(symbol, df)
+                    log_data_request(symbol, True)
+                    
+                    return df
+                    
+                except requests.exceptions.RequestException as e:
+                    if attempt == MAX_RETRIES - 1:
+                        raise
+                    backoff = self._exponential_backoff(attempt)
+                    logger.warning(f"Request failed, backing off for {backoff:.2f} seconds: {e}")
+                    time.sleep(backoff)
+                    
         except Exception as e:
-            raise AlphaVantageError(f"Error fetching data for {symbol}: {str(e)}")
+            error_msg = str(e)
+            logger.error(f"Error fetching data from Alpha Vantage for {symbol}: {error_msg}")
+            log_data_request(symbol, False, error_msg)
             
-    def get_historical_data(self, symbol: str, interval: str = 'daily',
-                          start_date: Optional[str] = None,
-                          end_date: Optional[str] = None) -> pd.DataFrame:
-        """Get historical data from Alpha Vantage.
-        
-        Args:
-            symbol: Stock symbol
-            interval: Data interval (daily, weekly, monthly)
-            start_date: Start date in YYYY-MM-DD format
-            end_date: End date in YYYY-MM-DD format
-            
-        Returns:
-            DataFrame with OHLCV data
-            
-        Raises:
-            AlphaVantageError: If data fetching fails
-        """
-        try:
-            # Fetch data
-            df = self.fetch_data(symbol, interval)
-            
-            # Filter by date range
-            if start_date:
-                df = df[df.index >= pd.to_datetime(start_date)]
-            if end_date:
-                df = df[df.index <= pd.to_datetime(end_date)]
-                
-            return df
-            
-        except Exception as e:
-            raise AlphaVantageError(f"Error getting historical data for {symbol}: {str(e)}")
-            
-    def get_multiple_data(self, symbols: List[str], interval: str = 'daily',
-                         start_date: Optional[str] = None,
-                         end_date: Optional[str] = None) -> Dict[str, pd.DataFrame]:
-        """Get data for multiple symbols in parallel.
+            # Fallback to Yahoo Finance
+            logger.info(f"Falling back to Yahoo Finance for {symbol}")
+            try:
+                df = self.yfinance_provider.get_data(symbol, start_date, end_date, interval)
+                log_data_request(symbol, True, "Fallback to Yahoo Finance successful")
+                return df
+            except Exception as fallback_error:
+                error_msg = f"Both Alpha Vantage and Yahoo Finance failed: {fallback_error}"
+                logger.error(error_msg)
+                log_data_request(symbol, False, error_msg)
+                raise RuntimeError(error_msg)
+
+    def get_multiple_data(self, symbols: list, start_date: Optional[str] = None,
+                         end_date: Optional[str] = None, interval: str = '1d') -> Dict[str, pd.DataFrame]:
+        """Get data for multiple symbols with fallback.
         
         Args:
             symbols: List of stock symbols
-            interval: Data interval (daily, weekly, monthly)
             start_date: Start date in YYYY-MM-DD format
             end_date: End date in YYYY-MM-DD format
+            interval: Data interval (1d, 1h, etc.)
             
         Returns:
             Dictionary mapping symbols to DataFrames
-            
-        Raises:
-            AlphaVantageError: If data fetching fails for any symbol
         """
         results = {}
-        errors = []
-        
-        def fetch_symbol(symbol: str) -> None:
+        for symbol in symbols:
             try:
-                results[symbol] = self.get_historical_data(
-                    symbol,
-                    interval=interval,
-                    start_date=start_date,
-                    end_date=end_date
-                )
+                results[symbol] = self.get_data(symbol, start_date, end_date, interval)
             except Exception as e:
-                errors.append(f"Error fetching {symbol}: {str(e)}")
-                
-        # Use ThreadPoolExecutor for parallel fetching
-        with ThreadPoolExecutor(max_workers=min(len(symbols), 5)) as executor:
-            executor.map(fetch_symbol, symbols)
-            
-        if errors:
-            raise AlphaVantageError("\n".join(errors))
-            
+                logger.error(f"Skipping {symbol} due to error: {e}")
+                continue
         return results
         
     async def get_current_price(self, symbol: str) -> float:
