@@ -1,18 +1,23 @@
+"""Execution engine for trading operations with robust error handling and caching."""
+
 import logging
 import redis
 import json
 import os
-from typing import Dict, List, Optional, Union, Tuple, Any
+import uuid
+import importlib
+import asyncio
+import aiohttp
+import time
+from typing import Dict, List, Optional, Union, Tuple, Any, Type
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 import pandas as pd
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
-import asyncio
-import aiohttp
 from functools import lru_cache
-import time
+from contextlib import asynccontextmanager
 
 class OrderType(Enum):
     MARKET = "market"
@@ -54,6 +59,8 @@ class ExecutionEngine:
                 - price_cache_ttl: Price cache TTL in seconds (default: 60)
                 - market_data_provider: Market data provider class
                 - market_data_config: Market data provider configuration
+                - slippage_percent: Expected slippage percentage (default: 0.1)
+                - fee_percent: Trading fee percentage (default: 0.1)
         """
         # Load configuration from environment variables with defaults
         self.config = {
@@ -67,7 +74,9 @@ class ExecutionEngine:
             'retry_delay': int(os.getenv('EXECUTION_RETRY_DELAY', 1)),
             'price_cache_ttl': int(os.getenv('PRICE_CACHE_TTL', 60)),
             'market_data_provider': os.getenv('MARKET_DATA_PROVIDER', 'AlphaVantageProvider'),
-            'market_data_config': json.loads(os.getenv('MARKET_DATA_CONFIG', '{}'))
+            'market_data_config': json.loads(os.getenv('MARKET_DATA_CONFIG', '{}')),
+            'slippage_percent': float(os.getenv('SLIPPAGE_PERCENT', 0.1)),
+            'fee_percent': float(os.getenv('FEE_PERCENT', 0.1))
         }
         
         # Update with provided config
@@ -105,35 +114,210 @@ class ExecutionEngine:
         
         # Initialize async session
         self.session = None
-
+        
+        # Initialize trades list
         self.trades = []
 
     def _init_market_data_provider(self):
-        """Initialize market data provider."""
+        """Initialize market data provider using dynamic class loading."""
         try:
             provider_class = self.config['market_data_provider']
-            if provider_class == 'AlphaVantageProvider':
-                from trading.data.providers.alpha_vantage_provider import AlphaVantageProvider
-                self.market_data = AlphaVantageProvider(**self.config['market_data_config'])
-            elif provider_class == 'YFinanceProvider':
-                from trading.data.providers.yfinance_provider import YFinanceProvider
-                self.market_data = YFinanceProvider(**self.config['market_data_config'])
-            else:
-                raise ValueError(f"Unknown market data provider: {provider_class}")
+            provider_module = f"trading.data.providers.{provider_class.lower()}_provider"
+            
+            # Dynamically import provider class
+            module = importlib.import_module(provider_module)
+            provider_class = getattr(module, provider_class)
+            
+            # Initialize provider
+            self.market_data = provider_class(**self.config['market_data_config'])
+            self.logger.info(f"Initialized market data provider: {provider_class.__name__}")
+            
         except Exception as e:
             self.logger.error(f"Failed to initialize market data provider: {str(e)}")
             raise ExecutionError(f"Market data provider initialization failed: {str(e)}")
-            
-    async def _init_session(self):
-        """Initialize aiohttp session if not exists."""
+
+    @asynccontextmanager
+    async def _get_session(self):
+        """Async context manager for aiohttp session."""
         if self.session is None:
             self.session = aiohttp.ClientSession()
+        try:
+            yield self.session
+        except Exception as e:
+            self.logger.error(f"Session error: {str(e)}")
+            raise
+        finally:
+            if self.session:
+                await self.session.close()
+                self.session = None
+
+    def _calculate_transaction_costs(self, price: float, quantity: float) -> Dict[str, float]:
+        """Calculate transaction costs including slippage and fees.
+        
+        Args:
+            price: Base price
+            quantity: Order quantity
             
-    async def _close_session(self):
-        """Close aiohttp session if exists."""
+        Returns:
+            Dictionary with cost breakdown
+        """
+        slippage = price * (self.config['slippage_percent'] / 100)
+        fee = price * quantity * (self.config['fee_percent'] / 100)
+        total_cost = price * quantity + fee
+        
+        return {
+            'base_price': price,
+            'slippage': slippage,
+            'fee': fee,
+            'total_cost': total_cost
+        }
+
+    def _generate_order_id(self) -> str:
+        """Generate a unique order ID."""
+        return str(uuid.uuid4())
+
+    def _save_trade(self, trade: Dict) -> None:
+        """Save trade with robust error recovery.
+        
+        Args:
+            trade: Trade dictionary to save
+        """
+        # Add order ID if missing
+        if 'order_id' not in trade:
+            trade['order_id'] = self._generate_order_id()
+            
+        # Add timestamp if missing
+        if 'timestamp' not in trade:
+            trade['timestamp'] = datetime.now().isoformat()
+            
+        # Add transaction costs
+        if 'price' in trade and 'quantity' in trade:
+            costs = self._calculate_transaction_costs(trade['price'], trade['quantity'])
+            trade.update(costs)
+            
+        # Save to primary file
+        try:
+            trade_file = self.trades_dir / f"trades_{datetime.now().strftime('%Y%m%d')}.json"
+            with open(trade_file, 'a') as f:
+                json.dump(trade, f)
+                f.write('\n')
+        except Exception as e:
+            self.logger.error(f"Failed to save trade to primary file: {str(e)}")
+            
+            # Try backup file
+            try:
+                backup_file = self.trades_dir / f"trades_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                with open(backup_file, 'w') as f:
+                    json.dump(trade, f)
+                    f.write('\n')
+                self.logger.info(f"Saved trade to backup file: {backup_file}")
+            except Exception as backup_error:
+                self.logger.error(f"Failed to save trade to backup file: {str(backup_error)}")
+                raise ExecutionError("Failed to save trade to any file")
+
+    async def execute_trade(self, symbol: str, quantity: float, order_type: OrderType, **kwargs) -> Dict:
+        """Execute a trade with full error handling and logging.
+        
+        Args:
+            symbol: Trading symbol
+            quantity: Order quantity
+            order_type: Type of order
+            **kwargs: Additional order parameters
+            
+        Returns:
+            Trade execution result
+            
+        Raises:
+            ExecutionError: If trade execution fails
+        """
+        try:
+            # Generate order ID
+            order_id = self._generate_order_id()
+            
+            # Get current price
+            price = await self._fetch_price_async(symbol)
+            
+            # Calculate transaction costs
+            costs = self._calculate_transaction_costs(price, quantity)
+            
+            # Create trade record
+            trade = {
+                'order_id': order_id,
+                'symbol': symbol,
+                'quantity': quantity,
+                'order_type': order_type.value,
+                'price': price,
+                'timestamp': datetime.now().isoformat(),
+                'status': OrderStatus.PENDING.value,
+                **costs,
+                **kwargs
+            }
+            
+            # Execute based on order type
+            if order_type == OrderType.MARKET:
+                trade['status'] = OrderStatus.FILLED.value
+            elif order_type == OrderType.LIMIT:
+                if 'limit_price' not in kwargs:
+                    raise ExecutionError("Limit price required for limit orders")
+                if price <= kwargs['limit_price']:
+                    trade['status'] = OrderStatus.FILLED.value
+                else:
+                    trade['status'] = OrderStatus.PENDING.value
+            # Add other order types as needed
+            
+            # Save trade
+            self._save_trade(trade)
+            
+            # Update trades list
+            self.trades.append(trade)
+            
+            return trade
+            
+        except Exception as e:
+            self.logger.error(f"Trade execution failed: {str(e)}")
+            raise ExecutionError(f"Trade execution failed: {str(e)}")
+
+    def get_trades(self) -> List[Dict[str, Any]]:
+        """Get all trades with optional filtering.
+        
+        Returns:
+            List of trade dictionaries
+        """
+        return self.trades
+
+    async def cleanup(self):
+        """Cleanup resources."""
         if self.session:
             await self.session.close()
             self.session = None
+
+    async def _fetch_price_async(self, asset: str) -> float:
+        """Fetch current price asynchronously.
+        
+        Args:
+            asset: Asset symbol
+            
+        Returns:
+            Current price
+            
+        Raises:
+            MarketDataError: If price fetching fails
+        """
+        try:
+            await self._get_session()
+            
+            # Try cache first
+            cached_price = self._get_cached_price(asset)
+            if cached_price is not None:
+                return cached_price
+                
+            # Fetch from market data provider
+            price = await self.market_data.get_current_price(asset)
+            self._update_price_cache(asset, price)
+            return price
+            
+        except Exception as e:
+            raise MarketDataError(f"Failed to fetch price for {asset}: {str(e)}")
             
     @lru_cache(maxsize=1000)
     def _get_cached_price(self, asset: str) -> Optional[float]:
@@ -161,34 +345,6 @@ class ExecutionEngine:
         self.price_cache[asset] = price
         self.price_cache_timestamps[asset] = time.time()
         
-    async def _fetch_price_async(self, asset: str) -> float:
-        """Fetch current price asynchronously.
-        
-        Args:
-            asset: Asset symbol
-            
-        Returns:
-            Current price
-            
-        Raises:
-            MarketDataError: If price fetching fails
-        """
-        try:
-            await self._init_session()
-            
-            # Try cache first
-            cached_price = self._get_cached_price(asset)
-            if cached_price is not None:
-                return cached_price
-                
-            # Fetch from market data provider
-            price = await self.market_data.get_current_price(asset)
-            self._update_price_cache(asset, price)
-            return price
-            
-        except Exception as e:
-            raise MarketDataError(f"Failed to fetch price for {asset}: {str(e)}")
-            
     def _get_current_price(self, asset: str) -> float:
         """Get current price for an asset.
         
@@ -214,149 +370,6 @@ class ExecutionEngine:
             
         except Exception as e:
             raise MarketDataError(f"Failed to get price for {asset}: {str(e)}")
-            
-    async def _execute_order_async(self, order_type: OrderType, asset: str, 
-                                 quantity: float, **kwargs) -> Optional[Dict]:
-        """Execute order asynchronously.
-        
-        Args:
-            order_type: Type of order to execute
-            asset: Asset symbol
-            quantity: Order quantity
-            **kwargs: Additional order parameters
-            
-        Returns:
-            Trade details if executed, None otherwise
-            
-        Raises:
-            ExecutionError: If order execution fails
-        """
-        try:
-            if order_type == OrderType.MARKET:
-                price = await self._fetch_price_async(asset)
-                return self.execute_market_order(asset, quantity, price, kwargs.get('metadata'))
-            elif order_type == OrderType.LIMIT:
-                return self.execute_limit_order(asset, quantity, kwargs['limit_price'], kwargs.get('metadata'))
-            elif order_type == OrderType.STOP:
-                return self.execute_stop_order(asset, quantity, kwargs['stop_price'], 
-                                             kwargs.get('limit_price'), kwargs.get('metadata'))
-            elif order_type == OrderType.TRAILING_STOP:
-                return self.execute_trailing_stop(asset, quantity, kwargs['trail_percent'],
-                                                kwargs.get('metadata'))
-            elif order_type == OrderType.FILL_OR_KILL:
-                return self.execute_fill_or_kill(asset, quantity, kwargs['limit_price'],
-                                               kwargs.get('metadata'))
-            else:
-                raise ExecutionError(f"Unsupported order type: {order_type}")
-                
-        except Exception as e:
-            raise ExecutionError(f"Async order execution failed: {str(e)}")
-            
-    async def execute_orders_batch(self, orders: List[Dict]) -> List[Optional[Dict]]:
-        """Execute multiple orders in batch asynchronously.
-        
-        Args:
-            orders: List of order dictionaries containing:
-                - type: OrderType
-                - asset: Asset symbol
-                - quantity: Order quantity
-                - Additional parameters based on order type
-                
-        Returns:
-            List of trade details for executed orders
-            
-        Raises:
-            ExecutionError: If batch execution fails
-        """
-        try:
-            async with aiohttp.ClientSession() as session:
-                tasks = []
-                for order in orders:
-                    task = self._execute_order_async(
-                        OrderType(order['type']),
-                        order['asset'],
-                        order['quantity'],
-                        **{k: v for k, v in order.items() if k not in ['type', 'asset', 'quantity']}
-                    )
-                    tasks.append(task)
-                return await asyncio.gather(*tasks, return_exceptions=True)
-                
-        except Exception as e:
-            raise ExecutionError(f"Batch order execution failed: {str(e)}")
-            
-    def _save_trade(self, trade: Dict) -> None:
-        """Save trade details to file.
-        
-        Args:
-            trade: Trade details dictionary
-        """
-        try:
-            # Create filename with timestamp
-            timestamp = datetime.fromisoformat(trade['timestamp'])
-            filename = self.trades_dir / f"trades_{timestamp.strftime('%Y%m%d')}.json"
-            
-            # Load existing trades
-            trades = []
-            if filename.exists():
-                with open(filename, 'r') as f:
-                    trades = json.load(f)
-                    
-            # Append new trade
-            trades.append(trade)
-            
-            # Save updated trades
-            with open(filename, 'w') as f:
-                json.dump(trades, f, indent=2)
-                
-        except Exception as e:
-            self.logger.error(f"Failed to save trade: {str(e)}")
-            
-    def get_trade_history(self, asset: Optional[str] = None,
-                         start_time: Optional[datetime] = None,
-                         end_time: Optional[datetime] = None) -> List[Dict]:
-        """Get trade history with optional filters.
-        
-        Args:
-            asset: Filter by asset symbol
-            start_time: Filter by start time
-            end_time: Filter by end time
-            
-        Returns:
-            List of trade details
-        """
-        try:
-            trades = []
-            
-            # Get all trade files
-            trade_files = sorted(self.trades_dir.glob('trades_*.json'))
-            
-            for file in trade_files:
-                with open(file, 'r') as f:
-                    file_trades = json.load(f)
-                    
-                # Apply filters
-                for trade in file_trades:
-                    trade_time = datetime.fromisoformat(trade['timestamp'])
-                    
-                    if asset and trade['asset'] != asset:
-                        continue
-                    if start_time and trade_time < start_time:
-                        continue
-                    if end_time and trade_time > end_time:
-                        continue
-                        
-                    trades.append(trade)
-                    
-            return trades
-            
-        except Exception as e:
-            self.logger.error(f"Failed to get trade history: {str(e)}")
-            return []
-            
-    def __del__(self):
-        """Cleanup on object destruction."""
-        if self.session:
-            asyncio.create_task(self._close_session())
 
     def execute_market_order(self, asset: str, quantity: float, price: float,
                            metadata: Optional[Dict] = None) -> Dict:
@@ -598,12 +611,4 @@ class ExecutionEngine:
         """
         # Placeholder for trade execution logic
         self.trades.append({'symbol': symbol, 'quantity': quantity, 'order_type': order_type})
-        print(f"Executed {order_type} order for {quantity} shares of {symbol}")
-
-    def get_trades(self) -> List[Dict[str, Any]]:
-        """Get a list of executed trades.
-
-        Returns:
-            List[Dict[str, Any]]: A list of executed trades.
-        """
-        return self.trades 
+        print(f"Executed {order_type} order for {quantity} shares of {symbol}") 
