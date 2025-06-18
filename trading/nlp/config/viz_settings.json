@@ -1,0 +1,111 @@
+{
+    "line": {
+        "default": {
+            "line_width": 2,
+            "line_color": "#1f77b4",
+            "show_legend": true,
+            "hover_template": "%{x}: %{y:.2f}"
+        },
+        "forecast": {
+            "historical_color": "#1f77b4",
+            "forecast_color": "#ff7f0e",
+            "confidence_color": "rgba(255, 127, 14, 0.2)",
+            "show_confidence": true
+        },
+        "monitor": {
+            "performance_color": "#2ca02c",
+            "threshold_color": "#d62728",
+            "alert_color": "#ff7f0e"
+        }
+    },
+    "candlestick": {
+        "default": {
+            "increasing_color": "#2ca02c",
+            "decreasing_color": "#d62728",
+            "show_volume": true,
+            "volume_color": "rgba(0, 0, 255, 0.2)"
+        },
+        "analysis": {
+            "ma_colors": ["#1f77b4", "#ff7f0e", "#2ca02c"],
+            "volume_color": "rgba(0, 0, 255, 0.2)",
+            "show_indicators": true
+        }
+    },
+    "scatter": {
+        "default": {
+            "marker_size": 10,
+            "show_legend": true,
+            "hover_template": "%{x}: %{y:.2f}"
+        },
+        "recommendation": {
+            "entry_color": "#2ca02c",
+            "stop_loss_color": "#d62728",
+            "take_profit_color": "#1f77b4",
+            "show_labels": true
+        },
+        "optimize": {
+            "best_point_color": "#2ca02c",
+            "other_points_color": "#1f77b4",
+            "show_path": true,
+            "path_color": "#ff7f0e"
+        }
+    },
+    "bar": {
+        "default": {
+            "bar_width": 0.8,
+            "show_legend": true,
+            "hover_template": "%{x}: %{y:.2f}"
+        },
+        "explanation": {
+            "positive_color": "#2ca02c",
+            "negative_color": "#d62728",
+            "neutral_color": "#1f77b4",
+            "show_labels": true
+        },
+        "validate": {
+            "accuracy_color": "#2ca02c",
+            "error_color": "#d62728",
+            "show_percentages": true
+        }
+    },
+    "heatmap": {
+        "default": {
+            "colorscale": "RdYlGn",
+            "show_scale": true,
+            "hover_template": "%{x} vs %{y}: %{z:.2f}"
+        },
+        "correlation": {
+            "colorscale": "RdBu",
+            "center": 0,
+            "show_values": true
+        }
+    },
+    "layout": {
+        "default": {
+            "template": "plotly_white",
+            "font_family": "Arial",
+            "font_size": 12,
+            "title_font_size": 16,
+            "show_grid": true,
+            "margin": {
+                "l": 50,
+                "r": 50,
+                "t": 50,
+                "b": 50
+            }
+        },
+        "dark": {
+            "template": "plotly_dark",
+            "font_family": "Arial",
+            "font_size": 12,
+            "title_font_size": 16,
+            "show_grid": true,
+            "margin": {
+                "l": 50,
+                "r": 50,
+                "t": 50,
+                "b": 50
+            }
+        }
+    }
+} 

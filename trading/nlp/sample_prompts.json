@@ -1,0 +1,16 @@
+[
+    "Show me the forecast for AAPL next week using the LSTM model.",
+    "Backtest the CatBoost model on MSFT for the last 6 months.",
+    "Compare the performance of Transformer and GNN on Tesla in 2023.",
+    "Explain why the Sharpe ratio dropped for Google in Q2.",
+    "Summarize the recent earnings event for Amazon in the US tech sector.",
+    "Predict the impact of rising CPI on the Finance sector in Europe.",
+    "What is the outlook for crude oil prices in the next quarter?",
+    "Analyze the effect of the FOMC decision on the S&P 500.",
+    "Give me a forecast for the Healthcare sector in China using Prophet.",
+    "Interpret the attention heatmap for the Autoformer model on NVDA.",
+    "Simulate a trading strategy for Apple with a 5% stop loss.",
+    "Which model performed best for EURUSD in 2022?",
+    "Show me the win rate and MSE for all models on the Energy sector.",
+    "Forecast GDP growth for the Eurozone and compare with the US."
+] 

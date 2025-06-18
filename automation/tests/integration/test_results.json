@@ -1,0 +1,155 @@
+{
+  "total": 8,
+  "passed": 0,
+  "failed": 8,
+  "skipped": 0,
+  "started_at": "2025-06-09T17:08:42Z",
+  "completed_at": "2025-06-09T17:09:11Z",
+  "suites": [
+    {
+      "name": "core_services",
+      "description": "Test core service functionality",
+      "status": "failed",
+      "cases": [
+        {
+          "name": "service_registry",
+          "description": "Test service registry functionality",
+          "status": "failed",
+          "steps": [
+            {
+              "name": "register_service",
+              "status": "failed",
+              "error": "HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/services (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001418417A3C0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+            }
+          ]
+        },
+        {
+          "name": "health_monitoring",
+          "description": "Test health monitoring system",
+          "status": "failed",
+          "steps": [
+            {
+              "name": "check_health",
+              "status": "failed",
+              "error": "HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000141841B9A90>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "security",
+      "description": "Test security framework",
+      "status": "failed",
+      "cases": [
+        {
+          "name": "rbac_operations",
+          "description": "Test RBAC functionality",
+          "status": "failed",
+          "steps": [
+            {
+              "name": "create_role",
+              "status": "failed",
+              "error": "HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/roles (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000141841BAAD0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "monitoring",
+      "description": "Test monitoring system",
+      "status": "failed",
+      "cases": [
+        {
+          "name": "metrics_collection",
+          "description": "Test metrics collection",
+          "status": "failed",
+          "steps": [
+            {
+              "name": "collect_metrics",
+              "status": "failed",
+              "error": "HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/metrics (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000141841D6650>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "logging",
+      "description": "Test logging system",
+      "status": "failed",
+      "cases": [
+        {
+          "name": "log_operations",
+          "description": "Test logging operations",
+          "status": "failed",
+          "steps": [
+            {
+              "name": "create_log",
+              "status": "failed",
+              "error": "HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/logs (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000141841D7360>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "data_processing",
+      "description": "Test data processing system",
+      "status": "failed",
+      "cases": [
+        {
+          "name": "data_operations",
+          "description": "Test data processing operations",
+          "status": "failed",
+          "steps": [
+            {
+              "name": "process_data",
+              "status": "failed",
+              "error": "HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/data/process (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000014184A08DD0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "notifications",
+      "description": "Test notification system",
+      "status": "failed",
+      "cases": [
+        {
+          "name": "notification_operations",
+          "description": "Test notification operations",
+          "status": "failed",
+          "steps": [
+            {
+              "name": "send_notification",
+              "status": "failed",
+              "error": "HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/notifications (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000014184A1C380>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ui",
+      "description": "Test UI system",
+      "status": "failed",
+      "cases": [
+        {
+          "name": "ui_operations",
+          "description": "Test UI operations",
+          "status": "failed",
+          "steps": [
+            {
+              "name": "get_dashboard",
+              "status": "failed",
+              "error": "HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /api/v1/ui/dashboard (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000014184A1D040>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

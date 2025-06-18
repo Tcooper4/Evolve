@@ -1,0 +1,66 @@
+{
+    "version": "1.0",
+    "channel": "{{ recipient }}",
+    "attachments": [
+        {
+            "color": "{{ color }}",
+            "title": "{{ title }}",
+            "text": "{{ message }}",
+            "fields": [
+                {
+                    "title": "Priority",
+                    "value": "{{ priority }}",
+                    "short": true
+                },
+                {
+                    "title": "Type",
+                    "value": "{{ type }}",
+                    "short": true
+                },
+                {
+                    "title": "Status",
+                    "value": "{{ status }}",
+                    "short": true
+                },
+                {
+                    "title": "Retry Count",
+                    "value": "{{ retry_count }}/{{ max_retries }}",
+                    "short": true
+                }
+                {% if metadata %}
+                {% for key, value in metadata.items() %}
+                ,{
+                    "title": "{{ key }}",
+                    "value": "{{ value }}",
+                    "short": true
+                }
+                {% endfor %}
+                {% endif %}
+                {% if error %}
+                ,{
+                    "title": "Error",
+                    "value": "{{ error }}",
+                    "short": false
+                }
+                {% endif %}
+            ],
+            "ts": {{ created_at_timestamp }},
+            "footer": "Automation System v{{ version }}",
+            "footer_icon": "https://example.com/icon.png",
+            "actions": [
+                {
+                    "name": "acknowledge",
+                    "text": "Acknowledge",
+                    "type": "button",
+                    "value": "{{ id }}"
+                },
+                {
+                    "name": "retry",
+                    "text": "Retry",
+                    "type": "button",
+                    "value": "{{ id }}"
+                }
+            ]
+        }
+    ]
+} 
