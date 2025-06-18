@@ -12,6 +12,10 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from trading.logs.logger import log_metrics  # Using our centralized logging system
 
+class MarketAnalysisError(Exception):
+    """Custom exception for market analysis errors."""
+    pass
+
 class MarketAnalyzer:
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}

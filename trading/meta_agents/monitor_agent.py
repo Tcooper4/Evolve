@@ -12,9 +12,9 @@ import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pathlib import Path
-from .base_agent import BaseAgent
-from .metrics_collector import MetricsCollector
-from .alert_manager import AlertManager
+from trading.base_agent import BaseAgent
+from trading.metrics_collector import MetricsCollector
+from trading.alert_manager import AlertManager
 
 class MonitorAgent(BaseAgent):
     """Agent responsible for system monitoring and metrics collection."""

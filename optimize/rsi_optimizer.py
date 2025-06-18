@@ -1,3 +1,9 @@
+"""
+DEPRECATED: This file has been consolidated into trading\optimization\rsi_optimizer.py
+Please use the consolidated version instead.
+Last updated: 2025-06-18 13:06:19
+"""
+
 # -*- coding: utf-8 -*-
 """RSI strategy parameter optimizer."""
 

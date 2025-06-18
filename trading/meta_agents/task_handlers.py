@@ -17,7 +17,7 @@ from alpha_vantage.timeseries import TimeSeries
 import torch
 import torch.nn as nn
 
-from .task_manager import Task
+from trading.task_manager import Task
 
 logger = logging.getLogger(__name__)
 

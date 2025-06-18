@@ -1,10 +1,25 @@
+"""Configuration utilities with hot-reload support.
+
+This module provides utilities for loading and managing configuration files,
+with support for hot-reloading when files change. It includes file watching,
+change detection, and automatic reloading of configurations.
+"""
+
 import json
 import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 import logging
 from dataclasses import dataclass, asdict
 import os
+import toml
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+import threading
+from functools import wraps
+import time
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class TradingConfig:
@@ -64,6 +79,189 @@ class TradingConfig:
             TradingConfig instance
         """
         return cls(**config_dict)
+
+class ConfigFileHandler(FileSystemEventHandler):
+    """Handler for config file changes."""
+    
+    def __init__(self, callback: Callable[[], None]):
+        """Initialize the handler.
+        
+        Args:
+            callback: Function to call when file changes
+        """
+        self.callback = callback
+    
+    def on_modified(self, event):
+        """Handle file modification events.
+        
+        Args:
+            event: File system event
+        """
+        if not event.is_directory:
+            logger.info(f"Config file changed: {event.src_path}")
+            self.callback()
+
+class ConfigManager:
+    """Manager for configuration files with hot-reload support."""
+    
+    def __init__(self, config_dir: str = "config"):
+        """Initialize the config manager.
+        
+        Args:
+            config_dir: Directory containing config files
+        """
+        self.config_dir = Path(config_dir)
+        self.configs: Dict[str, Any] = {}
+        self.observers: Dict[str, Observer] = {}
+        self._lock = threading.Lock()
+    
+    def load_config(
+        self,
+        filename: str,
+        hot_reload: bool = False,
+        callback: Optional[Callable[[], None]] = None
+    ) -> Dict[str, Any]:
+        """Load a configuration file with optional hot-reload.
+        
+        Args:
+            filename: Name of the config file
+            hot_reload: Whether to enable hot-reload
+            callback: Function to call when config changes
+            
+        Returns:
+            Configuration dictionary
+        """
+        file_path = self.config_dir / filename
+        
+        if not file_path.exists():
+            raise FileNotFoundError(f"Config file not found: {file_path}")
+        
+        # Load initial config
+        config = self._load_file(file_path)
+        
+        with self._lock:
+            self.configs[filename] = config
+        
+        # Set up hot-reload if requested
+        if hot_reload:
+            self._setup_hot_reload(file_path, callback)
+        
+        return config
+    
+    def _load_file(self, file_path: Path) -> Dict[str, Any]:
+        """Load a configuration file based on its extension.
+        
+        Args:
+            file_path: Path to the config file
+            
+        Returns:
+            Configuration dictionary
+        """
+        suffix = file_path.suffix.lower()
+        
+        try:
+            with open(file_path) as f:
+                if suffix == '.json':
+                    return json.load(f)
+                elif suffix in ['.yaml', '.yml']:
+                    return yaml.safe_load(f)
+                elif suffix == '.toml':
+                    return toml.load(f)
+                else:
+                    raise ValueError(f"Unsupported config file format: {suffix}")
+        except Exception as e:
+            logger.error(f"Error loading config file {file_path}: {e}")
+            raise
+    
+    def _setup_hot_reload(
+        self,
+        file_path: Path,
+        callback: Optional[Callable[[], None]]
+    ) -> None:
+        """Set up hot-reload for a config file.
+        
+        Args:
+            file_path: Path to the config file
+            callback: Function to call when config changes
+        """
+        if callback is None:
+            callback = lambda: self._reload_config(file_path)
+        
+        observer = Observer()
+        observer.schedule(
+            ConfigFileHandler(callback),
+            str(file_path.parent),
+            recursive=False
+        )
+        observer.start()
+        
+        with self._lock:
+            self.observers[str(file_path)] = observer
+    
+    def _reload_config(self, file_path: Path) -> None:
+        """Reload a configuration file.
+        
+        Args:
+            file_path: Path to the config file
+        """
+        try:
+            config = self._load_file(file_path)
+            with self._lock:
+                self.configs[file_path.name] = config
+            logger.info(f"Reloaded config file: {file_path}")
+        except Exception as e:
+            logger.error(f"Error reloading config file {file_path}: {e}")
+    
+    def get_config(self, filename: str) -> Dict[str, Any]:
+        """Get a configuration by filename.
+        
+        Args:
+            filename: Name of the config file
+            
+        Returns:
+            Configuration dictionary
+        """
+        with self._lock:
+            return self.configs.get(filename, {})
+    
+    def stop_hot_reload(self, filename: str) -> None:
+        """Stop hot-reload for a config file.
+        
+        Args:
+            filename: Name of the config file
+        """
+        file_path = str(self.config_dir / filename)
+        with self._lock:
+            if file_path in self.observers:
+                self.observers[file_path].stop()
+                self.observers[file_path].join()
+                del self.observers[file_path]
+    
+    def stop_all_hot_reload(self) -> None:
+        """Stop hot-reload for all config files."""
+        with self._lock:
+            for observer in self.observers.values():
+                observer.stop()
+                observer.join()
+            self.observers.clear()
+
+def hot_reload_config(func: Callable) -> Callable:
+    """Decorator to enable hot-reload for a function using config.
+    
+    Args:
+        func: Function to decorate
+        
+    Returns:
+        Decorated function
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        config_manager = ConfigManager()
+        return func(*args, config_manager=config_manager, **kwargs)
+    return wrapper
+
+# Create singleton instance
+config_manager = ConfigManager()
 
 def load_config(config_file: str) -> TradingConfig:
     """Load configuration from file.

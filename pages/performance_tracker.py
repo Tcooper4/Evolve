@@ -2,7 +2,8 @@
 Performance Tracker Dashboard
 
 This page provides interactive visualizations of model performance metrics with enhanced filtering
-and analysis capabilities.
+and analysis capabilities. It supports global state tracking for ticker/model selection and allows
+optional GPT-based summaries for agentic insights.
 """
 
 import streamlit as st
@@ -14,17 +15,30 @@ from io import BytesIO
 from memory.performance_memory import PerformanceMemory
 from llm.llm_summary import generate_strategy_commentary
 
+def initialize_session_state():
+    """Ensure global state for ticker/model selection is initialized."""
+    if "selected_ticker" not in st.session_state:
+        st.session_state.selected_ticker = None
+    if "selected_model" not in st.session_state:
+        st.session_state.selected_model = None
+    if "date_range" not in st.session_state:
+        st.session_state.date_range = None
+
 def main():
+    """Main entry point for the performance tracker dashboard."""
     st.set_page_config(page_title="📊 Agentic Performance Tracker", layout="wide")
     st.title("📊 Performance Tracker")
 
+    initialize_session_state()
     memory = PerformanceMemory()
     tickers = memory.get_all_tickers()
     if not tickers:
         st.warning("No performance records found.")
         return
 
-    selected_ticker = st.selectbox("📈 Select Ticker", tickers)
+    # Use global state for ticker selection
+    selected_ticker = st.selectbox("📈 Select Ticker", tickers, index=tickers.index(st.session_state.selected_ticker) if st.session_state.selected_ticker in tickers else 0)
+    st.session_state.selected_ticker = selected_ticker
     metrics = memory.get_metrics(selected_ticker)
 
     if not metrics:
@@ -52,7 +66,10 @@ def main():
     st.sidebar.header("🔧 Filters")
     df = df.sort_values("Timestamp", ascending=True)
 
-    date_range = st.sidebar.date_input("📅 Date Filter", [df["Timestamp"].min(), df["Timestamp"].max()])
+    # Use global state for date range
+    min_date, max_date = df["Timestamp"].min(), df["Timestamp"].max()
+    date_range = st.sidebar.date_input("📅 Date Filter", [min_date, max_date])
+    st.session_state.date_range = date_range
     if len(date_range) == 2:
         df = df[(df["Timestamp"] >= pd.to_datetime(date_range[0])) & 
                 (df["Timestamp"] <= pd.to_datetime(date_range[1]))]
@@ -111,19 +128,25 @@ def main():
 
     with tab5:
         st.subheader("🔍 Detailed Drilldown")
-        selected_model = st.selectbox("🔎 Select Model", df["Model"].unique())
+        selected_model = st.selectbox("🔎 Select Model", df["Model"].unique(), key="detail_model")
+        st.session_state.selected_model = selected_model
         ts = st.selectbox(
             "🕒 Select Timestamp", 
-            df[df["Model"] == selected_model]["Timestamp"].dt.strftime('%Y-%m-%d %H:%M:%S').unique()
+            df[df["Model"] == selected_model]["Timestamp"].dt.strftime('%Y-%m-%d %H:%M:%S').unique(),
+            key="detail_timestamp"
         )
         row = df[(df["Model"] == selected_model) & 
                  (df["Timestamp"].dt.strftime('%Y-%m-%d %H:%M:%S') == ts)]
         if not row.empty:
             st.code("\n".join([f"{k}: {v}" for k, v in row.iloc[0].to_dict().items()]), language="yaml")
 
-    # ==== AI Commentary ====
+    # ==== AI Commentary (GPT-based, optional) ====
     st.subheader("🧠 AI Strategy Commentary")
-    st.markdown("```text\n" + generate_strategy_commentary(df) + "\n```")
+    show_gpt = st.checkbox("Generate GPT-based summary", value=False)
+    if show_gpt:
+        st.markdown("```text\n" + generate_strategy_commentary(df) + "\n```")
+    else:
+        st.info("Enable the checkbox to generate a GPT-based summary of strategy performance.")
 
     # ==== Retraining + Switch Suggestion ====
     st.subheader("🚦 Strategy Recommendations")

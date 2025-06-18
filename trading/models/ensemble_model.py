@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
-from .base_model import BaseModel, ModelRegistry
+from trading.base_model import BaseModel, ModelRegistry
 
 class EnsembleModel(BaseModel):
     """Ensemble model that combines multiple forecasting models with adaptive weights."""

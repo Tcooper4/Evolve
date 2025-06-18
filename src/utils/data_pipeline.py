@@ -5,7 +5,7 @@ import pandas as pd
 from typing import Dict, List, Optional, Union, Tuple
 from pathlib import Path
 import logging
-from .data_validation import DataValidator
+from trading.data_validation import DataValidator
 
 # Configure logging
 logging.basicConfig(

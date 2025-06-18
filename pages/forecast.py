@@ -11,7 +11,7 @@ import pandas as pd
 import streamlit as st
 
 # Local imports
-from trading.agents.router import AgentRouter
+from core.agents.router import AgentRouter
 from trading.ui.components import (
     create_prompt_input,
     create_sidebar,

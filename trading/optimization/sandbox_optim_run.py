@@ -1,3 +1,9 @@
+"""
+DEPRECATED: This file is redundant or for development purposes only.
+Please use strategy_optimizer.py for optimization functionality.
+Last updated: 2025-06-18 13:06:26
+"""
+
 """Sandbox script for testing optimizers."""
 
 import os

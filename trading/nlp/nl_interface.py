@@ -8,14 +8,14 @@ import os
 import json
 from datetime import datetime
 
-from .prompt_processor import PromptProcessor, ProcessedPrompt
-from .response_formatter import ResponseFormatter, ResponseData
+from trading.prompt_processor import PromptProcessor, ProcessedPrompt
+from trading.response_formatter import ResponseFormatter, ResponseData
 from ..models.base_model import BaseModel
 from ..strategies.strategy_manager import StrategyManager
 from ..risk.risk_manager import RiskManager
 from ..portfolio.portfolio_manager import PortfolioManager
 from ..market.market_analyzer import MarketAnalyzer
-from .llm_processor import LLMProcessor
+from trading.llm_processor import LLMProcessor
 
 @dataclass
 class NLResponse:

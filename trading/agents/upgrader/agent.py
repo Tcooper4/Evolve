@@ -25,13 +25,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from trading.agents.task_memory import TaskMemory, Task, TaskStatus
 from trading.meta_agents.agents.model_builder import ModelBuilder
 from config.settings import Settings
-from .utils import (
+from trading.utils import (
     check_model_status,
     check_component_status,
     get_pipeline_components,
     validate_upgrade_result
 )
-from .scheduler import UpgradeScheduler
+from trading.scheduler import UpgradeScheduler
 
 logger = logging.getLogger("UpgraderAgent")
 

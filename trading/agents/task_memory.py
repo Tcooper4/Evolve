@@ -4,17 +4,19 @@
 # Standard library imports
 import json
 import logging
+import sqlite3
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, asdict
+import os
 
 # Third-party imports
 from pydantic import BaseModel, Field
 
 # Local imports
-from ..config.settings import MEMORY_DIR
+from ..config.settings import MEMORY_DIR, MEMORY_BACKEND
 from ..utils.error_handling import handle_file_errors
 
 class TaskStatus(str, Enum):
@@ -47,12 +49,19 @@ class Task:
             "notes": self.notes,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
-            "metadata": self.metadata
+            "metadata": json.dumps(self.metadata) if self.metadata else None
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Task':
         """Create task from dictionary."""
+        metadata = data.get("metadata")
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except json.JSONDecodeError:
+                metadata = None
+                
         return cls(
             task_id=data["task_id"],
             task_type=data["task_type"],
@@ -61,85 +70,156 @@ class Task:
             notes=data.get("notes"),
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
-            metadata=data.get("metadata")
+            metadata=metadata
         )
 
 class TaskMemory:
     """Persistent memory for agent tasks."""
     
-    def __init__(self, memory_file: Optional[Path] = None):
+    def __init__(self, memory_file: Optional[Path] = None, backend: str = MEMORY_BACKEND):
         """Initialize task memory.
         
         Args:
-            memory_file: Path to memory file (defaults to MEMORY_DIR/task_memory.json)
+            memory_file: Path to memory file (defaults to MEMORY_DIR/task_memory)
+            backend: Storage backend ('json' or 'sqlite')
         """
         self.logger = logging.getLogger(self.__class__.__name__)
-        self.memory_file = memory_file or MEMORY_DIR / "task_memory.json"
+        self.backend = backend
+        self.memory_file = memory_file or MEMORY_DIR / "task_memory"
         self.tasks: Dict[str, Task] = {}
+        
+        # Initialize storage
+        if self.backend == "sqlite":
+            self._init_sqlite()
+        else:
+            self._init_json()
+            
         self._load_memory()
     
+    def _init_sqlite(self):
+        """Initialize SQLite database."""
+        db_path = self.memory_file.with_suffix('.db')
+        self.conn = sqlite3.connect(str(db_path))
+        self.cursor = self.conn.cursor()
+        
+        # Create tasks table
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tasks (
+                task_id TEXT PRIMARY KEY,
+                task_type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                agent TEXT NOT NULL,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                metadata TEXT
+            )
+        """)
+        self.conn.commit()
+    
+    def _init_json(self):
+        """Initialize JSON storage."""
+        self.memory_file = self.memory_file.with_suffix('.json')
+        if not self.memory_file.exists():
+            self._save_memory()
+    
     def _load_memory(self) -> None:
-        """Load tasks from memory file."""
+        """Load tasks from storage."""
         try:
-            if not self.memory_file.exists():
-                self.logger.info(f"Memory file not found at {self.memory_file}, creating new")
-                self._save_memory()
-                return
+            if self.backend == "sqlite":
+                self._load_from_sqlite()
+            else:
+                self._load_from_json()
                 
-            with open(self.memory_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                
-            # Convert dictionary data to Task objects
-            self.tasks = {
-                task_id: Task.from_dict(task_data)
-                for task_id, task_data in data.items()
-            }
-            
-            self.logger.info(f"Loaded {len(self.tasks)} tasks from memory")
-            
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Error decoding memory file: {e}")
-            # Backup corrupted file
-            self._backup_corrupted_file()
-            self.tasks = {}
+            self.logger.info(f"Loaded {len(self.tasks)} tasks from {self.backend} storage")
             
         except Exception as e:
             self.logger.error(f"Error loading memory: {e}")
             self.tasks = {}
     
-    def _save_memory(self) -> None:
-        """Save tasks to memory file."""
-        try:
-            # Ensure directory exists
-            self.memory_file.parent.mkdir(parents=True, exist_ok=True)
-            
-            # Convert tasks to dictionary
-            data = {
-                task_id: task.to_dict()
-                for task_id, task in self.tasks.items()
+    def _load_from_sqlite(self) -> None:
+        """Load tasks from SQLite database."""
+        self.cursor.execute("SELECT * FROM tasks")
+        rows = self.cursor.fetchall()
+        
+        for row in rows:
+            task_data = {
+                "task_id": row[0],
+                "task_type": row[1],
+                "status": row[2],
+                "agent": row[3],
+                "notes": row[4],
+                "created_at": row[5],
+                "updated_at": row[6],
+                "metadata": row[7]
             }
+            task = Task.from_dict(task_data)
+            self.tasks[task.task_id] = task
+    
+    def _load_from_json(self) -> None:
+        """Load tasks from JSON file."""
+        if not self.memory_file.exists():
+            return
             
-            # Save to file
-            with open(self.memory_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2)
+        with open(self.memory_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        self.tasks = {
+            task_id: Task.from_dict(task_data)
+            for task_id, task_data in data.items()
+        }
+    
+    def _save_memory(self) -> None:
+        """Save tasks to storage."""
+        try:
+            if self.backend == "sqlite":
+                self._save_to_sqlite()
+            else:
+                self._save_to_json()
                 
-            self.logger.debug(f"Saved {len(self.tasks)} tasks to memory")
+            self.logger.debug(f"Saved {len(self.tasks)} tasks to {self.backend} storage")
             
         except Exception as e:
             self.logger.error(f"Error saving memory: {e}")
             raise
     
-    def _backup_corrupted_file(self) -> None:
-        """Backup corrupted memory file."""
-        if not self.memory_file.exists():
-            return
+    def _save_to_sqlite(self) -> None:
+        """Save tasks to SQLite database."""
+        # Clear existing data
+        self.cursor.execute("DELETE FROM tasks")
+        
+        # Insert new data
+        for task in self.tasks.values():
+            task_dict = task.to_dict()
+            self.cursor.execute("""
+                INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                task_dict["task_id"],
+                task_dict["task_type"],
+                task_dict["status"],
+                task_dict["agent"],
+                task_dict["notes"],
+                task_dict["created_at"],
+                task_dict["updated_at"],
+                task_dict["metadata"]
+            ))
             
-        backup_file = self.memory_file.with_suffix('.json.bak')
-        try:
-            self.memory_file.rename(backup_file)
-            self.logger.info(f"Backed up corrupted file to {backup_file}")
-        except Exception as e:
-            self.logger.error(f"Error backing up corrupted file: {e}")
+        self.conn.commit()
+    
+    def _save_to_json(self) -> None:
+        """Save tasks to JSON file."""
+        # Ensure directory exists
+        self.memory_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Convert tasks to dictionary
+        data = {
+            task_id: task.to_dict()
+            for task_id, task in self.tasks.items()
+        }
+        
+        # Save to file
+        with open(self.memory_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
     
     def add_task(self, task: Task) -> None:
         """Add a new task to memory.
@@ -242,7 +322,7 @@ class TaskMemory:
             task_id: ID of task to delete
             
         Returns:
-            True if task was deleted, False if not found
+            True if task was deleted
         """
         if task_id not in self.tasks:
             return False
@@ -256,15 +336,16 @@ class TaskMemory:
         """Clear completed tasks older than specified days.
         
         Args:
-            older_than_days: Age in days after which to clear tasks
+            older_than_days: Age threshold in days
             
         Returns:
             Number of tasks cleared
         """
-        cutoff_date = datetime.now() - timedelta(days=older_than_days)
+        cutoff = datetime.now() - timedelta(days=older_than_days)
         to_delete = [
             task_id for task_id, task in self.tasks.items()
-            if task.status == TaskStatus.COMPLETED and task.updated_at < cutoff_date
+            if (task.status == TaskStatus.COMPLETED and 
+                task.updated_at < cutoff)
         ]
         
         for task_id in to_delete:
@@ -275,6 +356,11 @@ class TaskMemory:
             self.logger.info(f"Cleared {len(to_delete)} completed tasks")
             
         return len(to_delete)
+    
+    def __del__(self):
+        """Cleanup on deletion."""
+        if hasattr(self, 'conn'):
+            self.conn.close()
 
 if __name__ == "__main__":
     # Configure logging

@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Log management script.
-Provides commands for managing the application's log files.
+Provides commands for managing application logs, including viewing, archiving, and cleaning logs.
+
+This script supports:
+- Viewing logs
+- Archiving logs
+- Cleaning old logs
+
+Usage:
+    python manage_logs.py <command> [options]
+
+Commands:
+    view        View logs
+    archive     Archive logs
+    clean       Clean old logs
+
+Examples:
+    # View logs
+    python manage_logs.py view --log-file logs/app.log
+
+    # Archive logs
+    python manage_logs.py archive --log-dir logs/ --output archive/logs.zip
+
+    # Clean old logs
+    python manage_logs.py clean --log-dir logs/ --days 30
 """
 
 import os

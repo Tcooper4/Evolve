@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Configuration management script.
-Provides commands for managing application configuration and secrets.
+Provides commands for managing application configuration files, including validation, updating, and exporting configs.
+
+This script supports:
+- Validating configuration files
+- Updating configuration settings
+- Exporting configuration files
+
+Usage:
+    python manage_config.py <command> [options]
+
+Commands:
+    validate    Validate configuration files
+    update      Update configuration settings
+    export      Export configuration files
+
+Examples:
+    # Validate configuration files
+    python manage_config.py validate --file config/app_config.yaml
+
+    # Update configuration settings
+    python manage_config.py update --file config/app_config.yaml --key setting --value new_value
+
+    # Export configuration files
+    python manage_config.py export --file config/app_config.yaml --output exported_config.yaml
 """
 
 import os

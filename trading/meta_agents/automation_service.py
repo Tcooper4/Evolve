@@ -11,10 +11,10 @@ import asyncio
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 from datetime import datetime
-from .models import Task, Workflow, TaskStatus
-from .task_manager import TaskManager
-from .workflow_engine import WorkflowEngine
-from .service_manager import ServiceManager
+from trading.models import Task, Workflow, TaskStatus
+from trading.task_manager import TaskManager
+from trading.workflow_engine import WorkflowEngine
+from trading.service_manager import ServiceManager
 
 class AutomationService:
     """Service for managing automation tasks and workflows."""
@@ -145,7 +145,7 @@ class AutomationService:
     
     def _get_task_handler(self, task_type: str) -> Any:
         """Get a task handler by type."""
-        from .task_handlers import TaskHandlerFactory
+        from trading.task_handlers import TaskHandlerFactory
         factory = TaskHandlerFactory(self.config)
         handler = factory.get_handler(task_type)
         if not handler:

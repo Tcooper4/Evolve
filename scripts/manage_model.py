@@ -1,7 +1,35 @@
 #!/usr/bin/env python3
 """
 Model management script.
-Provides commands for managing the application's machine learning models.
+Provides commands for managing machine learning models, including training, evaluation, deployment, and versioning.
+
+This script supports:
+- Training models
+- Evaluating model performance
+- Deploying models
+- Managing model versions
+
+Usage:
+    python manage_model.py <command> [options]
+
+Commands:
+    train       Train a model
+    evaluate    Evaluate a model
+    deploy      Deploy a model
+    version     Manage model versions
+
+Examples:
+    # Train a model
+    python manage_model.py train --model-type xgboost --data-path data/train.csv
+
+    # Evaluate a model
+    python manage_model.py evaluate --model-path models/model.pkl --data-path data/test.csv
+
+    # Deploy a model
+    python manage_model.py deploy --model-path models/model.pkl --deployment-type mlflow
+
+    # List model versions
+    python manage_model.py version --action list
 """
 
 import os

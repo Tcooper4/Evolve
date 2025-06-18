@@ -1,160 +1,268 @@
-"""UI components for the forecast page."""
+"""Forecast-specific UI components for the trading system.
 
-from typing import Dict, Any, Optional
+This module provides UI components specifically for forecasting functionality,
+with support for agentic interactions and monitoring.
+"""
+
+from typing import Dict, List, Optional, Tuple, Union, Any
 import streamlit as st
-import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+from datetime import datetime, timedelta
+import pandas as pd
+import numpy as np
+from pathlib import Path
+import logging
+import json
 
-def create_forecast_input() -> Optional[str]:
-    """Create input form for forecast parameters.
-    
-    Returns:
-        User input for forecast or None if not submitted
-    """
-    with st.form("forecast_form"):
-        # Ticker input
-        ticker = st.text_input("Ticker Symbol", "AAPL").upper()
-        
-        # Timeframe selection
-        timeframe = st.selectbox(
-            "Forecast Timeframe",
-            ["1d", "5d", "1w", "1m", "3m"],
-            index=2
-        )
-        
-        # Model selection
-        model = st.selectbox(
-            "Forecast Model",
-            ["LSTM", "TCN", "Transformer"],
-            index=0
-        )
-        
-        # Submit button
-        submitted = st.form_submit_button("Generate Forecast")
-        
-        if submitted:
-            return {
-                "ticker": ticker,
-                "timeframe": timeframe,
-                "model": model
-            }
-    return None
+from trading.components import (
+    create_date_range_selector,
+    create_model_selector,
+    create_parameter_inputs,
+    create_asset_selector,
+    create_timeframe_selector,
+    create_confidence_interval,
+    create_benchmark_overlay
+)
+from .config.registry import registry, ModelConfig
 
-def create_forecast_chart(forecast_data: Dict[str, Any]) -> None:
-    """Create forecast visualization.
+logger = logging.getLogger(__name__)
+
+def create_forecast_form(
+    default_model: Optional[str] = None,
+    default_asset: Optional[str] = None,
+    default_timeframe: Optional[str] = None,
+    key_prefix: str = "forecast"
+) -> Dict[str, Any]:
+    """Create a form for forecast configuration.
     
     Args:
-        forecast_data: Dictionary containing forecast results
+        default_model: Optional default model to select
+        default_asset: Optional default asset to select
+        default_timeframe: Optional default timeframe to select
+        key_prefix: Prefix for Streamlit component keys
+        
+    Returns:
+        Dictionary containing form inputs
     """
-    # Create figure with secondary y-axis
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-    
-    # Add historical price
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["dates"],
-            y=forecast_data["historical"],
-            name="Historical",
-            line=dict(color="blue")
-        ),
-        secondary_y=False
+    # Get date range
+    start_date, end_date = create_date_range_selector(
+        key=f"{key_prefix}_date_range"
     )
     
-    # Add forecast
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["forecast_dates"],
-            y=forecast_data["forecast"],
-            name="Forecast",
-            line=dict(color="red", dash="dash")
-        ),
-        secondary_y=False
+    # Get model selection
+    selected_model = create_model_selector(
+        category="forecasting",
+        default_model=default_model,
+        key=f"{key_prefix}_model"
     )
     
-    # Add confidence intervals
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["forecast_dates"],
-            y=forecast_data["upper_bound"],
+    # Get model parameters if a model is selected
+    parameters = {}
+    if selected_model:
+        model_config = registry.get_model_config(selected_model)
+        if model_config:
+            parameters = create_parameter_inputs(
+                model_config.parameters,
+                key_prefix=f"{key_prefix}_model"
+            )
+    
+    # Get asset selection
+    selected_asset = create_asset_selector(
+        assets=["BTC/USD", "ETH/USD", "AAPL", "MSFT", "GOOGL"],
+        default_asset=default_asset,
+        key=f"{key_prefix}_asset"
+    )
+    
+    # Get timeframe selection
+    selected_timeframe = create_timeframe_selector(
+        timeframes=["1h", "4h", "1d", "1w"],
+        default_timeframe=default_timeframe,
+        key=f"{key_prefix}_timeframe"
+    )
+    
+    # Log form submission for agentic monitoring
+    form_data = {
+        "start_date": start_date,
+        "end_date": end_date,
+        "model": selected_model,
+        "parameters": parameters,
+        "asset": selected_asset,
+        "timeframe": selected_timeframe
+    }
+    logger.info(f"Forecast form submitted: {form_data}")
+    
+    return form_data
+
+def create_forecast_chart(
+    data: pd.DataFrame,
+    model_config: ModelConfig,
+    show_confidence: bool = True,
+    show_benchmark: bool = True
+) -> go.Figure:
+    """Create an interactive forecast chart with optional features.
+    
+    Args:
+        data: DataFrame containing forecast data
+        model_config: Configuration for the model used
+        show_confidence: Whether to show confidence intervals
+        show_benchmark: Whether to show benchmark overlay
+        
+    Returns:
+        Plotly figure with forecast visualization
+    """
+    fig = go.Figure()
+    
+    # Add main forecast line
+    fig.add_trace(go.Scatter(
+        x=data.index,
+        y=data['prediction'],
+        name='Forecast',
+        line=dict(color='blue')
+    ))
+    
+    # Add confidence intervals if available and requested
+    if show_confidence and model_config.confidence_available and 'std_error' in data.columns:
+        lower, upper = create_confidence_interval(data)
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=upper,
             fill=None,
-            mode="lines",
-            line=dict(color="rgba(255,0,0,0.1)"),
-            name="Upper Bound"
-        ),
-        secondary_y=False
-    )
+            mode='lines',
+            line_color='rgba(0,100,80,0.2)',
+            name='Upper Bound'
+        ))
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=lower,
+            fill='tonexty',
+            mode='lines',
+            line_color='rgba(0,100,80,0.2)',
+            name='Lower Bound'
+        ))
     
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["forecast_dates"],
-            y=forecast_data["lower_bound"],
-            fill="tonexty",
-            mode="lines",
-            line=dict(color="rgba(255,0,0,0.1)"),
-            name="Lower Bound"
-        ),
-        secondary_y=False
-    )
+    # Add benchmark overlay if available and requested
+    if show_benchmark and model_config.benchmark_support and 'benchmark' in data.columns:
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=data['benchmark'],
+            name='Benchmark',
+            line=dict(color='gray', dash='dash')
+        ))
+    
+    # Add actual values if available
+    if 'actual' in data.columns:
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=data['actual'],
+            name='Actual',
+            line=dict(color='green')
+        ))
     
     # Update layout
     fig.update_layout(
-        title=f"Price Forecast for {forecast_data['ticker']}",
-        xaxis_title="Date",
-        yaxis_title="Price",
+        title='Price Forecast',
+        xaxis_title='Date',
+        yaxis_title='Price',
+        hovermode='x unified',
         showlegend=True
     )
     
-    # Display chart
-    st.plotly_chart(fig, use_container_width=True)
+    # Add range slider
+    fig.update_layout(
+        xaxis=dict(
+            rangeslider=dict(visible=True),
+            type="date"
+        )
+    )
+    
+    # Log chart creation for agentic monitoring
+    logger.info(f"Forecast chart created with model: {model_config.name}")
+    
+    return fig
 
-def create_forecast_metrics(forecast_data: Dict[str, Any]) -> None:
-    """Display forecast performance metrics.
+def create_forecast_metrics(
+    data: pd.DataFrame,
+    model_config: ModelConfig
+) -> Dict[str, float]:
+    """Calculate and display forecast performance metrics.
     
     Args:
-        forecast_data: Dictionary containing forecast results
+        data: DataFrame containing forecast and actual values
+        model_config: Configuration for the model used
+        
+    Returns:
+        Dictionary of metric names and values
     """
-    # Create metrics columns
-    col1, col2, col3 = st.columns(3)
+    metrics = {}
     
-    # Display metrics
-    col1.metric(
-        "MSE",
-        f"{forecast_data['metrics']['mse']:.4f}",
-        delta=f"{forecast_data['metrics']['mse_change']:.4f}"
-    )
+    if 'actual' in data.columns and 'prediction' in data.columns:
+        # Calculate error metrics
+        mae = np.mean(np.abs(data['actual'] - data['prediction']))
+        rmse = np.sqrt(np.mean((data['actual'] - data['prediction'])**2))
+        mape = np.mean(np.abs((data['actual'] - data['prediction']) / data['actual'])) * 100
+        
+        metrics = {
+            'MAE': mae,
+            'RMSE': rmse,
+            'MAPE': mape
+        }
+        
+        # Add confidence metrics if available
+        if model_config.confidence_available and 'std_error' in data.columns:
+            coverage = np.mean(
+                (data['actual'] >= data['prediction'] - 1.96 * data['std_error']) &
+                (data['actual'] <= data['prediction'] + 1.96 * data['std_error'])
+            ) * 100
+            metrics['Coverage'] = coverage
     
-    col2.metric(
-        "Accuracy",
-        f"{forecast_data['metrics']['accuracy']:.2%}",
-        delta=f"{forecast_data['metrics']['accuracy_change']:.2%}"
-    )
+    # Log metrics for agentic monitoring
+    logger.info(f"Forecast metrics calculated: {metrics}")
     
-    col3.metric(
-        "Confidence",
-        f"{forecast_data['metrics']['confidence']:.2%}"
-    )
+    return metrics
 
-def create_forecast_table(forecast_data: Dict[str, Any]) -> None:
-    """Display forecast results in a table.
+def create_forecast_export(
+    data: pd.DataFrame,
+    model_config: ModelConfig,
+    metrics: Dict[str, float]
+) -> None:
+    """Create export options for forecast results.
     
     Args:
-        forecast_data: Dictionary containing forecast results
+        data: DataFrame containing forecast data
+        model_config: Configuration for the model used
+        metrics: Dictionary of performance metrics
     """
-    # Create DataFrame
-    df = pd.DataFrame({
-        "Date": forecast_data["forecast_dates"],
-        "Forecast": forecast_data["forecast"],
-        "Lower Bound": forecast_data["lower_bound"],
-        "Upper Bound": forecast_data["upper_bound"]
-    })
+    st.subheader("Export Results")
     
-    # Format numbers
-    for col in ["Forecast", "Lower Bound", "Upper Bound"]:
-        df[col] = df[col].round(2)
+    # Create export options
+    export_format = st.radio(
+        "Select Export Format",
+        ["CSV", "JSON", "Excel"],
+        key="export_format"
+    )
     
-    # Display table
-    st.dataframe(df, use_container_width=True)
+    if st.button("Export"):
+        # Prepare export data
+        export_data = {
+            "forecast": data.to_dict(),
+            "model": model_config.name,
+            "metrics": metrics,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Export based on selected format
+        if export_format == "CSV":
+            data.to_csv("forecast_results.csv")
+        elif export_format == "JSON":
+            with open("forecast_results.json", "w") as f:
+                json.dump(export_data, f, indent=2)
+        else:  # Excel
+            data.to_excel("forecast_results.xlsx")
+        
+        st.success(f"Results exported as {export_format}")
+        
+        # Log export for agentic monitoring
+        logger.info(f"Forecast results exported as {export_format}")
 
 def create_forecast_explanation(forecast_data: Dict[str, Any]) -> None:
     """Display forecast explanation and insights.
@@ -175,4 +283,25 @@ def create_forecast_explanation(forecast_data: Dict[str, Any]) -> None:
     # Display risk factors
     st.subheader("Risk Factors")
     for risk in forecast_data["risks"]:
-        st.markdown(f"- {risk}") 
+        st.markdown(f"- {risk}")
+
+def create_forecast_table(forecast_data: Dict[str, Any]) -> None:
+    """Display forecast results in a table.
+    
+    Args:
+        forecast_data: Dictionary containing forecast results
+    """
+    # Create DataFrame
+    df = pd.DataFrame({
+        "Date": forecast_data["forecast_dates"],
+        "Forecast": forecast_data["forecast"],
+        "Lower Bound": forecast_data["lower_bound"],
+        "Upper Bound": forecast_data["upper_bound"]
+    })
+    
+    # Format numbers
+    for col in ["Forecast", "Lower Bound", "Upper Bound"]:
+        df[col] = df[col].round(2)
+    
+    # Display table
+    st.dataframe(df, use_container_width=True) 

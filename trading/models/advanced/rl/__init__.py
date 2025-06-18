@@ -1,3 +1,3 @@
-from .strategy_optimizer import DQNStrategyOptimizer
+from trading.strategy_optimizer import DQNStrategyOptimizer
 
 __all__ = ['DQNStrategyOptimizer'] 

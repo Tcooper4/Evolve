@@ -1,3 +1,3 @@
-from .risk_manager import RiskManager
+from trading.risk_manager import RiskManager
 
 __all__ = ['RiskManager'] 

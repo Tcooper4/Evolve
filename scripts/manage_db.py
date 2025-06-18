@@ -1,7 +1,34 @@
 #!/usr/bin/env python3
 """
 Database management script.
-Provides commands for managing the application's database.
+Provides commands for managing the application's database, including migrations, backups, and restores.
+
+This script supports:
+- Running database migrations
+- Creating and restoring database backups
+- Managing database connections
+
+Usage:
+    python manage_db.py <command> [options]
+
+Commands:
+    migrate     Run database migrations
+    backup      Create a database backup
+    restore     Restore database from backup
+    status      Show database status
+
+Examples:
+    # Run database migrations
+    python manage_db.py migrate
+
+    # Create a database backup
+    python manage_db.py backup --output db_backup.sql
+
+    # Restore database from backup
+    python manage_db.py restore --input db_backup.sql
+
+    # Show database status
+    python manage_db.py status
 """
 
 import os

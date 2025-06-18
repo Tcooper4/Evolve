@@ -17,7 +17,7 @@ import logging
 import uuid
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Union, Callable
+from typing import Dict, List, Optional, Tuple, Union, Callable, Any
 from dataclasses import dataclass
 from datetime import datetime
 import yaml
@@ -956,6 +956,28 @@ class ModelBuilder:
         except Exception as e:
             logger.error(f"Error exporting model config: {e}")
             raise
+
+    def get_model(self, model_id: str) -> Optional[Dict[str, Any]]:
+        """Get a trained model by ID.
+        
+        Args:
+            model_id: Model identifier
+            
+        Returns:
+            Optional[Dict[str, Any]]: Model information if found, None otherwise
+        """
+        return self.models.get(model_id)
+        
+    def get_training_history(self, model_id: str) -> Optional[list]:
+        """Get training history for a model.
+        
+        Args:
+            model_id: Model identifier
+            
+        Returns:
+            Optional[list]: Training history if found, None otherwise
+        """
+        return self.training_history.get(model_id)
 
 if __name__ == "__main__":
     # Example usage

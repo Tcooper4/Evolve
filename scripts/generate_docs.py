@@ -1,7 +1,25 @@
 #!/usr/bin/env python3
 """
 Documentation generation script.
-Generates API documentation and user guides.
+Provides commands for generating and exporting project documentation.
+
+This script supports:
+- Generating documentation from source code
+- Exporting documentation in various formats
+
+Usage:
+    python generate_docs.py <command> [options]
+
+Commands:
+    generate    Generate documentation
+    export      Export documentation
+
+Examples:
+    # Generate documentation
+    python generate_docs.py generate
+
+    # Export documentation
+    python generate_docs.py export --format pdf --output docs/project_docs.pdf
 """
 
 import os

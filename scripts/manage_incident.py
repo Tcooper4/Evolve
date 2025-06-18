@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Incident management script.
-Provides commands for managing automated incident response.
+Provides commands for managing incidents, reporting, and resolution tracking.
+
+This script supports:
+- Reporting incidents
+- Viewing and updating incident status
+- Exporting incident reports
+
+Usage:
+    python manage_incident.py <command> [options]
+
+Commands:
+    report      Report a new incident
+    status      View or update incident status
+    export      Export incident reports
+
+Examples:
+    # Report a new incident
+    python manage_incident.py report --description "API outage"
+
+    # View incident status
+    python manage_incident.py status --incident-id 123
+
+    # Export incident reports
+    python manage_incident.py export --output incidents.json
 """
 
 import os

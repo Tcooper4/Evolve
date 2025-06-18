@@ -9,7 +9,7 @@ from trading.utils.auto_repair import auto_repair
 from trading.utils.diagnostics import diagnostics
 from trading.utils.error_logger import error_logger
 from trading.llm.llm_interface import LLMInterface
-from trading.agents.router import AgentRouter
+from core.agents.router import AgentRouter
 from trading.agents.updater import ModelUpdater
 from trading.memory.performance_memory import PerformanceMemory
 from trading.config import config

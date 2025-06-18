@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Security management script.
-Provides commands for managing the application's security.
+Provides commands for managing application security, including user management, permissions, and security audits.
+
+This script supports:
+- Managing users and permissions
+- Running security audits
+- Exporting security reports
+
+Usage:
+    python manage_security.py <command> [options]
+
+Commands:
+    user        Manage users
+    audit       Run security audit
+    report      Export security report
+
+Examples:
+    # Manage users
+    python manage_security.py user --action add --username alice
+
+    # Run security audit
+    python manage_security.py audit
+
+    # Export security report
+    python manage_security.py report --output security_report.json
 """
 
 import os

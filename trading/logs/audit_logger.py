@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
-from .logger import get_logger
+from trading.logger import get_logger
 
 # Get base logger
 logger = get_logger(__name__)

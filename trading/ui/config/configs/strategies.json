@@ -1,0 +1,50 @@
+[
+    {
+        "name": "RSI Strategy",
+        "description": "Relative Strength Index based trading strategy",
+        "category": "technical",
+        "parameters": {
+            "rsi_period": 14,
+            "overbought": 70,
+            "oversold": 30,
+            "stop_loss": 0.02,
+            "take_profit": 0.04
+        },
+        "required_models": ["LSTM", "Transformer"],
+        "risk_level": "medium",
+        "timeframes": ["1h", "4h", "1d"],
+        "asset_classes": ["crypto", "forex", "stocks"]
+    },
+    {
+        "name": "MACD Strategy",
+        "description": "Moving Average Convergence Divergence strategy",
+        "category": "technical",
+        "parameters": {
+            "fast_period": 12,
+            "slow_period": 26,
+            "signal_period": 9,
+            "stop_loss": 0.02,
+            "take_profit": 0.04
+        },
+        "required_models": ["LSTM", "Transformer"],
+        "risk_level": "medium",
+        "timeframes": ["1h", "4h", "1d"],
+        "asset_classes": ["crypto", "forex", "stocks"]
+    },
+    {
+        "name": "Hybrid Strategy",
+        "description": "Combines technical and fundamental analysis with ML predictions",
+        "category": "hybrid",
+        "parameters": {
+            "technical_weight": 0.4,
+            "fundamental_weight": 0.3,
+            "ml_weight": 0.3,
+            "stop_loss": 0.02,
+            "take_profit": 0.04
+        },
+        "required_models": ["LSTM", "Transformer", "GNN"],
+        "risk_level": "high",
+        "timeframes": ["4h", "1d", "1w"],
+        "asset_classes": ["crypto", "stocks"]
+    }
+] 

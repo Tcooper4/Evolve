@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Debug management script.
-Provides commands for managing error handling and debugging.
+Provides commands for debugging the application, including running in debug mode, collecting debug info, and exporting logs.
+
+This script supports:
+- Running the application in debug mode
+- Collecting debug information
+- Exporting debug logs
+
+Usage:
+    python manage_debug.py <command> [options]
+
+Commands:
+    run         Run application in debug mode
+    collect     Collect debug information
+    export      Export debug logs
+
+Examples:
+    # Run in debug mode
+    python manage_debug.py run
+
+    # Collect debug information
+    python manage_debug.py collect --output debug_info.json
+
+    # Export debug logs
+    python manage_debug.py export --output debug_logs.zip
 """
 
 import os

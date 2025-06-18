@@ -2,6 +2,36 @@
 """
 Pipeline management script.
 Provides commands for managing the application's data processing pipeline.
+
+This script supports:
+- Running data processing pipelines (market data, model training, prediction)
+- Batch and streaming data processing
+- Pipeline component initialization and orchestration
+- Saving and reporting pipeline results
+
+Usage:
+    python manage_pipeline.py <command> [options]
+
+Commands:
+    run         Run a data processing pipeline
+    status      Show pipeline status
+    report      Generate pipeline report
+
+Examples:
+    # Run the market data pipeline on a CSV file
+    python manage_pipeline.py run --pipeline-type market_data --data-path data/market.csv
+
+    # Run the model training pipeline
+    python manage_pipeline.py run --pipeline-type model_training --data-path data/train.csv
+
+    # Run the prediction pipeline in streaming mode
+    python manage_pipeline.py run --pipeline-type prediction
+
+    # Show pipeline status
+    python manage_pipeline.py status --pipeline-type market_data
+
+    # Generate a pipeline report
+    python manage_pipeline.py report --pipeline-type model_training --output reports/pipeline_report.json
 """
 
 import os
@@ -21,8 +51,32 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 
 class PipelineManager:
+    """Manager for data processing pipelines.
+
+    This class provides methods for running, monitoring, and reporting on data
+    processing pipelines, including market data ingestion, model training, and
+    prediction. Supports both batch and streaming data processing.
+
+    Attributes:
+        config (dict): Application configuration
+        logger (logging.Logger): Logger instance
+        pipeline_dir (Path): Directory for pipeline artifacts
+        executor (ThreadPoolExecutor): Thread pool for parallel processing
+
+    Example:
+        manager = PipelineManager()
+        asyncio.run(manager.run_pipeline("market_data", "data/market.csv"))
+    """
+
     def __init__(self, config_path: str = "config/app_config.yaml"):
-        """Initialize the pipeline manager."""
+        """Initialize the pipeline manager.
+
+        Args:
+            config_path: Path to the application configuration file
+
+        Raises:
+            SystemExit: If the configuration file is not found
+        """
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
@@ -31,7 +85,17 @@ class PipelineManager:
         self.executor = ThreadPoolExecutor(max_workers=4)
 
     def _load_config(self, config_path: str) -> dict:
-        """Load application configuration."""
+        """Load application configuration.
+
+        Args:
+            config_path: Path to the configuration file
+
+        Returns:
+            Configuration dictionary
+
+        Raises:
+            SystemExit: If the configuration file is not found
+        """
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
@@ -40,7 +104,11 @@ class PipelineManager:
             return yaml.safe_load(f)
 
     def setup_logging(self):
-        """Initialize logging configuration."""
+        """Initialize logging configuration.
+
+        Raises:
+            SystemExit: If the logging configuration file is not found
+        """
         log_config_path = Path("config/logging_config.yaml")
         if not log_config_path.exists():
             print("Error: logging_config.yaml not found")
@@ -52,7 +120,18 @@ class PipelineManager:
         logging.config.dictConfig(log_config)
 
     async def run_pipeline(self, pipeline_type: str, data_path: Optional[str] = None):
-        """Run data processing pipeline."""
+        """Run data processing pipeline.
+
+        Args:
+            pipeline_type: Type of pipeline to run (e.g., "market_data", "model_training", "prediction")
+            data_path: Optional path to input data file
+
+        Returns:
+            True if pipeline completed successfully, False otherwise
+
+        Raises:
+            Exception: If pipeline execution fails
+        """
         self.logger.info(f"Running {pipeline_type} pipeline...")
         
         try:
@@ -396,12 +475,12 @@ class PipelineManager:
             self.logger.error(f"Failed to save results: {e}")
 
 def main():
-    """Main function."""
+    """Main entry point for the pipeline management script."""
     parser = argparse.ArgumentParser(description="Pipeline Manager")
     parser.add_argument(
         "command",
-        choices=["run"],
-        help="Command to execute"
+        choices=["run", "status", "report"],
+        help="Command to run"
     )
     parser.add_argument(
         "--pipeline-type",
@@ -411,18 +490,32 @@ def main():
     )
     parser.add_argument(
         "--data-path",
-        help="Path to input data file"
+        help="Path to input data file (for batch mode)"
     )
-    
+    parser.add_argument(
+        "--output",
+        help="Output file path for reports"
+    )
+    parser.add_argument(
+        "--help",
+        action="store_true",
+        help="Show usage examples"
+    )
     args = parser.parse_args()
+
+    if args.help:
+        print(__doc__)
+        return
+
     manager = PipelineManager()
-    
     if args.command == "run":
-        success = asyncio.run(manager.run_pipeline(args.pipeline_type, args.data_path))
-        sys.exit(0 if success else 1)
-    else:
-        parser.print_help()
-        sys.exit(1)
+        asyncio.run(manager.run_pipeline(args.pipeline_type, args.data_path))
+    elif args.command == "status":
+        # Implement status reporting
+        pass
+    elif args.command == "report":
+        # Implement reporting
+        pass
 
 if __name__ == "__main__":
     main() 

@@ -11,9 +11,9 @@ import asyncio
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 from datetime import datetime, timedelta
-from .models import Task, Workflow, TaskStatus
-from .task_manager import TaskManager
-from .workflow_engine import WorkflowEngine
+from trading.models import Task, Workflow, TaskStatus
+from trading.task_manager import TaskManager
+from trading.workflow_engine import WorkflowEngine
 
 class AutomationScheduler:
     """Scheduler for managing automation tasks and workflows."""

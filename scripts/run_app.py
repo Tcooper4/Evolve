@@ -1,7 +1,21 @@
 #!/usr/bin/env python3
 """
 Application runner script.
-Handles command-line arguments and starts the application in the appropriate mode.
+Provides commands for running the main application server or service.
+
+This script supports:
+- Running the main application
+- Running in different modes (development, production)
+
+Usage:
+    python run_app.py [--mode development|production]
+
+Examples:
+    # Run the application in development mode
+    python run_app.py --mode development
+
+    # Run the application in production mode
+    python run_app.py --mode production
 """
 
 import os

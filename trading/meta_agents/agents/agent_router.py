@@ -21,9 +21,9 @@ from pathlib import Path
 import re
 from enum import Enum
 
-from .model_builder import ModelBuilder
-from .performance_checker import PerformanceChecker
-from .self_repair import SelfRepairAgent
+from trading.model_builder import ModelBuilder
+from trading.performance_checker import PerformanceChecker
+from trading.self_repair import SelfRepairAgent
 
 # Configure logging
 logging.basicConfig(

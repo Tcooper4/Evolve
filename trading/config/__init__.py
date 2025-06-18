@@ -1,6 +1,6 @@
 """Configuration package."""
 
-from .configuration import (
+from trading.configuration import (
     ConfigManager,
     ModelConfig,
     DataConfig,

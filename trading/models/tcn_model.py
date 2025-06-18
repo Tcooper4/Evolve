@@ -12,7 +12,7 @@ import torch.nn.functional as F
 import shap
 
 # Local imports
-from .base_model import BaseModel, ValidationError, ModelRegistry
+from trading.base_model import BaseModel, ValidationError, ModelRegistry
 
 class TemporalBlock(nn.Module):
     """Temporal block for TCN."""

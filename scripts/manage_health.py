@@ -1,7 +1,30 @@
 #!/usr/bin/env python3
 """
 Health management script.
-Provides commands for monitoring system health and managing the health dashboard.
+Provides commands for checking and reporting application and system health.
+
+This script supports:
+- Checking application health
+- Generating health reports
+- Exporting health data
+
+Usage:
+    python manage_health.py <command> [options]
+
+Commands:
+    check       Check application health
+    report      Generate health report
+    export      Export health data
+
+Examples:
+    # Check application health
+    python manage_health.py check
+
+    # Generate health report
+    python manage_health.py report --output health_report.json
+
+    # Export health data
+    python manage_health.py export --output health_data.csv
 """
 
 import os

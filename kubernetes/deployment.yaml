@@ -22,27 +22,20 @@ spec:
           name: web
         - containerPort: 9090
           name: metrics
+        envFrom:
+        - configMapRef:
+            name: automation-config
+        - secretRef:
+            name: automation-secrets
         env:
-        - name: REDIS_HOST
+        - name: POD_NAME
           valueFrom:
-            configMapKeyRef:
-              name: automation-config
-              key: redis_host
-        - name: REDIS_PORT
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
           valueFrom:
-            configMapKeyRef:
-              name: automation-config
-              key: redis_port
-        - name: RAY_ADDRESS
-          valueFrom:
-            configMapKeyRef:
-              name: automation-config
-              key: ray_address
-        - name: RAY_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: automation-config
-              key: ray_port
+            fieldRef:
+              fieldPath: metadata.namespace
         resources:
           requests:
             cpu: "500m"
@@ -56,18 +49,48 @@ spec:
             port: web
           initialDelaySeconds: 30
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
         readinessProbe:
           httpGet:
             path: /ready
             port: web
           initialDelaySeconds: 5
           periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+          successThreshold: 1
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: web
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 30
         volumeMounts:
         - name: logs
           mountPath: /app/automation/logs
+        - name: models
+          mountPath: /app/automation/models
+        - name: data
+          mountPath: /app/automation/data
+        - name: config
+          mountPath: /app/automation/config
       volumes:
       - name: logs
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: automation-logs-pvc
+      - name: models
+        persistentVolumeClaim:
+          claimName: automation-models-pvc
+      - name: data
+        persistentVolumeClaim:
+          claimName: automation-data-pvc
+      - name: config
+        configMap:
+          name: automation-config
 ---
 apiVersion: v1
 kind: Service
@@ -92,10 +115,63 @@ metadata:
   name: automation-config
   namespace: automation
 data:
-  redis_host: "redis"
-  redis_port: "6379"
-  ray_address: "ray"
-  ray_port: "10001"
+  TRADING_ENV: "production"
+  LOG_LEVEL: "INFO"
+  AGENT_LOG_LEVEL: "INFO"
+  MODEL_LOG_LEVEL: "INFO"
+  DATA_LOG_LEVEL: "INFO"
+  ROOT_LOG_LEVEL: "WARNING"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  RAY_ADDRESS: "ray"
+  RAY_PORT: "10001"
+  WEB_HOST: "0.0.0.0"
+  WEB_PORT: "5000"
+  PROMETHEUS_PORT: "9090"
+  GRAFANA_PORT: "3000"
+  AGENT_TIMEOUT: "300"
+  MAX_CONCURRENT_AGENTS: "5"
+  AGENT_MEMORY_SIZE: "1000"
+  BACKTEST_DAYS: "365"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: automation-logs-pvc
+  namespace: automation
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: automation-models-pvc
+  namespace: automation
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: automation-data-pvc
+  namespace: automation
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: standard
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -104,7 +180,12 @@ metadata:
   namespace: automation
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
+  tls:
+  - hosts:
+    - automation.example.com
+    secretName: automation-tls
   rules:
   - host: automation.example.com
     http:

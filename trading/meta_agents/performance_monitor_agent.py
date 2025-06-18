@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-from .base_agent import BaseMetaAgent
+from trading.base_agent import BaseMetaAgent
 from trading.memory.performance_memory import PerformanceMemory
 from trading.models import BaseModel
 from trading.strategies import StrategyManager
