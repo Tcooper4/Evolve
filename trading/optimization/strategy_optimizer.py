@@ -1,3 +1,5 @@
+"""Strategy optimization module with multiple optimization methods."""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -32,6 +34,10 @@ import asyncio
 import aiohttp
 from typing_extensions import TypedDict
 import itertools
+from pydantic import BaseModel, Field, validator
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import Matern
+from sklearn.model_selection import ParameterGrid
 
 # Try to import ray and its submodules
 try:
@@ -42,6 +48,20 @@ try:
     RAY_AVAILABLE = True
 except ImportError:
     RAY_AVAILABLE = False
+
+from trading.optimization.base_optimizer import BaseOptimizer, OptimizerConfig
+from trading.optimization.performance_logger import PerformanceLogger, PerformanceMetrics
+
+# Setup logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+# Add file handler for debug logs
+debug_handler = logging.FileHandler('trading/optimization/logs/optimization_debug.log')
+debug_handler.setLevel(logging.DEBUG)
+debug_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+debug_handler.setFormatter(debug_formatter)
+logger.addHandler(debug_handler)
 
 @dataclass
 class OptimizationResult:
@@ -61,6 +81,15 @@ class OptimizationResult:
 class OptimizationMethod(ABC):
     """Base class for optimization methods."""
     
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize optimization method.
+        
+        Args:
+            config: Optional configuration dictionary
+        """
+        self.config = config or {}
+        self.logger = logging.getLogger(self.__class__.__name__)
+    
     @abstractmethod
     def optimize(self, objective: Callable, param_space: Dict[str, Any], 
                 data: pd.DataFrame, **kwargs) -> OptimizationResult:
@@ -76,7 +105,7 @@ class OptimizationMethod(ABC):
             OptimizationResult object
         """
         pass
-        
+    
     def _validate_param_space(self, param_space: Dict[str, Any]) -> None:
         """Validate parameter space.
         
@@ -99,7 +128,7 @@ class OptimizationMethod(ABC):
                     raise ValueError(f"Parameter {param} missing required keys: {required_keys}")
                 if space['start'] >= space['end']:
                     raise ValueError(f"Parameter {param} has invalid range")
-                    
+    
     def _check_early_stopping(self, scores: List[float], patience: int = 5,
                             min_delta: float = 1e-4) -> bool:
         """Check if optimization should stop early.
@@ -119,6 +148,24 @@ class OptimizationMethod(ABC):
         current_score = min(scores[-patience:])
         
         return (best_score - current_score) < min_delta
+    
+    def _objective_wrapper(self, objective: Callable, data: pd.DataFrame) -> Callable:
+        """Create objective function wrapper.
+        
+        Args:
+            objective: Original objective function
+            data: Market data
+            
+        Returns:
+            Wrapped objective function
+        """
+        def wrapper(params):
+            try:
+                return objective(params, data)
+            except Exception as e:
+                self.logger.error(f"Error in objective function: {str(e)}")
+                return float('inf')
+        return wrapper
 
 class GridSearch(OptimizationMethod):
     """Grid search optimization method."""
@@ -229,55 +276,49 @@ class GridSearch(OptimizationMethod):
             scores.append(score)
             
         return scores
-        
+    
     def _calculate_hyperparameter_importance(self, param_grid: List[Dict[str, Any]],
                                           scores: List[float]) -> Dict[str, float]:
         """Calculate hyperparameter importance.
         
         Args:
             param_grid: List of parameter combinations
-            scores: List of corresponding scores
+            scores: List of scores for each combination
             
         Returns:
-            Dictionary of hyperparameter importance scores
+            Dictionary of parameter importance scores
         """
         importance = {}
         
         for param in param_grid[0].keys():
             param_values = [p[param] for p in param_grid]
-            correlation = np.corrcoef(param_values, scores)[0, 1]
-            importance[param] = abs(correlation)
+            correlations = np.corrcoef(param_values, scores)[0, 1]
+            importance[param] = abs(correlations)
             
         return importance
-
+    
     def _generate_grid(self, param_space: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Generate parameter grid from parameter space.
+        """Generate parameter grid.
         
         Args:
-            param_space: Parameter space to generate grid from
+            param_space: Parameter space to search
             
         Returns:
             List of parameter combinations
         """
-        # Convert parameter space to lists
-        param_lists = {}
+        grid = {}
+        
         for param, space in param_space.items():
             if isinstance(space, (list, tuple)):
-                param_lists[param] = space
+                grid[param] = space
             elif isinstance(space, dict):
-                start = space['start']
-                end = space['end']
-                step = space.get('step', (end - start) / 10)
-                param_lists[param] = np.arange(start, end + step, step)
-            else:
-                param_lists[param] = [space]
+                grid[param] = np.linspace(
+                    space['start'],
+                    space['end'],
+                    space.get('n_points', 10)
+                )
                 
-        # Generate all combinations
-        keys = param_lists.keys()
-        values = param_lists.values()
-        combinations = list(itertools.product(*values))
-        
-        return [dict(zip(keys, combo)) for combo in combinations]
+        return list(ParameterGrid(grid))
 
 class BayesianOptimization(OptimizationMethod):
     """Bayesian optimization method."""
@@ -777,340 +818,233 @@ class DistributedOptimization(OptimizationMethod):
             
         return combinations
 
-class StrategyOptimizer:
-    """Strategy optimization class."""
+class StrategyOptimizerConfig(OptimizerConfig):
+    """Configuration for strategy optimizer."""
     
-    def __init__(self, config: Optional[Dict] = None, state_dim: Optional[int] = None, action_dim: Optional[int] = None):
-        """Initialize the StrategyOptimizer.
+    # Optimization settings
+    optimizer_type: str = Field("bayesian", description="Type of optimizer to use")
+    n_initial_points: int = Field(5, ge=1, description="Number of initial points for Bayesian optimization")
+    n_iterations: int = Field(50, ge=1, description="Number of optimization iterations")
+    grid_search_points: int = Field(100, ge=1, description="Maximum number of points for grid search")
+    
+    # Metric settings
+    primary_metric: str = Field("sharpe_ratio", description="Primary metric to optimize")
+    secondary_metrics: List[str] = Field(
+        ["win_rate", "max_drawdown"],
+        description="Secondary metrics to track"
+    )
+    metric_weights: Dict[str, float] = Field(
+        {"sharpe_ratio": 0.6, "win_rate": 0.3, "max_drawdown": 0.1},
+        description="Weights for each metric"
+    )
+    
+    # Bayesian optimization settings
+    kernel_type: str = Field("matern", description="Type of kernel for Gaussian process")
+    kernel_length_scale: float = Field(1.0, gt=0, description="Length scale for kernel")
+    kernel_nu: float = Field(2.5, gt=0, description="Nu parameter for Matern kernel")
+    
+    # Grid search settings
+    grid_search_strategy: str = Field("random", description="Strategy for grid search")
+    grid_search_batch_size: int = Field(10, ge=1, description="Batch size for grid search")
+    
+    @validator('optimizer_type')
+    def validate_optimizer_type(cls, v):
+        """Validate optimizer type."""
+        valid_types = ["bayesian", "grid", "random", "ray", "optuna", "pytorch"]
+        if v not in valid_types:
+            raise ValueError(f"Invalid optimizer type. Must be one of: {valid_types}")
+        return v
+    
+    @validator('primary_metric')
+    def validate_primary_metric(cls, v):
+        """Validate primary metric."""
+        valid_metrics = ["sharpe_ratio", "win_rate", "max_drawdown", "profit_factor"]
+        if v not in valid_metrics:
+            raise ValueError(f"Invalid primary metric. Must be one of: {valid_metrics}")
+        return v
 
+class StrategyOptimizer(BaseOptimizer):
+    """Strategy optimizer with multiple optimization methods."""
+    
+    def __init__(self, config: Union[Dict[str, Any], StrategyOptimizerConfig]):
+        """Initialize strategy optimizer.
+        
         Args:
-            config: Optional configuration dictionary.
-            state_dim: Optional dimension of the state space.
-            action_dim: Optional dimension of the action space.
+            config: Configuration dictionary or StrategyOptimizerConfig object
         """
-        self.config = config or {}
-        self.state_dim = state_dim
-        self.action_dim = action_dim
-        self.logger = logging.getLogger(__name__)
+        if isinstance(config, dict):
+            config = StrategyOptimizerConfig(**config)
+        self.config = config
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.performance_logger = PerformanceLogger()
         
-        # Initialize optimization methods
-        self.methods = {
-            'grid': GridSearch(),
-            'bayesian': BayesianOptimization(),
-            'optuna': OptunaOptimization(),
-            'pytorch': PyTorchOptimization(),
-            'distributed': DistributedOptimization()
-        }
-        
-        # Initialize data scaler
-        self.scaler = StandardScaler()
-        
-        # Set up logging
-        if not self.logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            )
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)
-            
-        # Set memory management parameters
-        self.max_memory = self.config.get('max_memory', 1e9)  # 1GB default
-        self.chunk_size = self.config.get('chunk_size', 1000)  # 1000 rows default
-
-    def optimize(self, strategy: Any, data: pd.DataFrame, param_space: Dict[str, Any],
-                method: str = 'bayesian', n_splits: int = 5, 
-                metric: Optional[Callable] = None, constraints: Optional[List[Callable]] = None,
-                **kwargs) -> OptimizationResult:
+        # Initialize optimization method
+        self.optimizer = self._create_optimizer()
+    
+    def optimize(self, strategy_class: Any, data: pd.DataFrame,
+                initial_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Optimize strategy parameters.
         
         Args:
-            strategy: Strategy to optimize
+            strategy_class: Strategy class to optimize
             data: Market data
-            param_space: Parameter space to search
-            method: Optimization method to use
-            n_splits: Number of time series splits for cross-validation
-            metric: Custom metric function to use
-            constraints: List of constraint functions
-            **kwargs: Additional optimization parameters
+            initial_params: Optional initial parameters
             
         Returns:
-            OptimizationResult object
+            Dictionary of optimized parameters
         """
-        if method not in self.methods:
-            raise ValueError(f"Unknown optimization method: {method}")
-            
-        # Normalize data
-        data = self._normalize_data(data)
+        # Get default parameters if not provided
+        if initial_params is None:
+            initial_params = self._get_default_params(strategy_class)
         
-        # Define objective function
-        def objective(params: Dict[str, Any], data: pd.DataFrame) -> float:
-            # Check constraints
-            if constraints:
-                for constraint in constraints:
-                    if not constraint(params):
-                        return float('inf')
-                        
-            # Set strategy parameters
-            strategy.set_params(**params)
-            
-            # Perform time series cross-validation
-            tscv = TimeSeriesSplit(n_splits=n_splits)
-            scores = []
-            
-            for train_idx, val_idx in tscv.split(data):
-                train_data = data.iloc[train_idx]
-                val_data = data.iloc[val_idx]
-                
-                # Train strategy
-                strategy.fit(train_data)
-                
-                # Evaluate strategy
-                if metric:
-                    score = metric(strategy, val_data)
-                else:
-                    score = strategy.evaluate(val_data)
-                scores.append(score)
-                
-            return np.mean(scores)
-            
-        # Run optimization with memory management
-        if data.memory_usage().sum() > self.max_memory:
-            self.logger.info("Using memory-optimized optimization")
-            return self._memory_optimized_optimize(
-                objective=objective,
-                data=data,
-                param_space=param_space,
-                method=method,
-                **kwargs
-            )
-            
+        # Create parameter space
+        param_space = self._create_parameter_grid(initial_params)
+        
+        # Create objective function
+        objective = self._objective_wrapper(strategy_class, data)
+        
         # Run optimization
-        result = self.methods[method].optimize(
+        result = self.optimizer.optimize(
             objective=objective,
             param_space=param_space,
             data=data,
-            n_splits=n_splits,
-            **kwargs
+            n_iterations=self.config.n_iterations
         )
         
-        # Save results
-        self.save_results(result, f"{strategy.__class__.__name__}_{method}")
+        # Log results
+        self._log_optimization_results(strategy_class, result.best_params, data)
         
-        return result
+        return result.best_params
+    
+    def _create_optimizer(self) -> OptimizationMethod:
+        """Create optimization method based on config.
         
-    def _memory_optimized_optimize(self, objective: Callable, data: pd.DataFrame,
-                                 param_space: Dict[str, Any], method: str,
-                                 **kwargs) -> OptimizationResult:
-        """Run memory-optimized optimization.
-        
-        Args:
-            objective: Objective function
-            data: Market data
-            param_space: Parameter space to search
-            method: Optimization method to use
-            **kwargs: Additional optimization parameters
-            
         Returns:
-            OptimizationResult object
+            OptimizationMethod instance
         """
-        # Split data into chunks
-        chunks = np.array_split(data, len(data) // self.chunk_size + 1)
-        
-        # Run optimization on each chunk
-        results = []
-        for i, chunk in enumerate(chunks):
-            self.logger.info(f"Processing chunk {i+1}/{len(chunks)}")
-            result = self.methods[method].optimize(
-                objective=objective,
-                param_space=param_space,
-                data=chunk,
-                **kwargs
-            )
-            results.append(result)
-            
-        # Combine results
-        best_result = min(results, key=lambda x: x.best_score)
-        all_scores = []
-        all_params = []
-        convergence_history = []
-        
-        for result in results:
-            all_scores.extend(result.all_scores)
-            all_params.extend(result.all_params)
-            convergence_history.extend(result.convergence_history)
-            
-        return OptimizationResult(
-            best_params=best_result.best_params,
-            best_score=best_result.best_score,
-            all_scores=all_scores,
-            all_params=all_params,
-            optimization_time=sum(r.optimization_time for r in results),
-            n_iterations=sum(r.n_iterations for r in results),
-            convergence_history=convergence_history
-        )
-        
-    def _normalize_data(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Normalize market data.
-        
-        Args:
-            data: Market data to normalize
-            
-        Returns:
-            Normalized data
-        """
-        numeric_cols = data.select_dtypes(include=[np.number]).columns
-        data[numeric_cols] = self.scaler.fit_transform(data[numeric_cols])
-        return data
-        
-    def parallel_optimize(self, strategies: List[Any], data: pd.DataFrame,
-                         param_spaces: List[Dict[str, Any]], method: str = 'bayesian',
-                         n_splits: int = 5, **kwargs) -> Dict[str, OptimizationResult]:
-        """Optimize multiple strategies in parallel.
-        
-        Args:
-            strategies: List of strategies to optimize
-            data: Market data
-            param_spaces: List of parameter spaces
-            method: Optimization method to use
-            n_splits: Number of time series splits
-            **kwargs: Additional optimization parameters
-            
-        Returns:
-            Dictionary mapping strategy names to optimization results
-        """
-        if len(strategies) != len(param_spaces):
-            raise ValueError("Number of strategies must match number of parameter spaces")
-            
-        results = {}
-        
-        with ThreadPoolExecutor() as executor:
-            futures = []
-            for strategy, param_space in zip(strategies, param_spaces):
-                future = executor.submit(
-                    self.optimize,
-                    strategy=strategy,
-                    data=data,
-                    param_space=param_space,
-                    method=method,
-                    n_splits=n_splits,
-                    **kwargs
-                )
-                futures.append((strategy.__class__.__name__, future))
-                
-            for name, future in futures:
-                try:
-                    results[name] = future.result()
-                except Exception as e:
-                    self.logger.error(f"Error optimizing {name}: {str(e)}")
-                    
-        return results
-        
-    def save_results(self, result: OptimizationResult, filename: str) -> None:
-        """Save optimization results.
-        
-        Args:
-            result: Optimization result to save
-            filename: Output filename
-        """
-        # Convert result to dictionary
-        result_dict = {
-            'best_params': result.best_params,
-            'best_score': result.best_score,
-            'all_scores': result.all_scores,
-            'all_params': result.all_params,
-            'optimization_time': result.optimization_time,
-            'n_iterations': result.n_iterations,
-            'convergence_history': result.convergence_history,
-            'metadata': result.metadata,
-            'feature_importance': result.feature_importance,
-            'cross_validation_scores': result.cross_validation_scores,
-            'hyperparameter_importance': result.hyperparameter_importance
+        optimizer_map = {
+            "grid": GridSearch,
+            "bayesian": BayesianOptimization,
+            "ray": RayOptimization if RAY_AVAILABLE else None,
+            "optuna": OptunaOptimization,
+            "pytorch": PyTorchOptimization
         }
         
-        # Save to file
-        output_path = self.results_dir / f"{filename}.json"
-        with open(output_path, 'w') as f:
-            json.dump(result_dict, f, indent=4)
+        optimizer_class = optimizer_map.get(self.config.optimizer_type)
+        if optimizer_class is None:
+            raise ValueError(f"Unsupported optimizer type: {self.config.optimizer_type}")
             
-        # Save plots
-        self._plot_results(result, filename)
-        
-    def _plot_results(self, result: OptimizationResult, filename: str) -> None:
-        """Plot optimization results.
+        return optimizer_class(self.config.dict())
+    
+    def _objective_wrapper(self, strategy_class: Any, data: pd.DataFrame) -> Callable:
+        """Create objective function wrapper.
         
         Args:
-            result: Optimization result to plot
-            filename: Output filename
-        """
-        # Create plots directory
-        plots_dir = self.results_dir / "plots"
-        plots_dir.mkdir(exist_ok=True)
-        
-        # Plot convergence history
-        plt.figure(figsize=(10, 6))
-        plt.plot(result.convergence_history)
-        plt.title("Optimization Convergence")
-        plt.xlabel("Iteration")
-        plt.ylabel("Score")
-        plt.savefig(plots_dir / f"{filename}_convergence.png")
-        plt.close()
-        
-        # Plot feature importance
-        if result.feature_importance:
-            plt.figure(figsize=(10, 6))
-            importance = pd.Series(result.feature_importance)
-            importance.sort_values().plot(kind='barh')
-            plt.title("Feature Importance")
-            plt.xlabel("Importance")
-            plt.tight_layout()
-            plt.savefig(plots_dir / f"{filename}_feature_importance.png")
-            plt.close()
-            
-        # Plot hyperparameter importance
-        if result.hyperparameter_importance:
-            plt.figure(figsize=(10, 6))
-            importance = pd.Series(result.hyperparameter_importance)
-            importance.sort_values().plot(kind='barh')
-            plt.title("Hyperparameter Importance")
-            plt.xlabel("Importance")
-            plt.tight_layout()
-            plt.savefig(plots_dir / f"{filename}_hyperparameter_importance.png")
-            plt.close()
-            
-        # Plot cross-validation scores
-        if result.cross_validation_scores:
-            plt.figure(figsize=(10, 6))
-            plt.boxplot(result.cross_validation_scores)
-            plt.title("Cross-validation Scores")
-            plt.ylabel("Score")
-            plt.savefig(plots_dir / f"{filename}_cv_scores.png")
-            plt.close()
-            
-    def load_results(self, filename: str) -> OptimizationResult:
-        """Load optimization results.
-        
-        Args:
-            filename: Input filename
+            strategy_class: Strategy class
+            data: Market data
             
         Returns:
-            OptimizationResult object
+            Objective function
         """
-        input_path = self.results_dir / f"{filename}.json"
-        with open(input_path, 'r') as f:
-            result_dict = json.load(f)
+        def objective(params: Dict[str, Any]) -> float:
+            try:
+                # Create strategy instance
+                strategy = strategy_class(params)
+                
+                # Generate signals
+                signals = strategy.generate_signals(data)
+                
+                # Calculate metrics
+                metrics = strategy.evaluate_performance(signals, data)
+                
+                # Calculate weighted score
+                score = 0
+                for metric, weight in self.config.metric_weights.items():
+                    score += weight * getattr(metrics, metric)
+                    
+                return -score  # Minimize negative score
+                
+            except Exception as e:
+                self.logger.error(f"Error in objective function: {str(e)}")
+                return float('inf')
+                
+        return objective
+    
+    def _get_default_params(self, strategy_class: Any) -> Dict[str, Any]:
+        """Get default parameters for strategy.
+        
+        Args:
+            strategy_class: Strategy class
             
-        return OptimizationResult(
-            best_params=result_dict['best_params'],
-            best_score=result_dict['best_score'],
-            all_scores=result_dict['all_scores'],
-            all_params=result_dict['all_params'],
-            optimization_time=result_dict['optimization_time'],
-            n_iterations=result_dict['n_iterations'],
-            convergence_history=result_dict['convergence_history'],
-            metadata=result_dict.get('metadata'),
-            feature_importance=result_dict.get('feature_importance'),
-            cross_validation_scores=result_dict.get('cross_validation_scores'),
-            hyperparameter_importance=result_dict.get('hyperparameter_importance')
-        ) 
+        Returns:
+            Dictionary of default parameters
+        """
+        if hasattr(strategy_class, 'default_params'):
+            return strategy_class.default_params
+        return {}
+    
+    def _create_parameter_grid(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Create parameter grid for optimization.
+        
+        Args:
+            params: Base parameters
+            
+        Returns:
+            List of parameter combinations
+        """
+        grid = {}
+        
+        for param, value in params.items():
+            if isinstance(value, (int, float)):
+                # Create range around value
+                grid[param] = {
+                    'start': value * 0.5,
+                    'end': value * 1.5,
+                    'n_points': 5
+                }
+            elif isinstance(value, (list, tuple)):
+                grid[param] = value
+                
+        return grid
+    
+    def _log_optimization_results(self, strategy_class: Any,
+                                optimized_params: Dict[str, Any],
+                                data: pd.DataFrame) -> None:
+        """Log optimization results.
+        
+        Args:
+            strategy_class: Strategy class
+            optimized_params: Optimized parameters
+            data: Market data
+        """
+        # Create strategy instance with optimized parameters
+        strategy = strategy_class(optimized_params)
+        
+        # Generate signals
+        signals = strategy.generate_signals(data)
+        
+        # Calculate metrics
+        metrics = strategy.evaluate_performance(signals, data)
+        
+        # Log results
+        self.performance_logger.log_metrics(
+            strategy_name=strategy_class.__name__,
+            metrics=metrics,
+            parameters=optimized_params
+        )
+        
+        # Save results to file
+        results_dir = Path('trading/optimization/results')
+        results_dir.mkdir(parents=True, exist_ok=True)
+        
+        results = {
+            'strategy': strategy_class.__name__,
+            'parameters': optimized_params,
+            'metrics': metrics.__dict__,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        with open(results_dir / f"{strategy_class.__name__}_optimization.json", 'w') as f:
+            json.dump(results, f, indent=4)
+
+__all__ = ["StrategyOptimizer", "StrategyOptimizerConfig"] 

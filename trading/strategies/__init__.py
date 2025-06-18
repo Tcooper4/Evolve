@@ -1,3 +1,12 @@
-from .strategy_manager import StrategyManager
+"""Trading strategies module."""
 
-__all__ = ['StrategyManager'] 
+from .strategy_manager import StrategyManager, Strategy, StrategyMetrics
+from .rsi_signals import generate_rsi_signals, load_optimized_settings
+
+__all__ = [
+    'StrategyManager',
+    'Strategy',
+    'StrategyMetrics',
+    'generate_rsi_signals',
+    'load_optimized_settings'
+] 
