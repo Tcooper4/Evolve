@@ -1,0 +1,157 @@
+{
+    "trading_patterns": {
+        "trend_following": {
+            "description": "Follow the established market trend",
+            "rules": [
+                "Buy when price is above moving averages",
+                "Sell when price is below moving averages",
+                "Use higher timeframe for trend direction"
+            ],
+            "indicators": ["SMA", "EMA", "MACD"]
+        },
+        "mean_reversion": {
+            "description": "Trade price deviations from the mean",
+            "rules": [
+                "Buy when price is significantly below moving average",
+                "Sell when price is significantly above moving average",
+                "Use RSI to confirm overbought/oversold conditions"
+            ],
+            "indicators": ["RSI", "Bollinger Bands", "Stochastic"]
+        },
+        "breakout": {
+            "description": "Trade price breakouts from consolidation",
+            "rules": [
+                "Buy when price breaks above resistance",
+                "Sell when price breaks below support",
+                "Confirm breakout with volume"
+            ],
+            "indicators": ["Volume", "ATR", "Support/Resistance"]
+        }
+    },
+    "risk_management": {
+        "position_sizing": {
+            "description": "Rules for determining position size",
+            "rules": [
+                "Risk no more than 1-2% of capital per trade",
+                "Adjust position size based on volatility",
+                "Consider correlation between positions"
+            ]
+        },
+        "stop_loss": {
+            "description": "Rules for setting stop losses",
+            "rules": [
+                "Set stop loss based on recent volatility",
+                "Place stop loss beyond key support/resistance",
+                "Adjust stop loss as trade moves in favor"
+            ]
+        },
+        "take_profit": {
+            "description": "Rules for taking profits",
+            "rules": [
+                "Set multiple take profit levels",
+                "Use trailing stops for strong trends",
+                "Consider partial profit taking"
+            ]
+        }
+    },
+    "market_conditions": {
+        "trending": {
+            "description": "Characteristics of trending markets",
+            "indicators": [
+                "Higher highs and higher lows for uptrend",
+                "Lower highs and lower lows for downtrend",
+                "Moving averages aligned in trend direction"
+            ]
+        },
+        "ranging": {
+            "description": "Characteristics of ranging markets",
+            "indicators": [
+                "Price oscillating between support and resistance",
+                "Moving averages moving sideways",
+                "Lower volatility"
+            ]
+        },
+        "volatile": {
+            "description": "Characteristics of volatile markets",
+            "indicators": [
+                "Large price swings",
+                "High trading volume",
+                "Wide Bollinger Bands"
+            ]
+        }
+    },
+    "technical_indicators": {
+        "trend": {
+            "moving_averages": {
+                "description": "Moving average crossover system",
+                "rules": [
+                    "Golden cross: Short MA crosses above long MA",
+                    "Death cross: Short MA crosses below long MA",
+                    "Use multiple timeframes for confirmation"
+                ]
+            },
+            "macd": {
+                "description": "Moving Average Convergence Divergence",
+                "rules": [
+                    "Buy when MACD line crosses above signal line",
+                    "Sell when MACD line crosses below signal line",
+                    "Consider histogram for momentum"
+                ]
+            }
+        },
+        "momentum": {
+            "rsi": {
+                "description": "Relative Strength Index",
+                "rules": [
+                    "Overbought above 70",
+                    "Oversold below 30",
+                    "Look for divergences"
+                ]
+            },
+            "stochastic": {
+                "description": "Stochastic Oscillator",
+                "rules": [
+                    "Overbought above 80",
+                    "Oversold below 20",
+                    "Watch for crossovers"
+                ]
+            }
+        },
+        "volatility": {
+            "bollinger_bands": {
+                "description": "Bollinger Bands",
+                "rules": [
+                    "Price touching upper band may indicate overbought",
+                    "Price touching lower band may indicate oversold",
+                    "Band width indicates volatility"
+                ]
+            },
+            "atr": {
+                "description": "Average True Range",
+                "rules": [
+                    "Higher ATR indicates higher volatility",
+                    "Use for stop loss placement",
+                    "Watch for ATR expansion/contraction"
+                ]
+            }
+        }
+    },
+    "market_sentiment": {
+        "volume": {
+            "description": "Volume analysis",
+            "rules": [
+                "Higher volume confirms price movement",
+                "Volume divergence may indicate trend weakness",
+                "Unusual volume may signal important price levels"
+            ]
+        },
+        "market_breadth": {
+            "description": "Market breadth indicators",
+            "rules": [
+                "Advance-decline line shows market participation",
+                "New highs vs new lows indicates market strength",
+                "Watch for divergences with price"
+            ]
+        }
+    }
+} 

@@ -1,0 +1,82 @@
+{
+    "timeframe": [
+        "(daily|weekly|monthly|quarterly|yearly)",
+        "(\\d+)\\s*(day|week|month|year)s?",
+        "(short|medium|long)\\s*term",
+        "(intraday|overnight|swing|position)",
+        "(session|period|interval)",
+        "(time|duration|horizon)"
+    ],
+    "metric": [
+        "(price|volume|return|volatility|trend)",
+        "(technical|fundamental) (indicator|metric)",
+        "(market|trading) (condition|state)",
+        "(performance|efficiency) (metric|measure)",
+        "(risk|reward) (metric|measure)",
+        "(profit|loss) (metric|measure)"
+    ],
+    "asset": [
+        "(stock|bond|commodity|crypto|forex)",
+        "(equity|security|instrument)",
+        "(market|trading) (pair|symbol)",
+        "(index|sector|industry)",
+        "(currency|fiat|token)",
+        "(derivative|option|future)"
+    ],
+    "action": [
+        "(buy|sell|hold|trade|invest)",
+        "(entry|exit) (point|level)",
+        "(position|trade) (size|amount)",
+        "(order|execution) (type|method)",
+        "(strategy|approach) (selection|implementation)",
+        "(risk|money) (management|control)"
+    ],
+    "indicator": [
+        "(moving average|ma|sma|ema)",
+        "(relative strength|rsi)",
+        "(macd|moving average convergence)",
+        "(bollinger bands|bb)",
+        "(stochastic|stoch)",
+        "(volume|vol) (indicator|oscillator)"
+    ],
+    "pattern": [
+        "(support|resistance) (level|zone)",
+        "(trend|channel) (line|boundary)",
+        "(chart|price) (pattern|formation)",
+        "(candlestick|bar) (pattern|formation)",
+        "(breakout|breakdown) (pattern|formation)",
+        "(reversal|continuation) (pattern|formation)"
+    ],
+    "risk": [
+        "(stop loss|stop|sl)",
+        "(take profit|tp)",
+        "(risk reward|rr) (ratio|relationship)",
+        "(position size|size) (calculation|determination)",
+        "(risk|exposure) (limit|threshold)",
+        "(drawdown|loss) (limit|threshold)"
+    ],
+    "market": [
+        "(bull|bear) (market|trend)",
+        "(trending|ranging) (market|condition)",
+        "(volatile|stable) (market|condition)",
+        "(liquid|illiquid) (market|condition)",
+        "(efficient|inefficient) (market|condition)",
+        "(correlated|uncorrelated) (market|condition)"
+    ],
+    "strategy": [
+        "(trend following|trend trading)",
+        "(mean reversion|reversion)",
+        "(breakout|breakdown) (trading|strategy)",
+        "(scalping|day trading|swing trading)",
+        "(momentum|contrarian) (trading|strategy)",
+        "(arbitrage|statistical arbitrage)"
+    ],
+    "analysis": [
+        "(technical|fundamental) (analysis|review)",
+        "(chart|price) (analysis|review)",
+        "(pattern|formation) (analysis|review)",
+        "(indicator|oscillator) (analysis|review)",
+        "(volume|vol) (analysis|review)",
+        "(sentiment|market) (analysis|review)"
+    ]
+} 

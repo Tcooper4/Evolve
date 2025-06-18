@@ -1,0 +1,75 @@
+{
+    "test_environment": {
+        "mode": "test",
+        "mock_services": true,
+        "use_test_database": true,
+        "use_test_redis": true
+    },
+    "test_data": {
+        "sample_size": 1000,
+        "time_series_length": 100,
+        "feature_count": 10,
+        "test_split": 0.2
+    },
+    "test_models": {
+        "lstm": {
+            "input_size": 10,
+            "hidden_size": 64,
+            "num_layers": 2,
+            "dropout": 0.2
+        },
+        "transformer": {
+            "input_size": 10,
+            "hidden_size": 64,
+            "num_heads": 4,
+            "num_layers": 2,
+            "dropout": 0.1
+        }
+    },
+    "test_tasks": {
+        "feature_implementation": {
+            "count": 5,
+            "complexity": "medium"
+        },
+        "bug_fix": {
+            "count": 3,
+            "complexity": "low"
+        },
+        "model_training": {
+            "count": 2,
+            "complexity": "high"
+        },
+        "data_processing": {
+            "count": 3,
+            "complexity": "medium"
+        }
+    },
+    "test_monitoring": {
+        "metrics": [
+            "cpu_usage",
+            "memory_usage",
+            "disk_usage",
+            "task_completion_time",
+            "model_accuracy",
+            "data_quality"
+        ],
+        "alert_thresholds": {
+            "cpu": 90,
+            "memory": 90,
+            "disk": 90
+        }
+    },
+    "test_validation": {
+        "data_quality": {
+            "completeness": 0.95,
+            "accuracy": 0.95,
+            "consistency": 0.95
+        },
+        "model_performance": {
+            "accuracy": 0.85,
+            "precision": 0.85,
+            "recall": 0.85,
+            "f1_score": 0.85
+        }
+    }
+} 

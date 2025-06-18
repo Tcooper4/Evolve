@@ -1,0 +1,513 @@
+{
+    "version": "1.0.0",
+    "last_updated": "2024-03-19T12:00:00Z",
+    "environment": "${ENVIRONMENT:-development}",
+    "openai": {
+        "api_key": "${OPENAI_API_KEY}",
+        "model": "gpt-4",
+        "temperature": 0.7,
+        "max_tokens": 2000,
+        "timeout": 30,
+        "retry_attempts": 3,
+        "retry_delay": 5,
+        "rate_limit": {
+            "requests_per_minute": 60,
+            "tokens_per_minute": 90000
+        }
+    },
+    "cursor": {
+        "workspace_path": ".",
+        "auto_save": true,
+        "format_on_save": true,
+        "max_file_size": 10485760,
+        "exclude_patterns": [
+            "*.pyc",
+            "__pycache__",
+            "*.log",
+            "*.tmp",
+            "*.bak",
+            "venv*",
+            ".git",
+            ".pytest_cache"
+        ]
+    },
+    "microservices": {
+        "enabled": true,
+        "services": {
+            "task_queue": {
+                "host": "${REDIS_HOST:-localhost}",
+                "port": "${REDIS_PORT:-6379}",
+                "password": "${REDIS_PASSWORD}",
+                "db": 0,
+                "ssl": {
+                    "enabled": true,
+                    "verify": true
+                },
+                "connection_pool": {
+                    "max_connections": 10,
+                    "timeout": 30
+                }
+            },
+            "api": {
+                "host": "${API_HOST:-localhost}",
+                "port": "${API_PORT:-8000}",
+                "workers": 4,
+                "timeout": 30,
+                "ssl": {
+                    "enabled": true,
+                    "cert": "${API_CERT_PATH}",
+                    "key": "${API_KEY_PATH}"
+                }
+            },
+            "monitoring": {
+                "host": "${MONITORING_HOST:-localhost}",
+                "port": "${MONITORING_PORT:-8001}",
+                "workers": 2,
+                "timeout": 30,
+                "ssl": {
+                    "enabled": true,
+                    "cert": "${MONITORING_CERT_PATH}",
+                    "key": "${MONITORING_KEY_PATH}"
+                }
+            }
+        },
+        "discovery": {
+            "enabled": true,
+            "type": "consul",
+            "host": "${CONSUL_HOST:-localhost}",
+            "port": "${CONSUL_PORT:-8500}",
+            "token": "${CONSUL_TOKEN}"
+        }
+    },
+    "distributed": {
+        "enabled": true,
+        "nodes": [],
+        "replication_factor": 2,
+        "consistency_level": "quorum",
+        "partition_tolerance": true,
+        "node_discovery": {
+            "enabled": true,
+            "interval": 30,
+            "timeout": 10
+        }
+    },
+    "event_driven": {
+        "enabled": true,
+        "event_bus": "redis",
+        "topics": [
+            "task_updates",
+            "system_health",
+            "model_updates",
+            "data_updates"
+        ],
+        "consumer_groups": {
+            "enabled": true,
+            "group_id": "automation-group",
+            "auto_offset_reset": "latest"
+        },
+        "retry": {
+            "enabled": true,
+            "max_attempts": 3,
+            "delay": 5
+        }
+    },
+    "agents": {
+        "code_generation": {
+            "enabled": true,
+            "priority": 1,
+            "max_concurrent": 5,
+            "timeout": 300,
+            "retry_attempts": 3
+        },
+        "testing": {
+            "enabled": true,
+            "priority": 2,
+            "max_concurrent": 5,
+            "timeout": 300,
+            "retry_attempts": 3
+        },
+        "review": {
+            "enabled": true,
+            "priority": 3,
+            "max_concurrent": 5,
+            "timeout": 300,
+            "retry_attempts": 3
+        },
+        "deployment": {
+            "enabled": true,
+            "priority": 4,
+            "max_concurrent": 5,
+            "timeout": 300,
+            "retry_attempts": 3
+        },
+        "model_training": {
+            "enabled": true,
+            "priority": 5,
+            "max_concurrent": 5,
+            "timeout": 300,
+            "retry_attempts": 3
+        },
+        "data_processing": {
+            "enabled": true,
+            "priority": 6,
+            "max_concurrent": 5,
+            "timeout": 300,
+            "retry_attempts": 3
+        }
+    },
+    "paths": {
+        "code_base": "trading",
+        "tests": "tests",
+        "docs": "docs",
+        "models": "models",
+        "data": "data",
+        "logs": "logs",
+        "backups": "backups",
+        "temp": "temp"
+    },
+    "monitoring": {
+        "enabled": true,
+        "check_interval": 60,
+        "alert_thresholds": {
+            "cpu": 80,
+            "memory": 85,
+            "disk": 90
+        },
+        "metrics_port": 9090,
+        "health_check_interval": 30,
+        "prometheus": {
+            "enabled": true,
+            "path": "/metrics",
+            "port": 9090
+        },
+        "grafana": {
+            "enabled": true,
+            "port": 3000
+        },
+        "alertmanager": {
+            "enabled": true,
+            "port": 9093
+        }
+    },
+    "error_handling": {
+        "max_retries": 3,
+        "retry_delay": 5,
+        "recovery_enabled": true,
+        "circuit_breaker": {
+            "enabled": true,
+            "failure_threshold": 5,
+            "reset_timeout": 60
+        }
+    },
+    "model_training": {
+        "enabled": true,
+        "max_epochs": 100,
+        "batch_size": 32,
+        "validation_split": 0.2,
+        "early_stopping": true,
+        "patience": 10,
+        "checkpointing": {
+            "enabled": true,
+            "interval": 5,
+            "max_to_keep": 5
+        },
+        "distributed": {
+            "enabled": true,
+            "strategy": "mirrored",
+            "num_gpus": 1
+        }
+    },
+    "data_processing": {
+        "enabled": true,
+        "validation_enabled": true,
+        "cleaning_enabled": true,
+        "feature_engineering_enabled": true,
+        "storage_enabled": true,
+        "batch_size": 1000,
+        "max_workers": 4,
+        "timeout": 3600
+    },
+    "security": {
+        "enabled": true,
+        "jwt_secret": "${JWT_SECRET}",
+        "rate_limits": {
+            "api": {
+                "limit": 100,
+                "window": 3600
+            },
+            "auth": {
+                "limit": 5,
+                "window": 300
+            }
+        },
+        "ip_whitelist": [],
+        "ip_blacklist": [],
+        "ssl": {
+            "enabled": true,
+            "cert_path": "${SSL_CERT_PATH}",
+            "key_path": "${SSL_KEY_PATH}"
+        },
+        "auth_required": true,
+        "token_expiry": 3600,
+        "password_policy": {
+            "min_length": 12,
+            "require_uppercase": true,
+            "require_lowercase": true,
+            "require_numbers": true,
+            "require_special": true
+        },
+        "mfa": {
+            "enabled": true,
+            "required": true
+        }
+    },
+    "performance": {
+        "enabled": true,
+        "monitoring_interval": 60,
+        "history_size": 1000,
+        "alert_thresholds": {
+            "cpu.percent": {
+                "value": 80,
+                "severity": "warning",
+                "message": "CPU usage is high"
+            },
+            "memory.percent": {
+                "value": 85,
+                "severity": "warning",
+                "message": "Memory usage is high"
+            },
+            "disk.percent": {
+                "value": 90,
+                "severity": "warning",
+                "message": "Disk usage is high"
+            }
+        },
+        "profiling": {
+            "enabled": true,
+            "interval": 300,
+            "output_dir": "profiles"
+        }
+    },
+    "notifications": {
+        "enabled": true,
+        "email": {
+            "enabled": true,
+            "smtp_server": "smtp.gmail.com",
+            "smtp_port": 587,
+            "use_tls": true,
+            "username": "${EMAIL_USERNAME}",
+            "password": "${EMAIL_PASSWORD}",
+            "from": "${EMAIL_FROM}",
+            "to": "${EMAIL_TO}",
+            "sender_email": "${EMAIL_SENDER}",
+            "sender_password": "${EMAIL_SENDER_PASSWORD}"
+        },
+        "slack": {
+            "enabled": false,
+            "webhook_url": "${SLACK_WEBHOOK_URL}",
+            "channel": "#notifications",
+            "username": "Automation Bot"
+        },
+        "discord": {
+            "enabled": true,
+            "webhook_url": "${DISCORD_WEBHOOK_URL}",
+            "username": "Automation Bot",
+            "avatar_url": ""
+        },
+        "websocket": {
+            "enabled": true,
+            "host": "localhost",
+            "port": 8765,
+            "use_ssl": true,
+            "ssl_cert": "certs/cert.pem",
+            "ssl_key": "certs/key.pem"
+        }
+    },
+    "task_scheduler": {
+        "enabled": true,
+        "max_concurrent_tasks": 5,
+        "default_timeout": 300,
+        "retry_delay": 5,
+        "max_retries": 3,
+        "priority_levels": {
+            "low": 0,
+            "medium": 1,
+            "high": 2,
+            "critical": 3
+        }
+    },
+    "code_context": {
+        "enabled": true,
+        "max_file_size": 1048576,
+        "max_history_size": 1000,
+        "sensitive_paths": [
+            "automation/config",
+            "automation/logs",
+            "automation/agents"
+        ],
+        "git": {
+            "enabled": true,
+            "branch": "main",
+            "remote": "origin"
+        }
+    },
+    "redis": {
+        "host": "${REDIS_HOST:-localhost}",
+        "port": "${REDIS_PORT:-6379}",
+        "db": 0,
+        "password": "${REDIS_PASSWORD}",
+        "ssl": {
+            "enabled": true,
+            "verify": true
+        },
+        "connection_pool": {
+            "max_connections": 10,
+            "timeout": 30
+        }
+    },
+    "ray": {
+        "address": "auto",
+        "namespace": "automation",
+        "runtime_env": {
+            "working_dir": ".",
+            "py_modules": ["trading", "automation"]
+        },
+        "resources": {
+            "num_cpus": 4,
+            "num_gpus": 1
+        }
+    },
+    "kubernetes": {
+        "in_cluster": false,
+        "namespace": "automation",
+        "config_path": "~/.kube/config",
+        "resources": {
+            "requests": {
+                "cpu": "500m",
+                "memory": "512Mi"
+            },
+            "limits": {
+                "cpu": "1000m",
+                "memory": "1Gi"
+            }
+        }
+    },
+    "logging": {
+        "level": "INFO",
+        "format": "json",
+        "file": "automation/logs/orchestrator.log",
+        "rotation": {
+            "max_size_mb": 100,
+            "backup_count": 5
+        },
+        "handlers": [
+            {
+                "type": "file",
+                "path": "logs/orchestrator.log"
+            },
+            {
+                "type": "syslog",
+                "facility": "local0"
+            }
+        ]
+    },
+    "tasks": {
+        "max_retries": 3,
+        "retry_delay": 300,
+        "timeout": 3600,
+        "concurrent_limit": 10,
+        "priority_levels": {
+            "low": 0,
+            "medium": 1,
+            "high": 2,
+            "critical": 3
+        }
+    },
+    "storage": {
+        "type": "local",
+        "path": "automation/data",
+        "backup_path": "automation/backups",
+        "s3": {
+            "enabled": false,
+            "bucket": "${S3_BUCKET}",
+            "region": "${S3_REGION}",
+            "access_key": "${S3_ACCESS_KEY}",
+            "secret_key": "${S3_SECRET_KEY}"
+        }
+    },
+    "api": {
+        "host": "localhost",
+        "port": 8000,
+        "debug": false,
+        "cors": {
+            "enabled": true,
+            "origins": ["*"],
+            "methods": ["GET", "POST", "PUT", "DELETE"],
+            "headers": ["Content-Type", "Authorization"]
+        },
+        "rate_limit": {
+            "enabled": true,
+            "limit": 100,
+            "window": 3600
+        }
+    },
+    "models": {
+        "lstm": {
+            "default_epochs": 100,
+            "default_batch_size": 32,
+            "default_learning_rate": 0.001,
+            "default_sequence_length": 60,
+            "checkpointing": {
+                "enabled": true,
+                "interval": 5,
+                "max_to_keep": 5
+            }
+        },
+        "transformer": {
+            "default_epochs": 100,
+            "default_batch_size": 32,
+            "default_learning_rate": 0.0001,
+            "default_sequence_length": 60
+        }
+    },
+    "data": {
+        "collection": {
+            "interval": 300,
+            "batch_size": 1000,
+            "max_retries": 3
+        },
+        "processing": {
+            "max_workers": 4,
+            "chunk_size": 10000
+        },
+        "validation": {
+            "required_columns": [
+                "timestamp",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume"
+            ],
+            "data_types": {
+                "timestamp": "datetime64[ns]",
+                "open": "float64",
+                "high": "float64",
+                "low": "float64",
+                "close": "float64",
+                "volume": "int64"
+            }
+        }
+    },
+    "backtesting": {
+        "default_initial_capital": 100000,
+        "default_commission": 0.001,
+        "default_slippage": 0.0001
+    },
+    "optimization": {
+        "max_iterations": 100,
+        "population_size": 50,
+        "mutation_rate": 0.1,
+        "crossover_rate": 0.8
+    }
+} 
