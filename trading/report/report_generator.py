@@ -1,459 +1,438 @@
-"""Report generation utilities for trading analysis."""
+"""Enhanced report generator with modular chart generation and agentic insights."""
 
-from typing import Dict, Any, List, Optional, Union
+import os
+import json
+import logging
 import pandas as pd
 import numpy as np
-from datetime import datetime
 import plotly.graph_objects as go
+import plotly.express as px
 from plotly.subplots import make_subplots
-import json
-import os
+from datetime import datetime
+from typing import Dict, List, Optional, Union, Any, Tuple
+import pdfkit
+import weasyprint
+from jinja2 import Environment, FileSystemLoader
+import openai
+from dataclasses import dataclass
+from pathlib import Path
 
-def generate_performance_report(
-    performance_data: Dict[str, Any],
-    output_dir: str,
-    filename: Optional[str] = None
-) -> str:
-    """Generate performance report with charts and metrics.
-    
-    Args:
-        performance_data: Dictionary containing performance data
-        output_dir: Directory to save report
-        filename: Optional filename for report
-        
-    Returns:
-        Path to generated report
-    """
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Generate filename if not provided
-    if filename is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"performance_report_{timestamp}.html"
-    
-    # Create report content
-    content = []
-    
-    # Add header
-    content.append("<h1>Trading Performance Report</h1>")
-    content.append(f"<p>Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>")
-    
-    # Add performance metrics
-    content.append("<h2>Performance Metrics</h2>")
-    metrics_table = _create_metrics_table(performance_data["metrics"])
-    content.append(metrics_table)
-    
-    # Add equity curve
-    content.append("<h2>Equity Curve</h2>")
-    equity_chart = _create_equity_chart(performance_data["equity_curve"])
-    content.append(equity_chart)
-    
-    # Add drawdown chart
-    content.append("<h2>Drawdown Analysis</h2>")
-    drawdown_chart = _create_drawdown_chart(performance_data["drawdowns"])
-    content.append(drawdown_chart)
-    
-    # Add trade analysis
-    content.append("<h2>Trade Analysis</h2>")
-    trade_charts = _create_trade_charts(performance_data["trades"])
-    content.append(trade_charts)
-    
-    # Add risk metrics
-    content.append("<h2>Risk Metrics</h2>")
-    risk_table = _create_risk_table(performance_data["risk_metrics"])
-    content.append(risk_table)
-    
-    # Combine content
-    report_html = "\n".join(content)
-    
-    # Save report
-    report_path = os.path.join(output_dir, filename)
-    with open(report_path, "w") as f:
-        f.write(report_html)
-    
-    return report_path
+# Setup logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
-def generate_forecast_report(
-    forecast_data: Dict[str, Any],
-    output_dir: str,
-    filename: Optional[str] = None
-) -> str:
-    """Generate forecast report with predictions and analysis.
-    
-    Args:
-        forecast_data: Dictionary containing forecast data
-        output_dir: Directory to save report
-        filename: Optional filename for report
-        
-    Returns:
-        Path to generated report
-    """
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Generate filename if not provided
-    if filename is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"forecast_report_{timestamp}.html"
-    
-    # Create report content
-    content = []
-    
-    # Add header
-    content.append("<h1>Price Forecast Report</h1>")
-    content.append(f"<p>Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>")
-    
-    # Add forecast chart
-    content.append("<h2>Price Forecast</h2>")
-    forecast_chart = _create_forecast_chart(forecast_data)
-    content.append(forecast_chart)
-    
-    # Add forecast metrics
-    content.append("<h2>Forecast Metrics</h2>")
-    metrics_table = _create_forecast_metrics_table(forecast_data["metrics"])
-    content.append(metrics_table)
-    
-    # Add confidence intervals
-    content.append("<h2>Confidence Intervals</h2>")
-    confidence_chart = _create_confidence_chart(forecast_data)
-    content.append(confidence_chart)
-    
-    # Add forecast explanation
-    content.append("<h2>Forecast Analysis</h2>")
-    content.append(f"<p>{forecast_data['explanation']}</p>")
-    
-    # Add key insights
-    content.append("<h2>Key Insights</h2>")
-    insights_list = _create_insights_list(forecast_data["insights"])
-    content.append(insights_list)
-    
-    # Combine content
-    report_html = "\n".join(content)
-    
-    # Save report
-    report_path = os.path.join(output_dir, filename)
-    with open(report_path, "w") as f:
-        f.write(report_html)
-    
-    return report_path
+# Add file handler for debug logs
+debug_handler = logging.FileHandler('trading/report/logs/report_debug.log')
+debug_handler.setLevel(logging.DEBUG)
+debug_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+debug_handler.setFormatter(debug_formatter)
+logger.addHandler(debug_handler)
 
-def _create_metrics_table(metrics: Dict[str, float]) -> str:
-    """Create HTML table for performance metrics.
+@dataclass
+class ReportConfig:
+    """Configuration for report generation."""
+    theme: str = 'light'  # 'light' or 'dark'
+    include_sections: List[str] = None  # List of sections to include
+    export_formats: List[str] = None  # List of export formats
+    strategy_params: Dict[str, Any] = None  # Strategy parameters
+    model_config: Dict[str, Any] = None  # Model configuration
+    run_metadata: Dict[str, Any] = None  # Run metadata
     
-    Args:
-        metrics: Dictionary containing performance metrics
-        
-    Returns:
-        HTML table string
-    """
-    table = ["<table>", "<tr><th>Metric</th><th>Value</th></tr>"]
-    
-    for metric, value in metrics.items():
-        if isinstance(value, float):
-            formatted_value = f"{value:.2%}" if "return" in metric or "rate" in metric else f"{value:.2f}"
-        else:
-            formatted_value = str(value)
-        
-        table.append(f"<tr><td>{metric}</td><td>{formatted_value}</td></tr>")
-    
-    table.append("</table>")
-    return "\n".join(table)
+    def __post_init__(self):
+        """Set default values for optional fields."""
+        if self.include_sections is None:
+            self.include_sections = [
+                'equity_curve',
+                'drawdown',
+                'returns_distribution',
+                'rolling_metrics',
+                'strategy_metrics',
+                'trade_analysis'
+            ]
+        if self.export_formats is None:
+            self.export_formats = ['html', 'pdf']
+        if self.strategy_params is None:
+            self.strategy_params = {}
+        if self.model_config is None:
+            self.model_config = {}
+        if self.run_metadata is None:
+            self.run_metadata = {
+                'user': os.getenv('USER', 'unknown'),
+                'run_time': datetime.utcnow().isoformat(),
+                'model_version': '1.0.0',
+                'strategy_name': 'unknown'
+            }
 
-def _create_equity_chart(equity_curve: pd.Series) -> str:
-    """Create equity curve chart.
+class ReportGenerator:
+    """Enhanced report generator with modular chart generation and agentic insights."""
     
-    Args:
-        equity_curve: Series containing equity values
+    def __init__(self, config: Optional[ReportConfig] = None):
+        """Initialize report generator.
         
-    Returns:
-        HTML chart string
-    """
-    fig = go.Figure()
+        Args:
+            config: Optional report configuration
+        """
+        self.config = config or ReportConfig()
+        
+        # Setup Jinja2 environment
+        template_dir = os.path.join(os.path.dirname(__file__), 'templates')
+        self.env = Environment(loader=FileSystemLoader(template_dir))
+        
+        # Create necessary directories
+        os.makedirs('trading/report/logs', exist_ok=True)
+        os.makedirs('trading/report/data', exist_ok=True)
+        os.makedirs('trading/report/output', exist_ok=True)
+        
+        # Load theme configuration
+        self.theme_config = self._load_theme_config()
+        
+        logger.info(f"Initialized ReportGenerator with config: {self.config}")
     
-    fig.add_trace(
-        go.Scatter(
+    def _load_theme_config(self) -> Dict[str, Any]:
+        """Load theme configuration.
+        
+        Returns:
+            Theme configuration dictionary
+        """
+        theme_file = os.path.join(os.path.dirname(__file__), 'configs', 'themes.json')
+        try:
+            with open(theme_file, 'r') as f:
+                themes = json.load(f)
+            return themes[self.config.theme]
+        except (FileNotFoundError, KeyError) as e:
+            logger.warning(f"Failed to load theme config: {e}. Using default theme.")
+            return {
+                'background_color': '#ffffff',
+                'text_color': '#000000',
+                'grid_color': '#e0e0e0',
+                'plot_colors': px.colors.qualitative.Set1
+            }
+    
+    def _validate_performance_data(self, data: Dict[str, Any]) -> bool:
+        """Validate performance data has all required fields.
+        
+        Args:
+            data: Performance data dictionary
+            
+        Returns:
+            True if valid, False otherwise
+        """
+        required_fields = [
+            'equity_curve',
+            'returns',
+            'trades',
+            'metrics'
+        ]
+        
+        for field in required_fields:
+            if field not in data:
+                logger.error(f"Missing required field: {field}")
+                return False
+        
+        return True
+    
+    def _create_equity_curve_chart(self, data: Dict[str, Any]) -> go.Figure:
+        """Create equity curve chart.
+        
+        Args:
+            data: Performance data dictionary
+            
+        Returns:
+            Plotly figure
+        """
+        equity_curve = pd.Series(data['equity_curve'])
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
             x=equity_curve.index,
             y=equity_curve.values,
-            name="Equity",
-            line=dict(color="blue")
-        )
-    )
-    
-    fig.update_layout(
-        title="Equity Curve",
-        xaxis_title="Date",
-        yaxis_title="Equity",
-        showlegend=True
-    )
-    
-    return fig.to_html(full_html=False)
-
-def _create_drawdown_chart(drawdowns: pd.Series) -> str:
-    """Create drawdown chart.
-    
-    Args:
-        drawdowns: Series containing drawdown values
+            mode='lines',
+            name='Equity',
+            line=dict(color=self.theme_config['plot_colors'][0])
+        ))
         
-    Returns:
-        HTML chart string
-    """
-    fig = go.Figure()
-    
-    fig.add_trace(
-        go.Scatter(
-            x=drawdowns.index,
-            y=drawdowns.values,
-            name="Drawdown",
-            fill="tozeroy",
-            line=dict(color="red")
+        fig.update_layout(
+            title='Equity Curve',
+            xaxis_title='Date',
+            yaxis_title='Equity',
+            template=self.config.theme,
+            plot_bgcolor=self.theme_config['background_color'],
+            paper_bgcolor=self.theme_config['background_color'],
+            font=dict(color=self.theme_config['text_color']),
+            showlegend=True
         )
-    )
-    
-    fig.update_layout(
-        title="Drawdown Analysis",
-        xaxis_title="Date",
-        yaxis_title="Drawdown",
-        showlegend=True
-    )
-    
-    return fig.to_html(full_html=False)
-
-def _create_trade_charts(trades: pd.DataFrame) -> str:
-    """Create trade analysis charts.
-    
-    Args:
-        trades: DataFrame containing trade data
         
-    Returns:
-        HTML charts string
-    """
-    # Create subplots
-    fig = make_subplots(
-        rows=2,
-        cols=2,
-        subplot_titles=(
-            "Trade Returns Distribution",
-            "Cumulative Trade Returns",
-            "Trade Duration",
-            "Win/Loss Ratio"
-        )
-    )
+        return fig
     
-    # Add trade returns distribution
-    fig.add_trace(
-        go.Histogram(
-            x=trades["returns"],
-            name="Returns",
-            nbinsx=50
-        ),
-        row=1,
-        col=1
-    )
-    
-    # Add cumulative returns
-    fig.add_trace(
-        go.Scatter(
-            x=trades.index,
-            y=trades["returns"].cumsum(),
-            name="Cumulative Returns"
-        ),
-        row=1,
-        col=2
-    )
-    
-    # Add trade duration
-    fig.add_trace(
-        go.Bar(
-            x=trades.index,
-            y=trades["duration"],
-            name="Duration"
-        ),
-        row=2,
-        col=1
-    )
-    
-    # Add win/loss ratio
-    wins = (trades["returns"] > 0).sum()
-    losses = (trades["returns"] < 0).sum()
-    fig.add_trace(
-        go.Pie(
-            values=[wins, losses],
-            labels=["Wins", "Losses"],
-            name="Win/Loss"
-        ),
-        row=2,
-        col=2
-    )
-    
-    fig.update_layout(height=800, showlegend=True)
-    
-    return fig.to_html(full_html=False)
-
-def _create_risk_table(risk_metrics: Dict[str, float]) -> str:
-    """Create HTML table for risk metrics.
-    
-    Args:
-        risk_metrics: Dictionary containing risk metrics
+    def _create_drawdown_chart(self, data: Dict[str, Any]) -> go.Figure:
+        """Create drawdown chart.
         
-    Returns:
-        HTML table string
-    """
-    table = ["<table>", "<tr><th>Risk Metric</th><th>Value</th></tr>"]
-    
-    for metric, value in risk_metrics.items():
-        formatted_value = f"{value:.2%}" if "var" in metric or "volatility" in metric else f"{value:.2f}"
-        table.append(f"<tr><td>{metric}</td><td>{formatted_value}</td></tr>")
-    
-    table.append("</table>")
-    return "\n".join(table)
-
-def _create_forecast_chart(forecast_data: Dict[str, Any]) -> str:
-    """Create forecast chart.
-    
-    Args:
-        forecast_data: Dictionary containing forecast data
+        Args:
+            data: Performance data dictionary
+            
+        Returns:
+            Plotly figure
+        """
+        equity_curve = pd.Series(data['equity_curve'])
+        rolling_max = equity_curve.expanding().max()
+        drawdown = (equity_curve - rolling_max) / rolling_max * 100
         
-    Returns:
-        HTML chart string
-    """
-    fig = go.Figure()
-    
-    # Add historical data
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["dates"],
-            y=forecast_data["historical"],
-            name="Historical",
-            line=dict(color="blue")
-        )
-    )
-    
-    # Add forecast
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["forecast_dates"],
-            y=forecast_data["forecast"],
-            name="Forecast",
-            line=dict(color="red", dash="dash")
-        )
-    )
-    
-    # Add confidence intervals
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["forecast_dates"],
-            y=forecast_data["upper_bound"],
-            fill=None,
-            mode="lines",
-            line=dict(color="rgba(255,0,0,0.1)"),
-            name="Upper Bound"
-        )
-    )
-    
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["forecast_dates"],
-            y=forecast_data["lower_bound"],
-            fill="tonexty",
-            mode="lines",
-            line=dict(color="rgba(255,0,0,0.1)"),
-            name="Lower Bound"
-        )
-    )
-    
-    fig.update_layout(
-        title="Price Forecast",
-        xaxis_title="Date",
-        yaxis_title="Price",
-        showlegend=True
-    )
-    
-    return fig.to_html(full_html=False)
-
-def _create_forecast_metrics_table(metrics: Dict[str, float]) -> str:
-    """Create HTML table for forecast metrics.
-    
-    Args:
-        metrics: Dictionary containing forecast metrics
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=drawdown.index,
+            y=drawdown.values,
+            mode='lines',
+            name='Drawdown',
+            line=dict(color=self.theme_config['plot_colors'][1])
+        ))
         
-    Returns:
-        HTML table string
-    """
-    table = ["<table>", "<tr><th>Metric</th><th>Value</th></tr>"]
-    
-    for metric, value in metrics.items():
-        formatted_value = f"{value:.2%}" if "accuracy" in metric or "confidence" in metric else f"{value:.4f}"
-        table.append(f"<tr><td>{metric}</td><td>{formatted_value}</td></tr>")
-    
-    table.append("</table>")
-    return "\n".join(table)
-
-def _create_confidence_chart(forecast_data: Dict[str, Any]) -> str:
-    """Create confidence intervals chart.
-    
-    Args:
-        forecast_data: Dictionary containing forecast data
+        fig.update_layout(
+            title='Drawdown',
+            xaxis_title='Date',
+            yaxis_title='Drawdown (%)',
+            template=self.config.theme,
+            plot_bgcolor=self.theme_config['background_color'],
+            paper_bgcolor=self.theme_config['background_color'],
+            font=dict(color=self.theme_config['text_color']),
+            showlegend=True
+        )
         
-    Returns:
-        HTML chart string
-    """
-    fig = go.Figure()
+        return fig
     
-    # Add forecast with confidence intervals
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["forecast_dates"],
-            y=forecast_data["forecast"],
-            name="Forecast",
-            line=dict(color="red")
-        )
-    )
-    
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["forecast_dates"],
-            y=forecast_data["upper_bound"],
-            fill=None,
-            mode="lines",
-            line=dict(color="rgba(255,0,0,0.1)"),
-            name="95% Confidence"
-        )
-    )
-    
-    fig.add_trace(
-        go.Scatter(
-            x=forecast_data["forecast_dates"],
-            y=forecast_data["lower_bound"],
-            fill="tonexty",
-            mode="lines",
-            line=dict(color="rgba(255,0,0,0.1)"),
-            name="Lower Bound"
-        )
-    )
-    
-    fig.update_layout(
-        title="Forecast Confidence Intervals",
-        xaxis_title="Date",
-        yaxis_title="Price",
-        showlegend=True
-    )
-    
-    return fig.to_html(full_html=False)
-
-def _create_insights_list(insights: List[str]) -> str:
-    """Create HTML list for key insights.
-    
-    Args:
-        insights: List of key insights
+    def _create_returns_distribution_chart(self, data: Dict[str, Any]) -> go.Figure:
+        """Create returns distribution chart.
         
-    Returns:
-        HTML list string
-    """
-    list_items = ["<ul>"]
+        Args:
+            data: Performance data dictionary
+            
+        Returns:
+            Plotly figure
+        """
+        returns = pd.Series(data['returns'])
+        
+        fig = go.Figure()
+        fig.add_trace(go.Histogram(
+            x=returns,
+            name='Returns',
+            marker_color=self.theme_config['plot_colors'][2],
+            opacity=0.7
+        ))
+        
+        # Add normal distribution overlay
+        x = np.linspace(returns.min(), returns.max(), 100)
+        y = np.exp(-(x - returns.mean())**2 / (2 * returns.std()**2)) / (returns.std() * np.sqrt(2 * np.pi))
+        y = y * len(returns) * (returns.max() - returns.min()) / 50  # Scale to match histogram
+        
+        fig.add_trace(go.Scatter(
+            x=x,
+            y=y,
+            mode='lines',
+            name='Normal Distribution',
+            line=dict(color=self.theme_config['plot_colors'][3])
+        ))
+        
+        fig.update_layout(
+            title='Returns Distribution',
+            xaxis_title='Return',
+            yaxis_title='Frequency',
+            template=self.config.theme,
+            plot_bgcolor=self.theme_config['background_color'],
+            paper_bgcolor=self.theme_config['background_color'],
+            font=dict(color=self.theme_config['text_color']),
+            showlegend=True
+        )
+        
+        return fig
     
-    for insight in insights:
-        list_items.append(f"<li>{insight}</li>")
+    def _create_rolling_metrics_chart(self, data: Dict[str, Any]) -> go.Figure:
+        """Create rolling metrics chart.
+        
+        Args:
+            data: Performance data dictionary
+            
+        Returns:
+            Plotly figure
+        """
+        returns = pd.Series(data['returns'])
+        window = 252  # Annual window
+        
+        # Calculate rolling metrics
+        rolling_sharpe = returns.rolling(window).mean() / returns.rolling(window).std() * np.sqrt(252)
+        rolling_vol = returns.rolling(window).std() * np.sqrt(252)
+        
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        fig.add_trace(
+            go.Scatter(
+                x=rolling_sharpe.index,
+                y=rolling_sharpe.values,
+                name='Rolling Sharpe',
+                line=dict(color=self.theme_config['plot_colors'][0])
+            ),
+            secondary_y=False
+        )
+        
+        fig.add_trace(
+            go.Scatter(
+                x=rolling_vol.index,
+                y=rolling_vol.values,
+                name='Rolling Volatility',
+                line=dict(color=self.theme_config['plot_colors'][1])
+            ),
+            secondary_y=True
+        )
+        
+        fig.update_layout(
+            title='Rolling Metrics',
+            template=self.config.theme,
+            plot_bgcolor=self.theme_config['background_color'],
+            paper_bgcolor=self.theme_config['background_color'],
+            font=dict(color=self.theme_config['text_color']),
+            showlegend=True
+        )
+        
+        fig.update_yaxes(title_text="Sharpe Ratio", secondary_y=False)
+        fig.update_yaxes(title_text="Volatility", secondary_y=True)
+        
+        return fig
     
-    list_items.append("</ul>")
-    return "\n".join(list_items) 
+    def _generate_performance_insights(self, data: Dict[str, Any]) -> str:
+        """Generate performance insights using GPT.
+        
+        Args:
+            data: Performance data dictionary
+            
+        Returns:
+            Generated insights text
+        """
+        try:
+            # Prepare metrics for GPT
+            metrics = data['metrics']
+            prompt = f"""
+            Analyze the following trading strategy performance metrics and provide insights:
+            
+            Sharpe Ratio: {metrics.get('sharpe_ratio', 0):.2f}
+            Win Rate: {metrics.get('win_rate', 0):.2%}
+            Max Drawdown: {metrics.get('max_drawdown', 0):.2%}
+            Total Return: {metrics.get('total_return', 0):.2%}
+            Average Trade: {metrics.get('avg_trade', 0):.2%}
+            Profit Factor: {metrics.get('profit_factor', 0):.2f}
+            
+            Provide:
+            1. Overall performance assessment
+            2. Key strengths and weaknesses
+            3. Specific improvement suggestions
+            """
+            
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a trading strategy analyst."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=500
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            logger.error(f"Failed to generate insights: {e}")
+            return "Failed to generate performance insights."
+    
+    def _export_data(self, data: Dict[str, Any], output_dir: str) -> None:
+        """Export performance data to files.
+        
+        Args:
+            data: Performance data dictionary
+            output_dir: Output directory
+        """
+        # Export metrics
+        metrics_df = pd.DataFrame([data['metrics']])
+        metrics_df.to_csv(os.path.join(output_dir, 'metrics.csv'), index=False)
+        
+        # Export equity curve
+        equity_df = pd.Series(data['equity_curve']).to_frame('equity')
+        equity_df.to_csv(os.path.join(output_dir, 'equity_curve.csv'))
+        
+        # Export returns
+        returns_df = pd.Series(data['returns']).to_frame('returns')
+        returns_df.to_csv(os.path.join(output_dir, 'returns.csv'))
+        
+        # Export trades
+        trades_df = pd.DataFrame(data['trades'])
+        trades_df.to_csv(os.path.join(output_dir, 'trades.csv'), index=False)
+        
+        # Export full data as JSON
+        with open(os.path.join(output_dir, 'full_data.json'), 'w') as f:
+            json.dump(data, f, indent=2)
+    
+    def generate_report(self, performance_data: Dict[str, Any], output_path: str) -> str:
+        """Generate performance report.
+        
+        Args:
+            performance_data: Performance data dictionary
+            output_path: Output path for report
+            
+        Returns:
+            Path to generated report
+        """
+        # Validate data
+        if not self._validate_performance_data(performance_data):
+            raise ValueError("Invalid performance data")
+        
+        # Create output directory
+        output_dir = os.path.dirname(output_path)
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Generate charts
+        charts = {}
+        if 'equity_curve' in self.config.include_sections:
+            charts['equity_curve'] = self._create_equity_curve_chart(performance_data)
+        if 'drawdown' in self.config.include_sections:
+            charts['drawdown'] = self._create_drawdown_chart(performance_data)
+        if 'returns_distribution' in self.config.include_sections:
+            charts['returns_distribution'] = self._create_returns_distribution_chart(performance_data)
+        if 'rolling_metrics' in self.config.include_sections:
+            charts['rolling_metrics'] = self._create_rolling_metrics_chart(performance_data)
+        
+        # Generate insights
+        insights = self._generate_performance_insights(performance_data)
+        
+        # Export data if requested
+        if 'csv' in self.config.export_formats or 'json' in self.config.export_formats:
+            self._export_data(performance_data, output_dir)
+        
+        # Load template
+        template = self.env.get_template('report_template.html')
+        
+        # Render template
+        html_content = template.render(
+            charts=charts,
+            metrics=performance_data['metrics'],
+            insights=insights,
+            strategy_params=self.config.strategy_params,
+            model_config=self.config.model_config,
+            run_metadata=self.config.run_metadata,
+            theme=self.theme_config
+        )
+        
+        # Save HTML report
+        html_path = output_path.replace('.pdf', '.html')
+        with open(html_path, 'w') as f:
+            f.write(html_content)
+        
+        # Convert to PDF if requested
+        if 'pdf' in self.config.export_formats:
+            try:
+                pdfkit.from_file(html_path, output_path)
+            except Exception as e:
+                logger.warning(f"Failed to generate PDF with pdfkit: {e}")
+                try:
+                    weasyprint.HTML(string=html_content).write_pdf(output_path)
+                except Exception as e:
+                    logger.error(f"Failed to generate PDF with weasyprint: {e}")
+        
+        return output_path
+
+__all__ = ["ReportGenerator", "ReportConfig"] 
