@@ -14,7 +14,7 @@ import torch
 from scipy import stats
 from numba import jit
 import warnings
-import talib
+import pandas_ta as ta
 from trading.logs.logger import log_metrics
 
 class MarketIndicators:
@@ -155,7 +155,7 @@ class MarketIndicators:
                 raise ValueError("Data must contain 'Close' column")
             
             start_time = datetime.now()
-            rsi = talib.RSI(data['Close'].values, timeperiod=window)
+            rsi = ta.rsi(data['Close'], length=window)
             calculation_time = (datetime.now() - start_time).total_seconds()
             
             self.performance_metrics['total_calculations'] += 1
@@ -170,7 +170,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return pd.Series(rsi, index=data.index)
+            return rsi
             
         except Exception as e:
             self.performance_metrics['errors'] += 1
@@ -191,11 +191,11 @@ class MarketIndicators:
                 raise ValueError("Data must contain 'Close' column")
             
             start_time = datetime.now()
-            macd, signal, hist = talib.MACD(
-                data['Close'].values,
-                fastperiod=self.config['macd_fast'],
-                slowperiod=self.config['macd_slow'],
-                signalperiod=self.config['macd_signal']
+            macd = ta.macd(
+                data['Close'],
+                fast=self.config['macd_fast'],
+                slow=self.config['macd_slow'],
+                signal=self.config['macd_signal']
             )
             calculation_time = (datetime.now() - start_time).total_seconds()
             
@@ -211,9 +211,9 @@ class MarketIndicators:
                 })
             
             return {
-                'macd': pd.Series(macd, index=data.index),
-                'signal': pd.Series(signal, index=data.index),
-                'histogram': pd.Series(hist, index=data.index)
+                'macd': macd[f'MACD_{self.config["macd_fast"]}_{self.config["macd_slow"]}_{self.config["macd_signal"]}'],
+                'signal': macd[f'MACDs_{self.config["macd_fast"]}_{self.config["macd_slow"]}_{self.config["macd_signal"]}'],
+                'histogram': macd[f'MACDh_{self.config["macd_fast"]}_{self.config["macd_slow"]}_{self.config["macd_signal"]}']
             }
             
         except Exception as e:
@@ -236,7 +236,7 @@ class MarketIndicators:
                 raise ValueError("Data must contain 'Close' column")
             
             start_time = datetime.now()
-            sma = talib.SMA(data['Close'].values, timeperiod=window)
+            sma = ta.sma(data['Close'], length=window)
             calculation_time = (datetime.now() - start_time).total_seconds()
             
             self.performance_metrics['total_calculations'] += 1
@@ -251,7 +251,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return pd.Series(sma, index=data.index)
+            return sma
             
         except Exception as e:
             self.performance_metrics['errors'] += 1
@@ -273,7 +273,7 @@ class MarketIndicators:
                 raise ValueError("Data must contain 'Close' column")
             
             start_time = datetime.now()
-            ema = talib.EMA(data['Close'].values, timeperiod=window)
+            ema = ta.ema(data['Close'], length=window)
             calculation_time = (datetime.now() - start_time).total_seconds()
             
             self.performance_metrics['total_calculations'] += 1
@@ -288,7 +288,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return pd.Series(ema, index=data.index)
+            return ema
             
         except Exception as e:
             self.performance_metrics['errors'] += 1
@@ -300,23 +300,18 @@ class MarketIndicators:
         
         Args:
             data: DataFrame with 'Close' prices
-            window: BB window period
-            num_std: Number of standard deviations
+            window: Window period for moving average
+            num_std: Number of standard deviations for bands
             
         Returns:
-            Dictionary containing upper band, middle band, and lower band
+            Dictionary containing upper, middle, and lower bands
         """
         try:
             if 'Close' not in data.columns:
                 raise ValueError("Data must contain 'Close' column")
             
             start_time = datetime.now()
-            upper, middle, lower = talib.BBANDS(
-                data['Close'].values,
-                timeperiod=window,
-                nbdevup=num_std,
-                nbdevdn=num_std
-            )
+            bb = ta.bbands(data['Close'], length=window, std=num_std)
             calculation_time = (datetime.now() - start_time).total_seconds()
             
             self.performance_metrics['total_calculations'] += 1
@@ -326,16 +321,16 @@ class MarketIndicators:
                 log_metrics("indicator_calculation", {
                     'indicator': 'Bollinger Bands',
                     'window': window,
-                    'num_std': num_std,
+                    'std': num_std,
                     'calculation_time': calculation_time,
                     'data_points': len(data),
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
             return {
-                'upper': pd.Series(upper, index=data.index),
-                'middle': pd.Series(middle, index=data.index),
-                'lower': pd.Series(lower, index=data.index)
+                'upper': bb[f'BBU_{window}_{num_std}'],
+                'middle': bb[f'BBM_{window}_{num_std}'],
+                'lower': bb[f'BBL_{window}_{num_std}']
             }
             
         except Exception as e:
@@ -405,39 +400,24 @@ class MarketIndicators:
         try:
             self._validate_data(data)
             
-            if self.device.type == 'cuda':
-                # GPU implementation
-                high = torch.tensor(data['High'].values, device=self.device)
-                low = torch.tensor(data['Low'].values, device=self.device)
-                close = torch.tensor(data['Close'].values, device=self.device)
-                
-                # Calculate %K
-                k = torch.zeros_like(close)
-                for i in range(k_period-1, len(close)):
-                    period_high = high[i-k_period+1:i+1].max()
-                    period_low = low[i-k_period+1:i+1].min()
-                    k[i] = 100 * ((close[i] - period_low) / (period_high - period_low))
-                    
-                # Calculate %D
-                d = torch.zeros_like(k)
-                for i in range(d_period-1, len(k)):
-                    d[i] = k[i-d_period+1:i+1].mean()
-                    
-                return pd.DataFrame({
-                    '%K': k.cpu().numpy(),
-                    '%D': d.cpu().numpy()
-                }, index=data.index)
-            else:
-                # CPU implementation
-                low_min = data['Low'].rolling(window=k_period).min()
-                high_max = data['High'].rolling(window=k_period).max()
-                k = 100 * ((data['Close'] - low_min) / (high_max - low_min))
-                d = k.rolling(window=d_period).mean()
-                
-                return pd.DataFrame({
-                    '%K': k,
-                    '%D': d
+            start_time = datetime.now()
+            stoch = ta.stoch(data['High'], data['Low'], data['Close'], k=k_period, d=d_period)
+            calculation_time = (datetime.now() - start_time).total_seconds()
+            
+            self.performance_metrics['total_calculations'] += 1
+            self.performance_metrics['cpu_calculations'] += 1
+            
+            if self.config.get('metrics_enabled', False):
+                log_metrics("indicator_calculation", {
+                    'indicator': 'Stochastic',
+                    'k_period': k_period,
+                    'd_period': d_period,
+                    'calculation_time': calculation_time,
+                    'data_points': len(data),
+                    'timestamp': datetime.utcnow().isoformat()
                 })
+            
+            return stoch
             
         except Exception as e:
             self.logger.error(f"Error calculating Stochastic Oscillator: {str(e)}")
@@ -456,42 +436,23 @@ class MarketIndicators:
         try:
             self._validate_data(data)
             
-            if self.device.type == 'cuda':
-                # GPU implementation
-                high = torch.tensor(data['High'].values, device=self.device)
-                low = torch.tensor(data['Low'].values, device=self.device)
-                close = torch.tensor(data['Close'].values, device=self.device)
-                
-                # Calculate True Range
-                high_low = high - low
-                high_close = torch.abs(high - torch.roll(close, 1))
-                low_close = torch.abs(low - torch.roll(close, 1))
-                
-                true_range = torch.maximum(
-                    torch.maximum(high_low, high_close),
-                    low_close
-                )
-                
-                # Calculate ATR
-                atr = torch.zeros_like(true_range)
-                atr[period-1] = true_range[:period].mean()
-                
-                for i in range(period, len(true_range)):
-                    atr[i] = (atr[i-1] * (period-1) + true_range[i]) / period
-                    
-                return pd.Series(atr.cpu().numpy(), index=data.index)
-            else:
-                # CPU implementation
-                high_low = data['High'] - data['Low']
-                high_close = np.abs(data['High'] - data['Close'].shift())
-                low_close = np.abs(data['Low'] - data['Close'].shift())
-                
-                ranges = pd.concat([high_low, high_close, low_close], axis=1)
-                true_range = ranges.max(axis=1)
-                
-                atr = true_range.rolling(window=period).mean()
-                
-                return atr
+            start_time = datetime.now()
+            atr = ta.atr(data['High'], data['Low'], data['Close'], length=period)
+            calculation_time = (datetime.now() - start_time).total_seconds()
+            
+            self.performance_metrics['total_calculations'] += 1
+            self.performance_metrics['cpu_calculations'] += 1
+            
+            if self.config.get('metrics_enabled', False):
+                log_metrics("indicator_calculation", {
+                    'indicator': 'ATR',
+                    'period': period,
+                    'calculation_time': calculation_time,
+                    'data_points': len(data),
+                    'timestamp': datetime.utcnow().isoformat()
+                })
+            
+            return atr
             
         except Exception as e:
             self.logger.error(f"Error calculating ATR: {str(e)}")
@@ -512,85 +473,38 @@ class MarketIndicators:
             displacement: Displacement period (default: 26)
             
         Returns:
-            DataFrame with Ichimoku components
+            DataFrame with Ichimoku Cloud components
         """
         try:
             self._validate_data(data)
             
-            if self.device.type == 'cuda':
-                # GPU implementation
-                high = torch.tensor(data['High'].values, device=self.device)
-                low = torch.tensor(data['Low'].values, device=self.device)
-                close = torch.tensor(data['Close'].values, device=self.device)
-                
-                # Calculate Tenkan-sen (Conversion Line)
-                tenkan_high = torch.zeros_like(close)
-                tenkan_low = torch.zeros_like(close)
-                for i in range(tenkan_period-1, len(close)):
-                    tenkan_high[i] = high[i-tenkan_period+1:i+1].max()
-                    tenkan_low[i] = low[i-tenkan_period+1:i+1].min()
-                tenkan_sen = (tenkan_high + tenkan_low) / 2
-                
-                # Calculate Kijun-sen (Base Line)
-                kijun_high = torch.zeros_like(close)
-                kijun_low = torch.zeros_like(close)
-                for i in range(kijun_period-1, len(close)):
-                    kijun_high[i] = high[i-kijun_period+1:i+1].max()
-                    kijun_low[i] = low[i-kijun_period+1:i+1].min()
-                kijun_sen = (kijun_high + kijun_low) / 2
-                
-                # Calculate Senkou Span A (Leading Span A)
-                senkou_span_a = (tenkan_sen + kijun_sen) / 2
-                
-                # Calculate Senkou Span B (Leading Span B)
-                senkou_span_b = torch.zeros_like(close)
-                for i in range(senkou_span_b_period-1, len(close)):
-                    period_high = high[i-senkou_span_b_period+1:i+1].max()
-                    period_low = low[i-senkou_span_b_period+1:i+1].min()
-                    senkou_span_b[i] = (period_high + period_low) / 2
-                    
-                # Displace Senkou Spans
-                senkou_span_a = torch.roll(senkou_span_a, displacement)
-                senkou_span_b = torch.roll(senkou_span_b, displacement)
-                
-                return pd.DataFrame({
-                    'Tenkan-sen': tenkan_sen.cpu().numpy(),
-                    'Kijun-sen': kijun_sen.cpu().numpy(),
-                    'Senkou Span A': senkou_span_a.cpu().numpy(),
-                    'Senkou Span B': senkou_span_b.cpu().numpy(),
-                    'Chikou Span': close.cpu().numpy()
-                }, index=data.index)
-            else:
-                # CPU implementation
-                # Calculate Tenkan-sen (Conversion Line)
-                tenkan_high = data['High'].rolling(window=tenkan_period).max()
-                tenkan_low = data['Low'].rolling(window=tenkan_period).min()
-                tenkan_sen = (tenkan_high + tenkan_low) / 2
-                
-                # Calculate Kijun-sen (Base Line)
-                kijun_high = data['High'].rolling(window=kijun_period).max()
-                kijun_low = data['Low'].rolling(window=kijun_period).min()
-                kijun_sen = (kijun_high + kijun_low) / 2
-                
-                # Calculate Senkou Span A (Leading Span A)
-                senkou_span_a = (tenkan_sen + kijun_sen) / 2
-                
-                # Calculate Senkou Span B (Leading Span B)
-                senkou_span_b_high = data['High'].rolling(window=senkou_span_b_period).max()
-                senkou_span_b_low = data['Low'].rolling(window=senkou_span_b_period).min()
-                senkou_span_b = (senkou_span_b_high + senkou_span_b_low) / 2
-                
-                # Displace Senkou Spans
-                senkou_span_a = senkou_span_a.shift(displacement)
-                senkou_span_b = senkou_span_b.shift(displacement)
-                
-                return pd.DataFrame({
-                    'Tenkan-sen': tenkan_sen,
-                    'Kijun-sen': kijun_sen,
-                    'Senkou Span A': senkou_span_a,
-                    'Senkou Span B': senkou_span_b,
-                    'Chikou Span': data['Close']
+            start_time = datetime.now()
+            ichimoku = ta.ichimoku(
+                data['High'],
+                data['Low'],
+                tenkan=tenkan_period,
+                kijun=kijun_period,
+                senkou=senkou_span_b_period,
+                displacement=displacement
+            )
+            calculation_time = (datetime.now() - start_time).total_seconds()
+            
+            self.performance_metrics['total_calculations'] += 1
+            self.performance_metrics['cpu_calculations'] += 1
+            
+            if self.config.get('metrics_enabled', False):
+                log_metrics("indicator_calculation", {
+                    'indicator': 'Ichimoku',
+                    'tenkan_period': tenkan_period,
+                    'kijun_period': kijun_period,
+                    'senkou_span_b_period': senkou_span_b_period,
+                    'displacement': displacement,
+                    'calculation_time': calculation_time,
+                    'data_points': len(data),
+                    'timestamp': datetime.utcnow().isoformat()
                 })
+            
+            return ichimoku
             
         except Exception as e:
             self.logger.error(f"Error calculating Ichimoku Cloud: {str(e)}")

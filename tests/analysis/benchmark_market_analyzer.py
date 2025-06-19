@@ -22,7 +22,6 @@ import seaborn as sns
 from trading.market.market_analyzer import MarketAnalyzer
 import yfinance as yf
 import pandas_ta as ta
-import talib
 import finta
 import plotly.graph_objects as go
 import plotly.express as px
@@ -340,58 +339,101 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         fig.write_image(self.benchmark_dir / 'library_radar.png')
         
     def test_library_comparison(self):
-        """Compare performance with other libraries."""
-        self.logger.info("Starting library comparison benchmark")
-        
+        """Compare performance of different technical analysis libraries."""
         # Test data
-        symbol = 'AAPL'
-        data = self.analyzer.fetch_data(symbol, period='1y', interval='1d')
+        data = self.analyzer.get_market_data('AAPL', period='1y')
         
         # Libraries to compare
         libraries = {
             'pandas_ta': ta,
-            'talib': talib,
-            'finta': finta,
-            'market_analyzer': self.analyzer
+            'finta': finta
         }
         
-        # Test technical indicators
+        # Test indicators
+        indicators = ['RSI', 'MACD', 'BB', 'SMA', 'EMA']
+        
         for lib_name, lib in libraries.items():
-            for _ in range(3):  # Run each test 3 times
-                start_time = time.time()
-                memory_before = self._measure_memory()
+            start_time = time.time()
+            
+            # Calculate indicators
+            if lib_name == 'pandas_ta':
+                rsi = lib.rsi(data['Close'])
+                macd = lib.macd(data['Close'])
+                bb = lib.bbands(data['Close'])
+                sma = lib.sma(data['Close'])
+                ema = lib.ema(data['Close'])
+            elif lib_name == 'finta':
+                rsi = lib.RSI(data)
+                macd = lib.MACD(data)
+                bb = lib.BBANDS(data)
+                sma = lib.SMA(data)
+                ema = lib.EMA(data)
                 
-                try:
-                    if lib_name == 'pandas_ta':
-                        indicators = lib.ta.strategy('All', data)
-                    elif lib_name == 'talib':
-                        indicators = pd.DataFrame({
-                            'SMA': lib.SMA(data['Close']),
-                            'RSI': lib.RSI(data['Close']),
-                            'MACD': lib.MACD(data['Close'])[0]
-                        })
-                    elif lib_name == 'finta':
-                        indicators = pd.DataFrame({
-                            'SMA': lib.SMA(data),
-                            'RSI': lib.RSI(data),
-                            'MACD': lib.MACD(data)
-                        })
-                    else:  # market_analyzer
-                        indicators = self.analyzer.calculate_technical_indicators(symbol)
-                        
-                    end_time = time.time()
-                    memory_after = self._measure_memory()
-                    
-                    self.results['library_comparison']['technical_indicators'].append({
-                        'library': lib_name,
-                        'time': end_time - start_time,
-                        'memory': memory_after - memory_before,
-                        'accuracy': self._calculate_accuracy(indicators),
-                        'timestamp': datetime.now().isoformat()
-                    })
-                except Exception as e:
-                    self.logger.error(f"Error in {lib_name} comparison: {str(e)}")
-                    
+            calculation_time = time.time() - start_time
+            
+            # Store results
+            self.results['library_comparison']['technical_indicators'].append({
+                'library': lib_name,
+                'time': calculation_time,
+                'accuracy': self._calculate_accuracy(pd.DataFrame({
+                    'RSI': rsi,
+                    'MACD': macd,
+                    'BB': bb,
+                    'SMA': sma,
+                    'EMA': ema
+                }))
+            })
+            
+        # Compare memory usage
+        for lib_name, lib in libraries.items():
+            memory_before = self._measure_memory()
+            
+            # Create large dataset
+            large_data = pd.concat([data] * 100)
+            
+            # Calculate indicators
+            if lib_name == 'pandas_ta':
+                rsi = lib.rsi(large_data['Close'])
+                macd = lib.macd(large_data['Close'])
+                bb = lib.bbands(large_data['Close'])
+            elif lib_name == 'finta':
+                rsi = lib.RSI(large_data)
+                macd = lib.MACD(large_data)
+                bb = lib.BBANDS(large_data)
+                
+            memory_after = self._measure_memory()
+            
+            # Store results
+            self.results['library_comparison']['memory_efficiency'].append({
+                'library': lib_name,
+                'memory_usage': memory_after - memory_before
+            })
+            
+        # Compare data processing speed
+        for lib_name, lib in libraries.items():
+            start_time = time.time()
+            
+            # Process data
+            if lib_name == 'pandas_ta':
+                processed = lib.bbands(lib.rsi(lib.macd(data['Close'])))
+            elif lib_name == 'finta':
+                processed = lib.BBANDS(lib.RSI(lib.MACD(data)))
+                
+            processing_time = time.time() - start_time
+            
+            # Store results
+            self.results['library_comparison']['data_processing'].append({
+                'library': lib_name,
+                'time': processing_time
+            })
+            
+        # Log results
+        self.logger.info("Library comparison results:")
+        for category in ['technical_indicators', 'memory_efficiency', 'data_processing']:
+            self.logger.info(f"\n{category}:")
+            for result in self.results['library_comparison'][category]:
+                self.logger.info(f"{result['library']}: {result}")
+            
     def _calculate_accuracy(self, indicators: pd.DataFrame) -> float:
         """Calculate accuracy score for indicators."""
         try:

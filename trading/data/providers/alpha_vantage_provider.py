@@ -16,7 +16,7 @@ import threading
 import pickle
 import random
 import yfinance as yf
-from trading.yfinance_provider import YFinanceProvider
+from .yfinance_provider import YFinanceProvider
 
 # Try to import redis, but make it optional
 try:
