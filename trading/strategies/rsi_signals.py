@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Dict, Any
 import pandas as pd
 import numpy as np
-import talib
+import pandas_ta as ta
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ def generate_rsi_signals(
                 logger.info(f"Using optimized RSI settings for {ticker}")
         
         # Calculate RSI
-        df['rsi'] = talib.RSI(df['Close'], timeperiod=period)
+        df['rsi'] = ta.rsi(df['Close'], length=period)
         
         # Generate signals
         df['signal'] = 0
