@@ -1,4 +1,4 @@
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 from datetime import datetime
 import asyncio
 from functools import wraps
@@ -23,7 +23,7 @@ class AssetRequest(BaseModel):
     price: float = Field(..., gt=0, description="Price per unit")
 
     @validator('asset')
-    def validate_asset(cls, v):
+    def validate_asset(cls, v: str) -> str:
         if not v.isalnum():
             raise ValueError('Asset symbol must be alphanumeric')
         return v.upper()
@@ -35,9 +35,9 @@ class BacktestRequest(BaseModel):
     end_date: Optional[datetime] = Field(None, description="End date for backtest")
 
 # Authentication decorator
-def token_required(f):
+def token_required(f: Callable) -> Callable:
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated(*args: Any, **kwargs: Any) -> Any:
         token = request.headers.get('Authorization')
         if not token:
             return jsonify({'error': 'Token is missing'}), 401
@@ -54,13 +54,13 @@ def token_required(f):
 
 # Error handling
 class APIError(Exception):
-    def __init__(self, message: str, status_code: int = 400):
+    def __init__(self, message: str, status_code: int = 400) -> None:
         self.message = message
         self.status_code = status_code
         super().__init__(self.message)
 
 @app.errorhandler(APIError)
-def handle_api_error(error):
+def handle_api_error(error: APIError) -> Any:
     response = jsonify({'error': error.message})
     response.status_code = error.status_code
     return response
@@ -81,7 +81,7 @@ def get_backtester() -> Backtester:
 # Routes
 @app.route('/portfolio', methods=['GET'])
 @token_required
-def get_portfolio(current_user):
+def get_portfolio(current_user: str) -> Any:
     """Get the current portfolio value and composition."""
     try:
         portfolio_value = portfolio_manager.get_portfolio_value()
@@ -97,7 +97,7 @@ def get_portfolio(current_user):
 
 @app.route('/portfolio/add', methods=['POST'])
 @token_required
-def add_asset(current_user):
+def add_asset(current_user: str) -> Any:
     """Add an asset to the portfolio."""
     try:
         data = AssetRequest(**request.json)
@@ -117,7 +117,7 @@ def add_asset(current_user):
 
 @app.route('/risk/var', methods=['GET'])
 @token_required
-def get_risk_metrics(current_user):
+def get_risk_metrics(current_user: str) -> Any:
     """Get comprehensive risk metrics for the portfolio."""
     try:
         risk_manager = get_risk_manager()
@@ -139,7 +139,7 @@ def get_risk_metrics(current_user):
 
 @app.route('/backtest/run', methods=['POST'])
 @token_required
-def run_backtest(current_user):
+def run_backtest(current_user: str) -> Any:
     """Run a backtest using the provided strategy and return detailed results."""
     try:
         data = BacktestRequest(**request.json)
@@ -186,12 +186,12 @@ try:
     
     # Add async versions of routes
     @quart_app.route('/portfolio/async', methods=['GET'])
-    async def get_portfolio_async():
+    async def get_portfolio_async() -> Any:
         """Async version of get_portfolio."""
         return await asyncio.to_thread(get_portfolio)
     
     @quart_app.route('/backtest/run/async', methods=['POST'])
-    async def run_backtest_async():
+    async def run_backtest_async() -> Any:
         """Async version of run_backtest."""
         return await asyncio.to_thread(run_backtest)
         

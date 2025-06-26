@@ -422,13 +422,21 @@ class TimeSeriesPlotter:
                 fig.show()
             return fig
 
-    def plot_data(self, data):
-        """Plot the given data."""
+    def plot_data(self, data: Union[pd.Series, np.ndarray, List[float]]) -> None:
+        """Plot the given data.
+        
+        Args:
+            data: Data to plot (pandas Series, numpy array, or list)
+        """
         plt.plot(data)
         plt.show()
 
-    def plot_histogram(self, data):
-        """Plot a histogram of the given data."""
+    def plot_histogram(self, data: Union[pd.Series, np.ndarray, List[float]]) -> None:
+        """Plot a histogram of the given data.
+        
+        Args:
+            data: Data to plot histogram for (pandas Series, numpy array, or list)
+        """
         plt.hist(data)
         plt.show()
 

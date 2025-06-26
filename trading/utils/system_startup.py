@@ -104,7 +104,7 @@ def get_system_status() -> Dict[str, Any]:
         "last_check": st.session_state.get("last_system_check", None)
     }
 
-def clear_session_state():
+def clear_session_state() -> None:
     """Clear all session state variables."""
     for key in list(st.session_state.keys()):
         del st.session_state[key] 
