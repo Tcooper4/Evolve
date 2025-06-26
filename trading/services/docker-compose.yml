@@ -1,0 +1,202 @@
+version: '3.8'
+
+services:
+  # Redis for message queuing
+  redis:
+    image: redis:7-alpine
+    container_name: evolve_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Model Builder Service
+  model_builder:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+    container_name: evolve_model_builder
+    command: python services/launch_model_builder.py
+    volumes:
+      - ../logs:/app/logs
+      - ../models:/app/models
+      - ../data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=INFO
+
+  # Performance Critic Service
+  performance_critic:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+    container_name: evolve_performance_critic
+    command: python services/launch_performance_critic.py
+    volumes:
+      - ../logs:/app/logs
+      - ../models:/app/models
+      - ../data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=INFO
+
+  # Updater Service
+  updater:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+    container_name: evolve_updater
+    command: python services/launch_updater.py
+    volumes:
+      - ../logs:/app/logs
+      - ../models:/app/models
+      - ../data:/app/data
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=INFO
+
+  # Research Service
+  research:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+    container_name: evolve_research
+    command: python services/launch_research.py
+    volumes:
+      - ../logs:/app/logs
+      - ../research:/app/research
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=INFO
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+
+  # Meta Tuner Service
+  meta_tuner:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+    container_name: evolve_meta_tuner
+    command: python services/launch_meta_tuner.py
+    volumes:
+      - ../logs:/app/logs
+      - ../models:/app/models
+      - ../optimization:/app/optimization
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=INFO
+
+  # Multimodal Service
+  multimodal:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+    container_name: evolve_multimodal
+    command: python services/launch_multimodal.py
+    volumes:
+      - ../logs:/app/logs
+      - ../plots:/app/plots
+      - ../visualization:/app/visualization
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=INFO
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+
+  # Prompt Router Service
+  prompt_router:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+    container_name: evolve_prompt_router
+    command: python services/launch_prompt_router.py
+    volumes:
+      - ../logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=INFO
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+
+  # Service Manager (Optional - for orchestration)
+  service_manager:
+    build:
+      context: ..
+      dockerfile: services/Dockerfile
+    container_name: evolve_service_manager
+    command: python services/service_manager.py --action status
+    volumes:
+      - ../logs:/app/logs
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_LEVEL=INFO
+
+  # Web Dashboard (Optional)
+  dashboard:
+    build:
+      context: ../dashboard
+      dockerfile: Dockerfile
+    container_name: evolve_dashboard
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../dashboard:/app
+      - /app/node_modules
+    depends_on:
+      - redis
+    restart: unless-stopped
+    environment:
+      - REACT_APP_API_URL=http://localhost:3000
+      - REACT_APP_REDIS_HOST=redis
+
+volumes:
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: evolve_network 
