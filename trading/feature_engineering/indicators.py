@@ -5,7 +5,6 @@ registered with :class:`FeatureEngineer` for additional feature
 calculations. Custom indicators are kept here to keep
 ``feature_engineer.py`` focused on orchestration.
 """
-from __future__ import annotations
 
 import pandas as pd
 import numpy as np

@@ -11,7 +11,7 @@ from redis.exceptions import (
     TimeoutError,
     ResponseError
 )
-from typing import Optional, Any, Dict, List, Union
+from typing import Optional, Any, Dict, List, Union, Callable
 import logging
 import json
 from datetime import datetime, timedelta
@@ -322,7 +322,7 @@ class RedisManager:
         except RedisError as e:
             self._handle_error(e)
 
-def with_redis_retry(max_retries: int = 3, delay: float = 1.0):
+def with_redis_retry(max_retries: int = 3, delay: float = 1.0) -> Callable:
     """Decorator for retrying Redis operations.
     
     Args:
@@ -332,9 +332,9 @@ def with_redis_retry(max_retries: int = 3, delay: float = 1.0):
     Returns:
         Decorated function
     """
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             for attempt in range(max_retries):
                 try:
                     return func(*args, **kwargs)

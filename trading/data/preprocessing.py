@@ -911,9 +911,106 @@ def apply_agent_transformations(df: pd.DataFrame, agent_config: Optional[Dict[st
         for col, condition in agent_config['custom_filters'].items():
             if col in df.columns:
                 logger.info(f"Applying custom filter to {col}")
-                df = df[eval(f"df['{col}'] {condition}")]
+                mask = _parse_safe_condition(df[col], condition)
+                df = df[mask]
     
     return df
+
+def _parse_safe_condition(series: pd.Series, condition: str) -> pd.Series:
+    """Safely parse and apply a condition to a pandas Series.
+    
+    Args:
+        series: Pandas Series to apply condition to
+        condition: String condition (e.g., "> 100", "<= 50", "== 0")
+        
+    Returns:
+        Boolean mask for the condition
+        
+    Raises:
+        ValueError: If condition format is invalid or unsafe
+    """
+    import re
+    
+    # Strip whitespace and normalize
+    condition = condition.strip()
+    
+    # Define safe operators and their corresponding pandas operations
+    safe_operators = {
+        '>': 'gt',
+        '>=': 'ge', 
+        '<': 'lt',
+        '<=': 'le',
+        '==': 'eq',
+        '!=': 'ne',
+        'in': 'isin',
+        'not in': 'not_na'  # Simplified for not in
+    }
+    
+    # Find the operator in the condition
+    operator_found = None
+    operator_value = None
+    
+    for op, pandas_op in safe_operators.items():
+        if op in condition:
+            # Split on the operator
+            parts = condition.split(op, 1)
+            if len(parts) == 2:
+                operator_found = pandas_op
+                operator_value = parts[1].strip()
+                break
+    
+    if operator_found is None:
+        raise ValueError(f"Unsafe or invalid condition: {condition}")
+    
+    try:
+        # Parse the value safely
+        if operator_found in ['isin']:
+            # Handle 'in' operator - expect a list-like structure
+            if operator_value.startswith('[') and operator_value.endswith(']'):
+                # Parse as literal list
+                import ast
+                value_list = ast.literal_eval(operator_value)
+                return series.isin(value_list)
+            else:
+                raise ValueError(f"Invalid 'in' condition format: {condition}")
+        elif operator_found == 'not_na':
+            # Handle 'not in' - simplified as not null
+            return series.notna()
+        else:
+            # Handle numeric comparisons
+            if operator_value.lower() in ['true', 'false']:
+                value = operator_value.lower() == 'true'
+            elif operator_value.lower() == 'null' or operator_value.lower() == 'none':
+                value = None
+            else:
+                # Try to parse as number
+                try:
+                    value = float(operator_value)
+                    # If it's an integer, convert back
+                    if value.is_integer():
+                        value = int(value)
+                except ValueError:
+                    # Try as string
+                    value = operator_value.strip('"\'')
+            
+            # Apply the condition using pandas methods
+            if operator_found == 'gt':
+                return series > value
+            elif operator_found == 'ge':
+                return series >= value
+            elif operator_found == 'lt':
+                return series < value
+            elif operator_found == 'le':
+                return series <= value
+            elif operator_found == 'eq':
+                return series == value
+            elif operator_found == 'ne':
+                return series != value
+            else:
+                raise ValueError(f"Unsupported operator: {operator_found}")
+                
+    except Exception as e:
+        raise ValueError(f"Error parsing condition '{condition}': {str(e)}")
 
 def preprocess_data(
     df: pd.DataFrame,
