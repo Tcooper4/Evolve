@@ -186,6 +186,288 @@ The platform tracks and visualizes key performance indicators:
 - **Profit Factor**: Gross profit to gross loss ratio
 - **Calmar Ratio**: Annual return to maximum drawdown
 
+## 📊 Report Generation System
+
+The Evolve trading system includes a comprehensive reporting system that automatically generates detailed reports after each forecast and strategy execution.
+
+### Features
+
+- **Trade Reports**: PnL analysis, win rate, average gains/losses, Sharpe ratio, drawdown
+- **Model Reports**: MSE, MAE, RMSE, accuracy, precision, recall, F1 score  
+- **Strategy Reasoning**: GPT-powered analysis of why actions were taken
+- **Multiple Formats**: PDF, Markdown, and HTML output
+- **Integrations**: Slack, Notion, and email notifications
+- **Automated Service**: Redis pub/sub service for automatic report generation
+- **Visualizations**: Equity curves, prediction vs actual charts, PnL distributions
+
+### Quick Usage
+
+```python
+from trading.report.report_generator import generate_quick_report
+
+# Generate comprehensive report
+report_data = generate_quick_report(
+    trade_data=trade_data,
+    model_data=model_data, 
+    strategy_data=strategy_data,
+    symbol='AAPL',
+    timeframe='1h',
+    period='7d'
+)
+
+print(f"Report generated: {report_data['report_id']}")
+print(f"Files: {report_data['files']}")
+```
+
+### Service Integration
+
+```python
+from trading.services.service_client import ServiceClient
+
+client = ServiceClient()
+
+# Trigger automated report generation
+event_id = client.trigger_strategy_report(
+    strategy_data=strategy_data,
+    trade_data=trade_data,
+    model_data=model_data,
+    symbol='AAPL',
+    timeframe='1h',
+    period='7d'
+)
+
+# Generate report directly
+report_data = client.generate_report(
+    trade_data=trade_data,
+    model_data=model_data,
+    strategy_data=strategy_data,
+    symbol='AAPL',
+    timeframe='1h',
+    period='7d'
+)
+```
+
+### Report Service
+
+Start the automated report service:
+
+```bash
+# Start report service
+python trading/report/launch_report_service.py
+
+# Or via service manager
+python trading/services/service_manager.py start report
+```
+
+The report service automatically listens for:
+- `forecast_completed` events
+- `strategy_completed` events  
+- `backtest_completed` events
+- `model_evaluation_completed` events
+
+### Configuration
+
+Set environment variables for integrations:
+
+```bash
+# OpenAI for GPT reasoning
+export OPENAI_API_KEY="your_openai_api_key"
+
+# Integrations (optional)
+export NOTION_TOKEN="your_notion_token"
+export SLACK_WEBHOOK="your_slack_webhook_url"
+
+# Email configuration (optional)
+export EMAIL_SMTP_SERVER="smtp.gmail.com"
+export EMAIL_SMTP_PORT="587"
+export EMAIL_USERNAME="your_email@gmail.com"
+export EMAIL_PASSWORD="your_app_password"
+export EMAIL_FROM="your_email@gmail.com"
+export EMAIL_TO="recipient@example.com"
+```
+
+### Demo
+
+Run the demo to see the system in action:
+
+```bash
+python trading/report/demo_report_generation.py
+```
+
+### Testing
+
+```bash
+# Run report system tests
+python trading/report/test_report_system.py
+```
+
+For detailed documentation, see [trading/report/README.md](trading/report/README.md).
+
+## 🤖 Reasoning Logger System
+
+A comprehensive system for recording, displaying, and analyzing agent decisions in plain language for transparency and explainability.
+
+### Features
+
+- **Decision Logging**: Record every decision agents make with detailed context
+- **Plain Language Summaries**: Human-readable summaries of complex decisions
+- **Chat-Style Explanations**: Conversational explanations of why actions were taken
+- **Real-Time Updates**: Live monitoring of agent decisions via Redis
+- **Multiple Display Formats**: Terminal and Streamlit interfaces
+- **Search & Filter**: Find and analyze specific decisions
+- **Statistics & Analytics**: Comprehensive decision analytics
+
+### Quick Usage
+
+```python
+from trading.utils.reasoning_logger import ReasoningLogger, DecisionType, ConfidenceLevel
+
+# Initialize logger
+logger = ReasoningLogger()
+
+# Log a decision
+decision_id = logger.log_decision(
+    agent_name='LSTMForecaster',
+    decision_type=DecisionType.FORECAST,
+    action_taken='Predicted AAPL will reach $185.50 in 7 days',
+    context={
+        'symbol': 'AAPL',
+        'timeframe': '1h',
+        'market_conditions': {'trend': 'bullish', 'rsi': 65},
+        'available_data': ['price', 'volume', 'rsi', 'macd'],
+        'constraints': {'max_forecast_days': 30},
+        'user_preferences': {'risk_tolerance': 'medium'}
+    },
+    reasoning={
+        'primary_reason': 'Strong technical indicators showing bullish momentum',
+        'supporting_factors': [
+            'RSI indicates bullish momentum (65)',
+            'MACD shows positive crossover',
+            'Volume is above average'
+        ],
+        'alternatives_considered': [
+            'Conservative forecast of $180.00',
+            'Aggressive forecast of $190.00'
+        ],
+        'risks_assessed': [
+            'Market volatility could increase',
+            'Earnings announcement next week'
+        ],
+        'confidence_explanation': 'High confidence due to strong technical signals',
+        'expected_outcome': 'AAPL expected to continue bullish trend'
+    },
+    confidence_level=ConfidenceLevel.HIGH,
+    metadata={'model_name': 'LSTM_v2', 'forecast_value': 185.50}
+)
+
+print(f"Decision logged: {decision_id}")
+```
+
+### Service Integration
+
+```python
+from trading.services.service_client import ServiceClient
+
+client = ServiceClient()
+
+# Log a reasoning decision
+decision_id = client.log_reasoning_decision({
+    'agent_name': 'LSTMForecaster',
+    'decision_type': 'FORECAST',
+    'action_taken': 'Predicted AAPL will reach $185.50',
+    'context': {
+        'symbol': 'AAPL',
+        'timeframe': '1h',
+        'market_conditions': {'trend': 'bullish'},
+        'available_data': ['price', 'volume'],
+        'constraints': {},
+        'user_preferences': {}
+    },
+    'reasoning': {
+        'primary_reason': 'Technical analysis shows bullish momentum',
+        'supporting_factors': ['RSI oversold', 'MACD positive'],
+        'alternatives_considered': ['Wait for confirmation'],
+        'risks_assessed': ['Market volatility'],
+        'confidence_explanation': 'High confidence due to clear signals',
+        'expected_outcome': 'Expected 5% upside'
+    },
+    'confidence_level': 'HIGH',
+    'metadata': {'forecast_value': 185.50}
+})
+
+# Get reasoning decisions
+decisions = client.get_reasoning_decisions(agent_name='LSTMForecaster', limit=10)
+
+# Get reasoning statistics
+stats = client.get_reasoning_statistics()
+```
+
+### Reasoning Service
+
+Start the automated reasoning service:
+
+```bash
+# Start reasoning service
+python trading/utils/launch_reasoning_service.py
+
+# Or via service manager
+python trading/services/service_manager.py start reasoning
+```
+
+The reasoning service automatically listens for:
+- `agent_decisions` events
+- `forecast_completed` events
+- `strategy_completed` events
+- `model_evaluation_completed` events
+
+And publishes `reasoning_updates` events with decision summaries.
+
+### Display Components
+
+```python
+from trading.utils.reasoning_display import ReasoningDisplay
+
+# Initialize display
+display = ReasoningDisplay(logger)
+
+# Display recent decisions in terminal
+display.display_recent_decisions_terminal(limit=10)
+
+# Display specific decision
+decision = logger.get_decision(decision_id)
+display.display_decision_terminal(decision)
+
+# Display statistics
+display.display_statistics_terminal()
+```
+
+### Streamlit Dashboard
+
+```python
+# Create complete reasoning page
+from trading.utils.reasoning_display import create_reasoning_page_streamlit
+
+# In your Streamlit app
+create_reasoning_page_streamlit()
+```
+
+### Demo
+
+Run the demo to see the system in action:
+
+```bash
+python trading/utils/demo_reasoning.py
+```
+
+### Testing
+
+```bash
+# Run reasoning system tests
+python trading/utils/test_reasoning.py
+```
+
+For detailed documentation, see [trading/utils/README.md](trading/utils/README.md).
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.

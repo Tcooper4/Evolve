@@ -1,28 +1,40 @@
 """
-Financial Forecasting Agent System.
+Trading Agents Module
 
-This package provides a modular system of agents for financial forecasting,
-including goal planning, self-improvement, and task management.
+This module provides autonomous agents for model management:
+- ModelBuilderAgent: Builds ML models from scratch
+- PerformanceCriticAgent: Evaluates model performance
+- UpdaterAgent: Updates models based on evaluation results
+- AgentLoopManager: Orchestrates the autonomous 3-agent system
 """
 
-from trading.base_agent import BaseAgent, AgentResult
-from trading.agent_manager import AgentManager
-from trading.goal_planner import GoalPlanner
-from trading.self_improving_agent import SelfImprovingAgent
-from trading.task_memory import Task, TaskMemory, TaskStatus
-from trading.task_dashboard import TaskDashboard, run_dashboard
-from trading.router import Router
+from .model_builder_agent import ModelBuilderAgent, ModelBuildRequest, ModelBuildResult
+from .performance_critic_agent import PerformanceCriticAgent, ModelEvaluationRequest, ModelEvaluationResult
+from .updater_agent import UpdaterAgent, UpdateRequest, UpdateResult
+from .agent_loop_manager import AgentLoopManager, AgentLoopState, AgentCommunication
 
 __all__ = [
-    'BaseAgent',
-    'AgentResult',
-    'AgentManager',
-    'GoalPlanner',
-    'SelfImprovingAgent',
-    'Task',
-    'TaskMemory',
-    'TaskStatus',
-    'TaskDashboard',
-    'Router',
-    'run_dashboard'
+    # Model Builder Agent
+    'ModelBuilderAgent',
+    'ModelBuildRequest', 
+    'ModelBuildResult',
+    
+    # Performance Critic Agent
+    'PerformanceCriticAgent',
+    'ModelEvaluationRequest',
+    'ModelEvaluationResult',
+    
+    # Updater Agent
+    'UpdaterAgent',
+    'UpdateRequest',
+    'UpdateResult',
+    
+    # Agent Loop Manager
+    'AgentLoopManager',
+    'AgentLoopState',
+    'AgentCommunication'
 ]
+
+__version__ = "1.0.0"
+__author__ = "Evolve Trading System"
+__description__ = "Autonomous 3-Agent Model Management System"
