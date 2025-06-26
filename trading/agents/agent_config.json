@@ -1,0 +1,115 @@
+{
+  "agent_loop": {
+    "cycle_interval": 3600,
+    "max_models": 10,
+    "evaluation_threshold": 0.5,
+    "auto_start": true,
+    "log_level": "INFO"
+  },
+  "model_builder": {
+    "models_dir": "trading/models/built",
+    "default_hyperparameters": {
+      "lstm": {
+        "hidden_dim": 64,
+        "num_layers": 2,
+        "dropout": 0.2,
+        "learning_rate": 0.001,
+        "batch_size": 32,
+        "epochs": 100,
+        "sequence_length": 20
+      },
+      "xgboost": {
+        "n_estimators": 100,
+        "max_depth": 6,
+        "learning_rate": 0.1,
+        "subsample": 0.8,
+        "colsample_bytree": 0.8,
+        "random_state": 42
+      },
+      "ensemble": {
+        "models": ["lstm", "xgboost"],
+        "weights": [0.5, 0.5],
+        "voting_method": "weighted_average"
+      }
+    },
+    "data_config": {
+      "target_column": "close",
+      "validation_split": 0.2,
+      "random_state": 42
+    }
+  },
+  "performance_critic": {
+    "evaluation_period": 252,
+    "risk_free_rate": 0.02,
+    "thresholds": {
+      "min_sharpe_ratio": 0.5,
+      "max_drawdown": -0.15,
+      "min_win_rate": 0.45,
+      "max_volatility": 0.25,
+      "min_calmar_ratio": 0.5
+    },
+    "metrics": {
+      "performance": ["sharpe_ratio", "total_return", "annualized_return", "volatility"],
+      "risk": ["max_drawdown", "var_95", "cvar_95", "sortino_ratio", "calmar_ratio"],
+      "trading": ["win_rate", "profit_factor", "avg_trade", "total_trades"]
+    }
+  },
+  "updater": {
+    "update_thresholds": {
+      "critical_sharpe": 0.0,
+      "critical_drawdown": -0.25,
+      "critical_win_rate": 0.3,
+      "retrain_sharpe": 0.3,
+      "retrain_drawdown": -0.15,
+      "tune_sharpe": 0.5,
+      "tune_drawdown": -0.10
+    },
+    "optimization": {
+      "optimizer_type": "bayesian",
+      "n_trials": 50,
+      "timeout": 3600,
+      "n_jobs": -1
+    },
+    "cleanup": {
+      "max_age_days": 30,
+      "max_failed_operations": 100
+    }
+  },
+  "memory": {
+    "storage_type": "file",
+    "backup_interval": 86400,
+    "max_history_size": 1000,
+    "compression": true
+  },
+  "communication": {
+    "queue_size": 1000,
+    "timeout": 30,
+    "retry_attempts": 3,
+    "log_communications": true
+  },
+  "data_sources": {
+    "primary": "data/latest_market_data.csv",
+    "backup": "data/backup_market_data.csv",
+    "update_frequency": 300,
+    "validation": {
+      "min_data_points": 1000,
+      "required_columns": ["date", "open", "high", "low", "close", "volume"]
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    "file": "trading/agents/logs/agent_loop.log",
+    "max_size": "10MB",
+    "backup_count": 5
+  },
+  "monitoring": {
+    "metrics_collection": true,
+    "health_check_interval": 300,
+    "alert_thresholds": {
+      "failed_operations": 5,
+      "memory_usage": 0.8,
+      "queue_size": 100
+    }
+  }
+} 
