@@ -419,34 +419,29 @@ class PerformanceManager:
             raise
 
     def _apply_optimizations(self, func: callable, suggestions: List[Dict[str, Any]]) -> callable:
-        """Apply optimizations to function."""
+        """Apply optimizations to function.
+        
+        Note: This is a simplified version that returns the original function
+        for safety. In a production environment, consider using AST manipulation
+        or other safe code transformation techniques.
+        """
         try:
-            # Get function source
-            import inspect
-            source = inspect.getsource(func)
+            # For safety, we'll return the original function
+            # In a production environment, you would implement safe code transformations
+            # using AST manipulation or other techniques that don't require exec()
             
-            # Apply optimizations based on suggestions
-            optimized_source = source
+            self.logger.warning(
+                "Dynamic code optimization disabled for security. "
+                "Consider using AST manipulation for safe code transformations."
+            )
+            
+            # Log the suggestions for manual review
             for suggestion in suggestions:
-                if suggestion["type"] == "list_comprehension":
-                    # Convert for loops to list comprehensions where possible
-                    pass
-                elif suggestion["type"] == "nested_loops":
-                    # Optimize nested loops
-                    pass
-                elif suggestion["type"] == "string_concatenation":
-                    # Convert string concatenation to f-strings
-                    pass
-                elif suggestion["type"] == "global_variables":
-                    # Remove global variables
-                    pass
+                self.logger.info(f"Optimization suggestion: {suggestion}")
             
-            # Create new function from optimized source
-            namespace = {}
-            exec(optimized_source, namespace)
-            optimized_func = namespace[func.__name__]
+            # Return the original function
+            return func
             
-            return optimized_func
         except Exception as e:
             self.logger.error(f"Failed to apply optimizations: {e}")
             raise

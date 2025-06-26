@@ -39,9 +39,10 @@ import pdb
 import ipdb
 import logging
 import time
+import ast
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime
+from typing import List, Dict, Any, Optional, Tuple, Callable, Union
+from datetime import datetime, timedelta
 import asyncio
 import aiohttp
 import numpy as np
@@ -50,9 +51,16 @@ from scipy import stats
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+
 class DebugManager:
-    def __init__(self, config_path: str = "config/app_config.yaml"):
-        """Initialize the debug manager."""
+    """Manages debugging operations for the trading platform."""
+    
+    def __init__(self, config_path: str = "config/app_config.yaml") -> None:
+        """Initialize the debug manager.
+        
+        Args:
+            config_path: Path to the configuration file.
+        """
         self.config = self._load_config(config_path)
         self.setup_logging()
         self.logger = logging.getLogger("trading")
@@ -61,8 +69,18 @@ class DebugManager:
         self.reports_dir = Path("reports/debug")
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
-    def _load_config(self, config_path: str) -> dict:
-        """Load application configuration."""
+    def _load_config(self, config_path: str) -> Dict[str, Any]:
+        """Load application configuration.
+        
+        Args:
+            config_path: Path to the configuration file.
+            
+        Returns:
+            Configuration dictionary.
+            
+        Raises:
+            SystemExit: If configuration file is not found.
+        """
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
@@ -70,8 +88,12 @@ class DebugManager:
         with open(config_path) as f:
             return yaml.safe_load(f)
 
-    def setup_logging(self):
-        """Initialize logging configuration."""
+    def setup_logging(self) -> None:
+        """Initialize logging configuration.
+        
+        Raises:
+            SystemExit: If logging configuration file is not found.
+        """
         log_config_path = Path("config/logging_config.yaml")
         if not log_config_path.exists():
             print("Error: logging_config.yaml not found")
@@ -82,8 +104,20 @@ class DebugManager:
         
         logging.config.dictConfig(log_config)
 
-    def debug_function(self, func: callable, *args, **kwargs):
-        """Debug a function with interactive debugging."""
+    def debug_function(self, func: Callable, *args: Any, **kwargs: Any) -> Any:
+        """Debug a function with interactive debugging.
+        
+        Args:
+            func: Function to debug.
+            *args: Positional arguments for the function.
+            **kwargs: Keyword arguments for the function.
+            
+        Returns:
+            Result of the function execution.
+            
+        Raises:
+            Exception: If debugging fails.
+        """
         self.logger.info(f"Debugging function: {func.__name__}")
         
         try:
@@ -98,8 +132,18 @@ class DebugManager:
             self.logger.error(f"Failed to debug function: {e}")
             raise
 
-    def analyze_errors(self, log_files: List[str]):
-        """Analyze error logs."""
+    def analyze_errors(self, log_files: List[str]) -> Dict[str, Any]:
+        """Analyze error logs.
+        
+        Args:
+            log_files: List of log file paths to analyze.
+            
+        Returns:
+            Dictionary containing error analysis results.
+            
+        Raises:
+            Exception: If error analysis fails.
+        """
         self.logger.info("Analyzing error logs")
         
         try:
@@ -161,8 +205,18 @@ class DebugManager:
             self.logger.error(f"Failed to analyze errors: {e}")
             raise
 
-    def monitor_errors(self, duration: int = 300):
-        """Monitor errors in real-time."""
+    def monitor_errors(self, duration: int = 300) -> List[Dict[str, Any]]:
+        """Monitor errors in real-time.
+        
+        Args:
+            duration: Duration to monitor in seconds.
+            
+        Returns:
+            List of errors detected during monitoring.
+            
+        Raises:
+            Exception: If error monitoring fails.
+        """
         self.logger.info(f"Monitoring errors for {duration} seconds")
         
         try:
@@ -204,8 +258,18 @@ class DebugManager:
             self.logger.error(f"Failed to monitor errors: {e}")
             raise
 
-    def fix_errors(self, error_analysis: Dict[str, Any]):
-        """Suggest fixes for common errors."""
+    def fix_errors(self, error_analysis: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Suggest fixes for common errors.
+        
+        Args:
+            error_analysis: Error analysis results.
+            
+        Returns:
+            List of fix suggestions.
+            
+        Raises:
+            Exception: If fix suggestions fail.
+        """
         self.logger.info("Suggesting error fixes")
         
         try:
@@ -266,8 +330,12 @@ class DebugManager:
             self.logger.error(f"Failed to suggest error fixes: {e}")
             raise
 
-    def _print_monitoring_results(self, errors: List[Dict[str, Any]]):
-        """Print error monitoring results."""
+    def _print_monitoring_results(self, errors: List[Dict[str, Any]]) -> None:
+        """Print error monitoring results.
+        
+        Args:
+            errors: List of errors to display.
+        """
         print("\nError Monitoring Results:")
         print(f"\nTotal Errors: {len(errors)}")
         
@@ -278,8 +346,12 @@ class DebugManager:
                 print(f"Message: {error['message']}")
                 print(f"File: {error['file']}")
 
-    def _print_fix_suggestions(self, suggestions: List[Dict[str, Any]]):
-        """Print error fix suggestions."""
+    def _print_fix_suggestions(self, suggestions: List[Dict[str, Any]]) -> None:
+        """Print error fix suggestions.
+        
+        Args:
+            suggestions: List of fix suggestions to display.
+        """
         print("\nError Fix Suggestions:")
         
         for suggestion in suggestions:
@@ -288,8 +360,15 @@ class DebugManager:
             print(f"Example: {suggestion['example']}")
             print(f"Severity: {suggestion['severity']}")
 
-    def _generate_error_plots(self, analysis: Dict[str, Any]):
-        """Generate error visualization plots."""
+    def _generate_error_plots(self, analysis: Dict[str, Any]) -> None:
+        """Generate error visualization plots.
+        
+        Args:
+            analysis: Error analysis results.
+            
+        Raises:
+            Exception: If plot generation fails.
+        """
         try:
             # Set style
             plt.style.use("seaborn")
@@ -328,8 +407,87 @@ class DebugManager:
             self.logger.error(f"Failed to generate error plots: {e}")
             raise
 
-def main():
-    """Main function."""
+    def _safe_parse_function(self, function_name: str) -> Callable:
+        """Safely parse function name to callable object.
+        
+        Args:
+            function_name: Name of the function to resolve.
+            
+        Returns:
+            Callable function object.
+            
+        Raises:
+            ValueError: If function name is invalid or function not found.
+        """
+        # Safe function mapping - only allow specific functions
+        safe_functions = {
+            "test_strategy": self._test_strategy_function,
+            "analyze_data": self._analyze_data_function,
+            "validate_model": self._validate_model_function,
+        }
+        
+        if function_name not in safe_functions:
+            raise ValueError(f"Function '{function_name}' is not in the safe functions list")
+        
+        return safe_functions[function_name]
+
+    def _safe_parse_arguments(self, args_str: str) -> List[Any]:
+        """Safely parse arguments string to list of values.
+        
+        Args:
+            args_str: String representation of arguments.
+            
+        Returns:
+            List of parsed arguments.
+            
+        Raises:
+            ValueError: If arguments cannot be safely parsed.
+        """
+        try:
+            # Use ast.literal_eval for safe parsing of literals
+            return ast.literal_eval(args_str)
+        except (ValueError, SyntaxError) as e:
+            raise ValueError(f"Cannot safely parse arguments: {e}")
+
+    def _test_strategy_function(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+        """Test strategy function for debugging.
+        
+        Args:
+            *args: Positional arguments.
+            **kwargs: Keyword arguments.
+            
+        Returns:
+            Test results dictionary.
+        """
+        return {"status": "success", "function": "test_strategy", "args": args, "kwargs": kwargs}
+
+    def _analyze_data_function(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+        """Analyze data function for debugging.
+        
+        Args:
+            *args: Positional arguments.
+            **kwargs: Keyword arguments.
+            
+        Returns:
+            Analysis results dictionary.
+        """
+        return {"status": "success", "function": "analyze_data", "args": args, "kwargs": kwargs}
+
+    def _validate_model_function(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
+        """Validate model function for debugging.
+        
+        Args:
+            *args: Positional arguments.
+            **kwargs: Keyword arguments.
+            
+        Returns:
+            Validation results dictionary.
+        """
+        return {"status": "success", "function": "validate_model", "args": args, "kwargs": kwargs}
+
+
+def main() -> None:
+    """Main function for the debug manager script."""
     parser = argparse.ArgumentParser(description="Debug Manager")
     parser.add_argument(
         "command",
@@ -338,7 +496,7 @@ def main():
     )
     parser.add_argument(
         "--function",
-        help="Function to debug"
+        help="Function to debug (must be in safe functions list)"
     )
     parser.add_argument(
         "--log-files",
@@ -353,8 +511,7 @@ def main():
     )
     parser.add_argument(
         "--args",
-        nargs="+",
-        help="Arguments for the function"
+        help="Arguments for the function (as string)"
     )
     parser.add_argument(
         "--kwargs",
@@ -365,25 +522,47 @@ def main():
     args = parser.parse_args()
     manager = DebugManager()
     
-    commands = {
-        "debug": lambda: manager.debug_function(
-            eval(args.function),
-            *eval(args.args) if args.args else [],
-            **(args.kwargs or {})
-        ),
-        "analyze": lambda: manager.analyze_errors(args.log_files),
-        "monitor": lambda: manager.monitor_errors(args.duration),
-        "fix": lambda: manager.fix_errors(
-            manager.analyze_errors(args.log_files)
-        )
-    }
-    
-    if args.command in commands:
-        success = commands[args.command]()
-        sys.exit(0 if success else 1)
-    else:
-        parser.print_help()
+    try:
+        if args.command == "debug":
+            if not args.function:
+                print("Error: --function is required for debug command")
+                sys.exit(1)
+            
+            # Safely parse function and arguments
+            func = manager._safe_parse_function(args.function)
+            func_args = manager._safe_parse_arguments(args.args) if args.args else []
+            func_kwargs = args.kwargs or {}
+            
+            result = manager.debug_function(func, *func_args, **func_kwargs)
+            print(f"Debug result: {result}")
+            
+        elif args.command == "analyze":
+            if not args.log_files:
+                print("Error: --log-files is required for analyze command")
+                sys.exit(1)
+            
+            result = manager.analyze_errors(args.log_files)
+            print(f"Analysis complete: {result['total_errors']} errors found")
+            
+        elif args.command == "monitor":
+            result = manager.monitor_errors(args.duration)
+            print(f"Monitoring complete: {len(result)} errors detected")
+            
+        elif args.command == "fix":
+            if not args.log_files:
+                print("Error: --log-files is required for fix command")
+                sys.exit(1)
+            
+            analysis = manager.analyze_errors(args.log_files)
+            result = manager.fix_errors(analysis)
+            print(f"Fix suggestions generated: {len(result)} suggestions")
+        
+        sys.exit(0)
+        
+    except Exception as e:
+        print(f"Error: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main() 

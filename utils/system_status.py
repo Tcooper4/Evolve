@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 class SystemStatus:
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize system status monitor."""
         self.start_time = time.time()
         self.logger = logging.getLogger(__name__)
