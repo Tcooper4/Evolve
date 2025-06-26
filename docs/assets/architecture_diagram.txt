@@ -1,0 +1,59 @@
+Evolve: Autonomous Financial Forecasting Platform Architecture
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              STREAMLIT DASHBOARD                            │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐            │
+│  │   Forecasting   │  │   Performance   │  │   Strategy      │            │
+│  │     Module      │  │    Tracker      │  │   Manager       │            │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘            │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              CORE APPLICATION                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐            │
+│  │   Data Layer    │  │   ML Pipeline   │  │  Strategy Layer │            │
+│  │                 │  │                 │  │                 │            │
+│  │ • yfinance      │──│ • LSTM Models   │──│ • RSI Strategy  │            │
+│  │ • Alpha Vantage │  │ • XGBoost       │  │ • MACD Strategy │            │
+│  │ • Data Cache    │  │ • Prophet       │  │ • Bollinger     │            │
+│  │ • Preprocessing │  │ • Ensemble      │  │ • Custom        │            │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘            │
+│           │                       │                       │                │
+│           ▼                       ▼                       ▼                │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐            │
+│  │  Backtesting    │  │  Visualization  │  │   AI Agents     │            │
+│  │                 │  │                 │  │                 │            │
+│  │ • Performance   │◀─│ • Plotly Charts │◀─│ • GPT Interface │            │
+│  │ • Risk Metrics  │  │ • Equity Curves │  │ • LLM Routing   │            │
+│  │ • Sharpe Ratio  │  │ • Signal Plots  │  │ • Auto-Optimize │            │
+│  │ • Drawdown      │  │ • Heatmaps      │  │ • Smart Select  │            │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘            │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              INFRASTRUCTURE                                │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐            │
+│  │   Monitoring    │  │   Storage       │  │   Deployment    │            │
+│  │                 │  │                 │  │                 │            │
+│  │ • Prometheus    │  │ • Redis Cache   │  │ • Docker        │            │
+│  │ • Grafana       │  │ • MongoDB       │  │ • Kubernetes    │            │
+│  │ • Logging       │  │ • SQLite        │  │ • CI/CD         │            │
+│  │ • Alerts        │  │ • File System   │  │ • Auto-Scale    │            │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Data Flow:
+Market Data → Feature Engineering → ML Models → Strategy Engine → 
+Signal Generation → Backtesting → Performance Analysis → Visualization → Dashboard
+
+Key Features:
+• 10+ ML Models (LSTM, XGBoost, Prophet, ARIMA, TCN, Transformer)
+• 5+ Trading Strategies (RSI, MACD, Bollinger Bands, SMA, Custom)
+• Real-time Market Data Integration
+• Comprehensive Backtesting Engine
+• Interactive Performance Dashboards
+• AI-Powered Decision Making
+• Production-Ready Infrastructure
+• 100% Test Coverage 
