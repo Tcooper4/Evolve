@@ -1,17 +1,12 @@
-"""Multi-objective optimizer using Optuna."""
+"""Multi-objective optimization using NSGA-II."""
 
-import optuna
-from optuna.visualization import (
-    plot_pareto_front,
-    plot_param_importances,
-    plot_slice
-)
-from typing import Dict, List, Optional, Tuple, Union
-import pandas as pd
 import numpy as np
+import pandas as pd
+from typing import Dict, List, Optional, Tuple, Union, Callable
 from datetime import datetime
-import plotly.graph_objects as go
-from trading.base_optimizer import BaseOptimizer, OptimizationResult
+import random
+from deap import base, creator, tools, algorithms
+from .base_optimizer import BaseOptimizer, OptimizationResult
 
 class MultiObjectiveOptimizer(BaseOptimizer):
     """Multi-objective optimizer using Optuna."""

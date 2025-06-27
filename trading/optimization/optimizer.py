@@ -4,17 +4,18 @@ Please use strategy_optimizer.py for optimization functionality.
 Last updated: 2025-06-18 13:06:26
 """
 
+import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Callable, Any
 import logging
 from pathlib import Path
 import json
 from datetime import datetime
 import os
-from trading.strategy_optimizer import StrategyOptimizer
+from .strategy_optimizer import StrategyOptimizer
 
 class OptimizationError(Exception):
     """Custom exception for optimization errors."""

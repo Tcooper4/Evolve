@@ -1,13 +1,13 @@
-"""Genetic optimizer using DEAP."""
+"""Genetic algorithm optimizer."""
 
-import random
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Callable
 from datetime import datetime
+import random
+from .base_optimizer import BaseOptimizer, OptimizationResult
 import plotly.graph_objects as go
 from deap import base, creator, tools, algorithms
-from trading.base_optimizer import BaseOptimizer, OptimizationResult
 
 class GeneticOptimizer(BaseOptimizer):
     """Genetic optimizer using DEAP."""
