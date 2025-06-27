@@ -25,7 +25,11 @@ if not logger.hasHandlers():
 
 # --- Dynamic Target Loading ---
 def load_targets() -> Dict[str, float]:
-    """Load performance targets from JSON, fallback to defaults."""
+    """Load performance targets from JSON, fallback to defaults.
+    
+    Returns:
+        Dictionary containing performance targets for various metrics.
+    """
     default_targets = {
         "sharpe": 1.3,
         "drawdown": 0.25,
@@ -47,7 +51,11 @@ def load_targets() -> Dict[str, float]:
 
 # --- Target Override ---
 def update_targets(new_targets: Dict[str, float]) -> None:
-    """Update and save targets to JSON."""
+    """Update and save targets to JSON.
+    
+    Args:
+        new_targets: Dictionary containing new performance targets to save.
+    """
     target_path = Path("memory/goals/targets.json")
     target_path.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -135,7 +143,7 @@ def calculate_rolling_metrics(df: pd.DataFrame, window: int = 7) -> Dict[str, fl
         window: Rolling window size in days
         
     Returns:
-        Dictionary of rolling averages
+        Dictionary of rolling averages for each metric
     """
     try:
         # Convert timestamp to datetime if needed
@@ -163,6 +171,10 @@ def calculate_rolling_metrics(df: pd.DataFrame, window: int = 7) -> Dict[str, fl
 
 def evaluate_performance(classification: Optional[bool] = None) -> Dict[str, Any]:
     """Evaluate current performance against goals.
+    
+    Args:
+        classification: Whether to include classification metrics in evaluation.
+            If None, uses the global CLASSIFICATION setting.
     
     Returns:
         Dictionary containing goal status and metrics
@@ -276,7 +288,11 @@ def evaluate_performance(classification: Optional[bool] = None) -> Dict[str, Any
         } 
 
 def plot_performance_trends(log_path: str = "memory/logs/performance_log.csv") -> None:
-    """Plot Sharpe, Drawdown, and MSE over time and save as PNG."""
+    """Plot Sharpe, Drawdown, and MSE over time and save as PNG.
+    
+    Args:
+        log_path: Path to the performance log CSV file
+    """
     try:
         if not os.path.exists(log_path):
             logger.warning(f"Performance log not found at {log_path}")

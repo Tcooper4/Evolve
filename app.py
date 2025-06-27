@@ -25,6 +25,7 @@ st.set_page_config(
 # Navigation configuration
 PAGES: Dict[str, str] = {
     "Home": "home",
+    "Unified Interface": "unified_interface",
     "Forecasting": "forecast",
     "Performance Tracker": "performance_tracker",
     "Strategy": "strategy",
@@ -43,7 +44,10 @@ def load_page_module(page_name: str) -> Optional[Any]:
         Loaded module or None if loading fails
     """
     try:
-        if page_name == "performance_tracker":
+        if page_name == "unified_interface":
+            from unified_interface import streamlit_ui
+            return streamlit_ui
+        elif page_name == "performance_tracker":
             from pages import performance_tracker
             return performance_tracker
         elif page_name == "forecast":
@@ -75,6 +79,7 @@ def render_home_page() -> None:
     
     Use the sidebar to navigate through different features:
     
+    - 🔮 **Unified Interface**: Access all features through one comprehensive interface
     - 📈 **Forecasting**: Generate and analyze market predictions using advanced ML models
     - 📊 **Performance Tracker**: Monitor model performance metrics and system health
     - 🎯 **Strategy**: View and manage trading strategies with backtesting results
@@ -87,6 +92,8 @@ def render_home_page() -> None:
     - **Real-time Data**: Live market data integration and processing
     - **Interactive Dashboards**: Professional-grade visualizations and charts
     - **Risk Management**: Comprehensive backtesting and performance metrics
+    - **Natural Language Interface**: Ask questions in plain English with QuantGPT
+    - **Unified Access**: All features accessible through commands, UI, or prompts
     """)
 
 
@@ -108,13 +115,24 @@ def main() -> None:
         # Main content area
         if selection == "Home":
             render_home_page()
+        elif selection == "Unified Interface":
+            # Load and execute unified interface
+            try:
+                from unified_interface import streamlit_ui
+                streamlit_ui()
+            except ImportError as e:
+                st.error(f"Unified interface not available: {e}")
+                st.info("Please ensure the unified_interface.py file is present.")
         else:
             # Load and execute page module
             page_module = load_page_module(selected_page)
             
             if page_module is not None:
                 try:
-                    page_module.main()
+                    if callable(page_module):
+                        page_module()
+                    else:
+                        page_module.main()
                 except AttributeError:
                     st.error(f"Page module '{selected_page}' does not have a main() function")
                     st.info("Please ensure the page module has a properly defined main() function.")

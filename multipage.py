@@ -1,17 +1,30 @@
+"""Simple multipage app controller for Streamlit applications."""
+
 import streamlit as st
+from typing import Callable, List, Dict, Any
+
 
 class MultiPage:
-    """Simple multipage app controller."""
+    """Simple multipage app controller for Streamlit applications."""
 
     def __init__(self) -> None:
-        self.pages = []
+        """Initialize the multipage controller."""
+        self.pages: List[Dict[str, Any]] = []
 
-    def add_page(self, title: str, func) -> None:
-        """Add a page."""
+    def add_page(self, title: str, func: Callable[[], None]) -> None:
+        """Add a page to the multipage application.
+        
+        Args:
+            title: Title of the page to display in the sidebar
+            func: Function to call when the page is selected
+        """
         self.pages.append({"title": title, "function": func})
 
     def run(self) -> None:
-        """Run the multipage app."""
+        """Execute the multipage application.
+        
+        Displays a sidebar with page selection and executes the selected page function.
+        """
         titles = [p["title"] for p in self.pages]
         choice = st.sidebar.selectbox("Page", titles)
         for page in self.pages:

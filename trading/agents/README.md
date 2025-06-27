@@ -1,331 +1,610 @@
-# Autonomous 3-Agent Model Management System
+# Pluggable Agents System
 
-A sophisticated autonomous system for continuous model management, evaluation, and improvement using three specialized agents working in harmony.
+This directory contains the new pluggable agents system that allows for dynamic enable/disable functionality, agent registration, and easy swapping of agent implementations.
 
-## 🏗️ Architecture Overview
+## Overview
 
-The system consists of three autonomous agents that work together in a continuous loop:
+The pluggable agents system provides:
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│  ModelBuilder   │───▶│ PerformanceCritic│───▶│    Updater      │
-│     Agent       │    │      Agent       │    │     Agent       │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         ▲                                              │
-         │                                              │
-         └──────────────────────────────────────────────┘
-```
+- **Standalone Components**: Each agent is a self-contained, pluggable component
+- **Dynamic Configuration**: Enable/disable agents via configuration files
+- **Easy Swapping**: Replace or upgrade agents without system changes
+- **Clean Interfaces**: Standardized `.run()` and `.execute()` methods
+- **Error Handling**: Comprehensive error handling and status tracking
+- **Metrics**: Built-in execution metrics and monitoring
+- **Performance Tracking**: Agent leaderboard with automatic deprecation
+- **Visualization**: Interactive dashboard for performance analysis
 
-### Agent Responsibilities
+## Architecture
 
-1. **ModelBuilderAgent**: Creates LSTM, XGBoost, and ensemble models from scratch
-2. **PerformanceCriticAgent**: Evaluates models using financial metrics (Sharpe ratio, drawdown, win rate)
-3. **UpdaterAgent**: Tunes, retrains, or replaces models based on critic feedback
+### Base Agent Interface
 
-## 🚀 Quick Start
+All agents implement the `BaseAgent` interface defined in `base_agent_interface.py`:
 
-### Installation
-
-```bash
-# Navigate to the trading directory
-cd trading/agents
-
-# Run the agent loop
-python run_agent_loop.py
-```
-
-### Configuration
-
-The system uses `agent_config.json` for configuration. Key settings:
-
-```json
-{
-  "agent_loop": {
-    "cycle_interval": 3600,  // 1 hour cycles
-    "max_models": 10,        // Maximum active models
-    "evaluation_threshold": 0.5
-  }
-}
-```
-
-### Command Line Options
-
-```bash
-# Run with custom configuration
-python run_agent_loop.py --config custom_config.json
-
-# Override cycle interval (in seconds)
-python run_agent_loop.py --cycle-interval 1800
-
-# Set maximum models
-python run_agent_loop.py --max-models 15
-
-# Set log level
-python run_agent_loop.py --log-level DEBUG
-```
-
-## 🤖 Agent Details
-
-### ModelBuilderAgent
-
-**Purpose**: Creates and initializes ML models from scratch
-
-**Features**:
-- Builds LSTM, XGBoost, and ensemble models
-- Automatic hyperparameter selection
-- Model persistence and versioning
-- Feature engineering integration
-
-**Example Usage**:
 ```python
-from trading.agents import ModelBuilderAgent, ModelBuildRequest
+class BaseAgent(ABC):
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the agent's main logic."""
+        pass
+    
+    def enable(self) -> None:
+        """Enable the agent."""
+        pass
+    
+    def disable(self) -> None:
+        """Disable the agent."""
+        pass
+    
+    def get_status(self) -> AgentStatus:
+        """Get the current status of the agent."""
+        pass
+```
 
-builder = ModelBuilderAgent()
+### Agent Manager
+
+The `AgentManager` class provides centralized management of all agents:
+
+- Agent registration and discovery
+- Dynamic enable/disable functionality
+- Configuration management
+- Execution coordination
+- Metrics collection
+- Performance tracking and leaderboard management
+
+### Agent Leaderboard
+
+The `AgentLeaderboard` class tracks agent performance and provides:
+
+- Performance metrics tracking (Sharpe ratio, drawdown, win rate, etc.)
+- Automatic deprecation of underperforming agents
+- Leaderboard ranking and sorting
+- Performance history tracking
+- Export capabilities for dashboards and reports
+
+## Available Agents
+
+### 1. ModelBuilderAgent
+
+**Purpose**: Builds and initializes various ML models from scratch
+
+**Capabilities**:
+- LSTM model building
+- XGBoost model building
+- Ensemble model building
+- Hyperparameter tuning
+
+**Usage**:
+```python
+from trading.agents.model_builder_agent import ModelBuildRequest
 
 request = ModelBuildRequest(
-    model_type='lstm',
-    data_path='data/market_data.csv',
-    target_column='close',
-    hyperparameters={
-        'hidden_dim': 64,
-        'num_layers': 2,
-        'dropout': 0.2
-    }
+    model_type="lstm",
+    data_path="data/sample_data.csv",
+    target_column="close",
+    hyperparameters={"epochs": 100, "batch_size": 32}
 )
 
-result = builder.build_model(request)
-print(f"Built model: {result.model_id}")
+result = await execute_agent("model_builder", request=request)
 ```
 
-### PerformanceCriticAgent
+### 2. PerformanceCriticAgent
 
-**Purpose**: Evaluates model performance using financial metrics
+**Purpose**: Evaluates model performance based on financial metrics
 
-**Metrics Evaluated**:
-- **Performance**: Sharpe ratio, total return, annualized return, volatility
-- **Risk**: Maximum drawdown, VaR, CVaR, Sortino ratio, Calmar ratio
-- **Trading**: Win rate, profit factor, average trade, total trades
+**Capabilities**:
+- Performance metrics calculation (Sharpe ratio, drawdown, etc.)
+- Risk assessment
+- Benchmark comparison
+- Trading metrics analysis
 
-**Example Usage**:
+**Usage**:
 ```python
-from trading.agents import PerformanceCriticAgent, ModelEvaluationRequest
-
-critic = PerformanceCriticAgent()
+from trading.agents.performance_critic_agent import ModelEvaluationRequest
 
 request = ModelEvaluationRequest(
-    model_id='model_123',
-    model_path='models/model_123.pkl',
-    model_type='lstm',
-    test_data_path='data/test_data.csv'
+    model_id="model_123",
+    model_path="models/model_123.pkl",
+    model_type="lstm",
+    test_data_path="data/test_data.csv"
 )
 
-result = critic.evaluate_model(request)
-print(f"Sharpe Ratio: {result.performance_metrics['sharpe_ratio']}")
-print(f"Max Drawdown: {result.risk_metrics['max_drawdown']}")
+result = await execute_agent("performance_critic", request=request)
 ```
 
-### UpdaterAgent
+### 3. UpdaterAgent
 
 **Purpose**: Updates models based on performance feedback
 
-**Update Types**:
-- **Retrain**: Rebuild model with improved hyperparameters
-- **Tune**: Optimize hyperparameters using Bayesian optimization
-- **Replace**: Replace failing model with alternative type
-- **Ensemble Adjust**: Optimize ensemble weights
+**Capabilities**:
+- Model retraining
+- Hyperparameter tuning
+- Model replacement
+- Ensemble weight adjustment
 
-**Example Usage**:
+**Usage**:
 ```python
-from trading.agents import UpdaterAgent
-
-updater = UpdaterAgent()
-
-# Process evaluation and determine update
-update_request = updater.process_evaluation(evaluation_result)
-
-if update_request:
-    # Execute the update
-    update_result = updater.execute_update(update_request)
-    print(f"Updated model: {update_result.new_model_id}")
+# The updater agent processes evaluation results automatically
+result = await execute_agent("updater", evaluation_result=eval_result)
 ```
 
-## 🔄 Autonomous Loop
+## Agent Leaderboard System
 
-### Cycle Process
+### Overview
 
-1. **Model Builder Phase**:
-   - Checks if new models are needed
-   - Determines optimal model type
-   - Builds models with appropriate hyperparameters
+The Agent Leaderboard system automatically tracks agent performance and provides insights into which agents are performing best. It includes:
 
-2. **Performance Critic Phase**:
-   - Identifies models requiring evaluation
-   - Calculates comprehensive performance metrics
-   - Generates recommendations
+- **Performance Tracking**: Monitor Sharpe ratio, drawdown, win rate, and total return
+- **Automatic Deprecation**: Automatically deprecate underperforming agents
+- **Leaderboard Ranking**: Sort agents by various performance metrics
+- **Interactive Dashboard**: Visualize performance with charts and filters
+- **Export Capabilities**: Export data for external analysis
 
-3. **Updater Phase**:
-   - Processes critic recommendations
-   - Executes appropriate updates (retrain/tune/replace)
-   - Maintains model registry
+### Performance Metrics
 
-### State Persistence
+The system tracks the following metrics for each agent:
 
-The system maintains state across cycles:
-- Model registry and metadata
-- Evaluation history
-- Update history
-- Communication logs
+- **Sharpe Ratio**: Risk-adjusted return measure
+- **Max Drawdown**: Maximum peak-to-trough decline
+- **Win Rate**: Percentage of profitable trades
+- **Total Return**: Overall return percentage
+- **Extra Metrics**: Custom metrics like volatility, Calmar ratio, profit factor
 
-### Communication System
+### Deprecation Thresholds
 
-Agents communicate through a queue-based system:
-- JSON message format
-- Priority-based processing
-- Persistent logging
-- Error handling and retries
+Agents are automatically deprecated when they fall below these thresholds:
 
-## 📊 Monitoring and Metrics
-
-### System Metrics
-
-- **Cycle Statistics**: Models built, evaluated, updated per cycle
-- **Performance Trends**: Model performance over time
-- **Failure Tracking**: Failed operations and error rates
-- **Resource Usage**: Memory, CPU, queue sizes
-
-### Health Checks
-
-- Agent status monitoring
-- Communication queue health
-- Model registry integrity
-- Data source availability
-
-## 🔧 Configuration
-
-### Agent Loop Settings
-
-```json
-{
-  "agent_loop": {
-    "cycle_interval": 3600,
-    "max_models": 10,
-    "evaluation_threshold": 0.5,
-    "auto_start": true
-  }
+```python
+default_thresholds = {
+    'sharpe_ratio': 0.5,    # Sharpe ratio below 0.5
+    'max_drawdown': 0.25,   # Drawdown above 25%
+    'win_rate': 0.45        # Win rate below 45%
 }
 ```
 
-### Model Builder Settings
+### Basic Usage
+
+```python
+from trading.agents.agent_manager import get_agent_manager
+
+# Get the agent manager (includes leaderboard)
+manager = get_agent_manager()
+
+# Log agent performance (automatically updates leaderboard)
+manager.log_agent_performance(
+    agent_name="model_builder_v1",
+    sharpe_ratio=1.8,
+    max_drawdown=0.12,
+    win_rate=0.68,
+    total_return=0.35,
+    extra_metrics={
+        "volatility": 0.18,
+        "calmar_ratio": 2.5,
+        "profit_factor": 2.1
+    }
+)
+
+# Get leaderboard data
+top_agents = manager.get_leaderboard(top_n=10, sort_by="sharpe_ratio")
+print("Top 10 agents by Sharpe ratio:")
+for i, agent in enumerate(top_agents, 1):
+    print(f"{i}. {agent['agent_name']}: Sharpe={agent['sharpe_ratio']:.2f}")
+
+# Get deprecated agents
+deprecated = manager.get_deprecated_agents()
+print(f"Deprecated agents: {deprecated}")
+
+# Get active agents
+active = manager.get_active_agents()
+print(f"Active agents: {active}")
+```
+
+### Advanced Usage
+
+```python
+# Custom deprecation thresholds
+from trading.agents.agent_leaderboard import AgentLeaderboard
+
+custom_thresholds = {
+    'sharpe_ratio': 1.0,    # Higher threshold
+    'max_drawdown': 0.20,   # Lower drawdown tolerance
+    'win_rate': 0.50        # Higher win rate requirement
+}
+
+leaderboard = AgentLeaderboard(deprecation_thresholds=custom_thresholds)
+
+# Update performance with custom thresholds
+leaderboard.update_performance(
+    agent_name="conservative_agent",
+    sharpe_ratio=0.8,  # Below custom threshold
+    max_drawdown=0.15,
+    win_rate=0.55,
+    total_return=0.25
+)
+
+# Export to DataFrame for analysis
+df = leaderboard.as_dataframe()
+print(df.head())
+
+# Get performance history
+history = leaderboard.get_history(limit=50)
+print(f"Recent performance updates: {len(history)}")
+```
+
+### Dashboard Usage
+
+Launch the interactive dashboard:
+
+```bash
+# Basic launch
+python trading/agents/launch_leaderboard_dashboard.py
+
+# Custom port
+python trading/agents/launch_leaderboard_dashboard.py --port 8502
+
+# Remote access
+python trading/agents/launch_leaderboard_dashboard.py --host 0.0.0.0 --port 8503
+
+# Headless mode
+python trading/agents/launch_leaderboard_dashboard.py --headless
+
+# Check dependencies
+python trading/agents/launch_leaderboard_dashboard.py --check-deps
+```
+
+The dashboard provides:
+
+- **Interactive Leaderboard**: Sort and filter agents by performance
+- **Performance Charts**: Visualize Sharpe ratios, returns, and risk metrics
+- **Status Management**: View active vs deprecated agents
+- **Deprecation Controls**: Manually deprecate or reactivate agents
+- **Performance History**: Track performance over time
+- **Export Options**: Download data as CSV or JSON
+- **Summary Reports**: Generate performance summaries
+
+### Integration with Reports
+
+The leaderboard data can be integrated into the reporting system:
+
+```python
+from trading.report.report_generator import ReportGenerator
+
+# Create report with leaderboard data
+report_gen = ReportGenerator()
+
+# Add leaderboard section to report
+leaderboard_data = manager.get_leaderboard(top_n=5)
+report_gen.add_section("Agent Performance", {
+    "top_performers": leaderboard_data,
+    "deprecated_agents": manager.get_deprecated_agents(),
+    "performance_summary": {
+        "total_agents": len(manager.leaderboard.leaderboard),
+        "active_agents": len(manager.get_active_agents()),
+        "avg_sharpe": sum(a['sharpe_ratio'] for a in leaderboard_data) / len(leaderboard_data)
+    }
+})
+
+# Generate report
+report_gen.generate_report("agent_performance_report.md")
+```
+
+## Configuration
+
+### Agent Configuration File
+
+The system uses `agent_config.json` for configuration:
 
 ```json
 {
-  "model_builder": {
-    "models_dir": "trading/models/built",
-    "default_hyperparameters": {
-      "lstm": {
-        "hidden_dim": 64,
-        "num_layers": 2,
-        "dropout": 0.2
+  "agents": {
+    "model_builder": {
+      "enabled": true,
+      "priority": 1,
+      "max_concurrent_runs": 2,
+      "timeout_seconds": 600,
+      "retry_attempts": 3,
+      "custom_config": {
+        "max_models": 10,
+        "model_types": ["lstm", "xgboost", "ensemble"]
       }
     }
+  },
+  "manager": {
+    "auto_start": true,
+    "max_concurrent_agents": 5,
+    "execution_timeout": 300,
+    "enable_logging": true,
+    "enable_metrics": true
   }
 }
 ```
 
-### Performance Critic Settings
+### Configuration Options
 
-```json
-{
-  "performance_critic": {
-    "thresholds": {
-      "min_sharpe_ratio": 0.5,
-      "max_drawdown": -0.15,
-      "min_win_rate": 0.45
-    }
-  }
-}
+#### Agent-Level Configuration
+
+- `enabled`: Whether the agent is enabled
+- `priority`: Execution priority (lower numbers = higher priority)
+- `max_concurrent_runs`: Maximum concurrent executions
+- `timeout_seconds`: Execution timeout
+- `retry_attempts`: Number of retry attempts on failure
+- `custom_config`: Agent-specific configuration
+
+#### Manager-Level Configuration
+
+- `auto_start`: Automatically start enabled agents
+- `max_concurrent_agents`: Maximum concurrent agents
+- `execution_timeout`: Default execution timeout
+- `enable_logging`: Enable detailed logging
+- `enable_metrics`: Enable metrics collection
+
+## Usage Examples
+
+### Basic Usage
+
+```python
+from trading.agents.agent_manager import get_agent_manager, execute_agent
+
+# Get the agent manager
+manager = get_agent_manager()
+
+# List all agents
+agents = manager.list_agents()
+print(f"Available agents: {[agent['name'] for agent in agents]}")
+
+# Enable/disable agents
+manager.enable_agent("model_builder")
+manager.disable_agent("performance_critic")
+
+# Execute an agent
+result = await execute_agent("model_builder", request=build_request)
 ```
 
-### Updater Settings
+### Custom Agent Registration
 
-```json
-{
-  "updater": {
-    "update_thresholds": {
-      "critical_sharpe": 0.0,
-      "retrain_sharpe": 0.3,
-      "tune_sharpe": 0.5
-    }
-  }
-}
+```python
+from trading.agents.base_agent_interface import BaseAgent, AgentConfig
+from trading.agents.agent_manager import register_agent
+
+class CustomAgent(BaseAgent):
+    async def execute(self, **kwargs) -> AgentResult:
+        # Custom logic here
+        return AgentResult(success=True, data={"result": "custom"})
+
+# Register custom agent
+config = AgentConfig(
+    name="custom_agent",
+    enabled=True,
+    priority=1,
+    custom_config={"param": "value"}
+)
+
+register_agent("custom_agent", CustomAgent, config)
 ```
 
-## 🛠️ Development
+### Agent Workflow with Performance Tracking
 
-### Adding New Model Types
+```python
+# Complete workflow example with performance tracking
+async def run_agent_workflow():
+    # 1. Build model
+    build_result = await execute_agent("model_builder", request=build_request)
+    
+    # 2. Evaluate model
+    eval_result = await execute_agent("performance_critic", request=eval_request)
+    
+    # 3. Log performance to leaderboard
+    manager = get_agent_manager()
+    manager.log_agent_performance(
+        agent_name="model_builder_v1",
+        sharpe_ratio=eval_result.data["sharpe_ratio"],
+        max_drawdown=eval_result.data["max_drawdown"],
+        win_rate=eval_result.data["win_rate"],
+        total_return=eval_result.data["total_return"]
+    )
+    
+    # 4. Update if needed
+    update_result = await execute_agent("updater", evaluation_result=eval_result.data)
+    
+    return update_result
+```
 
-1. Implement model class in `trading/models/`
-2. Add hyperparameters to `agent_config.json`
-3. Update `ModelBuilderAgent._build_*_model()` methods
-4. Add evaluation logic in `PerformanceCriticAgent`
+### Configuration Management
 
-### Adding New Metrics
+```python
+# Update agent configuration
+manager = get_agent_manager()
+manager.update_agent_config("model_builder", {
+    "max_models": 15,
+    "model_types": ["lstm", "xgboost", "ensemble", "transformer"]
+})
 
-1. Implement metric calculation in `trading/evaluation/metrics.py`
-2. Add metric to `PerformanceCriticAgent._calculate_*_metrics()`
-3. Update configuration thresholds
-4. Add to recommendations logic
+# Save configuration
+manager.save_config()
 
-### Custom Update Strategies
+# Get metrics
+metrics = manager.get_execution_metrics()
+print(f"Total executions: {metrics['total_executions']}")
 
-1. Implement strategy in `UpdaterAgent`
-2. Add update type to `UpdateRequest`
-3. Update `_determine_update_action()` logic
-4. Add configuration options
+# Get leaderboard data
+leaderboard_data = manager.get_leaderboard(top_n=5)
+print("Top 5 performing agents:")
+for agent in leaderboard_data:
+    print(f"- {agent['agent_name']}: Sharpe={agent['sharpe_ratio']:.2f}")
+```
 
-## 📝 Logging
+## Agent Status and Monitoring
 
-The system provides comprehensive logging:
+### Status Information
 
-- **Agent Loop**: Cycle execution and coordination
-- **Model Builder**: Model creation and training
-- **Performance Critic**: Evaluation results and recommendations
-- **Updater**: Update decisions and execution
-- **Communication**: Inter-agent messages
+Each agent provides status information:
 
-Log files are stored in `trading/agents/logs/` with rotation and compression.
+```python
+status = manager.get_agent_status("model_builder")
+print(f"Enabled: {status.enabled}")
+print(f"Running: {status.is_running}")
+print(f"Total runs: {status.total_runs}")
+print(f"Successful runs: {status.successful_runs}")
+print(f"Failed runs: {status.failed_runs}")
+```
 
-## 🚨 Error Handling
+### Execution Metrics
 
-The system includes robust error handling:
+The system tracks execution metrics:
 
-- **Graceful Degradation**: Continues operation despite individual failures
-- **Retry Logic**: Automatic retry for transient failures
-- **Failure Tracking**: Comprehensive logging of failures
-- **Recovery Mechanisms**: Automatic cleanup and recovery
+```python
+metrics = manager.get_execution_metrics()
+for agent_name, agent_metrics in metrics["agent_metrics"].items():
+    print(f"{agent_name}:")
+    print(f"  Total executions: {agent_metrics['total_executions']}")
+    print(f"  Success rate: {agent_metrics['successful_executions'] / agent_metrics['total_executions']:.2%}")
+    print(f"  Avg execution time: {agent_metrics['avg_execution_time']:.2f}s")
+```
 
-## 🔒 Security
+### Performance Monitoring
 
-- **Model Validation**: Input validation for all model operations
-- **Safe File Operations**: Secure file handling and cleanup
-- **Memory Management**: Proper resource cleanup and memory limits
-- **Error Isolation**: Failures don't propagate across agents
+Monitor agent performance through the leaderboard:
 
-## 📈 Performance Optimization
+```python
+# Get performance summary
+leaderboard_data = manager.get_leaderboard()
+active_agents = manager.get_active_agents()
+deprecated_agents = manager.get_deprecated_agents()
 
-- **Asynchronous Operations**: Non-blocking agent communication
-- **Resource Pooling**: Efficient model and data management
-- **Caching**: Intelligent caching of frequently used data
-- **Parallel Processing**: Concurrent model evaluation and updates
+print(f"Performance Summary:")
+print(f"  Total Agents: {len(leaderboard_data)}")
+print(f"  Active Agents: {len(active_agents)}")
+print(f"  Deprecated Agents: {len(deprecated_agents)}")
 
-## 🤝 Contributing
+# Check for underperforming agents
+for agent in leaderboard_data:
+    if agent['sharpe_ratio'] < 0.5:
+        print(f"⚠️  {agent['agent_name']} has low Sharpe ratio: {agent['sharpe_ratio']:.2f}")
+```
 
-1. Follow the existing code structure and patterns
-2. Add comprehensive type hints and docstrings
-3. Include unit tests for new functionality
-4. Update documentation for new features
-5. Ensure backward compatibility
+## Error Handling
 
-## 📄 License
+The system provides comprehensive error handling:
 
-This project is part of the Evolve Trading System and follows the same licensing terms. 
+```python
+result = await execute_agent("model_builder", request=request)
+
+if result.success:
+    print(f"Success: {result.data}")
+else:
+    print(f"Error: {result.error_message}")
+    print(f"Execution time: {result.execution_time}s")
+```
+
+## Best Practices
+
+### 1. Agent Design
+
+- Implement the `BaseAgent` interface
+- Provide clear metadata (version, description, capabilities)
+- Use proper error handling and logging
+- Validate input parameters
+
+### 2. Configuration
+
+- Use configuration files for agent settings
+- Provide sensible defaults
+- Document custom configuration options
+- Use environment-specific configurations
+
+### 3. Error Handling
+
+- Always check execution results
+- Implement proper retry logic
+- Log errors with context
+- Provide meaningful error messages
+
+### 4. Monitoring
+
+- Monitor agent status regularly
+- Track execution metrics
+- Set up alerts for failures
+- Review performance periodically
+
+### 5. Performance Tracking
+
+- Log performance metrics after each evaluation
+- Set appropriate deprecation thresholds
+- Monitor leaderboard regularly
+- Use the dashboard for visual analysis
+- Export data for external analysis
+
+## Migration from Old System
+
+If you're migrating from the old agent system:
+
+1. **Update imports**: Use the new agent manager
+2. **Update configuration**: Use the new config format
+3. **Update execution**: Use `execute_agent()` function
+4. **Add performance tracking**: Log performance to leaderboard
+5. **Test thoroughly**: Verify all functionality works
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Agent not found**: Check if agent is registered
+2. **Agent disabled**: Enable the agent via configuration
+3. **Execution timeout**: Increase timeout in configuration
+4. **Configuration errors**: Validate JSON syntax
+5. **Dashboard not loading**: Check dependencies with `--check-deps`
+
+### Debug Mode
+
+Enable debug logging:
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+### Getting Help
+
+- Check agent status: `manager.get_agent_status(agent_name)`
+- Review logs: Check log files for detailed information
+- Test individual agents: Use the demo script
+- Validate configuration: Check JSON syntax and required fields
+- View performance: Use the leaderboard dashboard
+
+## Demo and Testing
+
+### Run Demo
+
+```bash
+# Run the leaderboard demo
+python trading/agents/demo_leaderboard.py
+
+# Run agent tests
+pytest tests/test_agents/test_agent_leaderboard.py -v
+
+# Run all agent tests
+pytest tests/test_agents/ -v
+```
+
+### Test Coverage
+
+The test suite covers:
+
+- Agent performance tracking
+- Deprecation logic
+- Leaderboard functionality
+- Edge cases and error handling
+- Integration scenarios
+- Concurrent updates
+
+## Future Enhancements
+
+Planned improvements:
+
+- **Plugin System**: Load agents from external plugins
+- **Distributed Execution**: Run agents across multiple nodes
+- **Advanced Scheduling**: Sophisticated execution scheduling
+- **Web Interface**: Web-based agent management
+- **API Integration**: REST API for agent management
+- **Advanced Analytics**: Machine learning for performance prediction
+- **Automated Optimization**: Auto-tuning of deprecation thresholds
+- **Real-time Alerts**: Notifications for performance issues 

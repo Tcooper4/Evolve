@@ -17,6 +17,7 @@ from dataclasses import dataclass, asdict
 import pickle
 
 # Local imports
+from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentResult
 from trading.backtesting.backtester import Backtester
 from trading.evaluation.metrics import calculate_sharpe_ratio, calculate_max_drawdown, calculate_win_rate
 from trading.strategies.strategy_manager import StrategyManager
@@ -54,17 +55,19 @@ class ModelEvaluationResult:
     error_message: Optional[str] = None
 
 
-class PerformanceCriticAgent:
+class PerformanceCriticAgent(BaseAgent):
     """Agent responsible for evaluating model performance."""
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the Performance Critic Agent.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config or {}
-        self.logger = logging.getLogger(__name__)
+    # Agent metadata
+    version = "1.0.0"
+    description = "Evaluates model performance based on financial metrics including Sharpe ratio, drawdown, and win rate"
+    author = "Evolve Trading System"
+    tags = ["performance", "evaluation", "metrics", "risk"]
+    capabilities = ["model_evaluation", "performance_analysis", "risk_assessment", "benchmark_comparison"]
+    dependencies = ["trading.backtesting", "trading.evaluation", "trading.strategies"]
+    
+    def _setup(self) -> None:
+        """Setup method called during initialization."""
         self.memory = PerformanceMemory()
         self.backtester = Backtester()
         self.strategy_manager = StrategyManager()
@@ -84,6 +87,89 @@ class PerformanceCriticAgent:
         self.evaluation_history: Dict[str, List[ModelEvaluationResult]] = {}
         
         self.logger.info("PerformanceCriticAgent initialized")
+    
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the model evaluation logic.
+        
+        Args:
+            **kwargs: Must contain 'request' with ModelEvaluationRequest
+            
+        Returns:
+            AgentResult: Result of the model evaluation execution
+        """
+        request = kwargs.get('request')
+        if not request:
+            return AgentResult(
+                success=False,
+                error_message="ModelEvaluationRequest is required"
+            )
+        
+        if not isinstance(request, ModelEvaluationRequest):
+            return AgentResult(
+                success=False,
+                error_message="Request must be a ModelEvaluationRequest instance"
+            )
+        
+        try:
+            result = self.evaluate_model(request)
+            
+            if result.evaluation_status == "success":
+                return AgentResult(
+                    success=True,
+                    data={
+                        "model_id": result.model_id,
+                        "performance_metrics": result.performance_metrics,
+                        "risk_metrics": result.risk_metrics,
+                        "trading_metrics": result.trading_metrics,
+                        "recommendations": result.recommendations,
+                        "evaluation_timestamp": result.evaluation_timestamp
+                    }
+                )
+            else:
+                return AgentResult(
+                    success=False,
+                    error_message=result.error_message or "Model evaluation failed"
+                )
+                
+        except Exception as e:
+            return AgentResult(
+                success=False,
+                error_message=str(e)
+            )
+    
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters.
+        
+        Args:
+            **kwargs: Parameters to validate
+            
+        Returns:
+            bool: True if input is valid
+        """
+        request = kwargs.get('request')
+        if not request:
+            return False
+        
+        if not isinstance(request, ModelEvaluationRequest):
+            return False
+        
+        # Validate required fields
+        if not request.model_id or not request.model_path or not request.model_type or not request.test_data_path:
+            return False
+        
+        # Validate model path exists
+        if not Path(request.model_path).exists():
+            return False
+        
+        # Validate test data path exists
+        if not Path(request.test_data_path).exists():
+            return False
+        
+        # Validate evaluation period
+        if request.evaluation_period <= 0:
+            return False
+        
+        return True
     
     @handle_exceptions
     def evaluate_model(self, request: ModelEvaluationRequest) -> ModelEvaluationResult:
