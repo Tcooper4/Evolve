@@ -26,9 +26,8 @@ from pydantic import BaseModel
 from trading.core.performance import evaluate_performance
 from trading.config.settings import GOAL_FILE_PATH, DEFAULT_GOAL_FILE
 from trading.utils.error_handling import handle_file_errors
-from trading.base_agent import BaseAgent, AgentResult
-from trading.memory.task_memory import Task, TaskMemory, TaskStatus
-from trading.router import Router
+from trading.agents.base_agent_interface import BaseAgent, AgentResult
+from trading.agents.task_memory import Task, TaskMemory, TaskStatus
 
 # Configure logging
 log_file = Path("memory/logs/goal_status.log")
@@ -167,6 +166,13 @@ def evaluate_goals() -> Dict[str, Any]:
         error_msg = f"Error evaluating goals: {str(e)}"
         logger.error(error_msg)
         raise RuntimeError(error_msg)
+
+# Simple router stub for deprecated module
+class Router:
+    """Simple router stub for deprecated goal planner."""
+    def route_task(self, task):
+        """Route a task (stub implementation)."""
+        return {"status": "routed", "agent": "default"}
 
 class GoalPlanner(BaseAgent):
     """Agent responsible for planning and managing long-term objectives."""

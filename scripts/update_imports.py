@@ -3,6 +3,7 @@
 import os
 import re
 from pathlib import Path
+from typing import List, Tuple
 import logging
 
 # Configure logging
@@ -10,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Files to update
-FILES_TO_UPDATE = [
+FILES_TO_UPDATE: List[str] = [
     'tests/test_edge_cases.py',
     'tests/test_performance.py',
     'tests/test_real_world_scenario.py',
@@ -22,7 +23,7 @@ FILES_TO_UPDATE = [
 ]
 
 # Import replacements
-IMPORT_REPLACEMENTS = [
+IMPORT_REPLACEMENTS: List[Tuple[str, str]] = [
     (r'from trading\.agents\.router import AgentRouter',
      'from core.agents.router import AgentRouter'),
     (r'from trading\.agents\.self_improving_agent import SelfImprovingAgent',
@@ -54,7 +55,7 @@ def update_imports(file_path: str) -> None:
     except Exception as e:
         logger.error(f"Error updating {file_path}: {str(e)}")
 
-def main():
+def main() -> None:
     """Main function to update imports in all files."""
     for file_path in FILES_TO_UPDATE:
         if os.path.exists(file_path):

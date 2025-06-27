@@ -7,6 +7,7 @@ import json
 import logging
 from pydantic import BaseModel, EmailStr
 import uuid
+from dataclasses import field
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ class User(BaseModel):
     is_active: bool = True
     created_at: datetime
     last_login: Optional[datetime] = None
-    metadata: Dict = {}
+    metadata: Dict = field(default_factory=dict)
 
 class UserManager:
     def __init__(self, redis_client: redis.Redis, secret_key: str):

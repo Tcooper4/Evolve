@@ -9,13 +9,14 @@ and retraining triggers.
 import os
 import json
 from datetime import datetime
+from typing import Dict, Any, List, Optional, Tuple, Union
 from memory.model_monitor import detect_drift
 from memory.performance_weights import export_weights_to_file
 from models.retrain import trigger_retraining_if_needed
 
 STRATEGY_LOG_PATH = "memory/strategy_switches.json"
 
-def switch_strategy_if_needed(ticker: str, strategy_mode="auto"):
+def switch_strategy_if_needed(ticker: str, strategy_mode: str = "auto") -> Dict[str, Any]:
     """
     Switches forecasting strategy dynamically based on most trusted model weight.
     Optionally retrains if drift is detected.
@@ -60,7 +61,7 @@ def switch_strategy_if_needed(ticker: str, strategy_mode="auto"):
     return switch_info
 
 
-def _log_strategy_switch(switch_info: dict):
+def _log_strategy_switch(switch_info: Dict[str, Any]) -> None:
     """
     Logs strategy switch information to a JSON file.
 
@@ -78,7 +79,7 @@ def _log_strategy_switch(switch_info: dict):
         json.dump(log, f, indent=2)
 
 
-def get_strategy_history(ticker: str = None):
+def get_strategy_history(ticker: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     Retrieves the history of strategy switches.
 

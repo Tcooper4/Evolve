@@ -290,13 +290,13 @@ Please provide:
 Format the response as a comprehensive daily report."""
     
     def _extract_confidence(self, rationale: str) -> float:
-        """Extract confidence level from rationale text.
+        """Extract confidence from rationale text.
         
         Args:
             rationale: Rationale text
             
         Returns:
-            Confidence level (0-1)
+            Confidence value between 0 and 1
         """
         try:
             # Look for confidence in text
@@ -305,8 +305,8 @@ Format the response as a comprehensive daily report."""
                 confidence_text = rationale.lower().split("confidence")[1]
                 confidence = float(confidence_text.split()[0])
                 return max(0.0, min(1.0, confidence))
-        except:
-            pass
+        except (ValueError, IndexError) as e:
+            logger.warning(f"Could not extract confidence from rationale: {e}")
         
         # Default to moderate confidence
         return 0.5

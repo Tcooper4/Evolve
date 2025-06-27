@@ -13,15 +13,14 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 import pandas as pd
 import numpy as np
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 import pickle
 
 # Local imports
 from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentResult
 from trading.backtesting.backtester import Backtester
-from trading.evaluation.metrics import calculate_sharpe_ratio, calculate_max_drawdown, calculate_win_rate
+from trading.utils.common import calculate_sharpe_ratio, calculate_max_drawdown, calculate_win_rate, timer, handle_exceptions
 from trading.strategies.strategy_manager import StrategyManager
-from trading.utils.common import timer, handle_exceptions
 from trading.memory.performance_memory import PerformanceMemory
 from trading.memory.agent_memory import AgentMemory
 from trading.utils.reward_function import RewardFunction
@@ -50,7 +49,7 @@ class ModelEvaluationResult:
     risk_metrics: Dict[str, float]
     trading_metrics: Dict[str, Any]
     benchmark_comparison: Optional[Dict[str, float]] = None
-    recommendations: List[str] = []
+    recommendations: List[str] = field(default_factory=list)
     evaluation_status: str = "success"
     error_message: Optional[str] = None
 

@@ -92,27 +92,6 @@ import mlflow.xgboost
 import mlflow.lightgbm
 import mlflow.catboost
 import mlflow.spark
-import mlflow.tensorflow
-import mlflow.keras
-import mlflow.h2o
-import mlflow.statsmodels
-import mlflow.prophet
-import mlflow.pmdarima
-import mlflow.spacy
-import mlflow.fastai
-import mlflow.gluon
-import mlflow.mleap
-import mlflow.onnx
-import mlflow.paddle
-import mlflow.pyspark.ml
-import mlflow.sklearn
-import mlflow.spark
-import mlflow.tensorflow
-import mlflow.keras
-import mlflow.pytorch
-import mlflow.xgboost
-import mlflow.lightgbm
-import mlflow.catboost
 import mlflow.h2o
 import mlflow.statsmodels
 import mlflow.prophet
@@ -459,10 +438,6 @@ class MLManager:
         try:
             if model_type == "pytorch":
                 return self._initialize_pytorch_model(params)
-            elif model_type == "tensorflow":
-                return self._initialize_tensorflow_model(params)
-            elif model_type == "keras":
-                return self._initialize_keras_model(params)
             elif model_type == "sklearn":
                 return self._initialize_sklearn_model(params)
             elif model_type == "xgboost":
@@ -490,35 +465,6 @@ class MLManager:
             return model
         except Exception as e:
             self.logger.error(f"Failed to initialize PyTorch model: {e}")
-            raise
-
-    def _initialize_tensorflow_model(self, params: Optional[Dict[str, Any]] = None) -> Any:
-        """Initialize a TensorFlow model."""
-        try:
-            import tensorflow as tf
-            model = tf.keras.Sequential([
-                tf.keras.layers.Dense(params.get("hidden_size", 64), activation="relu"),
-                tf.keras.layers.Dropout(params.get("dropout", 0.2)),
-                tf.keras.layers.Dense(params.get("output_size", 1), activation="sigmoid")
-            ])
-            return model
-        except Exception as e:
-            self.logger.error(f"Failed to initialize TensorFlow model: {e}")
-            raise
-
-    def _initialize_keras_model(self, params: Optional[Dict[str, Any]] = None) -> Any:
-        """Initialize a Keras model."""
-        try:
-            from keras.models import Sequential
-            from keras.layers import Dense, Dropout
-            model = Sequential([
-                Dense(params.get("hidden_size", 64), activation="relu"),
-                Dropout(params.get("dropout", 0.2)),
-                Dense(params.get("output_size", 1), activation="sigmoid")
-            ])
-            return model
-        except Exception as e:
-            self.logger.error(f"Failed to initialize Keras model: {e}")
             raise
 
     def _initialize_sklearn_model(self, params: Optional[Dict[str, Any]] = None) -> Any:
@@ -594,19 +540,6 @@ class MLManager:
                     loss = criterion(outputs, torch.FloatTensor(y_train))
                     loss.backward()
                     optimizer.step()
-            else:
-                # TensorFlow/Keras model
-                model.compile(
-                    optimizer="adam",
-                    loss="binary_crossentropy",
-                    metrics=["accuracy"]
-                )
-                model.fit(
-                    X_train, y_train,
-                    epochs=100,
-                    batch_size=32,
-                    validation_split=0.2
-                )
             
             return model
         except Exception as e:
@@ -650,31 +583,6 @@ class MLManager:
                 study.optimize(objective, n_trials=100)
                 
                 return self._initialize_pytorch_model(study.best_params)
-            else:
-                # TensorFlow/Keras model
-                def objective(trial):
-                    model = self._initialize_tensorflow_model({
-                        "hidden_size": trial.suggest_int("hidden_size", 32, 256),
-                        "dropout": trial.suggest_float("dropout", 0.1, 0.5),
-                        "output_size": 1
-                    })
-                    model.compile(
-                        optimizer="adam",
-                        loss="binary_crossentropy",
-                        metrics=["accuracy"]
-                    )
-                    history = model.fit(
-                        X_train, y_train,
-                        epochs=100,
-                        batch_size=32,
-                        validation_split=0.2
-                    )
-                    return history.history["val_loss"][-1]
-                
-                study = optuna.create_study(direction="minimize")
-                study.optimize(objective, n_trials=100)
-                
-                return self._initialize_tensorflow_model(study.best_params)
         except Exception as e:
             self.logger.error(f"Failed to optimize deep learning model: {e}")
             raise
@@ -729,8 +637,6 @@ class MLManager:
             
             if model_type == "pytorch":
                 torch.save(model.state_dict(), model_path)
-            elif model_type in ["tensorflow", "keras"]:
-                model.save(model_path)
             else:
                 joblib.dump(model, model_path)
             
@@ -747,10 +653,6 @@ class MLManager:
                 model = self._initialize_pytorch_model()
                 model.load_state_dict(torch.load(model_path))
                 return model
-            elif model_path.endswith(".h5"):
-                # TensorFlow/Keras model
-                from tensorflow.keras.models import load_model
-                return load_model(model_path)
             else:
                 # Other models
                 return joblib.load(model_path)

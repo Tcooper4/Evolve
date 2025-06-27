@@ -11,6 +11,14 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from typing import Dict, Any, List, Optional, Tuple, Union
+import json
+import os
+
+# FIXME: Define logger
+import logging
+logger = logging.getLogger(__name__)
+
 from agents.strategy_switcher import switch_strategy_if_needed, get_best_strategy
 from models.forecast_router import ForecastRouter
 from memory.strategy_logger import log_strategy_decision, get_strategy_analysis
@@ -23,8 +31,6 @@ from trading.utils.visualization import plot_forecast, plot_attention_heatmap, p
 from trading.utils.metrics import calculate_metrics
 from trading.utils.system_status import get_system_status
 from src.analysis.market_analysis import MarketAnalysis
-import json
-import os
 
 def initialize_session_state():
     """Initialize session state variables if they don't exist."""

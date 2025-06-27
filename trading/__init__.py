@@ -5,8 +5,8 @@ __version__ = '0.1.0'
 from trading.market import MarketAnalyzer, MarketData, MarketIndicators
 from .data.preprocessing import DataPreprocessor, FeatureEngineering, DataValidator, DataScaler
 from .data.providers import AlphaVantageProvider, YFinanceProvider
+from trading.base_model import BaseModel
 from trading.models import (
-    BaseModel,
     LSTMModel,
     TCNModel,
     TransformerForecaster,
@@ -21,7 +21,7 @@ except ImportError:
 from trading.portfolio import PortfolioManager
 from trading.risk import RiskManager
 from trading.utils import LogManager, ModelLogger, DataLogger, PerformanceLogger
-from trading.memory import PerformanceMemory
+# from trading.memory import PerformanceMemory
 from .agents.updater import ModelUpdater
 from trading.nlp import NLInterface, PromptProcessor, ResponseFormatter, LLMProcessor
 from trading.evaluation import ModelEvaluator, RegressionMetrics, ClassificationMetrics, TimeSeriesMetrics, RiskMetrics
@@ -75,5 +75,7 @@ __all__ = [
 if OPTIMIZATION_AVAILABLE:
     __all__.append('DQNStrategyOptimizer')
 
-__all__.append('PerformanceMemory')
+# from trading.memory import PerformanceMemory
+# __all__.append('PerformanceMemory')
+
 __all__.append('ModelUpdater')

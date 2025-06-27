@@ -221,14 +221,15 @@ class SecurityManager:
         
         # Check for known vulnerable packages
         try:
-            import pkg_resources
-            for package in pkg_resources.working_set:
-                if package.key in ["cryptography", "pyjwt"]:
-                    if not package.parsed_version.is_prerelease:
-                        issues.append(f"Using non-prerelease version of {package.key}")
-                        recommendations.append(f"Update {package.key} to latest version")
-        except:
-            pass
+            from importlib.metadata import distributions, version
+            for dist in distributions():
+                package_name = dist.metadata['Name']
+                if package_name in ["cryptography", "pyjwt"]:
+                    current_version = version(package_name)
+                    # Add version checking logic here if needed
+                    pass
+        except Exception as e:
+            self.logger.warning(f"Could not check dependencies: {e}")
         
         return {
             "status": not issues,

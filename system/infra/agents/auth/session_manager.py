@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Optional, List
 import logging
 from pydantic import BaseModel
+from dataclasses import field
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class Session(BaseModel):
     last_activity: datetime
     ip_address: str
     user_agent: str
-    metadata: Dict = {}
+    metadata: Dict = field(default_factory=dict)
 
 class SessionManager:
     def __init__(

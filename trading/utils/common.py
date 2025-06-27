@@ -407,22 +407,43 @@ def calculate_drawdown(
 def calculate_max_drawdown(
     prices: pd.Series
 ) -> float:
-    """Calculate maximum drawdown from price series.
+    """Calculate maximum drawdown.
     
     Args:
-        prices: Series of prices
+        prices: Price series
         
     Returns:
-        Maximum drawdown as a decimal
+        Maximum drawdown as a negative percentage
         
     Example:
-        >>> prices = pd.Series([100, 95, 90, 100])
-        >>> mdd = calculate_max_drawdown(prices)
-        >>> print(mdd)
-        0.1
+        >>> prices = pd.Series([100, 110, 105, 120, 115])
+        >>> max_dd = calculate_max_drawdown(prices)
+        >>> print(max_dd)
+        -0.045454545454545456
     """
-    drawdown = calculate_drawdown(prices)
-    return abs(drawdown.min())
+    cumulative = prices / prices.iloc[0]
+    running_max = cumulative.expanding().max()
+    drawdown = (cumulative - running_max) / running_max
+    return float(drawdown.min())
+
+def calculate_win_rate(
+    returns: pd.Series
+) -> float:
+    """Calculate win rate from returns.
+    
+    Args:
+        returns: Returns series
+        
+    Returns:
+        Win rate as a percentage (0.0 to 1.0)
+        
+    Example:
+        >>> returns = pd.Series([0.01, -0.02, 0.03, -0.01, 0.02])
+        >>> win_rate = calculate_win_rate(returns)
+        >>> print(win_rate)
+        0.6
+    """
+    return float((returns > 0).mean())
 
 def calculate_calmar_ratio(
     returns: pd.Series,
@@ -696,7 +717,7 @@ def calculate_portfolio_metrics(returns: pd.Series) -> Dict[str, float]:
         'volatility': returns.std() * np.sqrt(252),
         'sharpe_ratio': calculate_sharpe_ratio(returns),
         'max_drawdown': calculate_max_drawdown(returns),
-        'win_rate': (returns > 0).mean(),
+        'win_rate': calculate_win_rate(returns),
         'profit_factor': abs(returns[returns > 0].sum() / returns[returns < 0].sum())
     }
 
