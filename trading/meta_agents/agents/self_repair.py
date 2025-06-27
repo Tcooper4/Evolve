@@ -538,8 +538,12 @@ class SelfRepairAgent:
         except Exception as e:
             logger.error(f"Error logging repair: {e}")
 
-    async def run(self) -> None:
-        """Main execution loop for the SelfRepairAgent"""
+    async def execute_repair_loop(self) -> None:
+        """Main execution loop for the SelfRepairAgent.
+        
+        Continuously monitors the codebase for issues and applies automatic repairs.
+        Runs until interrupted or an error occurs.
+        """
         try:
             while True:
                 # Scan for issues
@@ -570,10 +574,20 @@ class SelfRepairAgent:
 class CodeChangeHandler(FileSystemEventHandler):
     """Handler for monitoring code changes"""
     
-    def __init__(self, agent: SelfRepairAgent):
+    def __init__(self, agent: SelfRepairAgent) -> None:
+        """Initialize the code change handler.
+        
+        Args:
+            agent: The SelfRepairAgent instance to notify of changes
+        """
         self.agent = agent
     
-    def on_modified(self, event):
+    def on_modified(self, event) -> None:
+        """Handle file modification events.
+        
+        Args:
+            event: File system event containing information about the modification
+        """
         if event.is_directory:
             return
         if event.src_path.endswith(('.py', '.json', '.h5')):
@@ -583,4 +597,4 @@ class CodeChangeHandler(FileSystemEventHandler):
 
 if __name__ == "__main__":
     agent = SelfRepairAgent()
-    asyncio.run(agent.run()) 
+    asyncio.run(agent.execute_repair_loop()) 

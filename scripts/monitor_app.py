@@ -152,8 +152,12 @@ class ApplicationMonitor:
             f"Response Time: {self.metrics['response_time']:.3f}s"
         )
 
-    def run(self):
-        """Run the monitoring loop."""
+    def execute_monitoring_loop(self) -> None:
+        """Execute the monitoring loop.
+        
+        Continuously monitors application health and system metrics,
+        sending alerts when thresholds are exceeded.
+        """
         self.logger.info("Starting application monitoring")
         
         while True:
@@ -179,10 +183,10 @@ class ApplicationMonitor:
                 self.logger.error(f"Error in monitoring loop: {e}")
                 time.sleep(5)  # Wait before retrying
 
-def main():
-    """Main function."""
+def main() -> None:
+    """Main function for the application monitor."""
     monitor = ApplicationMonitor()
-    monitor.run()
+    monitor.execute_monitoring_loop()
 
 if __name__ == "__main__":
     main() 

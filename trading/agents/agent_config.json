@@ -36,6 +36,17 @@
       "target_column": "close",
       "validation_split": 0.2,
       "random_state": 42
+    },
+    "enabled": true,
+    "priority": 1,
+    "max_concurrent_runs": 2,
+    "timeout_seconds": 600,
+    "retry_attempts": 3,
+    "custom_config": {
+      "max_models": 10,
+      "model_types": ["lstm", "xgboost", "ensemble"],
+      "validation_split": 0.2,
+      "random_state": 42
     }
   },
   "performance_critic": {
@@ -52,6 +63,19 @@
       "performance": ["sharpe_ratio", "total_return", "annualized_return", "volatility"],
       "risk": ["max_drawdown", "var_95", "cvar_95", "sortino_ratio", "calmar_ratio"],
       "trading": ["win_rate", "profit_factor", "avg_trade", "total_trades"]
+    },
+    "enabled": true,
+    "priority": 2,
+    "max_concurrent_runs": 3,
+    "timeout_seconds": 300,
+    "retry_attempts": 2,
+    "custom_config": {
+      "evaluation_period": 252,
+      "min_sharpe_ratio": 0.5,
+      "max_drawdown": -0.15,
+      "min_win_rate": 0.45,
+      "max_volatility": 0.25,
+      "min_calmar_ratio": 0.5
     }
   },
   "updater": {
@@ -73,6 +97,21 @@
     "cleanup": {
       "max_age_days": 30,
       "max_failed_operations": 100
+    },
+    "enabled": true,
+    "priority": 3,
+    "max_concurrent_runs": 1,
+    "timeout_seconds": 900,
+    "retry_attempts": 2,
+    "custom_config": {
+      "critical_sharpe": 0.0,
+      "critical_drawdown": -0.25,
+      "critical_win_rate": 0.3,
+      "retrain_sharpe": 0.3,
+      "retrain_drawdown": -0.15,
+      "tune_sharpe": 0.5,
+      "tune_drawdown": -0.10,
+      "retrain_threshold": 0.3
     }
   },
   "memory": {
@@ -111,5 +150,12 @@
       "memory_usage": 0.8,
       "queue_size": 100
     }
+  },
+  "manager": {
+    "auto_start": true,
+    "max_concurrent_agents": 5,
+    "execution_timeout": 300,
+    "enable_logging": true,
+    "enable_metrics": true
   }
 } 

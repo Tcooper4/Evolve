@@ -18,6 +18,7 @@ import pickle
 import shutil
 
 # Local imports
+from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentResult
 from trading.agents.model_builder_agent import ModelBuilderAgent, ModelBuildRequest
 from trading.agents.performance_critic_agent import ModelEvaluationRequest, ModelEvaluationResult
 from trading.optimization.strategy_optimizer import StrategyOptimizer
@@ -52,17 +53,19 @@ class UpdateResult:
     error_message: Optional[str] = None
 
 
-class UpdaterAgent:
+class UpdaterAgent(BaseAgent):
     """Agent responsible for updating models based on performance feedback."""
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the Updater Agent.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config or {}
-        self.logger = logging.getLogger(__name__)
+    # Agent metadata
+    version = "1.0.0"
+    description = "Tunes model weights, retrains, or replaces bad models based on performance critic results"
+    author = "Evolve Trading System"
+    tags = ["model-updating", "optimization", "retraining", "tuning"]
+    capabilities = ["model_retraining", "hyperparameter_tuning", "model_replacement", "ensemble_adjustment"]
+    dependencies = ["trading.agents.model_builder_agent", "trading.optimization"]
+    
+    def _setup(self) -> None:
+        """Setup method called during initialization."""
         self.memory = PerformanceMemory()
         self.agent_memory = AgentMemory("trading/agents/agent_memory.json")
         
@@ -89,6 +92,88 @@ class UpdaterAgent:
         self.reward_function = RewardFunction()
         
         self.logger.info("UpdaterAgent initialized")
+    
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the model updating logic.
+        
+        Args:
+            **kwargs: Must contain either 'evaluation_result' or 'request'
+            
+        Returns:
+            AgentResult: Result of the model updating execution
+        """
+        evaluation_result = kwargs.get('evaluation_result')
+        request = kwargs.get('request')
+        
+        if not evaluation_result and not request:
+            return AgentResult(
+                success=False,
+                error_message="Either evaluation_result or request is required"
+            )
+        
+        try:
+            if evaluation_result and not request:
+                # Process evaluation and determine if update is needed
+                request = self.process_evaluation(evaluation_result)
+                if not request:
+                    return AgentResult(
+                        success=True,
+                        data={"message": "No update needed for this model"}
+                    )
+            
+            if not isinstance(request, UpdateRequest):
+                return AgentResult(
+                    success=False,
+                    error_message="Request must be an UpdateRequest instance"
+                )
+            
+            result = self.execute_update(request)
+            
+            if result.update_status == "success":
+                return AgentResult(
+                    success=True,
+                    data={
+                        "model_id": result.model_id,
+                        "update_type": result.update_type,
+                        "new_model_id": result.new_model_id,
+                        "improvement_metrics": result.improvement_metrics,
+                        "update_timestamp": result.update_timestamp
+                    }
+                )
+            else:
+                return AgentResult(
+                    success=False,
+                    error_message=result.error_message or "Model update failed"
+                )
+                
+        except Exception as e:
+            return AgentResult(
+                success=False,
+                error_message=str(e)
+            )
+    
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters.
+        
+        Args:
+            **kwargs: Parameters to validate
+            
+        Returns:
+            bool: True if input is valid
+        """
+        evaluation_result = kwargs.get('evaluation_result')
+        request = kwargs.get('request')
+        
+        if not evaluation_result and not request:
+            return False
+        
+        if evaluation_result and not isinstance(evaluation_result, ModelEvaluationResult):
+            return False
+        
+        if request and not isinstance(request, UpdateRequest):
+            return False
+        
+        return True
     
     @handle_exceptions
     def process_evaluation(self, evaluation_result: ModelEvaluationResult) -> Optional[UpdateRequest]:

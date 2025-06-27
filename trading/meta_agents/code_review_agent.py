@@ -35,11 +35,17 @@ class CodeReviewAgent(BaseMetaAgent):
             "security": self._analyze_security
         }
     
-    def run(self) -> Dict[str, Any]:
-        """Run code review and collect results.
+    def execute_code_review(self) -> Dict[str, Any]:
+        """Execute code review and collect results.
+        
+        Performs comprehensive code analysis on forecast logic and trading strategies,
+        generating suggestions for improvements and fixes.
         
         Returns:
-            Dict containing review results and suggested fixes
+            Dictionary containing review results and suggested fixes with the following keys:
+            - forecast_logic: Analysis results for each model
+            - strategies: Analysis results for each strategy  
+            - suggested_fixes: List of recommended improvements
         """
         results = {
             "forecast_logic": self._review_forecast_logic(),

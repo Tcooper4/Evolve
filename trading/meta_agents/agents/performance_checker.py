@@ -284,8 +284,12 @@ class PerformanceChecker:
         except Exception as e:
             logger.error(f"Error updating performance log: {e}")
 
-    async def run(self) -> None:
-        """Main execution loop for the PerformanceChecker agent"""
+    async def execute_performance_monitoring_loop(self) -> None:
+        """Main execution loop for the PerformanceChecker agent.
+        
+        Continuously monitors model performance metrics and detects performance drift.
+        Triggers retraining when significant degradation is detected.
+        """
         try:
             while True:
                 # Check for new performance metrics
@@ -319,10 +323,20 @@ class PerformanceChecker:
 class PerformanceLogHandler(FileSystemEventHandler):
     """Handler for monitoring performance log files"""
     
-    def __init__(self, checker: PerformanceChecker):
+    def __init__(self, checker: PerformanceChecker) -> None:
+        """Initialize the performance log handler.
+        
+        Args:
+            checker: The PerformanceChecker instance to notify of log updates
+        """
         self.checker = checker
     
-    def on_modified(self, event):
+    def on_modified(self, event) -> None:
+        """Handle file modification events.
+        
+        Args:
+            event: File system event containing information about the modification
+        """
         if event.is_directory:
             return
         if event.src_path.endswith('.json'):
@@ -332,4 +346,4 @@ class PerformanceLogHandler(FileSystemEventHandler):
 
 if __name__ == "__main__":
     checker = PerformanceChecker()
-    asyncio.run(checker.run()) 
+    asyncio.run(checker.execute_performance_monitoring_loop()) 

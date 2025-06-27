@@ -17,6 +17,7 @@ from dataclasses import dataclass, asdict
 import pickle
 
 # Local imports
+from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentResult
 from trading.models.lstm_model import LSTMForecaster
 from trading.models.xgboost_model import XGBoostForecaster
 from trading.models.ensemble_model import EnsembleForecaster
@@ -56,17 +57,19 @@ class ModelBuildResult:
     error_message: Optional[str] = None
 
 
-class ModelBuilderAgent:
+class ModelBuilderAgent(BaseAgent):
     """Agent responsible for building ML models from scratch."""
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the Model Builder Agent.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config or {}
-        self.logger = logging.getLogger(__name__)
+    # Agent metadata
+    version = "1.0.0"
+    description = "Builds and initializes various ML models including LSTM, XGBoost, and ensemble models"
+    author = "Evolve Trading System"
+    tags = ["model-building", "ml", "training"]
+    capabilities = ["lstm_building", "xgboost_building", "ensemble_building", "hyperparameter_tuning"]
+    dependencies = ["trading.models", "trading.data", "trading.feature_engineering"]
+    
+    def _setup(self) -> None:
+        """Setup method called during initialization."""
         self.memory = PerformanceMemory()
         self.models_dir = Path("trading/models/built")
         self.models_dir.mkdir(parents=True, exist_ok=True)
@@ -83,6 +86,85 @@ class ModelBuilderAgent:
         self.reward_function = RewardFunction()
         
         self.logger.info("ModelBuilderAgent initialized")
+    
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the model building logic.
+        
+        Args:
+            **kwargs: Must contain 'request' with ModelBuildRequest
+            
+        Returns:
+            AgentResult: Result of the model building execution
+        """
+        request = kwargs.get('request')
+        if not request:
+            return AgentResult(
+                success=False,
+                error_message="ModelBuildRequest is required"
+            )
+        
+        if not isinstance(request, ModelBuildRequest):
+            return AgentResult(
+                success=False,
+                error_message="Request must be a ModelBuildRequest instance"
+            )
+        
+        try:
+            result = self.build_model(request)
+            
+            if result.build_status == "success":
+                return AgentResult(
+                    success=True,
+                    data={
+                        "model_id": result.model_id,
+                        "model_type": result.model_type,
+                        "model_path": result.model_path,
+                        "training_metrics": result.training_metrics,
+                        "build_timestamp": result.build_timestamp
+                    }
+                )
+            else:
+                return AgentResult(
+                    success=False,
+                    error_message=result.error_message or "Model building failed"
+                )
+                
+        except Exception as e:
+            return AgentResult(
+                success=False,
+                error_message=str(e)
+            )
+    
+    def validate_input(self, **kwargs) -> bool:
+        """Validate input parameters.
+        
+        Args:
+            **kwargs: Parameters to validate
+            
+        Returns:
+            bool: True if input is valid
+        """
+        request = kwargs.get('request')
+        if not request:
+            return False
+        
+        if not isinstance(request, ModelBuildRequest):
+            return False
+        
+        # Validate required fields
+        if not request.model_type or not request.data_path or not request.target_column:
+            return False
+        
+        # Validate model type
+        valid_types = ['lstm', 'xgboost', 'ensemble']
+        if request.model_type.lower() not in valid_types:
+            return False
+        
+        # Validate data path exists
+        if not Path(request.data_path).exists():
+            return False
+        
+        return True
     
     @handle_exceptions
     def build_model(self, request: ModelBuildRequest) -> ModelBuildResult:

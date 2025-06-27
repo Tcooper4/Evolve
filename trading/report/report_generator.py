@@ -90,7 +90,8 @@ class ReportGenerator:
                  notion_token: str = None,
                  slack_webhook: str = None,
                  email_config: Dict[str, str] = None,
-                 output_dir: str = "reports"):
+                 output_dir: str = "reports",
+                 report_config: Optional[Dict[str, Any]] = None):
         """
         Initialize the ReportGenerator.
         
@@ -100,6 +101,7 @@ class ReportGenerator:
             slack_webhook: Slack webhook URL for notifications
             email_config: Email configuration dictionary
             output_dir: Directory to save reports
+            report_config: Dict to control chart types and features
         """
         self.openai_api_key = openai_api_key or os.getenv('OPENAI_API_KEY')
         self.notion_token = notion_token or os.getenv('NOTION_TOKEN')
@@ -107,6 +109,14 @@ class ReportGenerator:
         self.email_config = email_config or {}
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.report_config = report_config or {
+            'equity_curve': True,
+            'predictions': True,
+            'pnl_distribution': True,
+            'heatmap': True,
+            'model_summary': True,
+            'trade_log': True
+        }
         
         # Initialize OpenAI if available
         if self.openai_api_key:
@@ -417,37 +427,30 @@ class ReportGenerator:
     def _generate_charts(self, trade_data: Dict[str, Any], 
                         model_data: Dict[str, Any], 
                         symbol: str) -> Dict[str, str]:
-        """Generate charts and return as base64 encoded images."""
+        """Generate charts and return as base64 encoded images or HTML snippets."""
         charts = {}
-        
+        config = self.report_config
         try:
-            # Set style
             plt.style.use('seaborn-v0_8')
-            
+            trades = trade_data.get('trades', [])
             # 1. Equity Curve
-            if trade_data.get('trades'):
-                trades = trade_data['trades']
+            if config.get('equity_curve', True) and trades:
                 cumulative_pnl = np.cumsum([t.get('pnl', 0) for t in trades])
-                
                 plt.figure(figsize=(10, 6))
                 plt.plot(cumulative_pnl, linewidth=2, color='blue')
                 plt.title(f'{symbol} - Equity Curve', fontsize=14, fontweight='bold')
                 plt.xlabel('Trade Number')
                 plt.ylabel('Cumulative PnL')
                 plt.grid(True, alpha=0.3)
-                
-                # Save to base64
                 buffer = BytesIO()
                 plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
                 buffer.seek(0)
                 charts['equity_curve'] = base64.b64encode(buffer.getvalue()).decode()
                 plt.close()
-            
             # 2. Model Predictions vs Actual
-            if model_data.get('predictions') and model_data.get('actuals'):
+            if config.get('predictions', True) and model_data.get('predictions') and model_data.get('actuals'):
                 predictions = model_data['predictions']
                 actuals = model_data['actuals']
-                
                 plt.figure(figsize=(10, 6))
                 plt.plot(actuals, label='Actual', linewidth=2, color='blue')
                 plt.plot(predictions, label='Predicted', linewidth=2, color='red', alpha=0.7)
@@ -456,33 +459,73 @@ class ReportGenerator:
                 plt.ylabel('Price')
                 plt.legend()
                 plt.grid(True, alpha=0.3)
-                
                 buffer = BytesIO()
                 plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
                 buffer.seek(0)
                 charts['predictions'] = base64.b64encode(buffer.getvalue()).decode()
                 plt.close()
-            
             # 3. Trade Distribution
-            if trade_data.get('trades'):
-                pnls = [t.get('pnl', 0) for t in trade_data['trades']]
-                
+            if config.get('pnl_distribution', True) and trades:
+                pnls = [t.get('pnl', 0) for t in trades]
                 plt.figure(figsize=(10, 6))
                 plt.hist(pnls, bins=20, alpha=0.7, color='green', edgecolor='black')
                 plt.title(f'{symbol} - Trade PnL Distribution', fontsize=14, fontweight='bold')
                 plt.xlabel('PnL')
                 plt.ylabel('Frequency')
                 plt.grid(True, alpha=0.3)
-                
                 buffer = BytesIO()
                 plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
                 buffer.seek(0)
                 charts['pnl_distribution'] = base64.b64encode(buffer.getvalue()).decode()
                 plt.close()
-                
+            # 4. Heatmap of trade profitability over time
+            if config.get('heatmap', True) and trades:
+                # Example: day vs. hour heatmap (if timestamps available)
+                df = pd.DataFrame(trades)
+                if 'timestamp' in df.columns and 'pnl' in df.columns:
+                    df['timestamp'] = pd.to_datetime(df['timestamp'])
+                    df['day'] = df['timestamp'].dt.date
+                    df['hour'] = df['timestamp'].dt.hour
+                    heatmap_data = df.pivot_table(index='day', columns='hour', values='pnl', aggfunc='sum', fill_value=0)
+                    plt.figure(figsize=(12, 6))
+                    sns.heatmap(heatmap_data, cmap='RdYlGn', annot=False, fmt='.0f')
+                    plt.title(f'{symbol} - Trade Profitability Heatmap (Day vs Hour)', fontsize=14, fontweight='bold')
+                    plt.xlabel('Hour of Day')
+                    plt.ylabel('Day')
+                    buffer = BytesIO()
+                    plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+                    buffer.seek(0)
+                    charts['profit_heatmap'] = base64.b64encode(buffer.getvalue()).decode()
+                    plt.close()
+            # 5. Model summary (most/least successful)
+            if config.get('model_summary', True):
+                # Aggregate by model_id or model_name if available in trade_data
+                df = pd.DataFrame(trades)
+                if 'model_id' in df.columns and 'pnl' in df.columns:
+                    model_group = df.groupby('model_id')['pnl'].agg(['sum', 'count', 'mean']).reset_index()
+                    best = model_group.sort_values('sum', ascending=False).head(1)
+                    worst = model_group.sort_values('sum', ascending=True).head(1)
+                    summary = {
+                        'most_successful': best.to_dict(orient='records')[0] if not best.empty else {},
+                        'least_successful': worst.to_dict(orient='records')[0] if not worst.empty else {}
+                    }
+                    charts['model_summary'] = summary
+            # 6. Per-trade execution log
+            if config.get('trade_log', True) and trades:
+                # Prepare a log as a Markdown table and as a list for HTML
+                log_columns = ['timestamp', 'action', 'pnl', 'result', 'model_id']
+                df = pd.DataFrame(trades)
+                log_df = df[log_columns].copy() if all(col in df.columns for col in log_columns) else df.copy()
+                log_df = log_df.fillna('')
+                # Markdown table
+                md_table = '| Time | Action | PnL | Result | Model ID |\n|---|---|---|---|---|\n'
+                for _, row in log_df.iterrows():
+                    md_table += f"| {row.get('timestamp','')} | {row.get('action','')} | {row.get('pnl','')} | {row.get('result','')} | {row.get('model_id','')} |\n"
+                charts['trade_log_markdown'] = md_table
+                # For HTML, pass as list of dicts
+                charts['trade_log'] = log_df.to_dict(orient='records')
         except Exception as e:
             logger.error(f"Error generating charts: {e}")
-        
         return charts
     
     def _generate_markdown_report(self, report_data: Dict[str, Any]) -> Path:
@@ -569,6 +612,38 @@ class ReportGenerator:
 - **Max Drawdown:** ${{ "%.2f"|format(trade_metrics.max_drawdown) }}
 - **Sharpe Ratio:** {{ "%.2f"|format(trade_metrics.sharpe_ratio) }}
 - **Profit Factor:** {{ "%.2f"|format(trade_metrics.profit_factor) }}
+
+---
+
+## 🔥 Trade Profitability Heatmap
+{% if charts.profit_heatmap %}
+![Profitability Heatmap](data:image/png;base64,{{ charts.profit_heatmap }})
+{% else %}
+_No heatmap available._
+{% endif %}
+
+---
+
+## 🏆 Model Summary
+{% if charts.model_summary %}
+- **Most Successful Model:**
+    - Model ID: {{ charts.model_summary.most_successful.model_id }}
+    - Total PnL: ${{ charts.model_summary.most_successful.sum | default(0) }}
+    - Trades: {{ charts.model_summary.most_successful.count | default(0) }}
+    - Avg PnL: ${{ charts.model_summary.most_successful.mean | default(0) }}
+- **Least Successful Model:**
+    - Model ID: {{ charts.model_summary.least_successful.model_id }}
+    - Total PnL: ${{ charts.model_summary.least_successful.sum | default(0) }}
+    - Trades: {{ charts.model_summary.least_successful.count | default(0) }}
+    - Avg PnL: ${{ charts.model_summary.least_successful.mean | default(0) }}
+{% else %}
+_No model summary available._
+{% endif %}
+
+---
+
+## 🧾 Per-Trade Execution Log
+{{ charts.trade_log_markdown | safe }}
 
 ---
 
@@ -665,6 +740,9 @@ class ReportGenerator:
         .reasoning ul { margin: 10px 0; }
         .reasoning li { margin: 5px 0; }
         .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; }
+        table.trade-log { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        table.trade-log th, table.trade-log td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        table.trade-log th { background: #f0f4fa; color: #007bff; }
     </style>
 </head>
 <body>
@@ -704,6 +782,71 @@ class ReportGenerator:
                     <div class="value">{{ "%.2f"|format(trade_metrics.profit_factor) }}</div>
                 </div>
             </div>
+        </div>
+
+        <!-- Heatmap Section -->
+        <div class="section">
+            <h2>🔥 Trade Profitability Heatmap</h2>
+            {% if charts.profit_heatmap %}
+            <div class="chart-container">
+                <img src="data:image/png;base64,{{ charts.profit_heatmap }}" alt="Profitability Heatmap">
+            </div>
+            {% else %}
+            <p><em>No heatmap available.</em></p>
+            {% endif %}
+        </div>
+
+        <!-- Model Summary Section -->
+        <div class="section">
+            <h2>🏆 Model Summary</h2>
+            {% if charts.model_summary %}
+            <div>
+                <strong>Most Successful Model:</strong><br>
+                Model ID: {{ charts.model_summary.most_successful.model_id }}<br>
+                Total PnL: ${{ charts.model_summary.most_successful.sum | default(0) }}<br>
+                Trades: {{ charts.model_summary.most_successful.count | default(0) }}<br>
+                Avg PnL: ${{ charts.model_summary.most_successful.mean | default(0) }}<br>
+                <br>
+                <strong>Least Successful Model:</strong><br>
+                Model ID: {{ charts.model_summary.least_successful.model_id }}<br>
+                Total PnL: ${{ charts.model_summary.least_successful.sum | default(0) }}<br>
+                Trades: {{ charts.model_summary.least_successful.count | default(0) }}<br>
+                Avg PnL: ${{ charts.model_summary.least_successful.mean | default(0) }}<br>
+            </div>
+            {% else %}
+            <p><em>No model summary available.</em></p>
+            {% endif %}
+        </div>
+
+        <!-- Per-Trade Execution Log Section -->
+        <div class="section">
+            <h2>🧾 Per-Trade Execution Log</h2>
+            {% if charts.trade_log %}
+            <table class="trade-log">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Action</th>
+                        <th>PnL</th>
+                        <th>Result</th>
+                        <th>Model ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in charts.trade_log %}
+                    <tr>
+                        <td>{{ row.timestamp }}</td>
+                        <td>{{ row.action }}</td>
+                        <td>{{ row.pnl }}</td>
+                        <td>{{ row.result }}</td>
+                        <td>{{ row.model_id }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p><em>No trade log available.</em></p>
+            {% endif %}
         </div>
 
         <div class="section">

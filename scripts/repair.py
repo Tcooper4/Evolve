@@ -175,8 +175,16 @@ Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         except Exception as e:
             logging.error(f"Error during cleanup: {e}")
 
-    def run(self) -> None:
-        """Run all repair operations."""
+    def execute_repair_operations(self) -> None:
+        """Execute all repair operations.
+        
+        Performs a comprehensive scan and repair of the codebase including:
+        - Import scanning and fixing
+        - Encoding issue detection and resolution
+        - Duplicate file identification and consolidation
+        - Missing package installation
+        - Cache cleanup
+        """
         logging.info("Starting code repair...")
         
         self.scan_imports()
@@ -199,4 +207,4 @@ Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 if __name__ == "__main__":
     repair = CodeRepair()
-    repair.run() 
+    repair.execute_repair_operations() 
