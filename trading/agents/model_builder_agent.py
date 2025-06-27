@@ -20,7 +20,7 @@ import pickle
 from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentResult
 from trading.models.lstm_model import LSTMForecaster
 from trading.models.xgboost_model import XGBoostForecaster
-from trading.models.ensemble_model import EnsembleForecaster
+from trading.models.ensemble_model import EnsembleModel
 from trading.data.preprocessing import DataPreprocessor
 from trading.feature_engineering.feature_engineer import FeatureEngineering
 from trading.utils.common import timer, handle_exceptions

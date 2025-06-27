@@ -12,7 +12,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 # Local imports
-from trading.models.base_model import BaseModel, ValidationError, ModelRegistry
+from trading.base_model import BaseModel, ValidationError, ModelRegistry
 
 class PositionalEncoding(nn.Module):
     """Positional encoding for transformer model."""
@@ -49,7 +49,7 @@ class PositionalEncoding(nn.Module):
         """
         return x + self.pe[:, :x.size(1)]
 
-@ModelRegistry.register('Transformer')
+# @ModelRegistry.register('Transformer')
 class TransformerForecaster(BaseModel):
     """Transformer model for time series forecasting."""
     

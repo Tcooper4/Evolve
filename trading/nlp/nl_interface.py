@@ -10,7 +10,7 @@ from datetime import datetime
 
 from trading.prompt_processor import PromptProcessor, ProcessedPrompt
 from trading.response_formatter import ResponseFormatter, ResponseData
-from ..models.base_model import BaseModel
+from trading.base_model import BaseModel
 from ..strategies.strategy_manager import StrategyManager
 from ..risk.risk_manager import RiskManager
 from ..portfolio.portfolio_manager import PortfolioManager

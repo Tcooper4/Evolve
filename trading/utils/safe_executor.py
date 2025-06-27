@@ -5,24 +5,36 @@ Provides isolated, timeout-protected, and memory-limited execution
 for user-defined models and strategies to protect system stability.
 """
 
-import subprocess
-import tempfile
-import os
+import asyncio
 import json
 import logging
-import time
+import multiprocessing
+import os
 import signal
+import subprocess
+import sys
+import tempfile
+import time
+import traceback
+from dataclasses import dataclass, field
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 import psutil
 import threading
-from typing import Dict, Any, Optional, List, Tuple, Union
-from pathlib import Path
-import sys
-import traceback
-from dataclasses import dataclass
-from enum import Enum
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Constants
+DEFAULT_TIMEOUT_SECONDS = 300  # 5 minutes
+DEFAULT_MEMORY_LIMIT_MB = 1024  # 1GB
+DEFAULT_MAX_OUTPUT_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_CODE_SIZE_BYTES = 100000  # 100KB
+DEFAULT_MONITORING_INTERVAL = 1  # 1 second
+MAX_RETRY_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = 5
 
 class ExecutionStatus(Enum):
     """Execution status enumeration."""
@@ -33,7 +45,6 @@ class ExecutionStatus(Enum):
     VALIDATION_ERROR = "validation_error"
     SYSTEM_ERROR = "system_error"
 
-
 @dataclass
 class ExecutionResult:
     """Result of safe execution."""
@@ -43,29 +54,25 @@ class ExecutionResult:
     execution_time: float = 0.0
     memory_used: float = 0.0
     return_value: Optional[Any] = None
-    logs: List[str] = None
-    
-    def __post_init__(self):
-        if self.logs is None:
-            self.logs = []
-
+    logs: List[str] = field(default_factory=list)
 
 class SafeExecutor:
     """
     Safe execution environment for user-defined models and strategies.
     
-    Provides:
+    Features:
     - Timeout protection
-    - Memory limits
+    - Memory usage monitoring
+    - Code validation and sanitization
     - Isolated execution scope
     - Error logging and recovery
     - Resource monitoring
     """
     
     def __init__(self, 
-                 timeout_seconds: int = 300,  # 5 minutes default
-                 memory_limit_mb: int = 1024,  # 1GB default
-                 max_output_size: int = 10 * 1024 * 1024,  # 10MB
+                 timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+                 memory_limit_mb: int = DEFAULT_MEMORY_LIMIT_MB,
+                 max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
                  enable_sandbox: bool = True,
                  log_executions: bool = True):
         """
@@ -245,7 +252,7 @@ class SafeExecutor:
                 )
             
             # Check code length
-            if len(model_code) > 100000:  # 100KB limit
+            if len(model_code) > MAX_CODE_SIZE_BYTES:  # 100KB limit
                 return ExecutionResult(
                     status=ExecutionStatus.VALIDATION_ERROR,
                     error="Code too long (max 100KB)",
@@ -501,18 +508,24 @@ finally:
         try:
             import resource
             
-            # Set memory limit
-            memory_limit = self.memory_limit_mb * 1024 * 1024
+            # Set memory limit (soft and hard)
+            memory_limit = self.memory_limit_mb * 1024 * 1024  # Convert to bytes
             resource.setrlimit(resource.RLIMIT_AS, (memory_limit, memory_limit))
             
             # Set CPU time limit
-            resource.setrlimit(resource.RLIMIT_CPU, (self.timeout_seconds, self.timeout_seconds))
+            cpu_limit = self.timeout_seconds
+            resource.setrlimit(resource.RLIMIT_CPU, (cpu_limit, cpu_limit))
             
             # Set file size limit
-            resource.setrlimit(resource.RLIMIT_FSIZE, (self.max_output_size, self.max_output_size))
+            file_limit = self.max_output_size
+            resource.setrlimit(resource.RLIMIT_FSIZE, (file_limit, file_limit))
             
         except Exception as e:
-            logger.warning(f"Could not set process limits: {e}")
+            logger.warning(f"Could not set resource limits: {e}")
+    
+    def _timeout_handler(self, signum, frame):
+        """Signal handler for timeout."""
+        raise TimeoutError("Execution timeout")
     
     def _log_execution(self, model_name: str, model_type: str, result: ExecutionResult):
         """Log execution details."""

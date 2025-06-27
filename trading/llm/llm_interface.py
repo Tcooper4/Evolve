@@ -11,7 +11,7 @@ import yaml
 from ..logs.logger import get_logger
 from ..logs.audit_logger import audit_logger
 from trading.model_loader import ModelLoader, ModelConfig
-from trading.agent import LLMAgent, AgentConfig
+from trading.agents.llm.agent import LLMAgent, AgentConfig
 from trading.memory import MemoryManager
 from trading.tools import ToolRegistry, tool
 

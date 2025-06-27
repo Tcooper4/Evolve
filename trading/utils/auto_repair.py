@@ -6,8 +6,8 @@ import subprocess
 import importlib
 import logging
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple
-import pkg_resources
+from typing import List, Dict, Optional, Tuple, Any
+from importlib.metadata import distributions, version, PackageNotFoundError
 import platform
 import shutil
 from datetime import datetime
@@ -62,10 +62,10 @@ class AutoRepair:
         
         for package, min_version in self.REQUIRED_PACKAGES.items():
             try:
-                pkg = pkg_resources.working_set.by_key[package]
-                if pkg.version < min_version:
-                    outdated.append(f"{package} (current: {pkg.version}, required: {min_version})")
-            except KeyError:
+                current_version = version(package)
+                if current_version < min_version:
+                    outdated.append(f"{package} (current: {current_version}, required: {min_version})")
+            except PackageNotFoundError:
                 missing.append(package)
         
         return len(missing) == 0 and len(outdated) == 0, missing + outdated

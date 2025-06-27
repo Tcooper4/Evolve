@@ -9,7 +9,6 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import shap
 
 # Local imports
 from trading.models.base_model import BaseModel, ValidationError, ModelRegistry
@@ -197,6 +196,11 @@ class LSTMForecaster(BaseModel):
 
     def shap_interpret(self, X_sample):
         """Run SHAP interpretability on a sample batch."""
+        try:
+            import shap
+        except ImportError:
+            print("SHAP is not installed. Please install it with 'pip install shap'.")
+            return None
         explainer = shap.DeepExplainer(self.model, X_sample)
         shap_values = explainer.shap_values(X_sample)
         shap.summary_plot(shap_values, X_sample.cpu().numpy())
