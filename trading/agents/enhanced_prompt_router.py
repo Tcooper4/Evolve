@@ -1,5 +1,5 @@
 """
-PromptRouterAgent: Smart prompt router for agent orchestration.
+Enhanced PromptRouterAgent: Smart prompt router with comprehensive fallback logic.
 - Detects user intent (forecasting, backtesting, tuning, research)
 - Parses arguments using OpenAI, HuggingFace, or regex fallback
 - Routes to the correct agent automatically
@@ -11,6 +11,7 @@ import json
 import logging
 from typing import Dict, Any, Optional, Tuple, List
 from dataclasses import dataclass
+from datetime import datetime
 
 try:
     import openai
@@ -36,12 +37,12 @@ class ParsedIntent:
     raw_response: str
     error: Optional[str] = None
 
-class PromptRouterAgent:
+class EnhancedPromptRouterAgent:
     def __init__(self, openai_api_key: Optional[str] = None, 
                  huggingface_model: str = "gpt2", 
                  huggingface_api_key: Optional[str] = None):
         """
-        Initialize the prompt router agent.
+        Initialize the enhanced prompt router agent.
         
         Args:
             openai_api_key: OpenAI API key
