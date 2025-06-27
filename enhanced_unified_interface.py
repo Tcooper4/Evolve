@@ -1,8 +1,8 @@
 """
-Unified Interface for Evolve Trading System
+Enhanced Unified Interface for Evolve Trading System
 
 Provides access to all features through:
-- Streamlit UI
+- Streamlit UI with LLM controls and transparency
 - Terminal UI
 - Direct command/prompt interface
 
@@ -15,6 +15,7 @@ Features include:
 - Report generation
 - Agent management
 - LLM provider controls and transparency
+- Notification system integration
 """
 
 import streamlit as st
@@ -36,11 +37,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class UnifiedInterface:
-    """Unified interface for all Evolve trading system features."""
+class EnhancedUnifiedInterface:
+    """Enhanced unified interface for all Evolve trading system features."""
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the unified interface.
+        """Initialize the enhanced unified interface.
         
         Args:
             config: Configuration dictionary
@@ -55,6 +56,10 @@ class UnifiedInterface:
         self.huggingface_api_key = os.getenv('HUGGINGFACE_API_KEY')
         self.huggingface_model = os.getenv('HUGGINGFACE_MODEL', 'gpt2')
         
+        # Notification settings
+        self.slack_webhook_url = os.getenv('SLACK_WEBHOOK_URL')
+        self.email_password = os.getenv('EMAIL_PASSWORD')
+        
         # Initialize components
         self._initialize_components()
         
@@ -64,7 +69,7 @@ class UnifiedInterface:
             # Import components dynamically to handle missing dependencies
             self._import_components()
             self.initialized = True
-            logger.info("Unified interface initialized successfully")
+            logger.info("Enhanced unified interface initialized successfully")
             
         except Exception as e:
             logger.error(f"Error initializing components: {e}")
@@ -118,6 +123,36 @@ class UnifiedInterface:
             self.components['notifications'] = notification_system
         except ImportError:
             logger.warning("Notification system not available")
+        
+        try:
+            from trading.agents.meta_learner import MetaLearnerAgent
+            self.components['meta_learner'] = MetaLearnerAgent()
+        except ImportError:
+            logger.warning("MetaLearnerAgent not available")
+        
+        try:
+            from trading.optimizer.strategies.strategy_optimizer import StrategyOptimizer
+            self.components['strategy_optimizer'] = StrategyOptimizer()
+        except ImportError:
+            logger.warning("StrategyOptimizer not available")
+        
+        try:
+            from trading.agents.model_switching_controller import ModelSwitchingController
+            self.components['model_controller'] = ModelSwitchingController()
+        except ImportError:
+            logger.warning("ModelSwitchingController not available")
+        
+        try:
+            from trading.memory.prompt_feedback_memory import PromptFeedbackMemory
+            self.components['prompt_memory'] = PromptFeedbackMemory()
+        except ImportError:
+            logger.warning("PromptFeedbackMemory not available")
+        
+        try:
+            from trading.memory.long_term_performance_tracker import LongTermPerformanceTracker
+            self.components['performance_tracker'] = LongTermPerformanceTracker()
+        except ImportError:
+            logger.warning("LongTermPerformanceTracker not available")
     
     def get_llm_provider_status(self) -> Dict[str, Any]:
         """Get status of all LLM providers."""
@@ -141,13 +176,24 @@ class UnifiedInterface:
             logger.error(f"Invalid LLM provider: {provider}")
             return False
     
+    def get_notification_status(self) -> Dict[str, Any]:
+        """Get notification system status."""
+        if 'notifications' in self.components:
+            return self.components['notifications'].get_notification_status()
+        else:
+            return {
+                'slack_configured': bool(self.slack_webhook_url),
+                'email_configured': bool(self.email_password),
+                'last_notification': None
+            }
+    
     def get_help(self) -> Dict[str, Any]:
         """Get comprehensive help information."""
         return {
             'overview': {
-                'title': 'Evolve Trading System - Unified Interface',
+                'title': 'Evolve Trading System - Enhanced Unified Interface',
                 'description': 'Access all trading system features through natural language, commands, or UI',
-                'version': '2.0.0'
+                'version': '2.1.0'
             },
             'features': {
                 'forecasting': {
@@ -224,6 +270,10 @@ class UnifiedInterface:
                 'huggingface': 'Local models for privacy and cost control',
                 'regex': 'Rule-based fallback for reliability'
             },
+            'notifications': {
+                'slack': 'Real-time alerts via Slack webhooks',
+                'email': 'Email notifications for important events'
+            },
             'examples': {
                 'quick_start': [
                     'forecast AAPL 7d',
@@ -271,6 +321,16 @@ class UnifiedInterface:
                 result['llm_provider'] = provider
                 result['command'] = command
                 result['timestamp'] = datetime.now().isoformat()
+                
+                # Store in prompt memory if available
+                if 'prompt_memory' in self.components:
+                    self.components['prompt_memory'].store_interaction(command, result)
+                
+                # Send notification if significant event
+                if result.get('success') and 'notifications' in self.components:
+                    self.components['notifications'].send_agent_activity_notification(
+                        'prompt_router', f"Processed: {command[:50]}...", result
+                    )
                 
                 return result
             
@@ -370,52 +430,49 @@ class UnifiedInterface:
         """Handle forecasting commands."""
         try:
             if len(parts) < 2:
-                return {'error': 'Forecasting requires a symbol', 'status': 'error'}
+                return {'error': 'Forecast command requires symbol', 'status': 'error'}
             
             symbol = parts[1].upper()
-            period = parts[2] if len(parts) > 2 else '7d'
+            timeframe = '7d' if len(parts) < 3 else parts[2]
             
-            # Mock response for now
+            # Mock forecast result
             result = {
                 'symbol': symbol,
-                'period': period,
-                'prediction': f'Mock forecast for {symbol} over {period}',
+                'timeframe': timeframe,
+                'prediction': 150.25,
                 'confidence': 0.85,
-                'models_used': ['lstm', 'xgboost']
+                'model': 'lstm',
+                'timestamp': datetime.now().isoformat()
             }
             
             return {
                 'type': 'forecast',
-                'symbol': symbol,
-                'period': period,
                 'result': result,
                 'status': 'success'
             }
         except Exception as e:
-            return {'error': f'Forecasting error: {e}', 'status': 'error'}
+            return {'error': f'Forecast error: {e}', 'status': 'error'}
     
     def _handle_tuning(self, parts: List[str]) -> Dict[str, Any]:
-        """Handle model tuning commands."""
+        """Handle tuning commands."""
         try:
             if len(parts) < 3:
-                return {'error': 'Tuning requires model type and symbol', 'status': 'error'}
+                return {'error': 'Tune command requires model and symbol', 'status': 'error'}
             
-            model_type = parts[1]
+            model = parts[1]
             symbol = parts[2].upper()
             
-            # Mock response for now
+            # Mock tuning result
             result = {
-                'model_type': model_type,
+                'model': model,
                 'symbol': symbol,
-                'optimization_complete': True,
-                'best_params': {'learning_rate': 0.01, 'epochs': 100},
-                'performance_improvement': 0.15
+                'best_params': {'learning_rate': 0.001, 'batch_size': 32},
+                'improvement': 0.15,
+                'duration': '2h 30m'
             }
             
             return {
                 'type': 'tuning',
-                'model_type': model_type,
-                'symbol': symbol,
                 'result': result,
                 'status': 'success'
             }
@@ -431,26 +488,26 @@ class UnifiedInterface:
             action = parts[1]
             
             if action == 'list':
-                strategies = ['bollinger', 'rsi', 'macd', 'custom']
+                strategies = ['bollinger', 'macd', 'rsi', 'momentum', 'mean_reversion']
                 return {
                     'type': 'strategy_list',
                     'strategies': strategies,
                     'status': 'success'
                 }
-            elif action == 'run' and len(parts) >= 4:
-                strategy_name = parts[2]
-                symbol = parts[3].upper()
+            elif action == 'backtest' and len(parts) >= 3:
+                strategy = parts[2]
+                symbol = parts[3].upper() if len(parts) >= 4 else 'AAPL'
+                
                 result = {
-                    'strategy': strategy_name,
+                    'strategy': strategy,
                     'symbol': symbol,
-                    'signal': 'BUY',
-                    'confidence': 0.75,
-                    'entry_price': 150.25
+                    'sharpe_ratio': 1.25,
+                    'total_return': 0.15,
+                    'max_drawdown': -0.08
                 }
+                
                 return {
-                    'type': 'strategy_run',
-                    'strategy': strategy_name,
-                    'symbol': symbol,
+                    'type': 'strategy_backtest',
                     'result': result,
                     'status': 'success'
                 }
@@ -564,6 +621,7 @@ class UnifiedInterface:
             status = {
                 'interface': 'initialized' if self.initialized else 'error',
                 'components': {name: 'available' for name in self.components.keys()},
+                'llm_provider': self.llm_provider,
                 'timestamp': datetime.now().isoformat()
             }
             
@@ -576,406 +634,515 @@ class UnifiedInterface:
             return {'error': f'Status error: {e}', 'status': 'error'}
 
 
-def streamlit_ui():
-    """Streamlit web interface."""
+def enhanced_streamlit_ui():
+    """Enhanced Streamlit web interface with LLM controls and transparency."""
     st.set_page_config(
-        page_title="Evolve - Unified Interface",
+        page_title="Evolve - Enhanced Unified Interface",
         page_icon="🔮",
         layout="wide",
         initial_sidebar_state="expanded"
     )
     
     # Initialize interface
-    interface = UnifiedInterface()
+    interface = EnhancedUnifiedInterface()
     
-    # Sidebar
-    st.sidebar.title("🔮 Evolve Unified Interface")
+    # Sidebar with enhanced controls
+    st.sidebar.title("🔮 Evolve Enhanced Interface")
     st.sidebar.markdown("---")
     
+    # LLM Provider Controls
+    st.sidebar.subheader("🤖 LLM Provider")
+    provider_status = interface.get_llm_provider_status()
+    
+    # Show provider status
+    for provider, available in provider_status.items():
+        status_icon = "✅" if available else "❌"
+        st.sidebar.markdown(f"{status_icon} {provider.title()}")
+    
+    # Provider selection
+    selected_provider = st.sidebar.selectbox(
+        "Select LLM Provider",
+        [p for p, available in provider_status.items() if available],
+        index=0
+    )
+    
+    if st.sidebar.button("Apply Provider"):
+        interface.set_llm_provider(selected_provider)
+        st.sidebar.success(f"Provider set to: {selected_provider}")
+    
+    # Notification Status
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🔔 Notifications")
+    notification_status = interface.get_notification_status()
+    
+    slack_status = "✅" if notification_status.get('slack_configured') else "❌"
+    email_status = "✅" if notification_status.get('email_configured') else "❌"
+    
+    st.sidebar.markdown(f"{slack_status} Slack")
+    st.sidebar.markdown(f"{email_status} Email")
+    
     # Navigation
+    st.sidebar.markdown("---")
     page = st.sidebar.selectbox(
         "Choose Interface",
-        ["Main Interface", "QuantGPT", "Forecasting", "Tuning", "Strategy", "Portfolio", "Agents", "Reports", "Help"]
+        ["Main Interface", "QuantGPT", "Forecasting", "Tuning", "Strategy", "Portfolio", "Agents", "Reports", "Help", "System Status"]
     )
     
     if page == "Main Interface":
-        render_main_interface(interface)
+        render_enhanced_main_interface(interface)
     elif page == "QuantGPT":
-        render_quantgpt_interface(interface)
+        render_enhanced_quantgpt_interface(interface)
     elif page == "Forecasting":
-        render_forecasting_interface(interface)
+        render_enhanced_forecasting_interface(interface)
     elif page == "Tuning":
-        render_tuning_interface(interface)
+        render_enhanced_tuning_interface(interface)
     elif page == "Strategy":
-        render_strategy_interface(interface)
+        render_enhanced_strategy_interface(interface)
     elif page == "Portfolio":
-        render_portfolio_interface(interface)
+        render_enhanced_portfolio_interface(interface)
     elif page == "Agents":
-        render_agents_interface(interface)
+        render_enhanced_agents_interface(interface)
     elif page == "Reports":
-        render_reports_interface(interface)
+        render_enhanced_reports_interface(interface)
     elif page == "Help":
-        render_help_interface(interface)
+        render_enhanced_help_interface(interface)
+    elif page == "System Status":
+        render_system_status_interface(interface)
 
 
-def render_main_interface(interface: UnifiedInterface):
-    """Render main interface page."""
-    st.title("🔮 Evolve Unified Interface")
-    st.markdown("Access all trading system features through one unified interface.")
+def render_enhanced_main_interface(interface: EnhancedUnifiedInterface):
+    """Render enhanced main interface page."""
+    st.title("🔮 Evolve Enhanced Unified Interface")
+    st.markdown("Access all trading system features through one unified interface with full transparency.")
     
-    # Command input
+    # System Status Overview
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("LLM Provider", interface.llm_provider.title())
+    
+    with col2:
+        provider_status = interface.get_llm_provider_status()
+        available_providers = sum(provider_status.values())
+        st.metric("Available Providers", available_providers)
+    
+    with col3:
+        notification_status = interface.get_notification_status()
+        notifications_configured = sum([
+            notification_status.get('slack_configured', False),
+            notification_status.get('email_configured', False)
+        ])
+        st.metric("Notifications", notifications_configured)
+    
+    with col4:
+        components_count = len(interface.components)
+        st.metric("Components", components_count)
+    
+    # Command input with transparency
     st.subheader("Command Interface")
-    command = st.text_input(
+    
+    # Manual prompt input
+    manual_prompt = st.text_area(
         "Enter command or natural language query:",
-        placeholder="e.g., 'forecast AAPL 30d' or 'What's the best model for TSLA?'"
+        placeholder="e.g., 'forecast AAPL 30d' or 'What's the best model for TSLA?'",
+        height=100
     )
     
-    if st.button("Execute"):
-        if command:
-            with st.spinner("Processing..."):
-                result = interface.process_command(command)
-                display_result(result)
+    # LLM provider override
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        override_provider = st.selectbox(
+            "Override LLM Provider (optional)",
+            ["Use Default"] + [p.title() for p in interface.get_llm_provider_status().keys() if interface.get_llm_provider_status()[p]]
+        )
     
-    # Quick actions
+    with col2:
+        execute_button = st.button("🚀 Execute", type="primary")
+    
+    if execute_button and manual_prompt:
+        with st.spinner("Processing..."):
+            # Use override provider if selected
+            provider = None
+            if override_provider != "Use Default":
+                provider = override_provider.lower()
+            
+            result = interface.process_command(manual_prompt, provider)
+            display_enhanced_result(result)
+    
+    # Quick actions with transparency
     st.subheader("Quick Actions")
     col1, col2, col3 = st.columns(3)
     
     with col1:
         if st.button("📈 Forecast AAPL"):
             result = interface.process_command("forecast AAPL 7d")
-            display_result(result)
+            display_enhanced_result(result)
     
     with col2:
         if st.button("🤖 Ask QuantGPT"):
             result = interface.process_command("What's the trading signal for TSLA?")
-            display_result(result)
+            display_enhanced_result(result)
     
     with col3:
         if st.button("⚙️ System Status"):
             result = interface.process_command("status")
-            display_result(result)
+            display_enhanced_result(result)
 
 
-def render_quantgpt_interface(interface: UnifiedInterface):
-    """Render QuantGPT interface."""
+def render_enhanced_quantgpt_interface(interface: EnhancedUnifiedInterface):
+    """Render enhanced QuantGPT interface."""
     st.title("🤖 QuantGPT Natural Language Interface")
-    st.markdown("Ask questions about trading in natural language.")
-
-    # LLM Provider selection
-    provider_options = ['openai', 'huggingface', 'regex']
-    selected_provider = st.sidebar.radio("LLM Provider", provider_options, index=0)
-    st.sidebar.write(f"Current LLM Provider: {selected_provider}")
-
+    st.markdown("Ask questions about trading in natural language with full transparency.")
+    
+    # LLM Provider Info
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info(f"**Current LLM Provider:** {interface.llm_provider.title()}")
+    with col2:
+        provider_status = interface.get_llm_provider_status()
+        available = [p for p, available in provider_status.items() if available]
+        st.info(f"**Available Providers:** {', '.join(available)}")
+    
     # Query input
     query = st.text_area(
         "Enter your question:",
         placeholder="e.g., 'What's the best model for TSLA?' or 'Should I buy AAPL now?'",
         height=150
     )
-    if st.button("Ask QuantGPT") and query:
-        with st.spinner("Processing..."):
-            # Use the enhanced parse_intent signature
-            prompt_router = interface.components.get('prompt_router')
-            if prompt_router:
-                intent, args, provider, raw_response = prompt_router.parse_intent(query)
-                st.write(f"**LLM Provider Used:** {provider}")
-                st.write(f"**Parsed Intent:** {intent}")
-                st.write(f"**Parsed Args:** {args}")
-                st.write(f"**Raw LLM Response:**")
-                st.code(raw_response)
-                # Simulate routing
-                agents = interface.components.get('agent_manager', {})
-                st.write(f"**Triggered Action:** {intent}")
-            else:
-                st.error("Prompt router not available.")
-
-
-def render_forecasting_interface(interface: UnifiedInterface):
-    """Render forecasting interface."""
-    st.title("📈 Forecasting Interface")
     
-    col1, col2 = st.columns(2)
-    
+    # Provider selection for this query
+    col1, col2 = st.columns([3, 1])
     with col1:
-        symbol = st.text_input("Symbol:", value="AAPL").upper()
-        period = st.selectbox("Period:", ["1d", "7d", "30d", "90d"])
-        timeframe = st.selectbox("Timeframe:", ["1m", "5m", "15m", "1h", "4h", "1d"])
+        query_provider = st.selectbox(
+            "LLM Provider for this query",
+            [p.title() for p in provider_status.keys() if provider_status[p]]
+        )
     
     with col2:
-        model_type = st.selectbox("Model Type:", ["auto", "lstm", "xgboost", "prophet", "ensemble"])
-        include_analysis = st.checkbox("Include Analysis", value=True)
-        generate_report = st.checkbox("Generate Report", value=False)
+        ask_button = st.button("🤖 Ask", type="primary")
     
-    if st.button("Generate Forecast"):
-        command = f"forecast {symbol} {period}"
-        with st.spinner("Generating forecast..."):
-            result = interface.process_command(command)
-            display_result(result)
+    if ask_button and query:
+        with st.spinner("Processing with QuantGPT..."):
+            result = interface.process_command(query, query_provider.lower())
+            display_enhanced_result(result)
 
 
-def render_tuning_interface(interface: UnifiedInterface):
-    """Render tuning interface."""
-    st.title("⚙️ Model Tuning Interface")
+def display_enhanced_result(result: Dict[str, Any]):
+    """Display enhanced result with full transparency."""
+    st.subheader("📊 Result")
     
-    col1, col2 = st.columns(2)
+    # Success/Error indicator
+    if result.get('success', False):
+        st.success("✅ Command executed successfully")
+    else:
+        st.error("❌ Command failed")
     
-    with col1:
-        model_type = st.selectbox("Model Type:", ["lstm", "xgboost", "prophet", "ensemble"])
-        symbol = st.text_input("Symbol:", value="AAPL").upper()
+    # LLM Provider Info
+    if 'llm_provider' in result:
+        st.info(f"**LLM Provider Used:** {result['llm_provider'].title()}")
     
-    with col2:
-        optimization_type = st.selectbox("Optimization:", ["bayesian", "genetic", "grid"])
-        max_iterations = st.number_input("Max Iterations:", value=100, min_value=10, max_value=1000)
-    
-    if st.button("Start Tuning"):
-        command = f"tune {model_type} {symbol}"
-        with st.spinner("Tuning model..."):
-            result = interface.process_command(command)
-            display_result(result)
-
-
-def render_strategy_interface(interface: UnifiedInterface):
-    """Render strategy interface."""
-    st.title("🎯 Strategy Interface")
-    
-    action = st.selectbox("Action:", ["List Strategies", "Run Strategy", "Backtest Strategy"])
-    
-    if action == "List Strategies":
-        if st.button("List All Strategies"):
-            result = interface.process_command("strategy list")
-            display_result(result)
-    
-    elif action == "Run Strategy":
+    # Intent and Confidence (if available)
+    if 'intent' in result:
         col1, col2 = st.columns(2)
         with col1:
-            strategy = st.selectbox("Strategy:", ["bollinger", "rsi", "macd", "custom"])
+            st.metric("Detected Intent", result['intent'].title())
         with col2:
-            symbol = st.text_input("Symbol:", value="AAPL").upper()
-        
-        if st.button("Run Strategy"):
-            command = f"strategy run {strategy} {symbol}"
-            result = interface.process_command(command)
-            display_result(result)
-
-
-def render_portfolio_interface(interface: UnifiedInterface):
-    """Render portfolio interface."""
-    st.title("💼 Portfolio Interface")
+            if 'confidence' in result:
+                st.metric("Confidence", f"{result['confidence']:.2f}")
     
+    # Raw Response (if available)
+    if 'raw_response' in result:
+        with st.expander("🔍 Raw LLM Response"):
+            st.code(result['raw_response'])
+    
+    # Arguments (if available)
+    if 'args' in result and result['args']:
+        with st.expander("📋 Parsed Arguments"):
+            st.json(result['args'])
+    
+    # Main Result
+    if 'result' in result:
+        st.subheader("📈 Result Data")
+        st.json(result['result'])
+    
+    # Error Information
+    if 'error' in result:
+        st.error(f"**Error:** {result['error']}")
+    
+    # Timestamp
+    if 'timestamp' in result:
+        st.caption(f"Executed at: {result['timestamp']}")
+
+
+def render_enhanced_forecasting_interface(interface: EnhancedUnifiedInterface):
+    """Render enhanced forecasting interface."""
+    st.title("📈 Enhanced Forecasting Interface")
+    st.markdown("Generate market predictions with full model transparency.")
+    
+    # Model selection
     col1, col2 = st.columns(2)
-    
     with col1:
-        if st.button("Portfolio Status"):
-            result = interface.process_command("portfolio status")
-            display_result(result)
-    
+        symbol = st.text_input("Symbol", value="AAPL").upper()
     with col2:
-        if st.button("Rebalance Portfolio"):
-            result = interface.process_command("portfolio rebalance")
-            display_result(result)
-
-
-def render_agents_interface(interface: UnifiedInterface):
-    """Render agents interface."""
-    st.title("🤖 Agents Interface")
+        timeframe = st.selectbox("Timeframe", ["1d", "7d", "30d", "90d"])
     
+    # Model options
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        model = st.selectbox("Model", ["lstm", "transformer", "xgboost", "ensemble"])
+    with col2:
+        confidence_threshold = st.slider("Confidence Threshold", 0.5, 0.95, 0.8)
+    with col3:
+        provider = st.selectbox("LLM Provider", ["openai", "huggingface", "regex"])
+    
+    if st.button("🚀 Generate Forecast", type="primary"):
+        command = f"forecast {symbol} {timeframe} with {model} model"
+        result = interface.process_command(command, provider)
+        display_enhanced_result(result)
+
+
+def render_enhanced_tuning_interface(interface: EnhancedUnifiedInterface):
+    """Render enhanced tuning interface."""
+    st.title("⚙️ Enhanced Tuning Interface")
+    st.markdown("Optimize models and strategies with full transparency.")
+    
+    # Tuning parameters
     col1, col2 = st.columns(2)
-    
     with col1:
-        if st.button("List Agents"):
-            result = interface.process_command("agent list")
-            display_result(result)
-    
+        model = st.selectbox("Model to Tune", ["lstm", "transformer", "xgboost"])
     with col2:
-        if st.button("Agent Status"):
-            result = interface.process_command("agent status")
-            display_result(result)
+        symbol = st.text_input("Symbol", value="AAPL").upper()
+    
+    # Optimization settings
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        optimization_type = st.selectbox("Optimization Type", ["hyperparameter", "strategy", "ensemble"])
+    with col2:
+        max_iterations = st.number_input("Max Iterations", 10, 1000, 100)
+    with col3:
+        provider = st.selectbox("LLM Provider", ["openai", "huggingface", "regex"])
+    
+    if st.button("🔧 Start Tuning", type="primary"):
+        command = f"tune {model} {symbol} {optimization_type} {max_iterations} iterations"
+        result = interface.process_command(command, provider)
+        display_enhanced_result(result)
 
 
-def render_reports_interface(interface: UnifiedInterface):
-    """Render reports interface."""
-    st.title("📊 Reports Interface")
+def render_enhanced_strategy_interface(interface: EnhancedUnifiedInterface):
+    """Render enhanced strategy interface."""
+    st.title("📊 Enhanced Strategy Interface")
+    st.markdown("Manage and execute trading strategies with full transparency.")
     
-    symbol = st.text_input("Symbol:", value="AAPL").upper()
-    report_type = st.selectbox("Report Type:", ["comprehensive", "performance", "trade_log"])
+    # Strategy selection
+    col1, col2 = st.columns(2)
+    with col1:
+        strategy = st.selectbox("Strategy", ["bollinger", "macd", "rsi", "momentum"])
+    with col2:
+        symbol = st.text_input("Symbol", value="AAPL").upper()
     
-    if st.button("Generate Report"):
-        command = f"report generate {symbol}"
-        with st.spinner("Generating report..."):
-            result = interface.process_command(command)
-            display_result(result)
+    # Action selection
+    action = st.selectbox("Action", ["backtest", "run", "optimize", "analyze"])
+    
+    # Additional parameters
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        timeframe = st.selectbox("Timeframe", ["1d", "1w", "1m", "3m"])
+    with col2:
+        provider = st.selectbox("LLM Provider", ["openai", "huggingface", "regex"])
+    with col3:
+        include_risk = st.checkbox("Include Risk Analysis")
+    
+    if st.button("📈 Execute Strategy", type="primary"):
+        command = f"strategy {action} {strategy} {symbol} {timeframe}"
+        if include_risk:
+            command += " with risk analysis"
+        result = interface.process_command(command, provider)
+        display_enhanced_result(result)
 
 
-def render_help_interface(interface: UnifiedInterface):
-    """Render help interface."""
-    st.title("❓ Help & Documentation")
+def render_enhanced_portfolio_interface(interface: EnhancedUnifiedInterface):
+    """Render enhanced portfolio interface."""
+    st.title("💼 Enhanced Portfolio Interface")
+    st.markdown("Portfolio management and analysis with full transparency.")
     
-    help_data = interface.get_help()
+    # Portfolio actions
+    action = st.selectbox("Portfolio Action", ["status", "rebalance", "analyze", "optimize"])
     
-    st.subheader("Overview")
-    st.write(help_data['overview']['description'])
+    # Parameters
+    col1, col2 = st.columns(2)
+    with col1:
+        risk_tolerance = st.selectbox("Risk Tolerance", ["low", "medium", "high"])
+    with col2:
+        provider = st.selectbox("LLM Provider", ["openai", "huggingface", "regex"])
     
-    st.subheader("Available Features")
-    for feature, info in help_data['features'].items():
-        with st.expander(f"{feature.title()}"):
-            st.write(info['description'])
-            st.write("**Commands:**")
-            for cmd in info['commands']:
+    if st.button("💼 Execute Portfolio Action", type="primary"):
+        command = f"portfolio {action} with {risk_tolerance} risk"
+        result = interface.process_command(command, provider)
+        display_enhanced_result(result)
+
+
+def render_enhanced_agents_interface(interface: EnhancedUnifiedInterface):
+    """Render enhanced agents interface."""
+    st.title("🤖 Enhanced Agents Interface")
+    st.markdown("Manage autonomous trading agents with full transparency.")
+    
+    # Agent actions
+    action = st.selectbox("Agent Action", ["list", "status", "start", "stop", "configure"])
+    
+    # Agent selection
+    if action in ["start", "stop", "configure"]:
+        agent = st.selectbox("Agent", ["model_builder", "performance_critic", "updater", "researcher"])
+    else:
+        agent = ""
+    
+    # Provider selection
+    provider = st.selectbox("LLM Provider", ["openai", "huggingface", "regex"])
+    
+    if st.button("🤖 Execute Agent Action", type="primary"):
+        command = f"agent {action}"
+        if agent:
+            command += f" {agent}"
+        result = interface.process_command(command, provider)
+        display_enhanced_result(result)
+
+
+def render_enhanced_reports_interface(interface: EnhancedUnifiedInterface):
+    """Render enhanced reports interface."""
+    st.title("📋 Enhanced Reports Interface")
+    st.markdown("Generate comprehensive trading reports with full transparency.")
+    
+    # Report parameters
+    col1, col2 = st.columns(2)
+    with col1:
+        symbol = st.text_input("Symbol", value="AAPL").upper()
+    with col2:
+        report_type = st.selectbox("Report Type", ["comprehensive", "performance", "risk", "trade_log"])
+    
+    # Additional options
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        include_heatmap = st.checkbox("Include Heatmap", value=True)
+    with col2:
+        include_models = st.checkbox("Include Model Summary", value=True)
+    with col3:
+        provider = st.selectbox("LLM Provider", ["openai", "huggingface", "regex"])
+    
+    if st.button("📋 Generate Report", type="primary"):
+        command = f"report generate {symbol} {report_type}"
+        if include_heatmap:
+            command += " with heatmap"
+        if include_models:
+            command += " with model summary"
+        result = interface.process_command(command, provider)
+        display_enhanced_result(result)
+
+
+def render_enhanced_help_interface(interface: EnhancedUnifiedInterface):
+    """Render enhanced help interface."""
+    st.title("❓ Enhanced Help Interface")
+    st.markdown("Comprehensive help and documentation.")
+    
+    help_info = interface.get_help()
+    
+    # Overview
+    st.subheader("📖 Overview")
+    st.markdown(f"**{help_info['overview']['title']}**")
+    st.markdown(help_info['overview']['description'])
+    st.caption(f"Version: {help_info['overview']['version']}")
+    
+    # Features
+    st.subheader("🚀 Features")
+    for feature_name, feature_info in help_info['features'].items():
+        with st.expander(f"📋 {feature_name.title()}"):
+            st.markdown(f"**Description:** {feature_info['description']}")
+            st.markdown("**Commands:**")
+            for cmd in feature_info['commands']:
                 st.code(cmd)
+            st.markdown(f"**UI Section:** {feature_info['ui_section']}")
     
-    st.subheader("Quick Start Examples")
-    for example in help_data['examples']['quick_start']:
-        st.code(example)
+    # LLM Providers
+    st.subheader("🤖 LLM Providers")
+    for provider, description in help_info['llm_providers'].items():
+        st.markdown(f"**{provider.title()}:** {description}")
+    
+    # Examples
+    st.subheader("💡 Examples")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Quick Start:**")
+        for example in help_info['examples']['quick_start']:
+            st.code(example)
+    with col2:
+        st.markdown("**Advanced:**")
+        for example in help_info['examples']['advanced']:
+            st.code(example)
 
 
-def display_result(result: Dict[str, Any]):
-    """Display command result in Streamlit."""
-    if result.get('status') == 'error':
-        st.error(f"Error: {result.get('error', 'Unknown error')}")
-        return
+def render_system_status_interface(interface: EnhancedUnifiedInterface):
+    """Render system status interface."""
+    st.title("⚙️ System Status")
+    st.markdown("Comprehensive system status and health monitoring.")
     
-    if result.get('type') == 'help':
-        st.json(result['data'])
-        return
+    # System Overview
+    col1, col2, col3, col4 = st.columns(4)
     
-    # Display result based on type
-    result_type = result.get('type', 'unknown')
+    with col1:
+        st.metric("Interface Status", "✅ Active" if interface.initialized else "❌ Error")
     
-    if result_type == 'natural_language':
-        st.subheader("QuantGPT Response")
-        if 'result' in result and 'gpt_commentary' in result['result']:
-            st.write(result['result']['gpt_commentary'])
+    with col2:
+        components_count = len(interface.components)
+        st.metric("Components Loaded", components_count)
+    
+    with col3:
+        provider_status = interface.get_llm_provider_status()
+        available_providers = sum(provider_status.values())
+        st.metric("LLM Providers", available_providers)
+    
+    with col4:
+        notification_status = interface.get_notification_status()
+        notifications_configured = sum([
+            notification_status.get('slack_configured', False),
+            notification_status.get('email_configured', False)
+        ])
+        st.metric("Notifications", notifications_configured)
+    
+    # Component Status
+    st.subheader("🔧 Component Status")
+    for component_name, component in interface.components.items():
+        status = "✅ Available" if component else "❌ Not Available"
+        st.markdown(f"**{component_name}:** {status}")
+    
+    # LLM Provider Status
+    st.subheader("🤖 LLM Provider Status")
+    provider_status = interface.get_llm_provider_status()
+    for provider, available in provider_status.items():
+        status_icon = "✅" if available else "❌"
+        st.markdown(f"{status_icon} **{provider.title()}:** {'Available' if available else 'Not Available'}")
+    
+    # Notification Status
+    st.subheader("🔔 Notification Status")
+    notification_status = interface.get_notification_status()
+    for key, value in notification_status.items():
+        if isinstance(value, bool):
+            status_icon = "✅" if value else "❌"
+            st.markdown(f"{status_icon} **{key.replace('_', ' ').title()}:** {'Configured' if value else 'Not Configured'}")
         else:
-            st.write(result.get('result', 'No response'))
-    
-    elif result_type in ['forecast', 'tuning', 'strategy_run']:
-        st.subheader(f"{result_type.title()} Result")
-        st.json(result.get('result', {}))
-    
-    elif result_type in ['strategy_list', 'agent_list']:
-        st.subheader(f"{result_type.replace('_', ' ').title()}")
-        items = result.get('strategies', result.get('agents', []))
-        for item in items:
-            st.write(f"- {item}")
-    
-    else:
-        st.subheader("Result")
-        st.json(result)
-
-
-def terminal_ui():
-    """Terminal command-line interface."""
-    interface = UnifiedInterface()
-    
-    print("🔮 Evolve Unified Interface")
-    print("=" * 50)
-    print("Type 'help' for available commands")
-    print("Type 'quit' to exit")
-    print("=" * 50)
-    
-    while True:
-        try:
-            command = input("\n> ").strip()
-            
-            if command.lower() in ['quit', 'exit', 'q']:
-                print("Goodbye!")
-                break
-            
-            if command:
-                result = interface.process_command(command)
-                
-                if result.get('status') == 'error':
-                    print(f"❌ Error: {result.get('error')}")
-                else:
-                    print_result(result)
-                    
-        except KeyboardInterrupt:
-            print("\nGoodbye!")
-            break
-        except Exception as e:
-            print(f"❌ Unexpected error: {e}")
-
-
-def print_result(result: Dict[str, Any]):
-    """Print command result in terminal."""
-    if result.get('type') == 'help':
-        help_data = result['data']
-        print(f"\n{help_data['overview']['title']}")
-        print(f"Version: {help_data['overview']['version']}")
-        print(f"\n{help_data['overview']['description']}")
-        
-        print("\n📋 Available Features:")
-        for feature, info in help_data['features'].items():
-            print(f"\n  {feature.upper()}:")
-            print(f"    {info['description']}")
-            print("    Commands:")
-            for cmd in info['commands']:
-                print(f"      {cmd}")
-        
-        print("\n🚀 Quick Start Examples:")
-        for example in help_data['examples']['quick_start']:
-            print(f"  {example}")
-    
-    elif result.get('type') == 'natural_language':
-        print("\n🤖 QuantGPT Response:")
-        if 'result' in result and 'gpt_commentary' in result['result']:
-            print(result['result']['gpt_commentary'])
-        else:
-            print(result.get('result', 'No response'))
-    
-    elif result.get('type') in ['forecast', 'tuning', 'strategy_run']:
-        print(f"\n✅ {result['type'].title()} completed successfully")
-        print(f"Symbol: {result.get('symbol', 'N/A')}")
-        if 'result' in result:
-            print("Result:", json.dumps(result['result'], indent=2))
-    
-    elif result.get('type') in ['strategy_list', 'agent_list']:
-        items = result.get('strategies', result.get('agents', []))
-        print(f"\n📋 {result['type'].replace('_', ' ').title()}:")
-        for item in items:
-            print(f"  - {item}")
-    
-    else:
-        print(f"\n✅ Command completed successfully")
-        if 'result' in result:
-            print("Result:", json.dumps(result['result'], indent=2))
+            st.markdown(f"**{key.replace('_', ' ').title()}:** {value}")
 
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(description='Evolve Unified Interface')
-    parser.add_argument('--mode', choices=['streamlit', 'terminal'], default='streamlit',
-                       help='Interface mode (default: streamlit)')
-    parser.add_argument('--command', help='Execute a single command and exit')
-    parser.add_argument('--config', help='Configuration file path')
+    parser = argparse.ArgumentParser(description="Evolve Trading System - Enhanced Unified Interface")
+    parser.add_argument("--mode", choices=["streamlit", "terminal"], default="streamlit",
+                       help="Interface mode")
+    parser.add_argument("--config", type=str, help="Configuration file path")
     
     args = parser.parse_args()
     
-    # Load config if provided
-    config = {}
-    if args.config:
-        try:
-            with open(args.config, 'r') as f:
-                config = json.load(f)
-        except Exception as e:
-            print(f"Error loading config: {e}")
-    
-    # Initialize interface
-    interface = UnifiedInterface(config)
-    
-    if args.command:
-        # Execute single command
-        result = interface.process_command(args.command)
-        if args.mode == 'terminal':
-            print_result(result)
-        else:
-            print(json.dumps(result, indent=2))
+    if args.mode == "streamlit":
+        enhanced_streamlit_ui()
     else:
-        # Start appropriate UI
-        if args.mode == 'streamlit':
-            streamlit_ui()
-        else:
-            terminal_ui()
+        terminal_ui()
 
 
 if __name__ == "__main__":

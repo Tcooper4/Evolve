@@ -22,6 +22,7 @@ from trading.data.data_loader import load_market_data
 from trading.utils.visualization import plot_forecast, plot_attention_heatmap, plot_shap_values, plot_model_components, plot_model_comparison, plot_performance_over_time, plot_backtest_results
 from trading.utils.metrics import calculate_metrics
 from trading.utils.system_status import get_system_status
+from src.analysis.market_analysis import MarketAnalysis
 import json
 import os
 
@@ -33,6 +34,8 @@ def initialize_session_state():
         st.session_state.selected_model = None
     if "forecast_data" not in st.session_state:
         st.session_state.forecast_data = None
+    if "market_analysis" not in st.session_state:
+        st.session_state.market_analysis = None
     if "start_date" not in st.session_state:
         st.session_state.start_date = datetime.now().date()
     if "end_date" not in st.session_state:
@@ -70,6 +73,142 @@ def get_status_badge(status):
     }
     return f'<span style="color: {colors[status]}; font-weight: bold;">●</span> {status.title()}'
 
+def analyze_market_context(ticker: str, data: pd.DataFrame) -> Dict:
+    """
+    Analyze market context using the MarketAnalysis module.
+    
+    Args:
+        ticker: Ticker symbol
+        data: Market data DataFrame
+        
+    Returns:
+        Dictionary with market analysis results
+    """
+    try:
+        market_analyzer = MarketAnalysis()
+        analysis = market_analyzer.analyze_market(data)
+        
+        # Log the analysis
+        st.session_state.market_analysis = analysis
+        
+        return analysis
+        
+    except Exception as e:
+        st.error(f"Error analyzing market context: {str(e)}")
+        return {}
+
+def display_market_analysis(analysis: Dict):
+    """
+    Display market analysis results in the UI.
+    
+    Args:
+        analysis: Market analysis results
+    """
+    if not analysis:
+        return
+    
+    st.subheader("📊 Market Context Analysis")
+    
+    # Market Regime
+    if 'regime' in analysis:
+        regime = analysis['regime']
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Market Regime", regime.name)
+        with col2:
+            st.metric("Confidence", f"{regime.confidence:.1%}")
+        with col3:
+            st.metric("Trend Strength", f"{regime.metrics.get('trend_strength', 0):.2f}")
+        
+        st.info(f"**{regime.name}**: {regime.description}")
+    
+    # Market Conditions
+    if 'conditions' in analysis and analysis['conditions']:
+        st.subheader("Market Conditions")
+        
+        for condition in analysis['conditions']:
+            with st.expander(f"{condition.name} (Strength: {condition.strength:.1%})"):
+                st.write(condition.description)
+                
+                # Display indicators
+                if condition.indicators:
+                    st.write("**Key Indicators:**")
+                    for indicator, value in condition.indicators.items():
+                        if isinstance(value, (int, float)):
+                            st.write(f"- {indicator}: {value:.4f}")
+                        else:
+                            st.write(f"- {indicator}: {value}")
+                
+                # Display signals
+                if condition.signals:
+                    st.write("**Signals:**")
+                    for signal, value in condition.signals.items():
+                        st.write(f"- {signal}: {value}")
+    
+    # Trading Signals
+    if 'signals' in analysis:
+        st.subheader("Trading Signals")
+        
+        signal_categories = ['trend', 'momentum', 'volatility', 'volume', 'support_resistance']
+        
+        for category in signal_categories:
+            if category in analysis['signals']:
+                signals = analysis['signals'][category]
+                if signals:
+                    with st.expander(f"{category.title()} Signals"):
+                        for signal_name, signal_data in signals.items():
+                            if isinstance(signal_data, dict):
+                                st.write(f"**{signal_name}:**")
+                                for key, value in signal_data.items():
+                                    st.write(f"  - {key}: {value}")
+                            else:
+                                st.write(f"**{signal_name}:** {signal_data}")
+
+def generate_market_commentary(analysis: Dict, forecast_data: pd.DataFrame) -> str:
+    """
+    Generate market commentary based on analysis and forecast.
+    
+    Args:
+        analysis: Market analysis results
+        forecast_data: Forecast data
+        
+    Returns:
+        Generated commentary string
+    """
+    commentary = []
+    
+    if 'regime' in analysis:
+        regime = analysis['regime']
+        commentary.append(f"**Market Context**: The market is currently in a {regime.name.lower()} regime with {regime.confidence:.1%} confidence.")
+        
+        if regime.metrics.get('trend_strength', 0) > 0.7:
+            commentary.append("Strong trend conditions suggest following momentum strategies.")
+        elif regime.metrics.get('trend_strength', 0) < -0.7:
+            commentary.append("Strong downtrend suggests defensive positioning or short opportunities.")
+        else:
+            commentary.append("Mixed trend conditions suggest range-bound or mean-reversion strategies.")
+    
+    if 'conditions' in analysis:
+        conditions = analysis['conditions']
+        if conditions:
+            strong_conditions = [c for c in conditions if c.strength > 0.7]
+            if strong_conditions:
+                commentary.append(f"**Key Conditions**: {len(strong_conditions)} strong market conditions detected.")
+    
+    # Add forecast-specific commentary
+    if not forecast_data.empty:
+        latest_forecast = forecast_data.iloc[-1] if len(forecast_data) > 0 else None
+        if latest_forecast is not None:
+            if 'prediction' in latest_forecast:
+                pred = latest_forecast['prediction']
+                if pred > 0:
+                    commentary.append("**Forecast**: Model predicts upward price movement.")
+                else:
+                    commentary.append("**Forecast**: Model predicts downward price movement.")
+    
+    return " ".join(commentary) if commentary else "No market commentary available."
+
 def main():
     st.set_page_config(
         page_title="Forecast & Trade",
@@ -95,7 +234,7 @@ def main():
             unsafe_allow_html=True
         )
     
-    st.markdown("Generate forecasts and execute trades based on model predictions.")
+    st.markdown("Generate forecasts and execute trades based on model predictions with market context analysis.")
 
     # Initialize session state
     initialize_session_state()
@@ -110,6 +249,7 @@ def main():
             st.session_state.selected_ticker = ticker
             st.session_state.forecast_data = None
             st.session_state.selected_model = None
+            st.session_state.market_analysis = None
 
         # Date range selection
         col1, col2 = st.columns(2)
@@ -131,6 +271,12 @@ def main():
             st.session_state.end_date = end_date
             st.session_state.forecast_data = None
             st.session_state.selected_model = None
+            st.session_state.market_analysis = None
+
+        # Market Analysis Options
+        st.subheader("Market Analysis")
+        enable_market_analysis = st.checkbox("Enable Market Context Analysis", value=True)
+        show_market_commentary = st.checkbox("Show Market Commentary", value=True)
 
         # Model selection
         st.subheader("Model Selection")
@@ -206,6 +352,20 @@ def main():
         # Generate forecast button
         if st.button("Generate Forecast", type="primary"):
             with st.spinner("Generating forecast..."):
+                # Load market data for analysis
+                try:
+                    market_data = load_market_data(ticker, start_date, end_date)
+                    
+                    # Perform market analysis if enabled
+                    if enable_market_analysis:
+                        with st.spinner("Analyzing market context..."):
+                            market_analysis = analyze_market_context(ticker, market_data)
+                            st.session_state.market_analysis = market_analysis
+                            st.success("Market analysis completed!")
+                except Exception as e:
+                    st.warning(f"Could not load market data for analysis: {str(e)}")
+                    market_analysis = {}
+                
                 # Simulate forecast generation
                 forecast_data = generate_forecast(ticker, selected_model)
                 st.session_state.forecast_data = forecast_data
@@ -236,6 +396,17 @@ def main():
     if st.session_state.forecast_data is not None:
         # Display forecast results
         st.subheader("Forecast Results")
+        
+        # Market Analysis Section
+        if enable_market_analysis and st.session_state.market_analysis:
+            display_market_analysis(st.session_state.market_analysis)
+            
+            if show_market_commentary:
+                commentary = generate_market_commentary(
+                    st.session_state.market_analysis, 
+                    st.session_state.forecast_data
+                )
+                st.info(commentary)
         
         # Create tabs for different views
         tab1, tab2, tab3, tab4 = st.tabs(["Forecast", "Performance", "Analysis", "Backtest"])

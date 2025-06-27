@@ -1,5 +1,5 @@
 """
-Data validation and preprocessing utilities for market data.
+Enhanced data validation and preprocessing utilities for market data.
 """
 import pandas as pd
 import numpy as np
@@ -10,8 +10,8 @@ from datetime import datetime
 # Configure logging
 logger = logging.getLogger(__name__)
 
-class DataValidator:
-    """Class for validating and preprocessing market data."""
+class EnhancedDataValidator:
+    """Enhanced class for validating and preprocessing market data."""
     
     REQUIRED_COLUMNS = ['open', 'high', 'low', 'close', 'volume']
     
@@ -377,7 +377,7 @@ def validate_data_for_training(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any]]:
     Returns:
         Tuple of (is_valid, validation_summary)
     """
-    validator = DataValidator()
+    validator = EnhancedDataValidator()
     is_valid, error_message = validator.validate_dataframe(df)
     validation_summary = validator.get_validation_summary()
     
@@ -394,7 +394,7 @@ def validate_data_for_forecasting(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any
     Returns:
         Tuple of (is_valid, validation_summary)
     """
-    validator = DataValidator()
+    validator = EnhancedDataValidator()
     is_valid, error_message = validator.validate_dataframe(df)
     validation_summary = validator.get_validation_summary()
     
@@ -412,4 +412,36 @@ def validate_data_for_forecasting(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any
             if recent_data.isna().any().any():
                 validation_summary["warnings"].append("Recent data contains missing values")
     
-    return is_valid, validation_summary 
+    return is_valid, validation_summary
+
+
+def display_validation_warnings(validation_summary: Dict[str, Any]) -> None:
+    """
+    Display validation warnings in Streamlit UI.
+    
+    Args:
+        validation_summary: Validation summary dictionary
+    """
+    import streamlit as st
+    
+    if validation_summary["status"] == "failed":
+        st.error("❌ Data validation failed!")
+        for error in validation_summary.get("errors", []):
+            st.error(f"• {error}")
+    
+    if validation_summary.get("warnings"):
+        st.warning("⚠️ Data validation warnings:")
+        for warning in validation_summary["warnings"]:
+            st.warning(f"• {warning}")
+    
+    if validation_summary["status"] == "passed":
+        st.success("✅ Data validation passed!")
+        
+        # Show summary metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Checks", validation_summary["total_checks"])
+        with col2:
+            st.metric("Passed Checks", validation_summary["passed_checks"])
+        with col3:
+            st.metric("Warnings", validation_summary["warnings"]) 
