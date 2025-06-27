@@ -4,7 +4,7 @@ This module provides utilities for handling time-related operations with
 timezone support, market hours, and trading session management.
 """
 
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union, Tuple, Any
 from datetime import datetime, time, timedelta
 import pytz
 import pandas as pd
