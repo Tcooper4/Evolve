@@ -542,11 +542,15 @@ class CLIService(cmd.Cmd):
                 )
             )
 
-    def run(self):
+    def execute_cli(self) -> None:
+        """Execute the command-line interface.
+        
+        Starts the interactive CLI session and handles user commands.
+        """
         self.app()
 
-def main():
-    """Main entry point."""
+def main() -> None:
+    """Main entry point for the CLI service."""
     parser = argparse.ArgumentParser(description='Command-line interface')
     parser.add_argument('--config', required=True, help='Path to config file')
     args = parser.parse_args()

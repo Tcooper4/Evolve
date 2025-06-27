@@ -18,6 +18,54 @@
 - **🖥️ Streamlit UI**: End-to-end interactive dashboard for seamless user experience
 - **📊 Real-time Monitoring**: Live performance tracking and system health metrics
 
+## 🔮 Unified Interface
+
+Evolve provides a **Unified Interface** that gives you access to all features through multiple access methods:
+
+### Access Methods
+- **🌐 Streamlit Web Interface**: Interactive dashboards and forms
+- **💻 Terminal Command Line**: Quick command execution
+- **🤖 Natural Language**: Ask questions in plain English via QuantGPT
+- **⚡ Direct Commands**: Execute specific actions with parameters
+
+### Quick Start
+```bash
+# Launch Streamlit interface
+streamlit run app.py
+
+# Use terminal interface
+python unified_interface.py --terminal
+
+# Execute commands directly
+python unified_interface.py --command "forecast AAPL 7d"
+
+# Ask natural language questions
+python unified_interface.py --command "What's the best model for TSLA?"
+```
+
+### Available Commands
+- **Forecasting**: `forecast AAPL 30d`, `predict BTCUSDT 1h`
+- **Tuning**: `tune model lstm AAPL`, `optimize strategy rsi`
+- **Strategies**: `strategy list`, `strategy run bollinger AAPL`
+- **Portfolio**: `portfolio status`, `portfolio rebalance`
+- **Agents**: `agent list`, `agent status`
+- **Reports**: `report generate AAPL`, `performance report`
+
+### Natural Language Examples
+- "What's the best model for NVDA over 90 days?"
+- "Should I long TSLA this week?"
+- "Analyze BTCUSDT market conditions"
+- "What's the trading signal for AAPL?"
+
+### Interface Features
+- **Command Routing**: Automatically routes commands to appropriate services
+- **Error Handling**: Graceful error handling and user feedback
+- **Help System**: Comprehensive help and documentation
+- **Status Monitoring**: Real-time system status and health checks
+- **Integration**: Seamless integration with all existing services
+
+For detailed usage instructions, see [USAGE_GUIDE.md](USAGE_GUIDE.md) and [README_UNIFIED_INTERFACE.md](README_UNIFIED_INTERFACE.md).
+
 ## 🛠️ Tech Stack
 
 ### Core Technologies

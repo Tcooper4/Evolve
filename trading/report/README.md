@@ -11,6 +11,32 @@ A comprehensive reporting system for the Evolve trading platform that generates 
 - **Integrations**: Slack, Notion, and email notifications
 - **Automated Service**: Redis pub/sub service for automatic report generation
 - **Visualizations**: Equity curves, prediction vs actual charts, PnL distributions
+- **Profitability Heatmap**: Visual heatmap of trade profitability over time (day vs. hour)
+- **Model Summary**: Highlights most and least successful models (by PnL)
+- **Per-Trade Execution Log**: Table of all trades with time, action, outcome, and model
+- **Configurable Chart Types**: Toggle chart/report sections via `report_config`
+
+## New Report Sections
+
+- **🔥 Trade Profitability Heatmap**: Shows a heatmap of trade PnL by day and hour (if timestamps are available in trade data).
+- **🏆 Model Summary**: Lists the most and least successful models by total PnL, trade count, and average PnL.
+- **🧾 Per-Trade Execution Log**: Table of all trades with columns for time, action, PnL, result, and model ID.
+
+## Chart/Section Configuration
+
+You can control which charts and sections appear in the report by passing a `report_config` dictionary to `ReportGenerator`:
+
+```python
+report_config = {
+    'equity_curve': True,
+    'predictions': True,
+    'pnl_distribution': True,
+    'heatmap': True,  # Show profitability heatmap
+    'model_summary': True,  # Show model summary
+    'trade_log': True  # Show per-trade log
+}
+generator = ReportGenerator(report_config=report_config)
+```
 
 ## Quick Start
 
@@ -22,9 +48,9 @@ from trading.report.report_generator import generate_quick_report
 # Sample data
 trade_data = {
     'trades': [
-        {'pnl': 100, 'duration': 3600},
-        {'pnl': -50, 'duration': 1800},
-        {'pnl': 200, 'duration': 7200}
+        {'pnl': 100, 'duration': 3600, 'timestamp': '2024-06-20T10:00:00', 'action': 'BUY', 'result': 'WIN', 'model_id': 'lstm_v1'},
+        {'pnl': -50, 'duration': 1800, 'timestamp': '2024-06-20T11:00:00', 'action': 'SELL', 'result': 'LOSS', 'model_id': 'lstm_v1'},
+        {'pnl': 200, 'duration': 7200, 'timestamp': '2024-06-21T09:00:00', 'action': 'BUY', 'result': 'WIN', 'model_id': 'xgb_v2'}
     ]
 }
 
