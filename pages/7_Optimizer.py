@@ -16,11 +16,10 @@ from typing import Dict, List, Any
 import json
 import os
 
-from optimizer.core.optimizer_factory import OptimizerFactory
-from optimizer.strategies.strategy_optimizer import StrategyOptimizer
-from optimizer.visualization.optimization_visualizer import OptimizationVisualizer
-from utils.strategy_switcher import StrategySwitcher
-from utils.memory_logger import MemoryLogger
+# Import from consolidated trading.optimization module
+from trading.optimization import OptimizerFactory, StrategyOptimizer, OptimizationVisualizer
+from trading.utils.strategy_switcher import StrategySwitcher
+from trading.utils.memory_logger import MemoryLogger
 
 def load_strategy_data() -> pd.DataFrame:
     """Load strategy performance data."""

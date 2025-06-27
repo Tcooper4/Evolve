@@ -83,7 +83,7 @@ def demo_optimizer_consolidation():
     st.subheader("🔧 Optimizer Consolidation")
     
     try:
-        from optimizers.consolidator import OptimizerConsolidator, get_optimizer_status
+        from trading.optimization.utils.consolidator import OptimizerConsolidator, get_optimizer_status
         
         # Get current optimizer status
         status = get_optimizer_status()
@@ -120,6 +120,19 @@ def demo_optimizer_consolidation():
                     else:
                         st.error("❌ Consolidation failed!")
                         st.error(f"Errors: {results['errors']}")
+        
+        # Complete consolidation option
+        with st.expander("Run Complete Consolidation"):
+            st.info("This will run the complete optimization consolidation process including import fixes and validation.")
+            
+            if st.button("Run Complete Optimization Consolidation"):
+                with st.spinner("Running complete consolidation..."):
+                    try:
+                        from complete_optimization_consolidation import main as run_complete_consolidation
+                        run_complete_consolidation()
+                        st.success("✅ Complete consolidation completed successfully!")
+                    except Exception as e:
+                        st.error(f"❌ Complete consolidation failed: {str(e)}")
         
         return True
         
