@@ -1,4 +1,4 @@
-"""Configuration settings for the trading system."""
+"""Enhanced configuration settings for the trading system with all required environment variables."""
 
 import os
 from pathlib import Path
@@ -24,17 +24,17 @@ DATA_LOG_LEVEL = os.getenv('DATA_LOG_LEVEL', 'INFO')
 ROOT_LOG_LEVEL = os.getenv('ROOT_LOG_LEVEL', 'WARNING')
 
 # API Keys
-ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', 'demo-alpha-vantage-key')
-POLYGON_API_KEY = os.getenv('POLYGON_API_KEY', 'demo-polygon-key')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'sk-demo-openai-key')
+ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
+POLYGON_API_KEY = os.getenv('POLYGON_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # Security and Authentication
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret-key-change-in-production')
 WEB_SECRET_KEY = os.getenv('WEB_SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Notification Settings
-EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', 'dev-email-password')
-SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL', '')
+EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_USER = os.getenv('EMAIL_USER', 'your-email@gmail.com')
