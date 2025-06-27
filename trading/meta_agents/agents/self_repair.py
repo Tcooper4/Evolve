@@ -17,7 +17,7 @@ import logging
 import importlib
 import inspect
 import ast
-import pkg_resources
+from importlib.metadata import distributions, version, PackageNotFoundError
 import yaml
 import pandas as pd
 from datetime import datetime
@@ -294,32 +294,40 @@ class SelfRepairAgent:
         """Check for dependency issues"""
         try:
             issues = []
+            installed = {dist.metadata['Name']: dist.version for dist in distributions()}
             
-            # Get installed packages
-            installed = {pkg.key: pkg.version for pkg in pkg_resources.working_set}
+            # Check required dependencies
+            required_deps = {
+                'numpy': '1.24.0',
+                'pandas': '2.0.0',
+                'torch': '2.0.0',
+                'transformers': '4.30.0',
+                'streamlit': '1.24.0'
+            }
             
-            # Check requirements
-            req_path = Path("requirements.txt")
-            if req_path.exists():
-                with open(req_path, 'r') as f:
-                    requirements = f.readlines()
-                
-                for req in requirements:
-                    req = req.strip()
-                    if req and not req.startswith('#'):
-                        try:
-                            pkg_resources.require(req)
-                        except (pkg_resources.DistributionNotFound,
-                                pkg_resources.VersionConflict) as e:
-                            issues.append(RepairIssue(
-                                issue_type="dependency_error",
-                                file_path="requirements.txt",
-                                description=str(e),
-                                severity="high",
-                                fix_applied=False,
-                                timestamp=datetime.now().isoformat(),
-                                fix_details={"requirement": req}
-                            ))
+            for package, min_version in required_deps.items():
+                try:
+                    current_version = version(package)
+                    if current_version < min_version:
+                        issues.append(RepairIssue(
+                            issue_type="dependency",
+                            file_path="requirements.txt",
+                            description=f"Package {package} version {current_version} < {min_version}",
+                            severity="high",
+                            fix_applied=False,
+                            timestamp=datetime.now().isoformat(),
+                            fix_details={"package": package, "required_version": min_version}
+                        ))
+                except PackageNotFoundError:
+                    issues.append(RepairIssue(
+                        issue_type="dependency",
+                        file_path="requirements.txt",
+                        description=f"Package {package} not installed",
+                        severity="high",
+                        fix_applied=False,
+                        timestamp=datetime.now().isoformat(),
+                        fix_details={"package": package, "required_version": min_version}
+                    ))
             
             return issues
             
@@ -350,8 +358,8 @@ class SelfRepairAgent:
                         await self._fix_config_mismatch(issue)
                     elif issue.issue_type == "model_version":
                         await self._fix_model_version(issue)
-                    elif issue.issue_type == "dependency_error":
-                        await self._fix_dependency_error(issue)
+                    elif issue.issue_type == "dependency":
+                        await self._fix_dependency(issue)
                     
                     issue.fix_applied = True
                     fixed_issues.append(issue)
@@ -442,16 +450,16 @@ class SelfRepairAgent:
             logger.error(f"Error fixing model version: {e}")
             raise
 
-    async def _fix_dependency_error(self, issue: RepairIssue) -> None:
+    async def _fix_dependency(self, issue: RepairIssue) -> None:
         """Fix dependency issues"""
         try:
             # Install or update package
             subprocess.run([
                 sys.executable, "-m", "pip", "install", "--upgrade",
-                issue.fix_details["requirement"]
+                issue.fix_details["package"]
             ], check=True)
             
-            logger.info(f"Updated dependency: {issue.fix_details['requirement']}")
+            logger.info(f"Updated dependency: {issue.fix_details['package']}")
             
         except Exception as e:
             logger.error(f"Error fixing dependency error: {e}")

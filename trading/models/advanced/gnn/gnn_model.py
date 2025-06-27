@@ -9,8 +9,6 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv, global_mean_pool
-import shap
 
 # Local imports
 from trading.models.base_model import BaseModel, ValidationError, ModelRegistry
@@ -26,6 +24,10 @@ class GNNLayer(nn.Module):
             out_channels: Number of output channels
             dropout: Dropout rate
         """
+        try:
+            from torch_geometric.nn import GCNConv
+        except ImportError:
+            raise ImportError("torch_geometric is not installed. Please install it with 'pip install torch-geometric'.")
         super().__init__()
         self.conv = GCNConv(in_channels, out_channels)
         self.bn = nn.BatchNorm1d(out_channels)
@@ -41,6 +43,10 @@ class GNNLayer(nn.Module):
         Returns:
             Updated node features tensor of shape (num_nodes, out_channels)
         """
+        try:
+            from torch_geometric.nn import GCNConv
+        except ImportError:
+            raise ImportError("torch_geometric is not installed. Please install it with 'pip install torch-geometric'.")
         x = self.conv(x, edge_index)
         x = self.bn(x)
         x = F.relu(x)
@@ -67,6 +73,10 @@ class GNNForecaster(BaseModel):
                 - learning_rate: Learning rate (default: 0.001)
                 - use_lr_scheduler: Whether to use learning rate scheduler (default: True)
         """
+        try:
+            from torch_geometric.nn import global_mean_pool
+        except ImportError:
+            raise ImportError("torch_geometric is not installed. Please install it with 'pip install torch-geometric'.")
         if config is None:
             config = {}
         
@@ -401,6 +411,11 @@ class GNNForecaster(BaseModel):
 
     def shap_interpret(self, X_sample):
         """Run SHAP interpretability on a sample batch."""
+        try:
+            import shap
+        except ImportError:
+            print("SHAP is not installed. Please install it with 'pip install shap'.")
+            return None
         explainer = shap.DeepExplainer(self.model, X_sample)
         shap_values = explainer.shap_values(X_sample)
         shap.summary_plot(shap_values, X_sample.cpu().numpy())

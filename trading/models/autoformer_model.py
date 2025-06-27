@@ -1,5 +1,5 @@
 """AutoformerModel: Autoformer wrapper for time series forecasting."""
-from trading.models.base_model import BaseModel, ModelRegistry, ValidationError
+from trading.base_model import BaseModel, ModelRegistry, ValidationError
 import pandas as pd
 import numpy as np
 import torch

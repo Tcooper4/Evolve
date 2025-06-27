@@ -6,6 +6,7 @@ import inspect
 from typing import Dict, List, Optional, Type, Union
 import logging
 from .base_optimizer import BaseOptimizer
+import pandas as pd
 
 # Configure logging
 logging.basicConfig(

@@ -9,7 +9,6 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import shap
 
 # Local imports
 from trading.base_model import BaseModel, ValidationError, ModelRegistry
@@ -66,7 +65,7 @@ class TemporalBlock(nn.Module):
         res = x if self.downsample is None else self.downsample(x)
         return self.relu(out + res)
 
-@ModelRegistry.register('TCN')
+# @ModelRegistry.register('TCN')
 class TCNModel(BaseModel):
     """Temporal Convolutional Network for time series forecasting."""
     
@@ -235,6 +234,11 @@ class TCNModel(BaseModel):
 
     def shap_interpret(self, X_sample):
         """Run SHAP interpretability on a sample batch."""
+        try:
+            import shap
+        except ImportError:
+            print("SHAP is not installed. Please install it with 'pip install shap'.")
+            return None
         explainer = shap.DeepExplainer(self.model, X_sample)
         shap_values = explainer.shap_values(X_sample)
         shap.summary_plot(shap_values, X_sample.cpu().numpy())

@@ -89,6 +89,10 @@ DEFAULT_LLM_PROVIDER = os.getenv('DEFAULT_LLM_PROVIDER', 'openai')  # openai, hu
 HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
 HUGGINGFACE_MODEL = os.getenv('HUGGINGFACE_MODEL', 'gpt2')
 
+# Memory Settings
+MEMORY_DIR = Path(os.getenv('MEMORY_DIR', PROJECT_ROOT / 'memory'))
+MEMORY_BACKEND = os.getenv('MEMORY_BACKEND', 'json')
+
 def get_config_value(key: str, default: Any = None) -> Any:
     """Get a configuration value with type conversion.
     

@@ -8,6 +8,10 @@ import logging
 from ..models.base_model import BaseModel
 from .base_optimizer import BaseOptimizer, OptimizerConfig
 from .performance_logger import PerformanceLogger, PerformanceMetrics
+from dataclasses import dataclass
+from abc import ABC, abstractmethod
+from pydantic import Field, validator
+import torch.nn as nn
 
 # Try to import ray and its submodules
 try:

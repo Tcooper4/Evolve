@@ -13,7 +13,19 @@ from datetime import datetime
 import torch
 from scipy import stats
 import warnings
-import pandas_ta as ta
+
+# Workaround for pandas_ta numpy compatibility issue
+try:
+    # Patch numpy import issue in pandas_ta
+    import numpy
+    if not hasattr(numpy, 'NaN'):
+        numpy.NaN = numpy.nan
+    
+    import pandas_ta as ta
+except ImportError as e:
+    warnings.warn(f"pandas_ta import failed: {e}. Technical indicators may not be available.")
+    ta = None
+
 from trading.logs.logger import log_metrics
 
 # Safe numba import with fallback
