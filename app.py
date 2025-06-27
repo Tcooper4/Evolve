@@ -66,7 +66,7 @@ def initialize_system_modules() -> Dict[str, Any]:
     
     # Initialize Optimizer Consolidator Module
     try:
-        from optimizers.consolidator import OptimizerConsolidator, get_optimizer_status
+        from trading.optimization.utils.consolidator import OptimizerConsolidator, get_optimizer_status
         module_status["optimizer_consolidator"]["available"] = True
         module_status["optimizer_consolidator"]["functions"] = {
             "OptimizerConsolidator": OptimizerConsolidator,

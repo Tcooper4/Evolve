@@ -1,43 +1,13 @@
-"""Strategy optimization module with multiple optimization methods."""
+"""Strategy optimizer for trading strategies."""
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-from typing import Dict, Any, List, Tuple, Optional, Union, Callable
-from collections import deque
-import random
-from trading.models.base_model import BaseModel
-import torch.optim as optim
 import pandas as pd
-from abc import ABC, abstractmethod
-from torch.utils.data import DataLoader, TensorDataset
-import logging
+import numpy as np
+from typing import Dict, List, Optional, Tuple, Union, Callable, Any
 from datetime import datetime
-import json
-import os
-from pathlib import Path
-from dataclasses import dataclass
-from scipy.optimize import minimize, differential_evolution
-from sklearn.model_selection import TimeSeriesSplit
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import optuna
-from optuna.samplers import TPESampler
-import warnings
-from tqdm import tqdm
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.preprocessing import StandardScaler
-import joblib
-from functools import partial
-import asyncio
-import aiohttp
-from typing_extensions import TypedDict
-import itertools
-from pydantic import BaseModel, Field, validator
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import Matern
-from sklearn.model_selection import ParameterGrid
+import logging
+from ..models.base_model import BaseModel
+from .base_optimizer import BaseOptimizer, OptimizerConfig
+from .performance_logger import PerformanceLogger, PerformanceMetrics
 
 # Try to import ray and its submodules
 try:
