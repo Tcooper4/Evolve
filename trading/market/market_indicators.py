@@ -12,10 +12,23 @@ import logging
 from datetime import datetime
 import torch
 from scipy import stats
-from numba import jit
 import warnings
 import pandas_ta as ta
 from trading.logs.logger import log_metrics
+
+# Safe numba import with fallback
+try:
+    from numba import jit
+    NUMBA_AVAILABLE = True
+except ImportError:
+    NUMBA_AVAILABLE = False
+    print("⚠️ numba not installed – JIT optimization will be skipped.")
+    
+    # Create a dummy jit decorator
+    def jit(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
 
 class MarketIndicators:
     """Class for calculating technical analysis indicators with GPU/CPU support."""
