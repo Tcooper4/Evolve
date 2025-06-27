@@ -1,13 +1,15 @@
-"""Optimization visualizer module."""
+"""Optimization visualization tools."""
 
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from typing import Dict, List, Optional, Union
 import pandas as pd
 import numpy as np
-from datetime import datetime
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+from typing import Dict, List, Optional, Union, Tuple
+import matplotlib.pyplot as plt
+import seaborn as sns
+from .base_optimizer import OptimizationResult
 import optuna
-from trading.base_optimizer import OptimizationResult
 
 class OptimizationVisualizer:
     """Visualizer for optimization results."""

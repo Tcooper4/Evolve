@@ -1,11 +1,11 @@
-"""Optimizer factory with auto-discovery of optimization strategies."""
+"""Optimizer factory for creating different types of optimizers."""
 
 import os
 import importlib
 import inspect
 from typing import Dict, List, Optional, Type, Union
 import logging
-from trading.base_optimizer import BaseOptimizer
+from .base_optimizer import BaseOptimizer
 
 # Configure logging
 logging.basicConfig(
