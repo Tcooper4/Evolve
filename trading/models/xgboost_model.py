@@ -3,7 +3,7 @@
 from typing import Dict, Any, Optional, List, Tuple
 import pandas as pd
 import numpy as np
-from trading.base_model import BaseModel, ValidationError, ModelRegistry
+from .base_model import BaseModel, ValidationError, ModelRegistry
 
 class XGBoostForecaster(BaseModel):
     """XGBoost model for time series forecasting."""

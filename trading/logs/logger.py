@@ -9,7 +9,7 @@ import yaml
 import json
 from datetime import datetime
 
-from ..settings import METRIC_LOGGING_ENABLED, METRICS_PATH
+from trading.config.settings import METRIC_LOGGING_ENABLED, METRICS_PATH
 
 # Default configuration
 DEFAULT_LOG_LEVEL = "INFO"

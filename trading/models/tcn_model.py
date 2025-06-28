@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 # Local imports
-from trading.base_model import BaseModel, ValidationError, ModelRegistry
+from .base_model import BaseModel, ValidationError, ModelRegistry
 
 class TemporalBlock(nn.Module):
     """Temporal block for TCN."""

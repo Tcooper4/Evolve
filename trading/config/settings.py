@@ -93,6 +93,17 @@ HUGGINGFACE_MODEL = os.getenv('HUGGINGFACE_MODEL', 'gpt2')
 MEMORY_DIR = Path(os.getenv('MEMORY_DIR', PROJECT_ROOT / 'memory'))
 MEMORY_BACKEND = os.getenv('MEMORY_BACKEND', 'json')
 
+# Metric Logging Settings
+METRIC_LOGGING_ENABLED = True
+METRICS_PATH = LOG_DIR / "metrics.log"
+
+# Strategy Switch Settings
+STRATEGY_SWITCH_LOG_PATH = LOG_DIR / "strategy_switches.json"
+STRATEGY_REGISTRY_PATH = STRATEGY_DIR / "strategy_registry.json"
+STRATEGY_SWITCH_LOCK_TIMEOUT = 30
+STRATEGY_SWITCH_BACKEND = "file"
+STRATEGY_SWITCH_API_ENDPOINT = "http://localhost:8000/api/strategy-switches"
+
 def get_config_value(key: str, default: Any = None) -> Any:
     """Get a configuration value with type conversion.
     

@@ -25,7 +25,7 @@ def demo_goal_status_integration():
     st.subheader("🎯 Goal Status Integration")
     
     try:
-        from memory.goals.status import (
+        from trading.memory.goals.status import (
             get_status_summary, 
             update_goal_progress, 
             log_agent_contribution,

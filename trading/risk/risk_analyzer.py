@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from dataclasses import dataclass
 import openai
-from trading.risk_metrics import (
+from .risk_metrics import (
     calculate_rolling_metrics,
     calculate_advanced_metrics,
     calculate_regime_metrics

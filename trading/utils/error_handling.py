@@ -1,6 +1,6 @@
 import logging
 import traceback
-from typing import Optional, Callable, Any, Type
+from typing import Optional, Callable, Any, Type, Dict, List
 from functools import wraps
 import sys
 
@@ -178,4 +178,22 @@ def handle_keyboard_interrupt(func: Callable) -> Callable:
         except KeyboardInterrupt:
             print("\nOperation cancelled by user")
             sys.exit(0)
+    return wrapper
+
+def handle_file_errors(func: Callable) -> Callable:
+    """Decorator for handling file operation errors.
+    
+    Args:
+        func: Function to handle file errors for
+        
+    Returns:
+        Decorated function
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs) -> Any:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logging.error(f"Error in {func.__name__}: {e}")
+            return None
     return wrapper 

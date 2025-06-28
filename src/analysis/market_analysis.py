@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union, Tuple, Any
 import logging
 from dataclasses import dataclass
 from functools import wraps
@@ -29,6 +29,16 @@ class MarketCondition:
     indicators: Dict
     signals: Dict
     strength: float
+
+class MarketAnalyzer:
+    """Market analyzer class for compatibility"""
+    
+    def __init__(self, config: Optional[Dict] = None):
+        self.analysis = MarketAnalysis(config)
+    
+    def analyze_market_conditions(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Analyze market conditions using the underlying MarketAnalysis"""
+        return self.analysis.analyze_market(data)
 
 class MarketAnalysis:
     """Comprehensive market analysis system"""
@@ -872,3 +882,26 @@ class MarketAnalysis:
             return {'signal': 'sell', 'strength': avg_strength, 'confidence': 0.7}
         
         return {'signal': 'neutral', 'strength': avg_strength, 'confidence': 0.5}
+
+def analyze_market_conditions(data: pd.DataFrame) -> Dict[str, Any]:
+    """
+    Analyze market conditions using the MarketAnalysis class.
+    
+    Args:
+        data: Market data DataFrame
+        
+    Returns:
+        Dictionary with market analysis results
+    """
+    try:
+        analyzer = MarketAnalyzer()
+        return analyzer.analyze_market_conditions(data)
+    except Exception as e:
+        logger.error(f"Error analyzing market conditions: {str(e)}")
+        return {
+            'error': str(e),
+            'indicators': {},
+            'regime': None,
+            'conditions': [],
+            'signals': {}
+        }

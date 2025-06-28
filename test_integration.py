@@ -22,7 +22,7 @@ def test_goal_status_integration() -> Dict[str, Any]:
     logger.info("Testing Goal Status Integration...")
     
     try:
-        from memory.goals.status import get_status_summary, update_goal_progress, log_agent_contribution
+        from trading.memory.goals.status import get_status_summary, update_goal_progress, log_agent_contribution
         
         # Test getting status summary
         status = get_status_summary()

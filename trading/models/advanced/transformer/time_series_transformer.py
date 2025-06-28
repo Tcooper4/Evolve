@@ -12,7 +12,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 # Local imports
-from trading.base_model import BaseModel, ValidationError, ModelRegistry
+from trading.models.base_model import BaseModel, ValidationError, ModelRegistry
 
 class PositionalEncoding(nn.Module):
     """Positional encoding for transformer model."""

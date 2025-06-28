@@ -8,7 +8,7 @@ stored in the PerformanceMemory system.
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from memory.performance_memory import PerformanceMemory
+from trading.memory.performance_memory import PerformanceMemory
 
 def main():
     st.title("📈 Agentic Model Performance Dashboard")

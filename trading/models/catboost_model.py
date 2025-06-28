@@ -1,5 +1,5 @@
 """CatBoostModel: CatBoostRegressor wrapper for time series forecasting."""
-from trading.base_model import BaseModel, ModelRegistry, ValidationError
+from .base_model import BaseModel, ModelRegistry, ValidationError
 from catboost import CatBoostRegressor, Pool
 import pandas as pd
 import numpy as np

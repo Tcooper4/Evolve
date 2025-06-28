@@ -1,5 +1,5 @@
 """ProphetModel: Facebook Prophet wrapper for time series forecasting."""
-from trading.base_model import BaseModel, ModelRegistry, ValidationError
+from .base_model import BaseModel, ModelRegistry, ValidationError
 from fbprophet import Prophet
 import pandas as pd
 import numpy as np

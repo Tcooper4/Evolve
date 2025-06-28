@@ -8,7 +8,7 @@ change detection, and automatic reloading of configurations.
 import json
 import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional, Callable, List
 import logging
 from dataclasses import dataclass, asdict
 import os

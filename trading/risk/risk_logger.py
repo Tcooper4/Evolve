@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Optional
 import pandas as pd
-from trading.risk_metrics import calculate_rolling_metrics, calculate_advanced_metrics
+from .risk_metrics import calculate_rolling_metrics, calculate_advanced_metrics
 
 # Configure logging
 logging.basicConfig(

@@ -15,7 +15,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
 
 # Local imports
-from trading.base_model import BaseModel
+from .base_model import BaseModel
 
 class LSTMModel(nn.Module):
     """A class to handle LSTM model for time series prediction."""

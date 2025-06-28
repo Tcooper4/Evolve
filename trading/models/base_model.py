@@ -26,6 +26,7 @@ from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
+from pydantic import BaseModel as PydanticBaseModel, Field
 
 # Local imports
 import joblib
@@ -37,6 +38,16 @@ class ValidationError(Exception):
 class ModelError(Exception):
     """Custom exception for model errors."""
     pass
+
+class Recommendation(PydanticBaseModel):
+    """Model recommendation for trading signals."""
+    model_name: str
+    signal: str
+    confidence: float
+
+class StrategyPayload(PydanticBaseModel):
+    """Payload containing strategy recommendations."""
+    recommendations: List[Recommendation] = Field(default_factory=list)
 
 class ModelRegistry:
     """Registry for model types and their configurations."""

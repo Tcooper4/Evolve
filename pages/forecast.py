@@ -19,8 +19,8 @@ from trading.ui.components import (
     create_forecast_metrics,
     create_forecast_table
 )
-from memory.performance_log import log_performance
-from memory.goals.status import load_goals
+from trading.memory.performance_log import log_performance
+from trading.memory.goals.status import load_goals
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
