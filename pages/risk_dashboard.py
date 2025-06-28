@@ -111,27 +111,31 @@ with tab1:
         latest = metrics_df.iloc[-1]
         
         with col1:
+            sharpe = latest.get('metrics', {}).get('sharpe_ratio', 0.0)
             st.metric(
                 "Sharpe Ratio",
-                f"{latest['metrics']['sharpe_ratio']:.2f}"
+                f"{sharpe:.2f}"
             )
         
         with col2:
+            volatility = latest.get('metrics', {}).get('volatility', 0.0)
             st.metric(
                 "Volatility",
-                f"{latest['metrics']['volatility']:.2%}"
+                f"{volatility:.2%}"
             )
         
         with col3:
+            max_dd = latest.get('metrics', {}).get('max_drawdown', 0.0)
             st.metric(
                 "Max Drawdown",
-                f"{latest['metrics']['max_drawdown']:.2%}"
+                f"{max_dd:.2%}"
             )
         
         with col4:
+            var_95 = latest.get('metrics', {}).get('var_95', 0.0)
             st.metric(
                 "VaR (95%)",
-                f"{latest['metrics']['var_95']:.2%}"
+                f"{var_95:.2%}"
             )
         
         # Plot metrics

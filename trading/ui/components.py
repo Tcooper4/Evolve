@@ -7,6 +7,7 @@ and can be integrated with agentic systems for monitoring and control.
 from typing import Dict, List, Optional, Tuple, Union, Any
 import streamlit as st
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
@@ -573,9 +574,62 @@ def create_error_block(message: str) -> None:
     st.info("Try adjusting your parameters or selecting a different strategy.")
 
 def create_loading_spinner(message: str = "Processing..."):
-    """Create a loading spinner context manager.
+    """Create a loading spinner with message.
     
     Args:
-        message: Message to display while loading
+        message: Message to display during loading
     """
-    return st.spinner(message) 
+    return st.spinner(message)
+
+def create_forecast_metrics(forecast_results: Dict[str, Any]) -> None:
+    """Create forecast metrics display from forecast results.
+    
+    Args:
+        forecast_results: Dictionary containing forecast results and metrics
+    """
+    st.subheader("Forecast Metrics")
+    
+    metrics = forecast_results.get('metrics', {})
+    
+    # Display metrics in columns
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Accuracy", f"{metrics.get('accuracy', 0):.2%}")
+    
+    with col2:
+        st.metric("MSE", f"{metrics.get('mse', 0):.4f}")
+    
+    with col3:
+        st.metric("RMSE", f"{metrics.get('rmse', 0):.4f}")
+    
+    with col4:
+        st.metric("MAE", f"{metrics.get('mae', 0):.4f}")
+    
+    # Log metrics for agentic monitoring
+    logger.info(f"Forecast metrics displayed for {forecast_results.get('ticker', 'unknown')}")
+
+def create_forecast_table(forecast_results: Dict[str, Any]) -> None:
+    """Create forecast table display from forecast results.
+    
+    Args:
+        forecast_results: Dictionary containing forecast results
+    """
+    st.subheader("Forecast Results")
+    
+    # Create a simple table with forecast information
+    forecast_data = {
+        'Metric': ['Ticker', 'Model', 'Strategy', 'Prediction'],
+        'Value': [
+            forecast_results.get('ticker', 'N/A'),
+            forecast_results.get('model', 'N/A'),
+            forecast_results.get('strategy', 'N/A'),
+            forecast_results.get('prediction', 'N/A')
+        ]
+    }
+    
+    df = pd.DataFrame(forecast_data)
+    st.table(df)
+    
+    # Log table creation for agentic monitoring
+    logger.info(f"Forecast table displayed for {forecast_results.get('ticker', 'unknown')}") 

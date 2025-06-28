@@ -11,7 +11,6 @@ import pandas as pd
 import streamlit as st
 
 # Local imports
-from core.agents.router import AgentRouter
 from trading.ui.components import (
     create_prompt_input,
     create_sidebar,
@@ -19,8 +18,8 @@ from trading.ui.components import (
     create_forecast_metrics,
     create_forecast_table
 )
-from trading.memory.performance_log import log_performance
 from trading.memory.goals.status import load_goals
+from trading.memory.performance_logger import log_performance
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -28,7 +27,7 @@ sys.path.append(str(project_root))
 
 def render_forecast_page():
     """Render the forecast page."""
-    st.title("ðŸ“ˆ Price Forecast")
+    st.title("📈 Price Forecast")
     
     # Initialize session state variables if they don't exist
     if "signals" not in st.session_state:
@@ -46,11 +45,17 @@ def render_forecast_page():
     
     if prompt:
         try:
-            # Initialize router
-            router = AgentRouter()
+            # TODO: Replace with proper forecast implementation
+            # Router moved to archive - need to implement alternative
+            st.info("Forecast functionality is being updated. Please use the main forecasting page.")
             
-            # Get forecast
-            forecast_results = router.get_forecast(prompt)
+            # Placeholder for forecast results
+            forecast_results = {
+                "ticker": "AAPL",
+                "model": "placeholder",
+                "strategy": "placeholder",
+                "metrics": {"accuracy": 0.0, "mse": 0.0}
+            }
             st.session_state.forecast_results = forecast_results
             
             if forecast_results:
@@ -62,15 +67,6 @@ def render_forecast_page():
                 
                 # Display forecast table
                 create_forecast_table(forecast_results)
-                
-                # Log performance
-                if "metrics" in forecast_results:
-                    log_performance(
-                        ticker=forecast_results.get("ticker", "unknown"),
-                        model=forecast_results.get("model", "unknown"),
-                        strategy=forecast_results.get("strategy", "unknown"),
-                        metrics=forecast_results["metrics"]
-                    )
             else:
                 st.warning("No forecast results available.")
                 

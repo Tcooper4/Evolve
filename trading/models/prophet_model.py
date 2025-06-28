@@ -1,57 +1,74 @@
 """ProphetModel: Facebook Prophet wrapper for time series forecasting."""
 from .base_model import BaseModel, ModelRegistry, ValidationError
-from fbprophet import Prophet
 import pandas as pd
 import numpy as np
 import os
 import json
 
-@ModelRegistry.register('Prophet')
-class ProphetModel(BaseModel):
-    def __init__(self, config):
-        super().__init__(config)
-        self.model = Prophet(**config.get('prophet_params', {}))
-        self.fitted = False
-        self.history = None
+# Try to import Prophet, but make it optional
+try:
+    from prophet import Prophet
+    PROPHET_AVAILABLE = True
+except ImportError:
+    PROPHET_AVAILABLE = False
+    Prophet = None
 
-    def fit(self, train_data: pd.DataFrame, val_data=None, **kwargs):
-        df = train_data[[self.config['date_column'], self.config['target_column']]].rename(columns={
-            self.config['date_column']: 'ds',
-            self.config['target_column']: 'y'
-        })
-        self.model.fit(df)
-        self.fitted = True
-        self.history = df
-        return {'train_loss': [], 'val_loss': []}
+if PROPHET_AVAILABLE:
+    @ModelRegistry.register('Prophet')
+    class ProphetModel(BaseModel):
+        def __init__(self, config):
+            super().__init__(config)
+            self.model = Prophet(**config.get('prophet_params', {}))
+            self.fitted = False
+            self.history = None
 
-    def predict(self, data: pd.DataFrame, horizon: int = 1):
-        if not self.fitted:
-            raise RuntimeError('Model must be fit before predicting.')
-        future = data[[self.config['date_column']]].rename(columns={self.config['date_column']: 'ds'})
-        forecast = self.model.predict(future)
-        return forecast['yhat'].values
+        def fit(self, train_data: pd.DataFrame, val_data=None, **kwargs):
+            df = train_data[[self.config['date_column'], self.config['target_column']]].rename(columns={
+                self.config['date_column']: 'ds',
+                self.config['target_column']: 'y'
+            })
+            self.model.fit(df)
+            self.fitted = True
+            self.history = df
+            return {'train_loss': [], 'val_loss': []}
 
-    def summary(self):
-        print("ProphetModel: Facebook Prophet wrapper")
-        print(self.model)
+        def predict(self, data: pd.DataFrame, horizon: int = 1):
+            if not self.fitted:
+                raise RuntimeError('Model must be fit before predicting.')
+            future = data[[self.config['date_column']]].rename(columns={self.config['date_column']: 'ds'})
+            forecast = self.model.predict(future)
+            return forecast['yhat'].values
 
-    def infer(self):
-        pass  # Prophet is always in inference mode after fitting
+        def summary(self):
+            print("ProphetModel: Facebook Prophet wrapper")
+            print(self.model)
 
-    def shap_interpret(self, X_sample):
-        print("SHAP not supported for Prophet. Showing component plots instead.")
-        self.model.plot_components(self.model.predict(self.history))
+        def infer(self):
+            pass  # Prophet is always in inference mode after fitting
 
-    def save(self, path: str):
-        os.makedirs(path, exist_ok=True)
-        self.model.save(os.path.join(path, 'prophet_model.json'))
-        with open(os.path.join(path, 'config.json'), 'w') as f:
-            json.dump(self.config, f)
+        def shap_interpret(self, X_sample):
+            print("SHAP not supported for Prophet. Showing component plots instead.")
+            self.model.plot_components(self.model.predict(self.history))
 
-    def load(self, path: str):
-        from fbprophet.serialize import model_from_json
-        with open(os.path.join(path, 'prophet_model.json'), 'r') as fin:
-            self.model = model_from_json(fin.read())
-        with open(os.path.join(path, 'config.json'), 'r') as f:
-            self.config = json.load(f)
-        self.fitted = True 
+        def save(self, path: str):
+            os.makedirs(path, exist_ok=True)
+            self.model.save(os.path.join(path, 'prophet_model.json'))
+            with open(os.path.join(path, 'config.json'), 'w') as f:
+                json.dump(self.config, f)
+
+        def load(self, path: str):
+            from prophet.serialize import model_from_json
+            with open(os.path.join(path, 'prophet_model.json'), 'r') as fin:
+                self.model = model_from_json(fin.read())
+            with open(os.path.join(path, 'config.json'), 'r') as f:
+                self.config = json.load(f)
+            self.fitted = True
+else:
+    # Create a placeholder class that raises an informative error
+    class ProphetModel(BaseModel):
+        def __init__(self, config):
+            raise ImportError(
+                "Prophet is not installed. Please install it with: pip install prophet\n"
+                "Note: Prophet requires compilation and may have installation issues on Windows.\n"
+                "Consider using an alternative model like ARIMA or LSTM."
+            ) 

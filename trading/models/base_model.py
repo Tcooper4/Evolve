@@ -897,16 +897,83 @@ class BaseModel(ABC):
     def _safe_forward(self, *args, **kwargs) -> torch.Tensor:
         """Safely perform forward pass with error handling.
         
+        Args:
+            *args: Arguments for forward pass
+            **kwargs: Keyword arguments for forward pass
+            
         Returns:
             Model output tensor
         """
         try:
             return self.model(*args, **kwargs)
-        except RuntimeError as e:
-            if "out of memory" in str(e):
-                torch.cuda.empty_cache()
-                self.logger.warning("GPU OOM, clearing cache and retrying")
-                return self.model(*args, **kwargs)
-            raise ModelError(f"Forward pass failed: {e}")
         except Exception as e:
-            raise ModelError(f"Unexpected error in forward pass: {e}") 
+            self.logger.error(f"Forward pass failed: {e}")
+            raise ModelError(f"Model forward pass failed: {e}")
+
+    def get_confidence(self) -> Dict[str, float]:
+        """Get model confidence metrics.
+        
+        Returns:
+            Dictionary containing confidence metrics
+        """
+        try:
+            # Default confidence metrics
+            confidence = {
+                'model_confidence': 0.8,  # Default confidence
+                'prediction_interval': 0.95,
+                'uncertainty': 0.2
+            }
+            
+            # If we have validation losses, use them to estimate confidence
+            if hasattr(self, 'val_losses') and self.val_losses:
+                # Lower validation loss = higher confidence
+                avg_val_loss = np.mean(self.val_losses[-10:])  # Last 10 epochs
+                confidence['model_confidence'] = max(0.1, 1.0 - avg_val_loss)
+                confidence['uncertainty'] = avg_val_loss
+            
+            return confidence
+            
+        except Exception as e:
+            self.logger.warning(f"Could not compute confidence metrics: {e}")
+            return {
+                'model_confidence': 0.5,
+                'prediction_interval': 0.95,
+                'uncertainty': 0.5
+            }
+
+    def get_metadata(self) -> Dict[str, Any]:
+        """Get model metadata.
+        
+        Returns:
+            Dictionary containing model metadata
+        """
+        try:
+            metadata = {
+                'model_type': self.__class__.__name__,
+                'config': self.config,
+                'created_at': datetime.now().isoformat(),
+                'model_parameters': 0,
+                'training_history': {
+                    'train_losses': self.train_losses if hasattr(self, 'train_losses') else [],
+                    'val_losses': self.val_losses if hasattr(self, 'val_losses') else [],
+                    'best_val_loss': self.best_val_loss if hasattr(self, 'best_val_loss') else float('inf')
+                }
+            }
+            
+            # Count model parameters if available
+            if hasattr(self, 'model') and self.model is not None:
+                try:
+                    metadata['model_parameters'] = sum(p.numel() for p in self.model.parameters())
+                except:
+                    metadata['model_parameters'] = 0
+            
+            return metadata
+            
+        except Exception as e:
+            self.logger.warning(f"Could not get model metadata: {e}")
+            return {
+                'model_type': self.__class__.__name__,
+                'config': self.config,
+                'created_at': datetime.now().isoformat(),
+                'error': str(e)
+            } 

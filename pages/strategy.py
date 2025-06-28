@@ -15,6 +15,11 @@ def render_strategy_page():
     """Render the strategy page."""
     st.title("Trading Strategy")
     
+    # Check if router is initialized in session state
+    if "router" not in st.session_state:
+        st.warning("Router not initialized. Please restart the application.")
+        return
+    
     # Create sidebar
     sidebar_config = create_sidebar()
     

@@ -313,4 +313,33 @@ class OptimizationVisualizer:
         # Add drawdowns
         plots.append(self.plot_drawdowns())
         
-        return plots 
+        return plots
+    
+    @staticmethod
+    def display_optimization_summary(results: Dict[str, Any]) -> None:
+        """Display optimization summary.
+        
+        Args:
+            results: Optimization results dictionary
+        """
+        import streamlit as st
+        
+        st.subheader("Optimization Results")
+        
+        # Display best parameters
+        if "best_params" in results:
+            st.write("**Best Parameters:**")
+            for param, value in results["best_params"].items():
+                st.write(f"- {param}: {value}")
+        
+        # Display best score
+        if "best_score" in results:
+            st.write(f"**Best Score:** {results['best_score']:.4f}")
+        
+        # Display optimization time
+        if "optimization_time" in results:
+            st.write(f"**Optimization Time:** {results['optimization_time']:.2f} seconds")
+        
+        # Display number of iterations
+        if "n_iterations" in results:
+            st.write(f"**Number of Iterations:** {results['n_iterations']}") 

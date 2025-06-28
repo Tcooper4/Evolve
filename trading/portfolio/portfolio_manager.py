@@ -618,6 +618,63 @@ class PortfolioManager:
         except Exception as e:
             logger.error(f"Error logging commentary: {e}")
 
+    def get_position_summary(self) -> pd.DataFrame:
+        """Get summary of all positions as a DataFrame.
+        
+        Returns:
+            DataFrame with position summary
+        """
+        try:
+            positions_data = []
+            
+            # Add open positions
+            for pos in self.state.open_positions:
+                positions_data.append({
+                    'symbol': pos.symbol,
+                    'direction': pos.direction.value,
+                    'entry_price': pos.entry_price,
+                    'entry_time': pos.entry_time,
+                    'size': pos.size,
+                    'strategy': pos.strategy,
+                    'current_price': pos.entry_price,  # Placeholder
+                    'unrealized_pnl': pos.unrealized_pnl or 0.0,
+                    'status': pos.status.value,
+                    'take_profit': pos.take_profit,
+                    'stop_loss': pos.stop_loss
+                })
+            
+            # Add closed positions
+            for pos in self.state.closed_positions:
+                positions_data.append({
+                    'symbol': pos.symbol,
+                    'direction': pos.direction.value,
+                    'entry_price': pos.entry_price,
+                    'entry_time': pos.entry_time,
+                    'size': pos.size,
+                    'strategy': pos.strategy,
+                    'current_price': pos.exit_price,
+                    'unrealized_pnl': pos.pnl or 0.0,
+                    'status': pos.status.value,
+                    'take_profit': pos.take_profit,
+                    'stop_loss': pos.stop_loss
+                })
+            
+            if positions_data:
+                df = pd.DataFrame(positions_data)
+                df['entry_time'] = pd.to_datetime(df['entry_time'])
+                return df
+            else:
+                # Return empty DataFrame with correct columns
+                return pd.DataFrame(columns=[
+                    'symbol', 'direction', 'entry_price', 'entry_time', 'size',
+                    'strategy', 'current_price', 'unrealized_pnl', 'status',
+                    'take_profit', 'stop_loss'
+                ])
+                
+        except Exception as e:
+            logger.error(f"Error generating performance summary: {e}")
+            return pd.DataFrame()
+
     def get_performance_summary(self) -> Dict[str, Any]:
         """Get a summary of portfolio performance.
         
@@ -639,10 +696,13 @@ class PortfolioManager:
             volatility = np.std(pnl_values) if len(pnl_values) > 1 else 0.0
             sharpe_ratio = avg_pnl / volatility if volatility > 0 else 0.0
             
-            # Calculate drawdown
-            cumulative_pnl = np.cumsum(pnl_values)
-            running_max = np.maximum.accumulate(cumulative_pnl)
-            drawdown = np.min(cumulative_pnl - running_max)
+            # Calculate drawdown - handle empty array case
+            if len(pnl_values) > 0:
+                cumulative_pnl = np.cumsum(pnl_values)
+                running_max = np.maximum.accumulate(cumulative_pnl)
+                drawdown = np.min(cumulative_pnl - running_max)
+            else:
+                drawdown = 0.0
             
             # Strategy performance
             strategy_performance = {}
@@ -693,5 +753,44 @@ class PortfolioManager:
                 'total_pnl': 0.0,
                 'sharpe_ratio': 0.0
             }
+
+    def save(self, filename: str) -> None:
+        """Save portfolio state to file.
+        
+        Args:
+            filename: Path to save the state
+        """
+        try:
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            
+            # Save state
+            with open(filename, 'w') as f:
+                json.dump(self.state.to_dict(), f, indent=2, default=str)
+            
+            logger.info(f"Saved portfolio state to {filename}")
+            
+        except Exception as e:
+            logger.error(f"Error saving portfolio state: {e}")
+            raise
+
+    def load(self, filename: str) -> None:
+        """Load portfolio state from file.
+        
+        Args:
+            filename: Path to load the state from
+        """
+        try:
+            with open(filename, 'r') as f:
+                state_data = json.load(f)
+            
+            # Load state
+            self.state = PortfolioState.from_dict(state_data)
+            
+            logger.info(f"Loaded portfolio state from {filename}")
+            
+        except Exception as e:
+            logger.error(f"Error loading portfolio state: {e}")
+            raise
 
 __all__ = ["PortfolioManager", "PortfolioState", "Position", "PositionStatus", "TradeDirection"]

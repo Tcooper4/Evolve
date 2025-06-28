@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from pydantic import Field, validator
 import torch.nn as nn
+import json
+from pathlib import Path
 
 # Try to import ray and its submodules
 try:
@@ -821,20 +823,20 @@ class StrategyOptimizerConfig(OptimizerConfig):
     grid_search_strategy: str = Field("random", description="Strategy for grid search")
     grid_search_batch_size: int = Field(10, ge=1, description="Batch size for grid search")
     
-    @validator('optimizer_type')
+    @validator('optimizer_type', allow_reuse=True)
     def validate_optimizer_type(cls, v):
         """Validate optimizer type."""
-        valid_types = ["bayesian", "grid", "random", "ray", "optuna", "pytorch"]
+        valid_types = ["grid", "bayesian", "genetic"]
         if v not in valid_types:
-            raise ValueError(f"Invalid optimizer type. Must be one of: {valid_types}")
+            raise ValueError(f"optimizer_type must be one of {valid_types}")
         return v
     
-    @validator('primary_metric')
+    @validator('primary_metric', allow_reuse=True)
     def validate_primary_metric(cls, v):
         """Validate primary metric."""
-        valid_metrics = ["sharpe_ratio", "win_rate", "max_drawdown", "profit_factor"]
+        valid_metrics = ["sharpe_ratio", "win_rate", "max_drawdown", "mse", "alpha"]
         if v not in valid_metrics:
-            raise ValueError(f"Invalid primary metric. Must be one of: {valid_metrics}")
+            raise ValueError(f"primary_metric must be one of {valid_metrics}")
         return v
 
 class StrategyOptimizer(BaseOptimizer):
@@ -1020,6 +1022,95 @@ class StrategyOptimizer(BaseOptimizer):
         
         with open(results_dir / f"{strategy_class.__name__}_optimization.json", 'w') as f:
             json.dump(results, f, indent=4)
+
+    def plot_results(self, **kwargs):
+        """Plot optimization results."""
+        # TODO: Implement plotting functionality
+        pass
+    
+    def get_available_optimizers(self) -> List[str]:
+        """Get list of available optimizers.
+        
+        Returns:
+            List of optimizer names
+        """
+        return ["Grid", "Bayesian", "Genetic"]
+    
+    def get_strategy_param_space(self, strategy: str) -> Dict[str, Any]:
+        """Get parameter space for a given strategy.
+        
+        Args:
+            strategy: Strategy name
+            
+        Returns:
+            Dictionary with parameter ranges
+        """
+        param_spaces = {
+            "RSI": {
+                "period": {"start": 10, "end": 30},
+                "overbought": {"start": 70, "end": 90},
+                "oversold": {"start": 10, "end": 30}
+            },
+            "MACD": {
+                "fast_period": {"start": 8, "end": 16},
+                "slow_period": {"start": 20, "end": 30},
+                "signal_period": {"start": 7, "end": 12}
+            },
+            "Bollinger": {
+                "period": {"start": 15, "end": 30},
+                "std_dev": {"start": 1.5, "end": 3.0}
+            },
+            "SMA": {
+                "short_period": {"start": 5, "end": 15},
+                "long_period": {"start": 20, "end": 50}
+            }
+        }
+        
+        return param_spaces.get(strategy, {})
+    
+    def optimize_strategy(self, strategy: str, optimizer_type: str, 
+                         param_space: Dict[str, Any], training_data: pd.DataFrame, 
+                         **settings) -> Dict[str, Any]:
+        """Optimize a strategy with given parameters.
+        
+        Args:
+            strategy: Strategy name
+            optimizer_type: Type of optimizer to use
+            param_space: Parameter space
+            training_data: Training data
+            **settings: Optimization settings
+            
+        Returns:
+            Optimization results
+        """
+        # TODO: Implement actual optimization
+        return {
+            "best_params": {"param1": 10},
+            "best_score": 0.85,
+            "optimization_time": 120.5
+        }
+    
+    def save_optimization_results(self, results: Dict[str, Any], save_path: str) -> None:
+        """Save optimization results to file.
+        
+        Args:
+            results: Optimization results
+            save_path: Path to save results
+        """
+        # TODO: Implement save functionality
+        pass
+    
+    def load_optimization_results(self, file_path: str) -> Dict[str, Any]:
+        """Load optimization results from file.
+        
+        Args:
+            file_path: Path to results file
+            
+        Returns:
+            Loaded results
+        """
+        # TODO: Implement load functionality
+        return {}
 
 __all__ = ["StrategyOptimizer", "StrategyOptimizerConfig"] 
 

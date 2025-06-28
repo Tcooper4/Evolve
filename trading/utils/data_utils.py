@@ -299,14 +299,50 @@ def split_data(
         Tuple of (train_df, val_df, test_df)
     """
     if shuffle:
-        df = df.sample(frac=1).reset_index(drop=True)
+        df = df.sample(frac=1, random_state=42).reset_index(drop=True)
     
     n = len(df)
-    test_idx = int(n * (1 - test_size))
-    val_idx = int(test_idx * (1 - validation_size))
+    test_end = int(n * (1 - test_size))
+    val_end = int(test_end * (1 - validation_size))
     
-    train_df = df.iloc[:val_idx]
-    val_df = df.iloc[val_idx:test_idx]
-    test_df = df.iloc[test_idx:]
+    train_df = df[:val_end]
+    val_df = df[val_end:test_end]
+    test_df = df[test_end:]
     
-    return train_df, val_df, test_df 
+    return train_df, val_df, test_df
+
+def prepare_forecast_data(data: pd.DataFrame) -> pd.DataFrame:
+    """Prepare data for forecasting.
+    
+    Args:
+        data: Raw time series data
+        
+    Returns:
+        Prepared DataFrame for forecasting
+    """
+    df = data.copy()
+    
+    # Ensure we have a datetime index
+    if not isinstance(df.index, pd.DatetimeIndex):
+        # Try to convert the first column to datetime if it looks like dates
+        if len(df.columns) > 0:
+            first_col = df.columns[0]
+            try:
+                df[first_col] = pd.to_datetime(df[first_col])
+                df = df.set_index(first_col)
+            except:
+                # If conversion fails, create a simple numeric index
+                df.index = pd.date_range(start='2020-01-01', periods=len(df), freq='D')
+    
+    # Handle missing values
+    df = df.fillna(method='ffill').fillna(method='bfill')
+    
+    # Ensure numeric columns
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    if len(numeric_cols) == 0:
+        raise ValueError("No numeric columns found in the data")
+    
+    # Sort by index
+    df = df.sort_index()
+    
+    return df 

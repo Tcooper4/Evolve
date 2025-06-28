@@ -58,7 +58,7 @@ class OptimizerConfig(BaseModel):
     validation_split: float = Field(0.2, gt=0, lt=1, description="Validation split ratio")
     cross_validation_folds: int = Field(3, ge=2, description="Number of cross-validation folds")
     
-    @validator('scheduler_type')
+    @validator('scheduler_type', allow_reuse=True)
     def validate_scheduler_type(cls, v):
         """Validate scheduler type."""
         valid_types = ["cosine", "step", "performance"]
@@ -66,7 +66,7 @@ class OptimizerConfig(BaseModel):
             raise ValueError(f"scheduler_type must be one of {valid_types}")
         return v
     
-    @validator('objectives')
+    @validator('objectives', allow_reuse=True)
     def validate_objectives(cls, v):
         """Validate objectives."""
         valid_objectives = ["sharpe_ratio", "win_rate", "max_drawdown", "mse", "alpha"]

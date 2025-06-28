@@ -440,6 +440,159 @@ class TimeSeriesPlotter:
         plt.hist(data)
         plt.show()
 
+class PerformancePlotter:
+    """Class for plotting performance metrics and analysis."""
+    
+    def __init__(
+        self,
+        backend: str = 'matplotlib',
+        figsize: tuple = (12, 8)
+    ):
+        """Initialize the performance plotter.
+        
+        Args:
+            backend: Plotting backend ('matplotlib' or 'plotly')
+            figsize: Default figure size
+        """
+        self.backend = backend
+        self.figsize = figsize
+    
+    def plot_performance_metrics(
+        self,
+        metrics: Dict[str, float],
+        title: str = 'Performance Metrics',
+        show: bool = True
+    ) -> Union[plt.Figure, go.Figure]:
+        """Plot performance metrics as a bar chart.
+        
+        Args:
+            metrics: Dictionary of metric names and values
+            title: Plot title
+            show: Whether to display the plot
+            
+        Returns:
+            Matplotlib or Plotly figure
+        """
+        if self.backend == 'matplotlib':
+            fig, ax = plt.subplots(figsize=self.figsize)
+            
+            metrics_names = list(metrics.keys())
+            metrics_values = list(metrics.values())
+            
+            bars = ax.bar(metrics_names, metrics_values)
+            ax.set_title(title)
+            ax.set_ylabel('Value')
+            ax.grid(True, alpha=0.3)
+            
+            # Add value labels on bars
+            for bar, value in zip(bars, metrics_values):
+                height = bar.get_height()
+                ax.text(bar.get_x() + bar.get_width()/2., height,
+                       f'{value:.3f}', ha='center', va='bottom')
+            
+            plt.xticks(rotation=45)
+            plt.tight_layout()
+            
+            if show:
+                plt.show()
+            return fig
+        else:
+            fig = go.Figure()
+            
+            fig.add_trace(go.Bar(
+                x=list(metrics.keys()),
+                y=list(metrics.values()),
+                text=[f'{v:.3f}' for v in metrics.values()],
+                textposition='auto',
+            ))
+            
+            fig.update_layout(
+                title=title,
+                xaxis_title='Metrics',
+                yaxis_title='Value',
+                showlegend=False
+            )
+            
+            if show:
+                fig.show()
+            return fig
+    
+    def plot_rolling_performance(
+        self,
+        returns: pd.Series,
+        window: int = 30,
+        title: str = 'Rolling Performance',
+        show: bool = True
+    ) -> Union[plt.Figure, go.Figure]:
+        """Plot rolling performance metrics.
+        
+        Args:
+            returns: Series of returns
+            window: Rolling window size
+            title: Plot title
+            show: Whether to display the plot
+            
+        Returns:
+            Matplotlib or Plotly figure
+        """
+        # Calculate rolling metrics
+        rolling_sharpe = returns.rolling(window).mean() / returns.rolling(window).std() * np.sqrt(252)
+        rolling_vol = returns.rolling(window).std() * np.sqrt(252)
+        rolling_return = returns.rolling(window).mean() * 252
+        
+        if self.backend == 'matplotlib':
+            fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=self.figsize)
+            
+            # Rolling Sharpe Ratio
+            rolling_sharpe.plot(ax=ax1, label=f'{window}-day Rolling Sharpe')
+            ax1.set_title('Rolling Sharpe Ratio')
+            ax1.grid(True)
+            ax1.legend()
+            
+            # Rolling Volatility
+            rolling_vol.plot(ax=ax2, label=f'{window}-day Rolling Volatility')
+            ax2.set_title('Rolling Volatility')
+            ax2.grid(True)
+            ax2.legend()
+            
+            # Rolling Return
+            rolling_return.plot(ax=ax3, label=f'{window}-day Rolling Return')
+            ax3.set_title('Rolling Annualized Return')
+            ax3.grid(True)
+            ax3.legend()
+            
+            plt.tight_layout()
+            if show:
+                plt.show()
+            return fig
+        else:
+            fig = make_subplots(rows=3, cols=1, 
+                               subplot_titles=('Rolling Sharpe Ratio', 'Rolling Volatility', 'Rolling Return'))
+            
+            # Rolling Sharpe Ratio
+            fig.add_trace(
+                go.Scatter(x=rolling_sharpe.index, y=rolling_sharpe.values, name='Sharpe Ratio'),
+                row=1, col=1
+            )
+            
+            # Rolling Volatility
+            fig.add_trace(
+                go.Scatter(x=rolling_vol.index, y=rolling_vol.values, name='Volatility'),
+                row=2, col=1
+            )
+            
+            # Rolling Return
+            fig.add_trace(
+                go.Scatter(x=rolling_return.index, y=rolling_return.values, name='Return'),
+                row=3, col=1
+            )
+            
+            fig.update_layout(title=title, height=800, showlegend=False)
+            
+            if show:
+                fig.show()
+            return fig
+
 class FeatureImportancePlotter:
     """Class for plotting feature importance."""
     

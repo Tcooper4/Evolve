@@ -83,3 +83,15 @@ jinja2>=3.0.0
 reportlab>=3.6.0  # For PDF generation
 weasyprint>=54.0  # Alternative PDF generation
 fpdf>=1.7.0  # For PDF generation
+
+# Missing dependencies from prompt
+aiohttp>=3.8.0
+aiosmtplib>=2.0.0
+apscheduler>=3.9.0
+autoformer_pytorch>=0.1.0
+bentoml>=1.0.0
+boto3>=1.26.0
+catboost>=1.1.0
+click>=8.0.0
+click_default_group>=1.2.0
+cloudpickle>=2.0.0

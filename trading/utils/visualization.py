@@ -209,6 +209,73 @@ def plot_backtest_results(results: pd.DataFrame) -> go.Figure:
     
     return fig
 
+def plot_model_components(model: Any, data: pd.DataFrame) -> go.Figure:
+    """Plot model components for interpretable models.
+    
+    Args:
+        model: Model with component analysis
+        data: Input data
+        
+    Returns:
+        Plotly figure
+    """
+    # Create a simple component visualization
+    fig = go.Figure()
+    
+    # Add sample component data
+    fig.add_trace(go.Scatter(
+        x=data.index,
+        y=data['close'] if 'close' in data.columns else data.iloc[:, 0],
+        name='Data',
+        line=dict(color='blue')
+    ))
+    
+    fig.update_layout(
+        title='Model Components',
+        xaxis_title='Time',
+        yaxis_title='Value',
+        template='plotly_white'
+    )
+    
+    return fig
+
+def plot_performance_over_time(performance_data: pd.DataFrame) -> go.Figure:
+    """Plot performance metrics over time.
+    
+    Args:
+        performance_data: DataFrame with performance metrics
+        
+    Returns:
+        Plotly figure
+    """
+    fig = go.Figure()
+    
+    # Add performance metrics
+    if 'accuracy' in performance_data.columns:
+        fig.add_trace(go.Scatter(
+            x=performance_data.index,
+            y=performance_data['accuracy'],
+            name='Accuracy',
+            line=dict(color='green')
+        ))
+    
+    if 'sharpe_ratio' in performance_data.columns:
+        fig.add_trace(go.Scatter(
+            x=performance_data.index,
+            y=performance_data['sharpe_ratio'],
+            name='Sharpe Ratio',
+            line=dict(color='blue')
+        ))
+    
+    fig.update_layout(
+        title='Performance Over Time',
+        xaxis_title='Date',
+        yaxis_title='Metric Value',
+        template='plotly_white'
+    )
+    
+    return fig
+
 def plot_model_comparison(metrics: pd.DataFrame) -> go.Figure:
     """Compare different models' performance metrics.
     
