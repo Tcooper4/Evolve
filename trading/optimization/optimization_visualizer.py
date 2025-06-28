@@ -5,7 +5,7 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union, Tuple, Any
 import matplotlib.pyplot as plt
 import seaborn as sns
 from .base_optimizer import OptimizationResult

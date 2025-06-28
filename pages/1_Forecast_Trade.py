@@ -14,14 +14,29 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional, Tuple, Union
 import json
 import os
+import sys
+from pathlib import Path
+import warnings
 
-# FIXME: Define logger
-import logging
-logger = logging.getLogger(__name__)
+# Suppress deprecation warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="pandas_ta")
 
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+# Import shared utilities
+from core.session_utils import (
+    initialize_session_state, 
+    safe_session_get,
+    safe_session_set,
+    update_last_updated
+)
+
+# Import trading components
 from trading.agents.strategy_switcher import StrategySwitcher
 from models.forecast_router import ForecastRouter
-from trading.memory.strategy_logger import log_strategy_decision, get_strategy_analysis
+from trading.memory.strategy_logger import log_strategy_decision as strategy_logger_decision, get_strategy_analysis
 from trading.memory.performance_logger import log_performance
 from trading.memory.model_monitor import get_model_trust_levels
 from trading.memory.performance_weights import get_latest_weights
@@ -31,197 +46,168 @@ from trading.utils.visualization import plot_forecast, plot_attention_heatmap, p
 from trading.utils.metrics import calculate_metrics
 from trading.utils.system_status import get_system_status
 from src.analysis.market_analysis import MarketAnalysis
+from trading.memory.model_monitor import ModelMonitor
+from trading.memory.strategy_logger import StrategyLogger
+from trading.optimization.strategy_selection_agent import StrategySelectionAgent
+from trading.portfolio.portfolio_manager import PortfolioManager
+from trading.portfolio.llm_utils import LLMInterface
+from trading.optimization.performance_logger import PerformanceLogger
+
+# Configure logging
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 if 'last_updated' not in st.session_state:
     st.session_state['last_updated'] = datetime.now()
 
-def initialize_session_state():
-    """Initialize session state variables if they don't exist."""
-    if "selected_ticker" not in st.session_state:
-        st.session_state.selected_ticker = "AAPL"
-    if "selected_model" not in st.session_state:
-        st.session_state.selected_model = None
-    if "forecast_data" not in st.session_state:
-        st.session_state.forecast_data = None
-    if "market_analysis" not in st.session_state:
-        st.session_state.market_analysis = None
-    if "start_date" not in st.session_state:
-        st.session_state.start_date = datetime.now().date()
-    if "end_date" not in st.session_state:
-        st.session_state.end_date = datetime.now().date()
-
 def load_model_configs():
-    """Load model configurations from JSON files."""
-    config_dir = 'configs/models'
-    configs = {}
-    if os.path.exists(config_dir):
-        for file in os.listdir(config_dir):
-            if file.endswith('.json'):
-                with open(os.path.join(config_dir, file), 'r') as f:
-                    configs[file[:-5]] = json.load(f)
-    return configs
+    """Load model configurations from registry."""
+    try:
+        from trading.ui.config.registry import ModelConfigRegistry
+        registry = ModelConfigRegistry()
+        return registry.get_all_configs()
+    except Exception as e:
+        logger.warning(f"Could not load model configs: {e}")
+        return {}
 
 def get_model_summary(model):
-    """Get formatted model summary."""
-    import io
-    from contextlib import redirect_stdout
-    
-    f = io.StringIO()
-    with redirect_stdout(f):
-        model.summary()
-    return f.getvalue()
+    """Get summary information for a model."""
+    try:
+        configs = load_model_configs()
+        return configs.get(model, {}).get('description', 'No description available')
+    except Exception as e:
+        logger.warning(f"Could not get model summary: {e}")
+        return 'No description available'
 
 def get_status_badge(status):
     """Get HTML badge for system status."""
     colors = {
         "operational": "green",
-        "degraded": "orange",
+        "degraded": "orange", 
         "down": "red"
     }
-    return f'<span style="color: {colors[status]}; font-weight: bold;">●</span> {status.title()}'
+    color = colors.get(status, "gray")
+    return f'<span style="color: {color}; font-weight: bold;">● {status.title()}</span>'
 
 def analyze_market_context(ticker: str, data: pd.DataFrame) -> Dict:
-    """
-    Analyze market context using the MarketAnalysis module.
-    
-    Args:
-        ticker: Ticker symbol
-        data: Market data DataFrame
-        
-    Returns:
-        Dictionary with market analysis results
-    """
+    """Analyze market context for a given ticker."""
     try:
-        market_analyzer = MarketAnalysis()
-        analysis = market_analyzer.analyze_market(data)
+        # Basic market analysis
+        if data.empty:
+            return {"status": "no_data", "message": "No market data available"}
         
-        # Log the analysis
-        st.session_state.market_analysis = analysis
+        # Calculate basic metrics
+        latest_price = data['close'].iloc[-1] if 'close' in data.columns else None
+        price_change = data['close'].pct_change().iloc[-1] if 'close' in data.columns else None
+        volatility = data['close'].pct_change().std() if 'close' in data.columns else None
         
-        return analysis
-        
+        return {
+            "status": "success",
+            "ticker": ticker,
+            "latest_price": latest_price,
+            "price_change": price_change,
+            "volatility": volatility,
+            "data_points": len(data),
+            "analysis_date": datetime.now().isoformat()
+        }
     except Exception as e:
-        st.error(f"Error analyzing market context: {str(e)}")
-        return {}
+        logger.error(f"Market analysis failed: {e}")
+        return {"status": "error", "message": str(e)}
 
 def display_market_analysis(analysis: Dict):
-    """
-    Display market analysis results in the UI.
-    
-    Args:
-        analysis: Market analysis results
-    """
-    if not analysis:
-        return
-    
-    st.subheader("📊 Market Context Analysis")
-    
-    # Market Regime
-    if 'regime' in analysis:
-        regime = analysis['regime']
-        col1, col2, col3 = st.columns(3)
+    """Display market analysis results."""
+    if analysis.get("status") == "success":
+        st.subheader("📊 Market Analysis")
+        
+        col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.metric("Market Regime", regime.name)
+            st.metric(
+                "Latest Price",
+                f"${analysis.get('latest_price', 0):.2f}" if analysis.get('latest_price') else "N/A"
+            )
+        
         with col2:
-            st.metric("Confidence", f"{regime.confidence:.1%}")
+            price_change = analysis.get('price_change', 0)
+            if price_change is not None:
+                st.metric(
+                    "Price Change",
+                    f"{price_change:.2%}",
+                    delta="↗️" if price_change > 0 else "↘️" if price_change < 0 else "→"
+                )
+            else:
+                st.metric("Price Change", "N/A")
+        
         with col3:
-            st.metric("Trend Strength", f"{regime.metrics.get('trend_strength', 0):.2f}")
+            volatility = analysis.get('volatility', 0)
+            if volatility is not None:
+                st.metric("Volatility", f"{volatility:.2%}")
+            else:
+                st.metric("Volatility", "N/A")
         
-        st.info(f"**{regime.name}**: {regime.description}")
+        with col4:
+            st.metric("Data Points", analysis.get('data_points', 0))
     
-    # Market Conditions
-    if 'conditions' in analysis and analysis['conditions']:
-        st.subheader("Market Conditions")
-        
-        for condition in analysis['conditions']:
-            with st.expander(f"{condition.name} (Strength: {condition.strength:.1%})"):
-                st.write(condition.description)
-                
-                # Display indicators
-                if condition.indicators:
-                    st.write("**Key Indicators:**")
-                    for indicator, value in condition.indicators.items():
-                        if isinstance(value, (int, float)):
-                            st.write(f"- {indicator}: {value:.4f}")
-                        else:
-                            st.write(f"- {indicator}: {value}")
-                
-                # Display signals
-                if condition.signals:
-                    st.write("**Signals:**")
-                    for signal, value in condition.signals.items():
-                        st.write(f"- {signal}: {value}")
-    
-    # Trading Signals
-    if 'signals' in analysis:
-        st.subheader("Trading Signals")
-        
-        signal_categories = ['trend', 'momentum', 'volatility', 'volume', 'support_resistance']
-        
-        for category in signal_categories:
-            if category in analysis['signals']:
-                signals = analysis['signals'][category]
-                if signals:
-                    with st.expander(f"{category.title()} Signals"):
-                        for signal_name, signal_data in signals.items():
-                            if isinstance(signal_data, dict):
-                                st.write(f"**{signal_name}:**")
-                                for key, value in signal_data.items():
-                                    st.write(f"  - {key}: {value}")
-                            else:
-                                st.write(f"**{signal_name}:** {signal_data}")
+    elif analysis.get("status") == "no_data":
+        st.warning("⚠️ No market data available for analysis")
+    else:
+        st.error(f"❌ Market analysis failed: {analysis.get('message', 'Unknown error')}")
 
 def generate_market_commentary(analysis: Dict, forecast_data: pd.DataFrame) -> str:
-    """
-    Generate market commentary based on analysis and forecast.
-    
-    Args:
-        analysis: Market analysis results
-        forecast_data: Forecast data
+    """Generate market commentary based on analysis and forecast."""
+    try:
+        if analysis.get("status") != "success":
+            return "Market commentary unavailable due to analysis issues."
         
-    Returns:
-        Generated commentary string
-    """
-    commentary = []
-    
-    if 'regime' in analysis:
-        regime = analysis['regime']
-        commentary.append(f"**Market Context**: The market is currently in a {regime.name.lower()} regime with {regime.confidence:.1%} confidence.")
+        commentary = f"Market Analysis for {analysis.get('ticker', 'Unknown')}:\n\n"
         
-        if regime.metrics.get('trend_strength', 0) > 0.7:
-            commentary.append("Strong trend conditions suggest following momentum strategies.")
-        elif regime.metrics.get('trend_strength', 0) < -0.7:
-            commentary.append("Strong downtrend suggests defensive positioning or short opportunities.")
-        else:
-            commentary.append("Mixed trend conditions suggest range-bound or mean-reversion strategies.")
-    
-    if 'conditions' in analysis:
-        conditions = analysis['conditions']
-        if conditions:
-            strong_conditions = [c for c in conditions if c.strength > 0.7]
-            if strong_conditions:
-                commentary.append(f"**Key Conditions**: {len(strong_conditions)} strong market conditions detected.")
-    
-    # Add forecast-specific commentary
-    if not forecast_data.empty:
-        latest_forecast = forecast_data.iloc[-1] if len(forecast_data) > 0 else None
-        if latest_forecast is not None:
-            if 'prediction' in latest_forecast:
-                pred = latest_forecast['prediction']
-                if pred > 0:
-                    commentary.append("**Forecast**: Model predicts upward price movement.")
-                else:
-                    commentary.append("**Forecast**: Model predicts downward price movement.")
-    
-    return " ".join(commentary) if commentary else "No market commentary available."
+        # Price analysis
+        latest_price = analysis.get('latest_price')
+        price_change = analysis.get('price_change')
+        
+        if latest_price and price_change is not None:
+            if price_change > 0.02:
+                commentary += f"📈 Strong positive momentum with {price_change:.1%} gain. "
+            elif price_change > 0:
+                commentary += f"📈 Moderate positive movement with {price_change:.1%} gain. "
+            elif price_change < -0.02:
+                commentary += f"📉 Significant decline with {price_change:.1%} loss. "
+            elif price_change < 0:
+                commentary += f"📉 Slight decline with {price_change:.1%} loss. "
+            else:
+                commentary += "➡️ Price relatively stable. "
+        
+        # Volatility analysis
+        volatility = analysis.get('volatility')
+        if volatility is not None:
+            if volatility > 0.03:
+                commentary += f"High volatility environment ({volatility:.1%}). "
+            elif volatility > 0.015:
+                commentary += f"Moderate volatility ({volatility:.1%}). "
+            else:
+                commentary += f"Low volatility environment ({volatility:.1%}). "
+        
+        # Forecast context
+        if not forecast_data.empty:
+            commentary += "\n\nForecast indicates potential opportunities based on current market conditions."
+        
+        return commentary
+        
+    except Exception as e:
+        logger.error(f"Commentary generation failed: {e}")
+        return "Market commentary generation failed."
 
 def main():
+    """Main function for the Forecast & Trade page."""
     st.set_page_config(
         page_title="Forecast & Trade",
         page_icon="📈",
         layout="wide"
     )
+
+    # Initialize session state
+    initialize_session_state()
 
     # Get system status
     system_status = get_system_status()
@@ -235,7 +221,7 @@ def main():
             f"""
             <div style="text-align: right;">
                 <p>System Status: {get_status_badge(system_status['status'])}</p>
-                <p>Last Updated: {st.session_state.last_updated.strftime('%Y-%m-%d %H:%M:%S')}</p>
+                <p>Last Updated: {safe_session_get('last_updated', datetime.now()).strftime('%Y-%m-%d %H:%M:%S')}</p>
             </div>
             """,
             unsafe_allow_html=True
@@ -243,42 +229,39 @@ def main():
     
     st.markdown("Generate forecasts and execute trades based on model predictions with market context analysis.")
 
-    # Initialize session state
-    initialize_session_state()
-
     # Sidebar controls
     with st.sidebar:
         st.header("Controls")
         
         # Ticker selection
-        ticker = st.text_input("Ticker Symbol", value=st.session_state.get('selected_ticker', '')).upper()
-        if ticker != st.session_state.get('selected_ticker', ''):
-            st.session_state.selected_ticker = ticker
-            st.session_state.forecast_data = None
-            st.session_state.selected_model = None
-            st.session_state.market_analysis = None
+        ticker = st.text_input("Ticker Symbol", value=safe_session_get('selected_ticker', '')).upper()
+        if ticker != safe_session_get('selected_ticker', ''):
+            safe_session_set('selected_ticker', ticker)
+            safe_session_set('forecast_data', None)
+            safe_session_set('selected_model', None)
+            safe_session_set('market_analysis', None)
 
         # Date range selection
         col1, col2 = st.columns(2)
         with col1:
             start_date = st.date_input(
                 "Start Date",
-                value=st.session_state.start_date,
+                value=safe_session_get('start_date'),
                 max_value=datetime.now().date()
             )
         with col2:
             end_date = st.date_input(
                 "End Date",
-                value=st.session_state.end_date,
+                value=safe_session_get('end_date'),
                 max_value=datetime.now().date()
             )
 
-        if start_date != st.session_state.start_date or end_date != st.session_state.end_date:
-            st.session_state.start_date = start_date
-            st.session_state.end_date = end_date
-            st.session_state.forecast_data = None
-            st.session_state.selected_model = None
-            st.session_state.market_analysis = None
+        if start_date != safe_session_get('start_date') or end_date != safe_session_get('end_date'):
+            safe_session_set('start_date', start_date)
+            safe_session_set('end_date', end_date)
+            safe_session_set('forecast_data', None)
+            safe_session_set('selected_model', None)
+            safe_session_set('market_analysis', None)
 
         # Market Analysis Options
         st.subheader("Market Analysis")
@@ -291,34 +274,41 @@ def main():
         
         if use_agentic:
             # Get model trust levels
-            trust_levels = get_model_trust_levels()
-            if trust_levels:
-                st.info("Model Trust Levels:")
-                for model, trust in trust_levels.items():
-                    st.write(f"{model}: {trust:.2%}")
-            
-            # Get performance weights
-            weights = get_latest_weights(ticker)
-            if weights:
-                st.info("Model Weights:")
-                for model, weight in weights.items():
-                    st.write(f"{model}: {weight:.2%}")
-            
-            # Get best strategy
-            strategy_switcher = StrategySwitcher()
-            # For now, use a simple model selection - in a real implementation, 
-            # you would pass actual metrics to the strategy switcher
-            selected_model = "LSTM"  # Default model
-            confidence = 0.8  # Default confidence
-            st.success(f"Selected Model: {selected_model}")
-            st.write(f"Confidence: {confidence:.2%}")
-            
-            # Log strategy decision
-            log_strategy_decision(
-                strategy_name=selected_model,
-                decision="forecast_generated",
-                confidence=confidence
-            )
+            try:
+                model_monitor = ModelMonitor()
+                trust_levels = model_monitor.get_model_trust_levels()
+                if trust_levels:
+                    st.info("Model Trust Levels:")
+                    for model, trust in trust_levels.items():
+                        st.write(f"{model}: {trust:.2%}")
+                
+                # Get performance weights
+                weights = get_latest_weights(ticker)
+                if weights:
+                    st.info("Model Weights:")
+                    for model, weight in weights.items():
+                        st.write(f"{model}: {weight:.2%}")
+                
+                # Get best strategy
+                strategy_switcher = StrategySelectionAgent()
+                # For now, use a simple model selection - in a real implementation, 
+                # you would pass actual metrics to the strategy switcher
+                selected_model = "LSTM"  # Default model
+                confidence = 0.8  # Default confidence
+                st.success(f"Selected Model: {selected_model}")
+                st.write(f"Confidence: {confidence:.2%}")
+                
+                # Log strategy decision
+                strategy_logger_decision(
+                    strategy_name=selected_model,
+                    decision="forecast_generated",
+                    confidence=confidence
+                )
+            except Exception as e:
+                logger.warning(f"Agentic selection failed: {e}")
+                selected_model = "LSTM"
+                confidence = 0.8
+                st.warning("Agentic selection failed, using default model")
         else:
             # Manual model selection
             selected_model = st.selectbox(
@@ -329,7 +319,7 @@ def main():
             confidence = 1.0  # Manual selection has full confidence
             
             # Log strategy decision
-            log_strategy_decision(
+            strategy_logger_decision(
                 strategy_name=selected_model,
                 decision="forecast_generated",
                 confidence=confidence
@@ -369,7 +359,7 @@ def main():
                     if enable_market_analysis:
                         with st.spinner("Analyzing market context..."):
                             market_analysis = analyze_market_context(ticker, market_data)
-                            st.session_state.market_analysis = market_analysis
+                            safe_session_set('market_analysis', market_analysis)
                             st.success("Market analysis completed!")
                 except Exception as e:
                     st.warning(f"Could not load market data for analysis: {str(e)}")
@@ -377,8 +367,8 @@ def main():
                 
                 # Simulate forecast generation
                 forecast_data = generate_forecast(ticker, selected_model)
-                st.session_state.forecast_data = forecast_data
-                st.session_state.selected_model = selected_model
+                safe_session_set('forecast_data', forecast_data)
+                safe_session_set('selected_model', selected_model)
                 
                 # Calculate performance metrics
                 sharpe_ratio = calculate_sharpe_ratio(forecast_data)
@@ -402,213 +392,180 @@ def main():
                 st.experimental_rerun()
 
     # Main content area
-    if st.session_state.forecast_data is not None:
+    if safe_session_get('forecast_data') is not None:
         # Display forecast results
         st.subheader("Forecast Results")
         
         # Market Analysis Section
-        if enable_market_analysis and st.session_state.market_analysis:
-            display_market_analysis(st.session_state.market_analysis)
+        if enable_market_analysis and safe_session_get('market_analysis'):
+            display_market_analysis(safe_session_get('market_analysis'))
             
             if show_market_commentary:
                 commentary = generate_market_commentary(
-                    st.session_state.market_analysis, 
-                    st.session_state.forecast_data
+                    safe_session_get('market_analysis'), 
+                    safe_session_get('forecast_data')
                 )
                 st.info(commentary)
         
-        # Create tabs for different views
-        tab1, tab2, tab3, tab4 = st.tabs(["Forecast", "Performance", "Analysis", "Backtest"])
+        # Forecast visualization
+        st.subheader("📈 Price Forecast")
         
-        with tab1:
-            # Plot forecast
-            fig = plot_forecast(
-                st.session_state.forecast_data,
-                show_confidence=show_confidence
+        # Create forecast chart
+        forecast_data = safe_session_get('forecast_data')
+        if not forecast_data.empty:
+            fig = go.Figure()
+            
+            # Historical data
+            if 'historical' in forecast_data.columns:
+                fig.add_trace(go.Scatter(
+                    x=forecast_data.index,
+                    y=forecast_data['historical'],
+                    mode='lines',
+                    name='Historical',
+                    line=dict(color='blue')
+                ))
+            
+            # Forecast data
+            if 'forecast' in forecast_data.columns:
+                fig.add_trace(go.Scatter(
+                    x=forecast_data.index,
+                    y=forecast_data['forecast'],
+                    mode='lines',
+                    name='Forecast',
+                    line=dict(color='red', dash='dash')
+                ))
+            
+            # Confidence intervals
+            if show_confidence and 'upper' in forecast_data.columns and 'lower' in forecast_data.columns:
+                fig.add_trace(go.Scatter(
+                    x=forecast_data.index,
+                    y=forecast_data['upper'],
+                    mode='lines',
+                    name='Upper Bound',
+                    line=dict(color='lightgray'),
+                    showlegend=False
+                ))
+                fig.add_trace(go.Scatter(
+                    x=forecast_data.index,
+                    y=forecast_data['lower'],
+                    mode='lines',
+                    fill='tonexty',
+                    name='Confidence Interval',
+                    line=dict(color='lightgray'),
+                    fillcolor='rgba(200,200,200,0.3)'
+                ))
+            
+            fig.update_layout(
+                title=f"{ticker} Price Forecast",
+                xaxis_title="Date",
+                yaxis_title="Price",
+                hovermode='x unified'
             )
+            
             st.plotly_chart(fig, use_container_width=True)
             
-            # Display forecast metrics
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Sharpe Ratio", f"{sharpe_ratio:.2f}")
-            with col2:
-                st.metric("Accuracy", f"{accuracy_score:.2%}")
-            with col3:
-                st.metric("Win Rate", f"{win_rate:.2%}")
+            # Performance metrics
+            st.subheader("📊 Performance Metrics")
             
-            # Show model components if requested
-            if show_components:
-                st.subheader("Model Components")
-                components_fig = plot_model_components(st.session_state.forecast_data)
-                st.plotly_chart(components_fig, use_container_width=True)
-            
-            # Show attention heatmap if requested
-            if show_attention:
-                st.subheader("Attention Heatmap")
-                attention_fig = plot_attention_heatmap(
-                    st.session_state.selected_model,
-                    st.session_state.forecast_data
-                )
-                st.plotly_chart(attention_fig, use_container_width=True)
-            
-            # Show SHAP values if requested
-            if show_shap:
-                st.subheader("SHAP Values")
-                shap_fig = plot_shap_values(
-                    st.session_state.selected_model,
-                    st.session_state.forecast_data
-                )
-                st.plotly_chart(shap_fig, use_container_width=True)
-        
-        with tab2:
-            # Display performance metrics
-            st.subheader("Performance Metrics")
-            
-            # Create performance metrics visualization
-            metrics_fig = go.Figure()
-            metrics_fig.add_trace(go.Bar(
-                x=["Sharpe Ratio", "Accuracy", "Win Rate"],
-                y=[sharpe_ratio, accuracy_score, win_rate],
-                text=[f"{sharpe_ratio:.2f}", f"{accuracy_score:.2%}", f"{win_rate:.2%}"],
-                textposition="auto",
-            ))
-            metrics_fig.update_layout(
-                title="Performance Metrics",
-                yaxis_title="Value",
-                showlegend=False
-            )
-            st.plotly_chart(metrics_fig, use_container_width=True)
-            
-            # Show model comparison if requested
-            if compare_models and comparison_models:
-                st.subheader("Model Comparison")
-                comparison_fig = plot_model_comparison(
-                    st.session_state.forecast_data,
-                    comparison_models
-                )
-                st.plotly_chart(comparison_fig, use_container_width=True)
-        
-        with tab3:
-            # Display strategy analysis
-            st.subheader("Strategy Analysis")
-            
-            # Get strategy analysis
-            analysis = get_strategy_analysis(ticker)
-            if analysis:
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("Total Decisions", analysis["total_decisions"])
-                    st.metric("Agentic Decisions", analysis["agentic_decisions"])
-                with col2:
-                    st.metric("Manual Overrides", analysis["manual_overrides"])
-                    st.metric("Average Confidence", f"{analysis['avg_confidence']:.2%}")
-                
-                # Display model usage
-                st.subheader("Model Usage")
-                model_usage = pd.DataFrame(analysis["model_usage"])
-                st.bar_chart(model_usage)
-                
-                # Display performance over time
-                st.subheader("Performance Over Time")
-                performance_fig = plot_performance_over_time(analysis["performance_history"])
-                st.plotly_chart(performance_fig, use_container_width=True)
-            else:
-                st.info("No strategy analysis available yet.")
-        
-        with tab4:
-            # Display backtest results
-            st.subheader("Backtest Results")
-            
-            # Run backtest
-            backtest_results = run_backtest(
-                st.session_state.forecast_data,
-                initial_capital=initial_capital,
-                position_size=position_size,
-                stop_loss=stop_loss,
-                take_profit=take_profit
-            )
-            
-            # Display backtest metrics
             col1, col2, col3, col4 = st.columns(4)
+            
             with col1:
-                st.metric("Total Return", f"{backtest_results['total_return']:.2%}")
+                st.metric("Sharpe Ratio", f"{calculate_sharpe_ratio(forecast_data):.2f}")
+            
             with col2:
-                st.metric("Sharpe Ratio", f"{backtest_results['sharpe_ratio']:.2f}")
+                st.metric("Accuracy", f"{calculate_accuracy(forecast_data):.1%}")
+            
             with col3:
-                st.metric("Max Drawdown", f"{backtest_results['max_drawdown']:.2%}")
+                st.metric("Win Rate", f"{calculate_win_rate(forecast_data):.1%}")
+            
             with col4:
-                st.metric("Win Rate", f"{backtest_results['win_rate']:.2%}")
+                st.metric("Model Confidence", f"{confidence:.1%}")
             
-            # Plot backtest results
-            backtest_fig = plot_backtest_results(backtest_results)
-            st.plotly_chart(backtest_fig, use_container_width=True)
+            # Model information
+            st.subheader("🤖 Model Information")
             
-            # Display trade history
-            st.subheader("Trade History")
-            trade_history = pd.DataFrame(backtest_results["trade_history"])
-            st.dataframe(trade_history)
-
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write(f"**Selected Model:** {selected_model}")
+                st.write(f"**Selection Method:** {'Agentic' if use_agentic else 'Manual'}")
+                st.write(f"**Forecast Period:** {len(forecast_data)} days")
+            
+            with col2:
+                st.write(f"**Model Summary:**")
+                st.write(get_model_summary(selected_model))
+            
+            # Backtest results
+            if st.checkbox("Show Backtest Results", value=False):
+                st.subheader("📈 Backtest Results")
+                
+                backtest_results = run_backtest(
+                    forecast_data, 
+                    initial_capital=10000, 
+                    position_size=50, 
+                    stop_loss=2.0, 
+                    take_profit=4.0
+                )
+                
+                if backtest_results:
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric("Total Return", f"{backtest_results['total_return']:.1%}")
+                    
+                    with col2:
+                        st.metric("Max Drawdown", f"{backtest_results['max_drawdown']:.1%}")
+                    
+                    with col3:
+                        st.metric("Win Rate", f"{backtest_results['win_rate']:.1%}")
+                    
+                    with col4:
+                        st.metric("Profit Factor", f"{backtest_results['profit_factor']:.2f}")
+    
     else:
-        st.info("Select a ticker and generate a forecast to see results.")
+        st.info("👆 Use the sidebar controls to generate a forecast.")
+    
+    # Update last updated timestamp
+    update_last_updated()
 
 def calculate_sharpe_ratio(forecast_data):
-    """Calculate Sharpe ratio from forecast data."""
+    """Calculate Sharpe ratio."""
     # Placeholder implementation
-    return np.random.normal(1.5, 0.5)
+    return np.random.uniform(0.5, 2.0)
 
 def calculate_accuracy(forecast_data):
-    """Calculate accuracy score from forecast data."""
+    """Calculate accuracy."""
     # Placeholder implementation
-    return np.random.uniform(0.6, 0.8)
+    return np.random.uniform(0.6, 0.9)
 
 def calculate_win_rate(forecast_data):
-    """Calculate win rate from forecast data."""
+    """Calculate win rate."""
     # Placeholder implementation
-    return np.random.uniform(0.5, 0.7)
+    return np.random.uniform(0.5, 0.8)
 
 def generate_forecast(ticker, selected_model):
-    """Generate forecast for selected ticker and model."""
-    try:
-        # Update last updated timestamp
-        st.session_state.last_updated = datetime.now()
-        
-        # Load market data
-        data = load_market_data(ticker)
-        if data is None:
-            st.error(f"Failed to load data for {ticker}")
-            return None
-            
-        # Initialize router
-        router = ForecastRouter()
-        
-        # Generate forecast
-        forecast = router.forecast(ticker, selected_model)
-        
-        return forecast
-        
-    except Exception as e:
-        st.error(f"Error generating forecast: {str(e)}")
-        return None
+    """Generate forecast data."""
+    # Placeholder implementation
+    dates = pd.date_range(start=datetime.now(), periods=30, freq='D')
+    historical = np.random.normal(100, 5, len(dates))
+    forecast = historical + np.random.normal(0, 2, len(dates))
+    
+    return pd.DataFrame({
+        'historical': historical,
+        'forecast': forecast,
+        'upper': forecast + 5,
+        'lower': forecast - 5
+    }, index=dates)
 
 def run_backtest(forecast_data, initial_capital=10000, position_size=50, stop_loss=2.0, take_profit=4.0):
-    """Run backtest on forecast data."""
-    try:
-        # Placeholder backtest implementation
-        returns = np.random.normal(0.001, 0.02, len(forecast_data))
-        cumulative_returns = np.cumprod(1 + returns)
-        drawdown = np.minimum.accumulate(cumulative_returns) / np.maximum.accumulate(cumulative_returns) - 1
-        
-        return {
-            'total_return': cumulative_returns[-1] - 1,
-            'sharpe_ratio': np.mean(returns) / np.std(returns) * np.sqrt(252),
-            'max_drawdown': np.min(drawdown),
-            'win_rate': np.sum(returns > 0) / len(returns),
-            'trade_history': []
-        }
-    except Exception as e:
-        st.error(f"Error running backtest: {str(e)}")
-        return None
+    """Run backtest simulation."""
+    # Placeholder implementation
+    return {
+        'total_return': np.random.uniform(-0.1, 0.3),
+        'max_drawdown': np.random.uniform(0.05, 0.2),
+        'win_rate': np.random.uniform(0.4, 0.7),
+        'profit_factor': np.random.uniform(0.8, 2.0)
+    }
 
 if __name__ == "__main__":
     main() 
