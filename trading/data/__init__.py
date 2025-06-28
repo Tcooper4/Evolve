@@ -6,6 +6,7 @@ from .preprocessing import (
 )
 from .providers.alpha_vantage_provider import AlphaVantageProvider
 from .providers.yfinance_provider import YFinanceProvider
+from .data_loader import load_market_data, load_multiple_tickers, get_latest_price
 
 __all__ = [
     'DataPreprocessor',
@@ -13,5 +14,8 @@ __all__ = [
     'DataValidator',
     'DataScaler',
     'AlphaVantageProvider',
-    'YFinanceProvider'
+    'YFinanceProvider',
+    'load_market_data',
+    'load_multiple_tickers',
+    'get_latest_price'
 ] 

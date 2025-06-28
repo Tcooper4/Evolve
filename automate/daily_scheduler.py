@@ -17,10 +17,10 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 # Project imports
-from core.agents.router import AgentRouter
+# from core.agents.router import AgentRouter  # Moved to archive
 from trading.llm.llm_interface import LLMInterface
 from core.agents.self_improving_agent import SelfImprovingAgent
-from trading.memory.performance_log import log_performance
+from trading.memory.performance_logger import log_performance
 from trading.utils.logging import setup_logging
 from core.agents.goal_planner import evaluate_goals
 from trading.config.settings import (

@@ -9,6 +9,17 @@ import logging
 # Configure logging
 logger = logging.getLogger(__name__)
 
+def check_encoding(file_path: str) -> dict:
+    """Check the encoding of a file.
+    
+    Args:
+        file_path: Path to the file to check
+        
+    Returns:
+        dict: Dictionary containing encoding information
+    """
+    return detect_encoding(file_path)
+
 def is_utf8(file_path: str) -> bool:
     """Check if a file is UTF-8 encoded.
     

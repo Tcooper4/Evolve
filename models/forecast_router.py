@@ -32,7 +32,13 @@ from pathlib import Path
 from trading.models.arima_model import ARIMAModel
 from trading.models.lstm_model import LSTMModel
 from trading.models.xgboost_model import XGBoostModel
-from trading.models.prophet_model import ProphetModel
+# Make Prophet import optional
+try:
+    from trading.models.prophet_model import ProphetModel
+    PROPHET_AVAILABLE = True
+except ImportError:
+    PROPHET_AVAILABLE = False
+    ProphetModel = None
 from trading.models.autoformer_model import AutoformerModel
 from trading.utils.data_utils import prepare_forecast_data
 from trading.utils.logging import setup_logging
@@ -63,9 +69,13 @@ class ForecastRouter:
             'arima': ARIMAModel,
             'lstm': LSTMModel,
             'xgboost': XGBoostModel,
-            'prophet': ProphetModel,
             'autoformer': AutoformerModel
         }
+        
+        # Add Prophet only if available
+        if PROPHET_AVAILABLE:
+            self.model_registry['prophet'] = ProphetModel
+            
         self.performance_history = pd.DataFrame()
         self.model_weights = self._initialize_weights()
         
@@ -140,7 +150,7 @@ class ForecastRouter:
         # Apply selection rules
         if characteristics['length'] < 100:
             return 'arima'  # Better for short series
-        elif characteristics['has_seasonality']:
+        elif characteristics['has_seasonality'] and PROPHET_AVAILABLE:
             return 'prophet'  # Better for seasonal data
         elif characteristics['has_trend']:
             return 'autoformer'  # Better for trending data

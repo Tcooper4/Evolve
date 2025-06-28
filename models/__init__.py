@@ -2,7 +2,7 @@
 Models module for machine learning models and training.
 """
 
-from trading.forecast_router import ForecastRouter
-from trading.retrain import ModelRetrainer
+from .forecast_router import ForecastRouter
+# from trading.retrain import ModelRetrainer  # Commented out as it may not exist
 
-__all__ = ['ForecastRouter', 'ModelRetrainer'] 
+__all__ = ['ForecastRouter'] 

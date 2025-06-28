@@ -27,7 +27,6 @@ st.set_page_config(
 # Navigation configuration
 PAGES: Dict[str, str] = {
     "Home": "home",
-    "Unified Interface": "unified_interface",
     "Forecasting": "forecast",
     "Performance Tracker": "performance_tracker",
     "Strategy": "strategy",
@@ -210,10 +209,7 @@ def load_page_module(page_name: str) -> Optional[Any]:
         Loaded module or None if loading fails
     """
     try:
-        if page_name == "unified_interface":
-            from unified_interface import streamlit_ui
-            return streamlit_ui
-        elif page_name == "performance_tracker":
+        if page_name == "performance_tracker":
             from pages import performance_tracker
             return performance_tracker
         elif page_name == "forecast":
@@ -245,7 +241,6 @@ def render_home_page(module_status: Dict[str, Any]) -> None:
     
     Use the sidebar to navigate through different features:
     
-    - 🔮 **Unified Interface**: Access all features through one comprehensive interface
     - 📈 **Forecasting**: Generate and analyze market predictions using advanced ML models
     - 📊 **Performance Tracker**: Monitor model performance metrics and system health
     - 🎯 **Strategy**: View and manage trading strategies with backtesting results
@@ -339,14 +334,6 @@ def main() -> None:
         # Main content area
         if selection == "Home":
             render_home_page(module_status)
-        elif selection == "Unified Interface":
-            # Load and execute unified interface
-            try:
-                from unified_interface import streamlit_ui
-                streamlit_ui()
-            except ImportError as e:
-                st.error(f"Unified interface not available: {e}")
-                st.info("Please ensure the unified_interface.py file is present.")
         else:
             # Load and execute page module
             page_module = load_page_module(selected_page)
