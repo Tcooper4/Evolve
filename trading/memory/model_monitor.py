@@ -8,6 +8,66 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
+
+class ModelMonitor:
+    """Model monitoring class for tracking model performance and detecting issues."""
+    
+    def __init__(self):
+        """Initialize the model monitor."""
+        self.logger = logging.getLogger(__name__)
+        self.trust_levels = {
+            "lstm": 0.85,
+            "xgboost": 0.78,
+            "prophet": 0.72,
+            "ensemble": 0.91,
+            "tcn": 0.68,
+            "transformer": 0.82
+        }
+    
+    def get_model_trust_levels(self) -> Dict[str, float]:
+        """Get trust levels for different models.
+        
+        Returns:
+            Dictionary mapping model names to trust levels (0-1)
+        """
+        try:
+            self.logger.info(f"Model trust levels retrieved: {self.trust_levels}")
+            return self.trust_levels
+        except Exception as e:
+            self.logger.error(f"Error getting model trust levels: {str(e)}")
+            return {
+                "lstm": 0.5,
+                "xgboost": 0.5,
+                "prophet": 0.5,
+                "ensemble": 0.5,
+                "tcn": 0.5,
+                "transformer": 0.5
+            }
+    
+    def update_trust_level(self, model_name: str, new_trust: float):
+        """Update trust level for a specific model.
+        
+        Args:
+            model_name: Name of the model
+            new_trust: New trust level (0-1)
+        """
+        try:
+            self.trust_levels[model_name] = max(0.0, min(1.0, new_trust))
+            self.logger.info(f"Updated trust level for {model_name}: {new_trust:.3f}")
+        except Exception as e:
+            self.logger.error(f"Error updating trust level: {str(e)}")
+    
+    def detect_drift(self, current_data: pd.DataFrame, historical_data: pd.DataFrame, 
+                    threshold: float = 0.1, method: str = "ks_test") -> Dict[str, Any]:
+        """Detect data drift between current and historical data."""
+        return detect_drift(current_data, historical_data, threshold, method)
+    
+    def generate_strategy_priority(self, performance_metrics: Dict[str, float], 
+                                 market_conditions: Dict[str, Any]) -> Dict[str, Any]:
+        """Generate strategy priority based on performance and market conditions."""
+        return generate_strategy_priority(performance_metrics, market_conditions)
+
+
 def detect_drift(
     current_data: pd.DataFrame,
     historical_data: pd.DataFrame,

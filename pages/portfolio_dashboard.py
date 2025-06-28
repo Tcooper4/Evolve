@@ -254,7 +254,7 @@ st.sidebar.title("Controls")
 st.sidebar.subheader("Portfolio State")
 
 # Initialize portfolio manager if not already done
-if st.session_state.portfolio_manager is None:
+if 'portfolio_manager' not in st.session_state or st.session_state.portfolio_manager is None:
     st.session_state.portfolio_manager = PortfolioManager()
 
 # Load portfolio from file
@@ -270,6 +270,11 @@ if st.sidebar.button("Save Portfolio"):
 
 # Get portfolio data
 portfolio = st.session_state.portfolio_manager
+
+# Check if portfolio is properly initialized
+if portfolio is None or not hasattr(portfolio, 'state') or portfolio.state is None:
+    st.error("Portfolio manager not properly initialized. Please try refreshing the page.")
+    st.stop()
 
 # Filters
 st.sidebar.subheader("Filters")

@@ -365,14 +365,14 @@ imported_modules = {{}}
 for module_name, alias in SAFE_MODULES.items():
     try:
         if '.' in module_name:
-            # Handle submodules
             parts = module_name.split('.')
             module = __import__(module_name, fromlist=[parts[-1]])
             imported_modules[alias] = getattr(module, parts[-1])
         else:
             imported_modules[alias] = __import__(module_name)
-    except ImportError:
-        pass
+    except ImportError as e:
+        logger.warning(f"Failed to import module {module_name}: {e}")
+        # Continue with other imports
 
 # Add safe modules to globals
 globals().update(imported_modules)

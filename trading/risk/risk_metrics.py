@@ -7,6 +7,9 @@ from plotly.subplots import make_subplots
 from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class RiskMetrics:
@@ -212,29 +215,77 @@ def plot_drawdown_heatmap(
     Returns:
         Plotly figure object
     """
-    # Calculate drawdowns
-    cum_returns = (1 + returns).cumprod()
-    rolling_max = cum_returns.expanding().max()
-    drawdowns = (cum_returns - rolling_max) / rolling_max
-    
-    # Create heatmap
-    fig = go.Figure(data=go.Heatmap(
-        z=drawdowns.values.T,
-        x=drawdowns.index,
-        y=drawdowns.columns,
-        colorscale='RdBu',
-        zmid=0
-    ))
-    
-    fig.update_layout(
-        title=title,
-        height=height,
-        xaxis_title="Date",
-        yaxis_title="Asset",
-        template="plotly_white"
-    )
-    
-    return fig
+    try:
+        # Ensure we have numeric data
+        numeric_columns = returns.select_dtypes(include=[np.number]).columns
+        if len(numeric_columns) == 0:
+            # If no numeric columns, try to convert
+            for col in returns.columns:
+                if col != 'timestamp':  # Skip timestamp column
+                    try:
+                        returns[col] = pd.to_numeric(returns[col], errors='coerce')
+                    except:
+                        pass
+        
+        # Filter to only numeric columns
+        returns = returns.select_dtypes(include=[np.number])
+        
+        if returns.empty:
+            # Return empty figure if no numeric data
+            fig = go.Figure()
+            fig.update_layout(
+                title=title,
+                height=height,
+                annotations=[{
+                    'text': 'No numeric data available for drawdown calculation',
+                    'xref': 'paper',
+                    'yref': 'paper',
+                    'showarrow': False,
+                    'font': {'size': 16}
+                }]
+            )
+            return fig
+        
+        # Calculate drawdowns
+        cum_returns = (1 + returns).cumprod()
+        rolling_max = cum_returns.expanding().max()
+        drawdowns = (cum_returns - rolling_max) / rolling_max
+        
+        # Create heatmap
+        fig = go.Figure(data=go.Heatmap(
+            z=drawdowns.values.T,
+            x=drawdowns.index,
+            y=drawdowns.columns,
+            colorscale='RdBu',
+            zmid=0
+        ))
+        
+        fig.update_layout(
+            title=title,
+            height=height,
+            xaxis_title="Date",
+            yaxis_title="Asset",
+            template="plotly_white"
+        )
+        
+        return fig
+        
+    except Exception as e:
+        logger.error(f"Error creating drawdown heatmap: {e}")
+        # Return empty figure with error message
+        fig = go.Figure()
+        fig.update_layout(
+            title=title,
+            height=height,
+            annotations=[{
+                'text': f'Error creating heatmap: {str(e)}',
+                'xref': 'paper',
+                'yref': 'paper',
+                'showarrow': False,
+                'font': {'size': 16}
+            }]
+        )
+        return fig
 
 def calculate_regime_metrics(
     returns: pd.Series,

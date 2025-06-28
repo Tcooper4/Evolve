@@ -93,6 +93,23 @@ def load_metrics():
 # Load metrics
 metrics_df = load_metrics()
 
+# Flatten metrics if they're nested
+if not metrics_df.empty and 'metrics' in metrics_df.columns:
+    # Extract metrics from nested structure
+    flattened_df = pd.DataFrame()
+    for idx, row in metrics_df.iterrows():
+        metrics = row.get('metrics', {})
+        if isinstance(metrics, dict):
+            # Add timestamp
+            metrics['timestamp'] = row.get('timestamp')
+            # Add to flattened dataframe
+            flattened_df = pd.concat([flattened_df, pd.DataFrame([metrics])], ignore_index=True)
+    
+    # Use flattened dataframe for plotting
+    plot_df = flattened_df
+else:
+    plot_df = metrics_df
+
 # Create tabs
 tab1, tab2, tab3 = st.tabs([
     "Risk Metrics",
@@ -139,17 +156,20 @@ with tab1:
             )
         
         # Plot metrics
-        st.plotly_chart(
-            plot_risk_metrics(metrics_df),
-            use_container_width=True
-        )
-        
-        # Drawdown heatmap
-        st.subheader("Drawdown Heatmap")
-        st.plotly_chart(
-            plot_drawdown_heatmap(metrics_df),
-            use_container_width=True
-        )
+        if not plot_df.empty:
+            st.plotly_chart(
+                plot_risk_metrics(plot_df),
+                use_container_width=True
+            )
+            
+            # Drawdown heatmap
+            st.subheader("Drawdown Heatmap")
+            st.plotly_chart(
+                plot_drawdown_heatmap(plot_df),
+                use_container_width=True
+            )
+        else:
+            st.warning("No data available for plotting")
 
 # Regime Analysis Tab
 with tab2:

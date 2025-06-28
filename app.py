@@ -11,471 +11,273 @@ from typing import Dict, Any, Optional
 import logging
 import pandas as pd
 from datetime import datetime
+import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+import sys
+import os
+import warnings
+from pathlib import Path
 
-# Import consolidated runner
-try:
-    from utils.runner import run_app
-    CONSOLIDATED_RUNNER_AVAILABLE = True
-except ImportError:
-    CONSOLIDATED_RUNNER_AVAILABLE = False
-    logger.warning("Consolidated runner not available - using legacy app structure")
+# Suppress deprecation warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="pandas_ta")
 
-# Import PromptAgent for agentic routing
-try:
-    from trading.agents.prompt_router_agent import PromptRouterAgent
-    PROMPT_AGENT_AVAILABLE = True
-except ImportError:
-    PROMPT_AGENT_AVAILABLE = False
-    logger.warning("PromptRouterAgent not available - using fallback routing")
+# Add project root to path
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Page configuration
-st.set_page_config(
-    page_title="Evolve - Agentic Forecasting System",
-    page_icon="🔮",
-    layout="wide",
-    initial_sidebar_state="expanded"
+# Import shared utilities
+from core.session_utils import (
+    initialize_session_state, 
+    initialize_system_modules, 
+    display_system_status,
+    safe_session_get,
+    safe_session_set,
+    update_last_updated
 )
 
-# Navigation configuration
-PAGES: Dict[str, str] = {
-    "Home": "home",
-    "Forecasting": "forecast",
-    "Performance Tracker": "performance_tracker",
-    "Strategy": "strategy",
-    "System Scorecard": "5_📊_System_Scorecard",
-    "Settings": "settings"
-}
+# Import trading components
+from trading.memory.model_monitor import ModelMonitor
+from trading.memory.strategy_logger import StrategyLogger
+from trading.optimization.strategy_selection_agent import StrategySelectionAgent
+from trading.portfolio.portfolio_manager import PortfolioManager
+from trading.portfolio.llm_utils import LLMInterface
+from trading.optimization.performance_logger import PerformanceLogger
+from trading.agents.prompt_router_agent import PromptRouterAgent
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
-def initialize_session_state() -> None:
-    """Initialize all session state variables with default values."""
-    # API and configuration
-    if "use_api" not in st.session_state:
-        st.session_state.use_api = False
-    if "api_key" not in st.session_state:
-        st.session_state.api_key = ""
-    
-    # Portfolio and risk management
-    if "portfolio" not in st.session_state:
-        st.session_state.portfolio = None
-    if "risk_manager" not in st.session_state:
-        st.session_state.risk_manager = None
-    if "strategy_manager" not in st.session_state:
-        st.session_state.strategy_manager = None
-    
-    # System components
-    if "router" not in st.session_state:
-        st.session_state.router = None
-    if "llm" not in st.session_state:
-        st.session_state.llm = None
-    if "updater" not in st.session_state:
-        st.session_state.updater = None
-    if "memory" not in st.session_state:
-        st.session_state.memory = None
-    
-    # Health and status
-    if "health_status" not in st.session_state:
-        st.session_state.health_status = "unknown"
-    if "repair_status" not in st.session_state:
-        st.session_state.repair_status = "unknown"
-    if "llm_provider" not in st.session_state:
-        st.session_state.llm_provider = "unknown"
-    if "last_system_check" not in st.session_state:
-        st.session_state.last_system_check = None
-    
-    # UI state
-    if "last_updated" not in st.session_state:
-        st.session_state.last_updated = datetime.now()
-    if "selected_ticker" not in st.session_state:
-        st.session_state.selected_ticker = "AAPL"
-    if "selected_model" not in st.session_state:
-        st.session_state.selected_model = None
-    if "forecast_data" not in st.session_state:
-        st.session_state.forecast_data = None
-    if "market_analysis" not in st.session_state:
-        st.session_state.market_analysis = None
-    if "start_date" not in st.session_state:
-        st.session_state.start_date = datetime.now().date()
-    if "end_date" not in st.session_state:
-        st.session_state.end_date = datetime.now().date()
-    if "date_range" not in st.session_state:
-        st.session_state.date_range = None
-    
-    # Strategy and performance
-    if "signals" not in st.session_state:
-        st.session_state.signals = None
-    if "results" not in st.session_state:
-        st.session_state.results = None
-    if "forecast_results" not in st.session_state:
-        st.session_state.forecast_results = None
-    
-    # Portfolio dashboard
-    if "portfolio_manager" not in st.session_state:
-        st.session_state.portfolio_manager = None
-    
-    # Task dashboard
-    if "last_refresh" not in st.session_state:
-        st.session_state.last_refresh = datetime.now()
-    if "auto_refresh" not in st.session_state:
-        st.session_state.auto_refresh = True
-    if "selected_task" not in st.session_state:
-        st.session_state.selected_task = None
-    
-    # Leaderboard dashboard
-    if "status_filter" not in st.session_state:
-        st.session_state.status_filter = "All"
-    if "sort_by" not in st.session_state:
-        st.session_state.sort_by = "sharpe_ratio"
-    if "top_n" not in st.session_state:
-        st.session_state.top_n = 10
+def main():
+    """Main application function."""
+    # Page configuration
+    st.set_page_config(
+        page_title="Evolve Clean Trading Dashboard",
+        page_icon="📈",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+
+    # Initialize session state
+    initialize_session_state()
+
+    # Initialize system modules
+    module_status = initialize_system_modules()
+
+    # Display system status
+    display_system_status(module_status)
+
+    # Main dashboard content
+    st.title("🚀 Evolve Clean Trading Dashboard")
+    st.markdown("Advanced AI-powered trading system with real-time market analysis and automated decision making.")
+
+    # Update last updated timestamp
+    update_last_updated()
+
+    # Sidebar navigation
+    st.sidebar.title("📊 Navigation")
+    page = st.sidebar.selectbox(
+        "Choose a page:",
+        [
+            "🏠 Home",
+            "📈 Forecast & Trade", 
+            "📊 Portfolio Dashboard",
+            "⚡ Strategy History",
+            "🎯 Performance Tracker",
+            "🛡️ Risk Dashboard",
+            "⚙️ Settings",
+            "📋 System Scorecard"
+        ]
+    )
+
+    # Page routing
+    if page == "🏠 Home":
+        show_home_page(module_status)
+    elif page == "📈 Forecast & Trade":
+        st.switch_page("pages/1_Forecast_Trade.py")
+    elif page == "📊 Portfolio Dashboard":
+        st.switch_page("pages/portfolio_dashboard.py")
+    elif page == "⚡ Strategy History":
+        st.switch_page("pages/6_Strategy_History.py")
+    elif page == "🎯 Performance Tracker":
+        st.switch_page("pages/performance_tracker.py")
+    elif page == "🛡️ Risk Dashboard":
+        st.switch_page("pages/risk_dashboard.py")
+    elif page == "⚙️ Settings":
+        st.switch_page("pages/settings.py")
+    elif page == "📋 System Scorecard":
+        st.switch_page("pages/5_📊_System_Scorecard.py")
 
 
-def initialize_system_modules() -> Dict[str, Any]:
-    """
-    Initialize all system modules and return their status.
+def show_home_page(module_status: Dict[str, Any]):
+    """Display the home page with system overview and quick actions."""
+    st.header("🏠 System Overview")
     
-    Returns:
-        Dictionary with module initialization status
-    """
-    module_status = {
-        "goal_status": {"available": False, "error": None},
-        "optimizer_consolidator": {"available": False, "error": None},
-        "market_analysis": {"available": False, "error": None},
-        "data_pipeline": {"available": False, "error": None},
-        "data_validation": {"available": False, "error": None}
-    }
+    # System status summary
+    col1, col2, col3, col4 = st.columns(4)
     
-    # Initialize Goal Status Module
-    try:
-        from trading.memory.goals.status import get_status_summary, update_goal_progress
-        module_status["goal_status"]["available"] = True
-        module_status["goal_status"]["functions"] = {
-            "get_status_summary": get_status_summary,
-            "update_goal_progress": update_goal_progress
-        }
-        logger.info("[SUCCESS] Goal status module initialized")
-    except Exception as e:
-        module_status["goal_status"]["error"] = str(e)
-        logger.warning(f"[WARNING] Goal status module not available: {e}")
+    with col1:
+        st.metric(
+            label="System Status",
+            value="🟢 Operational" if all(status == 'SUCCESS' for status in module_status.values()) else "🟡 Degraded",
+            delta="All systems online" if all(status == 'SUCCESS' for status in module_status.values()) else "Some issues detected"
+        )
     
-    # Initialize Optimizer Consolidator Module
-    try:
-        from optimizers.consolidator import OptimizerConsolidator, run_optimizer_consolidation
-        module_status["optimizer_consolidator"]["available"] = True
-        module_status["optimizer_consolidator"]["functions"] = {
-            "OptimizerConsolidator": OptimizerConsolidator,
-            "run_optimizer_consolidation": run_optimizer_consolidation
-        }
-        logger.info("[SUCCESS] Optimizer consolidator module initialized")
-    except Exception as e:
-        module_status["optimizer_consolidator"]["error"] = str(e)
-        logger.warning(f"[WARNING] Optimizer consolidator module not available: {e}")
+    with col2:
+        # Get model trust levels
+        try:
+            model_monitor = ModelMonitor()
+            trust_levels = model_monitor.get_model_trust_levels()
+            avg_trust = sum(trust_levels.values()) / len(trust_levels) if trust_levels else 0
+            st.metric(
+                label="Avg Model Trust",
+                value=f"{avg_trust:.1%}",
+                delta=f"{len(trust_levels)} models active" if trust_levels else "No models"
+            )
+        except Exception as e:
+            logger.warning(f"Could not get model trust levels: {e}")
+            st.metric(label="Avg Model Trust", value="N/A", delta="Error")
     
-    # Initialize Market Analysis Module
-    try:
-        from src.analysis.market_analysis import MarketAnalyzer, analyze_market_conditions
-        module_status["market_analysis"]["available"] = True
-        module_status["market_analysis"]["functions"] = {
-            "MarketAnalyzer": MarketAnalyzer,
-            "analyze_market_conditions": analyze_market_conditions
-        }
-        logger.info("[SUCCESS] Market analysis module initialized")
-    except Exception as e:
-        module_status["market_analysis"]["error"] = str(e)
-        logger.warning(f"[WARNING] Market analysis module not available: {e}")
-    
-    # Initialize Data Pipeline Module
-    try:
-        from src.utils.data_pipeline import DataPipeline, run_data_pipeline
-        module_status["data_pipeline"]["available"] = True
-        module_status["data_pipeline"]["functions"] = {
-            "DataPipeline": DataPipeline,
-            "run_data_pipeline": run_data_pipeline
-        }
-        logger.info("[SUCCESS] Data pipeline module initialized")
-    except Exception as e:
-        module_status["data_pipeline"]["error"] = str(e)
-        logger.warning(f"[WARNING] Data pipeline module not available: {e}")
-    
-    # Initialize Data Validation Module
-    try:
-        from src.utils.data_validation import DataValidator, validate_data_for_training, validate_data_for_forecasting
-        module_status["data_validation"]["available"] = True
-        module_status["data_validation"]["functions"] = {
-            "DataValidator": DataValidator,
-            "validate_data_for_training": validate_data_for_training,
-            "validate_data_for_forecasting": validate_data_for_forecasting
-        }
-        logger.info("[SUCCESS] Data validation module initialized")
-    except Exception as e:
-        module_status["data_validation"]["error"] = str(e)
-        logger.warning(f"[WARNING] Data validation module not available: {e}")
-    
-    return module_status
-
-
-def display_system_status(module_status: Dict[str, Any]) -> None:
-    """
-    Display system status in the sidebar.
-    
-    Args:
-        module_status: Dictionary with module status information
-    """
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🔧 System Status")
-    
-    # Count available modules
-    available_modules = sum(1 for module in module_status.values() if module["available"])
-    total_modules = len(module_status)
-    
-    # Display overall status
-    if available_modules == total_modules:
-        st.sidebar.success(f"[SUCCESS] All modules available ({available_modules}/{total_modules})")
-    elif available_modules > 0:
-        st.sidebar.warning(f"[WARNING] {available_modules}/{total_modules} modules available")
-    else:
-        st.sidebar.error(f"[ERROR] No modules available ({available_modules}/{total_modules})")
-    
-    # Display individual module status
-    with st.sidebar.expander("Module Details"):
-        for module_name, status in module_status.items():
-            if status["available"]:
-                st.success(f"[SUCCESS] {module_name.replace('_', ' ').title()}")
+    with col3:
+        # Get portfolio status
+        try:
+            portfolio_manager = safe_session_get('portfolio_manager')
+            if portfolio_manager and hasattr(portfolio_manager, 'get_position_summary'):
+                summary = portfolio_manager.get_position_summary()
+                total_positions = len(summary.get('positions', []))
+                st.metric(
+                    label="Active Positions",
+                    value=total_positions,
+                    delta="Portfolio active" if total_positions > 0 else "No positions"
+                )
             else:
-                st.error(f"[ERROR] {module_name.replace('_', ' ').title()}")
-                if status["error"]:
-                    st.caption(f"Error: {status['error'][:50]}...")
-
-
-def display_goal_status(module_status: Dict[str, Any]) -> None:
-    """
-    Display goal status in the sidebar.
-    
-    Args:
-        module_status: Dictionary with module status information
-    """
-    if not module_status["goal_status"]["available"]:
-        return
-    
-    try:
-        get_status_summary = module_status["goal_status"]["functions"]["get_status_summary"]
-        status_summary = get_status_summary()
-        
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("🎯 Goal Status")
-        
-        # Display current status
-        status_color = {
-            "on_track": "success",
-            "behind_schedule": "warning",
-            "ahead_of_schedule": "info",
-            "completed": "success",
-            "not_started": "info"
-        }.get(status_summary["current_status"].lower(), "info")
-        
-        getattr(st.sidebar, status_color)(f"Status: {status_summary['current_status']}")
-        
-        # Display progress
-        if status_summary["progress"] is not None:
-            st.sidebar.progress(status_summary["progress"])
-            st.sidebar.caption(f"Progress: {status_summary['progress']:.1%}")
-        
-        # Display last updated
-        if status_summary["last_updated"] != "Unknown":
-            st.sidebar.caption(f"Updated: {status_summary['last_updated'][:10]}")
-        
-        # Display alerts if any
-        if status_summary.get("alerts"):
-            with st.sidebar.expander("[WARNING] Alerts"):
-                for alert in status_summary["alerts"]:
-                    st.warning(alert["message"])
-        
-    except Exception as e:
-        st.sidebar.error(f"Error loading goal status: {str(e)}")
-
-
-def load_page_module(page_name: str) -> Optional[Any]:
-    """Dynamically load a page module.
-    
-    Args:
-        page_name: Name of the page module to load
-        
-    Returns:
-        Loaded module or None if loading fails
-    """
-    try:
-        if page_name == "performance_tracker":
-            from pages import performance_tracker
-            return performance_tracker
-        elif page_name == "forecast":
-            from pages import forecast
-            return forecast
-        elif page_name == "strategy":
-            from pages import strategy
-            return strategy
-        elif page_name == "5_📊_System_Scorecard":
-            return importlib.import_module("pages.5_📊_System_Scorecard")
-        elif page_name == "settings":
-            from pages import settings
-            return settings
-        else:
-            return None
-    except ImportError as e:
-        logger.error(f"Failed to import page module '{page_name}': {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected error loading page '{page_name}': {e}")
-        return None
-
-
-def render_home_page(module_status: Dict[str, Any]) -> None:
-    """Render the home page with welcome message and navigation guide."""
-    st.title("🔮 Evolve: Agentic Forecasting System")
-    
-    # Add agentic prompt input section
-    st.subheader("🤖 Ask Anything - Agentic Interface")
-    
-    # Initialize PromptAgent if available
-    if PROMPT_AGENT_AVAILABLE and "prompt_agent" not in st.session_state:
-        try:
-            st.session_state.prompt_agent = PromptRouterAgent()
-            st.success("✅ Agentic routing initialized")
+                st.metric(label="Active Positions", value="0", delta="Portfolio not initialized")
         except Exception as e:
-            st.warning(f"⚠️ Agentic routing initialization failed: {e}")
-            st.session_state.prompt_agent = None
+            logger.warning(f"Could not get portfolio status: {e}")
+            st.metric(label="Active Positions", value="N/A", delta="Error")
     
-    # Prompt input
-    prompt = st.text_input("Ask anything about forecasting, trading, or analysis...", 
-                          placeholder="e.g., 'Forecast AAPL for the next 30 days using LSTM'")
-    
-    if prompt and st.session_state.get("prompt_agent"):
+    with col4:
+        # Get recent strategy decisions
         try:
-            with st.spinner("🤖 Analyzing your request..."):
-                # Parse intent using PromptAgent
-                parsed_intent = st.session_state.prompt_agent.parse_intent(prompt)
-                
-                if parsed_intent:
-                    st.success(f"🎯 Detected intent: {parsed_intent.intent} (confidence: {parsed_intent.confidence:.1%})")
-                    
-                    # Display parsed arguments
-                    if parsed_intent.args:
-                        st.info("📋 Extracted parameters:")
-                        for key, value in parsed_intent.args.items():
-                            st.write(f"  • {key}: {value}")
-                    
-                    # Route to appropriate functionality
-                    if parsed_intent.intent == "forecasting":
-                        st.info("📈 Redirecting to forecasting page...")
-                        st.session_state.selected_ticker = parsed_intent.args.get('symbol', 'AAPL')
-                        st.session_state.selected_model = parsed_intent.args.get('model', 'LSTM')
-                        st.experimental_rerun()
-                    elif parsed_intent.intent == "backtesting":
-                        st.info("📊 Redirecting to strategy page...")
-                        st.experimental_rerun()
-                    elif parsed_intent.intent == "portfolio":
-                        st.info("💼 Redirecting to portfolio page...")
-                        st.experimental_rerun()
-                    else:
-                        st.info(f"🔍 Intent '{parsed_intent.intent}' detected - use the sidebar to navigate to the appropriate section")
-                else:
-                    st.warning("⚠️ Could not parse intent - please try rephrasing your request")
-                    
+            strategy_logger = StrategyLogger()
+            recent_decisions = strategy_logger.get_recent_decisions(limit=5)
+            decision_count = len(recent_decisions) if recent_decisions else 0
+            st.metric(
+                label="Recent Decisions",
+                value=decision_count,
+                delta="Strategy active" if decision_count > 0 else "No recent decisions"
+            )
         except Exception as e:
-            st.error(f"❌ Error processing request: {str(e)}")
-            if st.session_state.get("prompt_agent"):
-                st.warning("⚠️ Fallback model used due to unavailable capability.")
+            logger.warning(f"Could not get strategy decisions: {e}")
+            st.metric(label="Recent Decisions", value="N/A", delta="Error")
     
-    st.markdown("""
-    Welcome to **Evolve**, an autonomous financial forecasting and trading strategy platform!
+    st.markdown("---")
     
-    Use the sidebar to navigate through different features:
+    # Quick actions
+    st.subheader("⚡ Quick Actions")
     
-    - 📈 **Forecasting**: Generate and analyze market predictions using advanced ML models
-    - 📊 **Performance Tracker**: Monitor model performance metrics and system health
-    - 🎯 **Strategy**: View and manage trading strategies with backtesting results
-    - 📋 **System Scorecard**: Check overall system health and performance indicators
-    - ⚙️ **Settings**: Configure system parameters and preferences
+    col1, col2, col3 = st.columns(3)
     
-    ### Key Features
-    - **Multi-Model Forecasting**: LSTM, XGBoost, Prophet, ARIMA, and ensemble models
-    - **Technical Analysis**: RSI, MACD, Bollinger Bands, and custom indicators
-    - **Real-time Data**: Live market data integration and processing
-    - **Interactive Dashboards**: Professional-grade visualizations and charts
-    - **Risk Management**: Comprehensive backtesting and performance metrics
-    - **Natural Language Interface**: Ask questions in plain English with QuantGPT
-    - **Unified Access**: All features accessible through commands, UI, or prompts
-    """)
-
-
-def main() -> None:
-    """Main application entry point."""
-    if CONSOLIDATED_RUNNER_AVAILABLE:
-        # Use consolidated runner
-        run_app()
-    else:
-        # Fallback to legacy structure
-        logger.warning("⚠️ Fallback model used due to unavailable capability - using legacy app structure")
-        legacy_main()
-
-
-def legacy_main() -> None:
-    """Legacy main function for fallback."""
+    with col1:
+        if st.button("📈 Generate Forecast", type="primary"):
+            st.switch_page("pages/1_Forecast_Trade.py")
+    
+    with col2:
+        if st.button("📊 View Portfolio"):
+            st.switch_page("pages/portfolio_dashboard.py")
+    
+    with col3:
+        if st.button("🎯 Track Performance"):
+            st.switch_page("pages/performance_tracker.py")
+    
+    st.markdown("---")
+    
+    # Agentic prompt routing
+    st.subheader("🤖 AI Assistant")
+    
+    # Initialize prompt router agent
     try:
-        # Initialize session state
-        initialize_session_state()
+        prompt_router = PromptRouterAgent()
         
-        # Initialize system modules
-        module_status = initialize_system_modules()
-        
-        # Sidebar navigation
-        st.sidebar.title("🔮 Navigation")
-        st.sidebar.markdown("---")
-        
-        selection = st.sidebar.radio(
-            "🔍 Navigate",
-            list(PAGES.keys()),
-            index=0
+        # Get user input
+        user_query = st.text_input(
+            "Ask me anything about trading, market analysis, or system status:",
+            placeholder="e.g., 'What's the best model for AAPL?' or 'Show me recent performance'"
         )
         
-        selected_page = PAGES[selection]
-        
-        # Display system status in sidebar
-        display_system_status(module_status)
-        
-        # Display goal status in sidebar
-        display_goal_status(module_status)
-        
-        # Main content area
-        if selection == "Home":
-            render_home_page(module_status)
-        else:
-            # Load and execute page module
-            page_module = load_page_module(selected_page)
-            
-            if page_module is not None:
+        if user_query:
+            with st.spinner("🤖 Processing your request..."):
                 try:
-                    if callable(page_module):
-                        page_module()
+                    # Route the prompt to appropriate agent
+                    response = prompt_router.route_prompt(user_query)
+                    
+                    if response:
+                        st.success("✅ Response generated")
+                        st.write(response)
                     else:
-                        page_module.main()
-                except AttributeError:
-                    st.error(f"Page module '{selected_page}' does not have a main() function")
-                    st.info("Please ensure the page module has a properly defined main() function.")
+                        st.warning("⚠️ No response generated - using fallback")
+                        # Fallback response
+                        st.info("I understand your query. Please use the navigation menu to access specific features:")
+                        st.write("- Use 'Forecast & Trade' for market predictions")
+                        st.write("- Use 'Portfolio Dashboard' for position management")
+                        st.write("- Use 'Performance Tracker' for historical analysis")
+                        
                 except Exception as e:
-                    st.error(f"Error executing page '{selected_page}': {str(e)}")
-                    logger.error(f"Page execution error: {e}")
-            else:
-                st.error(f"Page '{selected_page}' not found or could not be loaded")
-                st.info("Please ensure the page module exists and can be imported.")
-                
+                    logger.error(f"Prompt routing failed: {e}")
+                    st.error(f"❌ Error processing request: {str(e)}")
+                    st.info("Please use the navigation menu to access specific features.")
+                    
     except Exception as e:
-        st.error(f"Application error: {str(e)}")
-        logger.error(f"Application error: {e}")
-        st.info("Please check the logs for more details.")
+        logger.warning(f"⚠️ Agentic routing initialization failed: {e}")
+        st.info("🤖 AI Assistant temporarily unavailable. Please use the navigation menu to access features.")
+    
+    st.markdown("---")
+    
+    # Recent activity
+    st.subheader("📋 Recent Activity")
+    
+    try:
+        # Get recent strategy decisions
+        strategy_logger = StrategyLogger()
+        recent_decisions = strategy_logger.get_recent_decisions(limit=10)
+        
+        if recent_decisions:
+            for decision in recent_decisions:
+                timestamp = decision.get('timestamp', 'Unknown')
+                strategy = decision.get('strategy', 'Unknown')
+                decision_type = decision.get('decision', 'Unknown')
+                confidence = decision.get('confidence', 0)
+                
+                st.write(f"🕒 **{timestamp}** - {strategy}: {decision_type} (Confidence: {confidence:.1%})")
+        else:
+            st.info("No recent activity to display.")
+            
+    except Exception as e:
+        logger.warning(f"Could not load recent activity: {e}")
+        st.info("Recent activity temporarily unavailable.")
+    
+    st.markdown("---")
+    
+    # System information
+    st.subheader("ℹ️ System Information")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**Version:** 1.0.0")
+        st.write("**Last Updated:**", safe_session_get('last_updated', 'Unknown'))
+        st.write("**Status:**", "🟢 Operational" if all(status == 'SUCCESS' for status in module_status.values()) else "🟡 Degraded")
+    
+    with col2:
+        st.write("**Python:**", sys.version.split()[0])
+        st.write("**Streamlit:**", st.__version__)
+        st.write("**Pandas:**", pd.__version__)
 
 
 if __name__ == "__main__":

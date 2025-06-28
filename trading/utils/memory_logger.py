@@ -111,9 +111,10 @@ class MemoryLogger:
                                 log_entry = json.loads(json_str)
                                 logs.append(log_entry)
                     except json.JSONDecodeError:
+                        self.logger.debug(f"Failed to parse log line: {line.strip()}")
                         continue
         except FileNotFoundError:
-            pass
+            self.logger.warning(f"Log file not found: {self.log_file}")
         
         return logs
     
