@@ -1,18 +1,31 @@
-# Legacy Components Archive
+# Legacy Files Archive
 
-This directory contains legacy components that have been moved from the main codebase during the cleanup process. These files are kept for reference but are no longer actively used.
+This directory contains legacy files that have been moved from the main codebase to prevent conflicts and maintain a clean project structure.
 
 ## Moved Files
 
-- `enhanced_unified_interface.py` - Legacy unified interface implementation
-- `integration_demo.py` - Demo integration script (no longer needed)
-- `validate_optimization_consolidation.py` - Validation script for optimization consolidation
-- `router.py` - Legacy core router implementation
-- `agent_manager.py` - Legacy agent manager from core/agents
-- `rsi_optimizer.py` - Legacy RSI optimizer from optimize directory
-- `cleanup_optimization.py` - Legacy optimization cleanup script
-- `init_app.py` - Legacy app initialization script
+### Scripts
+- `scripts/cleanup_agents.py` - Legacy agent cleanup script
+- `scripts/manage_backup.py` - Legacy backup management script
 
-## Note
+### Automate
+- `automate/daily_scheduler.py` - Legacy daily scheduling automation
 
-These files are preserved for historical reference and potential future use. They should not be imported or used in the current codebase as they may contain outdated implementations or dependencies. 
+### Core
+- `core/agents/base_agent.py` - Legacy base agent implementation
+
+## Reason for Moving
+
+These files were moved to archive because:
+1. They contain outdated or unused functionality
+2. They may conflict with newer implementations
+3. They are no longer actively maintained
+4. They have been replaced by more modern alternatives
+
+## Usage
+
+If you need to reference these files for historical purposes or to extract specific functionality, they are available in this archive. However, it is recommended to use the current implementations in the main codebase instead.
+
+## Restoration
+
+To restore any of these files, simply move them back to their original location. However, be aware that they may not be compatible with the current codebase and may require updates. 
