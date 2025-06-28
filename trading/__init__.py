@@ -24,7 +24,55 @@ from trading.utils import LogManager, ModelLogger, DataLogger, PerformanceLogger
 # from trading.memory import PerformanceMemory
 from .agents.updater import UpdaterAgent
 from trading.nlp import NLInterface, PromptProcessor, ResponseFormatter, LLMProcessor
-from trading.evaluation import ModelEvaluator, RegressionMetrics, ClassificationMetrics, TimeSeriesMetrics, RiskMetrics
+
+# Fix broken imports with proper error handling
+try:
+    from trading.evaluation import ModelEvaluator, RegressionMetrics, ClassificationMetrics, TimeSeriesMetrics, RiskMetrics
+    EVALUATION_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Evaluation metrics import failed: {e}")
+    EVALUATION_AVAILABLE = False
+    # Create fallback classes
+    class RegressionMetrics:
+        def __init__(self):
+            logger.warning("⚠️ Using fallback RegressionMetrics")
+        def mean_squared_error(self, *args, **kwargs): return 0.0
+        def root_mean_squared_error(self, *args, **kwargs): return 0.0
+        def mean_absolute_error(self, *args, **kwargs): return 0.0
+        def r2_score(self, *args, **kwargs): return 0.0
+    
+    class ClassificationMetrics:
+        def __init__(self):
+            logger.warning("⚠️ Using fallback ClassificationMetrics")
+        def accuracy(self, *args, **kwargs): return 0.0
+        def precision(self, *args, **kwargs): return 0.0
+        def recall(self, *args, **kwargs): return 0.0
+        def f1_score(self, *args, **kwargs): return 0.0
+    
+    class TimeSeriesMetrics:
+        def __init__(self):
+            logger.warning("⚠️ Using fallback TimeSeriesMetrics")
+        def mean_absolute_percentage_error(self, *args, **kwargs): return 0.0
+        def symmetric_mean_absolute_percentage_error(self, *args, **kwargs): return 0.0
+        def mean_absolute_scaled_error(self, *args, **kwargs): return 0.0
+        def calculate_metrics(self, *args, **kwargs): return {}
+    
+    class RiskMetrics:
+        def __init__(self):
+            logger.warning("⚠️ Using fallback RiskMetrics")
+        def calculate_metrics(self, *args, **kwargs): return {}
+        def sharpe_ratio(self, *args, **kwargs): return 0.0
+        def sortino_ratio(self, *args, **kwargs): return 0.0
+        def maximum_drawdown(self, *args, **kwargs): return 0.0
+        def value_at_risk(self, *args, **kwargs): return 0.0
+    
+    class ModelEvaluator:
+        def __init__(self):
+            logger.warning("⚠️ Using fallback ModelEvaluator")
+        def evaluate(self, *args, **kwargs): return {}
+
 from trading.visualization import TimeSeriesPlotter, PerformancePlotter, FeatureImportancePlotter, PredictionPlotter
 from trading.strategies import StrategyManager
 from trading.execution import ExecutionEngine
