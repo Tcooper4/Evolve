@@ -284,7 +284,9 @@ class ARIMAModel(BaseModel):
                     residuals = self.fitted_model.resid
                     plot_acf(residuals, ax=plt.gca(), lags=40)
                     plt.title('ACF of Residuals')
-                except:
+                except Exception as e:
+                    import logging
+                    logging.error(f"Error plotting ACF of residuals: {e}")
                     plt.text(0.5, 0.5, 'ACF not available', 
                             ha='center', va='center', transform=plt.gca().transAxes)
                     plt.title('ACF of Residuals')

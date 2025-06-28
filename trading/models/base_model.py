@@ -758,7 +758,8 @@ class BaseModel(ABC):
             if hasattr(self, 'model') and self.model is not None:
                 try:
                     metadata['model_parameters'] = sum(p.numel() for p in self.model.parameters())
-                except:
+                except Exception as e:
+                    self.logger.warning(f"Could not count model parameters: {e}")
                     metadata['model_parameters'] = 0
             
             return metadata

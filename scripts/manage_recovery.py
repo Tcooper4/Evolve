@@ -395,7 +395,8 @@ class RecoveryManager:
                     "status": "healthy" if response.status_code == 200 else "unhealthy",
                     "response_time": response.elapsed.total_seconds()
                 }
-            except:
+            except Exception as e:
+                self.logger.error(f"Application health check failed: {e}")
                 components["application"] = {
                     "status": "unhealthy",
                     "error": "Application not responding"
@@ -414,7 +415,8 @@ class RecoveryManager:
                     "status": "healthy",
                     "connected_clients": redis_client.client_list()
                 }
-            except:
+            except Exception as e:
+                self.logger.error(f"Database health check failed: {e}")
                 components["database"] = {
                     "status": "unhealthy",
                     "error": "Database not responding"
@@ -427,7 +429,8 @@ class RecoveryManager:
                     "status": "healthy" if disk_usage.percent < 90 else "warning",
                     "usage": disk_usage.percent
                 }
-            except:
+            except Exception as e:
+                self.logger.error(f"Filesystem health check failed: {e}")
                 components["filesystem"] = {
                     "status": "unhealthy",
                     "error": "Failed to check filesystem"

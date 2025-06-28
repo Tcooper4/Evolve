@@ -129,7 +129,8 @@ class MonitoringManager:
                     self.request_latency.observe(health_data["latency"])
                 
                 self.request_count.inc()
-        except:
+        except Exception as e:
+            self.logger.error(f"Failed to collect application metrics: {e}")
             self.error_count.inc()
 
     def _save_metrics(self):

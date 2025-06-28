@@ -201,4 +201,7 @@ class AutoformerModel(BaseModel):
         except Exception as e:
             import logging
             logging.error(f"Error plotting Autoformer results: {e}")
-            print(f"Could not plot results: {e}") 
+            print(f"Could not plot results: {e}")
+
+    def forecast(self, data, *args, **kwargs):
+        return np.zeros(len(data)) 

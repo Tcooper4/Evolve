@@ -222,7 +222,8 @@ class LogManager:
         try:
             message = line.split(" - ")[-1].strip()
             patterns[message] = patterns.get(message, 0) + 1
-        except:
+        except Exception as e:
+            self.logger.warning(f"Failed to update pattern count: {e}")
             pass
 
     def export_logs(self, output_dir: str, days: int = 7):

@@ -196,5 +196,6 @@ class WebSocketHandler:
                     algorithms=['HS256']
                 )
                 self.manager.disconnect(data['username'])
-            except:
+            except Exception as e:
+                logger.error(f"Error disconnecting user: {e}")
                 pass 

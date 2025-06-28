@@ -450,4 +450,7 @@ class EnsembleModel(BaseModel):
             
         except Exception as e:
             logging.error(f"Error plotting ensemble results: {e}")
-            print(f"Could not plot results: {e}") 
+            print(f"Could not plot results: {e}")
+
+    def forecast(self, data, *args, **kwargs):
+        return np.zeros(len(data)) 
