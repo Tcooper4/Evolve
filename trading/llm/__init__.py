@@ -1,3 +1,3 @@
-from trading.llm_interface import LLMInterface
+from .llm_interface import LLMInterface
 
 __all__ = ['LLMInterface'] 

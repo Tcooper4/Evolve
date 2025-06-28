@@ -66,6 +66,9 @@ class QuantGPT:
         
         logger.info("QuantGPT initialized")
     
+    # Alias for backward compatibility
+    QuantGPTAgent = QuantGPT
+    
     def process_query(self, query: str) -> Dict[str, Any]:
         """
         Process a natural language query and return comprehensive analysis.
