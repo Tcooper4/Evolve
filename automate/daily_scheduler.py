@@ -20,7 +20,7 @@ sys.path.append(str(project_root))
 from core.agents.router import AgentRouter
 from trading.llm.llm_interface import LLMInterface
 from core.agents.self_improving_agent import SelfImprovingAgent
-from memory.performance_log import log_performance
+from trading.memory.performance_log import log_performance
 from trading.utils.logging import setup_logging
 from core.agents.goal_planner import evaluate_goals
 from trading.config.settings import (

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
-from trading.base_model import BaseModel, ModelRegistry
+from .base_model import BaseModel, ModelRegistry
 
 # @ModelRegistry.register('Ensemble')
 class EnsembleModel(BaseModel):

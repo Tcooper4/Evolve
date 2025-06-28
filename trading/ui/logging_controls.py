@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import pandas as pd
 
-from ..settings import (
+from trading.config.settings import (
     set_log_level,
     set_metric_logging,
     set_metrics_path,

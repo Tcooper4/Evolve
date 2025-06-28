@@ -18,7 +18,7 @@ import os
 
 # Import from consolidated trading.optimization module
 from trading.optimization import OptimizerFactory, StrategyOptimizer, OptimizationVisualizer
-from trading.utils.strategy_switcher import StrategySwitcher
+from trading.agents.strategy_switcher import StrategySwitcher
 from trading.utils.memory_logger import MemoryLogger
 
 def load_strategy_data() -> pd.DataFrame:

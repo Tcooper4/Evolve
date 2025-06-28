@@ -5,7 +5,7 @@ __version__ = '0.1.0'
 from trading.market import MarketAnalyzer, MarketData, MarketIndicators
 from .data.preprocessing import DataPreprocessor, FeatureEngineering, DataValidator, DataScaler
 from .data.providers import AlphaVantageProvider, YFinanceProvider
-from trading.base_model import BaseModel
+from trading.models.base_model import BaseModel
 from trading.models import (
     LSTMModel,
     TCNModel,
@@ -22,7 +22,7 @@ from trading.portfolio import PortfolioManager
 from trading.risk import RiskManager
 from trading.utils import LogManager, ModelLogger, DataLogger, PerformanceLogger
 # from trading.memory import PerformanceMemory
-from .agents.updater import ModelUpdater
+from .agents.updater import UpdaterAgent
 from trading.nlp import NLInterface, PromptProcessor, ResponseFormatter, LLMProcessor
 from trading.evaluation import ModelEvaluator, RegressionMetrics, ClassificationMetrics, TimeSeriesMetrics, RiskMetrics
 from trading.visualization import TimeSeriesPlotter, PerformancePlotter, FeatureImportancePlotter, PredictionPlotter
@@ -78,4 +78,4 @@ if OPTIMIZATION_AVAILABLE:
 # from trading.memory import PerformanceMemory
 # __all__.append('PerformanceMemory')
 
-__all__.append('ModelUpdater')
+__all__.append('UpdaterAgent')

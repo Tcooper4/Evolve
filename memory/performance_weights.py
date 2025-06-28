@@ -9,7 +9,7 @@ import os
 import json
 import pandas as pd
 from datetime import datetime
-from memory.performance_memory import PerformanceMemory
+from trading.memory.performance_memory import PerformanceMemory
 from models.retrain import trigger_retraining_if_needed
 
 WEIGHT_HISTORY_PATH = "memory/weight_history.json"

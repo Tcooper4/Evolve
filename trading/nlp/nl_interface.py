@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List, Union, Tuple
 from dataclasses import dataclass
 import pandas as pd
 import numpy as np
@@ -8,14 +8,14 @@ import os
 import json
 from datetime import datetime
 
-from trading.prompt_processor import PromptProcessor, ProcessedPrompt
-from trading.response_formatter import ResponseFormatter, ResponseData
-from trading.base_model import BaseModel
+from .prompt_processor import PromptProcessor, ProcessedPrompt
+from .response_formatter import ResponseFormatter, ResponseData
+from trading.models.base_model import BaseModel
 from ..strategies.strategy_manager import StrategyManager
 from ..risk.risk_manager import RiskManager
 from ..portfolio.portfolio_manager import PortfolioManager
 from ..market.market_analyzer import MarketAnalyzer
-from trading.llm_processor import LLMProcessor
+from .llm_processor import LLMProcessor
 
 @dataclass
 class NLResponse:
