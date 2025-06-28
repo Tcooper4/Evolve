@@ -1,9 +1,8 @@
 """
 Performance Tracker Dashboard
 
-This page provides interactive visualizations of model performance metrics with enhanced filtering
-and analysis capabilities. It supports global state tracking for ticker/model selection and allows
-optional GPT-based summaries for agentic insights.
+This page provides comprehensive performance tracking and analysis
+for the trading system's models and strategies.
 """
 
 import streamlit as st
@@ -13,24 +12,36 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from io import BytesIO
 from typing import Dict, Any, List, Optional, Tuple, Union
+import sys
+from pathlib import Path
+
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+# Import shared utilities
+from core.session_utils import (
+    initialize_session_state, 
+    safe_session_get,
+    safe_session_set,
+    update_last_updated
+)
+
+# Import trading components
 from trading.memory.performance_memory import PerformanceMemory
 from llm.llm_summary import generate_strategy_commentary
-
-def initialize_session_state():
-    """Ensure global state for ticker/model selection is initialized."""
-    if "selected_ticker" not in st.session_state:
-        st.session_state.selected_ticker = None
-    if "selected_model" not in st.session_state:
-        st.session_state.selected_model = None
-    if "date_range" not in st.session_state:
-        st.session_state.date_range = None
 
 def main():
     """Main entry point for the performance tracker dashboard."""
     st.set_page_config(page_title="📊 Agentic Performance Tracker", layout="wide")
     st.title("📊 Performance Tracker")
 
+    # Initialize session state
     initialize_session_state()
+    
+    # Update last updated timestamp
+    update_last_updated()
+    
     memory = PerformanceMemory()
     tickers = memory.get_all_tickers()
     if not tickers:
@@ -38,8 +49,12 @@ def main():
         return
 
     # Use global state for ticker selection
-    selected_ticker = st.selectbox("📈 Select Ticker", tickers, index=tickers.index(st.session_state.selected_ticker) if st.session_state.selected_ticker in tickers else 0)
-    st.session_state.selected_ticker = selected_ticker
+    selected_ticker = st.selectbox(
+        "📈 Select Ticker", 
+        tickers, 
+        index=tickers.index(safe_session_get('selected_ticker')) if safe_session_get('selected_ticker') in tickers else 0
+    )
+    safe_session_set('selected_ticker', selected_ticker)
     metrics = memory.get_metrics(selected_ticker)
 
     if not metrics:
@@ -70,7 +85,7 @@ def main():
     # Use global state for date range
     min_date, max_date = df["Timestamp"].min(), df["Timestamp"].max()
     date_range = st.sidebar.date_input("📅 Date Filter", [min_date, max_date])
-    st.session_state.date_range = date_range
+    safe_session_set('date_range', date_range)
     if len(date_range) == 2:
         df = df[(df["Timestamp"] >= pd.to_datetime(date_range[0])) & 
                 (df["Timestamp"] <= pd.to_datetime(date_range[1]))]
@@ -130,7 +145,7 @@ def main():
     with tab5:
         st.subheader("🔍 Detailed Drilldown")
         selected_model = st.selectbox("🔎 Select Model", df["Model"].unique(), key="detail_model")
-        st.session_state.selected_model = selected_model
+        safe_session_set('selected_model', selected_model)
         ts = st.selectbox(
             "🕒 Select Timestamp", 
             df[df["Model"] == selected_model]["Timestamp"].dt.strftime('%Y-%m-%d %H:%M:%S').unique(),
@@ -201,6 +216,7 @@ def main():
         df.to_csv(index=False).encode("utf-8"), 
         file_name=f"{selected_ticker}_performance.csv"
     )
+
 
 if __name__ == "__main__":
     main() 

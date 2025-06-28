@@ -1,427 +1,291 @@
 """
-Shared runner utilities for the trading system.
-Consolidates common run logic to avoid duplication.
+System runner utilities for initializing and managing the trading system.
+
+This module provides functions for initializing system modules and managing
+the overall system state.
 """
 
 import logging
-import streamlit as st
-import importlib
+import sys
+import os
+from pathlib import Path
 from typing import Dict, Any, Optional
-from datetime import datetime
+import importlib
 
+# Add project root to path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+# Import shared utilities
+from core.session_utils import (
+    initialize_session_state, 
+    initialize_system_modules, 
+    display_system_status,
+    safe_session_get,
+    safe_session_set,
+    update_last_updated
+)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-def run_app() -> None:
-    """Main application runner with shared logic."""
-    try:
-        # Initialize session state
-        initialize_session_state()
-        
-        # Initialize system modules
-        module_status = initialize_system_modules()
-        
-        # Run the main application
-        main_application_loop(module_status)
-        
-    except Exception as e:
-        st.error(f"Application error: {str(e)}")
-        logger.error(f"Application error: {e}")
-        st.info("Please check the logs for more details.")
 
-def initialize_session_state() -> None:
-    """Initialize all session state variables with default values."""
-    # API and configuration
-    if "use_api" not in st.session_state:
-        st.session_state.use_api = False
-    if "api_key" not in st.session_state:
-        st.session_state.api_key = ""
+def run_system_initialization() -> Dict[str, Any]:
+    """Initialize the entire trading system.
     
-    # Portfolio and risk management
-    if "portfolio" not in st.session_state:
-        st.session_state.portfolio = None
-    if "risk_manager" not in st.session_state:
-        st.session_state.risk_manager = None
-    if "strategy_manager" not in st.session_state:
-        st.session_state.strategy_manager = None
+    Returns:
+        Dictionary containing initialization status for all modules
+    """
+    logger.info("🚀 Starting system initialization...")
     
-    # System components
-    if "router" not in st.session_state:
-        st.session_state.router = None
-    if "llm" not in st.session_state:
-        st.session_state.llm = None
-    if "updater" not in st.session_state:
-        st.session_state.updater = None
-    if "memory" not in st.session_state:
-        st.session_state.memory = None
+    # Initialize session state
+    initialize_session_state()
     
-    # Health and status
-    if "health_status" not in st.session_state:
-        st.session_state.health_status = "unknown"
-    if "repair_status" not in st.session_state:
-        st.session_state.repair_status = "unknown"
-    if "llm_provider" not in st.session_state:
-        st.session_state.llm_provider = "unknown"
-    if "last_system_check" not in st.session_state:
-        st.session_state.last_system_check = None
+    # Initialize system modules
+    module_status = initialize_system_modules()
     
-    # UI state
-    if "last_updated" not in st.session_state:
-        st.session_state.last_updated = datetime.now()
-    if "selected_ticker" not in st.session_state:
-        st.session_state.selected_ticker = "AAPL"
-    if "selected_model" not in st.session_state:
-        st.session_state.selected_model = None
-    if "forecast_data" not in st.session_state:
-        st.session_state.forecast_data = None
-    if "market_analysis" not in st.session_state:
-        st.session_state.market_analysis = None
-    if "start_date" not in st.session_state:
-        st.session_state.start_date = datetime.now().date()
-    if "end_date" not in st.session_state:
-        st.session_state.end_date = datetime.now().date()
-    if "date_range" not in st.session_state:
-        st.session_state.date_range = None
+    # Update last updated timestamp
+    update_last_updated()
     
-    # Strategy and performance
-    if "signals" not in st.session_state:
-        st.session_state.signals = None
-    if "results" not in st.session_state:
-        st.session_state.results = None
-    if "forecast_results" not in st.session_state:
-        st.session_state.forecast_results = None
+    # Log initialization results
+    success_count = sum(1 for status in module_status.values() if status == 'SUCCESS')
+    total_count = len(module_status)
     
-    # Portfolio dashboard
-    if "portfolio_manager" not in st.session_state:
-        st.session_state.portfolio_manager = None
-    
-    # Task dashboard
-    if "last_refresh" not in st.session_state:
-        st.session_state.last_refresh = datetime.now()
-    if "auto_refresh" not in st.session_state:
-        st.session_state.auto_refresh = True
-    if "selected_task" not in st.session_state:
-        st.session_state.selected_task = None
-    
-    # Leaderboard dashboard
-    if "status_filter" not in st.session_state:
-        st.session_state.status_filter = "All"
-    if "sort_by" not in st.session_state:
-        st.session_state.sort_by = "sharpe_ratio"
-    if "top_n" not in st.session_state:
-        st.session_state.top_n = 10
-
-def initialize_system_modules() -> Dict[str, Any]:
-    """Initialize all system modules and return their status."""
-    module_status = {
-        "goal_status": {"available": False, "error": None},
-        "optimizer_consolidator": {"available": False, "error": None},
-        "market_analysis": {"available": False, "error": None},
-        "data_pipeline": {"available": False, "error": None},
-        "data_validation": {"available": False, "error": None}
-    }
-    
-    # Initialize Goal Status Module
-    try:
-        from trading.memory.goals.status import get_status_summary, update_goal_progress
-        module_status["goal_status"]["available"] = True
-        module_status["goal_status"]["functions"] = {
-            "get_status_summary": get_status_summary,
-            "update_goal_progress": update_goal_progress
-        }
-        logger.info("[SUCCESS] Goal status module initialized")
-    except Exception as e:
-        module_status["goal_status"]["error"] = str(e)
-        logger.warning(f"[WARNING] Goal status module not available: {e}")
-    
-    # Initialize Optimizer Consolidator Module
-    try:
-        from optimizers.consolidator import OptimizerConsolidator, run_optimizer_consolidation
-        module_status["optimizer_consolidator"]["available"] = True
-        module_status["optimizer_consolidator"]["functions"] = {
-            "OptimizerConsolidator": OptimizerConsolidator,
-            "run_optimizer_consolidation": run_optimizer_consolidation
-        }
-        logger.info("[SUCCESS] Optimizer consolidator module initialized")
-    except Exception as e:
-        module_status["optimizer_consolidator"]["error"] = str(e)
-        logger.warning(f"[WARNING] Optimizer consolidator module not available: {e}")
-    
-    # Initialize Market Analysis Module
-    try:
-        from src.analysis.market_analysis import MarketAnalyzer, analyze_market_conditions
-        module_status["market_analysis"]["available"] = True
-        module_status["market_analysis"]["functions"] = {
-            "MarketAnalyzer": MarketAnalyzer,
-            "analyze_market_conditions": analyze_market_conditions
-        }
-        logger.info("[SUCCESS] Market analysis module initialized")
-    except Exception as e:
-        module_status["market_analysis"]["error"] = str(e)
-        logger.warning(f"[WARNING] Market analysis module not available: {e}")
-    
-    # Initialize Data Pipeline Module
-    try:
-        from src.utils.data_pipeline import DataPipeline, run_data_pipeline
-        module_status["data_pipeline"]["available"] = True
-        module_status["data_pipeline"]["functions"] = {
-            "DataPipeline": DataPipeline,
-            "run_data_pipeline": run_data_pipeline
-        }
-        logger.info("[SUCCESS] Data pipeline module initialized")
-    except Exception as e:
-        module_status["data_pipeline"]["error"] = str(e)
-        logger.warning(f"[WARNING] Data pipeline module not available: {e}")
-    
-    # Initialize Data Validation Module
-    try:
-        from src.utils.data_validation import DataValidator, validate_data_for_training, validate_data_for_forecasting
-        module_status["data_validation"]["available"] = True
-        module_status["data_validation"]["functions"] = {
-            "DataValidator": DataValidator,
-            "validate_data_for_training": validate_data_for_training,
-            "validate_data_for_forecasting": validate_data_for_forecasting
-        }
-        logger.info("[SUCCESS] Data validation module initialized")
-    except Exception as e:
-        module_status["data_validation"]["error"] = str(e)
-        logger.warning(f"[WARNING] Data validation module not available: {e}")
+    if success_count == total_count:
+        logger.info(f"✅ System initialization completed successfully ({success_count}/{total_count} modules)")
+    elif success_count > 0:
+        logger.warning(f"⚠️ Partial system initialization ({success_count}/{total_count} modules)")
+    else:
+        logger.error(f"❌ System initialization failed ({success_count}/{total_count} modules)")
     
     return module_status
 
-def main_application_loop(module_status: Dict[str, Any]) -> None:
-    """Main application loop with navigation and page rendering."""
-    # Navigation configuration
-    PAGES: Dict[str, str] = {
-        "Home": "home",
-        "Forecasting": "forecast",
-        "Performance Tracker": "performance_tracker",
-        "Strategy": "strategy",
-        "System Scorecard": "5_📊_System_Scorecard",
-        "Settings": "settings"
-    }
-    
-    # Sidebar navigation
-    st.sidebar.title("🔮 Navigation")
-    st.sidebar.markdown("---")
-    
-    selection = st.sidebar.radio(
-        "🔍 Navigate",
-        list(PAGES.keys()),
-        index=0
-    )
-    
-    selected_page = PAGES[selection]
-    
-    # Display system status in sidebar
-    display_system_status(module_status)
-    
-    # Display goal status in sidebar
-    display_goal_status(module_status)
-    
-    # Main content area
-    if selection == "Home":
-        render_home_page(module_status)
-    else:
-        # Load and execute page module
-        page_module = load_page_module(selected_page)
-        
-        if page_module is not None:
-            try:
-                if callable(page_module):
-                    page_module()
-                else:
-                    page_module.main()
-            except AttributeError:
-                st.error(f"Page module '{selected_page}' does not have a main() function")
-                st.info("Please ensure the page module has a properly defined main() function.")
-            except Exception as e:
-                st.error(f"Error executing page '{selected_page}': {str(e)}")
-                logger.error(f"Page execution error: {e}")
-        else:
-            st.error(f"Page '{selected_page}' not found or could not be loaded")
-            st.info("Please ensure the page module exists and can be imported.")
 
-def display_system_status(module_status: Dict[str, Any]) -> None:
-    """Display system status in the sidebar."""
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🔧 System Status")
+def run_agentic_routing() -> Optional[str]:
+    """Initialize and run agentic prompt routing.
     
-    # Count available modules
-    available_modules = sum(1 for module in module_status.values() if module["available"])
-    total_modules = len(module_status)
-    
-    # Display overall status
-    if available_modules == total_modules:
-        st.sidebar.success(f"[SUCCESS] All modules available ({available_modules}/{total_modules})")
-    elif available_modules > 0:
-        st.sidebar.warning(f"[WARNING] {available_modules}/{total_modules} modules available")
-    else:
-        st.sidebar.error(f"[ERROR] No modules available ({available_modules}/{total_modules})")
-    
-    # Display individual module status
-    with st.sidebar.expander("Module Details"):
-        for module_name, status in module_status.items():
-            if status["available"]:
-                st.success(f"[SUCCESS] {module_name.replace('_', ' ').title()}")
-            else:
-                st.error(f"[ERROR] {module_name.replace('_', ' ').title()}")
-                if status["error"]:
-                    st.caption(f"Error: {status['error'][:50]}...")
-
-def display_goal_status(module_status: Dict[str, Any]) -> None:
-    """Display goal status in the sidebar."""
-    if not module_status["goal_status"]["available"]:
-        return
-    
-    try:
-        get_status_summary = module_status["goal_status"]["functions"]["get_status_summary"]
-        status_summary = get_status_summary()
-        
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("🎯 Goal Status")
-        
-        # Display current status
-        status_color = {
-            "on_track": "success",
-            "behind_schedule": "warning",
-            "ahead_of_schedule": "info",
-            "completed": "success",
-            "not_started": "info"
-        }.get(status_summary["current_status"].lower(), "info")
-        
-        getattr(st.sidebar, status_color)(f"Status: {status_summary['current_status']}")
-        
-        # Display progress
-        if status_summary["progress"] is not None:
-            st.sidebar.progress(status_summary["progress"])
-            st.sidebar.caption(f"Progress: {status_summary['progress']:.1%}")
-        
-        # Display last updated
-        if status_summary["last_updated"] != "Unknown":
-            st.sidebar.caption(f"Updated: {status_summary['last_updated'][:10]}")
-        
-        # Display alerts if any
-        if status_summary.get("alerts"):
-            with st.sidebar.expander("[WARNING] Alerts"):
-                for alert in status_summary["alerts"]:
-                    st.warning(alert["message"])
-        
-    except Exception as e:
-        st.sidebar.error(f"Error loading goal status: {str(e)}")
-
-def load_page_module(page_name: str) -> Optional[Any]:
-    """Dynamically load a page module."""
-    try:
-        if page_name == "performance_tracker":
-            from pages import performance_tracker
-            return performance_tracker
-        elif page_name == "forecast":
-            from pages import forecast
-            return forecast
-        elif page_name == "strategy":
-            from pages import strategy
-            return strategy
-        elif page_name == "5_📊_System_Scorecard":
-            return importlib.import_module("pages.5_📊_System_Scorecard")
-        elif page_name == "settings":
-            from pages import settings
-            return settings
-        else:
-            return None
-    except ImportError as e:
-        logger.error(f"Failed to import page module '{page_name}': {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected error loading page '{page_name}': {e}")
-        return None
-
-def render_home_page(module_status: Dict[str, Any]) -> None:
-    """Render the home page with welcome message and navigation guide."""
-    st.title("🔮 Evolve: Agentic Forecasting System")
-    
-    # Add agentic prompt input section
-    st.subheader("🤖 Ask Anything - Agentic Interface")
-    
-    # Initialize PromptAgent if available
+    Returns:
+        Response from agentic routing or None if failed
+    """
     try:
         from trading.agents.prompt_router_agent import PromptRouterAgent
-        if "prompt_agent" not in st.session_state:
-            st.session_state.prompt_agent = PromptRouterAgent()
-            st.success("✅ Agentic routing initialized")
-    except ImportError:
-        st.warning("⚠️ PromptRouterAgent not available - using fallback routing")
-        st.session_state.prompt_agent = None
+        
+        logger.info("🤖 Initializing agentic prompt routing...")
+        prompt_router = PromptRouterAgent()
+        
+        # Test the router with a simple query
+        test_response = prompt_router.route_prompt("What is the system status?")
+        
+        if test_response:
+            logger.info("✅ Agentic routing initialized successfully")
+            return test_response
+        else:
+            logger.warning("⚠️ Agentic routing returned no response")
+            return None
+            
     except Exception as e:
-        st.warning(f"⚠️ Agentic routing initialization failed: {e}")
-        st.session_state.prompt_agent = None
-    
-    # Prompt input
-    prompt = st.text_input("Ask anything about forecasting, trading, or analysis...", 
-                          placeholder="e.g., 'Forecast AAPL for the next 30 days using LSTM'")
-    
-    if prompt and st.session_state.get("prompt_agent"):
-        try:
-            with st.spinner("🤖 Analyzing your request..."):
-                # Parse intent using PromptAgent
-                parsed_intent = st.session_state.prompt_agent.parse_intent(prompt)
-                
-                if parsed_intent:
-                    st.success(f"🎯 Detected intent: {parsed_intent.intent} (confidence: {parsed_intent.confidence:.1%})")
-                    
-                    # Display parsed arguments
-                    if parsed_intent.args:
-                        st.info("📋 Extracted parameters:")
-                        for key, value in parsed_intent.args.items():
-                            st.write(f"  • {key}: {value}")
-                    
-                    # Route to appropriate functionality
-                    if parsed_intent.intent == "forecasting":
-                        st.info("📈 Redirecting to forecasting page...")
-                        st.session_state.selected_ticker = parsed_intent.args.get('symbol', 'AAPL')
-                        st.session_state.selected_model = parsed_intent.args.get('model', 'LSTM')
-                        st.experimental_rerun()
-                    elif parsed_intent.intent == "backtesting":
-                        st.info("📊 Redirecting to strategy page...")
-                        st.experimental_rerun()
-                    elif parsed_intent.intent == "portfolio":
-                        st.info("💼 Redirecting to portfolio page...")
-                        st.experimental_rerun()
-                    else:
-                        st.info(f"🔍 Intent '{parsed_intent.intent}' detected - use the sidebar to navigate to the appropriate section")
-                else:
-                    st.warning("⚠️ Could not parse intent - please try rephrasing your request")
-                    
-        except Exception as e:
-            st.error(f"❌ Error processing request: {str(e)}")
-            if st.session_state.get("prompt_agent"):
-                st.warning("⚠️ Fallback model used due to unavailable capability.")
-    
-    st.markdown("""
-    Welcome to **Evolve**, an autonomous financial forecasting and trading strategy platform!
-    
-    Use the sidebar to navigate through different features:
-    
-    - 📈 **Forecasting**: Generate and analyze market predictions using advanced ML models
-    - 📊 **Performance Tracker**: Monitor model performance metrics and system health
-    - 🎯 **Strategy**: View and manage trading strategies with backtesting results
-    - 📋 **System Scorecard**: Check overall system health and performance indicators
-    - ⚙️ **Settings**: Configure system parameters and preferences
-    
-    ### Key Features
-    - **Multi-Model Forecasting**: LSTM, XGBoost, Prophet, ARIMA, and ensemble models
-    - **Technical Analysis**: RSI, MACD, Bollinger Bands, and custom indicators
-    - **Real-time Data**: Live market data integration and processing
-    - **Interactive Dashboards**: Professional-grade visualizations and charts
-    - **Risk Management**: Comprehensive backtesting and performance metrics
-    - **Natural Language Interface**: Ask questions in plain English with QuantGPT
-    - **Unified Access**: All features accessible through commands, UI, or prompts
-    """)
+        logger.error(f"❌ Agentic routing initialization failed: {e}")
+        return None
 
-def validate_consolidation() -> bool:
-    """Validate that consolidation is working properly."""
+
+def run_portfolio_management() -> bool:
+    """Initialize portfolio management system.
+    
+    Returns:
+        True if successful, False otherwise
+    """
     try:
-        # Check if all required modules are available
-        from utils.runner import run_app, initialize_session_state, initialize_system_modules
+        from trading.portfolio.portfolio_manager import PortfolioManager
+        
+        logger.info("📊 Initializing portfolio management...")
+        portfolio_manager = PortfolioManager()
+        
+        # Store in session state
+        safe_session_set('portfolio_manager', portfolio_manager)
+        
+        logger.info("✅ Portfolio management initialized successfully")
         return True
-    except ImportError:
-        return False 
+        
+    except Exception as e:
+        logger.error(f"❌ Portfolio management initialization failed: {e}")
+        return False
+
+
+def run_performance_tracking() -> bool:
+    """Initialize performance tracking system.
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        from trading.optimization.performance_logger import PerformanceLogger
+        
+        logger.info("📈 Initializing performance tracking...")
+        performance_logger = PerformanceLogger()
+        
+        # Store in session state
+        safe_session_set('performance_logger', performance_logger)
+        
+        logger.info("✅ Performance tracking initialized successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Performance tracking initialization failed: {e}")
+        return False
+
+
+def run_strategy_logging() -> bool:
+    """Initialize strategy logging system.
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        from trading.memory.strategy_logger import StrategyLogger
+        
+        logger.info("📝 Initializing strategy logging...")
+        strategy_logger = StrategyLogger()
+        
+        # Store in session state
+        safe_session_set('strategy_logger', strategy_logger)
+        
+        logger.info("✅ Strategy logging initialized successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Strategy logging initialization failed: {e}")
+        return False
+
+
+def run_model_monitoring() -> bool:
+    """Initialize model monitoring system.
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        from trading.memory.model_monitor import ModelMonitor
+        
+        logger.info("🔍 Initializing model monitoring...")
+        model_monitor = ModelMonitor()
+        
+        # Store in session state
+        safe_session_set('model_monitor', model_monitor)
+        
+        logger.info("✅ Model monitoring initialized successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Model monitoring initialization failed: {e}")
+        return False
+
+
+def run_complete_system() -> Dict[str, Any]:
+    """Run the complete system initialization and return status.
+    
+    Returns:
+        Dictionary containing complete system status
+    """
+    logger.info("🚀 Starting complete system initialization...")
+    
+    # Initialize core system
+    module_status = run_system_initialization()
+    
+    # Initialize additional components
+    additional_status = {}
+    
+    # Agentic routing
+    agentic_response = run_agentic_routing()
+    additional_status['agentic_routing'] = 'SUCCESS' if agentic_response else 'FAILED'
+    
+    # Portfolio management
+    portfolio_success = run_portfolio_management()
+    additional_status['portfolio_management'] = 'SUCCESS' if portfolio_success else 'FAILED'
+    
+    # Performance tracking
+    performance_success = run_performance_tracking()
+    additional_status['performance_tracking'] = 'SUCCESS' if performance_success else 'FAILED'
+    
+    # Strategy logging
+    strategy_success = run_strategy_logging()
+    additional_status['strategy_logging'] = 'SUCCESS' if strategy_success else 'FAILED'
+    
+    # Model monitoring
+    model_success = run_model_monitoring()
+    additional_status['model_monitoring'] = 'SUCCESS' if model_success else 'FAILED'
+    
+    # Combine all status
+    complete_status = {**module_status, **additional_status}
+    
+    # Log final status
+    success_count = sum(1 for status in complete_status.values() if status == 'SUCCESS')
+    total_count = len(complete_status)
+    
+    logger.info(f"🎯 Complete system initialization finished: {success_count}/{total_count} components successful")
+    
+    return complete_status
+
+
+def display_system_status(module_status: Dict[str, Any]) -> None:
+    """Display system status information.
+    
+    This function is now imported from core.session_utils to avoid duplication.
+    """
+    from core.session_utils import display_system_status as display_status
+    display_status(module_status)
+
+
+def get_system_health() -> Dict[str, Any]:
+    """Get overall system health status.
+    
+    Returns:
+        Dictionary containing system health information
+    """
+    try:
+        # Get module status
+        module_status = run_system_initialization()
+        
+        # Calculate health metrics
+        success_count = sum(1 for status in module_status.values() if status == 'SUCCESS')
+        total_count = len(module_status)
+        health_percentage = (success_count / total_count) * 100 if total_count > 0 else 0
+        
+        # Determine overall health status
+        if health_percentage >= 90:
+            health_status = "excellent"
+        elif health_percentage >= 75:
+            health_status = "good"
+        elif health_percentage >= 50:
+            health_status = "fair"
+        else:
+            health_status = "poor"
+        
+        return {
+            "overall_status": health_status,
+            "health_percentage": health_percentage,
+            "successful_modules": success_count,
+            "total_modules": total_count,
+            "module_status": module_status,
+            "timestamp": update_last_updated()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting system health: {e}")
+        return {
+            "overall_status": "error",
+            "health_percentage": 0,
+            "successful_modules": 0,
+            "total_modules": 0,
+            "module_status": {},
+            "error": str(e)
+        }
+
+
+if __name__ == "__main__":
+    # Run complete system initialization when executed directly
+    status = run_complete_system()
+    print(f"System initialization completed: {status}") 

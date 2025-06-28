@@ -53,6 +53,52 @@ from scipy.optimize import differential_evolution
 import warnings
 warnings.filterwarnings('ignore')
 
+# Try to import empyrical, with fallback
+try:
+    import empyrical as ep
+    EMPYRICIAL_AVAILABLE = True
+except ImportError:
+    EMPYRICIAL_AVAILABLE = False
+    # Create a simple fallback for empyrical functions
+    class EmpyricalFallback:
+        @staticmethod
+        def sharpe_ratio(returns, risk_free=0.0, period=252):
+            """Simple Sharpe ratio calculation."""
+            excess_returns = returns - risk_free
+            if len(excess_returns) == 0 or excess_returns.std() == 0:
+                return 0.0
+            return (excess_returns.mean() * period) / (excess_returns.std() * np.sqrt(period))
+        
+        @staticmethod
+        def sortino_ratio(returns, risk_free=0.0, period=252):
+            """Simple Sortino ratio calculation."""
+            excess_returns = returns - risk_free
+            downside_returns = excess_returns[excess_returns < 0]
+            if len(downside_returns) == 0 or downside_returns.std() == 0:
+                return 0.0
+            return (excess_returns.mean() * period) / (downside_returns.std() * np.sqrt(period))
+        
+        @staticmethod
+        def max_drawdown(returns):
+            """Simple max drawdown calculation."""
+            cumulative = (1 + returns).cumprod()
+            running_max = cumulative.expanding().max()
+            drawdown = (cumulative - running_max) / running_max
+            return drawdown.min()
+        
+        @staticmethod
+        def calmar_ratio(returns, risk_free=0.0, period=252):
+            """Simple Calmar ratio calculation."""
+            max_dd = EmpyricalFallback.max_drawdown(returns)
+            if max_dd == 0:
+                return 0.0
+            annual_return = (1 + returns.mean()) ** period - 1
+            return annual_return / abs(max_dd)
+    
+    ep = EmpyricalFallback()
+
+from scipy.optimize import minimize
+
 # Constants
 TRADING_DAYS_PER_YEAR = 252
 DEFAULT_SLIPPAGE = 0.001  # 0.1%
