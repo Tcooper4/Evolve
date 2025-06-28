@@ -34,8 +34,18 @@ class BaseService(ABC):
             redis_db: Redis database number
         """
         self.service_name = service_name
-        self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
-        self.pubsub = self.redis_client.pubsub()
+        
+        # Initialize Redis connection with error handling
+        try:
+            self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
+            self.pubsub = self.redis_client.pubsub()
+            self.redis_available = True
+            logger.info(f"Redis connection established for {service_name}")
+        except Exception as e:
+            logger.warning(f"Redis connection failed for {service_name}: {e}. Running in local mode.")
+            self.redis_client = None
+            self.pubsub = None
+            self.redis_available = False
         
         # Service state
         self.is_running = False
@@ -68,18 +78,24 @@ class BaseService(ABC):
             return
         
         self.is_running = True
-        self.thread = threading.Thread(target=self._listen_loop, daemon=True)
-        self.thread.start()
         
-        # Subscribe to channels
-        self.pubsub.subscribe(self.input_channel, self.control_channel)
-        
-        # Publish startup message
-        self._publish_output({
-            'type': 'service_started',
-            'service': self.service_name,
-            'timestamp': time.time()
-        })
+        if self.redis_available:
+            self.thread = threading.Thread(target=self._listen_loop, daemon=True)
+            self.thread.start()
+            
+            # Subscribe to channels
+            self.pubsub.subscribe(self.input_channel, self.control_channel)
+            
+            # Publish startup message
+            self._publish_output({
+                'type': 'service_started',
+                'service': self.service_name,
+                'timestamp': time.time()
+            })
+            
+            logger.info(f"{self.service_name} service started with Redis")
+        else:
+            logger.info(f"{self.service_name} service started in local mode (no Redis)")
         
         logger.info(f"{self.service_name} service started")
     
@@ -90,19 +106,20 @@ class BaseService(ABC):
         
         self.is_running = False
         
-        # Publish shutdown message
-        self._publish_output({
-            'type': 'service_stopped',
-            'service': self.service_name,
-            'timestamp': time.time()
-        })
-        
-        # Unsubscribe and close
-        self.pubsub.unsubscribe()
-        self.pubsub.close()
-        
-        if self.thread and self.thread.is_alive():
-            self.thread.join(timeout=5)
+        if self.redis_available:
+            # Publish shutdown message
+            self._publish_output({
+                'type': 'service_stopped',
+                'service': self.service_name,
+                'timestamp': time.time()
+            })
+            
+            # Unsubscribe and close
+            self.pubsub.unsubscribe()
+            self.pubsub.close()
+            
+            if self.thread and self.thread.is_alive():
+                self.thread.join(timeout=5)
         
         logger.info(f"{self.service_name} service stopped")
     
@@ -173,6 +190,10 @@ class BaseService(ABC):
     
     def _publish_output(self, data: Dict[str, Any]):
         """Publish message to output channel."""
+        if not self.redis_available:
+            logger.debug(f"Redis not available, skipping publish for {self.service_name}")
+            return
+            
         try:
             data['service'] = self.service_name
             data['timestamp'] = time.time()
@@ -182,6 +203,10 @@ class BaseService(ABC):
     
     def send_message(self, target_service: str, message_type: str, data: Dict[str, Any]):
         """Send message to another service."""
+        if not self.redis_available:
+            logger.debug(f"Redis not available, skipping message send for {self.service_name}")
+            return
+            
         try:
             message = {
                 'type': message_type,
