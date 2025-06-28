@@ -607,16 +607,91 @@ class PortfolioManager:
         logger.info(f"Logged {action} position for {position.symbol}")
     
     def _log_commentary(self, commentary: DailyCommentary) -> None:
-        """Log daily commentary.
+        """Log daily commentary."""
+        try:
+            if self.redis:
+                self.redis.lpush('portfolio_commentary', json.dumps(commentary.to_dict()))
+            else:
+                # Log to file
+                with open('trading/portfolio/logs/commentary.log', 'a') as f:
+                    f.write(f"{datetime.utcnow().isoformat()}: {commentary.to_dict()}\n")
+        except Exception as e:
+            logger.error(f"Error logging commentary: {e}")
+
+    def get_performance_summary(self) -> Dict[str, Any]:
+        """Get a summary of portfolio performance.
         
-        Args:
-            commentary: Daily commentary to log
+        Returns:
+            Dictionary with performance summary
         """
-        # Save to JSON
-        log_path = f"trading/portfolio/logs/commentary_{commentary.date.strftime('%Y%m%d')}.json"
-        with open(log_path, "w") as f:
-            json.dump(commentary.to_dict(), f, indent=2)
-        
-        logger.info(f"Logged daily commentary for {commentary.date.date()}")
+        try:
+            # Calculate basic metrics
+            total_positions = len(self.state.closed_positions)
+            winning_positions = len([p for p in self.state.closed_positions if p.pnl and p.pnl > 0])
+            win_rate = winning_positions / total_positions if total_positions > 0 else 0.0
+            
+            # Calculate P&L metrics
+            total_pnl = sum([p.pnl or 0 for p in self.state.closed_positions])
+            avg_pnl = total_pnl / total_positions if total_positions > 0 else 0.0
+            
+            # Calculate risk metrics
+            pnl_values = [p.pnl or 0 for p in self.state.closed_positions]
+            volatility = np.std(pnl_values) if len(pnl_values) > 1 else 0.0
+            sharpe_ratio = avg_pnl / volatility if volatility > 0 else 0.0
+            
+            # Calculate drawdown
+            cumulative_pnl = np.cumsum(pnl_values)
+            running_max = np.maximum.accumulate(cumulative_pnl)
+            drawdown = np.min(cumulative_pnl - running_max)
+            
+            # Strategy performance
+            strategy_performance = {}
+            for position in self.state.closed_positions:
+                strategy = position.strategy
+                if strategy not in strategy_performance:
+                    strategy_performance[strategy] = {
+                        'total_pnl': 0.0,
+                        'positions': 0,
+                        'wins': 0
+                    }
+                strategy_performance[strategy]['total_pnl'] += position.pnl or 0
+                strategy_performance[strategy]['positions'] += 1
+                if position.pnl and position.pnl > 0:
+                    strategy_performance[strategy]['wins'] += 1
+            
+            # Calculate strategy win rates
+            for strategy in strategy_performance:
+                total_pos = strategy_performance[strategy]['positions']
+                wins = strategy_performance[strategy]['wins']
+                strategy_performance[strategy]['win_rate'] = wins / total_pos if total_pos > 0 else 0.0
+                strategy_performance[strategy]['avg_pnl'] = strategy_performance[strategy]['total_pnl'] / total_pos if total_pos > 0 else 0.0
+            
+            summary = {
+                'total_positions': total_positions,
+                'winning_positions': winning_positions,
+                'win_rate': win_rate,
+                'total_pnl': total_pnl,
+                'average_pnl': avg_pnl,
+                'volatility': volatility,
+                'sharpe_ratio': sharpe_ratio,
+                'max_drawdown': drawdown,
+                'current_equity': self.state.equity,
+                'available_capital': self.state.available_capital,
+                'open_positions': len(self.state.open_positions),
+                'strategy_performance': strategy_performance,
+                'last_updated': self.state.timestamp.isoformat()
+            }
+            
+            return summary
+            
+        except Exception as e:
+            logger.error(f"Error generating performance summary: {e}")
+            return {
+                'error': str(e),
+                'total_positions': 0,
+                'win_rate': 0.0,
+                'total_pnl': 0.0,
+                'sharpe_ratio': 0.0
+            }
 
 __all__ = ["PortfolioManager", "PortfolioState", "Position", "PositionStatus", "TradeDirection"]

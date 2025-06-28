@@ -82,3 +82,4 @@ xgboost>=1.5.0,<1.7
 jinja2>=3.0.0
 reportlab>=3.6.0  # For PDF generation
 weasyprint>=54.0  # Alternative PDF generation
+fpdf>=1.7.0  # For PDF generation

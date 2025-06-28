@@ -30,7 +30,7 @@ class TaskCreate(BaseModel):
     task_type: str = Field(..., description="Type of task (data_collection, model_training, etc.)")
     priority: int = Field(default=1, description="Task priority (1-5)")
     parameters: Dict[str, Any] = Field(default={}, description="Task parameters")
-    dependencies: List[str] = Field(default=[], description="List of task IDs this task depends on")
+    dependencies: List[str] = Field(default_factory=list, description="List of task IDs this task depends on")
 
 class TaskResponse(BaseModel):
     task_id: str

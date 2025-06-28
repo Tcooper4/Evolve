@@ -53,41 +53,42 @@ def initialize_system_modules() -> Dict[str, Any]:
     
     # Initialize Goal Status Module
     try:
-        from memory.goals.status import get_status_summary, update_goal_progress
+        from trading.memory.goals.status import get_status_summary, update_goal_progress
         module_status["goal_status"]["available"] = True
         module_status["goal_status"]["functions"] = {
             "get_status_summary": get_status_summary,
             "update_goal_progress": update_goal_progress
         }
-        logger.info("✅ Goal status module initialized")
+        logger.info("[SUCCESS] Goal status module initialized")
     except Exception as e:
         module_status["goal_status"]["error"] = str(e)
-        logger.warning(f"⚠️ Goal status module not available: {e}")
+        logger.warning(f"[WARNING] Goal status module not available: {e}")
     
     # Initialize Optimizer Consolidator Module
     try:
-        from trading.optimization.utils.consolidator import OptimizerConsolidator, get_optimizer_status
+        from optimizers.consolidator import OptimizerConsolidator, run_optimizer_consolidation
         module_status["optimizer_consolidator"]["available"] = True
         module_status["optimizer_consolidator"]["functions"] = {
             "OptimizerConsolidator": OptimizerConsolidator,
-            "get_optimizer_status": get_optimizer_status
+            "run_optimizer_consolidation": run_optimizer_consolidation
         }
-        logger.info("✅ Optimizer consolidator module initialized")
+        logger.info("[SUCCESS] Optimizer consolidator module initialized")
     except Exception as e:
         module_status["optimizer_consolidator"]["error"] = str(e)
-        logger.warning(f"⚠️ Optimizer consolidator module not available: {e}")
+        logger.warning(f"[WARNING] Optimizer consolidator module not available: {e}")
     
     # Initialize Market Analysis Module
     try:
-        from src.analysis.market_analysis import MarketAnalysis
+        from src.analysis.market_analysis import MarketAnalyzer, analyze_market_conditions
         module_status["market_analysis"]["available"] = True
         module_status["market_analysis"]["functions"] = {
-            "MarketAnalysis": MarketAnalysis
+            "MarketAnalyzer": MarketAnalyzer,
+            "analyze_market_conditions": analyze_market_conditions
         }
-        logger.info("✅ Market analysis module initialized")
+        logger.info("[SUCCESS] Market analysis module initialized")
     except Exception as e:
         module_status["market_analysis"]["error"] = str(e)
-        logger.warning(f"⚠️ Market analysis module not available: {e}")
+        logger.warning(f"[WARNING] Market analysis module not available: {e}")
     
     # Initialize Data Pipeline Module
     try:
@@ -97,10 +98,10 @@ def initialize_system_modules() -> Dict[str, Any]:
             "DataPipeline": DataPipeline,
             "run_data_pipeline": run_data_pipeline
         }
-        logger.info("✅ Data pipeline module initialized")
+        logger.info("[SUCCESS] Data pipeline module initialized")
     except Exception as e:
         module_status["data_pipeline"]["error"] = str(e)
-        logger.warning(f"⚠️ Data pipeline module not available: {e}")
+        logger.warning(f"[WARNING] Data pipeline module not available: {e}")
     
     # Initialize Data Validation Module
     try:
@@ -111,10 +112,10 @@ def initialize_system_modules() -> Dict[str, Any]:
             "validate_data_for_training": validate_data_for_training,
             "validate_data_for_forecasting": validate_data_for_forecasting
         }
-        logger.info("✅ Data validation module initialized")
+        logger.info("[SUCCESS] Data validation module initialized")
     except Exception as e:
         module_status["data_validation"]["error"] = str(e)
-        logger.warning(f"⚠️ Data validation module not available: {e}")
+        logger.warning(f"[WARNING] Data validation module not available: {e}")
     
     return module_status
 
@@ -135,19 +136,19 @@ def display_system_status(module_status: Dict[str, Any]) -> None:
     
     # Display overall status
     if available_modules == total_modules:
-        st.sidebar.success(f"✅ All modules available ({available_modules}/{total_modules})")
+        st.sidebar.success(f"[SUCCESS] All modules available ({available_modules}/{total_modules})")
     elif available_modules > 0:
-        st.sidebar.warning(f"⚠️ {available_modules}/{total_modules} modules available")
+        st.sidebar.warning(f"[WARNING] {available_modules}/{total_modules} modules available")
     else:
-        st.sidebar.error(f"❌ No modules available ({available_modules}/{total_modules})")
+        st.sidebar.error(f"[ERROR] No modules available ({available_modules}/{total_modules})")
     
     # Display individual module status
     with st.sidebar.expander("Module Details"):
         for module_name, status in module_status.items():
             if status["available"]:
-                st.success(f"✅ {module_name.replace('_', ' ').title()}")
+                st.success(f"[SUCCESS] {module_name.replace('_', ' ').title()}")
             else:
-                st.error(f"❌ {module_name.replace('_', ' ').title()}")
+                st.error(f"[ERROR] {module_name.replace('_', ' ').title()}")
                 if status["error"]:
                     st.caption(f"Error: {status['error'][:50]}...")
 
@@ -191,7 +192,7 @@ def display_goal_status(module_status: Dict[str, Any]) -> None:
         
         # Display alerts if any
         if status_summary.get("alerts"):
-            with st.sidebar.expander("⚠️ Alerts"):
+            with st.sidebar.expander("[WARNING] Alerts"):
                 for alert in status_summary["alerts"]:
                     st.warning(alert["message"])
         
@@ -272,18 +273,18 @@ def render_home_page(module_status: Dict[str, Any]) -> None:
         for module_name in ["goal_status", "market_analysis", "data_validation"]:
             status = module_status[module_name]
             if status["available"]:
-                st.success(f"✅ {module_name.replace('_', ' ').title()}")
+                st.success(f"[SUCCESS] {module_name.replace('_', ' ').title()}")
             else:
-                st.error(f"❌ {module_name.replace('_', ' ').title()}")
+                st.error(f"[ERROR] {module_name.replace('_', ' ').title()}")
     
     with col2:
         st.markdown("**Utility Modules:**")
         for module_name in ["optimizer_consolidator", "data_pipeline"]:
             status = module_status[module_name]
             if status["available"]:
-                st.success(f"✅ {module_name.replace('_', ' ').title()}")
+                st.success(f"[SUCCESS] {module_name.replace('_', ' ').title()}")
             else:
-                st.error(f"❌ {module_name.replace('_', ' ').title()}")
+                st.error(f"[ERROR] {module_name.replace('_', ' ').title()}")
     
     # Display goal status if available
     if module_status["goal_status"]["available"]:

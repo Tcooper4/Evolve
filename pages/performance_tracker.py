@@ -13,7 +13,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from io import BytesIO
 from typing import Dict, Any, List, Optional, Tuple, Union
-from memory.performance_memory import PerformanceMemory
+from trading.memory.performance_memory import PerformanceMemory
 from llm.llm_summary import generate_strategy_commentary
 
 def initialize_session_state():

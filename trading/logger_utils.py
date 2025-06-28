@@ -1,6 +1,6 @@
 """Trading logger utilities - wrapper for memory.logger_utils."""
 
-from memory.logger_utils import (
+from trading.memory.logger_utils import (
     UnifiedLogger,
     PerformanceMetrics,
     StrategyDecision,

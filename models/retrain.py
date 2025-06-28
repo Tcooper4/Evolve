@@ -190,4 +190,37 @@ def main():
         raise
 
 if __name__ == "__main__":
-    main() 
+    main()
+
+"""
+Model retraining utilities.
+"""
+
+import logging
+from typing import Dict, Any
+
+logger = logging.getLogger(__name__)
+
+def trigger_retraining_if_needed(weights: Dict[str, float], threshold: float = 0.1) -> bool:
+    """
+    Trigger model retraining if needed.
+    
+    Args:
+        weights: Model weights dictionary
+        threshold: Threshold for triggering retraining
+        
+    Returns:
+        True if retraining was triggered, False otherwise
+    """
+    try:
+        # Simple logic: trigger retraining if any weight is below threshold
+        for model, weight in weights.items():
+            if weight < threshold:
+                logger.info(f"Triggering retraining for {model} (weight: {weight})")
+                return True
+                
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error in retraining trigger: {e}")
+        return False 

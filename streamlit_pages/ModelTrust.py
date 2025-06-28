@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 import json
 import os
 from datetime import datetime
-from memory.model_monitor import generate_strategy_priority, detect_drift
+from trading.memory.model_monitor import generate_strategy_priority, detect_drift
 
 def load_weight_history():
     """Load weight history data if available."""

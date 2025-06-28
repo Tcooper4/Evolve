@@ -324,7 +324,7 @@ def create_prompt_input() -> str:
         key="prompt_input"
     )
 
-def create_sidebar() -> Dict[str, any]:
+def create_sidebar() -> Dict[str, Any]:
     """Create the sidebar with model and strategy controls.
     
     Returns:
@@ -497,7 +497,7 @@ def create_strategy_chart(
     return fig
 
 def create_performance_report(
-    results: Dict[str, any],
+    results: Dict[str, Any],
     title: str = "Performance Report"
 ) -> None:
     """Create an expandable performance report section.
