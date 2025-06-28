@@ -504,4 +504,71 @@ class LSTMForecaster(BaseModel):
         self.model = self.build_model()
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.scaler = checkpoint['scaler']
-        self.model.to(self.device) 
+        self.model.to(self.device)
+
+    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+        """Generate forecast for future time steps.
+        
+        Args:
+            data: Historical data DataFrame
+            horizon: Number of time steps to forecast
+            
+        Returns:
+            Dictionary containing forecast results
+        """
+        try:
+            # Make initial prediction
+            predictions = self.predict(data)
+            
+            # Generate multi-step forecast
+            forecast_values = []
+            current_data = data.copy()
+            
+            for i in range(horizon):
+                # Get prediction for next step
+                pred = self.predict(current_data)
+                forecast_values.append(pred[-1])
+                
+                # Update data for next iteration
+                new_row = current_data.iloc[-1].copy()
+                new_row[self.config['target_column']] = pred[-1]
+                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                current_data = current_data.iloc[1:]  # Remove oldest row
+            
+            return {
+                'forecast': np.array(forecast_values),
+                'confidence': 0.85,  # Placeholder confidence
+                'model': 'LSTM',
+                'horizon': horizon
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error in LSTM model forecast: {e}")
+            raise RuntimeError(f"LSTM model forecasting failed: {e}")
+
+    def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> None:
+        """Plot model results and predictions.
+        
+        Args:
+            data: Input data DataFrame
+            predictions: Optional predictions to plot
+        """
+        try:
+            import matplotlib.pyplot as plt
+            
+            if predictions is None:
+                predictions = self.predict(data)
+            
+            plt.figure(figsize=(12, 6))
+            plt.plot(data.index, data[self.config['target_column']], label='Actual', color='blue')
+            plt.plot(data.index[self.config['sequence_length']:], predictions, label='Predicted', color='red')
+            plt.title('LSTM Model Predictions')
+            plt.xlabel('Time')
+            plt.ylabel('Value')
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+            
+        except Exception as e:
+            self.logger.error(f"Error plotting LSTM results: {e}")
+            print(f"Could not plot results: {e}") 

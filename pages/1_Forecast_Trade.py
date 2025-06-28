@@ -72,8 +72,8 @@ def load_model_configs():
         registry = ModelConfigRegistry()
         return registry.get_all_configs()
     except Exception as e:
-        logger.warning(f"Could not load model configs: {e}")
-        return {}
+        logging.error(f"Error loading model configs: {e}")
+        raise RuntimeError(f"Failed to load model configurations: {e}")
 
 def get_model_summary(model):
     """Get summary information for a model."""
@@ -81,8 +81,8 @@ def get_model_summary(model):
         configs = load_model_configs()
         return configs.get(model, {}).get('description', 'No description available')
     except Exception as e:
-        logger.warning(f"Could not get model summary: {e}")
-        return 'No description available'
+        logging.error(f"Error getting model summary: {e}")
+        raise RuntimeError(f"Failed to get model summary: {e}")
 
 def get_status_badge(status):
     """Get HTML badge for system status."""
@@ -116,8 +116,8 @@ def analyze_market_context(ticker: str, data: pd.DataFrame) -> Dict:
             "analysis_date": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"Market analysis failed: {e}")
-        return {"status": "error", "message": str(e)}
+        logging.error(f"Error in market analysis: {e}")
+        raise RuntimeError(f"Market analysis failed: {e}")
 
 def display_market_analysis(analysis: Dict):
     """Display market analysis results."""
@@ -199,8 +199,8 @@ def generate_market_commentary(analysis: Dict, forecast_data: pd.DataFrame) -> s
         return commentary
         
     except Exception as e:
-        logger.error(f"Commentary generation failed: {e}")
-        return "Market commentary generation failed."
+        logging.error(f"Error generating market commentary: {e}")
+        raise RuntimeError(f"Market commentary generation failed: {e}")
 
 def main():
     """Main function for the Forecast & Trade page."""

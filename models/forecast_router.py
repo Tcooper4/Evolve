@@ -276,6 +276,73 @@ class ForecastRouter:
             ]
         return self.performance_history
 
+    def forecast(self, data: pd.DataFrame, horizon: int = 30, 
+                model_type: Optional[str] = None, **kwargs) -> Dict[str, Any]:
+        """Generate forecast using the best available model.
+        
+        Args:
+            data: Time series data
+            horizon: Forecast horizon in periods
+            model_type: Optional preferred model type
+            **kwargs: Additional model-specific parameters
+            
+        Returns:
+            Dictionary containing forecast results
+        """
+        try:
+            # Use existing get_forecast method
+            result = self.get_forecast(data, horizon, model_type, **kwargs)
+            
+            # Add forecast-specific metadata
+            result['forecast_method'] = 'router_selected'
+            result['timestamp'] = datetime.now().isoformat()
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Forecast router error: {e}")
+            raise RuntimeError(f"Forecast router failed: {e}")
+
+    def plot_results(self, data: pd.DataFrame, forecast_result: Dict[str, Any]) -> None:
+        """Plot forecast results.
+        
+        Args:
+            data: Historical data
+            forecast_result: Result from forecast method
+        """
+        try:
+            import matplotlib.pyplot as plt
+            
+            plt.figure(figsize=(12, 6))
+            
+            # Plot historical data
+            plt.plot(data.index, data.iloc[:, 0], label='Historical', color='blue')
+            
+            # Plot forecast
+            if 'forecast' in forecast_result:
+                forecast_data = forecast_result['forecast']
+                if isinstance(forecast_data, pd.DataFrame):
+                    forecast_values = forecast_data.iloc[:, 0]
+                else:
+                    forecast_values = forecast_data
+                
+                # Create future dates
+                last_date = data.index[-1]
+                future_dates = pd.date_range(start=last_date, periods=len(forecast_values)+1, freq='D')[1:]
+                
+                plt.plot(future_dates, forecast_values, label='Forecast', color='red')
+            
+            plt.title(f'Forecast using {forecast_result.get("model", "Unknown")} model')
+            plt.xlabel('Time')
+            plt.ylabel('Value')
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+            
+        except Exception as e:
+            logger.error(f"Error plotting forecast results: {e}")
+            print(f"Could not plot results: {e}")
+
 
 # Example usage:
 if __name__ == "__main__":

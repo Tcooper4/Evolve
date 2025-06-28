@@ -80,4 +80,56 @@ def generate_rsi_signals(
     except Exception as e:
         error_msg = f"Error generating RSI signals: {str(e)}"
         logger.error(error_msg)
+        raise RuntimeError(error_msg)
+
+def generate_signals(df: pd.DataFrame, ticker: str = None, **kwargs) -> Dict[str, Any]:
+    """Generate trading signals using RSI strategy.
+    
+    Args:
+        df: Price data DataFrame with OHLCV columns
+        ticker: Optional ticker symbol for loading optimized settings
+        **kwargs: Additional parameters for signal generation
+        
+    Returns:
+        Dictionary containing signals and metadata
+    """
+    try:
+        # Generate RSI signals
+        result_df = generate_rsi_signals(df, ticker, **kwargs)
+        
+        # Extract signals
+        signals = result_df['signal'].dropna()
+        
+        # Calculate signal statistics
+        buy_signals = (signals == 1).sum()
+        sell_signals = (signals == -1).sum()
+        total_signals = buy_signals + sell_signals
+        
+        # Calculate performance metrics
+        if 'strategy_returns' in result_df.columns:
+            strategy_returns = result_df['strategy_returns'].dropna()
+            total_return = (1 + strategy_returns).prod() - 1
+            sharpe_ratio = strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0
+            max_drawdown = (strategy_returns.cumsum() - strategy_returns.cumsum().expanding().max()).min()
+        else:
+            total_return = 0
+            sharpe_ratio = 0
+            max_drawdown = 0
+        
+        return {
+            'signals': signals.to_dict(),
+            'buy_signals': buy_signals,
+            'sell_signals': sell_signals,
+            'total_signals': total_signals,
+            'total_return': total_return,
+            'sharpe_ratio': sharpe_ratio,
+            'max_drawdown': max_drawdown,
+            'strategy': 'RSI',
+            'ticker': ticker,
+            'timestamp': pd.Timestamp.now().isoformat()
+        }
+        
+    except Exception as e:
+        error_msg = f"Error generating signals: {str(e)}"
+        logger.error(error_msg)
         raise RuntimeError(error_msg) 
