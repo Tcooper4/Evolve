@@ -324,8 +324,9 @@ class IncidentManager:
                         for pattern in sensitive_patterns:
                             if pattern in content.lower():
                                 issues.append(f"Sensitive data found in {file}")
-                    except:
-                        pass
+                    except Exception as e:
+                        self.logger.warning(f"⚠️ Could not read file {file}: {e}")
+                        continue
             
             return {
                 "healthy": len(issues) == 0,

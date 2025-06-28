@@ -231,8 +231,9 @@ class DataManager:
                             # Try to convert to numeric
                             try:
                                 df[col] = pd.to_numeric(df[col], errors="ignore")
-                            except:
-                                pass
+                            except Exception as e:
+                                self.logger.warning(f"⚠️ Could not convert column {col} to numeric: {e}")
+                                continue
                     
                     # Save optimized CSV
                     df.to_csv(csv_path, index=False)

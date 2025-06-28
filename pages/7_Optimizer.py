@@ -15,9 +15,28 @@ import numpy as np
 from typing import Dict, List, Any
 import json
 import os
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Import from consolidated trading.optimization module
-from trading.optimization import OptimizerFactory, StrategyOptimizer, OptimizationVisualizer
+try:
+    from trading.optimization import OptimizerFactory, StrategyOptimizer, OptimizationVisualizer
+    OPTIMIZATION_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Optimization module import failed: {e}")
+    OPTIMIZATION_AVAILABLE = False
+    st.session_state["status"] = "fallback activated"
+
+# Import AgentHub for unified agent routing
+try:
+    from core.agent_hub import AgentHub
+    AGENT_HUB_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"AgentHub import failed: {e}")
+    AGENT_HUB_AVAILABLE = False
+
 from trading.agents.strategy_switcher import StrategySwitcher
 from trading.utils.memory_logger import MemoryLogger
 
@@ -29,19 +48,70 @@ def load_strategy_data() -> pd.DataFrame:
 def main():
     st.title("Strategy Optimizer")
     
-    # Initialize components
-    strategy_switcher = StrategySwitcher()
-    memory_logger = MemoryLogger()
+    # Initialize AgentHub if available
+    if AGENT_HUB_AVAILABLE and 'agent_hub' not in st.session_state:
+        st.session_state['agent_hub'] = AgentHub()
     
-    # Create optimizer config
-    optimizer_config = {
-        "name": "strategy_optimizer",
-        "optimizer_type": "bayesian",
-        "n_initial_points": 10,
-        "n_iterations": 50,
-        "primary_metric": "sharpe_ratio"
-    }
-    optimizer = StrategyOptimizer(optimizer_config)
+    # Natural Language Input Section
+    if AGENT_HUB_AVAILABLE:
+        st.subheader("🤖 AI Agent Interface")
+        st.markdown("Ask for optimization help or request specific optimizations:")
+        
+        user_prompt = st.text_area(
+            "What optimization would you like to perform?",
+            placeholder="e.g., 'Optimize RSI strategy for AAPL' or 'Find best parameters for MACD strategy'",
+            height=100
+        )
+        
+        if st.button("🚀 Process with AI Agent"):
+            if user_prompt:
+                with st.spinner("Processing optimization request..."):
+                    try:
+                        agent_hub = st.session_state['agent_hub']
+                        response = agent_hub.route(user_prompt)
+                        
+                        st.subheader("🤖 AI Response")
+                        st.write(response['content'])
+                        
+                        if response['type'] == 'fallback':
+                            st.warning("Using fallback optimization interface")
+                        
+                    except Exception as e:
+                        st.error(f"Failed to process request: {e}")
+                        logger.error(f"AgentHub error: {e}")
+            else:
+                st.warning("Please enter a prompt to process.")
+        
+        st.divider()
+    
+    # Check if optimization is available
+    if not OPTIMIZATION_AVAILABLE:
+        st.error("Optimization module not available")
+        st.info("Please check that the trading.optimization module is properly installed.")
+        return
+    
+    # Initialize components
+    try:
+        strategy_switcher = StrategySwitcher()
+        memory_logger = MemoryLogger()
+        
+        # Create optimizer config
+        optimizer_config = {
+            "name": "strategy_optimizer",
+            "optimizer_type": "bayesian",
+            "n_initial_points": 10,
+            "n_iterations": 50,
+            "primary_metric": "sharpe_ratio"
+        }
+        optimizer = StrategyOptimizer(optimizer_config)
+        
+        logger.info("StrategyOptimizer initialized successfully")
+        
+    except Exception as e:
+        st.error(f"Failed to initialize optimization components: {e}")
+        logger.error(f"Optimization initialization error: {e}")
+        st.session_state["status"] = "fallback activated"
+        return
     
     # Sidebar configuration
     st.sidebar.header("Optimization Settings")
