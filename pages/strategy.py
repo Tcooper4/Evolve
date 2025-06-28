@@ -81,3 +81,7 @@ def render_strategy_page():
 if __name__ == "__main__":
     render_strategy_page()
 
+def main():
+    """Main function for the strategy page."""
+    render_strategy_page()
+

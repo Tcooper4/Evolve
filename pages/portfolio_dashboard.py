@@ -252,24 +252,37 @@ st.sidebar.title("Controls")
 
 # Load/Save state
 st.sidebar.subheader("Portfolio State")
-if st.sidebar.button("Save Portfolio"):
-    save_portfolio_state("trading/portfolio/data/portfolio_state.json")
 
+# Initialize portfolio manager if not already done
+if st.session_state.portfolio_manager is None:
+    st.session_state.portfolio_manager = PortfolioManager()
+
+# Load portfolio from file
+filename = st.sidebar.text_input("Portfolio File", value="portfolio.json")
 if st.sidebar.button("Load Portfolio"):
-    load_portfolio_state("trading/portfolio/data/portfolio_state.json")
+    st.session_state.portfolio_manager.load(filename)
+    st.success("Portfolio loaded successfully!")
+
+# Save portfolio to file
+if st.sidebar.button("Save Portfolio"):
+    st.session_state.portfolio_manager.save(filename)
+    st.success("Portfolio saved successfully!")
+
+# Get portfolio data
+portfolio = st.session_state.portfolio_manager
 
 # Filters
 st.sidebar.subheader("Filters")
 selected_strategy = st.sidebar.multiselect(
     "Strategy",
-    options=sorted(set(p.strategy for p in st.session_state.portfolio_manager.state.open_positions +
-                      st.session_state.portfolio_manager.state.closed_positions))
+    options=sorted(set(p.strategy for p in portfolio.state.open_positions +
+                      portfolio.state.closed_positions))
 )
 
 selected_symbol = st.sidebar.multiselect(
     "Symbol",
-    options=sorted(set(p.symbol for p in st.session_state.portfolio_manager.state.open_positions +
-                      st.session_state.portfolio_manager.state.closed_positions))
+    options=sorted(set(p.symbol for p in portfolio.state.open_positions +
+                      portfolio.state.closed_positions))
 )
 
 # Main content
@@ -277,7 +290,7 @@ selected_symbol = st.sidebar.multiselect(
 st.header("Portfolio Overview")
 
 # Get performance summary
-summary = st.session_state.portfolio_manager.get_performance_summary()
+summary = portfolio.get_performance_summary()
 
 # Display key metrics
 col1, col2, col3, col4 = st.columns(4)
@@ -290,7 +303,7 @@ col4.metric("Win Rate", f"{summary.get('win_rate', 0):.2%}")
 st.header("Position Summary")
 
 # Get position summary
-positions_df = st.session_state.portfolio_manager.get_position_summary()
+positions_df = portfolio.get_position_summary()
 
 # Apply filters
 if selected_strategy:
@@ -309,19 +322,19 @@ tab1, tab2, tab3 = st.tabs(["Equity Curve", "Rolling Metrics", "Strategy Perform
 
 with tab1:
     st.plotly_chart(plot_equity_curve(
-        st.session_state.portfolio_manager.state.closed_positions
+        portfolio.state.closed_positions
     ), key="equity_curve")
 
 with tab2:
     window = st.slider("Rolling Window", 5, 100, 20)
     st.plotly_chart(plot_rolling_metrics(
-        st.session_state.portfolio_manager.state.closed_positions,
+        portfolio.state.closed_positions,
         window=window
     ), key="rolling_metrics")
 
 with tab3:
     st.plotly_chart(plot_strategy_performance(
-        st.session_state.portfolio_manager.state.closed_positions
+        portfolio.state.closed_positions
     ), key="strategy_performance")
 
 # Export Options
@@ -340,7 +353,7 @@ if st.sidebar.button("Export Trade Report"):
             'Exit Price': p.exit_price,
             'PnL': p.pnl,
             'Return': p.pnl / (p.entry_price * p.size) if p.pnl is not None else None
-        } for p in st.session_state.portfolio_manager.state.closed_positions
+        } for p in portfolio.state.closed_positions
     ])
     
     # Save to CSV
