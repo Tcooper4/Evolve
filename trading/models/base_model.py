@@ -452,253 +452,6 @@ class BaseModel(ABC):
         
         return metrics
     
-    def predict(self, data: pd.DataFrame, feature_cols: List[str],
-                sequence_length: int) -> np.ndarray:
-        """Generate predictions.
-        
-        Args:
-            data: Input data
-            feature_cols: List of feature column names
-            sequence_length: Length of input sequences
-            
-        Returns:
-            Array of predictions
-        """
-        if self.model is None:
-            raise ModelError("Model not trained")
-        
-        self.model.eval()
-        
-        # Scale features
-        features = self.scaler.transform(data[feature_cols])
-        
-        # Create sequences
-        sequences = []
-        for i in range(len(data) - sequence_length):
-            sequences.append(features[i:i + sequence_length])
-        
-        # Generate predictions
-        predictions = []
-        with torch.no_grad():
-            for sequence in sequences:
-                x = torch.FloatTensor(sequence).unsqueeze(0).to(self.device)
-                output = self.model(x)
-                predictions.append(output.cpu().numpy())
-        
-        return np.array(predictions).flatten()
-    
-    def save(self, filepath: str) -> None:
-        """Save model state.
-        
-        Args:
-            filepath: Path to save model state
-        """
-        if self.model is None:
-            raise ModelError("No model to save")
-        
-        state = {
-            'model_state': self.model.state_dict(),
-            'config': self.config,
-            'scaler': self.scaler,
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses,
-            'best_val_loss': self.best_val_loss,
-            'best_model_state': self.best_model_state,
-            'version': '1.0'  # Add version for future compatibility
-        }
-        
-        torch.save(state, filepath)
-        self.logger.info(f"Model saved to {filepath}")
-    
-    def load(self, filepath: str) -> None:
-        """Load model state.
-        
-        Args:
-            filepath: Path to load model state from
-        """
-        state = torch.load(filepath, map_location=self.device)
-        
-        # Check version compatibility
-        version = state.get('version', '0.0')
-        if version != '1.0':
-            self.logger.warning(f"Loading model with version {version}, current version is 1.0")
-        
-        # Load state
-        self.config = state['config']
-        self.scaler = state['scaler']
-        self.train_losses = state['train_losses']
-        self.val_losses = state['val_losses']
-        self.best_val_loss = state['best_val_loss']
-        self.best_model_state = state['best_model_state']
-        
-        # Build and load model
-        self.model = self.build_model()
-        self.model.load_state_dict(state['model_state'])
-        self.model.to(self.device)
-        
-        self.logger.info(f"Model loaded from {filepath}")
-    
-    def save_results(self, results: Dict[str, Any], filename: str) -> None:
-        """Save training results.
-        
-        Args:
-            results: Dictionary of results to save
-            filename: Name of file to save results to
-        """
-        filepath = self.results_dir / filename
-        with open(filepath, 'w') as f:
-            json.dump(results, f, indent=4)
-        self.logger.info(f"Results saved to {filepath}")
-    
-    def load_results(self, filename: str) -> Dict[str, Any]:
-        """Load training results.
-        
-        Args:
-            filename: Name of file to load results from
-            
-        Returns:
-            Dictionary of loaded results
-        """
-        filepath = self.results_dir / filename
-        with open(filepath, 'r') as f:
-            results = json.load(f)
-        self.logger.info(f"Results loaded from {filepath}")
-        return results
-
-    def _setup_model(self) -> None:
-        """Setup model architecture."""
-        pass
-
-    def summary(self) -> None:
-        """Print model architecture summary."""
-        total_params = 0
-        print(f"\n{self.__class__.__name__} Architecture Summary:")
-        print("-" * 50)
-        
-        for name, module in self.model.named_children():
-            params = sum(p.numel() for p in module.parameters())
-            total_params += params
-            print(f"{name}:")
-            print(f"  Parameters: {params:,}")
-            print(f"  Structure: {module}")
-            print("-" * 50)
-        
-        print(f"\nTotal Parameters: {total_params:,}")
-        print(f"Model Size: {total_params * 4 / (1024 * 1024):.2f} MB")
-
-    def fit(self, train_data: pd.DataFrame, val_data: Optional[pd.DataFrame] = None,
-            epochs: int = 100, batch_size: int = 32, early_stopping_patience: int = 10) -> Dict[str, List[float]]:
-        """Train the model.
-        
-        Args:
-            train_data: Training data
-            val_data: Validation data
-            epochs: Number of training epochs
-            batch_size: Batch size
-            early_stopping_patience: Early stopping patience
-            
-        Returns:
-            Training history
-        """
-        # Prepare data
-        X_train, y_train = self._prepare_data(train_data, is_training=True)
-        train_dataset = TimeSeriesDataset(X_train, y_train)
-        train_loader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True
-        )
-        
-        if val_data is not None:
-            X_val, y_val = self._prepare_data(val_data, is_training=False)
-            val_dataset = TimeSeriesDataset(X_val, y_val)
-            val_loader = torch.utils.data.DataLoader(
-                val_dataset, batch_size=batch_size
-            )
-        
-        # Training loop
-        best_val_loss = float('inf')
-        patience_counter = 0
-        start_time = time.time()
-        
-        for epoch in tqdm(range(epochs), desc="Training"):
-            epoch_start = time.time()
-            
-            # Training
-            self.model.train()
-            train_loss = 0
-            train_metrics = []
-            
-            for X_batch, y_batch in train_loader:
-                self.optimizer.zero_grad()
-                y_pred = self.model(X_batch)
-                loss = self._compute_loss(y_pred, y_batch)
-                loss.backward()
-                self.optimizer.step()
-                train_loss += loss.item()
-                train_metrics.extend(self._compute_metrics(y_pred, y_batch))
-            
-            train_loss /= len(train_loader)
-            train_metrics = np.mean(train_metrics)
-            
-            # Validation
-            if val_data is not None:
-                self.model.eval()
-                val_loss = 0
-                val_metrics = []
-                
-                with torch.no_grad():
-                    for X_batch, y_batch in val_loader:
-                        y_pred = self.model(X_batch)
-                        val_loss += self._compute_loss(y_pred, y_batch).item()
-                        val_metrics.extend(self._compute_metrics(y_pred, y_batch))
-                
-                val_loss /= len(val_loader)
-                val_metrics = np.mean(val_metrics)
-                
-                # Learning rate scheduling
-                if self.scheduler is not None:
-                    self.scheduler.step(val_loss)
-                
-                # Early stopping
-                if val_loss < best_val_loss:
-                    best_val_loss = val_loss
-                    patience_counter = 0
-                    self._save_model('best_model.pt')
-                else:
-                    patience_counter += 1
-                    if patience_counter >= early_stopping_patience:
-                        print(f"Early stopping at epoch {epoch + 1}")
-                        break
-            else:
-                val_loss = None
-                val_metrics = None
-            
-            # Log metrics
-            epoch_time = time.time() - epoch_start
-            self.training_history['train_loss'].append(train_loss)
-            self.training_history['val_loss'].append(val_loss)
-            self.training_history['train_metrics'].append(train_metrics)
-            self.training_history['val_metrics'].append(val_metrics)
-            self.training_history['epoch_times'].append(epoch_time)
-            
-            # TensorBoard logging
-            self.writer.add_scalar('Loss/train', train_loss, epoch)
-            if val_loss is not None:
-                self.writer.add_scalar('Loss/val', val_loss, epoch)
-            self.writer.add_scalar('Metrics/train', train_metrics, epoch)
-            if val_metrics is not None:
-                self.writer.add_scalar('Metrics/val', val_metrics, epoch)
-            self.writer.add_scalar('Time/epoch', epoch_time, epoch)
-        
-        # Save training history
-        self._save_training_history()
-        
-        # Log total training time
-        total_time = time.time() - start_time
-        print(f"\nTraining completed in {total_time:.2f} seconds")
-        print(f"Average epoch time: {np.mean(self.training_history['epoch_times']):.2f} seconds")
-        
-        return self.training_history
-    
     def predict(self, data: pd.DataFrame, horizon: int = 1) -> np.ndarray:
         """Make predictions.
         
@@ -718,6 +471,47 @@ class BaseModel(ABC):
             return y_pred.cpu().numpy()
         else:
             return self._multi_horizon_predict(X, horizon)
+    
+    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+        """Generate forecast for future time steps.
+        
+        Args:
+            data: Historical data DataFrame
+            horizon: Number of time steps to forecast
+            
+        Returns:
+            Dictionary containing forecast results
+        """
+        try:
+            # Make initial prediction
+            predictions = self.predict(data, horizon=1)
+            
+            # Generate multi-step forecast
+            forecast_values = []
+            current_data = data.copy()
+            
+            for i in range(horizon):
+                # Get prediction for next step
+                pred = self.predict(current_data, horizon=1)
+                forecast_values.append(pred[-1])
+                
+                # Update data for next iteration
+                new_row = current_data.iloc[-1].copy()
+                new_row['close'] = pred[-1]  # Update with prediction
+                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                current_data = current_data.iloc[1:]  # Remove oldest row
+            
+            return {
+                'forecast': np.array(forecast_values),
+                'confidence': 0.8,  # Base model confidence
+                'model': self.__class__.__name__,
+                'horizon': horizon
+            }
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error in base model forecast: {e}")
+            raise RuntimeError(f"Base model forecasting failed: {e}")
     
     def _multi_horizon_predict(self, X: torch.Tensor, horizon: int) -> np.ndarray:
         """Make multi-horizon predictions.
