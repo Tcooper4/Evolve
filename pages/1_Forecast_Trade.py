@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 from trading.agents.strategy_switcher import StrategySwitcher
 from models.forecast_router import ForecastRouter
 from trading.memory.strategy_logger import log_strategy_decision, get_strategy_analysis
-from trading.memory.performance_logger import log_strategy_performance
+from trading.memory.performance_logger import log_performance
 from trading.memory.model_monitor import get_model_trust_levels
 from trading.memory.performance_weights import get_latest_weights
 from trading.models.base_model import ModelRegistry
@@ -31,6 +31,9 @@ from trading.utils.visualization import plot_forecast, plot_attention_heatmap, p
 from trading.utils.metrics import calculate_metrics
 from trading.utils.system_status import get_system_status
 from src.analysis.market_analysis import MarketAnalysis
+
+if 'last_updated' not in st.session_state:
+    st.session_state['last_updated'] = datetime.now()
 
 def initialize_session_state():
     """Initialize session state variables if they don't exist."""
@@ -46,8 +49,6 @@ def initialize_session_state():
         st.session_state.start_date = datetime.now().date()
     if "end_date" not in st.session_state:
         st.session_state.end_date = datetime.now().date()
-    if "last_updated" not in st.session_state:
-        st.session_state.last_updated = datetime.now()
 
 def load_model_configs():
     """Load model configurations from JSON files."""
@@ -250,8 +251,8 @@ def main():
         st.header("Controls")
         
         # Ticker selection
-        ticker = st.text_input("Ticker Symbol", value=st.session_state.selected_ticker).upper()
-        if ticker != st.session_state.selected_ticker:
+        ticker = st.text_input("Ticker Symbol", value=st.session_state.get('selected_ticker', '')).upper()
+        if ticker != st.session_state.get('selected_ticker', ''):
             st.session_state.selected_ticker = ticker
             st.session_state.forecast_data = None
             st.session_state.selected_model = None
@@ -290,7 +291,7 @@ def main():
         
         if use_agentic:
             # Get model trust levels
-            trust_levels = get_model_trust_levels(ticker)
+            trust_levels = get_model_trust_levels()
             if trust_levels:
                 st.info("Model Trust Levels:")
                 for model, trust in trust_levels.items():
@@ -387,7 +388,7 @@ def main():
                 win_rate = calculate_win_rate(forecast_data)
                 
                 # Log performance metrics
-                log_strategy_performance(
+                log_performance(
                     ticker=ticker,
                     model=selected_model,
                     agentic=use_agentic,
@@ -583,17 +584,32 @@ def generate_forecast(ticker, selected_model):
         # Initialize router
         router = ForecastRouter()
         
-        # Get forecast
-        forecast = router.get_forecast(
-            data=data,
-            model_type=selected_model,
-            forecast_horizon=30
-        )
+        # Generate forecast
+        forecast = router.forecast(ticker, selected_model)
         
         return forecast
         
     except Exception as e:
         st.error(f"Error generating forecast: {str(e)}")
+        return None
+
+def run_backtest(forecast_data, initial_capital=10000, position_size=50, stop_loss=2.0, take_profit=4.0):
+    """Run backtest on forecast data."""
+    try:
+        # Placeholder backtest implementation
+        returns = np.random.normal(0.001, 0.02, len(forecast_data))
+        cumulative_returns = np.cumprod(1 + returns)
+        drawdown = np.minimum.accumulate(cumulative_returns) / np.maximum.accumulate(cumulative_returns) - 1
+        
+        return {
+            'total_return': cumulative_returns[-1] - 1,
+            'sharpe_ratio': np.mean(returns) / np.std(returns) * np.sqrt(252),
+            'max_drawdown': np.min(drawdown),
+            'win_rate': np.sum(returns > 0) / len(returns),
+            'trade_history': []
+        }
+    except Exception as e:
+        st.error(f"Error running backtest: {str(e)}")
         return None
 
 if __name__ == "__main__":

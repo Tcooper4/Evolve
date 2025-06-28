@@ -126,4 +126,51 @@ class XGBoostForecaster(BaseModel):
             for col in self.config['feature_columns']:
                 feature_names.append(f"{col}_t{i}")
         
-        return dict(zip(feature_names, self.model.feature_importances_)) 
+        return dict(zip(feature_names, self.model.feature_importances_))
+
+class XGBoostModel(BaseModel):
+    """XGBoost model for time series forecasting (alias for XGBoostForecaster)."""
+    
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize XGBoost model.
+        
+        Args:
+            config: Model configuration dictionary
+        """
+        super().__init__(config)
+        self.forecaster = XGBoostForecaster(config)
+        self.is_fitted = False
+    
+    def fit(self, data: pd.DataFrame) -> 'XGBoostModel':
+        """Fit the model to the data.
+        
+        Args:
+            data: Training data
+            
+        Returns:
+            Self for chaining
+        """
+        self.forecaster.fit(data)
+        self.is_fitted = True
+        return self
+    
+    def predict(self, data: pd.DataFrame) -> np.ndarray:
+        """Make predictions.
+        
+        Args:
+            data: Input data
+            
+        Returns:
+            Predictions
+        """
+        if not self.is_fitted:
+            raise ValueError("Model must be fitted before making predictions")
+        return self.forecaster.predict(data)
+    
+    def get_feature_importance(self) -> Dict[str, float]:
+        """Get feature importance scores.
+        
+        Returns:
+            Dictionary of feature importance scores
+        """
+        return self.forecaster.get_feature_importance() 

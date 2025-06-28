@@ -281,10 +281,10 @@ summary = st.session_state.portfolio_manager.get_performance_summary()
 
 # Display key metrics
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total Return", f"{summary['total_return']:.2%}")
-col2.metric("Sharpe Ratio", f"{summary['sharpe_ratio']:.2f}")
-col3.metric("Max Drawdown", f"{summary['max_drawdown']:.2%}")
-col4.metric("Win Rate", f"{summary['win_rate']:.2%}")
+col1.metric("Total PnL", f"{summary.get('total_pnl', 0):.2f}")
+col2.metric("Sharpe Ratio", f"{summary.get('sharpe_ratio', 0):.2f}")
+col3.metric("Max Drawdown", f"{summary.get('max_drawdown', 0):.2f}")
+col4.metric("Win Rate", f"{summary.get('win_rate', 0):.2%}")
 
 # Position Summary
 st.header("Position Summary")
@@ -310,19 +310,19 @@ tab1, tab2, tab3 = st.tabs(["Equity Curve", "Rolling Metrics", "Strategy Perform
 with tab1:
     st.plotly_chart(plot_equity_curve(
         st.session_state.portfolio_manager.state.closed_positions
-    ))
+    ), key="equity_curve")
 
 with tab2:
     window = st.slider("Rolling Window", 5, 100, 20)
     st.plotly_chart(plot_rolling_metrics(
         st.session_state.portfolio_manager.state.closed_positions,
         window=window
-    ))
+    ), key="rolling_metrics")
 
 with tab3:
     st.plotly_chart(plot_strategy_performance(
         st.session_state.portfolio_manager.state.closed_positions
-    ))
+    ), key="strategy_performance")
 
 # Export Options
 st.sidebar.subheader("Export Options")

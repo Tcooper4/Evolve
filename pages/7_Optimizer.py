@@ -32,7 +32,16 @@ def main():
     # Initialize components
     strategy_switcher = StrategySwitcher()
     memory_logger = MemoryLogger()
-    optimizer = StrategyOptimizer(strategy_switcher, memory_logger)
+    
+    # Create optimizer config
+    optimizer_config = {
+        "name": "strategy_optimizer",
+        "optimizer_type": "bayesian",
+        "n_initial_points": 10,
+        "n_iterations": 50,
+        "primary_metric": "sharpe_ratio"
+    }
+    optimizer = StrategyOptimizer(optimizer_config)
     
     # Sidebar configuration
     st.sidebar.header("Optimization Settings")
