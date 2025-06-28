@@ -129,6 +129,9 @@ class GeneticOptimizer(BaseOptimizer):
         """
         return self.best_params
     
+    def plot_results(self, *args, **kwargs):
+        print("Plotting not implemented yet.")
+    
     def _evaluate_individual(self, individual: List[float], strategy: str, data: Dict) -> Tuple[float]:
         """Evaluate an individual's fitness.
         

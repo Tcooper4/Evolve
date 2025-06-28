@@ -38,7 +38,7 @@ class DataPipeline:
     def _initialize_components(self):
         """Initialize pipeline components."""
         try:
-            from trading.data_validation import DataValidator
+            from .data_validation import DataValidator
             self.validator = DataValidator()
             logger.info("DataValidator initialized successfully")
         except ImportError:

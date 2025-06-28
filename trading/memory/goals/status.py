@@ -216,7 +216,8 @@ class GoalStatusTracker:
                     })
             except ValueError as e:
                 logger.warning(f"Could not parse target date for alert calculation: {e}")
-                pass
+                logging.error(f"Error in {__file__}: {e}")
+                raise
         
         return alerts
     
@@ -442,7 +443,8 @@ def _check_alerts(goals_data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 })
         except ValueError as e:
             logger.warning(f"Could not parse target date for alert calculation: {e}")
-            pass
+            logging.error(f"Error in {__file__}: {e}")
+            raise
     
     return alerts
 

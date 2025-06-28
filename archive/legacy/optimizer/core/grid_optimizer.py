@@ -75,6 +75,9 @@ class GridOptimizer(BaseOptimizer):
         """
         return self.best_params
     
+    def plot_results(self, *args, **kwargs):
+        print("Plotting not implemented yet.")
+    
     def _evaluate_params(self, strategy: str, params: Dict, data: Dict) -> float:
         """Evaluate a set of parameters.
         
