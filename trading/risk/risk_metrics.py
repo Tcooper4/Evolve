@@ -132,55 +132,60 @@ def plot_risk_metrics(
     )
     
     # Sharpe Ratio
-    fig.add_trace(
-        go.Scatter(
-            x=metrics.index,
-            y=metrics['sharpe_ratio'],
-            name="Sharpe Ratio"
-        ),
-        row=1, col=1
-    )
+    if 'sharpe_ratio' in metrics.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=metrics.index,
+                y=metrics['sharpe_ratio'],
+                name="Sharpe Ratio"
+            ),
+            row=1, col=1
+        )
     
     # Volatility
-    fig.add_trace(
-        go.Scatter(
-            x=metrics.index,
-            y=metrics['volatility'],
-            name="Volatility"
-        ),
-        row=1, col=2
-    )
+    if 'volatility' in metrics.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=metrics.index,
+                y=metrics['volatility'],
+                name="Volatility"
+            ),
+            row=1, col=2
+        )
     
     # Sortino Ratio
-    fig.add_trace(
-        go.Scatter(
-            x=metrics.index,
-            y=metrics['sortino_ratio'],
-            name="Sortino Ratio"
-        ),
-        row=2, col=1
-    )
+    if 'sortino_ratio' in metrics.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=metrics.index,
+                y=metrics['sortino_ratio'],
+                name="Sortino Ratio"
+            ),
+            row=2, col=1
+        )
     
     # Max Drawdown
-    fig.add_trace(
-        go.Scatter(
-            x=metrics.index,
-            y=metrics['max_drawdown'],
-            name="Max Drawdown",
-            fill='tozeroy'
-        ),
-        row=2, col=2
-    )
+    if 'max_drawdown' in metrics.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=metrics.index,
+                y=metrics['max_drawdown'],
+                name="Max Drawdown",
+                fill='tozeroy'
+            ),
+            row=2, col=2
+        )
     
     # Calmar Ratio
-    fig.add_trace(
-        go.Scatter(
-            x=metrics.index,
-            y=metrics['calmar_ratio'],
-            name="Calmar Ratio"
-        ),
-        row=3, col=1
-    )
+    if 'calmar_ratio' in metrics.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=metrics.index,
+                y=metrics['calmar_ratio'],
+                name="Calmar Ratio"
+            ),
+            row=3, col=1
+        )
     
     # Update layout
     fig.update_layout(

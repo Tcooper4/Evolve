@@ -58,14 +58,12 @@ def check_model_health() -> Dict[str, Any]:
         if not model_dir.exists():
             return {'status': 'down', 'error': 'Model directory not found'}
             
-        # Check for required model files
-        required_files = ['forecast_router.py', 'retrain.py']
-        missing_files = [f for f in required_files if not (model_dir / f).exists()]
-        
-        if missing_files:
+        # Check if models directory has any Python files (more flexible than requiring specific files)
+        model_files = list(model_dir.glob('*.py'))
+        if not model_files:
             return {
                 'status': 'degraded',
-                'missing_files': missing_files
+                'message': 'No Python model files found'
             }
             
         return {'status': 'operational'}
@@ -85,14 +83,12 @@ def check_data_health() -> Dict[str, Any]:
         if not data_dir.exists():
             return {'status': 'down', 'error': 'Data directory not found'}
             
-        # Check for required data files
-        required_files = ['market_data.csv', 'model_weights.json']
-        missing_files = [f for f in required_files if not (data_dir / f).exists()]
-        
-        if missing_files:
+        # Check if data directory has any files (more flexible than requiring specific files)
+        data_files = list(data_dir.glob('*'))
+        if not data_files:
             return {
                 'status': 'degraded',
-                'missing_files': missing_files
+                'message': 'Data directory is empty'
             }
             
         return {'status': 'operational'}

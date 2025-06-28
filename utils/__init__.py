@@ -1,5 +1,5 @@
 """
-Utilities module for common helper functions and tools.
+Utility modules for the trading system.
 """
 
 from tools.encoding_utils import check_encoding, convert_to_utf8

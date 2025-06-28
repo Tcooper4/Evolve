@@ -259,34 +259,36 @@ class PromptRouterAgent:
         return args
 
     def parse_intent(self, prompt: str) -> ParsedIntent:
-        """
-        Parse intent with fallback logic.
+        """Parse intent using the best available provider.
         
         Args:
-            prompt: User prompt to parse
+            prompt: User input prompt
             
         Returns:
-            ParsedIntent object with intent, confidence, and arguments
+            ParsedIntent with intent and arguments
         """
-        logger.info(f"Parsing intent for prompt: {prompt[:100]}...")
-        
         # Try OpenAI first
         if openai and self.openai_api_key:
             result = self.parse_intent_openai(prompt)
-            if result and result.intent != 'unknown':
-                logger.info(f"✅ OpenAI parsed intent: {result.intent} (confidence: {result.confidence})")
+            if result and result.confidence > 0.8:
+                logger.info(f"✅ OpenAI parsing successful: {result.intent} (confidence: {result.confidence:.1%})")
                 return result
+            elif result:
+                logger.warning(f"⚠️ OpenAI parsing low confidence: {result.intent} (confidence: {result.confidence:.1%})")
         
-        # Try HuggingFace second
+        # Try HuggingFace next
         if self.hf_pipeline:
             result = self.parse_intent_huggingface(prompt)
-            if result and result.intent != 'unknown':
-                logger.info(f"✅ HuggingFace parsed intent: {result.intent} (confidence: {result.confidence})")
+            if result and result.confidence > 0.7:
+                logger.info(f"✅ HuggingFace parsing successful: {result.intent} (confidence: {result.confidence:.1%})")
                 return result
+            elif result:
+                logger.warning(f"⚠️ HuggingFace parsing low confidence: {result.intent} (confidence: {result.confidence:.1%})")
         
         # Fallback to regex
+        logger.warning("⚠️ Fallback model used due to unavailable capability - using regex parsing")
         result = self.parse_intent_regex(prompt)
-        logger.info(f"✅ Regex parsed intent: {result.intent} (confidence: {result.confidence})")
+        logger.info(f"✅ Regex fallback parsing: {result.intent} (confidence: {result.confidence:.1%})")
         return result
 
     def route(self, prompt: str, agents: Dict[str, Any]) -> Dict[str, Any]:

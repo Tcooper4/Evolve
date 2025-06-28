@@ -315,9 +315,8 @@ def main():
             
             # Log strategy decision
             log_strategy_decision(
-                ticker=ticker,
-                selected_model=selected_model,
-                is_agentic=True,
+                strategy_name=selected_model,
+                decision="forecast_generated",
                 confidence=confidence
             )
         else:
@@ -331,9 +330,8 @@ def main():
             
             # Log strategy decision
             log_strategy_decision(
-                ticker=ticker,
-                selected_model=selected_model,
-                is_agentic=False,
+                strategy_name=selected_model,
+                decision="forecast_generated",
                 confidence=confidence
             )
 

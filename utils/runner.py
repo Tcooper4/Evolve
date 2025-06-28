@@ -1,55 +1,32 @@
 """
-Main Streamlit Application
-
-This is the entry point for the Agentic Forecasting System dashboard.
-Provides a web interface for financial forecasting and trading strategy analysis.
+Shared runner utilities for the trading system.
+Consolidates common run logic to avoid duplication.
 """
 
+import logging
 import streamlit as st
 import importlib
 from typing import Dict, Any, Optional
-import logging
-import pandas as pd
 from datetime import datetime
 
-# Import consolidated runner
-try:
-    from utils.runner import run_app
-    CONSOLIDATED_RUNNER_AVAILABLE = True
-except ImportError:
-    CONSOLIDATED_RUNNER_AVAILABLE = False
-    logger.warning("Consolidated runner not available - using legacy app structure")
-
-# Import PromptAgent for agentic routing
-try:
-    from trading.agents.prompt_router_agent import PromptRouterAgent
-    PROMPT_AGENT_AVAILABLE = True
-except ImportError:
-    PROMPT_AGENT_AVAILABLE = False
-    logger.warning("PromptRouterAgent not available - using fallback routing")
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Page configuration
-st.set_page_config(
-    page_title="Evolve - Agentic Forecasting System",
-    page_icon="🔮",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Navigation configuration
-PAGES: Dict[str, str] = {
-    "Home": "home",
-    "Forecasting": "forecast",
-    "Performance Tracker": "performance_tracker",
-    "Strategy": "strategy",
-    "System Scorecard": "5_📊_System_Scorecard",
-    "Settings": "settings"
-}
-
+def run_app() -> None:
+    """Main application runner with shared logic."""
+    try:
+        # Initialize session state
+        initialize_session_state()
+        
+        # Initialize system modules
+        module_status = initialize_system_modules()
+        
+        # Run the main application
+        main_application_loop(module_status)
+        
+    except Exception as e:
+        st.error(f"Application error: {str(e)}")
+        logger.error(f"Application error: {e}")
+        st.info("Please check the logs for more details.")
 
 def initialize_session_state() -> None:
     """Initialize all session state variables with default values."""
@@ -133,14 +110,8 @@ def initialize_session_state() -> None:
     if "top_n" not in st.session_state:
         st.session_state.top_n = 10
 
-
 def initialize_system_modules() -> Dict[str, Any]:
-    """
-    Initialize all system modules and return their status.
-    
-    Returns:
-        Dictionary with module initialization status
-    """
+    """Initialize all system modules and return their status."""
     module_status = {
         "goal_status": {"available": False, "error": None},
         "optimizer_consolidator": {"available": False, "error": None},
@@ -217,14 +188,61 @@ def initialize_system_modules() -> Dict[str, Any]:
     
     return module_status
 
+def main_application_loop(module_status: Dict[str, Any]) -> None:
+    """Main application loop with navigation and page rendering."""
+    # Navigation configuration
+    PAGES: Dict[str, str] = {
+        "Home": "home",
+        "Forecasting": "forecast",
+        "Performance Tracker": "performance_tracker",
+        "Strategy": "strategy",
+        "System Scorecard": "5_📊_System_Scorecard",
+        "Settings": "settings"
+    }
+    
+    # Sidebar navigation
+    st.sidebar.title("🔮 Navigation")
+    st.sidebar.markdown("---")
+    
+    selection = st.sidebar.radio(
+        "🔍 Navigate",
+        list(PAGES.keys()),
+        index=0
+    )
+    
+    selected_page = PAGES[selection]
+    
+    # Display system status in sidebar
+    display_system_status(module_status)
+    
+    # Display goal status in sidebar
+    display_goal_status(module_status)
+    
+    # Main content area
+    if selection == "Home":
+        render_home_page(module_status)
+    else:
+        # Load and execute page module
+        page_module = load_page_module(selected_page)
+        
+        if page_module is not None:
+            try:
+                if callable(page_module):
+                    page_module()
+                else:
+                    page_module.main()
+            except AttributeError:
+                st.error(f"Page module '{selected_page}' does not have a main() function")
+                st.info("Please ensure the page module has a properly defined main() function.")
+            except Exception as e:
+                st.error(f"Error executing page '{selected_page}': {str(e)}")
+                logger.error(f"Page execution error: {e}")
+        else:
+            st.error(f"Page '{selected_page}' not found or could not be loaded")
+            st.info("Please ensure the page module exists and can be imported.")
 
 def display_system_status(module_status: Dict[str, Any]) -> None:
-    """
-    Display system status in the sidebar.
-    
-    Args:
-        module_status: Dictionary with module status information
-    """
+    """Display system status in the sidebar."""
     st.sidebar.markdown("---")
     st.sidebar.subheader("🔧 System Status")
     
@@ -250,14 +268,8 @@ def display_system_status(module_status: Dict[str, Any]) -> None:
                 if status["error"]:
                     st.caption(f"Error: {status['error'][:50]}...")
 
-
 def display_goal_status(module_status: Dict[str, Any]) -> None:
-    """
-    Display goal status in the sidebar.
-    
-    Args:
-        module_status: Dictionary with module status information
-    """
+    """Display goal status in the sidebar."""
     if not module_status["goal_status"]["available"]:
         return
     
@@ -297,16 +309,8 @@ def display_goal_status(module_status: Dict[str, Any]) -> None:
     except Exception as e:
         st.sidebar.error(f"Error loading goal status: {str(e)}")
 
-
 def load_page_module(page_name: str) -> Optional[Any]:
-    """Dynamically load a page module.
-    
-    Args:
-        page_name: Name of the page module to load
-        
-    Returns:
-        Loaded module or None if loading fails
-    """
+    """Dynamically load a page module."""
     try:
         if page_name == "performance_tracker":
             from pages import performance_tracker
@@ -331,7 +335,6 @@ def load_page_module(page_name: str) -> Optional[Any]:
         logger.error(f"Unexpected error loading page '{page_name}': {e}")
         return None
 
-
 def render_home_page(module_status: Dict[str, Any]) -> None:
     """Render the home page with welcome message and navigation guide."""
     st.title("🔮 Evolve: Agentic Forecasting System")
@@ -340,13 +343,17 @@ def render_home_page(module_status: Dict[str, Any]) -> None:
     st.subheader("🤖 Ask Anything - Agentic Interface")
     
     # Initialize PromptAgent if available
-    if PROMPT_AGENT_AVAILABLE and "prompt_agent" not in st.session_state:
-        try:
+    try:
+        from trading.agents.prompt_router_agent import PromptRouterAgent
+        if "prompt_agent" not in st.session_state:
             st.session_state.prompt_agent = PromptRouterAgent()
             st.success("✅ Agentic routing initialized")
-        except Exception as e:
-            st.warning(f"⚠️ Agentic routing initialization failed: {e}")
-            st.session_state.prompt_agent = None
+    except ImportError:
+        st.warning("⚠️ PromptRouterAgent not available - using fallback routing")
+        st.session_state.prompt_agent = None
+    except Exception as e:
+        st.warning(f"⚠️ Agentic routing initialization failed: {e}")
+        st.session_state.prompt_agent = None
     
     # Prompt input
     prompt = st.text_input("Ask anything about forecasting, trading, or analysis...", 
@@ -410,73 +417,11 @@ def render_home_page(module_status: Dict[str, Any]) -> None:
     - **Unified Access**: All features accessible through commands, UI, or prompts
     """)
 
-
-def main() -> None:
-    """Main application entry point."""
-    if CONSOLIDATED_RUNNER_AVAILABLE:
-        # Use consolidated runner
-        run_app()
-    else:
-        # Fallback to legacy structure
-        logger.warning("⚠️ Fallback model used due to unavailable capability - using legacy app structure")
-        legacy_main()
-
-
-def legacy_main() -> None:
-    """Legacy main function for fallback."""
+def validate_consolidation() -> bool:
+    """Validate that consolidation is working properly."""
     try:
-        # Initialize session state
-        initialize_session_state()
-        
-        # Initialize system modules
-        module_status = initialize_system_modules()
-        
-        # Sidebar navigation
-        st.sidebar.title("🔮 Navigation")
-        st.sidebar.markdown("---")
-        
-        selection = st.sidebar.radio(
-            "🔍 Navigate",
-            list(PAGES.keys()),
-            index=0
-        )
-        
-        selected_page = PAGES[selection]
-        
-        # Display system status in sidebar
-        display_system_status(module_status)
-        
-        # Display goal status in sidebar
-        display_goal_status(module_status)
-        
-        # Main content area
-        if selection == "Home":
-            render_home_page(module_status)
-        else:
-            # Load and execute page module
-            page_module = load_page_module(selected_page)
-            
-            if page_module is not None:
-                try:
-                    if callable(page_module):
-                        page_module()
-                    else:
-                        page_module.main()
-                except AttributeError:
-                    st.error(f"Page module '{selected_page}' does not have a main() function")
-                    st.info("Please ensure the page module has a properly defined main() function.")
-                except Exception as e:
-                    st.error(f"Error executing page '{selected_page}': {str(e)}")
-                    logger.error(f"Page execution error: {e}")
-            else:
-                st.error(f"Page '{selected_page}' not found or could not be loaded")
-                st.info("Please ensure the page module exists and can be imported.")
-                
-    except Exception as e:
-        st.error(f"Application error: {str(e)}")
-        logger.error(f"Application error: {e}")
-        st.info("Please check the logs for more details.")
-
-
-if __name__ == "__main__":
-    main()
+        # Check if all required modules are available
+        from utils.runner import run_app, initialize_session_state, initialize_system_modules
+        return True
+    except ImportError:
+        return False 

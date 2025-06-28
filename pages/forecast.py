@@ -77,3 +77,7 @@ def render_forecast_page():
 if __name__ == "__main__":
     render_forecast_page()
 
+def main():
+    """Main function for the forecast page."""
+    render_forecast_page()
+
