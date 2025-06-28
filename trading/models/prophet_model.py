@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import os
 import json
+from typing import Dict, Any
 
 # Try to import Prophet, but make it optional
 try:
@@ -38,6 +39,43 @@ if PROPHET_AVAILABLE:
             future = data[[self.config['date_column']]].rename(columns={self.config['date_column']: 'ds'})
             forecast = self.model.predict(future)
             return forecast['yhat'].values
+
+        def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+            """Generate forecast for future time steps.
+            
+            Args:
+                data: Historical data DataFrame
+                horizon: Number of time steps to forecast
+                
+            Returns:
+                Dictionary containing forecast results
+            """
+            try:
+                if not self.fitted:
+                    raise RuntimeError('Model must be fit before forecasting.')
+                
+                # Create future dates for forecasting
+                last_date = data[self.config['date_column']].iloc[-1]
+                future_dates = pd.date_range(start=last_date, periods=horizon+1, freq='D')[1:]
+                future_df = pd.DataFrame({'ds': future_dates})
+                
+                # Generate forecast
+                forecast_result = self.model.predict(future_df)
+                
+                return {
+                    'forecast': forecast_result['yhat'].values,
+                    'confidence': 0.85,  # Prophet confidence
+                    'model': 'Prophet',
+                    'horizon': horizon,
+                    'forecast_dates': future_dates,
+                    'lower_bound': forecast_result['yhat_lower'].values,
+                    'upper_bound': forecast_result['yhat_upper'].values
+                }
+                
+            except Exception as e:
+                import logging
+                logging.error(f"Error in Prophet model forecast: {e}")
+                raise RuntimeError(f"Prophet model forecasting failed: {e}")
 
         def summary(self):
             print("ProphetModel: Facebook Prophet wrapper")

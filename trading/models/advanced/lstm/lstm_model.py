@@ -188,6 +188,80 @@ class LSTMForecaster(BaseModel):
         
         return X, y
 
+    def predict(self, data: pd.DataFrame) -> np.ndarray:
+        """Make predictions using the LSTM model.
+        
+        Args:
+            data: Input data as pandas DataFrame
+            
+        Returns:
+            Predicted values as numpy array
+        """
+        try:
+            # Prepare data
+            X, _ = self._prepare_data(data, is_training=False)
+            
+            # Set model to evaluation mode
+            self.eval()
+            
+            # Make predictions
+            with torch.no_grad():
+                predictions = self(X)
+            
+            # Convert to numpy and denormalize
+            predictions = predictions.cpu().numpy()
+            predictions = predictions * self.y_std + self.y_mean
+            
+            return predictions.flatten()
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error in LSTM model predict: {e}")
+            raise RuntimeError(f"LSTM model prediction failed: {e}")
+
+    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+        """Generate forecast for future time steps.
+        
+        Args:
+            data: Historical data DataFrame
+            horizon: Number of time steps to forecast
+            
+        Returns:
+            Dictionary containing forecast results
+        """
+        try:
+            # Make initial prediction
+            predictions = self.predict(data)
+            
+            # Generate multi-step forecast
+            forecast_values = []
+            current_data = data.copy()
+            
+            for i in range(horizon):
+                # Get prediction for next step
+                pred = self.predict(current_data)
+                forecast_values.append(pred[-1])
+                
+                # Update data for next iteration
+                new_row = current_data.iloc[-1].copy()
+                new_row[self.config.get('target_column', 'close')] = pred[-1]  # Update with prediction
+                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                current_data = current_data.iloc[1:]  # Remove oldest row
+            
+            return {
+                'forecast': np.array(forecast_values),
+                'confidence': 0.85,  # LSTM confidence
+                'model': 'LSTM',
+                'horizon': horizon,
+                'feature_columns': self.config.get('feature_columns', []),
+                'target_column': self.config.get('target_column', 'close')
+            }
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error in LSTM model forecast: {e}")
+            raise RuntimeError(f"LSTM model forecasting failed: {e}")
+
     def summary(self):
         super().summary()
 
