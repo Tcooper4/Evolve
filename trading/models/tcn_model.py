@@ -2,6 +2,7 @@
 
 # Standard library imports
 from typing import Any, Dict, List, Optional, Tuple
+import logging
 
 # Third-party imports
 import numpy as np
@@ -253,4 +254,149 @@ class TCNModel(BaseModel):
         })
         self.fit(df.iloc[:80], df.iloc[80:])
         y_pred = self.predict(df.iloc[80:])
-        print('Synthetic test MSE:', ((y_pred.flatten() - df['close'].iloc[80:].values) ** 2).mean()) 
+        print('Synthetic test MSE:', ((y_pred.flatten() - df['close'].iloc[80:].values) ** 2).mean())
+
+    def fit(self, data: pd.DataFrame, epochs: int = 100, batch_size: int = 32, 
+            learning_rate: float = 0.001) -> Dict[str, List[float]]:
+        """Fit the TCN model to the data.
+        
+        Args:
+            data: Training data DataFrame
+            epochs: Number of training epochs
+            batch_size: Batch size for training
+            learning_rate: Learning rate for optimizer
+            
+        Returns:
+            Dictionary containing training history
+        """
+        try:
+            # Prepare data
+            X, y = self._prepare_data(data, is_training=True)
+            
+            # Setup optimizer and loss function
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+            criterion = nn.MSELoss()
+            
+            # Training history
+            history = {'train_loss': []}
+            
+            # Training loop
+            self.model.train()
+            for epoch in range(epochs):
+                # Forward pass
+                optimizer.zero_grad()
+                outputs = self.model(X)
+                loss = criterion(outputs, y)
+                
+                # Backward pass
+                loss.backward()
+                optimizer.step()
+                
+                # Record loss
+                history['train_loss'].append(loss.item())
+                
+                # Log progress
+                if (epoch + 1) % 10 == 0:
+                    print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
+            
+            return history
+            
+        except Exception as e:
+            logging.error(f"Error in TCN model fit: {e}")
+            raise RuntimeError(f"TCN model fitting failed: {e}")
+
+    def predict(self, data: pd.DataFrame) -> np.ndarray:
+        """Make predictions using the fitted TCN model.
+        
+        Args:
+            data: Input data DataFrame
+            
+        Returns:
+            Numpy array of predictions
+        """
+        try:
+            # Prepare data
+            X, _ = self._prepare_data(data, is_training=False)
+            
+            # Make predictions
+            self.model.eval()
+            with torch.no_grad():
+                predictions = self.model(X)
+            
+            # Convert to numpy and denormalize
+            predictions = predictions.cpu().numpy()
+            predictions = predictions * self.y_std + self.y_mean
+            
+            return predictions.flatten()
+            
+        except Exception as e:
+            logging.error(f"Error in TCN model predict: {e}")
+            raise RuntimeError(f"TCN model prediction failed: {e}")
+
+    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+        """Generate forecast for future time steps.
+        
+        Args:
+            data: Historical data DataFrame
+            horizon: Number of time steps to forecast
+            
+        Returns:
+            Dictionary containing forecast results
+        """
+        try:
+            # Make initial prediction
+            predictions = self.predict(data)
+            
+            # Generate multi-step forecast
+            forecast_values = []
+            current_data = data.copy()
+            
+            for i in range(horizon):
+                # Get prediction for next step
+                pred = self.predict(current_data)
+                forecast_values.append(pred[-1])
+                
+                # Update data for next iteration (simple approach)
+                # In a production system, you might want more sophisticated handling
+                new_row = current_data.iloc[-1].copy()
+                new_row['close'] = pred[-1]  # Update with prediction
+                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                current_data = current_data.iloc[1:]  # Remove oldest row
+            
+            return {
+                'forecast': np.array(forecast_values),
+                'confidence': 0.8,  # Placeholder confidence
+                'model': 'TCN',
+                'horizon': horizon
+            }
+            
+        except Exception as e:
+            logging.error(f"Error in TCN model forecast: {e}")
+            raise RuntimeError(f"TCN model forecasting failed: {e}")
+
+    def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> None:
+        """Plot model results and predictions.
+        
+        Args:
+            data: Input data DataFrame
+            predictions: Optional predictions to plot
+        """
+        try:
+            import matplotlib.pyplot as plt
+            
+            if predictions is None:
+                predictions = self.predict(data)
+            
+            plt.figure(figsize=(12, 6))
+            plt.plot(data.index, data[self.config['target_column']], label='Actual', color='blue')
+            plt.plot(data.index[self.config['sequence_length']:], predictions, label='Predicted', color='red')
+            plt.title('TCN Model Predictions')
+            plt.xlabel('Time')
+            plt.ylabel('Value')
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+            
+        except Exception as e:
+            logging.error(f"Error plotting TCN results: {e}")
+            print(f"Could not plot results: {e}") 
