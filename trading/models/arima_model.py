@@ -170,7 +170,9 @@ class ARIMAModel(BaseModel):
                         if aic < best_aic:
                             best_aic = aic
                             best_order = (p, d, q)
-                    except:
+                    except Exception as e:
+                        import logging
+                        logging.error(f"Error fitting ARIMA model with order {(p, d, q)}: {e}")
                         continue
         
         return best_order
@@ -200,4 +202,111 @@ class ARIMAModel(BaseModel):
             self.fitted_model = ARIMAResults.load(filepath)
             self.is_fitted = True
         except Exception as e:
-            print(f"Error loading model: {e}") 
+            print(f"Error loading model: {e}")
+
+    def forecast(self, data: pd.Series, horizon: int = 30) -> Dict[str, Any]:
+        """Generate forecast for future time steps.
+        
+        Args:
+            data: Historical time series data
+            horizon: Number of time steps to forecast
+            
+        Returns:
+            Dictionary containing forecast results
+        """
+        try:
+            if not self.is_fitted:
+                # Fit the model if not already fitted
+                self.fit(data)
+            
+            # Generate forecast
+            forecast_result = self.fitted_model.forecast(steps=horizon)
+            
+            return {
+                'forecast': forecast_result.values,
+                'confidence': 0.8,  # ARIMA confidence
+                'model': 'ARIMA',
+                'horizon': horizon,
+                'order': self.order,
+                'seasonal_order': self.seasonal_order,
+                'aic': self.get_aic(),
+                'bic': self.get_bic()
+            }
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error in ARIMA model forecast: {e}")
+            raise RuntimeError(f"ARIMA model forecasting failed: {e}")
+
+    def plot_results(self, data: pd.Series, predictions: np.ndarray = None) -> None:
+        """Plot ARIMA model results and predictions.
+        
+        Args:
+            data: Input time series data
+            predictions: Optional predictions to plot
+        """
+        try:
+            import matplotlib.pyplot as plt
+            
+            if predictions is None:
+                predictions = self.predict(steps=len(data))
+            
+            plt.figure(figsize=(15, 10))
+            
+            # Plot 1: Historical vs Predicted
+            plt.subplot(2, 2, 1)
+            plt.plot(data.index, data.values, label='Actual', color='blue')
+            plt.plot(data.index[-len(predictions):], predictions, label='Predicted', color='red')
+            plt.title('ARIMA Model Predictions')
+            plt.xlabel('Time')
+            plt.ylabel('Value')
+            plt.legend()
+            plt.grid(True)
+            
+            # Plot 2: Residuals
+            plt.subplot(2, 2, 2)
+            if len(predictions) == len(data):
+                residuals = data.values - predictions
+                plt.plot(residuals)
+                plt.title('Model Residuals')
+                plt.xlabel('Time')
+                plt.ylabel('Residual')
+                plt.grid(True)
+            else:
+                plt.text(0.5, 0.5, 'Residuals not available', 
+                        ha='center', va='center', transform=plt.gca().transAxes)
+                plt.title('Model Residuals')
+            
+            # Plot 3: ACF of residuals
+            plt.subplot(2, 2, 3)
+            if self.is_fitted:
+                try:
+                    residuals = self.fitted_model.resid
+                    plot_acf(residuals, ax=plt.gca(), lags=40)
+                    plt.title('ACF of Residuals')
+                except:
+                    plt.text(0.5, 0.5, 'ACF not available', 
+                            ha='center', va='center', transform=plt.gca().transAxes)
+                    plt.title('ACF of Residuals')
+            else:
+                plt.text(0.5, 0.5, 'Model not fitted', 
+                        ha='center', va='center', transform=plt.gca().transAxes)
+                plt.title('ACF of Residuals')
+            
+            # Plot 4: Model information
+            plt.subplot(2, 2, 4)
+            plt.text(0.1, 0.8, f'Model: ARIMA{self.order}', fontsize=12)
+            if self.seasonal_order:
+                plt.text(0.1, 0.6, f'Seasonal: {self.seasonal_order}', fontsize=12)
+            plt.text(0.1, 0.4, f'AIC: {self.get_aic():.2f}', fontsize=12)
+            plt.text(0.1, 0.2, f'BIC: {self.get_bic():.2f}', fontsize=12)
+            plt.title('Model Information')
+            plt.axis('off')
+            
+            plt.tight_layout()
+            plt.show()
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error plotting ARIMA results: {e}")
+            print(f"Could not plot results: {e}") 

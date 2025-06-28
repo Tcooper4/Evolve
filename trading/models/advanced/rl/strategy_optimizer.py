@@ -9,6 +9,7 @@ from pathlib import Path
 import json
 from collections import deque
 import random
+import logging
 
 class StrategyOptimizer(ABC):
     def __init__(self, state_dim: int, action_dim: int, config: Dict[str, Any]):
@@ -251,4 +252,74 @@ class DQNStrategyOptimizer(StrategyOptimizer):
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         self.steps_done = checkpoint['steps_done']
         self.epsilon = checkpoint['epsilon']
-        self.config = checkpoint['config'] 
+        self.config = checkpoint['config']
+
+    def plot_results(self, *args, **kwargs):
+        """Plot training results and performance metrics.
+        
+        Args:
+            *args: Additional arguments
+            **kwargs: Additional keyword arguments
+        """
+        try:
+            import matplotlib.pyplot as plt
+            
+            # Create subplots for different metrics
+            fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+            fig.suptitle('DQN Strategy Optimizer Results', fontsize=16)
+            
+            # Plot 1: Training loss over time
+            if hasattr(self, 'loss_history'):
+                axes[0, 0].plot(self.loss_history)
+                axes[0, 0].set_title('Training Loss')
+                axes[0, 0].set_xlabel('Training Steps')
+                axes[0, 0].set_ylabel('Loss')
+                axes[0, 0].grid(True)
+            else:
+                axes[0, 0].text(0.5, 0.5, 'No loss history available', 
+                               ha='center', va='center', transform=axes[0, 0].transAxes)
+                axes[0, 0].set_title('Training Loss')
+            
+            # Plot 2: Epsilon decay
+            if hasattr(self, 'epsilon_history'):
+                axes[0, 1].plot(self.epsilon_history)
+                axes[0, 1].set_title('Epsilon Decay')
+                axes[0, 1].set_xlabel('Training Steps')
+                axes[0, 1].set_ylabel('Epsilon')
+                axes[0, 1].grid(True)
+            else:
+                axes[0, 1].text(0.5, 0.5, f'Current Epsilon: {self.epsilon:.3f}', 
+                               ha='center', va='center', transform=axes[0, 1].transAxes)
+                axes[0, 1].set_title('Epsilon Decay')
+            
+            # Plot 3: Q-value distribution
+            if hasattr(self, 'q_values_history'):
+                axes[1, 0].hist(self.q_values_history, bins=20, alpha=0.7)
+                axes[1, 0].set_title('Q-Value Distribution')
+                axes[1, 0].set_xlabel('Q-Value')
+                axes[1, 0].set_ylabel('Frequency')
+                axes[1, 0].grid(True)
+            else:
+                axes[1, 0].text(0.5, 0.5, 'No Q-value history available', 
+                               ha='center', va='center', transform=axes[1, 0].transAxes)
+                axes[1, 0].set_title('Q-Value Distribution')
+            
+            # Plot 4: Action distribution
+            if hasattr(self, 'action_history'):
+                action_counts = pd.Series(self.action_history).value_counts()
+                axes[1, 1].bar(action_counts.index, action_counts.values)
+                axes[1, 1].set_title('Action Distribution')
+                axes[1, 1].set_xlabel('Action')
+                axes[1, 1].set_ylabel('Count')
+                axes[1, 1].grid(True)
+            else:
+                axes[1, 1].text(0.5, 0.5, 'No action history available', 
+                               ha='center', va='center', transform=axes[1, 1].transAxes)
+                axes[1, 1].set_title('Action Distribution')
+            
+            plt.tight_layout()
+            plt.show()
+            
+        except Exception as e:
+            logging.error(f"Error plotting DQN results: {e}")
+            print(f"Could not plot results: {e}") 
