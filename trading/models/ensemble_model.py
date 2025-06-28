@@ -7,6 +7,7 @@ import pandas as pd
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
 from .base_model import BaseModel, ModelRegistry
+import logging
 
 # @ModelRegistry.register('Ensemble')
 class EnsembleModel(BaseModel):
@@ -107,8 +108,8 @@ class EnsembleModel(BaseModel):
                 })
                 
             except Exception as e:
-                print(f"Error updating weights for {model_name}: {e}")
-                score = -np.inf
+                logging.error(f"Error updating weights for {model_name}: {e}")
+                raise RuntimeError(f"Failed to update weights for {model_name}: {e}")
         
         # Update weights using softmax
         scores = np.array([h[-1]['score'] for h in self.performance_history.values()])
@@ -163,8 +164,9 @@ class EnsembleModel(BaseModel):
             try:
                 preds = model.predict(data.iloc[-20:])  # Use last 20 points
                 confidences[model_name] = model.calculate_confidence(preds) if hasattr(model, 'calculate_confidence') else 1.0
-            except Exception:
-                confidences[model_name] = 0.0
+            except Exception as e:
+                logging.error(f"Error calculating confidence for {model_name}: {e}")
+                raise RuntimeError(f"Failed to calculate confidence for {model_name}: {e}")
         
         # Update strategy patterns
         self.strategy_patterns[regime] = {
@@ -223,8 +225,8 @@ class EnsembleModel(BaseModel):
                 confidences[model_name] = confidence
                 
             except Exception as e:
-                print(f"Error in {model_name} prediction: {e}")
-                continue
+                logging.error(f"Error in {model_name} prediction: {e}")
+                raise RuntimeError(f"Failed to get prediction from {model_name}: {e}")
         
         if not predictions:
             raise ValueError("All models failed to make predictions")
@@ -328,7 +330,8 @@ class EnsembleModel(BaseModel):
                 try:
                     shap_values[model_name] = model.shap_interpret(data)
                 except Exception as e:
-                    print(f"Error getting SHAP values for {model_name}: {e}")
+                    logging.error(f"Error getting SHAP values for {model_name}: {e}")
+                    raise RuntimeError(f"Failed to get SHAP values for {model_name}: {e}")
         
         if not shap_values:
             raise ValueError("No models support SHAP interpretation")
@@ -338,4 +341,113 @@ class EnsembleModel(BaseModel):
         for model_name, values in shap_values.items():
             weighted_shap += self.weights[model_name] * values
         
-        return weighted_shap 
+        return weighted_shap
+
+    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+        """Generate forecast for future time steps.
+        
+        Args:
+            data: Historical data DataFrame
+            horizon: Number of time steps to forecast
+            
+        Returns:
+            Dictionary containing forecast results
+        """
+        try:
+            # Make initial prediction
+            predictions = self.predict(data)
+            
+            # Generate multi-step forecast
+            forecast_values = []
+            current_data = data.copy()
+            
+            for i in range(horizon):
+                # Get prediction for next step
+                pred = self.predict(current_data)
+                forecast_values.append(pred[-1])
+                
+                # Update data for next iteration
+                new_row = current_data.iloc[-1].copy()
+                new_row['close'] = pred[-1]  # Update with prediction
+                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                current_data = current_data.iloc[1:]  # Remove oldest row
+            
+            return {
+                'forecast': np.array(forecast_values),
+                'confidence': 0.9,  # High confidence for ensemble
+                'model': 'Ensemble',
+                'horizon': horizon,
+                'weights': self.weights,
+                'strategy_patterns': self.strategy_patterns
+            }
+            
+        except Exception as e:
+            logging.error(f"Error in ensemble model forecast: {e}")
+            raise RuntimeError(f"Ensemble model forecasting failed: {e}")
+
+    def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> None:
+        """Plot ensemble model results and predictions.
+        
+        Args:
+            data: Input data DataFrame
+            predictions: Optional predictions to plot
+        """
+        try:
+            import matplotlib.pyplot as plt
+            
+            if predictions is None:
+                predictions = self.predict(data)
+            
+            plt.figure(figsize=(15, 10))
+            
+            # Plot 1: Historical vs Predicted
+            plt.subplot(2, 2, 1)
+            plt.plot(data.index, data['close'], label='Actual', color='blue')
+            plt.plot(data.index[-len(predictions):], predictions, label='Predicted', color='red')
+            plt.title('Ensemble Model Predictions')
+            plt.xlabel('Time')
+            plt.ylabel('Value')
+            plt.legend()
+            plt.grid(True)
+            
+            # Plot 2: Model Weights
+            plt.subplot(2, 2, 2)
+            model_names = list(self.weights.keys())
+            weights = list(self.weights.values())
+            plt.bar(model_names, weights)
+            plt.title('Model Weights')
+            plt.xlabel('Models')
+            plt.ylabel('Weight')
+            plt.xticks(rotation=45)
+            plt.grid(True)
+            
+            # Plot 3: Performance History
+            plt.subplot(2, 2, 3)
+            for model_name, history in self.performance_history.items():
+                if history:
+                    scores = [h['score'] for h in history]
+                    plt.plot(scores, label=model_name)
+            plt.title('Model Performance History')
+            plt.xlabel('Time')
+            plt.ylabel('Score')
+            plt.legend()
+            plt.grid(True)
+            
+            # Plot 4: Strategy Patterns
+            plt.subplot(2, 2, 4)
+            regimes = list(self.strategy_patterns.keys())
+            best_models = [self.strategy_patterns[r]['best_model'] for r in regimes]
+            plt.bar(regimes, [1] * len(regimes))
+            plt.title('Strategy Patterns by Regime')
+            plt.xlabel('Market Regime')
+            plt.ylabel('Count')
+            for i, (regime, model) in enumerate(zip(regimes, best_models)):
+                plt.text(i, 0.5, model, ha='center', va='center')
+            plt.grid(True)
+            
+            plt.tight_layout()
+            plt.show()
+            
+        except Exception as e:
+            logging.error(f"Error plotting ensemble results: {e}")
+            print(f"Could not plot results: {e}") 
