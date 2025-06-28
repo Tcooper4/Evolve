@@ -214,7 +214,8 @@ class GoalStatusTracker:
                         "message": f"Goal deadline in {days_remaining} days",
                         "severity": "medium"
                     })
-            except ValueError:
+            except ValueError as e:
+                logger.warning(f"Could not parse target date for alert calculation: {e}")
                 pass
         
         return alerts
@@ -439,7 +440,8 @@ def _check_alerts(goals_data: Dict[str, Any]) -> List[Dict[str, Any]]:
                     "message": f"Goal deadline in {days_remaining} days",
                     "severity": "medium"
                 })
-        except ValueError:
+        except ValueError as e:
+            logger.warning(f"Could not parse target date for alert calculation: {e}")
             pass
     
     return alerts

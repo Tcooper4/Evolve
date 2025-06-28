@@ -17,6 +17,7 @@ import os
 import sys
 from pathlib import Path
 import warnings
+import re
 
 # Suppress deprecation warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="pandas_ta")
@@ -32,6 +33,9 @@ from core.session_utils import (
     safe_session_set,
     update_last_updated
 )
+
+# Import AgentHub for unified agent routing
+from core.agent_hub import AgentHub
 
 # Import trading components
 from trading.agents.strategy_switcher import StrategySwitcher
@@ -150,9 +154,9 @@ def display_market_analysis(analysis: Dict):
             st.metric("Data Points", analysis.get('data_points', 0))
     
     elif analysis.get("status") == "no_data":
-        st.warning("⚠️ No market data available for analysis")
+        st.warning("No market data available for analysis")
     else:
-        st.error(f"❌ Market analysis failed: {analysis.get('message', 'Unknown error')}")
+        st.error(f"Market analysis failed: {analysis.get('message', 'Unknown error')}")
 
 def generate_market_commentary(analysis: Dict, forecast_data: pd.DataFrame) -> str:
     """Generate market commentary based on analysis and forecast."""
@@ -200,34 +204,96 @@ def generate_market_commentary(analysis: Dict, forecast_data: pd.DataFrame) -> s
 
 def main():
     """Main function for the Forecast & Trade page."""
-    st.set_page_config(
-        page_title="Forecast & Trade",
-        page_icon="📈",
-        layout="wide"
-    )
-
+    
     # Initialize session state
     initialize_session_state()
-
-    # Get system status
-    system_status = get_system_status()
     
-    # Header with status and timestamp
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.title("Forecast & Trade")
-    with col2:
-        st.markdown(
-            f"""
-            <div style="text-align: right;">
-                <p>System Status: {get_status_badge(system_status['status'])}</p>
-                <p>Last Updated: {safe_session_get('last_updated', datetime.now()).strftime('%Y-%m-%d %H:%M:%S')}</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    # Initialize AgentHub for unified agent routing
+    if 'agent_hub' not in st.session_state:
+        st.session_state['agent_hub'] = AgentHub()
     
-    st.markdown("Generate forecasts and execute trades based on model predictions with market context analysis.")
+    agent_hub = st.session_state['agent_hub']
+    
+    # Page header
+    st.title("📈 Forecast & Trade")
+    st.markdown("Generate market forecasts and execute trading strategies with AI-powered insights.")
+    
+    # Natural Language Input Section
+    st.subheader("🤖 AI Agent Interface")
+    st.markdown("Ask questions or request actions using natural language:")
+    
+    user_prompt = st.text_area(
+        "What would you like to know or do?",
+        placeholder="e.g., 'Forecast AAPL for the next 30 days' or 'Analyze market trends for tech stocks'",
+        height=100
+    )
+    
+    if st.button("🚀 Process with AI Agent"):
+        if user_prompt:
+            with st.spinner("Processing your request..."):
+                try:
+                    # Route the prompt through AgentHub
+                    response = agent_hub.route(user_prompt)
+                    
+                    # Display the response
+                    st.subheader("🤖 AI Response")
+                    
+                    if response['type'] == 'forecast':
+                        st.success("📈 Forecast Generated")
+                        st.write(response['content'])
+                        
+                        # Extract ticker and update session state
+                        if 'ticker' in response['content']:
+                            ticker_match = re.search(r'([A-Z]{1,5})', response['content'])
+                            if ticker_match:
+                                st.session_state['ticker'] = ticker_match.group(1)
+                                st.experimental_rerun()
+                    
+                    elif response['type'] == 'trading':
+                        st.success("💰 Trading Analysis")
+                        st.write(response['content'])
+                    
+                    elif response['type'] == 'analysis':
+                        st.success("📊 Market Analysis")
+                        st.write(response['content'])
+                    
+                    elif response['type'] == 'quantitative':
+                        st.success("🧮 Quantitative Analysis")
+                        st.write(response['content'])
+                    
+                    elif response['type'] == 'llm':
+                        st.success("💬 General Response")
+                        st.write(response['content'])
+                    
+                    else:
+                        st.info("📋 Response")
+                        st.write(response['content'])
+                    
+                    # Show agent status
+                    agent_status = agent_hub.get_agent_status()
+                    st.subheader("Agent Status")
+                    for agent_type, status in agent_status.items():
+                        status_icon = "OK" if status['available'] else "FAIL"
+                        st.write(f"{status_icon} {agent_type.title()}: {status['type'] or 'Not Available'}")
+                    
+                except Exception as e:
+                    st.error(f"Error processing request: {e}")
+                    logger.error(f"AgentHub error: {e}")
+        else:
+            st.warning("Please enter a prompt to process.")
+    
+    # Show recent agent interactions
+    recent_interactions = agent_hub.get_recent_interactions(limit=3)
+    if recent_interactions:
+        st.subheader("Recent Interactions")
+        for interaction in recent_interactions:
+            success_icon = "OK" if interaction['success'] else "FAIL"
+            st.write(f"{success_icon} {interaction['agent_type']}: {interaction['prompt'][:50]}...")
+    
+    st.divider()
+    
+    # Original forecast interface
+    st.subheader("📊 Traditional Forecast Interface")
 
     # Sidebar controls
     with st.sidebar:

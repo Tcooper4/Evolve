@@ -27,6 +27,13 @@ warnings.filterwarnings("ignore", category=UserWarning, module="pandas_ta")
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # Import shared utilities
 from core.session_utils import (
     initialize_session_state, 
@@ -37,6 +44,14 @@ from core.session_utils import (
     update_last_updated
 )
 
+# Import AgentHub for unified agent routing
+try:
+    from core.agent_hub import AgentHub
+    AGENT_HUB_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"AgentHub import failed: {e}")
+    AGENT_HUB_AVAILABLE = False
+
 # Import trading components
 from trading.memory.model_monitor import ModelMonitor
 from trading.memory.strategy_logger import StrategyLogger
@@ -45,13 +60,6 @@ from trading.portfolio.portfolio_manager import PortfolioManager
 from trading.portfolio.llm_utils import LLMInterface
 from trading.optimization.performance_logger import PerformanceLogger
 from trading.agents.prompt_router_agent import PromptRouterAgent
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 
 def main():
@@ -66,6 +74,15 @@ def main():
 
     # Initialize session state
     initialize_session_state()
+
+    # Initialize AgentHub if available
+    if AGENT_HUB_AVAILABLE and 'agent_hub' not in st.session_state:
+        try:
+            st.session_state['agent_hub'] = AgentHub()
+            logger.info("AgentHub initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize AgentHub: {e}")
+            st.session_state["status"] = "fallback activated"
 
     # Initialize system modules
     module_status = initialize_system_modules()
@@ -179,6 +196,70 @@ def show_home_page(module_status: Dict[str, Any]):
     
     st.markdown("---")
     
+    # Global AI Agent Interface
+    if AGENT_HUB_AVAILABLE and 'agent_hub' in st.session_state:
+        st.subheader("🤖 Global AI Agent Interface")
+        st.markdown("Ask questions or request actions across the entire system:")
+        
+        user_prompt = st.text_area(
+            "What would you like to know or do?",
+            placeholder="e.g., 'Show me the best performing strategy' or 'Analyze market conditions for tech stocks'",
+            height=100,
+            key="global_agent_prompt"
+        )
+        
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button("🚀 Ask AI Agent", type="primary"):
+                if user_prompt:
+                    with st.spinner("Processing your request..."):
+                        try:
+                            agent_hub = st.session_state['agent_hub']
+                            response = agent_hub.route(user_prompt)
+                            
+                            st.subheader("🤖 AI Response")
+                            
+                            if response['type'] == 'forecast':
+                                st.success("📈 Forecast Response")
+                            elif response['type'] == 'trading':
+                                st.success("💰 Trading Response")
+                            elif response['type'] == 'analysis':
+                                st.success("📊 Analysis Response")
+                            elif response['type'] == 'quantitative':
+                                st.success("🧮 Quantitative Response")
+                            elif response['type'] == 'llm':
+                                st.success("💬 General Response")
+                            else:
+                                st.info("📋 Response")
+                            
+                            st.write(response['content'])
+                            
+                            # Show which agent was used
+                            st.caption(f"Response from: {response['agent']} agent")
+                            
+                        except Exception as e:
+                            st.error(f"Error processing request: {str(e)}")
+                            logger.error(f"Global AgentHub error: {e}")
+                else:
+                    st.warning("Please enter a prompt to process.")
+        
+        with col2:
+            if st.button("🔄 Reset"):
+                st.session_state['global_agent_prompt'] = ""
+                st.experimental_rerun()
+        
+        # Show recent agent interactions
+        if 'agent_hub' in st.session_state:
+            agent_hub = st.session_state['agent_hub']
+            recent_interactions = agent_hub.get_recent_interactions(limit=5)
+            if recent_interactions:
+                st.subheader("🕒 Recent AI Interactions")
+                for interaction in recent_interactions:
+                    success_icon = "OK" if interaction['success'] else "FAIL"
+                    st.write(f"{success_icon} **{interaction['agent_type']}**: {interaction['prompt'][:60]}...")
+    
+    st.markdown("---")
+    
     # Quick actions
     st.subheader("⚡ Quick Actions")
     
@@ -218,10 +299,10 @@ def show_home_page(module_status: Dict[str, Any]):
                     response = prompt_router.route_prompt(user_query)
                     
                     if response:
-                        st.success("✅ Response generated")
+                        st.success("Response generated")
                         st.write(response)
                     else:
-                        st.warning("⚠️ No response generated - using fallback")
+                        st.warning("No response generated - using fallback")
                         # Fallback response
                         st.info("I understand your query. Please use the navigation menu to access specific features:")
                         st.write("- Use 'Forecast & Trade' for market predictions")
@@ -230,7 +311,7 @@ def show_home_page(module_status: Dict[str, Any]):
                         
                 except Exception as e:
                     logger.error(f"Prompt routing failed: {e}")
-                    st.error(f"❌ Error processing request: {str(e)}")
+                    st.error(f"Error processing request: {str(e)}")
                     st.info("Please use the navigation menu to access specific features.")
                     
     except Exception as e:

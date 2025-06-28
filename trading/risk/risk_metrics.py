@@ -224,8 +224,9 @@ def plot_drawdown_heatmap(
                 if col != 'timestamp':  # Skip timestamp column
                     try:
                         returns[col] = pd.to_numeric(returns[col], errors='coerce')
-                    except:
-                        pass
+                    except Exception as e:
+                        logger.warning(f"⚠️ Could not convert column {col} to numeric: {e}")
+                        continue
         
         # Filter to only numeric columns
         returns = returns.select_dtypes(include=[np.number])
