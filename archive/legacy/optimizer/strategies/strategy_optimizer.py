@@ -137,4 +137,7 @@ class StrategyOptimizer:
             results = json.load(f)
         
         logger.info(f"Loaded optimization results from {input_path}")
-        return results 
+        return results
+    
+    def plot_results(self, *args, **kwargs):
+        print("Plotting not implemented yet.") 
