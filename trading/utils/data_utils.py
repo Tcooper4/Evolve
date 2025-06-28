@@ -330,7 +330,8 @@ def prepare_forecast_data(data: pd.DataFrame) -> pd.DataFrame:
             try:
                 df[first_col] = pd.to_datetime(df[first_col])
                 df = df.set_index(first_col)
-            except:
+            except Exception as e:
+                logging.error(f"Error converting column {first_col} to datetime: {e}")
                 # If conversion fails, create a simple numeric index
                 df.index = pd.date_range(start='2020-01-01', periods=len(df), freq='D')
     
