@@ -1,7 +1,26 @@
-"""
-Agents module for trading and market analysis agents.
+"""Agents Module for Evolve Trading Platform.
+
+This module contains various autonomous trading agents.
 """
 
-from trading.agents.strategy_switcher import StrategySwitcher
+from .model_generator_agent import (
+    AutoEvolutionaryModelGenerator,
+    ArxivResearchFetcher,
+    ModelImplementationGenerator,
+    ModelBenchmarker,
+    ResearchPaper,
+    ModelCandidate,
+    BenchmarkResult,
+    run_model_evolution
+)
 
-__all__ = ['StrategySwitcher'] 
+__all__ = [
+    'AutoEvolutionaryModelGenerator',
+    'ArxivResearchFetcher',
+    'ModelImplementationGenerator', 
+    'ModelBenchmarker',
+    'ResearchPaper',
+    'ModelCandidate',
+    'BenchmarkResult',
+    'run_model_evolution'
+] 

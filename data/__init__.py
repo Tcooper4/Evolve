@@ -1,9 +1,28 @@
-"""
-Data module for data processing and storage.
+"""Data Module for Evolve Trading Platform.
+
+This module provides data loading, processing, and streaming capabilities.
 """
 
-from trading.processing import DataProcessor
-from trading.storage import DataStorage
-from trading.validation import DataValidator
+from .streaming_pipeline import (
+    StreamingPipeline,
+    InMemoryCache,
+    DataProvider,
+    PolygonDataProvider,
+    YFinanceDataProvider,
+    MarketData,
+    StreamingConfig,
+    DataTrigger,
+    create_streaming_pipeline
+)
 
-__all__ = ['DataProcessor', 'DataStorage', 'DataValidator'] 
+__all__ = [
+    'StreamingPipeline',
+    'InMemoryCache',
+    'DataProvider',
+    'PolygonDataProvider',
+    'YFinanceDataProvider',
+    'MarketData',
+    'StreamingConfig',
+    'DataTrigger',
+    'create_streaming_pipeline'
+] 
