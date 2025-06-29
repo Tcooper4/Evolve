@@ -33,9 +33,13 @@ class StrategyConfig:
     category: str  # e.g., "technical", "fundamental", "hybrid"
     parameters: Dict[str, Union[str, float, int, bool]]
     required_models: List[str]
+    required_data: List[str]
+    output_type: str
     risk_level: str  # e.g., "low", "medium", "high"
     timeframes: List[str]
     asset_classes: List[str]
+    confidence_available: bool = False
+    benchmark_support: bool = False
 
 class Registry:
     """Central registry for all UI components."""
@@ -65,7 +69,17 @@ class Registry:
             with open(config_dir / "strategies.json") as f:
                 strategy_configs = json.load(f)
                 for config in strategy_configs:
-                    self._strategies[config["name"]] = StrategyConfig(**config)
+                    # Handle missing fields with defaults
+                    config_with_defaults = {
+                        "required_models": [],
+                        "risk_level": "medium",
+                        "timeframes": ["1d"],
+                        "asset_classes": ["equity"],
+                        "confidence_available": False,
+                        "benchmark_support": False,
+                        **config
+                    }
+                    self._strategies[config["name"]] = StrategyConfig(**config_with_defaults)
             logger.info(f"Loaded {len(self._strategies)} strategy configurations")
         except Exception as e:
             logger.error(f"Failed to load strategy configurations: {e}")
