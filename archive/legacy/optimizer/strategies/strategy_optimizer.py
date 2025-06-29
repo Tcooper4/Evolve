@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 import json
 import pandas as pd
-from ..core.optimizer_factory import OptimizerFactory, BaseOptimizer
+from archive.legacy.optimizer.core.optimizer_factory import OptimizerFactory, BaseOptimizer
 
 logger = logging.getLogger(__name__)
 

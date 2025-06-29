@@ -65,7 +65,7 @@ class AutomationTasks:
         """Handler for backup task."""
         try:
             # TODO: Implement backup logic
-            pass
+            raise NotImplementedError('Pending feature')
         except Exception as e:
             self.logger.error(f"Error in backup handler: {str(e)}")
             raise
@@ -93,7 +93,7 @@ class AutomationTasks:
         """Handler for cleanup task."""
         try:
             # TODO: Implement cleanup logic
-            pass
+            raise NotImplementedError('Pending feature')
         except Exception as e:
             self.logger.error(f"Error in cleanup handler: {str(e)}")
             raise
@@ -121,7 +121,7 @@ class AutomationTasks:
         """Handler for validation task."""
         try:
             # TODO: Implement validation logic
-            pass
+            raise NotImplementedError('Pending feature')
         except Exception as e:
             self.logger.error(f"Error in validation handler: {str(e)}")
             raise
@@ -159,7 +159,7 @@ class AutomationTasks:
         """Handler for processing task."""
         try:
             # TODO: Implement processing logic
-            pass
+            raise NotImplementedError('Pending feature')
         except Exception as e:
             self.logger.error(f"Error in process handler: {str(e)}")
             raise
@@ -178,4 +178,13 @@ class AutomationTasks:
             self.logger.info(f"Sent status notification: {message}")
         except Exception as e:
             self.logger.error(f"Error sending status notification: {str(e)}")
-            raise 
+            raise
+
+    def backup(self):
+        raise NotImplementedError('Pending feature')
+    def cleanup(self):
+        raise NotImplementedError('Pending feature')
+    def validate(self):
+        raise NotImplementedError('Pending feature')
+    def process(self):
+        raise NotImplementedError('Pending feature') 

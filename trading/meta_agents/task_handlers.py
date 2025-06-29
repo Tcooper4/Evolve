@@ -449,3 +449,12 @@ class TaskHandlerFactory:
             raise ValueError(f"Unsupported handler type: {handler_type}")
         
         return handler_class(config) 
+
+def execute_command(self):
+    raise NotImplementedError('Pending feature')
+def call_api(self):
+    raise NotImplementedError('Pending feature')
+def process_data(self):
+    raise NotImplementedError('Pending feature')
+def send_notification(self):
+    raise NotImplementedError('Pending feature') 

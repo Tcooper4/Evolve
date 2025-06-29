@@ -16,7 +16,7 @@ from passlib.context import CryptContext
 from ratelimit import limits, sleep_and_retry
 import uvicorn
 
-from ..core.models.task import Task, TaskStatus, TaskPriority, TaskType
+from system.infra.agents.core.models.task import Task, TaskStatus, TaskPriority, TaskType
 from trading.automation_core import AutomationCore
 from trading.automation_tasks import AutomationTasks
 from trading.automation_workflows import AutomationWorkflows

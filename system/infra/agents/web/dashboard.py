@@ -11,9 +11,21 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from ..auth.security import SecurityManager
-from ..monitoring.metrics_collector import MetricsCollector
-from ..monitoring.alert_manager import AlertManager
+try:
+    from system.infra.agents.auth.security import SecurityManager
+except ImportError as e:
+    logging.warning(f"SecurityManager import failed: {e}")
+    SecurityManager = None
+try:
+    from system.infra.agents.monitoring.metrics_collector import MetricsCollector
+except ImportError as e:
+    logging.warning(f"MetricsCollector import failed: {e}")
+    MetricsCollector = None
+try:
+    from system.infra.agents.monitoring.alert_manager import AlertManager
+except ImportError as e:
+    logging.warning(f"AlertManager import failed: {e}")
+    AlertManager = None
 
 logger = logging.getLogger(__name__)
 

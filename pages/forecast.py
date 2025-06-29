@@ -45,9 +45,8 @@ def render_forecast_page():
     
     if prompt:
         try:
-            # TODO: Replace with proper forecast implementation
-            # Router moved to archive - need to implement alternative
-            st.info("Forecast functionality is being updated. Please use the main forecasting page.")
+            # Replace with proper forecast implementation
+            raise NotImplementedError('Pending feature')
             
             # Placeholder for forecast results
             forecast_results = {

@@ -6,8 +6,8 @@ import json
 import redis
 from pydantic import BaseModel, Field
 
-from ..core.orchestrator import Orchestrator, Task
-from ..config.config import load_config
+from system.infra.agents.core.orchestrator import Orchestrator, Task
+from system.infra.agents.config.config import load_config
 
 app = FastAPI(
     title="Automation Task API",

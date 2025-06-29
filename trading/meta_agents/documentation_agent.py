@@ -55,15 +55,8 @@ class DocumentationAgent(BaseAgent):
             self.logger.error(f"Failed to initialize documentation agent: {str(e)}")
             raise
     
-    async def generate_api_docs(self, source_path: str) -> None:
-        """Generate API documentation from source code."""
-        try:
-            # TODO: Implement API documentation generation
-            # This would involve parsing source code and generating markdown/rst files
-            self.logger.info(f"Generated API documentation from {source_path}")
-        except Exception as e:
-            self.logger.error(f"Error generating API documentation: {str(e)}")
-            raise
+    def generate_api_docs(self):
+        raise NotImplementedError('Pending feature')
     
     async def generate_guides(self, content: Dict[str, Any]) -> None:
         """Generate user guides and tutorials."""
@@ -126,27 +119,21 @@ class DocumentationAgent(BaseAgent):
             self.logger.error(f"Error analyzing documentation: {str(e)}")
             raise
     
-    async def deploy_documentation(self, target: str) -> None:
-        """Deploy documentation to the specified target."""
-        try:
-            if target == "github":
-                # TODO: Implement GitHub Pages deployment
-                self.logger.info("Deployed documentation to GitHub Pages")
-            elif target == "readthedocs":
-                # TODO: Implement ReadTheDocs deployment
-                self.logger.info("Deployed documentation to ReadTheDocs")
-            else:
-                raise ValueError(f"Unsupported deployment target: {target}")
-        except Exception as e:
-            self.logger.error(f"Error deploying documentation: {str(e)}")
-            raise
+    def analyze_content(self):
+        raise NotImplementedError('Pending feature')
+    
+    def deploy_github_pages(self):
+        raise NotImplementedError('Pending feature')
+    
+    def deploy_readthedocs(self):
+        raise NotImplementedError('Pending feature')
     
     async def update_documentation(self, changes: Dict[str, Any]) -> None:
         """Update documentation based on provided changes."""
         try:
             # Update API docs
             if "api" in changes:
-                await self.generate_api_docs(changes["api"]["source_path"])
+                await self.generate_api_docs()
             
             # Update guides
             if "guides" in changes:

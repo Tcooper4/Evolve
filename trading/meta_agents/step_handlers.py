@@ -100,7 +100,7 @@ class CommandStepHandler(StepHandler):
         # - Validate command syntax
         # - Check command permissions
         
-        return True
+        raise NotImplementedError('Pending feature')
 
 class APIStepHandler(StepHandler):
     """Handler for API call steps."""
@@ -171,7 +171,7 @@ class APIStepHandler(StepHandler):
         if timeout is not None and not isinstance(timeout, (int, float)):
             return False
         
-        return True
+        raise NotImplementedError('Pending feature')
 
 class DataProcessingStepHandler(StepHandler):
     """Handler for data processing steps."""
@@ -377,7 +377,7 @@ class DataProcessingStepHandler(StepHandler):
             if not other_data or not left_on or not right_on:
                 return False
         
-        return True
+        raise NotImplementedError('Pending feature')
 
 class NotificationStepHandler(StepHandler):
     """Handler for notification steps."""
@@ -464,7 +464,7 @@ class NotificationStepHandler(StepHandler):
         if not isinstance(data, dict):
             return False
         
-        return True
+        raise NotImplementedError('Pending feature')
 
 class StepHandlerFactory:
     """Factory for creating step handlers."""
