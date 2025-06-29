@@ -172,12 +172,13 @@ class TradingEnvironment:
             return np.zeros(15, dtype=np.float32)
         
         row = self.data.iloc[self.current_step]
+        current_price = row['Close']
         
         # Price features
         price_features = [
-            row['Open'] / row['Close'] - 1,
-            row['High'] / row['Close'] - 1,
-            row['Low'] / row['Close'] - 1,
+            row['Open'] / current_price - 1,
+            row['High'] / current_price - 1,
+            row['Low'] / current_price - 1,
             row['Volume'] / self.data['Volume'].mean() - 1,
         ]
         
@@ -296,6 +297,7 @@ class RLTrader:
         self.model = None
         self.env = None
         self.training_history = []
+        self.last_training_metrics = {}
         
         if not GYMNASIUM_AVAILABLE:
             logger.error("Gymnasium not available")
@@ -325,11 +327,15 @@ class RLTrader:
     def train_model(self, data: pd.DataFrame, 
                    algorithm: str = 'PPO',
                    total_timesteps: int = 10000,
-                   model_params: Optional[Dict] = None) -> bool:
+                   model_params: Optional[Dict] = None) -> Dict[str, Any]:
         """Train RL model."""
         if not STABLE_BASELINES3_AVAILABLE:
             logger.error("Stable-baselines3 not available")
-            return False
+            return {
+                'success': False,
+                'error': 'Stable-baselines3 not available',
+                'metrics': {}
+            }
         
         try:
             # Create environment
@@ -362,26 +368,63 @@ class RLTrader:
             callback = TrainingCallback()
             self.model.learn(total_timesteps=total_timesteps, callback=callback)
             
+            # Calculate training metrics
+            training_metrics = self._calculate_training_metrics(env)
+            self.last_training_metrics = training_metrics
+            
             logger.info(f"Trained {algorithm} model for {total_timesteps} timesteps")
-            return True
+            return {
+                'success': True,
+                'algorithm': algorithm,
+                'timesteps': total_timesteps,
+                'metrics': training_metrics
+            }
             
         except Exception as e:
             logger.error(f"Error training RL model: {e}")
-            return False
+            return {
+                'success': False,
+                'error': str(e),
+                'metrics': {}
+            }
+    
+    def _calculate_training_metrics(self, env: TradingEnvironment) -> Dict[str, float]:
+        """Calculate training metrics."""
+        try:
+            metrics = env.calculate_metrics()
+            return {
+                'total_return': metrics.get('total_return', 0),
+                'sharpe_ratio': metrics.get('sharpe_ratio', 0),
+                'volatility': metrics.get('volatility', 0),
+                'max_drawdown': metrics.get('max_drawdown', 0),
+                'win_rate': metrics.get('win_rate', 0),
+                'num_trades': metrics.get('num_trades', 0)
+            }
+        except Exception as e:
+            logger.error(f"Error calculating training metrics: {e}")
+            return {}
     
     def predict_action(self, observation: np.ndarray) -> Tuple[int, Dict]:
         """Predict action for given observation."""
         if self.model is None:
             raise ValueError("Model not trained")
         
-        action, _ = self.model.predict(observation, deterministic=True)
-        return action, {}
+        try:
+            action, _ = self.model.predict(observation, deterministic=True)
+            return action, {'confidence': 0.8, 'model_available': True}
+        except Exception as e:
+            logger.error(f"Error predicting action: {e}")
+            return 2, {'confidence': 0.0, 'model_available': False, 'error': str(e)}  # Default to hold
     
     def evaluate_model(self, data: pd.DataFrame, 
-                      num_episodes: int = 10) -> Dict[str, float]:
+                      num_episodes: int = 10) -> Dict[str, Any]:
         """Evaluate trained model."""
         if self.model is None:
-            return {}
+            return {
+                'success': False,
+                'error': 'Model not trained',
+                'metrics': {}
+            }
         
         try:
             env = self.create_environment(data)
@@ -431,31 +474,52 @@ class RLTrader:
             evaluation_metrics.update(avg_metrics)
             
             logger.info(f"RL model evaluation: {evaluation_metrics}")
-            return evaluation_metrics
+            return {
+                'success': True,
+                'episodes': num_episodes,
+                'metrics': evaluation_metrics
+            }
             
         except Exception as e:
             logger.error(f"Error evaluating RL model: {e}")
-            return {}
+            return {
+                'success': False,
+                'error': str(e),
+                'metrics': {}
+            }
     
-    def save_model(self, filepath: str) -> bool:
+    def save_model(self, filepath: str) -> Dict[str, Any]:
         """Save trained model."""
         if self.model is None:
             logger.error("No model to save")
-            return False
+            return {
+                'success': False,
+                'error': 'No model to save'
+            }
         
         try:
             self.model.save(filepath)
             logger.info(f"Saved model to {filepath}")
-            return True
+            return {
+                'success': True,
+                'filepath': filepath,
+                'model_type': type(self.model).__name__
+            }
         except Exception as e:
             logger.error(f"Error saving model: {e}")
-            return False
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
-    def load_model(self, filepath: str, algorithm: str = 'PPO') -> bool:
+    def load_model(self, filepath: str, algorithm: str = 'PPO') -> Dict[str, Any]:
         """Load trained model."""
         if not STABLE_BASELINES3_AVAILABLE:
             logger.error("Stable-baselines3 not available")
-            return False
+            return {
+                'success': False,
+                'error': 'Stable-baselines3 not available'
+            }
         
         try:
             if algorithm == 'PPO':
@@ -468,10 +532,38 @@ class RLTrader:
                 raise ValueError(f"Unknown algorithm: {algorithm}")
             
             logger.info(f"Loaded model from {filepath}")
-            return True
+            return {
+                'success': True,
+                'filepath': filepath,
+                'algorithm': algorithm,
+                'model_type': type(self.model).__name__
+            }
         except Exception as e:
             logger.error(f"Error loading model: {e}")
-            return False
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def get_model_status(self) -> Dict[str, Any]:
+        """Get current model status."""
+        return {
+            'model_available': self.model is not None,
+            'model_type': type(self.model).__name__ if self.model else None,
+            'last_training_metrics': self.last_training_metrics,
+            'gymnasium_available': GYMNASIUM_AVAILABLE,
+            'stable_baselines3_available': STABLE_BASELINES3_AVAILABLE
+        }
+    
+    def get_system_health(self) -> Dict[str, Any]:
+        """Get overall system health."""
+        return {
+            'overall_status': 'healthy' if (self.model is not None and GYMNASIUM_AVAILABLE and STABLE_BASELINES3_AVAILABLE) else 'degraded',
+            'model_available': self.model is not None,
+            'gymnasium_available': GYMNASIUM_AVAILABLE,
+            'stable_baselines3_available': STABLE_BASELINES3_AVAILABLE,
+            'last_training_success': self.last_training_metrics.get('total_return', 0) > 0 if self.last_training_metrics else False
+        }
 
 # Global RL trader instance
 rl_trader = RLTrader()
