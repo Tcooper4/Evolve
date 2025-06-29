@@ -67,6 +67,7 @@ def demo_unified_interface():
         print(f"\n📝 Running {len(demo_commands)} demo commands...")
         print("-" * 60)
         
+        results = []
         for i, demo in enumerate(demo_commands, 1):
             print(f"\n{i}. {demo['description']}")
             print(f"   Command: {demo['command']}")
@@ -74,6 +75,7 @@ def demo_unified_interface():
             
             # Execute command
             result = interface.process_command(demo['command'])
+            results.append(result)
             
             if result.get('status') == 'error':
                 print(f"   ❌ Error: {result.get('error')}")
@@ -105,11 +107,15 @@ def demo_unified_interface():
         print("3. Execute commands: python unified_interface.py --command 'help'")
         print("4. Ask questions: python unified_interface.py --command 'What is the best model for AAPL?'")
         
+        return {"status": "demo_completed", "results": results, "commands_executed": len(demo_commands)}
+        
     except ImportError as e:
         print(f"❌ Import error: {e}")
         print("Make sure unified_interface.py is in the current directory")
+        return {"status": "demo_failed", "error": "import_error", "details": str(e)}
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
+        return {"status": "demo_failed", "error": "unexpected_error", "details": str(e)}
 
 def show_usage_examples():
     """Show usage examples."""
@@ -161,15 +167,25 @@ def show_usage_examples():
         }
     ]
     
+    total_examples = 0
     for category in examples:
         print(f"\n{category['category']}:")
         for example in category['examples']:
             print(f"  {example}")
+            total_examples += 1
+    
+    return {"status": "examples_displayed", "total_examples": total_examples, "categories": len(examples)}
 
 def main():
     """Main demo function."""
-    demo_unified_interface()
-    show_usage_examples()
+    demo_result = demo_unified_interface()
+    examples_result = show_usage_examples()
+    
+    return {
+        "status": "main_completed",
+        "demo": demo_result,
+        "examples": examples_result
+    }
 
 if __name__ == "__main__":
     main() 
