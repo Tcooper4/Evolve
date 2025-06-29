@@ -61,6 +61,22 @@ from trading.portfolio.llm_utils import LLMInterface
 from trading.optimization.performance_logger import PerformanceLogger
 from trading.agents.prompt_router_agent import PromptRouterAgent
 
+# Import data feed
+try:
+    from data.live_feed import get_data_feed
+    DATA_FEED_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Data feed import failed: {e}")
+    DATA_FEED_AVAILABLE = False
+
+# Import capability router
+try:
+    from core.capability_router import get_system_health as get_capability_health
+    CAPABILITY_ROUTER_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Capability router import failed: {e}")
+    CAPABILITY_ROUTER_AVAILABLE = False
+
 
 def main():
     """Main application function."""
@@ -196,6 +212,51 @@ def show_home_page(module_status: Dict[str, Any]):
     
     st.markdown("---")
     
+    # System Health Dashboard
+    st.subheader("🏥 System Health Dashboard")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # AgentHub Health
+        if AGENT_HUB_AVAILABLE and 'agent_hub' in st.session_state:
+            agent_hub = st.session_state['agent_hub']
+            agent_health = agent_hub.get_system_health()
+            
+            st.write("**🤖 AgentHub Status:**")
+            st.write(f"Overall: {agent_health['overall_status']}")
+            st.write(f"Available Agents: {agent_health['available_agents']}/{agent_health['total_agents']}")
+            
+            # Show agent status
+            for agent_name, status in agent_health['agent_status'].items():
+                status_icon = "🟢" if status['available'] else "🔴"
+                st.write(f"{status_icon} {agent_name}: {status['health']}")
+    
+    with col2:
+        # Data Feed Health
+        if DATA_FEED_AVAILABLE:
+            try:
+                data_feed = get_data_feed()
+                feed_health = data_feed.get_system_health()
+                
+                st.write("**📊 Data Feed Status:**")
+                st.write(f"Overall: {feed_health['overall_status']}")
+                st.write(f"Available Providers: {feed_health['available_providers']}/{feed_health['total_providers']}")
+                st.write(f"Current Provider: {feed_health['current_provider']}")
+                st.write(f"Cache Size: {feed_health['cache_size']}")
+                
+                # Show provider status
+                provider_status = data_feed.get_provider_status()
+                for provider_name, status in provider_status.items():
+                    if provider_name not in ['current_provider', 'fallback_history', 'cache_size', 'cache_ttl']:
+                        status_icon = "🟢" if status['available'] else "🔴"
+                        st.write(f"{status_icon} {provider_name}: {'Available' if status['available'] else 'Unavailable'}")
+            except Exception as e:
+                st.write("**📊 Data Feed Status:** Error")
+                st.write(f"Error: {str(e)}")
+    
+    st.markdown("---")
+    
     # Global AI Agent Interface
     if AGENT_HUB_AVAILABLE and 'agent_hub' in st.session_state:
         st.subheader("🤖 Global AI Agent Interface")
@@ -234,8 +295,13 @@ def show_home_page(module_status: Dict[str, Any]):
                             
                             st.write(response['content'])
                             
-                            # Show which agent was used
-                            st.caption(f"Response from: {response['agent']} agent")
+                            # Show which agent was used and confidence
+                            st.caption(f"Response from: {response['agent']} agent (Confidence: {response.get('confidence', 0):.1%})")
+                            
+                            # Show metadata if available
+                            if 'metadata' in response:
+                                with st.expander("📋 Response Metadata"):
+                                    st.json(response['metadata'])
                             
                         except Exception as e:
                             st.error(f"Error processing request: {str(e)}")
@@ -255,8 +321,9 @@ def show_home_page(module_status: Dict[str, Any]):
             if recent_interactions:
                 st.subheader("🕒 Recent AI Interactions")
                 for interaction in recent_interactions:
-                    success_icon = "OK" if interaction['success'] else "FAIL"
-                    st.write(f"{success_icon} **{interaction['agent_type']}**: {interaction['prompt'][:60]}...")
+                    success_icon = "✅" if interaction['success'] else "❌"
+                    confidence = interaction.get('confidence', 0)
+                    st.write(f"{success_icon} **{interaction['agent_type']}** (Confidence: {confidence:.1%}): {interaction['prompt'][:60]}...")
     
     st.markdown("---")
     
@@ -296,11 +363,19 @@ def show_home_page(module_status: Dict[str, Any]):
             with st.spinner("🤖 Processing your request..."):
                 try:
                     # Route the prompt to appropriate agent
-                    response = prompt_router.route_prompt(user_query)
+                    response = prompt_router.route_prompt(user_query, {})
                     
-                    if response:
+                    if response and response.get('success'):
                         st.success("Response generated")
-                        st.write(response)
+                        st.write(response.get('result', 'No result available'))
+                        
+                        # Show routing details
+                        with st.expander("🔍 Routing Details"):
+                            st.write(f"**Intent:** {response.get('intent', 'Unknown')}")
+                            st.write(f"**Confidence:** {response.get('confidence', 0):.1%}")
+                            st.write(f"**Provider:** {response.get('provider', 'Unknown')}")
+                            st.write(f"**Agent Used:** {response.get('agent_used', 'None')}")
+                            st.write(f"**Arguments:** {response.get('args', {})}")
                     else:
                         st.warning("No response generated - using fallback")
                         # Fallback response

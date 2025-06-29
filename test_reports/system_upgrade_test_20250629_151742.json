@@ -1,0 +1,100 @@
+{
+  "timestamp": "2025-06-29T15:17:42.597931",
+  "summary": {
+    "total_tests": 22,
+    "passed_tests": 18,
+    "failed_tests": 4,
+    "success_rate": 81.81818181818183
+  },
+  "test_results": {
+    "AgentHub System Health": {
+      "status": "PASSED",
+      "error": null
+    },
+    "AgentHub Agent Status": {
+      "status": "PASSED",
+      "error": null
+    },
+    "AgentHub Recent Interactions": {
+      "status": "PASSED",
+      "error": null
+    },
+    "CapabilityRouter Import": {
+      "status": "FAILED",
+      "error": "'ModuleSpec' object has no attribute 'datetime'"
+    },
+    "PromptRouter Intent Parsing": {
+      "status": "PASSED",
+      "error": null
+    },
+    "PromptRouter Providers": {
+      "status": "PASSED",
+      "error": null
+    },
+    "PromptRouter Health": {
+      "status": "PASSED",
+      "error": null
+    },
+    "Data Feed Provider Status": {
+      "status": "PASSED",
+      "error": null
+    },
+    "Data Feed Health": {
+      "status": "FAILED",
+      "error": null
+    },
+    "Data Feed Fallback Historical": {
+      "status": "PASSED",
+      "error": null
+    },
+    "Data Feed Fallback Live": {
+      "status": "PASSED",
+      "error": null
+    },
+    "RL Trader Model Status": {
+      "status": "PASSED",
+      "error": null
+    },
+    "RL Trader Health": {
+      "status": "PASSED",
+      "error": null
+    },
+    "RL Trader Training Result": {
+      "status": "PASSED",
+      "error": null
+    },
+    "Unified Interface Health": {
+      "status": "PASSED",
+      "error": null
+    },
+    "Unified Interface Query Processing": {
+      "status": "PASSED",
+      "error": null
+    },
+    "Unified Interface Report Export": {
+      "status": "PASSED",
+      "error": null
+    },
+    "AgentHub Health Method": {
+      "status": "PASSED",
+      "error": null
+    },
+    "CapabilityRouter Health Check": {
+      "status": "FAILED",
+      "error": "'ModuleSpec' object has no attribute 'datetime'"
+    },
+    "DataFeed Health Method": {
+      "status": "FAILED",
+      "error": null
+    },
+    "RLTrader Health Method": {
+      "status": "PASSED",
+      "error": null
+    },
+    "UnifiedInterface Health Method": {
+      "status": "PASSED",
+      "error": null
+    }
+  },
+  "upgrade_status": "PARTIAL"
+}
