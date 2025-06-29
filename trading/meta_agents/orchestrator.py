@@ -172,4 +172,7 @@ class Orchestrator:
             self.logger.info("Orchestrator stopped")
         except Exception as e:
             self.logger.error(f"Error stopping orchestrator: {str(e)}")
-            raise 
+            raise
+
+    def cleanup(self):
+        raise NotImplementedError('Pending feature') 

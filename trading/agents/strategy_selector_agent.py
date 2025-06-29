@@ -669,26 +669,39 @@ class StrategySelectorAgent:
             self.logger.error(f"Error updating strategy performance: {str(e)}")
     
     def get_strategy_recommendations(self, 
+                                   market_data: pd.DataFrame,
                                    market_regime: str,
                                    risk_tolerance: str = 'medium') -> List[StrategyRecommendation]:
-        """Get strategy recommendations for given market conditions."""
+        """Get strategy recommendations for given market conditions.
+        
+        Args:
+            market_data: Real market data for evaluation
+            market_regime: Current market regime
+            risk_tolerance: Risk tolerance level
+            
+        Returns:
+            List of strategy recommendations
+        """
         try:
-            # Create sample market data for evaluation
-            sample_data = self._create_sample_market_data(market_regime)
+            if market_data.empty:
+                self.logger.warning("No market data provided for strategy recommendations")
+                return []
             
             # Get compatible strategies
+            volatility = self._calculate_volatility(market_data)
+            trend_strength = self._calculate_trend_strength(market_data)
             compatible_strategies = self._get_compatible_strategies(
-                market_regime, 0.02, 0.01, risk_tolerance
+                market_regime, volatility, trend_strength, risk_tolerance
             )
             
             recommendations = []
             for strategy_type in compatible_strategies[:3]:  # Top 3 strategies
                 optimized_params = self._optimize_strategy_parameters(
-                    strategy_type, sample_data, 30
+                    strategy_type, market_data, 30
                 )
                 
                 performance = self._evaluate_strategy(
-                    strategy_type, optimized_params, sample_data, 30
+                    strategy_type, optimized_params, market_data, 30
                 )
                 
                 if performance:
@@ -709,45 +722,6 @@ class StrategySelectorAgent:
         except Exception as e:
             self.logger.error(f"Error getting strategy recommendations: {str(e)}")
             return []
-    
-    def _create_sample_market_data(self, market_regime: str) -> pd.DataFrame:
-        """Create sample market data for strategy evaluation."""
-        try:
-            # Generate sample data based on market regime
-            np.random.seed(42)
-            n_periods = 100
-            
-            if market_regime == 'trending_up':
-                trend = 0.001
-                volatility = 0.02
-            elif market_regime == 'trending_down':
-                trend = -0.001
-                volatility = 0.02
-            elif market_regime == 'volatile':
-                trend = 0.0
-                volatility = 0.04
-            else:  # sideways or low_volatility
-                trend = 0.0
-                volatility = 0.01
-            
-            # Generate price series
-            returns = np.random.normal(trend, volatility, n_periods)
-            prices = 100 * np.exp(np.cumsum(returns))
-            
-            # Create DataFrame
-            data = pd.DataFrame({
-                'open': prices * (1 + np.random.normal(0, 0.001, n_periods)),
-                'high': prices * (1 + abs(np.random.normal(0, 0.002, n_periods))),
-                'low': prices * (1 - abs(np.random.normal(0, 0.002, n_periods))),
-                'close': prices,
-                'volume': np.random.randint(1000, 10000, n_periods)
-            })
-            
-            return data
-            
-        except Exception as e:
-            self.logger.error(f"Error creating sample market data: {str(e)}")
-            return pd.DataFrame()
     
     def _load_strategy_performance(self):
         """Load strategy performance from memory."""

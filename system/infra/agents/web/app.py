@@ -19,14 +19,30 @@ from functools import wraps
 import yaml
 import uuid
 
-from ..agents.orchestrator import DevelopmentOrchestrator
-from ..agents.monitor import SystemMonitor
-from ..agents.error_handler import ErrorHandler
+try:
+    from system.infra.agents.agents.orchestrator import DevelopmentOrchestrator
+except ImportError as e:
+    logging.warning(f"DevelopmentOrchestrator import failed: {e}")
+    DevelopmentOrchestrator = None
+try:
+    from system.infra.agents.agents.monitor import SystemMonitor
+except ImportError as e:
+    logging.warning(f"SystemMonitor import failed: {e}")
+    SystemMonitor = None
+try:
+    from system.infra.agents.agents.error_handler import ErrorHandler
+except ImportError as e:
+    logging.warning(f"ErrorHandler import failed: {e}")
+    ErrorHandler = None
+try:
+    from system.infra.agents.auth.user_manager import UserManager
+except ImportError as e:
+    logging.warning(f"UserManager import failed: {e}")
+    UserManager = None
 from automation.api.task_api import TaskAPI, TaskCreate, TaskUpdate
 from automation.api.metrics_api import MetricsAPI
 from automation.core.orchestrator import Orchestrator
 from trading.middleware import login_required, admin_required, inject_user
-from ..auth.user_manager import UserManager
 from automation.notifications.notification_manager import NotificationManager, NotificationType, NotificationPriority
 from automation.web.websocket import WebSocketManager, WebSocketHandler
 

@@ -1026,7 +1026,7 @@ class StrategyOptimizer(BaseOptimizer):
     def plot_results(self, **kwargs):
         """Plot optimization results."""
         # TODO: Implement plotting functionality
-        pass
+        raise NotImplementedError('Pending feature')
     
     def get_available_optimizers(self) -> List[str]:
         """Get list of available optimizers.
@@ -1084,11 +1084,7 @@ class StrategyOptimizer(BaseOptimizer):
             Optimization results
         """
         # TODO: Implement actual optimization
-        return {
-            "best_params": {"param1": 10},
-            "best_score": 0.85,
-            "optimization_time": 120.5
-        }
+        raise NotImplementedError('Pending feature')
     
     def save_optimization_results(self, results: Dict[str, Any], save_path: str) -> None:
         """Save optimization results to file.
@@ -1098,7 +1094,7 @@ class StrategyOptimizer(BaseOptimizer):
             save_path: Path to save results
         """
         # TODO: Implement save functionality
-        pass
+        raise NotImplementedError('Pending feature')
     
     def load_optimization_results(self, file_path: str) -> Dict[str, Any]:
         """Load optimization results from file.
@@ -1110,7 +1106,7 @@ class StrategyOptimizer(BaseOptimizer):
             Loaded results
         """
         # TODO: Implement load functionality
-        return {}
+        raise NotImplementedError('Pending feature')
 
 __all__ = ["StrategyOptimizer", "StrategyOptimizerConfig"] 
 

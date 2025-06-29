@@ -12,8 +12,16 @@ from typing import Dict, List, Any, Optional
 from pathlib import Path
 import json
 import yaml
-from ..metrics_collector import MetricsCollector
-from ..alert_manager import AlertManager
+try:
+    from trading.meta_agents.metrics_collector import MetricsCollector
+except ImportError as e:
+    logging.warning(f"MetricsCollector import failed: {e}")
+    MetricsCollector = None
+try:
+    from trading.meta_agents.alert_manager import AlertManager
+except ImportError as e:
+    logging.warning(f"AlertManager import failed: {e}")
+    AlertManager = None
 
 async def setup_monitoring(config_path: str) -> None:
     """Set up monitoring components."""

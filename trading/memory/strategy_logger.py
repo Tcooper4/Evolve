@@ -148,6 +148,9 @@ class StrategyLogger:
             self.log_file.unlink()
         self.logger.info("Strategy logs cleared")
 
+    def analyze_strategy(self):
+        raise NotImplementedError('Pending feature')
+
 
 def log_strategy_decision(
     strategy_name: str,

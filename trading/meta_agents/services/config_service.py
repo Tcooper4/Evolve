@@ -300,7 +300,7 @@ class ConfigService:
         """Validate config against schema."""
         try:
             # TODO: Implement schema validation
-            pass
+            raise NotImplementedError('Pending feature')
         except Exception as e:
             self.logger.error(f"Error validating config: {str(e)}")
             raise

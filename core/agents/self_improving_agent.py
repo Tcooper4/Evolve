@@ -65,7 +65,7 @@ class ModelRegistry:
                     continue
                     
                 try:
-                    module = importlib.import_module(f"..models.{model_file.stem}", package=__package__)
+                    module = importlib.import_module(f"trading.models.{model_file.stem}", package=__package__)
                     model_class = getattr(module, f"{model_file.stem.capitalize()}Model")
                     self.available_models[model_file.stem] = model_class
                 except (ImportError, AttributeError) as e:
@@ -105,7 +105,7 @@ class StrategyRegistry:
                     continue
                     
                 try:
-                    module = importlib.import_module(f"..strategies.{strategy_file.stem}", package=__package__)
+                    module = importlib.import_module(f"trading.strategies.{strategy_file.stem}", package=__package__)
                     strategy_class = getattr(module, f"{strategy_file.stem.capitalize()}Strategy")
                     self.available_strategies[strategy_file.stem] = strategy_class
                 except (ImportError, AttributeError) as e:

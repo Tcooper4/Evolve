@@ -393,4 +393,7 @@ class IntegrationTestHandler:
     
     def get_test_config(self) -> Dict:
         """Get the current test configuration."""
-        return self.test_config 
+        return self.test_config
+    
+    def run_component_tests(self):
+        raise NotImplementedError('Pending feature') 

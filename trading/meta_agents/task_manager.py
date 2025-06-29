@@ -196,20 +196,8 @@ class TaskManager:
             self.logger.error(f"Error deleting task: {str(e)}")
             raise
     
-    async def monitor_tasks(self, interval: int = 60):
-        """Monitor tasks at regular intervals."""
-        try:
-            while True:
-                for task_id in self.tasks:
-                    task = self.tasks[task_id]
-                    if task['status'] == 'running':
-                        # TODO: Implement task monitoring logic
-                        pass
-                
-                await asyncio.sleep(interval)
-        except Exception as e:
-            self.logger.error(f"Error monitoring tasks: {str(e)}")
-            raise
+    def monitor_tasks(self):
+        raise NotImplementedError('Pending feature')
     
     async def start(self) -> None:
         """Start the task manager."""

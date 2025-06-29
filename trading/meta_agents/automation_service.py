@@ -170,4 +170,7 @@ class AutomationService:
             self.logger.info("Automation service stopped")
         except Exception as e:
             self.logger.error(f"Error stopping automation service: {str(e)}")
-            raise 
+            raise
+
+    def schedule(self):
+        raise NotImplementedError('Pending feature') 

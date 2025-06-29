@@ -10,9 +10,9 @@ import redis
 from cachetools import TTLCache
 from ratelimit import limits, sleep_and_retry
 
-from ..core.task_manager import TaskManager
-from ..core.orchestrator import Orchestrator
-from ..core.models.task import Task, TaskStatus, TaskPriority, TaskType
+from system.infra.agents.core.task_manager import TaskManager
+from system.infra.agents.core.orchestrator import Orchestrator
+from system.infra.agents.core.models.task import Task, TaskStatus, TaskPriority, TaskType
 
 logger = logging.getLogger(__name__)
 

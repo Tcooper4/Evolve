@@ -1,0 +1,78 @@
+# Optimizer Configuration
+# Production-grade configuration with no hardcoded values
+
+# Data Configuration
+data:
+  # Default data source priority
+  default_source: "auto"
+  available_sources: ["auto", "yfinance", "alpha_vantage"]
+  
+  # Default date range (days from current date)
+  default_lookback_days: 365
+  
+  # Data interval
+  default_interval: "1d"
+  
+  # Cache settings
+  cache_enabled: true
+  cache_expiry_hours: 24
+
+# Display Configuration
+display:
+  # Chart display settings
+  chart_days: 100
+  table_rows: 20
+  
+  # Metrics display
+  show_volatility: true
+  show_returns: true
+  show_volume: true
+
+# Optimization Configuration
+optimization:
+  # Default optimizer settings
+  default_optimizer: "bayesian"
+  max_iterations: 100
+  initial_points: 10
+  
+  # Performance metrics
+  primary_metric: "sharpe_ratio"
+  secondary_metrics: ["max_drawdown", "total_return", "volatility"]
+  
+  # Risk settings
+  max_drawdown_limit: 0.20
+  min_sharpe_ratio: 0.5
+
+# Trading Configuration
+trading:
+  # Trading days per year (industry standard)
+  trading_days_per_year: 252
+  
+  # Risk management
+  position_sizing: "kelly_criterion"
+  max_position_size: 0.1
+  
+  # Transaction costs
+  commission_rate: 0.001
+  slippage: 0.0005
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  log_optimization_results: true
+  log_data_requests: true
+  log_performance_metrics: true
+
+# UI Configuration
+ui:
+  # Sidebar settings
+  sidebar_width: 300
+  show_advanced_options: false
+  
+  # Chart settings
+  chart_height: 400
+  chart_theme: "plotly_white"
+  
+  # Data refresh settings
+  auto_refresh: false
+  refresh_interval_seconds: 300 

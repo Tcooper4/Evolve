@@ -411,24 +411,7 @@ class CLIService(cmd.Cmd):
         ):
             """List tasks."""
             try:
-                # TODO: Implement task listing logic
-                table = Table(title="Tasks", show_header=True, header_style="bold magenta")
-                table.add_column("ID", style="dim")
-                table.add_column("Name")
-                table.add_column("Type")
-                table.add_column("Status")
-                table.add_column("Created")
-                
-                # Placeholder data
-                table.add_row(
-                    "1",
-                    "Sample Task",
-                    "Analysis",
-                    "Pending",
-                    datetime.now().isoformat()
-                )
-                
-                self.console.print(table)
+                self.list_tasks()
             except Exception as e:
                 self.console.print(f"[red]Error: {str(e)}[/red]")
 
@@ -441,17 +424,7 @@ class CLIService(cmd.Cmd):
         ):
             """Create a new task."""
             try:
-                # TODO: Implement task creation logic
-                self.console.print(
-                    Panel(
-                        f"Task created successfully:\n"
-                        f"Name: {name}\n"
-                        f"Type: {task_type}\n"
-                        f"Priority: {priority}",
-                        title="Success",
-                        border_style="green"
-                    )
-                )
+                self.create_task()
             except Exception as e:
                 self.console.print(f"[red]Error: {str(e)}[/red]")
 
@@ -462,22 +435,7 @@ class CLIService(cmd.Cmd):
         ):
             """List workflows."""
             try:
-                # TODO: Implement workflow listing logic
-                table = Table(title="Workflows", show_header=True, header_style="bold magenta")
-                table.add_column("ID", style="dim")
-                table.add_column("Name")
-                table.add_column("Status")
-                table.add_column("Created")
-                
-                # Placeholder data
-                table.add_row(
-                    "1",
-                    "Sample Workflow",
-                    "Active",
-                    datetime.now().isoformat()
-                )
-                
-                self.console.print(table)
+                self.list_workflows()
             except Exception as e:
                 self.console.print(f"[red]Error: {str(e)}[/red]")
 
@@ -488,16 +446,7 @@ class CLIService(cmd.Cmd):
         ):
             """Create a new workflow."""
             try:
-                # TODO: Implement workflow creation logic
-                self.console.print(
-                    Panel(
-                        f"Workflow created successfully:\n"
-                        f"Name: {name}\n"
-                        f"Description: {description}",
-                        title="Success",
-                        border_style="green"
-                    )
-                )
+                self.create_workflow()
             except Exception as e:
                 self.console.print(f"[red]Error: {str(e)}[/red]")
 
@@ -505,6 +454,10 @@ class CLIService(cmd.Cmd):
         def metrics():
             """Show system metrics."""
             try:
+                self.display_metrics()
+            except Exception as e:
+                self.console.print(f"[red]Error: {str(e)}[/red]")
+
                 # TODO: Implement metrics display logic
                 table = Table(title="System Metrics", show_header=True, header_style="bold magenta")
                 table.add_column("Metric")

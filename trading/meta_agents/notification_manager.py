@@ -143,4 +143,7 @@ class NotificationManager:
             }
         except Exception as e:
             self.logger.error(f"Error getting handler status: {str(e)}")
-            raise 
+            raise
+    
+    def check_handler_status(self):
+        raise NotImplementedError('Pending feature') 

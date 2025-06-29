@@ -124,6 +124,9 @@ class EmailHandler(NotificationHandler):
             self.logger.error(f"Error sending email notification: {str(e)}")
             return False
 
+    def send_email(self, *args, **kwargs):
+        raise NotImplementedError('Pending feature')
+
 class NotificationHandlerFactory:
     """Factory for creating notification handlers."""
     

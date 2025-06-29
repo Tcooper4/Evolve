@@ -14,7 +14,7 @@ from email.mime.multipart import MIMEMultipart
 import jwt
 from twilio.rest import Client
 
-from ..core.models.task import Task, TaskStatus, TaskPriority, TaskType
+from system.infra.agents.core.models.task import Task, TaskStatus, TaskPriority, TaskType
 from trading.automation_core import AutomationCore
 from trading.automation_monitoring import AutomationMonitoring
 

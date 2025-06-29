@@ -1,6 +1,6 @@
 from functools import wraps
 from flask import request, jsonify, current_app
-from ..auth.user_manager import UserManager
+from system.infra.agents.auth.user_manager import UserManager
 
 def login_required(f):
     @wraps(f)
