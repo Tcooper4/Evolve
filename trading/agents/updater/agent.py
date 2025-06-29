@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
-from ..task_memory import Task, TaskMemory, TaskStatus
+from trading.agents.task_memory import Task, TaskMemory, TaskStatus
 from trading.utils import (
     check_model_performance,
     detect_model_drift,

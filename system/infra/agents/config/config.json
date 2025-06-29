@@ -4,22 +4,22 @@
     "environment": "${ENVIRONMENT:-development}",
     "openai": {
         "api_key": "${OPENAI_API_KEY}",
-        "model": "gpt-4",
-        "temperature": 0.7,
-        "max_tokens": 2000,
-        "timeout": 30,
-        "retry_attempts": 3,
-        "retry_delay": 5,
+        "model": "${OPENAI_MODEL:-gpt-4}",
+        "temperature": "${OPENAI_TEMPERATURE:-0.7}",
+        "max_tokens": "${OPENAI_MAX_TOKENS:-2000}",
+        "timeout": "${OPENAI_TIMEOUT:-30}",
+        "retry_attempts": "${OPENAI_RETRY_ATTEMPTS:-3}",
+        "retry_delay": "${OPENAI_RETRY_DELAY:-5}",
         "rate_limit": {
-            "requests_per_minute": 60,
-            "tokens_per_minute": 90000
+            "requests_per_minute": "${OPENAI_RATE_LIMIT_REQUESTS:-60}",
+            "tokens_per_minute": "${OPENAI_RATE_LIMIT_TOKENS:-90000}"
         }
     },
     "cursor": {
-        "workspace_path": ".",
-        "auto_save": true,
-        "format_on_save": true,
-        "max_file_size": 10485760,
+        "workspace_path": "${CURSOR_WORKSPACE_PATH:-.}",
+        "auto_save": "${CURSOR_AUTO_SAVE:-true}",
+        "format_on_save": "${CURSOR_FORMAT_ON_SAVE:-true}",
+        "max_file_size": "${CURSOR_MAX_FILE_SIZE:-10485760}",
         "exclude_patterns": [
             "*.pyc",
             "__pycache__",
@@ -32,29 +32,29 @@
         ]
     },
     "microservices": {
-        "enabled": true,
+        "enabled": "${MICROSERVICES_ENABLED:-true}",
         "services": {
             "task_queue": {
                 "host": "${REDIS_HOST:-localhost}",
                 "port": "${REDIS_PORT:-6379}",
                 "password": "${REDIS_PASSWORD}",
-                "db": 0,
+                "db": "${REDIS_DB:-0}",
                 "ssl": {
-                    "enabled": true,
-                    "verify": true
+                    "enabled": "${REDIS_SSL_ENABLED:-true}",
+                    "verify": "${REDIS_SSL_VERIFY:-true}"
                 },
                 "connection_pool": {
-                    "max_connections": 10,
-                    "timeout": 30
+                    "max_connections": "${REDIS_MAX_CONNECTIONS:-10}",
+                    "timeout": "${REDIS_TIMEOUT:-30}"
                 }
             },
             "api": {
                 "host": "${API_HOST:-localhost}",
                 "port": "${API_PORT:-8000}",
-                "workers": 4,
-                "timeout": 30,
+                "workers": "${API_WORKERS:-4}",
+                "timeout": "${API_TIMEOUT:-30}",
                 "ssl": {
-                    "enabled": true,
+                    "enabled": "${API_SSL_ENABLED:-true}",
                     "cert": "${API_CERT_PATH}",
                     "key": "${API_KEY_PATH}"
                 }
@@ -62,38 +62,38 @@
             "monitoring": {
                 "host": "${MONITORING_HOST:-localhost}",
                 "port": "${MONITORING_PORT:-8001}",
-                "workers": 2,
-                "timeout": 30,
+                "workers": "${MONITORING_WORKERS:-2}",
+                "timeout": "${MONITORING_TIMEOUT:-30}",
                 "ssl": {
-                    "enabled": true,
+                    "enabled": "${MONITORING_SSL_ENABLED:-true}",
                     "cert": "${MONITORING_CERT_PATH}",
                     "key": "${MONITORING_KEY_PATH}"
                 }
             }
         },
         "discovery": {
-            "enabled": true,
-            "type": "consul",
+            "enabled": "${DISCOVERY_ENABLED:-true}",
+            "type": "${DISCOVERY_TYPE:-consul}",
             "host": "${CONSUL_HOST:-localhost}",
             "port": "${CONSUL_PORT:-8500}",
             "token": "${CONSUL_TOKEN}"
         }
     },
     "distributed": {
-        "enabled": true,
+        "enabled": "${DISTRIBUTED_ENABLED:-true}",
         "nodes": [],
-        "replication_factor": 2,
-        "consistency_level": "quorum",
-        "partition_tolerance": true,
+        "replication_factor": "${REPLICATION_FACTOR:-2}",
+        "consistency_level": "${CONSISTENCY_LEVEL:-quorum}",
+        "partition_tolerance": "${PARTITION_TOLERANCE:-true}",
         "node_discovery": {
-            "enabled": true,
-            "interval": 30,
-            "timeout": 10
+            "enabled": "${NODE_DISCOVERY_ENABLED:-true}",
+            "interval": "${NODE_DISCOVERY_INTERVAL:-30}",
+            "timeout": "${NODE_DISCOVERY_TIMEOUT:-10}"
         }
     },
     "event_driven": {
-        "enabled": true,
-        "event_bus": "redis",
+        "enabled": "${EVENT_DRIVEN_ENABLED:-true}",
+        "event_bus": "${EVENT_BUS:-redis}",
         "topics": [
             "task_updates",
             "system_health",
@@ -101,200 +101,200 @@
             "data_updates"
         ],
         "consumer_groups": {
-            "enabled": true,
-            "group_id": "automation-group",
-            "auto_offset_reset": "latest"
+            "enabled": "${CONSUMER_GROUPS_ENABLED:-true}",
+            "group_id": "${CONSUMER_GROUP_ID:-automation-group}",
+            "auto_offset_reset": "${AUTO_OFFSET_RESET:-latest}"
         },
         "retry": {
-            "enabled": true,
-            "max_attempts": 3,
-            "delay": 5
+            "enabled": "${EVENT_RETRY_ENABLED:-true}",
+            "max_attempts": "${EVENT_MAX_ATTEMPTS:-3}",
+            "delay": "${EVENT_RETRY_DELAY:-5}"
         }
     },
     "agents": {
         "code_generation": {
-            "enabled": true,
-            "priority": 1,
-            "max_concurrent": 5,
-            "timeout": 300,
-            "retry_attempts": 3
+            "enabled": "${CODE_GENERATION_ENABLED:-true}",
+            "priority": "${CODE_GENERATION_PRIORITY:-1}",
+            "max_concurrent": "${CODE_GENERATION_MAX_CONCURRENT:-5}",
+            "timeout": "${CODE_GENERATION_TIMEOUT:-300}",
+            "retry_attempts": "${CODE_GENERATION_RETRY_ATTEMPTS:-3}"
         },
         "testing": {
-            "enabled": true,
-            "priority": 2,
-            "max_concurrent": 5,
-            "timeout": 300,
-            "retry_attempts": 3
+            "enabled": "${TESTING_ENABLED:-true}",
+            "priority": "${TESTING_PRIORITY:-2}",
+            "max_concurrent": "${TESTING_MAX_CONCURRENT:-5}",
+            "timeout": "${TESTING_TIMEOUT:-300}",
+            "retry_attempts": "${TESTING_RETRY_ATTEMPTS:-3}"
         },
         "review": {
-            "enabled": true,
-            "priority": 3,
-            "max_concurrent": 5,
-            "timeout": 300,
-            "retry_attempts": 3
+            "enabled": "${REVIEW_ENABLED:-true}",
+            "priority": "${REVIEW_PRIORITY:-3}",
+            "max_concurrent": "${REVIEW_MAX_CONCURRENT:-5}",
+            "timeout": "${REVIEW_TIMEOUT:-300}",
+            "retry_attempts": "${REVIEW_RETRY_ATTEMPTS:-3}"
         },
         "deployment": {
-            "enabled": true,
-            "priority": 4,
-            "max_concurrent": 5,
-            "timeout": 300,
-            "retry_attempts": 3
+            "enabled": "${DEPLOYMENT_ENABLED:-true}",
+            "priority": "${DEPLOYMENT_PRIORITY:-4}",
+            "max_concurrent": "${DEPLOYMENT_MAX_CONCURRENT:-5}",
+            "timeout": "${DEPLOYMENT_TIMEOUT:-300}",
+            "retry_attempts": "${DEPLOYMENT_RETRY_ATTEMPTS:-3}"
         },
         "model_training": {
-            "enabled": true,
-            "priority": 5,
-            "max_concurrent": 5,
-            "timeout": 300,
-            "retry_attempts": 3
+            "enabled": "${MODEL_TRAINING_ENABLED:-true}",
+            "priority": "${MODEL_TRAINING_PRIORITY:-5}",
+            "max_concurrent": "${MODEL_TRAINING_MAX_CONCURRENT:-5}",
+            "timeout": "${MODEL_TRAINING_TIMEOUT:-300}",
+            "retry_attempts": "${MODEL_TRAINING_RETRY_ATTEMPTS:-3}"
         },
         "data_processing": {
-            "enabled": true,
-            "priority": 6,
-            "max_concurrent": 5,
-            "timeout": 300,
-            "retry_attempts": 3
+            "enabled": "${DATA_PROCESSING_ENABLED:-true}",
+            "priority": "${DATA_PROCESSING_PRIORITY:-6}",
+            "max_concurrent": "${DATA_PROCESSING_MAX_CONCURRENT:-5}",
+            "timeout": "${DATA_PROCESSING_TIMEOUT:-300}",
+            "retry_attempts": "${DATA_PROCESSING_RETRY_ATTEMPTS:-3}"
         }
     },
     "paths": {
-        "code_base": "trading",
-        "tests": "tests",
-        "docs": "docs",
-        "models": "models",
-        "data": "data",
-        "logs": "logs",
-        "backups": "backups",
-        "temp": "temp"
+        "code_base": "${CODE_BASE_PATH:-trading}",
+        "tests": "${TESTS_PATH:-tests}",
+        "docs": "${DOCS_PATH:-docs}",
+        "models": "${MODELS_PATH:-models}",
+        "data": "${DATA_PATH:-data}",
+        "logs": "${LOGS_PATH:-logs}",
+        "backups": "${BACKUPS_PATH:-backups}",
+        "temp": "${TEMP_PATH:-temp}"
     },
     "monitoring": {
-        "enabled": true,
-        "check_interval": 60,
+        "enabled": "${MONITORING_ENABLED:-true}",
+        "check_interval": "${MONITORING_CHECK_INTERVAL:-60}",
         "alert_thresholds": {
-            "cpu": 80,
-            "memory": 85,
-            "disk": 90
+            "cpu": "${CPU_ALERT_THRESHOLD:-80}",
+            "memory": "${MEMORY_ALERT_THRESHOLD:-85}",
+            "disk": "${DISK_ALERT_THRESHOLD:-90}"
         },
-        "metrics_port": 9090,
-        "health_check_interval": 30,
+        "metrics_port": "${METRICS_PORT:-9090}",
+        "health_check_interval": "${HEALTH_CHECK_INTERVAL:-30}",
         "prometheus": {
-            "enabled": true,
-            "path": "/metrics",
-            "port": 9090
+            "enabled": "${PROMETHEUS_ENABLED:-true}",
+            "path": "${PROMETHEUS_PATH:-/metrics}",
+            "port": "${PROMETHEUS_PORT:-9090}"
         },
         "grafana": {
-            "enabled": true,
-            "port": 3000
+            "enabled": "${GRAFANA_ENABLED:-true}",
+            "port": "${GRAFANA_PORT:-3000}"
         },
         "alertmanager": {
-            "enabled": true,
-            "port": 9093
+            "enabled": "${ALERTMANAGER_ENABLED:-true}",
+            "port": "${ALERTMANAGER_PORT:-9093}"
         }
     },
     "error_handling": {
-        "max_retries": 3,
-        "retry_delay": 5,
-        "recovery_enabled": true,
+        "max_retries": "${ERROR_MAX_RETRIES:-3}",
+        "retry_delay": "${ERROR_RETRY_DELAY:-5}",
+        "recovery_enabled": "${ERROR_RECOVERY_ENABLED:-true}",
         "circuit_breaker": {
-            "enabled": true,
-            "failure_threshold": 5,
-            "reset_timeout": 60
+            "enabled": "${CIRCUIT_BREAKER_ENABLED:-true}",
+            "failure_threshold": "${CIRCUIT_BREAKER_FAILURE_THRESHOLD:-5}",
+            "reset_timeout": "${CIRCUIT_BREAKER_RESET_TIMEOUT:-60}"
         }
     },
     "model_training": {
-        "enabled": true,
-        "max_epochs": 100,
-        "batch_size": 32,
-        "validation_split": 0.2,
-        "early_stopping": true,
-        "patience": 10,
+        "enabled": "${MODEL_TRAINING_ENABLED:-true}",
+        "max_epochs": "${MODEL_MAX_EPOCHS:-100}",
+        "batch_size": "${MODEL_BATCH_SIZE:-32}",
+        "validation_split": "${MODEL_VALIDATION_SPLIT:-0.2}",
+        "early_stopping": "${MODEL_EARLY_STOPPING:-true}",
+        "patience": "${MODEL_PATIENCE:-10}",
         "checkpointing": {
-            "enabled": true,
-            "interval": 5,
-            "max_to_keep": 5
+            "enabled": "${MODEL_CHECKPOINTING_ENABLED:-true}",
+            "interval": "${MODEL_CHECKPOINTING_INTERVAL:-5}",
+            "max_to_keep": "${MODEL_CHECKPOINTING_MAX_TO_KEEP:-5}"
         },
         "distributed": {
-            "enabled": true,
-            "strategy": "mirrored",
-            "num_gpus": 1
+            "enabled": "${MODEL_DISTRIBUTED_ENABLED:-true}",
+            "strategy": "${MODEL_DISTRIBUTED_STRATEGY:-mirrored}",
+            "num_gpus": "${MODEL_NUM_GPUS:-1}"
         }
     },
     "data_processing": {
-        "enabled": true,
-        "validation_enabled": true,
-        "cleaning_enabled": true,
-        "feature_engineering_enabled": true,
-        "storage_enabled": true,
-        "batch_size": 1000,
-        "max_workers": 4,
-        "timeout": 3600
+        "enabled": "${DATA_PROCESSING_ENABLED:-true}",
+        "validation_enabled": "${DATA_VALIDATION_ENABLED:-true}",
+        "cleaning_enabled": "${DATA_CLEANING_ENABLED:-true}",
+        "feature_engineering_enabled": "${DATA_FEATURE_ENGINEERING_ENABLED:-true}",
+        "storage_enabled": "${DATA_STORAGE_ENABLED:-true}",
+        "batch_size": "${DATA_BATCH_SIZE:-1000}",
+        "max_workers": "${DATA_MAX_WORKERS:-4}",
+        "timeout": "${DATA_TIMEOUT:-3600}"
     },
     "security": {
-        "enabled": true,
+        "enabled": "${SECURITY_ENABLED:-true}",
         "jwt_secret": "${JWT_SECRET}",
         "rate_limits": {
             "api": {
-                "limit": 100,
-                "window": 3600
+                "limit": "${API_RATE_LIMIT:-100}",
+                "window": "${API_RATE_LIMIT_WINDOW:-3600}"
             },
             "auth": {
-                "limit": 5,
-                "window": 300
+                "limit": "${AUTH_RATE_LIMIT:-5}",
+                "window": "${AUTH_RATE_LIMIT_WINDOW:-300}"
             }
         },
         "ip_whitelist": [],
         "ip_blacklist": [],
         "ssl": {
-            "enabled": true,
+            "enabled": "${SSL_ENABLED:-true}",
             "cert_path": "${SSL_CERT_PATH}",
             "key_path": "${SSL_KEY_PATH}"
         },
-        "auth_required": true,
-        "token_expiry": 3600,
+        "auth_required": "${AUTH_REQUIRED:-true}",
+        "token_expiry": "${TOKEN_EXPIRY:-3600}",
         "password_policy": {
-            "min_length": 12,
-            "require_uppercase": true,
-            "require_lowercase": true,
-            "require_numbers": true,
-            "require_special": true
+            "min_length": "${PASSWORD_MIN_LENGTH:-12}",
+            "require_uppercase": "${PASSWORD_REQUIRE_UPPERCASE:-true}",
+            "require_lowercase": "${PASSWORD_REQUIRE_LOWERCASE:-true}",
+            "require_numbers": "${PASSWORD_REQUIRE_NUMBERS:-true}",
+            "require_special": "${PASSWORD_REQUIRE_SPECIAL:-true}"
         },
         "mfa": {
-            "enabled": true,
-            "required": true
+            "enabled": "${MFA_ENABLED:-true}",
+            "required": "${MFA_REQUIRED:-true}"
         }
     },
     "performance": {
-        "enabled": true,
-        "monitoring_interval": 60,
-        "history_size": 1000,
+        "enabled": "${PERFORMANCE_ENABLED:-true}",
+        "monitoring_interval": "${PERFORMANCE_MONITORING_INTERVAL:-60}",
+        "history_size": "${PERFORMANCE_HISTORY_SIZE:-1000}",
         "alert_thresholds": {
             "cpu.percent": {
-                "value": 80,
+                "value": "${CPU_ALERT_THRESHOLD:-80}",
                 "severity": "warning",
                 "message": "CPU usage is high"
             },
             "memory.percent": {
-                "value": 85,
+                "value": "${MEMORY_ALERT_THRESHOLD:-85}",
                 "severity": "warning",
                 "message": "Memory usage is high"
             },
             "disk.percent": {
-                "value": 90,
+                "value": "${DISK_ALERT_THRESHOLD:-90}",
                 "severity": "warning",
                 "message": "Disk usage is high"
             }
         },
         "profiling": {
-            "enabled": true,
-            "interval": 300,
-            "output_dir": "profiles"
+            "enabled": "${PROFILING_ENABLED:-true}",
+            "interval": "${PROFILING_INTERVAL:-300}",
+            "output_dir": "${PROFILING_OUTPUT_DIR:-profiles}"
         }
     },
     "notifications": {
-        "enabled": true,
+        "enabled": "${NOTIFICATIONS_ENABLED:-true}",
         "email": {
-            "enabled": true,
-            "smtp_server": "smtp.gmail.com",
-            "smtp_port": 587,
-            "use_tls": true,
+            "enabled": "${EMAIL_ENABLED:-true}",
+            "smtp_server": "${EMAIL_SMTP_SERVER:-smtp.gmail.com}",
+            "smtp_port": "${EMAIL_SMTP_PORT:-587}",
+            "use_tls": "${EMAIL_USE_TLS:-true}",
             "username": "${EMAIL_USERNAME}",
             "password": "${EMAIL_PASSWORD}",
             "from": "${EMAIL_FROM}",
@@ -303,32 +303,32 @@
             "sender_password": "${EMAIL_SENDER_PASSWORD}"
         },
         "slack": {
-            "enabled": false,
+            "enabled": "${SLACK_ENABLED:-false}",
             "webhook_url": "${SLACK_WEBHOOK_URL}",
-            "channel": "#notifications",
-            "username": "Automation Bot"
+            "channel": "${SLACK_CHANNEL:-#notifications}",
+            "username": "${SLACK_USERNAME:-Automation Bot}"
         },
         "discord": {
-            "enabled": true,
+            "enabled": "${DISCORD_ENABLED:-true}",
             "webhook_url": "${DISCORD_WEBHOOK_URL}",
-            "username": "Automation Bot",
-            "avatar_url": ""
+            "username": "${DISCORD_USERNAME:-Automation Bot}",
+            "avatar_url": "${DISCORD_AVATAR_URL:-}"
         },
         "websocket": {
-            "enabled": true,
-            "host": "localhost",
-            "port": 8765,
-            "use_ssl": true,
-            "ssl_cert": "certs/cert.pem",
-            "ssl_key": "certs/key.pem"
+            "enabled": "${WEBSOCKET_ENABLED:-true}",
+            "host": "${WEBSOCKET_HOST:-localhost}",
+            "port": "${WEBSOCKET_PORT:-8765}",
+            "use_ssl": "${WEBSOCKET_USE_SSL:-true}",
+            "ssl_cert": "${WEBSOCKET_SSL_CERT:-certs/cert.pem}",
+            "ssl_key": "${WEBSOCKET_SSL_KEY:-certs/key.pem}"
         }
     },
     "task_scheduler": {
-        "enabled": true,
-        "max_concurrent_tasks": 5,
-        "default_timeout": 300,
-        "retry_delay": 5,
-        "max_retries": 3,
+        "enabled": "${TASK_SCHEDULER_ENABLED:-true}",
+        "max_concurrent_tasks": "${TASK_SCHEDULER_MAX_CONCURRENT:-5}",
+        "default_timeout": "${TASK_SCHEDULER_DEFAULT_TIMEOUT:-300}",
+        "retry_delay": "${TASK_SCHEDULER_RETRY_DELAY:-5}",
+        "max_retries": "${TASK_SCHEDULER_MAX_RETRIES:-3}",
         "priority_levels": {
             "low": 0,
             "medium": 1,
@@ -337,85 +337,85 @@
         }
     },
     "code_context": {
-        "enabled": true,
-        "max_file_size": 1048576,
-        "max_history_size": 1000,
+        "enabled": "${CODE_CONTEXT_ENABLED:-true}",
+        "max_file_size": "${CODE_CONTEXT_MAX_FILE_SIZE:-1048576}",
+        "max_history_size": "${CODE_CONTEXT_MAX_HISTORY_SIZE:-1000}",
         "sensitive_paths": [
             "automation/config",
             "automation/logs",
             "automation/agents"
         ],
         "git": {
-            "enabled": true,
-            "branch": "main",
-            "remote": "origin"
+            "enabled": "${GIT_ENABLED:-true}",
+            "branch": "${GIT_BRANCH:-main}",
+            "remote": "${GIT_REMOTE:-origin}"
         }
     },
     "redis": {
         "host": "${REDIS_HOST:-localhost}",
         "port": "${REDIS_PORT:-6379}",
-        "db": 0,
+        "db": "${REDIS_DB:-0}",
         "password": "${REDIS_PASSWORD}",
         "ssl": {
-            "enabled": true,
-            "verify": true
+            "enabled": "${REDIS_SSL_ENABLED:-true}",
+            "verify": "${REDIS_SSL_VERIFY:-true}"
         },
         "connection_pool": {
-            "max_connections": 10,
-            "timeout": 30
+            "max_connections": "${REDIS_MAX_CONNECTIONS:-10}",
+            "timeout": "${REDIS_TIMEOUT:-30}"
         }
     },
     "ray": {
-        "address": "auto",
-        "namespace": "automation",
+        "address": "${RAY_ADDRESS:-auto}",
+        "namespace": "${RAY_NAMESPACE:-automation}",
         "runtime_env": {
-            "working_dir": ".",
+            "working_dir": "${RAY_WORKING_DIR:-.}",
             "py_modules": ["trading", "automation"]
         },
         "resources": {
-            "num_cpus": 4,
-            "num_gpus": 1
+            "num_cpus": "${RAY_NUM_CPUS:-4}",
+            "num_gpus": "${RAY_NUM_GPUS:-1}"
         }
     },
     "kubernetes": {
-        "in_cluster": false,
-        "namespace": "automation",
-        "config_path": "~/.kube/config",
+        "in_cluster": "${K8S_IN_CLUSTER:-false}",
+        "namespace": "${K8S_NAMESPACE:-automation}",
+        "config_path": "${K8S_CONFIG_PATH:-~/.kube/config}",
         "resources": {
             "requests": {
-                "cpu": "500m",
-                "memory": "512Mi"
+                "cpu": "${K8S_CPU_REQUEST:-500m}",
+                "memory": "${K8S_MEMORY_REQUEST:-512Mi}"
             },
             "limits": {
-                "cpu": "1000m",
-                "memory": "1Gi"
+                "cpu": "${K8S_CPU_LIMIT:-1000m}",
+                "memory": "${K8S_MEMORY_LIMIT:-1Gi}"
             }
         }
     },
     "logging": {
-        "level": "INFO",
-        "format": "json",
-        "file": "automation/logs/orchestrator.log",
+        "level": "${LOG_LEVEL:-INFO}",
+        "format": "${LOG_FORMAT:-json}",
+        "file": "${LOG_FILE:-automation/logs/orchestrator.log}",
         "rotation": {
-            "max_size_mb": 100,
-            "backup_count": 5
+            "max_size_mb": "${LOG_MAX_SIZE_MB:-100}",
+            "backup_count": "${LOG_BACKUP_COUNT:-5}"
         },
         "handlers": [
             {
                 "type": "file",
-                "path": "logs/orchestrator.log"
+                "path": "${LOG_FILE_PATH:-logs/orchestrator.log}"
             },
             {
                 "type": "syslog",
-                "facility": "local0"
+                "facility": "${SYSLOG_FACILITY:-local0}"
             }
         ]
     },
     "tasks": {
-        "max_retries": 3,
-        "retry_delay": 300,
-        "timeout": 3600,
-        "concurrent_limit": 10,
+        "max_retries": "${TASKS_MAX_RETRIES:-3}",
+        "retry_delay": "${TASKS_RETRY_DELAY:-300}",
+        "timeout": "${TASKS_TIMEOUT:-3600}",
+        "concurrent_limit": "${TASKS_CONCURRENT_LIMIT:-10}",
         "priority_levels": {
             "low": 0,
             "medium": 1,
@@ -424,11 +424,11 @@
         }
     },
     "storage": {
-        "type": "local",
-        "path": "automation/data",
-        "backup_path": "automation/backups",
+        "type": "${STORAGE_TYPE:-local}",
+        "path": "${STORAGE_PATH:-automation/data}",
+        "backup_path": "${STORAGE_BACKUP_PATH:-automation/backups}",
         "s3": {
-            "enabled": false,
+            "enabled": "${S3_ENABLED:-false}",
             "bucket": "${S3_BUCKET}",
             "region": "${S3_REGION}",
             "access_key": "${S3_ACCESS_KEY}",
@@ -436,49 +436,49 @@
         }
     },
     "api": {
-        "host": "localhost",
-        "port": 8000,
-        "debug": false,
+        "host": "${API_HOST:-localhost}",
+        "port": "${API_PORT:-8000}",
+        "debug": "${API_DEBUG:-false}",
         "cors": {
-            "enabled": true,
+            "enabled": "${API_CORS_ENABLED:-true}",
             "origins": ["*"],
             "methods": ["GET", "POST", "PUT", "DELETE"],
             "headers": ["Content-Type", "Authorization"]
         },
         "rate_limit": {
-            "enabled": true,
-            "limit": 100,
-            "window": 3600
+            "enabled": "${API_RATE_LIMIT_ENABLED:-true}",
+            "limit": "${API_RATE_LIMIT:-100}",
+            "window": "${API_RATE_LIMIT_WINDOW:-3600}"
         }
     },
     "models": {
         "lstm": {
-            "default_epochs": 100,
-            "default_batch_size": 32,
-            "default_learning_rate": 0.001,
-            "default_sequence_length": 60,
+            "default_epochs": "${LSTM_DEFAULT_EPOCHS:-100}",
+            "default_batch_size": "${LSTM_DEFAULT_BATCH_SIZE:-32}",
+            "default_learning_rate": "${LSTM_DEFAULT_LEARNING_RATE:-0.001}",
+            "default_sequence_length": "${LSTM_DEFAULT_SEQUENCE_LENGTH:-60}",
             "checkpointing": {
-                "enabled": true,
-                "interval": 5,
-                "max_to_keep": 5
+                "enabled": "${LSTM_CHECKPOINTING_ENABLED:-true}",
+                "interval": "${LSTM_CHECKPOINTING_INTERVAL:-5}",
+                "max_to_keep": "${LSTM_CHECKPOINTING_MAX_TO_KEEP:-5}"
             }
         },
         "transformer": {
-            "default_epochs": 100,
-            "default_batch_size": 32,
-            "default_learning_rate": 0.0001,
-            "default_sequence_length": 60
+            "default_epochs": "${TRANSFORMER_DEFAULT_EPOCHS:-100}",
+            "default_batch_size": "${TRANSFORMER_DEFAULT_BATCH_SIZE:-32}",
+            "default_learning_rate": "${TRANSFORMER_DEFAULT_LEARNING_RATE:-0.0001}",
+            "default_sequence_length": "${TRANSFORMER_DEFAULT_SEQUENCE_LENGTH:-60}"
         }
     },
     "data": {
         "collection": {
-            "interval": 300,
-            "batch_size": 1000,
-            "max_retries": 3
+            "interval": "${DATA_COLLECTION_INTERVAL:-300}",
+            "batch_size": "${DATA_COLLECTION_BATCH_SIZE:-1000}",
+            "max_retries": "${DATA_COLLECTION_MAX_RETRIES:-3}"
         },
         "processing": {
-            "max_workers": 4,
-            "chunk_size": 10000
+            "max_workers": "${DATA_PROCESSING_MAX_WORKERS:-4}",
+            "chunk_size": "${DATA_PROCESSING_CHUNK_SIZE:-10000}"
         },
         "validation": {
             "required_columns": [
@@ -500,14 +500,14 @@
         }
     },
     "backtesting": {
-        "default_initial_capital": 100000,
-        "default_commission": 0.001,
-        "default_slippage": 0.0001
+        "default_initial_capital": "${BACKTESTING_DEFAULT_INITIAL_CAPITAL:-100000}",
+        "default_commission": "${BACKTESTING_DEFAULT_COMMISSION:-0.001}",
+        "default_slippage": "${BACKTESTING_DEFAULT_SLIPPAGE:-0.0001}"
     },
     "optimization": {
-        "max_iterations": 100,
-        "population_size": 50,
-        "mutation_rate": 0.1,
-        "crossover_rate": 0.8
+        "max_iterations": "${OPTIMIZATION_MAX_ITERATIONS:-100}",
+        "population_size": "${OPTIMIZATION_POPULATION_SIZE:-50}",
+        "mutation_rate": "${OPTIMIZATION_MUTATION_RATE:-0.1}",
+        "crossover_rate": "${OPTIMIZATION_CROSSOVER_RATE:-0.8}"
     }
 } 

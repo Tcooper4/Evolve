@@ -2,122 +2,122 @@
 
 # Server Settings
 server:
-  host: "0.0.0.0"
-  port: 8501
-  debug: false
-  workers: 4
-  timeout: 60
+  host: "${HOST:-0.0.0.0}"
+  port: "${PORT:-8501}"
+  debug: "${DEBUG_MODE:-false}"
+  workers: "${WORKERS:-4}"
+  timeout: "${TIMEOUT:-60}"
 
 # Logging Configuration
 logging:
-  level: "INFO"
+  level: "${LOG_LEVEL:-INFO}"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: "logs/app.log"
-  max_size: 10485760  # 10MB
-  backup_count: 5
+  file: "${LOG_FILE:-logs/app.log}"
+  max_size: "${LOG_MAX_SIZE:-10485760}"  # 10MB
+  backup_count: "${LOG_BACKUP_COUNT:-5}"
 
 # Database Settings
 database:
   redis:
-    host: "localhost"
-    port: 6379
-    db: 0
-    password: null
-    ssl: false
+    host: "${REDIS_HOST:-localhost}"
+    port: "${REDIS_PORT:-6379}"
+    db: "${REDIS_DB:-0}"
+    password: "${REDIS_PASSWORD:-null}"
+    ssl: "${REDIS_SSL:-false}"
 
 # Market Data Settings
 market_data:
-  default_timeframe: "1d"
-  default_assets: ["BTC", "ETH", "SOL"]
-  cache_ttl: 300  # 5 minutes
-  max_retries: 3
-  retry_delay: 1
+  default_timeframe: "${DEFAULT_TIMEFRAME:-1d}"
+  default_assets: "${DEFAULT_ASSETS:-['BTC', 'ETH', 'SOL']}"
+  cache_ttl: "${CACHE_TTL:-300}"  # 5 minutes
+  max_retries: "${MAX_RETRIES:-3}"
+  retry_delay: "${RETRY_DELAY:-1}"
 
 # Model Settings
 models:
   forecast:
-    horizon: 30  # days
-    confidence_interval: 0.95
-    min_training_samples: 1000
-    update_frequency: 3600  # 1 hour
+    horizon: "${FORECAST_HORIZON:-30}"  # days
+    confidence_interval: "${CONFIDENCE_INTERVAL:-0.95}"
+    min_training_samples: "${MIN_TRAINING_SAMPLES:-1000}"
+    update_frequency: "${UPDATE_FREQUENCY:-3600}"  # 1 hour
   technical:
     indicators:
       - name: "RSI"
-        period: 14
+        period: "${RSI_PERIOD:-14}"
       - name: "MACD"
-        fast_period: 12
-        slow_period: 26
-        signal_period: 9
+        fast_period: "${MACD_FAST_PERIOD:-12}"
+        slow_period: "${MACD_SLOW_PERIOD:-26}"
+        signal_period: "${MACD_SIGNAL_PERIOD:-9}"
       - name: "BB"
-        period: 20
-        std_dev: 2
+        period: "${BB_PERIOD:-20}"
+        std_dev: "${BB_STD_DEV:-2}"
 
 # Strategy Settings
 strategies:
   default:
-    position_size: 0.1
-    stop_loss: 0.02
-    take_profit: 0.04
-    max_positions: 5
+    position_size: "${POSITION_SIZE:-0.1}"
+    stop_loss: "${STOP_LOSS:-0.02}"
+    take_profit: "${TAKE_PROFIT:-0.04}"
+    max_positions: "${MAX_POSITIONS:-5}"
   optimization:
-    method: "bayesian"
-    n_trials: 100
-    cv_folds: 5
+    method: "${OPTIMIZATION_METHOD:-bayesian}"
+    n_trials: "${N_TRIALS:-100}"
+    cv_folds: "${CV_FOLDS:-5}"
 
 # Risk Management
 risk:
-  max_drawdown: 0.2
-  max_leverage: 3
+  max_drawdown: "${MAX_DRAWDOWN:-0.2}"
+  max_leverage: "${MAX_LEVERAGE:-3}"
   position_limits:
-    BTC: 0.3
-    ETH: 0.3
-    SOL: 0.2
-    default: 0.1
-  correlation_threshold: 0.7
+    BTC: "${BTC_LIMIT:-0.3}"
+    ETH: "${ETH_LIMIT:-0.3}"
+    SOL: "${SOL_LIMIT:-0.2}"
+    default: "${DEFAULT_LIMIT:-0.1}"
+  correlation_threshold: "${CORRELATION_THRESHOLD:-0.7}"
 
 # NLP Settings
 nlp:
-  confidence_threshold: 0.7
-  max_tokens: 1000
-  temperature: 0.7
-  cache_ttl: 3600  # 1 hour
+  confidence_threshold: "${NLP_CONFIDENCE_THRESHOLD:-0.7}"
+  max_tokens: "${NLP_MAX_TOKENS:-1000}"
+  temperature: "${NLP_TEMPERATURE:-0.7}"
+  cache_ttl: "${NLP_CACHE_TTL:-3600}"  # 1 hour
   templates:
-    forecast: "trading/nlp/config/response_templates.json"
-    visualization: "trading/nlp/config/viz_settings.json"
-    entities: "trading/nlp/config/entity_patterns.json"
-    intents: "trading/nlp/config/intent_patterns.json"
+    forecast: "${FORECAST_TEMPLATE:-trading/nlp/config/response_templates.json}"
+    visualization: "${VIZ_TEMPLATE:-trading/nlp/config/viz_settings.json}"
+    entities: "${ENTITY_TEMPLATE:-trading/nlp/config/entity_patterns.json}"
+    intents: "${INTENT_TEMPLATE:-trading/nlp/config/intent_patterns.json}"
 
 # API Settings
 api:
-  rate_limit: 100  # requests per minute
-  timeout: 30
-  max_retries: 3
-  cache_ttl: 300  # 5 minutes
+  rate_limit: "${API_RATE_LIMIT:-100}"  # requests per minute
+  timeout: "${API_TIMEOUT:-30}"
+  max_retries: "${API_MAX_RETRIES:-3}"
+  cache_ttl: "${API_CACHE_TTL:-300}"  # 5 minutes
 
 # Performance Monitoring
 monitoring:
   metrics:
     - name: "response_time"
-      threshold: 2.0  # seconds
+      threshold: "${RESPONSE_TIME_THRESHOLD:-2.0}"  # seconds
     - name: "memory_usage"
-      threshold: 1024  # MB
+      threshold: "${MEMORY_USAGE_THRESHOLD:-1024}"  # MB
     - name: "cpu_usage"
-      threshold: 80  # percent
+      threshold: "${CPU_USAGE_THRESHOLD:-80}"  # percent
   alert:
-    email: "alerts@example.com"
-    slack: "https://hooks.slack.com/services/xxx/yyy/zzz"
+    email: "${ALERT_EMAIL:-alerts@example.com}"
+    slack: "${ALERT_SLACK:-https://hooks.slack.com/services/xxx/yyy/zzz}"
 
 # Security Settings
 security:
   ssl:
-    enabled: false
-    cert_file: null
-    key_file: null
+    enabled: "${SSL_ENABLED:-false}"
+    cert_file: "${SSL_CERT_FILE:-null}"
+    key_file: "${SSL_KEY_FILE:-null}"
   cors:
-    allowed_origins: ["*"]
-    allowed_methods: ["GET", "POST"]
-    allowed_headers: ["*"]
+    allowed_origins: "${CORS_ORIGINS:-['*']}"
+    allowed_methods: "${CORS_METHODS:-['GET', 'POST']}"
+    allowed_headers: "${CORS_HEADERS:-['*']}"
   rate_limiting:
-    enabled: true
-    window: 60  # seconds
-    max_requests: 100 
+    enabled: "${RATE_LIMITING_ENABLED:-true}"
+    window: "${RATE_LIMITING_WINDOW:-60}"  # seconds
+    max_requests: "${RATE_LIMITING_MAX_REQUESTS:-100}" 

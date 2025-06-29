@@ -27,6 +27,8 @@ ROOT_LOG_LEVEL = os.getenv('ROOT_LOG_LEVEL', 'WARNING')
 ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY')
 POLYGON_API_KEY = os.getenv('POLYGON_API_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+FINNHUB_API_KEY = os.getenv('FINNHUB_API_KEY')
+IEX_API_KEY = os.getenv('IEX_API_KEY')
 
 # Security and Authentication
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret-key-change-in-production')
@@ -88,6 +90,10 @@ BACKTEST_DAYS = int(os.getenv('BACKTEST_DAYS', '365'))
 DEFAULT_LLM_PROVIDER = os.getenv('DEFAULT_LLM_PROVIDER', 'openai')  # openai, huggingface, fallback
 HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
 HUGGINGFACE_MODEL = os.getenv('HUGGINGFACE_MODEL', 'gpt2')
+
+# Data Provider Configuration
+DATA_PROVIDER = os.getenv('DATA_PROVIDER', 'yahoo')  # yahoo, alpha_vantage, polygon, finnhub, iex
+DEFAULT_PROVIDER = os.getenv('DEFAULT_PROVIDER', 'yahoo')
 
 def get_config_value(key: str, default: Any = None) -> Any:
     """Get a configuration value with type conversion.

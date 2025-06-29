@@ -8,8 +8,8 @@ import asyncio
 from dataclasses import dataclass, field
 import yaml
 
-from ..logs.logger import get_logger
-from ..logs.audit_logger import audit_logger
+from trading.logs.logger import get_logger
+from trading.logs.audit_logger import audit_logger
 from trading.model_loader import ModelLoader, ModelConfig
 from trading.agents.llm.agent import LLMAgent, AgentConfig
 from trading.memory import MemoryManager
