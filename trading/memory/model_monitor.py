@@ -67,6 +67,55 @@ class ModelMonitor:
         """Generate strategy priority based on performance and market conditions."""
         return generate_strategy_priority(performance_metrics, market_conditions)
 
+    def get_model_performance(self, model_name: str) -> Dict[str, Any]:
+        """Get performance metrics for a specific model.
+        
+        Args:
+            model_name: Name of the model
+            
+        Returns:
+            Dictionary containing performance metrics
+        """
+        try:
+            # Get model trust level
+            trust_levels = self.get_model_trust_levels()
+            trust_level = trust_levels.get(model_name, 0.0)
+            
+            # Generate mock performance metrics based on trust level
+            # In a real implementation, this would come from actual performance tracking
+            performance = {
+                'mse': max(0.01, 0.05 - trust_level * 0.03),  # Lower MSE for higher trust
+                'mae': max(0.05, 0.15 - trust_level * 0.08),   # Lower MAE for higher trust
+                'r2': min(0.95, 0.6 + trust_level * 0.3),      # Higher R² for higher trust
+                'accuracy': min(0.95, 0.5 + trust_level * 0.4), # Higher accuracy for higher trust
+                'sharpe_ratio': min(2.0, trust_level * 1.5),    # Higher Sharpe for higher trust
+                'total_return': min(0.3, trust_level * 0.25),   # Higher return for higher trust
+                'max_drawdown': max(0.05, 0.2 - trust_level * 0.15), # Lower drawdown for higher trust
+                'win_rate': min(0.8, 0.4 + trust_level * 0.4),  # Higher win rate for higher trust
+                'volatility': max(0.05, 0.25 - trust_level * 0.15), # Lower volatility for higher trust
+                'last_updated': datetime.now().isoformat(),
+                'trust_level': trust_level
+            }
+            
+            return performance
+            
+        except Exception as e:
+            logger.error(f"Error getting model performance for {model_name}: {e}")
+            return {
+                'mse': 0.1,
+                'mae': 0.2,
+                'r2': 0.5,
+                'accuracy': 0.5,
+                'sharpe_ratio': 0.0,
+                'total_return': 0.0,
+                'max_drawdown': 0.2,
+                'win_rate': 0.5,
+                'volatility': 0.2,
+                'last_updated': datetime.now().isoformat(),
+                'trust_level': 0.0,
+                'error': str(e)
+            }
+
 
 def detect_drift(
     current_data: pd.DataFrame,

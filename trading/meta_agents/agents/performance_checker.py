@@ -1,349 +1,443 @@
 """
-Performance Checker Agent
+Performance Checker for Meta-Agent Loop
 
-This agent is responsible for:
-1. Monitoring and logging model performance metrics over time
-2. Detecting performance drift or degradation
-3. Triggering model retraining when necessary
-4. Managing performance logs and thresholds
-
-The agent maintains a rolling window of performance metrics and uses
-statistical methods to detect significant changes in model behavior.
+This module provides performance monitoring and improvement suggestions
+for strategies and models in the Evolve trading system.
 """
 
-import os
-import json
 import logging
+from typing import Dict, Any, List, Optional
+from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Union
-from dataclasses import dataclass
-from pathlib import Path
-from scipy import stats
-import asyncio
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
-@dataclass
-class PerformanceMetrics:
-    """Container for model performance metrics"""
-    model_name: str
-    timestamp: str
-    mse: float
-    sharpe: float
-    drawdown: float
-    prediction_latency: float
-    data_freshness: float
-    confidence_score: float
-
 class PerformanceChecker:
-    def __init__(self, config_path: str = "config/performance_checker_config.json"):
-        """
-        Initialize the PerformanceChecker agent.
+    """Performance checker for continuous improvement of strategies and models."""
+    
+    def __init__(self):
+        """Initialize the performance checker."""
+        self.performance_history = {}
+        self.improvement_suggestions = {}
+        self.retirement_thresholds = {
+            'sharpe_ratio': 0.3,      # Minimum Sharpe ratio
+            'win_rate': 0.4,          # Minimum win rate
+            'max_drawdown': 0.25,     # Maximum drawdown
+            'total_return': 0.05,     # Minimum total return
+            'consecutive_losses': 10   # Maximum consecutive losses
+        }
+        self.tuning_thresholds = {
+            'sharpe_decay': 0.2,      # Sharpe ratio decay threshold
+            'accuracy_drop': 0.1,     # Accuracy drop threshold
+            'performance_trend': -0.1  # Performance trend threshold
+        }
+        
+        logger.info("Performance Checker initialized")
+    
+    def check_strategy_performance(self, strategy_name: str, 
+                                 performance: Dict[str, float]) -> Dict[str, Any]:
+        """Check strategy performance and determine if action is needed.
         
         Args:
-            config_path: Path to the configuration file
-        """
-        self.config = self._load_config(config_path)
-        self.performance_log = self.load_log()
-        self.log_dir = Path(self.config.get("log_dir", "logs/performance"))
-        self.thresholds = self.config.get("thresholds", {
-            "mse_increase": 0.2,  # 20% increase in MSE
-            "sharpe_decrease": 0.15,  # 15% decrease in Sharpe
-            "drawdown_increase": 0.1,  # 10% increase in drawdown
-            "confidence_threshold": 0.7,  # Minimum confidence score
-            "drift_threshold": 0.05  # Statistical significance level
-        })
-        self.window_size = self.config.get("window_size", 30)  # Days
-        self.retrain_cooldown = self.config.get("retrain_cooldown", 7)  # Days
-        
-        # Create necessary directories
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Initialize file watcher for performance logs
-        self.observer = Observer()
-        self.observer.schedule(
-            PerformanceLogHandler(self),
-            str(self.log_dir),
-            recursive=False
-        )
-        self.observer.start()
-        
-        logger.info("Initialized PerformanceChecker agent")
-
-    def _load_config(self, config_path: str) -> Dict:
-        """Load configuration from JSON file"""
-        try:
-            with open(config_path, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            logger.warning(f"Config file {config_path} not found, using defaults")
-            return {}
-
-    def load_log(self) -> Dict[str, List[PerformanceMetrics]]:
-        """
-        Load performance metrics from log files.
-        
+            strategy_name: Name of the strategy
+            performance: Current performance metrics
+            
         Returns:
-            Dictionary mapping model names to lists of their performance metrics
+            Dictionary with recommendations
         """
         try:
-            log_data = {}
-            for log_file in self.log_dir.glob("*.json"):
-                model_name = log_file.stem
-                with open(log_file, 'r') as f:
-                    raw_metrics = json.load(f)
-                    log_data[model_name] = [
-                        PerformanceMetrics(**metrics)
-                        for metrics in raw_metrics
-                    ]
-            return log_data
+            # Store performance in history
+            if strategy_name not in self.performance_history:
+                self.performance_history[strategy_name] = []
+            
+            performance_record = {
+                'timestamp': datetime.now(),
+                'performance': performance.copy()
+            }
+            self.performance_history[strategy_name].append(performance_record)
+            
+            # Keep only last 50 records
+            if len(self.performance_history[strategy_name]) > 50:
+                self.performance_history[strategy_name] = self.performance_history[strategy_name][-50:]
+            
+            # Check retirement conditions
+            should_retire = self._check_retirement_conditions(strategy_name, performance)
+            
+            # Check tuning conditions
+            should_tune = self._check_tuning_conditions(strategy_name, performance)
+            
+            # Calculate confidence in recommendation
+            confidence = self._calculate_confidence(strategy_name, performance)
+            
+            # Generate recommendations
+            recommendations = self._generate_recommendations(strategy_name, performance, should_retire, should_tune)
+            
+            return {
+                'should_retire': should_retire,
+                'should_tune': should_tune,
+                'confidence': confidence,
+                'recommendations': recommendations,
+                'performance_trend': self._calculate_performance_trend(strategy_name),
+                'timestamp': datetime.now().isoformat()
+            }
+            
         except Exception as e:
-            logger.error(f"Error loading performance logs: {e}")
-            return {}
-
-    def detect_drift(self, model_name: str, new_metrics: PerformanceMetrics) -> Tuple[bool, Dict]:
-        """
-        Detect performance drift by comparing new metrics to historical data.
+            logger.error(f"Error checking strategy performance: {e}")
+            return {
+                'should_retire': False,
+                'should_tune': False,
+                'confidence': 0.0,
+                'recommendations': ['Error occurred during performance check'],
+                'error': str(e)
+            }
+    
+    def check_model_performance(self, model_name: str, 
+                              performance: Dict[str, float]) -> Dict[str, Any]:
+        """Check model performance and determine if action is needed.
         
         Args:
             model_name: Name of the model
-            new_metrics: Latest performance metrics
+            performance: Current performance metrics
             
         Returns:
-            Tuple of (drift_detected, drift_details)
+            Dictionary with recommendations
         """
         try:
-            if model_name not in self.performance_log:
-                return False, {"reason": "No historical data available"}
+            # Store performance in history
+            if model_name not in self.performance_history:
+                self.performance_history[model_name] = []
             
-            # Get recent metrics
-            recent_metrics = self.performance_log[model_name][-self.window_size:]
-            if not recent_metrics:
-                return False, {"reason": "Insufficient historical data"}
+            performance_record = {
+                'timestamp': datetime.now(),
+                'performance': performance.copy()
+            }
+            self.performance_history[model_name].append(performance_record)
             
-            # Calculate rolling statistics
-            recent_mse = [m.mse for m in recent_metrics]
-            recent_sharpe = [m.sharpe for m in recent_metrics]
-            recent_drawdown = [m.drawdown for m in recent_metrics]
+            # Keep only last 50 records
+            if len(self.performance_history[model_name]) > 50:
+                self.performance_history[model_name] = self.performance_history[model_name][-50:]
             
-            # Check for significant changes
-            drift_details = {
-                "mse_change": self._calculate_change(new_metrics.mse, recent_mse),
-                "sharpe_change": self._calculate_change(new_metrics.sharpe, recent_sharpe),
-                "drawdown_change": self._calculate_change(new_metrics.drawdown, recent_drawdown),
-                "confidence_low": new_metrics.confidence_score < self.thresholds["confidence_threshold"]
+            # Check retirement conditions (adapted for models)
+            should_retire = self._check_model_retirement_conditions(model_name, performance)
+            
+            # Check tuning conditions
+            should_tune = self._check_model_tuning_conditions(model_name, performance)
+            
+            # Calculate confidence in recommendation
+            confidence = self._calculate_model_confidence(model_name, performance)
+            
+            # Generate recommendations
+            recommendations = self._generate_model_recommendations(model_name, performance, should_retire, should_tune)
+            
+            return {
+                'should_retire': should_retire,
+                'should_tune': should_tune,
+                'confidence': confidence,
+                'recommendations': recommendations,
+                'performance_trend': self._calculate_performance_trend(model_name),
+                'timestamp': datetime.now().isoformat()
             }
             
-            # Perform statistical tests
-            drift_detected = (
-                drift_details["mse_change"] > self.thresholds["mse_increase"] or
-                drift_details["sharpe_change"] < -self.thresholds["sharpe_decrease"] or
-                drift_details["drawdown_change"] > self.thresholds["drawdown_increase"] or
-                drift_details["confidence_low"]
-            )
-            
-            if drift_detected:
-                logger.warning(f"Drift detected for model {model_name}: {drift_details}")
-            
-            return drift_detected, drift_details
-            
         except Exception as e:
-            logger.error(f"Error detecting drift: {e}")
-            return False, {"error": str(e)}
-
-    def _calculate_change(self, new_value: float, historical_values: List[float]) -> float:
-        """Calculate relative change compared to historical values"""
-        try:
-            if not historical_values:
-                return 0.0
-            historical_mean = np.mean(historical_values)
-            if historical_mean == 0:
-                return 0.0
-            return (new_value - historical_mean) / abs(historical_mean)
-        except Exception as e:
-            logger.error(f"Error calculating change: {e}")
-            return 0.0
-
-    async def trigger_retrain(self, model_name: str, drift_details: Dict) -> bool:
-        """
-        Trigger model retraining if conditions are met.
+            logger.error(f"Error checking model performance: {e}")
+            return {
+                'should_retire': False,
+                'should_tune': False,
+                'confidence': 0.0,
+                'recommendations': ['Error occurred during performance check'],
+                'error': str(e)
+            }
+    
+    def suggest_improvements(self, strategy_name: str, 
+                           performance: Dict[str, float]) -> List[str]:
+        """Suggest improvements for a strategy.
         
         Args:
-            model_name: Name of the model to retrain
-            drift_details: Details about the detected drift
+            strategy_name: Name of the strategy
+            performance: Current performance metrics
             
         Returns:
-            True if retraining was triggered, False otherwise
+            List of improvement suggestions
         """
         try:
-            # Check retrain cooldown
-            last_retrain = self._get_last_retrain_time(model_name)
-            if last_retrain and (datetime.now() - last_retrain).days < self.retrain_cooldown:
-                logger.info(f"Retraining skipped for {model_name} due to cooldown period")
-                return False
+            suggestions = []
             
-            # Prepare retraining signal
-            signal = {
-                "model_name": model_name,
-                "drift_details": drift_details,
-                "timestamp": datetime.now().isoformat(),
-                "priority": self._calculate_retrain_priority(drift_details)
-            }
+            # Check specific performance areas
+            if performance.get('sharpe_ratio', 0) < 0.8:
+                suggestions.append("Consider reducing position sizes to improve Sharpe ratio")
             
-            # Send signal to ModelBuilder
-            signal_path = self.log_dir / f"{model_name}_retrain_signal.json"
-            with open(signal_path, 'w') as f:
-                json.dump(signal, f, indent=2)
+            if performance.get('win_rate', 0) < 0.5:
+                suggestions.append("Review entry/exit criteria to improve win rate")
             
-            logger.info(f"Retraining triggered for model {model_name}")
-            return True
+            if performance.get('max_drawdown', 0) > 0.15:
+                suggestions.append("Implement stricter stop-loss mechanisms")
+            
+            if performance.get('volatility', 0) > 0.25:
+                suggestions.append("Consider adding volatility filters")
+            
+            # Check for parameter tuning opportunities
+            if self._should_tune_parameters(strategy_name, performance):
+                suggestions.append("Consider hyperparameter optimization")
+            
+            # Check for regime adaptation
+            if self._should_adapt_to_regime(strategy_name, performance):
+                suggestions.append("Consider regime-specific parameter adjustments")
+            
+            # If no specific suggestions, provide general ones
+            if not suggestions:
+                suggestions.append("Monitor performance closely and consider parameter fine-tuning")
+                suggestions.append("Review market conditions and adjust strategy accordingly")
+            
+            return suggestions
             
         except Exception as e:
-            logger.error(f"Error triggering retrain: {e}")
+            logger.error(f"Error generating improvement suggestions: {e}")
+            return ["Monitor performance and consider parameter adjustments"]
+    
+    def _check_retirement_conditions(self, strategy_name: str, 
+                                   performance: Dict[str, float]) -> bool:
+        """Check if strategy should be retired."""
+        try:
+            # Check individual thresholds
+            if performance.get('sharpe_ratio', 0) < self.retirement_thresholds['sharpe_ratio']:
+                return True
+            
+            if performance.get('win_rate', 0) < self.retirement_thresholds['win_rate']:
+                return True
+            
+            if abs(performance.get('max_drawdown', 0)) > self.retirement_thresholds['max_drawdown']:
+                return True
+            
+            if performance.get('total_return', 0) < self.retirement_thresholds['total_return']:
+                return True
+            
+            # Check performance trend
+            if strategy_name in self.performance_history and len(self.performance_history[strategy_name]) >= 10:
+                recent_performance = self.performance_history[strategy_name][-10:]
+                older_performance = self.performance_history[strategy_name][-20:-10]
+                
+                if len(recent_performance) >= 5 and len(older_performance) >= 5:
+                    recent_sharpe = np.mean([p['performance'].get('sharpe_ratio', 0) for p in recent_performance])
+                    older_sharpe = np.mean([p['performance'].get('sharpe_ratio', 0) for p in older_performance])
+                    
+                    if recent_sharpe < older_sharpe * 0.5:  # 50% decay
+                        return True
+            
             return False
-
-    def _get_last_retrain_time(self, model_name: str) -> Optional[datetime]:
-        """Get the timestamp of the last retraining for a model"""
-        try:
-            signal_files = list(self.log_dir.glob(f"{model_name}_retrain_signal.json"))
-            if not signal_files:
-                return None
-            latest_file = max(signal_files, key=os.path.getctime)
-            with open(latest_file, 'r') as f:
-                signal = json.load(f)
-                return datetime.fromisoformat(signal["timestamp"])
-        except Exception as e:
-            logger.error(f"Error getting last retrain time: {e}")
-            return None
-
-    def _calculate_retrain_priority(self, drift_details: Dict) -> int:
-        """Calculate retraining priority based on drift severity"""
-        try:
-            priority = 0
-            if drift_details["mse_change"] > self.thresholds["mse_increase"] * 2:
-                priority += 3
-            elif drift_details["mse_change"] > self.thresholds["mse_increase"]:
-                priority += 2
-                
-            if drift_details["sharpe_change"] < -self.thresholds["sharpe_decrease"] * 2:
-                priority += 3
-            elif drift_details["sharpe_change"] < -self.thresholds["sharpe_decrease"]:
-                priority += 2
-                
-            if drift_details["drawdown_change"] > self.thresholds["drawdown_increase"] * 2:
-                priority += 3
-            elif drift_details["drawdown_change"] > self.thresholds["drawdown_increase"]:
-                priority += 2
-                
-            if drift_details["confidence_low"]:
-                priority += 1
-                
-            return min(priority, 10)  # Cap at 10
             
         except Exception as e:
-            logger.error(f"Error calculating retrain priority: {e}")
-            return 5  # Default priority
-
-    def update_log(self, model_name: str, new_metrics: PerformanceMetrics) -> None:
-        """
-        Update performance log with new metrics.
-        
-        Args:
-            model_name: Name of the model
-            new_metrics: New performance metrics
-        """
-        try:
-            # Update in-memory log
-            if model_name not in self.performance_log:
-                self.performance_log[model_name] = []
-            self.performance_log[model_name].append(new_metrics)
-            
-            # Keep only recent metrics
-            self.performance_log[model_name] = self.performance_log[model_name][-self.window_size:]
-            
-            # Save to disk
-            log_path = self.log_dir / f"{model_name}.json"
-            with open(log_path, 'w') as f:
-                json.dump(
-                    [vars(m) for m in self.performance_log[model_name]],
-                    f,
-                    indent=2
-                )
-            
-            logger.info(f"Updated performance log for model {model_name}")
-            
-        except Exception as e:
-            logger.error(f"Error updating performance log: {e}")
-
-    async def execute_performance_monitoring_loop(self) -> None:
-        """Main execution loop for the PerformanceChecker agent.
-        
-        Continuously monitors model performance metrics and detects performance drift.
-        Triggers retraining when significant degradation is detected.
-        """
-        try:
-            while True:
-                # Check for new performance metrics
-                for model_name, metrics in self.performance_log.items():
-                    if not metrics:
-                        continue
-                        
-                    latest_metrics = metrics[-1]
-                    
-                    # Detect drift
-                    drift_detected, drift_details = self.detect_drift(
-                        model_name,
-                        latest_metrics
-                    )
-                    
-                    if drift_detected:
-                        # Trigger retraining if necessary
-                        await self.trigger_retrain(model_name, drift_details)
-                
-                # Wait before next check
-                await asyncio.sleep(self.config.get("check_interval", 3600))  # Default: 1 hour
-                
-        except KeyboardInterrupt:
-            logger.info("PerformanceChecker agent stopped by user")
-        except Exception as e:
-            logger.error(f"Error in PerformanceChecker agent: {e}")
-        finally:
-            self.observer.stop()
-            self.observer.join()
-
-class PerformanceLogHandler(FileSystemEventHandler):
-    """Handler for monitoring performance log files"""
+            logger.error(f"Error checking retirement conditions: {e}")
+            return False
     
-    def __init__(self, checker: PerformanceChecker) -> None:
-        """Initialize the performance log handler.
-        
-        Args:
-            checker: The PerformanceChecker instance to notify of log updates
-        """
-        self.checker = checker
+    def _check_model_retirement_conditions(self, model_name: str, 
+                                         performance: Dict[str, float]) -> bool:
+        """Check if model should be retired."""
+        try:
+            # Check model-specific thresholds
+            if performance.get('accuracy', 0) < 0.4:
+                return True
+            
+            if performance.get('mse', float('inf')) > 0.1:
+                return True
+            
+            if performance.get('r2', 0) < 0.3:
+                return True
+            
+            # Check performance trend
+            if model_name in self.performance_history and len(self.performance_history[model_name]) >= 10:
+                recent_performance = self.performance_history[model_name][-10:]
+                older_performance = self.performance_history[model_name][-20:-10]
+                
+                if len(recent_performance) >= 5 and len(older_performance) >= 5:
+                    recent_accuracy = np.mean([p['performance'].get('accuracy', 0) for p in recent_performance])
+                    older_accuracy = np.mean([p['performance'].get('accuracy', 0) for p in older_performance])
+                    
+                    if recent_accuracy < older_accuracy * 0.7:  # 30% decay
+                        return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error checking model retirement conditions: {e}")
+            return False
     
-    def on_modified(self, event) -> None:
-        """Handle file modification events.
+    def _check_tuning_conditions(self, strategy_name: str, 
+                               performance: Dict[str, float]) -> bool:
+        """Check if strategy should be tuned."""
+        try:
+            # Check if performance is below optimal but above retirement threshold
+            if (self.retirement_thresholds['sharpe_ratio'] < performance.get('sharpe_ratio', 0) < 0.8):
+                return True
+            
+            if (self.retirement_thresholds['win_rate'] < performance.get('win_rate', 0) < 0.6):
+                return True
+            
+            # Check performance trend
+            if strategy_name in self.performance_history and len(self.performance_history[strategy_name]) >= 10:
+                recent_performance = self.performance_history[strategy_name][-5:]
+                older_performance = self.performance_history[strategy_name][-10:-5]
+                
+                if len(recent_performance) >= 3 and len(older_performance) >= 3:
+                    recent_sharpe = np.mean([p['performance'].get('sharpe_ratio', 0) for p in recent_performance])
+                    older_sharpe = np.mean([p['performance'].get('sharpe_ratio', 0) for p in older_performance])
+                    
+                    if recent_sharpe < older_sharpe * (1 + self.tuning_thresholds['sharpe_decay']):
+                        return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error checking tuning conditions: {e}")
+            return False
+    
+    def _check_model_tuning_conditions(self, model_name: str, 
+                                     performance: Dict[str, float]) -> bool:
+        """Check if model should be tuned."""
+        try:
+            # Check if performance is below optimal but above retirement threshold
+            if (0.4 < performance.get('accuracy', 0) < 0.7):
+                return True
+            
+            if (0.3 < performance.get('r2', 0) < 0.6):
+                return True
+            
+            # Check performance trend
+            if model_name in self.performance_history and len(self.performance_history[model_name]) >= 10:
+                recent_performance = self.performance_history[model_name][-5:]
+                older_performance = self.performance_history[model_name][-10:-5]
+                
+                if len(recent_performance) >= 3 and len(older_performance) >= 3:
+                    recent_accuracy = np.mean([p['performance'].get('accuracy', 0) for p in recent_performance])
+                    older_accuracy = np.mean([p['performance'].get('accuracy', 0) for p in older_performance])
+                    
+                    if recent_accuracy < older_accuracy * (1 + self.tuning_thresholds['accuracy_drop']):
+                        return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error checking model tuning conditions: {e}")
+            return False
+    
+    def _calculate_confidence(self, strategy_name: str, 
+                            performance: Dict[str, float]) -> float:
+        """Calculate confidence in the performance assessment."""
+        try:
+            # Base confidence on performance stability
+            if strategy_name in self.performance_history and len(self.performance_history[strategy_name]) >= 5:
+                recent_performances = self.performance_history[strategy_name][-5:]
+                sharpe_values = [p['performance'].get('sharpe_ratio', 0) for p in recent_performances]
+                
+                # Higher confidence for more stable performance
+                stability = 1.0 - min(1.0, np.std(sharpe_values) / 0.5)
+                return max(0.3, min(1.0, stability))
+            else:
+                return 0.5  # Default confidence for new strategies
+                
+        except Exception as e:
+            logger.error(f"Error calculating confidence: {e}")
+            return 0.5
+    
+    def _calculate_model_confidence(self, model_name: str, 
+                                  performance: Dict[str, float]) -> float:
+        """Calculate confidence in the model performance assessment."""
+        try:
+            # Base confidence on model performance stability
+            if model_name in self.performance_history and len(self.performance_history[model_name]) >= 5:
+                recent_performances = self.performance_history[model_name][-5:]
+                accuracy_values = [p['performance'].get('accuracy', 0) for p in recent_performances]
+                
+                # Higher confidence for more stable performance
+                stability = 1.0 - min(1.0, np.std(accuracy_values) / 0.3)
+                return max(0.3, min(1.0, stability))
+            else:
+                return 0.5  # Default confidence for new models
+                
+        except Exception as e:
+            logger.error(f"Error calculating model confidence: {e}")
+            return 0.5
+    
+    def _calculate_performance_trend(self, name: str) -> float:
+        """Calculate performance trend over time."""
+        try:
+            if name not in self.performance_history or len(self.performance_history[name]) < 10:
+                return 0.0
+            
+            recent_performances = self.performance_history[name][-10:]
+            
+            # Calculate trend based on key metrics
+            if 'sharpe_ratio' in recent_performances[0]['performance']:
+                # Strategy trend
+                sharpe_values = [p['performance'].get('sharpe_ratio', 0) for p in recent_performances]
+            else:
+                # Model trend
+                sharpe_values = [p['performance'].get('accuracy', 0) for p in recent_performances]
+            
+            if len(sharpe_values) >= 2:
+                # Simple linear trend
+                x = np.arange(len(sharpe_values))
+                slope = np.polyfit(x, sharpe_values, 1)[0]
+                return slope
+            else:
+                return 0.0
+                
+        except Exception as e:
+            logger.error(f"Error calculating performance trend: {e}")
+            return 0.0
+    
+    def _generate_recommendations(self, strategy_name: str, 
+                                performance: Dict[str, float],
+                                should_retire: bool, 
+                                should_tune: bool) -> List[str]:
+        """Generate specific recommendations."""
+        recommendations = []
         
-        Args:
-            event: File system event containing information about the modification
-        """
-        if event.is_directory:
-            return
-        if event.src_path.endswith('.json'):
-            logger.info(f"Performance log updated: {event.src_path}")
-            # Reload the log file
-            self.checker.performance_log = self.checker.load_log()
+        if should_retire:
+            recommendations.append(f"Consider retiring {strategy_name} due to poor performance")
+            recommendations.append("Evaluate alternative strategies for the current market conditions")
+        elif should_tune:
+            recommendations.append(f"Consider tuning parameters for {strategy_name}")
+            recommendations.append("Review recent market conditions and adjust strategy accordingly")
+        else:
+            recommendations.append(f"Continue monitoring {strategy_name} performance")
+            recommendations.append("Consider incremental improvements based on market analysis")
+        
+        return recommendations
+    
+    def _generate_model_recommendations(self, model_name: str, 
+                                      performance: Dict[str, float],
+                                      should_retire: bool, 
+                                      should_tune: bool) -> List[str]:
+        """Generate specific model recommendations."""
+        recommendations = []
+        
+        if should_retire:
+            recommendations.append(f"Consider retiring {model_name} due to poor performance")
+            recommendations.append("Evaluate alternative models for the current data characteristics")
+        elif should_tune:
+            recommendations.append(f"Consider tuning hyperparameters for {model_name}")
+            recommendations.append("Review feature engineering and data preprocessing")
+        else:
+            recommendations.append(f"Continue monitoring {model_name} performance")
+            recommendations.append("Consider ensemble methods to improve robustness")
+        
+        return recommendations
+    
+    def _should_tune_parameters(self, strategy_name: str, 
+                              performance: Dict[str, float]) -> bool:
+        """Check if parameters should be tuned."""
+        return performance.get('sharpe_ratio', 0) < 1.0 and performance.get('win_rate', 0) < 0.6
+    
+    def _should_adapt_to_regime(self, strategy_name: str, 
+                              performance: Dict[str, float]) -> bool:
+        """Check if strategy should adapt to market regime."""
+        return performance.get('volatility', 0) > 0.2 or performance.get('max_drawdown', 0) > 0.1
 
-if __name__ == "__main__":
-    checker = PerformanceChecker()
-    asyncio.run(checker.execute_performance_monitoring_loop()) 
+
+# Global performance checker instance
+performance_checker = PerformanceChecker()
+
+def get_performance_checker() -> PerformanceChecker:
+    """Get the global performance checker instance."""
+    return performance_checker 

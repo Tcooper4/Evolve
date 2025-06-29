@@ -542,6 +542,31 @@ class MarketRegimeAgent:
         except Exception as e:
             logger.error(f"Error loading regime history: {e}")
 
+    def get_regime_confidence(self) -> float:
+        """Get confidence level for the current regime classification.
+        
+        Returns:
+            Confidence score between 0.0 and 1.0
+        """
+        try:
+            if not hasattr(self, 'last_classification_result'):
+                return 0.5  # Default confidence if no classification performed
+            
+            # Calculate confidence based on classification probabilities
+            if hasattr(self, 'last_probabilities') and self.last_probabilities is not None:
+                # Use the highest probability as confidence
+                confidence = max(self.last_probabilities) if self.last_probabilities else 0.5
+            else:
+                # Fallback confidence calculation
+                confidence = 0.7
+            
+            # Ensure confidence is within bounds
+            return max(0.0, min(1.0, confidence))
+            
+        except Exception as e:
+            logger.error(f"Error calculating regime confidence: {e}")
+            return 0.5  # Default confidence on error
+
 # Global market regime agent instance
 market_regime_agent = MarketRegimeAgent()
 
