@@ -1,0 +1,345 @@
+{
+  "timestamp": "2025-06-29T15:48:42.735054",
+  "duration_seconds": 72.315114,
+  "total_tests": 8,
+  "passed": 3,
+  "failed": 5,
+  "success_rate": 37.5,
+  "test_results": {
+    "Enhanced UI Integration": {
+      "success": true,
+      "available_components": 11,
+      "total_components": 11,
+      "component_status": {
+        "agent_hub": true,
+        "data_feed": true,
+        "prompt_router": true,
+        "model_monitor": true,
+        "strategy_logger": true,
+        "portfolio_manager": true,
+        "strategy_selector": true,
+        "market_regime_agent": true,
+        "hybrid_engine": true,
+        "quant_gpt": true,
+        "report_exporter": true
+      },
+      "tab_results": {
+        "forecast_tab": {
+          "success": true,
+          "forecast": {
+            "symbol": "AAPL",
+            "timeframe": "30d",
+            "model_type": "ensemble",
+            "confidence": 0.85,
+            "forecast_values": [
+              100.0,
+              101.0,
+              102.0,
+              103.0,
+              104.0
+            ],
+            "model_metadata": {
+              "ensemble_weights": [
+                0.3,
+                0.4,
+                0.3
+              ]
+            },
+            "agent_used": "forecast_router",
+            "timestamp": "2025-06-29T15:48:01.967874"
+          },
+          "model_trace": {
+            "model_selection_reason": "Selected ensemble based on data characteristics",
+            "data_quality_score": 0.85,
+            "feature_importance": [
+              "price_momentum",
+              "volume_trend",
+              "volatility"
+            ],
+            "validation_metrics": {
+              "mse": 0.02,
+              "mae": 0.15,
+              "r2": 0.78
+            }
+          },
+          "backtest_performance": {
+            "sharpe_ratio": 1.2,
+            "total_return": 0.15,
+            "max_drawdown": -0.08,
+            "win_rate": 0.65,
+            "volatility": 0.18
+          }
+        },
+        "strategy_tab": {
+          "success": true,
+          "strategy_chain": [
+            {
+              "strategy": "momentum",
+              "weight": 0.4,
+              "reason": "Compatible with bull regime and medium risk"
+            },
+            {
+              "strategy": "trend_following",
+              "weight": 0.6,
+              "reason": "Compatible with bull regime and medium risk"
+            }
+          ],
+          "regime_analysis": {
+            "regime": "bull",
+            "volatility": 0.18,
+            "trend_strength": 0.7,
+            "momentum": 0.05,
+            "volume_trend": 1.2
+          },
+          "performance": {
+            "total_return": 0.12,
+            "sharpe_ratio": 1.1,
+            "max_drawdown": -0.06,
+            "win_rate": 0.62,
+            "volatility": 0.16
+          }
+        },
+        "portfolio_tab": {
+          "success": true,
+          "portfolio_summary": {
+            "total_value": 150000.0,
+            "cash": 25000.0,
+            "positions": [
+              {
+                "symbol": "AAPL",
+                "shares": 100,
+                "value": 15000.0
+              },
+              {
+                "symbol": "GOOGL",
+                "shares": 50,
+                "value": 7000.0
+              },
+              {
+                "symbol": "TSLA",
+                "shares": 200,
+                "value": 50000.0
+              }
+            ]
+          },
+          "risk_metrics": {
+            "volatility": 0.18,
+            "var": -0.05,
+            "beta": 1.1,
+            "sharpe_ratio": 1.2,
+            "max_drawdown": -0.08
+          }
+        },
+        "logs_tab": {
+          "success": true,
+          "agent_interactions": [
+            {
+              "timestamp": "2025-06-29 15:30:00",
+              "agent_type": "forecast_router",
+              "prompt": "Forecast AAPL for 30 days",
+              "response": "Generated forecast with 85% confidence",
+              "confidence": 0.85,
+              "success": true
+            },
+            {
+              "timestamp": "2025-06-29 15:29:30",
+              "agent_type": "strategy_selector",
+              "prompt": "Select strategy for AAPL",
+              "response": "Selected momentum strategy",
+              "confidence": 0.78,
+              "success": true
+            }
+          ],
+          "strategy_decisions": [
+            {
+              "timestamp": "2025-06-29 15:30:00",
+              "strategy": "momentum",
+              "decision": "BUY",
+              "confidence": 0.75,
+              "parameters": {
+                "lookback": 20,
+                "threshold": 0.02
+              }
+            }
+          ]
+        },
+        "system_tab": {
+          "success": true,
+          "system_health": {
+            "overall_status": "healthy",
+            "healthy_components": 3,
+            "data_feed_status": "healthy",
+            "data_feed_providers": 3,
+            "model_engine_status": "healthy",
+            "active_models": 5,
+            "strategy_engine_status": "healthy",
+            "active_strategies": 8
+          },
+          "capability_status": {
+            "openai_api": true,
+            "huggingface_models": true,
+            "redis_connection": false,
+            "postgres_connection": false,
+            "alpha_vantage_api": true,
+            "yfinance_api": true,
+            "torch_models": true,
+            "streamlit_interface": true,
+            "plotly_visualization": true
+          }
+        }
+      },
+      "successful_tabs": 5
+    },
+    "Dynamic Strategy Engine": {
+      "success": false,
+      "error": "'MarketRegimeAgent' object has no attribute 'get_regime_confidence'"
+    },
+    "Agent Memory Management": {
+      "success": false,
+      "interaction_store": false,
+      "strategy_store": false,
+      "interactions_retrieved": 0,
+      "confidence_boost": 0.0,
+      "retirement_check": false,
+      "health_status": "empty"
+    },
+    "Model Confidence & Trace": {
+      "success": false,
+      "error": "'ModelMonitor' object has no attribute 'get_model_performance'"
+    },
+    "Meta-Agent Loop": {
+      "success": false,
+      "error": "No module named 'trading.orchestrator'"
+    },
+    "Live Data Streaming": {
+      "success": true,
+      "provider_status": {
+        "current_provider": "Polygon",
+        "providers": {
+          "Polygon": {
+            "name": "Polygon",
+            "available": true,
+            "error_count": 0,
+            "last_check": null,
+            "last_successful_request": null
+          },
+          "Finnhub": {
+            "name": "Finnhub",
+            "available": true,
+            "error_count": 0,
+            "last_check": null,
+            "last_successful_request": null
+          },
+          "Alpha Vantage": {
+            "name": "Alpha Vantage",
+            "available": true,
+            "error_count": 0,
+            "last_check": null,
+            "last_successful_request": null
+          }
+        }
+      },
+      "health_status": "healthy",
+      "available_providers": 3,
+      "historical_data_available": true,
+      "live_data_available": true,
+      "current_provider": "Polygon"
+    },
+    "Comprehensive Reporting": {
+      "success": false,
+      "error": "cannot import name 'ReportExporter' from 'trading.report.export_engine' (C:\\Users\\Thomas\\OneDrive\\Desktop\\Dashboard\\evolve_clean\\trading\\report\\export_engine.py)"
+    },
+    "System Health Monitoring": {
+      "success": true,
+      "overall_health": "degraded",
+      "healthy_components": 1,
+      "total_components": 4,
+      "capability_health": {
+        "overall_status": "degraded",
+        "available_capabilities": 6,
+        "total_capabilities": 9,
+        "critical_capabilities_available": false,
+        "capability_status": {
+          "openai_api": true,
+          "huggingface_models": true,
+          "redis_connection": false,
+          "postgres_connection": false,
+          "alpha_vantage_api": false,
+          "yfinance_api": true,
+          "torch_models": true,
+          "streamlit_interface": true,
+          "plotly_visualization": true
+        },
+        "recent_fallbacks": [
+          {
+            "timestamp": "2025-06-29T15:48:42.034339",
+            "capability": "redis_connection",
+            "reason": "capability_unavailable"
+          },
+          {
+            "timestamp": "2025-06-29T15:48:42.037177",
+            "capability": "postgres_connection",
+            "reason": "capability_unavailable"
+          },
+          {
+            "timestamp": "2025-06-29T15:48:42.038642",
+            "capability": "alpha_vantage_api",
+            "reason": "capability_unavailable"
+          }
+        ]
+      },
+      "agent_health": {
+        "overall_status": "healthy",
+        "available_agents": 1,
+        "total_agents": 1,
+        "agent_status": {
+          "forecast": {
+            "available": true,
+            "health": "unknown",
+            "last_used": null
+          }
+        },
+        "fallback_available": false,
+        "last_interaction": null
+      },
+      "data_health": {
+        "status": "healthy",
+        "available_providers": 3,
+        "total_providers": 3,
+        "current_provider": "Alpha Vantage",
+        "cache_size": 1,
+        "provider_status": {
+          "Polygon": {
+            "name": "Polygon",
+            "available": true,
+            "error_count": 0,
+            "last_check": null,
+            "last_successful_request": null
+          },
+          "Finnhub": {
+            "name": "Finnhub",
+            "available": true,
+            "error_count": 0,
+            "last_check": null,
+            "last_successful_request": null
+          },
+          "Alpha Vantage": {
+            "name": "Alpha Vantage",
+            "available": true,
+            "error_count": 0,
+            "last_check": "2025-06-29T15:48:25.540945",
+            "last_successful_request": "2025-06-29T15:48:25.540951"
+          }
+        }
+      },
+      "rl_health": {
+        "overall_status": "degraded",
+        "model_available": false,
+        "gymnasium_available": true,
+        "stable_baselines3_available": true,
+        "last_training_success": false
+      }
+    }
+  },
+  "upgrade_status": "FAILED"
+}

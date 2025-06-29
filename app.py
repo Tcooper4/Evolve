@@ -131,21 +131,31 @@ def main():
 
     # Page routing
     if page == "🏠 Home":
-        show_home_page(module_status)
+        result = show_home_page(module_status)
+        return result
     elif page == "📈 Forecast & Trade":
         st.switch_page("pages/1_Forecast_Trade.py")
+        return {'status': 'redirected', 'page': 'forecast_trade'}
     elif page == "📊 Portfolio Dashboard":
         st.switch_page("pages/portfolio_dashboard.py")
+        return {'status': 'redirected', 'page': 'portfolio_dashboard'}
     elif page == "⚡ Strategy History":
         st.switch_page("pages/6_Strategy_History.py")
+        return {'status': 'redirected', 'page': 'strategy_history'}
     elif page == "🎯 Performance Tracker":
         st.switch_page("pages/performance_tracker.py")
+        return {'status': 'redirected', 'page': 'performance_tracker'}
     elif page == "🛡️ Risk Dashboard":
         st.switch_page("pages/risk_dashboard.py")
+        return {'status': 'redirected', 'page': 'risk_dashboard'}
     elif page == "⚙️ Settings":
         st.switch_page("pages/settings.py")
+        return {'status': 'redirected', 'page': 'settings'}
     elif page == "📋 System Scorecard":
         st.switch_page("pages/5_📊_System_Scorecard.py")
+        return {'status': 'redirected', 'page': 'system_scorecard'}
+    
+    return {'status': 'unknown_page', 'page': page}
 
 
 def show_home_page(module_status: Dict[str, Any]):
@@ -200,7 +210,7 @@ def show_home_page(module_status: Dict[str, Any]):
         try:
             strategy_logger = StrategyLogger()
             recent_decisions = strategy_logger.get_recent_decisions(limit=5)
-            decision_count = len(recent_decisions) if recent_decisions else 0
+            decision_count = len(recent_decisions)
             st.metric(
                 label="Recent Decisions",
                 value=decision_count,
@@ -210,230 +220,144 @@ def show_home_page(module_status: Dict[str, Any]):
             logger.warning(f"Could not get strategy decisions: {e}")
             st.metric(label="Recent Decisions", value="N/A", delta="Error")
     
-    st.markdown("---")
-    
     # System Health Dashboard
-    st.subheader("🏥 System Health Dashboard")
+    st.subheader("🔧 System Health")
     
-    col1, col2 = st.columns(2)
+    # Get comprehensive system health
+    health_data = get_comprehensive_system_health()
     
-    with col1:
-        # AgentHub Health
-        if AGENT_HUB_AVAILABLE and 'agent_hub' in st.session_state:
-            agent_hub = st.session_state['agent_hub']
-            agent_health = agent_hub.get_system_health()
-            
-            st.write("**🤖 AgentHub Status:**")
-            st.write(f"Overall: {agent_health['overall_status']}")
-            st.write(f"Available Agents: {agent_health['available_agents']}/{agent_health['total_agents']}")
-            
-            # Show agent status
-            for agent_name, status in agent_health['agent_status'].items():
-                status_icon = "🟢" if status['available'] else "🔴"
-                st.write(f"{status_icon} {agent_name}: {status['health']}")
+    # Display health metrics
+    health_col1, health_col2, health_col3 = st.columns(3)
     
-    with col2:
-        # Data Feed Health
-        if DATA_FEED_AVAILABLE:
-            try:
-                data_feed = get_data_feed()
-                feed_health = data_feed.get_system_health()
-                
-                st.write("**📊 Data Feed Status:**")
-                st.write(f"Overall: {feed_health['overall_status']}")
-                st.write(f"Available Providers: {feed_health['available_providers']}/{feed_health['total_providers']}")
-                st.write(f"Current Provider: {feed_health['current_provider']}")
-                st.write(f"Cache Size: {feed_health['cache_size']}")
-                
-                # Show provider status
-                provider_status = data_feed.get_provider_status()
-                for provider_name, status in provider_status.items():
-                    if provider_name not in ['current_provider', 'fallback_history', 'cache_size', 'cache_ttl']:
-                        status_icon = "🟢" if status['available'] else "🔴"
-                        st.write(f"{status_icon} {provider_name}: {'Available' if status['available'] else 'Unavailable'}")
-            except Exception as e:
-                st.write("**📊 Data Feed Status:** Error")
-                st.write(f"Error: {str(e)}")
-    
-    st.markdown("---")
-    
-    # Global AI Agent Interface
-    if AGENT_HUB_AVAILABLE and 'agent_hub' in st.session_state:
-        st.subheader("🤖 Global AI Agent Interface")
-        st.markdown("Ask questions or request actions across the entire system:")
-        
-        user_prompt = st.text_area(
-            "What would you like to know or do?",
-            placeholder="e.g., 'Show me the best performing strategy' or 'Analyze market conditions for tech stocks'",
-            height=100,
-            key="global_agent_prompt"
+    with health_col1:
+        st.metric(
+            label="Data Feed Status",
+            value=health_data.get('data_feed_status', 'Unknown'),
+            delta=health_data.get('data_feed_providers', 0)
         )
-        
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            if st.button("🚀 Ask AI Agent", type="primary"):
-                if user_prompt:
-                    with st.spinner("Processing your request..."):
-                        try:
-                            agent_hub = st.session_state['agent_hub']
-                            response = agent_hub.route(user_prompt)
-                            
-                            st.subheader("🤖 AI Response")
-                            
-                            if response['type'] == 'forecast':
-                                st.success("📈 Forecast Response")
-                            elif response['type'] == 'trading':
-                                st.success("💰 Trading Response")
-                            elif response['type'] == 'analysis':
-                                st.success("📊 Analysis Response")
-                            elif response['type'] == 'quantitative':
-                                st.success("🧮 Quantitative Response")
-                            elif response['type'] == 'llm':
-                                st.success("💬 General Response")
-                            else:
-                                st.info("📋 Response")
-                            
-                            st.write(response['content'])
-                            
-                            # Show which agent was used and confidence
-                            st.caption(f"Response from: {response['agent']} agent (Confidence: {response.get('confidence', 0):.1%})")
-                            
-                            # Show metadata if available
-                            if 'metadata' in response:
-                                with st.expander("📋 Response Metadata"):
-                                    st.json(response['metadata'])
-                            
-                        except Exception as e:
-                            st.error(f"Error processing request: {str(e)}")
-                            logger.error(f"Global AgentHub error: {e}")
-                else:
-                    st.warning("Please enter a prompt to process.")
-        
-        with col2:
-            if st.button("🔄 Reset"):
-                st.session_state['global_agent_prompt'] = ""
-                st.experimental_rerun()
-        
-        # Show recent agent interactions
-        if 'agent_hub' in st.session_state:
-            agent_hub = st.session_state['agent_hub']
-            recent_interactions = agent_hub.get_recent_interactions(limit=5)
-            if recent_interactions:
-                st.subheader("🕒 Recent AI Interactions")
-                for interaction in recent_interactions:
-                    success_icon = "✅" if interaction['success'] else "❌"
-                    confidence = interaction.get('confidence', 0)
-                    st.write(f"{success_icon} **{interaction['agent_type']}** (Confidence: {confidence:.1%}): {interaction['prompt'][:60]}...")
     
-    st.markdown("---")
+    with health_col2:
+        st.metric(
+            label="Model Engine Status",
+            value=health_data.get('model_engine_status', 'Unknown'),
+            delta=health_data.get('active_models', 0)
+        )
     
-    # Quick actions
+    with health_col3:
+        st.metric(
+            label="Strategy Engine Status",
+            value=health_data.get('strategy_engine_status', 'Unknown'),
+            delta=health_data.get('active_strategies', 0)
+        )
+    
+    # Quick Actions
     st.subheader("⚡ Quick Actions")
     
-    col1, col2, col3 = st.columns(3)
+    action_col1, action_col2, action_col3 = st.columns(3)
     
-    with col1:
-        if st.button("📈 Generate Forecast", type="primary"):
+    with action_col1:
+        if st.button("📈 Run Forecast", use_container_width=True):
             st.switch_page("pages/1_Forecast_Trade.py")
     
-    with col2:
-        if st.button("📊 View Portfolio"):
+    with action_col2:
+        if st.button("📊 View Portfolio", use_container_width=True):
             st.switch_page("pages/portfolio_dashboard.py")
     
-    with col3:
-        if st.button("🎯 Track Performance"):
-            st.switch_page("pages/performance_tracker.py")
+    with action_col3:
+        if st.button("⚡ Strategy History", use_container_width=True):
+            st.switch_page("pages/6_Strategy_History.py")
     
-    st.markdown("---")
-    
-    # Agentic prompt routing
-    st.subheader("🤖 AI Assistant")
-    
-    # Initialize prompt router agent
-    try:
-        prompt_router = PromptRouterAgent()
-        
-        # Get user input
-        user_query = st.text_input(
-            "Ask me anything about trading, market analysis, or system status:",
-            placeholder="e.g., 'What's the best model for AAPL?' or 'Show me recent performance'"
-        )
-        
-        if user_query:
-            with st.spinner("🤖 Processing your request..."):
-                try:
-                    # Route the prompt to appropriate agent
-                    response = prompt_router.route_prompt(user_query, {})
-                    
-                    if response and response.get('success'):
-                        st.success("Response generated")
-                        st.write(response.get('result', 'No result available'))
-                        
-                        # Show routing details
-                        with st.expander("🔍 Routing Details"):
-                            st.write(f"**Intent:** {response.get('intent', 'Unknown')}")
-                            st.write(f"**Confidence:** {response.get('confidence', 0):.1%}")
-                            st.write(f"**Provider:** {response.get('provider', 'Unknown')}")
-                            st.write(f"**Agent Used:** {response.get('agent_used', 'None')}")
-                            st.write(f"**Arguments:** {response.get('args', {})}")
-                    else:
-                        st.warning("No response generated - using fallback")
-                        # Fallback response
-                        st.info("I understand your query. Please use the navigation menu to access specific features:")
-                        st.write("- Use 'Forecast & Trade' for market predictions")
-                        st.write("- Use 'Portfolio Dashboard' for position management")
-                        st.write("- Use 'Performance Tracker' for historical analysis")
-                        
-                except Exception as e:
-                    logger.error(f"Prompt routing failed: {e}")
-                    st.error(f"Error processing request: {str(e)}")
-                    st.info("Please use the navigation menu to access specific features.")
-                    
-    except Exception as e:
-        logger.warning(f"⚠️ Agentic routing initialization failed: {e}")
-        st.info("🤖 AI Assistant temporarily unavailable. Please use the navigation menu to access features.")
-    
-    st.markdown("---")
-    
-    # Recent activity
+    # Recent Activity
     st.subheader("📋 Recent Activity")
     
     try:
-        # Get recent strategy decisions
-        strategy_logger = StrategyLogger()
-        recent_decisions = strategy_logger.get_recent_decisions(limit=10)
-        
-        if recent_decisions:
-            for decision in recent_decisions:
-                timestamp = decision.get('timestamp', 'Unknown')
-                strategy = decision.get('strategy', 'Unknown')
-                decision_type = decision.get('decision', 'Unknown')
-                confidence = decision.get('confidence', 0)
-                
-                st.write(f"🕒 **{timestamp}** - {strategy}: {decision_type} (Confidence: {confidence:.1%})")
+        # Get recent agent interactions
+        if AGENT_HUB_AVAILABLE and 'agent_hub' in st.session_state:
+            agent_hub = st.session_state['agent_hub']
+            recent_interactions = agent_hub.get_recent_interactions(limit=10)
+            
+            if recent_interactions:
+                for interaction in recent_interactions:
+                    with st.expander(f"{interaction['timestamp']} - {interaction['agent_type']}"):
+                        st.write(f"**Prompt:** {interaction['prompt']}")
+                        st.write(f"**Response:** {interaction['response'][:200]}...")
+                        st.write(f"**Confidence:** {interaction.get('confidence', 'N/A')}")
+            else:
+                st.info("No recent agent interactions")
         else:
-            st.info("No recent activity to display.")
+            st.info("Agent hub not available")
             
     except Exception as e:
-        logger.warning(f"Could not load recent activity: {e}")
-        st.info("Recent activity temporarily unavailable.")
+        logger.warning(f"Could not get recent activity: {e}")
+        st.info("Could not load recent activity")
     
-    st.markdown("---")
+    return {
+        'status': 'success',
+        'module_status': module_status,
+        'health_data': health_data,
+        'timestamp': datetime.now().isoformat()
+    }
+
+
+def get_comprehensive_system_health() -> Dict[str, Any]:
+    """Get comprehensive system health information."""
+    health_data = {
+        'data_feed_status': 'Unknown',
+        'data_feed_providers': 0,
+        'model_engine_status': 'Unknown',
+        'active_models': 0,
+        'strategy_engine_status': 'Unknown',
+        'active_strategies': 0,
+        'overall_status': 'Unknown'
+    }
     
-    # System information
-    st.subheader("ℹ️ System Information")
+    try:
+        # Data feed health
+        if DATA_FEED_AVAILABLE:
+            data_feed = get_data_feed()
+            feed_health = data_feed.get_system_health()
+            health_data['data_feed_status'] = feed_health.get('status', 'Unknown')
+            health_data['data_feed_providers'] = feed_health.get('available_providers', 0)
+        
+        # Model engine health
+        try:
+            model_monitor = ModelMonitor()
+            trust_levels = model_monitor.get_model_trust_levels()
+            health_data['active_models'] = len(trust_levels) if trust_levels else 0
+            health_data['model_engine_status'] = 'Healthy' if health_data['active_models'] > 0 else 'Degraded'
+        except Exception as e:
+            logger.warning(f"Model engine health check failed: {e}")
+            health_data['model_engine_status'] = 'Error'
+        
+        # Strategy engine health
+        try:
+            strategy_logger = StrategyLogger()
+            recent_strategies = strategy_logger.get_recent_decisions(limit=10)
+            health_data['active_strategies'] = len(recent_strategies) if recent_strategies else 0
+            health_data['strategy_engine_status'] = 'Healthy' if health_data['active_strategies'] > 0 else 'Degraded'
+        except Exception as e:
+            logger.warning(f"Strategy engine health check failed: {e}")
+            health_data['strategy_engine_status'] = 'Error'
+        
+        # Overall status
+        healthy_components = sum([
+            health_data['data_feed_status'] == 'healthy',
+            health_data['model_engine_status'] == 'Healthy',
+            health_data['strategy_engine_status'] == 'Healthy'
+        ])
+        
+        if healthy_components == 3:
+            health_data['overall_status'] = 'Healthy'
+        elif healthy_components >= 1:
+            health_data['overall_status'] = 'Degraded'
+        else:
+            health_data['overall_status'] = 'Critical'
+            
+    except Exception as e:
+        logger.error(f"System health check failed: {e}")
+        health_data['overall_status'] = 'Error'
     
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("**Version:** 1.0.0")
-        st.write("**Last Updated:**", safe_session_get('last_updated', 'Unknown'))
-        st.write("**Status:**", "🟢 Operational" if all(status == 'SUCCESS' for status in module_status.values()) else "🟡 Degraded")
-    
-    with col2:
-        st.write("**Python:**", sys.version.split()[0])
-        st.write("**Streamlit:**", st.__version__)
-        st.write("**Pandas:**", pd.__version__)
+    return health_data
 
 
 if __name__ == "__main__":
