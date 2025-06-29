@@ -22,6 +22,7 @@ class CapabilityRouter:
         self._capabilities = {}
         self._fallbacks = {}
         self._capability_cache = {}
+        self._fallback_log = []
         
         # Register default capabilities
         self._register_default_capabilities()
@@ -73,6 +74,19 @@ class CapabilityRouter:
             self._check_torch,
             fallback=self._fallback_no_torch
         )
+        
+        # Additional capabilities
+        self.register_capability(
+            'streamlit_interface',
+            self._check_streamlit,
+            fallback=self._fallback_no_streamlit
+        )
+        
+        self.register_capability(
+            'plotly_visualization',
+            self._check_plotly,
+            fallback=self._fallback_no_plotly
+        )
     
     def register_capability(
         self, 
@@ -119,12 +133,14 @@ class CapabilityRouter:
                 if name in self._fallbacks:
                     logger.info(f"Using fallback for capability '{name}'")
                     self._fallbacks[name]()
+                    self._log_fallback(name, "capability_unavailable")
             
             return result
             
         except Exception as e:
             logger.error(f"Error checking capability '{name}': {e}")
             self._capability_cache[name] = False
+            self._log_fallback(name, f"error: {str(e)}")
             return False
     
     def get_capability_status(self) -> Dict[str, bool]:
@@ -153,12 +169,15 @@ class CapabilityRouter:
             def wrapper(*args, **kwargs):
                 if self.check_capability(capability_name):
                     try:
-                        return func(*args, **kwargs)
+                        result = func(*args, **kwargs)
+                        return result if result is not None else fallback_value
                     except Exception as e:
                         logger.error(f"Error in function {func.__name__}: {e}")
+                        self._log_fallback(capability_name, f"function_error: {str(e)}")
                         return fallback_value
                 else:
                     logger.warning(f"Capability '{capability_name}' not available for {func.__name__}, using fallback")
+                    self._log_fallback(capability_name, "capability_unavailable")
                     return fallback_value
             return wrapper
         return decorator
@@ -178,23 +197,88 @@ class CapabilityRouter:
         """
         if self.check_capability(capability_name):
             try:
-                return func(*args, **kwargs)
+                result = func(*args, **kwargs)
+                return result if result is not None else fallback_value
             except Exception as e:
-                logger.error(f"Error calling {func.__name__}: {e}")
+                logger.error(f"Error calling function {func.__name__}: {e}")
+                self._log_fallback(capability_name, f"function_error: {str(e)}")
                 return fallback_value
         else:
             logger.warning(f"Capability '{capability_name}' not available for {func.__name__}, using fallback")
+            self._log_fallback(capability_name, "capability_unavailable")
             return fallback_value
     
-    # Capability check functions
+    def _log_fallback(self, capability_name: str, reason: str):
+        """Log when a fallback is triggered.
+        
+        Args:
+            capability_name: Name of the capability that triggered fallback
+            reason: Reason for the fallback
+        """
+        from datetime import datetime
+        
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'capability': capability_name,
+            'reason': reason
+        }
+        self._fallback_log.append(log_entry)
+        
+        # Keep only last 100 fallback logs
+        if len(self._fallback_log) > 100:
+            self._fallback_log = self._fallback_log[-100:]
+    
+    def get_fallback_log(self, limit: int = 10) -> list:
+        """Get recent fallback logs.
+        
+        Args:
+            limit: Maximum number of logs to return
+            
+        Returns:
+            List of recent fallback logs
+        """
+        return self._fallback_log[-limit:]
+    
+    def clear_cache(self) -> None:
+        """Clear the capability cache."""
+        self._capability_cache.clear()
+    
+    def get_system_health(self) -> Dict[str, Any]:
+        """Get overall system health based on capabilities.
+        
+        Returns:
+            Dictionary containing system health information
+        """
+        capability_status = self.get_capability_status()
+        available_capabilities = sum(capability_status.values())
+        total_capabilities = len(capability_status)
+        
+        critical_capabilities = ['openai_api', 'alpha_vantage_api', 'streamlit_interface']
+        critical_available = all(capability_status.get(cap, False) for cap in critical_capabilities)
+        
+        return {
+            'overall_status': 'healthy' if critical_available else 'degraded',
+            'available_capabilities': available_capabilities,
+            'total_capabilities': total_capabilities,
+            'critical_capabilities_available': critical_available,
+            'capability_status': capability_status,
+            'recent_fallbacks': self.get_fallback_log(5)
+        }
+    
+    # Capability check methods
     def _check_openai_api(self) -> bool:
         """Check if OpenAI API is available."""
         try:
             import openai
-            # Check if API key is set
-            api_key = st.secrets.get("openai_api_key") or st.session_state.get("openai_api_key")
-            return bool(api_key)
+            # Check if API key is configured
+            if hasattr(openai, 'api_key') and openai.api_key:
+                return True
+            # Check environment variable
+            import os
+            return os.getenv('OPENAI_API_KEY') is not None
         except ImportError:
+            return False
+        except Exception:
             return False
     
     def _check_huggingface(self) -> bool:
@@ -203,6 +287,8 @@ class CapabilityRouter:
             import transformers
             return True
         except ImportError:
+            return False
+        except Exception:
             return False
     
     def _check_redis(self) -> bool:
@@ -219,18 +305,18 @@ class CapabilityRouter:
         """Check if PostgreSQL connection is available."""
         try:
             import psycopg2
-            # This is a basic check - in practice you'd check actual connection
             return True
         except ImportError:
+            return False
+        except Exception:
             return False
     
     def _check_alpha_vantage(self) -> bool:
         """Check if Alpha Vantage API is available."""
         try:
-            from alpha_vantage.timeseries import TimeSeries
-            api_key = st.secrets.get("alpha_vantage_api_key") or st.session_state.get("alpha_vantage_api_key")
-            return bool(api_key)
-        except ImportError:
+            import os
+            return os.getenv('ALPHA_VANTAGE_API_KEY') is not None
+        except Exception:
             return False
     
     def _check_yfinance(self) -> bool:
@@ -240,6 +326,8 @@ class CapabilityRouter:
             return True
         except ImportError:
             return False
+        except Exception:
+            return False
     
     def _check_torch(self) -> bool:
         """Check if PyTorch is available."""
@@ -248,43 +336,80 @@ class CapabilityRouter:
             return True
         except ImportError:
             return False
+        except Exception:
+            return False
     
-    # Fallback functions
+    def _check_streamlit(self) -> bool:
+        """Check if Streamlit is available."""
+        try:
+            import streamlit
+            return True
+        except ImportError:
+            return False
+        except Exception:
+            return False
+    
+    def _check_plotly(self) -> bool:
+        """Check if Plotly is available."""
+        try:
+            import plotly
+            return True
+        except ImportError:
+            return False
+        except Exception:
+            return False
+    
+    # Fallback methods
     def _fallback_no_llm(self):
-        """Fallback when LLM capabilities are not available."""
-        logger.warning("LLM capabilities not available - using rule-based responses")
-        st.warning("⚠️ AI features temporarily unavailable - using basic functionality")
+        """Fallback when LLM is not available."""
+        logger.warning("LLM not available, using rule-based fallback")
+        return {"status": "fallback", "method": "rule_based"}
     
     def _fallback_no_hf(self):
-        """Fallback when HuggingFace models are not available."""
-        logger.warning("HuggingFace models not available - using alternative models")
+        """Fallback when HuggingFace is not available."""
+        logger.warning("HuggingFace not available, using OpenAI fallback")
+        return {"status": "fallback", "method": "openai"}
     
     def _fallback_no_redis(self):
         """Fallback when Redis is not available."""
-        logger.warning("Redis not available - using in-memory storage")
-        st.warning("⚠️ Using in-memory storage (data will not persist)")
+        logger.warning("Redis not available, using in-memory storage")
+        return {"status": "fallback", "method": "memory"}
     
     def _fallback_no_postgres(self):
         """Fallback when PostgreSQL is not available."""
-        logger.warning("PostgreSQL not available - using file-based storage")
+        logger.warning("PostgreSQL not available, using SQLite fallback")
+        return {"status": "fallback", "method": "sqlite"}
     
     def _fallback_no_alpha_vantage(self):
-        """Fallback when Alpha Vantage API is not available."""
-        logger.warning("Alpha Vantage API not available - using alternative data sources")
+        """Fallback when Alpha Vantage is not available."""
+        logger.warning("Alpha Vantage not available, using yfinance fallback")
+        return {"status": "fallback", "method": "yfinance"}
     
     def _fallback_no_yfinance(self):
         """Fallback when yfinance is not available."""
-        logger.warning("yfinance not available - using alternative data sources")
+        logger.warning("yfinance not available, using mock data")
+        return {"status": "fallback", "method": "mock_data"}
     
     def _fallback_no_torch(self):
         """Fallback when PyTorch is not available."""
-        logger.warning("PyTorch not available - using alternative models")
+        logger.warning("PyTorch not available, using scikit-learn fallback")
+        return {"status": "fallback", "method": "sklearn"}
+    
+    def _fallback_no_streamlit(self):
+        """Fallback when Streamlit is not available."""
+        logger.warning("Streamlit not available, using CLI interface")
+        return {"status": "fallback", "method": "cli"}
+    
+    def _fallback_no_plotly(self):
+        """Fallback when Plotly is not available."""
+        logger.warning("Plotly not available, using matplotlib fallback")
+        return {"status": "fallback", "method": "matplotlib"}
 
 
-# Global capability router instance
-capability_router = CapabilityRouter()
+# Global instance
+_capability_router = CapabilityRouter()
 
-
+# Convenience functions
 def check_capability(name: str) -> bool:
     """Check if a capability is available.
     
@@ -294,8 +419,7 @@ def check_capability(name: str) -> bool:
     Returns:
         True if capability is available, False otherwise
     """
-    return capability_router.check_capability(name)
-
+    return _capability_router.check_capability(name)
 
 def safe_call(capability_name: str, func: Callable, *args, fallback_value: Any = None, **kwargs):
     """Safely call a function that requires a capability.
@@ -310,8 +434,7 @@ def safe_call(capability_name: str, func: Callable, *args, fallback_value: Any =
     Returns:
         Result of function call or fallback value
     """
-    return capability_router.safe_call(capability_name, func, *args, fallback_value=fallback_value, **kwargs)
-
+    return _capability_router.safe_call(capability_name, func, *args, fallback_value=fallback_value, **kwargs)
 
 def with_fallback(capability_name: str, fallback_value: Any = None):
     """Decorator to provide fallback behavior for functions that require capabilities.
@@ -323,8 +446,7 @@ def with_fallback(capability_name: str, fallback_value: Any = None):
     Returns:
         Decorator function
     """
-    return capability_router.with_fallback(capability_name, fallback_value)
-
+    return _capability_router.with_fallback(capability_name, fallback_value)
 
 def get_capability_status() -> Dict[str, bool]:
     """Get status of all registered capabilities.
@@ -332,8 +454,7 @@ def get_capability_status() -> Dict[str, bool]:
     Returns:
         Dictionary mapping capability names to their availability status
     """
-    return capability_router.get_capability_status()
-
+    return _capability_router.get_capability_status()
 
 def register_capability(name: str, check_func: Callable[[], bool], fallback: Optional[Callable] = None):
     """Register a capability with its check function and optional fallback.
@@ -343,4 +464,23 @@ def register_capability(name: str, check_func: Callable[[], bool], fallback: Opt
         check_func: Function that returns True if capability is available
         fallback: Optional fallback function to call if capability is not available
     """
-    capability_router.register_capability(name, check_func, fallback) 
+    _capability_router.register_capability(name, check_func, fallback)
+
+def get_system_health() -> Dict[str, Any]:
+    """Get overall system health based on capabilities.
+    
+    Returns:
+        Dictionary containing system health information
+    """
+    return _capability_router.get_system_health()
+
+def get_fallback_log(limit: int = 10) -> list:
+    """Get recent fallback logs.
+    
+    Args:
+        limit: Maximum number of logs to return
+        
+    Returns:
+        List of recent fallback logs
+    """
+    return _capability_router.get_fallback_log(limit) 

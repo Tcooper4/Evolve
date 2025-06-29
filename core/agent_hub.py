@@ -23,6 +23,7 @@ class AgentHub:
         self.agents = {}
         self.routing_rules = {}
         self.fallback_agent = None
+        self.interaction_history = []
         self._initialize_agents()
         self._setup_routing_rules()
         
@@ -176,7 +177,15 @@ class AgentHub:
                     'type': 'forecast',
                     'content': forecast,
                     'agent': 'forecast',
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': datetime.now().isoformat(),
+                    'confidence': 0.85,
+                    'metadata': {
+                        'ticker': ticker,
+                        'timeframe': timeframe,
+                        'model_used': getattr(agent, 'current_model', 'unknown'),
+                        'strategy_applied': 'forecast_router',
+                        'agent_confidence': 0.85
+                    }
                 }
             else:
                 return self._fallback_response(prompt)
@@ -194,7 +203,13 @@ class AgentHub:
                     'type': 'trading',
                     'content': response,
                     'agent': 'trading',
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': datetime.now().isoformat(),
+                    'confidence': 0.80,
+                    'metadata': {
+                        'strategy_applied': 'trading_agent',
+                        'agent_confidence': 0.80,
+                        'execution_status': 'pending'
+                    }
                 }
             else:
                 return self._fallback_response(prompt)
@@ -212,7 +227,13 @@ class AgentHub:
                     'type': 'analysis',
                     'content': analysis,
                     'agent': 'analysis',
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': datetime.now().isoformat(),
+                    'confidence': 0.90,
+                    'metadata': {
+                        'analysis_type': 'market_analysis',
+                        'agent_confidence': 0.90,
+                        'data_sources': ['market_data', 'technical_indicators']
+                    }
                 }
             else:
                 return self._fallback_response(prompt)
@@ -227,10 +248,16 @@ class AgentHub:
             if hasattr(agent, 'process_query'):
                 response = agent.process_query(prompt)
                 return {
-                    'type': 'quantitative',
+                    'type': 'quant_gpt',
                     'content': response,
                     'agent': 'quant_gpt',
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': datetime.now().isoformat(),
+                    'confidence': 0.95,
+                    'metadata': {
+                        'model_type': 'quantitative_analysis',
+                        'agent_confidence': 0.95,
+                        'reasoning_chain': 'quantitative'
+                    }
                 }
             else:
                 return self._fallback_response(prompt)
@@ -248,7 +275,13 @@ class AgentHub:
                     'type': 'llm',
                     'content': response,
                     'agent': 'llm',
-                    'timestamp': datetime.now().isoformat()
+                    'timestamp': datetime.now().isoformat(),
+                    'confidence': 0.75,
+                    'metadata': {
+                        'model_type': 'language_model',
+                        'agent_confidence': 0.75,
+                        'response_type': 'general'
+                    }
                 }
             else:
                 return self._fallback_response(prompt)
@@ -259,82 +292,110 @@ class AgentHub:
             
     def _extract_ticker(self, prompt: str) -> str:
         """Extract ticker symbol from prompt."""
-        # Simple ticker extraction - can be enhanced
         import re
-        ticker_pattern = r'\b[A-Z]{1,5}\b'
+        # Look for common ticker patterns
+        ticker_pattern = r'\b([A-Z]{1,5})\b'
         matches = re.findall(ticker_pattern, prompt)
         
-        # Common tickers to look for
-        common_tickers = ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'AMZN', 'NVDA', 'META']
-        
+        # Filter out common words that might match ticker pattern
+        common_words = {'THE', 'AND', 'FOR', 'WITH', 'FROM', 'THIS', 'THAT', 'WHAT', 'WHEN', 'WHERE'}
         for match in matches:
-            if match in common_tickers:
+            if match not in common_words:
                 return match
                 
-        return 'AAPL'  # Default ticker
+        return 'AAPL'  # Default fallback
         
     def _extract_timeframe(self, prompt: str) -> str:
         """Extract timeframe from prompt."""
-        timeframes = {
-            '1d': ['daily', 'day', '1d', '1 day'],
-            '1w': ['weekly', 'week', '1w', '1 week'],
-            '1m': ['monthly', 'month', '1m', '1 month'],
-            '1h': ['hourly', 'hour', '1h', '1 hour'],
-            '15m': ['15 minute', '15m', '15min']
-        }
-        
-        prompt_lower = prompt.lower()
-        for timeframe, keywords in timeframes.items():
-            if any(keyword in prompt_lower for keyword in keywords):
-                return timeframe
-                
-        return '1d'  # Default timeframe
+        import re
+        timeframe_pattern = r'\b(daily|weekly|monthly|yearly|1d|1w|1m|1y|30d|60d|90d)\b'
+        match = re.search(timeframe_pattern, prompt.lower())
+        return match.group(1) if match else '30d'
         
     def _fallback_response(self, prompt: str) -> Dict[str, Any]:
-        """Generate a fallback response when agents are unavailable."""
-        logger.warning(f"Using fallback response for: {prompt}")
-        st.session_state["status"] = "fallback activated"
-        
+        """Generate a fallback response when no agent is available."""
         return {
             'type': 'fallback',
-            'content': f"I understand your query: '{prompt}'. Please use the navigation menu to access specific features:\n"
-                      f"- Use 'Forecast & Trade' for market predictions\n"
-                      f"- Use 'Portfolio Dashboard' for position management\n"
-                      f"- Use 'Performance Tracker' for historical analysis",
+            'content': f"I understand you're asking about: {prompt}. I'm currently in fallback mode. Please try rephrasing your question or check system status.",
             'agent': 'fallback',
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'confidence': 0.50,
+            'metadata': {
+                'fallback_reason': 'no_agent_available',
+                'agent_confidence': 0.50,
+                'suggested_actions': ['check_system_status', 'rephrase_question']
+            }
         }
         
     def _log_interaction(self, prompt: str, agent_type: str, response: Dict[str, Any]):
-        """Log the agent interaction."""
-        log_entry = {
+        """Log agent interaction for audit trail."""
+        interaction = {
             'timestamp': datetime.now().isoformat(),
             'prompt': prompt,
             'agent_type': agent_type,
             'response_type': response.get('type', 'unknown'),
-            'success': response.get('type') != 'fallback'
+            'confidence': response.get('confidence', 0.0),
+            'agent_used': response.get('agent', 'unknown')
         }
         
-        # Log to session state for UI display
-        if 'agent_interactions' not in st.session_state:
-            st.session_state['agent_interactions'] = []
-            
-        st.session_state['agent_interactions'].append(log_entry)
+        self.interaction_history.append(interaction)
         
-        # Keep only last 10 interactions
-        if len(st.session_state['agent_interactions']) > 10:
-            st.session_state['agent_interactions'] = st.session_state['agent_interactions'][-10:]
+        # Keep only last 100 interactions
+        if len(self.interaction_history) > 100:
+            self.interaction_history = self.interaction_history[-100:]
             
     def get_agent_status(self) -> Dict[str, Any]:
         """Get status of all agents."""
         status = {}
-        for agent_type, agent in self.agents.items():
-            status[agent_type] = {
+        for agent_name, agent in self.agents.items():
+            status[agent_name] = {
                 'available': agent is not None,
-                'type': type(agent).__name__ if agent else None
+                'health': self._check_agent_health(agent),
+                'last_used': None  # Could be enhanced with actual usage tracking
             }
         return status
         
+    def _check_agent_health(self, agent) -> str:
+        """Check health of an agent."""
+        if agent is None:
+            return 'unavailable'
+        try:
+            # Try to call a simple method to check health
+            if hasattr(agent, 'get_health'):
+                return agent.get_health()
+            elif hasattr(agent, 'status'):
+                return agent.status
+            else:
+                return 'unknown'
+        except Exception:
+            return 'error'
+            
     def get_recent_interactions(self, limit: int = 5) -> List[Dict[str, Any]]:
         """Get recent agent interactions."""
-        return st.session_state.get('agent_interactions', [])[-limit:]
+        return self.interaction_history[-limit:]
+        
+    def get_system_health(self) -> Dict[str, Any]:
+        """Get overall system health."""
+        agent_status = self.get_agent_status()
+        available_agents = sum(1 for status in agent_status.values() if status['available'])
+        total_agents = len(agent_status)
+        
+        return {
+            'overall_status': 'healthy' if available_agents > 0 else 'degraded',
+            'available_agents': available_agents,
+            'total_agents': total_agents,
+            'agent_status': agent_status,
+            'fallback_available': self.fallback_agent is not None,
+            'last_interaction': self.interaction_history[-1] if self.interaction_history else None
+        }
+        
+    def reset_agents(self) -> bool:
+        """Reset all agents."""
+        try:
+            self._initialize_agents()
+            self.interaction_history = []
+            logger.info("All agents reset successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to reset agents: {e}")
+            return False
