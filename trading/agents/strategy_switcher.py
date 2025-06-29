@@ -21,12 +21,19 @@ from enum import Enum
 
 # Local imports
 from trading.config.settings import (
-    STRATEGY_DIR, DEFAULT_STRATEGY, STRATEGY_SWITCH_THRESHOLD,
-    STRATEGY_PERFORMANCE_WINDOW, STRATEGY_MIN_PERFORMANCE,
-    STRATEGY_MAX_DRAWDOWN, STRATEGY_SWITCH_COOLDOWN
+    STRATEGY_DIR, DEFAULT_STRATEGY, STRATEGY_SWITCH_LOG_PATH,
+    STRATEGY_SWITCH_LOCK_TIMEOUT, STRATEGY_SWITCH_BACKEND,
+    STRATEGY_SWITCH_API_ENDPOINT
 )
 from trading.utils.error_handling import handle_file_errors
 from trading.models.model_registry import get_available_models
+
+# Default values for missing constants
+STRATEGY_SWITCH_THRESHOLD = 0.1  # 10% performance decline threshold
+STRATEGY_PERFORMANCE_WINDOW = 30  # 30 days performance window
+STRATEGY_MIN_PERFORMANCE = 0.5  # Minimum acceptable performance
+STRATEGY_MAX_DRAWDOWN = 0.2  # Maximum acceptable drawdown
+STRATEGY_SWITCH_COOLDOWN = 24  # Hours between strategy switches
 
 logger = logging.getLogger(__name__)
 
@@ -57,13 +64,20 @@ class StrategySwitcher:
             config: Optional configuration dictionary
         """
         self.config = config or {}
-        self.log_path = Path(self.config.get("log_path", STRATEGY_DIR))
+        self.log_path = Path(self.config.get("log_path", STRATEGY_SWITCH_LOG_PATH))
         self.lock_path = self.log_path.with_suffix(".lock")
-        self.lock_timeout = self.config.get("lock_timeout", STRATEGY_SWITCH_COOLDOWN)
+        self.lock_timeout = self.config.get("lock_timeout", STRATEGY_SWITCH_LOCK_TIMEOUT)
         self.backend = StrategySwitchBackend(
-            self.config.get("backend", DEFAULT_STRATEGY)
+            self.config.get("backend", STRATEGY_SWITCH_BACKEND)
         )
-        self.api_endpoint = self.config.get("api_endpoint", STRATEGY_DIR)
+        self.api_endpoint = self.config.get("api_endpoint", STRATEGY_SWITCH_API_ENDPOINT)
+        
+        # Strategy switching parameters
+        self.switch_threshold = self.config.get("switch_threshold", STRATEGY_SWITCH_THRESHOLD)
+        self.performance_window = self.config.get("performance_window", STRATEGY_PERFORMANCE_WINDOW)
+        self.min_performance = self.config.get("min_performance", STRATEGY_MIN_PERFORMANCE)
+        self.max_drawdown = self.config.get("max_drawdown", STRATEGY_MAX_DRAWDOWN)
+        self.switch_cooldown = self.config.get("switch_cooldown", STRATEGY_SWITCH_COOLDOWN)
         
         # Initialize backend
         self._init_backend()
