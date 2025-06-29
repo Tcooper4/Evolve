@@ -20,15 +20,13 @@ from dataclasses import dataclass
 from enum import Enum
 
 # Local imports
-from ..config.settings import (
-    STRATEGY_SWITCH_LOG_PATH,
-    STRATEGY_REGISTRY_PATH,
-    STRATEGY_SWITCH_LOCK_TIMEOUT,
-    STRATEGY_SWITCH_BACKEND,
-    STRATEGY_SWITCH_API_ENDPOINT
+from trading.config.settings import (
+    STRATEGY_DIR, DEFAULT_STRATEGY, STRATEGY_SWITCH_THRESHOLD,
+    STRATEGY_PERFORMANCE_WINDOW, STRATEGY_MIN_PERFORMANCE,
+    STRATEGY_MAX_DRAWDOWN, STRATEGY_SWITCH_COOLDOWN
 )
-from ..utils.error_handling import handle_file_errors
-from ..models.model_registry import get_available_models
+from trading.utils.error_handling import handle_file_errors
+from trading.models.model_registry import get_available_models
 
 logger = logging.getLogger(__name__)
 
@@ -59,13 +57,13 @@ class StrategySwitcher:
             config: Optional configuration dictionary
         """
         self.config = config or {}
-        self.log_path = Path(self.config.get("log_path", STRATEGY_SWITCH_LOG_PATH))
+        self.log_path = Path(self.config.get("log_path", STRATEGY_DIR))
         self.lock_path = self.log_path.with_suffix(".lock")
-        self.lock_timeout = self.config.get("lock_timeout", STRATEGY_SWITCH_LOCK_TIMEOUT)
+        self.lock_timeout = self.config.get("lock_timeout", STRATEGY_SWITCH_COOLDOWN)
         self.backend = StrategySwitchBackend(
-            self.config.get("backend", STRATEGY_SWITCH_BACKEND)
+            self.config.get("backend", DEFAULT_STRATEGY)
         )
-        self.api_endpoint = self.config.get("api_endpoint", STRATEGY_SWITCH_API_ENDPOINT)
+        self.api_endpoint = self.config.get("api_endpoint", STRATEGY_DIR)
         
         # Initialize backend
         self._init_backend()

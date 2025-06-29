@@ -16,9 +16,10 @@ import sys
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from .service_client import ServiceClient
-from .base_service import BaseService
-from ..memory.agent_memory import AgentMemory
+from trading.services.service_client import ServiceClient
+from trading.services.base_service import BaseService
+from trading.memory.agent_memory import AgentMemory
+from trading.services.quant_gpt import QuantGPT
 
 logger = logging.getLogger(__name__)
 

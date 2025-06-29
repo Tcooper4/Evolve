@@ -10,13 +10,14 @@ import sys
 import os
 from typing import Dict, Any, Optional
 import json
+from pathlib import Path
 
 # Add the trading directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from .base_service import BaseService
-from ..agents.research_agent import ResearchAgent
-from ..memory.agent_memory import AgentMemory
+from trading.agents.research_agent import ResearchAgent
+from trading.memory.agent_memory import AgentMemory
+from trading.services.base_service import BaseService
 
 logger = logging.getLogger(__name__)
 

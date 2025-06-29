@@ -7,8 +7,8 @@ from dataclasses import dataclass
 import logging
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from ..risk.risk_metrics import calculate_regime_metrics
-from ..strategies.rsi_signals import generate_rsi_signals
+from trading.risk.risk_metrics import calculate_regime_metrics
+from trading.strategies.rsi_signals import generate_rsi_signals
 
 # Configure logging
 logging.basicConfig(

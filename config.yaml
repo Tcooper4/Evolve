@@ -2,56 +2,45 @@
 
 # Data settings
 data:
-  source: "yahoo"  # Data source (yahoo, alpha_vantage, etc.)
-  symbols:
-    - "AAPL"
-    - "MSFT"
-    - "GOOGL"
-    - "AMZN"
-    - "META"
-  timeframe: "1d"  # Data timeframe
-  start_date: "2020-01-01"
-  end_date: "2023-12-31"
-  features:
-    - "open"
-    - "high"
-    - "low"
-    - "close"
-    - "volume"
-    - "adj_close"
+  source: "${DATA_SOURCE:-yahoo}"  # Data source (yahoo, alpha_vantage, etc.)
+  symbols: "${SYMBOLS:-['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META']}"
+  timeframe: "${TIMEFRAME:-1d}"  # Data timeframe
+  start_date: "${START_DATE:-2020-01-01}"
+  end_date: "${END_DATE:-2023-12-31}"
+  features: "${FEATURES:-['open', 'high', 'low', 'close', 'volume', 'adj_close']}"
 
 # Feature engineering settings
 feature_engineering:
   technical_indicators:
     - name: "SMA"
-      windows: [20, 50, 200]
+      windows: "${SMA_WINDOWS:-[20, 50, 200]}"
     - name: "EMA"
-      windows: [12, 26]
+      windows: "${EMA_WINDOWS:-[12, 26]}"
     - name: "RSI"
-      window: 14
+      window: "${RSI_WINDOW:-14}"
     - name: "MACD"
-      fast_period: 12
-      slow_period: 26
-      signal_period: 9
+      fast_period: "${MACD_FAST_PERIOD:-12}"
+      slow_period: "${MACD_SLOW_PERIOD:-26}"
+      signal_period: "${MACD_SIGNAL_PERIOD:-9}"
     - name: "Bollinger Bands"
-      window: 20
-      num_std: 2
+      window: "${BB_WINDOW:-20}"
+      num_std: "${BB_NUM_STD:-2}"
   statistical_features:
     - name: "returns"
-      method: "log"
+      method: "${RETURNS_METHOD:-log}"
     - name: "volatility"
-      window: 252
+      window: "${VOLATILITY_WINDOW:-252}"
     - name: "skewness"
-      window: 252
+      window: "${SKEWNESS_WINDOW:-252}"
     - name: "kurtosis"
-      window: 252
+      window: "${KURTOSIS_WINDOW:-252}"
   market_microstructure:
     - name: "bid_ask_spread"
-      window: 20
+      window: "${BID_ASK_WINDOW:-20}"
     - name: "order_flow_imbalance"
-      window: 20
+      window: "${ORDER_FLOW_WINDOW:-20}"
     - name: "volume_profile"
-      num_bins: 10
+      num_bins: "${VOLUME_PROFILE_BINS:-10}"
   time_features:
     - name: "hour"
     - name: "day_of_week"
@@ -62,102 +51,102 @@ feature_engineering:
 
 # Model settings
 model:
-  type: "dqn"  # Model type (dqn, lstm, transformer)
-  state_dim: 50  # State dimension
-  action_dim: 3  # Action dimension (buy, sell, hold)
-  hidden_size: 128
-  learning_rate: 0.001
-  batch_size: 64
-  gamma: 0.99
-  epsilon_start: 1.0
-  epsilon_end: 0.01
-  epsilon_decay: 0.995
-  memory_size: 10000
-  target_update: 10
-  gradient_clip: 1.0
-  dropout: 0.2
-  num_layers: 2
-  num_heads: 4  # For transformer
-  warmup_steps: 1000
-  max_epochs: 1000
+  type: "${MODEL_TYPE:-dqn}"  # Model type (dqn, lstm, transformer)
+  state_dim: "${STATE_DIM:-50}"  # State dimension
+  action_dim: "${ACTION_DIM:-3}"  # Action dimension (buy, sell, hold)
+  hidden_size: "${HIDDEN_SIZE:-128}"
+  learning_rate: "${LEARNING_RATE:-0.001}"
+  batch_size: "${BATCH_SIZE:-64}"
+  gamma: "${GAMMA:-0.99}"
+  epsilon_start: "${EPSILON_START:-1.0}"
+  epsilon_end: "${EPSILON_END:-0.01}"
+  epsilon_decay: "${EPSILON_DECAY:-0.995}"
+  memory_size: "${MEMORY_SIZE:-10000}"
+  target_update: "${TARGET_UPDATE:-10}"
+  gradient_clip: "${GRADIENT_CLIP:-1.0}"
+  dropout: "${DROPOUT:-0.2}"
+  num_layers: "${NUM_LAYERS:-2}"
+  num_heads: "${NUM_HEADS:-4}"  # For transformer
+  warmup_steps: "${WARMUP_STEPS:-1000}"
+  max_epochs: "${MAX_EPOCHS:-1000}"
   early_stopping:
-    patience: 10
-    min_delta: 0.001
+    patience: "${EARLY_STOPPING_PATIENCE:-10}"
+    min_delta: "${EARLY_STOPPING_MIN_DELTA:-0.001}"
 
 # Strategy settings
 strategy:
-  type: "ensemble"  # Strategy type (single, ensemble)
+  type: "${STRATEGY_TYPE:-ensemble}"  # Strategy type (single, ensemble)
   strategies:
     - name: "trend_following"
-      weight: 0.4
+      weight: "${TREND_FOLLOWING_WEIGHT:-0.4}"
     - name: "mean_reversion"
-      weight: 0.3
+      weight: "${MEAN_REVERSION_WEIGHT:-0.3}"
     - name: "breakout"
-      weight: 0.3
+      weight: "${BREAKOUT_WEIGHT:-0.3}"
   position_sizing:
-    method: "kelly"  # Position sizing method (fixed, kelly, optimal)
-    max_position_size: 0.2  # Maximum position size as fraction of portfolio
-    risk_per_trade: 0.02  # Risk per trade as fraction of portfolio
+    method: "${POSITION_SIZING_METHOD:-kelly}"  # Position sizing method (fixed, kelly, optimal)
+    max_position_size: "${MAX_POSITION_SIZE:-0.2}"  # Maximum position size as fraction of portfolio
+    risk_per_trade: "${RISK_PER_TRADE:-0.02}"  # Risk per trade as fraction of portfolio
 
 # Risk management settings
 risk:
   position_limits:
-    max_position_size: 0.2
-    max_leverage: 2.0
-    max_correlation: 0.7
+    max_position_size: "${MAX_POSITION_SIZE_LIMIT:-0.2}"
+    max_leverage: "${MAX_LEVERAGE_LIMIT:-2.0}"
+    max_correlation: "${MAX_CORRELATION_LIMIT:-0.7}"
   risk_limits:
-    max_drawdown: 0.2
-    max_volatility: 0.3
-    min_sharpe_ratio: 1.0
-    var_confidence: 0.95
+    max_drawdown: "${MAX_DRAWDOWN_LIMIT:-0.2}"
+    max_volatility: "${MAX_VOLATILITY_LIMIT:-0.3}"
+    min_sharpe_ratio: "${MIN_SHARPE_RATIO:-1.0}"
+    var_confidence: "${VAR_CONFIDENCE:-0.95}"
   portfolio_limits:
-    max_sector_exposure: 0.3
-    max_country_exposure: 0.4
-    min_diversification: 0.7
+    max_sector_exposure: "${MAX_SECTOR_EXPOSURE:-0.3}"
+    max_country_exposure: "${MAX_COUNTRY_EXPOSURE:-0.4}"
+    min_diversification: "${MIN_DIVERSIFICATION:-0.7}"
 
 # Portfolio management settings
 portfolio:
-  initial_cash: 100000
-  rebalance_frequency: "monthly"
-  rebalance_threshold: 0.1
-  transaction_cost: 0.001
-  slippage: 0.0005
-  tax_rate: 0.15
-  dividend_reinvestment: true
+  initial_cash: "${INITIAL_CASH:-100000}"
+  rebalance_frequency: "${REBALANCE_FREQUENCY:-monthly}"
+  rebalance_threshold: "${REBALANCE_THRESHOLD:-0.1}"
+  transaction_cost: "${TRANSACTION_COST:-0.001}"
+  slippage: "${SLIPPAGE:-0.0005}"
+  tax_rate: "${TAX_RATE:-0.15}"
+  dividend_reinvestment: "${DIVIDEND_REINVESTMENT:-true}"
 
 # Optimization settings
 optimization:
-  method: "bayesian"  # Optimization method (grid, random, bayesian)
-  objective: "sharpe_ratio"  # Optimization objective
+  method: "${OPTIMIZATION_METHOD:-bayesian}"  # Optimization method (grid, random, bayesian)
+  objective: "${OPTIMIZATION_OBJECTIVE:-sharpe_ratio}"  # Optimization objective
   constraints:
     - "max_drawdown < 0.2"
     - "volatility < 0.3"
     - "sharpe_ratio > 1.0"
   parameters:
     - name: "lookback_window"
-      min: 10
-      max: 200
+      min: "${LOOKBACK_WINDOW_MIN:-10}"
+      max: "${LOOKBACK_WINDOW_MAX:-200}"
     - name: "entry_threshold"
-      min: 0.01
-      max: 0.1
+      min: "${ENTRY_THRESHOLD_MIN:-0.01}"
+      max: "${ENTRY_THRESHOLD_MAX:-0.1}"
     - name: "exit_threshold"
-      min: 0.01
-      max: 0.1
+      min: "${EXIT_THRESHOLD_MIN:-0.01}"
+      max: "${EXIT_THRESHOLD_MAX:-0.1}"
     - name: "stop_loss"
-      min: 0.01
-      max: 0.1
+      min: "${STOP_LOSS_MIN:-0.01}"
+      max: "${STOP_LOSS_MAX:-0.1}"
     - name: "take_profit"
-      min: 0.01
-      max: 0.2
+      min: "${TAKE_PROFIT_MIN:-0.01}"
+      max: "${TAKE_PROFIT_MAX:-0.2}"
 
 # Backtesting settings
 backtesting:
-  start_date: "2020-01-01"
-  end_date: "2023-12-31"
-  initial_cash: 100000
-  transaction_cost: 0.001
-  slippage: 0.0005
-  benchmark: "SPY"
+  start_date: "${BACKTEST_START_DATE:-2020-01-01}"
+  end_date: "${BACKTEST_END_DATE:-2023-12-31}"
+  initial_cash: "${BACKTEST_INITIAL_CASH:-100000}"
+  transaction_cost: "${BACKTEST_TRANSACTION_COST:-0.001}"
+  slippage: "${BACKTEST_SLIPPAGE:-0.0005}"
+  benchmark: "${BACKTEST_BENCHMARK:-SPY}"
   metrics:
     - "total_return"
     - "annualized_return"
@@ -180,26 +169,26 @@ logging:
 # API settings
 api:
   yahoo:
-    retry_count: 3
-    timeout: 30
+    retry_count: "${YAHOO_RETRY_COUNT:-3}"
+    timeout: "${YAHOO_TIMEOUT:-30}"
   alpha_vantage:
     api_key: "${ALPHA_VANTAGE_API_KEY}"
-    retry_count: 3
-    timeout: 30
+    retry_count: "${ALPHA_VANTAGE_RETRY_COUNT:-3}"
+    timeout: "${ALPHA_VANTAGE_TIMEOUT:-30}"
   polygon:
     api_key: "${POLYGON_API_KEY}"
-    retry_count: 3
-    timeout: 30
+    retry_count: "${POLYGON_RETRY_COUNT:-3}"
+    timeout: "${POLYGON_TIMEOUT:-30}"
 
 # System settings
 system:
-  num_workers: 4
-  use_gpu: true
-  seed: 42
-  cache_dir: "cache"
-  results_dir: "results"
-  checkpoint_dir: "checkpoints"
-  tensorboard_dir: "tensorboard"
+  num_workers: "${NUM_WORKERS:-4}"
+  use_gpu: "${USE_GPU:-true}"
+  seed: "${SEED:-42}"
+  cache_dir: "${CACHE_DIR:-cache}"
+  results_dir: "${RESULTS_DIR:-results}"
+  checkpoint_dir: "${CHECKPOINT_DIR:-checkpoints}"
+  tensorboard_dir: "${TENSORBOARD_DIR:-tensorboard}"
 
 api_keys:
   alpha_vantage: "${ALPHA_VANTAGE_API_KEY}"

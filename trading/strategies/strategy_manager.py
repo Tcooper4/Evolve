@@ -25,7 +25,7 @@ except ImportError:
 
 # Local imports
 from trading.exceptions import StrategyError, StrategyNotFoundError, StrategyValidationError
-from ..core.performance import log_performance
+from trading.core.performance import log_performance
 
 @dataclass
 class StrategyMetrics:

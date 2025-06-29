@@ -12,8 +12,8 @@ from typing import Dict, List, Optional, Any, Union, Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-from ..config.settings import ROUTING_CONFIG
-from ..utils.error_handling import handle_routing_errors
+from trading.config.settings import ROUTING_CONFIG
+from trading.utils.error_handling import handle_routing_errors
 
 logger = logging.getLogger(__name__)
 

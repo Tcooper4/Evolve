@@ -16,8 +16,8 @@ import os
 from pydantic import BaseModel, Field
 
 # Local imports
-from ..config.settings import MEMORY_DIR, MEMORY_BACKEND
-from ..utils.error_handling import handle_file_errors
+from trading.config.settings import MEMORY_DIR, MEMORY_BACKEND
+from trading.utils.error_handling import handle_file_errors
 
 class TaskStatus(str, Enum):
     """Possible task statuses."""

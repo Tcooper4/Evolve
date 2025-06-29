@@ -26,7 +26,9 @@ ROOT_LOG_LEVEL = os.getenv('ROOT_LOG_LEVEL', 'WARNING')
 # API Keys
 ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', 'demo-alpha-vantage-key')
 POLYGON_API_KEY = os.getenv('POLYGON_API_KEY', 'demo-polygon-key')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'sk-demo-openai-key')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'demo-openai-key')
+FINNHUB_API_KEY = os.getenv('FINNHUB_API_KEY', 'demo-finnhub-key')
+IEX_API_KEY = os.getenv('IEX_API_KEY', 'demo-iex-key')
 
 # Security and Authentication
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret-key-change-in-production')
@@ -103,6 +105,10 @@ STRATEGY_REGISTRY_PATH = STRATEGY_DIR / "strategy_registry.json"
 STRATEGY_SWITCH_LOCK_TIMEOUT = 30
 STRATEGY_SWITCH_BACKEND = "file"
 STRATEGY_SWITCH_API_ENDPOINT = "http://localhost:8000/api/strategy-switches"
+
+# Data Provider Configuration
+DATA_PROVIDER = os.getenv('DATA_PROVIDER', 'yahoo')  # yahoo, alpha_vantage, polygon, finnhub, iex
+DEFAULT_PROVIDER = os.getenv('DEFAULT_PROVIDER', 'yahoo')
 
 def get_config_value(key: str, default: Any = None) -> Any:
     """Get a configuration value with type conversion.

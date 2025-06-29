@@ -11,10 +11,10 @@ from datetime import datetime
 from .prompt_processor import PromptProcessor, ProcessedPrompt
 from .response_formatter import ResponseFormatter, ResponseData
 from trading.models.base_model import BaseModel
-from ..strategies.strategy_manager import StrategyManager
-from ..risk.risk_manager import RiskManager
-from ..portfolio.portfolio_manager import PortfolioManager
-from ..market.market_analyzer import MarketAnalyzer
+from trading.strategies.strategy_manager import StrategyManager
+from trading.risk.risk_manager import RiskManager
+from trading.portfolio.portfolio_manager import PortfolioManager
+from trading.market.market_analyzer import MarketAnalyzer
 from .llm_processor import LLMProcessor
 
 @dataclass
