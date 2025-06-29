@@ -54,6 +54,57 @@ class AlphaDecayAlert:
     recommendations: List[str]
 
 
+@dataclass
+class StrategyContribution:
+    """Strategy contribution to performance."""
+    strategy_name: str
+    period_start: datetime
+    period_end: datetime
+    contribution_pct: float
+    absolute_return: float
+    risk_contribution: float
+    sharpe_contribution: float
+    alpha_decay_score: float
+    metadata: Dict[str, Any]
+
+
+@dataclass
+class AlphaDecayAnalysis:
+    """Alpha decay analysis result."""
+    strategy_name: str
+    decay_detected: bool
+    decay_score: float
+    decay_period_days: int
+    performance_trend: str
+    recommendations: List[str]
+    metadata: Dict[str, Any]
+
+
+@dataclass
+class AttributionFactor:
+    """Individual attribution factor."""
+    factor_name: str
+    contribution: float
+    weight: float
+    correlation: float
+    significance: float
+    decay_rate: float
+
+
+@dataclass
+class AlphaAttribution:
+    """Complete alpha attribution analysis."""
+    total_alpha: float
+    explained_alpha: float
+    unexplained_alpha: float
+    factors: List[AttributionFactor]
+    r_squared: float
+    alpha_decay_forecast: float
+    attribution_period: str
+    timestamp: datetime
+    metadata: Dict[str, Any]
+
+
 class AlphaAttributionEngine:
     """
     Alpha Attribution Engine with:
@@ -86,6 +137,189 @@ class AlphaAttributionEngine:
         self.strategy_performance: Dict[str, pd.Series] = {}
         self.factor_exposures: Dict[str, pd.DataFrame] = {}
         
+        # Attribution parameters
+        self.min_periods = self.config.get('min_periods', 30)
+        
+        # Performance metrics
+        self.metrics = ['return', 'sharpe_ratio', 'max_drawdown', 'volatility']
+        
+        # Initialize components
+        self.alpha_decay_model = None
+        self.factor_registry = self._initialize_factor_registry()
+        
+        logger.info("Alpha Attribution Engine initialized")
+        
+    def _initialize_factor_registry(self) -> Dict[str, Dict[str, Any]]:
+        """Initialize factor registry for attribution analysis."""
+        return {
+            'momentum': {
+                'description': 'Price momentum factor',
+                'calculation': self._calculate_momentum_factor,
+                'expected_decay': 0.1,
+                'category': 'technical'
+            },
+            'volatility': {
+                'description': 'Volatility factor',
+                'calculation': self._calculate_volatility_factor,
+                'expected_decay': 0.15,
+                'category': 'risk'
+            },
+            'volume': {
+                'description': 'Volume factor',
+                'calculation': self._calculate_volume_factor,
+                'expected_decay': 0.2,
+                'category': 'liquidity'
+            },
+            'mean_reversion': {
+                'description': 'Mean reversion factor',
+                'calculation': self._calculate_mean_reversion_factor,
+                'expected_decay': 0.05,
+                'category': 'technical'
+            },
+            'trend': {
+                'description': 'Trend strength factor',
+                'calculation': self._calculate_trend_factor,
+                'expected_decay': 0.08,
+                'category': 'technical'
+            },
+            'correlation': {
+                'description': 'Market correlation factor',
+                'calculation': self._calculate_correlation_factor,
+                'expected_decay': 0.12,
+                'category': 'systematic'
+            },
+            'liquidity': {
+                'description': 'Liquidity factor',
+                'calculation': self._calculate_liquidity_factor,
+                'expected_decay': 0.25,
+                'category': 'liquidity'
+            },
+            'sentiment': {
+                'description': 'Market sentiment factor',
+                'calculation': self._calculate_sentiment_factor,
+                'expected_decay': 0.3,
+                'category': 'behavioral'
+            }
+        }
+    
+    def _calculate_momentum_factor(self, data: pd.DataFrame) -> pd.Series:
+        """Calculate momentum factor."""
+        try:
+            returns = data['Close'].pct_change()
+            momentum_5 = returns.rolling(5).mean()
+            momentum_20 = returns.rolling(20).mean()
+            momentum_factor = momentum_5 - momentum_20
+            return momentum_factor
+        except Exception as e:
+            logger.error(f"Error calculating momentum factor: {e}")
+            return pd.Series(index=data.index, data=0.0)
+    
+    def _calculate_volatility_factor(self, data: pd.DataFrame) -> pd.Series:
+        """Calculate volatility factor."""
+        try:
+            returns = data['Close'].pct_change()
+            volatility_5 = returns.rolling(5).std()
+            volatility_20 = returns.rolling(20).std()
+            volatility_factor = volatility_5 / volatility_20 - 1
+            return volatility_factor
+        except Exception as e:
+            logger.error(f"Error calculating volatility factor: {e}")
+            return pd.Series(index=data.index, data=0.0)
+    
+    def _calculate_volume_factor(self, data: pd.DataFrame) -> pd.Series:
+        """Calculate volume factor."""
+        try:
+            if 'Volume' not in data.columns:
+                return pd.Series(index=data.index, data=0.0)
+            
+            volume_ma = data['Volume'].rolling(20).mean()
+            volume_factor = (data['Volume'] - volume_ma) / volume_ma
+            return volume_factor
+        except Exception as e:
+            logger.error(f"Error calculating volume factor: {e}")
+            return pd.Series(index=data.index, data=0.0)
+    
+    def _calculate_mean_reversion_factor(self, data: pd.DataFrame) -> pd.Series:
+        """Calculate mean reversion factor."""
+        try:
+            sma = data['Close'].rolling(20).mean()
+            std = data['Close'].rolling(20).std()
+            upper_band = sma + (2 * std)
+            lower_band = sma - (2 * std)
+            
+            # Position within Bollinger Bands
+            position = (data['Close'] - lower_band) / (upper_band - lower_band)
+            mean_reversion_factor = 0.5 - position  # Distance from center
+            return mean_reversion_factor
+        except Exception as e:
+            logger.error(f"Error calculating mean reversion factor: {e}")
+            return pd.Series(index=data.index, data=0.0)
+    
+    def _calculate_trend_factor(self, data: pd.DataFrame) -> pd.Series:
+        """Calculate trend strength factor."""
+        try:
+            sma_20 = data['Close'].rolling(20).mean()
+            sma_50 = data['Close'].rolling(50).mean()
+            sma_200 = data['Close'].rolling(200).mean()
+            
+            # Trend strength based on moving average alignment
+            trend_short = (data['Close'] - sma_20) / sma_20
+            trend_medium = (sma_20 - sma_50) / sma_50
+            trend_long = (sma_50 - sma_200) / sma_200
+            
+            trend_factor = (trend_short + trend_medium + trend_long) / 3
+            return trend_factor
+        except Exception as e:
+            logger.error(f"Error calculating trend factor: {e}")
+            return pd.Series(index=data.index, data=0.0)
+    
+    def _calculate_correlation_factor(self, data: pd.DataFrame) -> pd.Series:
+        """Calculate market correlation factor."""
+        try:
+            # Use rolling correlation with a market proxy (SPY)
+            returns = data['Close'].pct_change()
+            
+            # For simplicity, use autocorrelation as proxy
+            correlation_factor = returns.rolling(20).corr(returns.shift(1))
+            return correlation_factor
+        except Exception as e:
+            logger.error(f"Error calculating correlation factor: {e}")
+            return pd.Series(index=data.index, data=0.0)
+    
+    def _calculate_liquidity_factor(self, data: pd.DataFrame) -> pd.Series:
+        """Calculate liquidity factor."""
+        try:
+            if 'Volume' not in data.columns:
+                return pd.Series(index=data.index, data=0.0)
+            
+            # Price impact of volume
+            returns = data['Close'].pct_change()
+            volume_ratio = data['Volume'] / data['Volume'].rolling(20).mean()
+            
+            # Liquidity factor (inverse of price impact)
+            liquidity_factor = 1.0 / (1.0 + abs(returns) * volume_ratio)
+            return liquidity_factor
+        except Exception as e:
+            logger.error(f"Error calculating liquidity factor: {e}")
+            return pd.Series(index=data.index, data=0.0)
+    
+    def _calculate_sentiment_factor(self, data: pd.DataFrame) -> pd.Series:
+        """Calculate market sentiment factor."""
+        try:
+            # Combine multiple sentiment indicators
+            returns = data['Close'].pct_change()
+            
+            # Volatility-adjusted returns as sentiment proxy
+            volatility = returns.rolling(20).std()
+            sentiment_factor = returns / (volatility + 1e-8)
+            
+            # Normalize to [-1, 1] range
+            sentiment_factor = np.tanh(sentiment_factor)
+            return sentiment_factor
+        except Exception as e:
+            logger.error(f"Error calculating sentiment factor: {e}")
+            return pd.Series(index=data.index, data=0.0)
+    
     def perform_attribution_analysis(self, 
                                    portfolio_returns: pd.Series,
                                    strategy_returns: Dict[str, pd.Series],
@@ -653,4 +887,11 @@ class AlphaAttributionEngine:
             
         except Exception as e:
             self.logger.error(f"Error disabling underperforming strategies: {str(e)}")
-            return [] 
+            return []
+
+# Global alpha attribution engine instance
+alpha_attribution_engine = AlphaAttributionEngine()
+
+def get_alpha_attribution_engine() -> AlphaAttributionEngine:
+    """Get the global alpha attribution engine instance."""
+    return alpha_attribution_engine 
