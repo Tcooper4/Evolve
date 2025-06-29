@@ -7,6 +7,8 @@ from datetime import datetime
 import random
 from deap import base, creator, tools, algorithms
 from .base_optimizer import BaseOptimizer, OptimizationResult
+import plotly.graph_objects as go
+import optuna
 
 class MultiObjectiveOptimizer(BaseOptimizer):
     """Multi-objective optimizer using Optuna."""
