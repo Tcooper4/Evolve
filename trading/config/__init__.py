@@ -28,7 +28,7 @@ from trading.config.settings import (
     STRATEGY_SWITCH_LOG_PATH, STRATEGY_REGISTRY_PATH,
     STRATEGY_SWITCH_LOCK_TIMEOUT, STRATEGY_SWITCH_BACKEND,
     STRATEGY_SWITCH_API_ENDPOINT,
-    get_config_value, get_config_dict, validate_config
+    get_config_value, get_config_dict, validate_config, Settings, settings
 )
 
 class Config:
@@ -56,5 +56,7 @@ __all__ = [
     'TrainingConfig',
     'WebConfig',
     'MonitoringConfig',
-    'config'
+    'config',
+    'Settings',
+    'settings'
 ] 

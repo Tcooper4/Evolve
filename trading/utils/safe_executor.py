@@ -348,7 +348,6 @@ SAFE_MODULES = {{
     'pandas': 'pd',
     'matplotlib.pyplot': 'plt',
     'sklearn': 'sklearn',
-    'tensorflow': 'tf',
     'torch': 'torch',
     'scipy': 'scipy',
     'statsmodels': 'statsmodels',

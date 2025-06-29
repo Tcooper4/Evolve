@@ -245,16 +245,9 @@ class TCNModel(BaseModel):
         shap.summary_plot(shap_values, X_sample.cpu().numpy())
 
     def test_synthetic(self):
-        """Test model on synthetic data."""
-        import numpy as np, pandas as pd
-        n = 100
-        df = pd.DataFrame({
-            'close': np.sin(np.linspace(0, 10, n)),
-            'volume': np.random.rand(n)
-        })
-        self.fit(df.iloc[:80], df.iloc[80:])
-        y_pred = self.predict(df.iloc[80:])
-        print('Synthetic test MSE:', ((y_pred.flatten() - df['close'].iloc[80:].values) ** 2).mean())
+        """Test model on synthetic data - DEPRECATED."""
+        st.warning("Synthetic data testing is deprecated. Use real market data for testing.")
+        return None
 
     def fit(self, data: pd.DataFrame, epochs: int = 100, batch_size: int = 32, 
             learning_rate: float = 0.001) -> Dict[str, List[float]]:

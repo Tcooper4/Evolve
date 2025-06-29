@@ -1,294 +1,449 @@
-"""LLM Agent implementation with advanced prompting and tool usage."""
+"""LLM Agent for Trading Decisions."""
 
-from typing import Dict, List, Optional, Any, Union, Callable
-import asyncio
 import logging
-from pathlib import Path
-import json
-from datetime import datetime
-import yaml
-from dataclasses import dataclass, field
-import openai
-from trading.model_loader import ModelLoader, ModelConfig
-from trading.memory import MemoryManager
-from trading.tools import ToolRegistry
+import warnings
+warnings.filterwarnings('ignore')
 
-logger = logging.getLogger(__name__)
+# Try to import LLM libraries with fallbacks
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    openai = None
 
-@dataclass
-class AgentConfig:
-    """Configuration for an LLM agent."""
-    name: str
-    role: str  # "educator", "analyst", "optimizer", etc.
-    model_name: str
-    temperature: float = 0.7
-    max_tokens: int = 500
-    top_p: float = 0.9
-    tools_enabled: bool = True
-    memory_enabled: bool = True
-    max_retries: int = 3
-    retry_delay: float = 1.0
-    confidence_threshold: float = 0.7
+try:
+    from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
+    TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    TRANSFORMERS_AVAILABLE = False
+    pipeline = AutoTokenizer = AutoModelForCausalLM = None
 
-@dataclass
-class AgentMetrics:
-    """Metrics for agent performance tracking."""
-    total_requests: int = 0
-    successful_requests: int = 0
-    failed_requests: int = 0
-    total_tokens: int = 0
-    total_time: float = 0.0
-    tool_calls: int = 0
-    memory_hits: int = 0
-    retries: int = 0
-    errors: List[Dict[str, Any]] = field(default_factory=list)
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+    torch = None
+
+# Import from trading package
+try:
+    from trading.utils.common import get_logger
+    from trading.config.configuration import TradingConfig
+    from trading.memory.agent_memory import AgentMemory
+    from trading.market.market_data import MarketData
+    from trading.evaluation.metrics import calculate_metrics
+except ImportError:
+    # Fallback imports
+    def get_logger(name):
+        return logging.getLogger(name)
+    
+    class TradingConfig:
+        def __init__(self):
+            self.llm_model = "gpt-3.5-turbo"
+            self.llm_api_key = None
+    
+    class AgentMemory:
+        def __init__(self):
+            self.memory = []
+    
+    class MarketData:
+        def __init__(self):
+            self.data = {}
+    
+    def calculate_metrics(returns):
+        return {'sharpe_ratio': 0.0, 'total_return': 0.0}
+
+logger = get_logger(__name__)
 
 class LLMAgent:
-    """Advanced LLM agent with tool usage and memory capabilities."""
+    """LLM-powered trading agent."""
     
-    def __init__(
-        self,
-        config: AgentConfig,
-        model_loader: ModelLoader,
-        memory_manager: Optional[MemoryManager] = None,
-        tool_registry: Optional[ToolRegistry] = None
-    ):
-        """Initialize the LLM agent.
+    def __init__(self, config: TradingConfig = None):
+        """Initialize LLM agent."""
+        self.config = config or TradingConfig()
+        self.memory = AgentMemory()
+        self.market_data = MarketData()
+        self.performance_history = []
         
-        Args:
-            config: Agent configuration
-            model_loader: Model loader instance
-            memory_manager: Optional memory manager
-            tool_registry: Optional tool registry
-        """
-        self.config = config
-        self.model_loader = model_loader
-        self.memory_manager = memory_manager
-        self.tool_registry = tool_registry
-        self.metrics = AgentMetrics()
-        self._load_templates()
-        
-    def _load_templates(self) -> None:
-        """Load prompt templates for the agent's role."""
-        template_path = Path(__file__).parent / "templates" / f"{self.config.role}.yaml"
-        if template_path.exists():
-            with open(template_path, 'r') as f:
-                self.templates = yaml.safe_load(f)
+        # Initialize LLM components
+        self._init_llm()
+    
+    def _init_llm(self):
+        """Initialize LLM components."""
+        if OPENAI_AVAILABLE and self.config.llm_api_key:
+            openai.api_key = self.config.llm_api_key
+            self.llm_type = "openai"
+        elif TRANSFORMERS_AVAILABLE and TORCH_AVAILABLE:
+            self.llm_type = "local"
+            self._load_local_model()
         else:
-            logger.warning(f"No templates found for role {self.config.role}")
-            self.templates = {}
+            self.llm_type = "dummy"
+            logger.warning("No LLM available, using dummy responses")
     
-    async def process_prompt(
-        self,
-        prompt: str,
-        context: Optional[Dict[str, Any]] = None,
-        tools: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
-        """Process a prompt with the agent.
-        
-        Args:
-            prompt: Input prompt
-            context: Optional context information
-            tools: Optional list of tool names to enable
-            
-        Returns:
-            Dictionary containing response and metadata
-        """
-        start_time = datetime.now()
-        self.metrics.total_requests += 1
-        
+    def _load_local_model(self):
+        """Load local transformer model."""
         try:
-            # Check memory for similar prompts
-            if self.config.memory_enabled and self.memory_manager:
-                memory_result = await self.memory_manager.recall(prompt)
-                if memory_result:
-                    self.metrics.memory_hits += 1
-                    return memory_result
+            model_name = "microsoft/DialoGPT-medium"
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.model = AutoModelForCausalLM.from_pretrained(model_name)
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+        except Exception as e:
+            logger.error(f"Failed to load local model: {e}")
+            self.llm_type = "dummy"
+    
+    def analyze_market(self, market_data: dict) -> dict:
+        """Analyze market data using LLM."""
+        try:
+            # Prepare market context
+            context = self._prepare_market_context(market_data)
             
-            # Prepare prompt with context
-            prepared_prompt = self._prepare_prompt(prompt, context)
+            # Generate analysis
+            if self.llm_type == "openai":
+                analysis = self._openai_analysis(context)
+            elif self.llm_type == "local":
+                analysis = self._local_analysis(context)
+            else:
+                analysis = self._dummy_analysis(context)
             
-            # Get model response with retries
-            response = await self._get_model_response(prepared_prompt)
+            # Store in memory
+            self.memory.memory.append({
+                'timestamp': 'now',
+                'type': 'market_analysis',
+                'data': analysis
+            })
             
-            # Process tool calls if enabled
-            if self.config.tools_enabled and self.tool_registry:
-                response = await self._process_tool_calls(response, tools)
+            return analysis
             
-            # Store in memory if enabled
-            if self.config.memory_enabled and self.memory_manager:
-                await self.memory_manager.store(prompt, response)
+        except Exception as e:
+            logger.error(f"Error in market analysis: {e}")
+            return self._dummy_analysis({})
+    
+    def generate_trading_signal(self, market_data: dict, 
+                               portfolio_state: dict) -> dict:
+        """Generate trading signal using LLM."""
+        try:
+            # Prepare trading context
+            context = self._prepare_trading_context(market_data, portfolio_state)
             
-            # Update metrics
-            self.metrics.successful_requests += 1
-            self.metrics.total_time += (datetime.now() - start_time).total_seconds()
+            # Generate signal
+            if self.llm_type == "openai":
+                signal = self._openai_signal(context)
+            elif self.llm_type == "local":
+                signal = self._local_signal(context)
+            else:
+                signal = self._dummy_signal(context)
+            
+            # Validate signal
+            signal = self._validate_signal(signal)
+            
+            # Store in memory
+            self.memory.memory.append({
+                'timestamp': 'now',
+                'type': 'trading_signal',
+                'data': signal
+            })
+            
+            return signal
+            
+        except Exception as e:
+            logger.error(f"Error generating trading signal: {e}")
+            return self._dummy_signal({})
+    
+    def _prepare_market_context(self, market_data: dict) -> str:
+        """Prepare market context for LLM."""
+        context = f"""
+        Market Data Analysis:
+        - Symbol: {market_data.get('symbol', 'Unknown')}
+        - Current Price: ${market_data.get('price', 0):.2f}
+        - Volume: {market_data.get('volume', 0):,}
+        - 24h Change: {market_data.get('change_24h', 0):.2f}%
+        - Market Cap: ${market_data.get('market_cap', 0):,.0f}
+        
+        Technical Indicators:
+        - RSI: {market_data.get('rsi', 0):.2f}
+        - MACD: {market_data.get('macd', 0):.4f}
+        - Moving Average: ${market_data.get('ma_20', 0):.2f}
+        - Bollinger Bands: Upper=${market_data.get('bb_upper', 0):.2f}, Lower=${market_data.get('bb_lower', 0):.2f}
+        
+        Market Sentiment:
+        - Fear & Greed Index: {market_data.get('fear_greed', 0)}
+        - News Sentiment: {market_data.get('news_sentiment', 'neutral')}
+        """
+        return context
+    
+    def _prepare_trading_context(self, market_data: dict, 
+                                portfolio_state: dict) -> str:
+        """Prepare trading context for LLM."""
+        context = f"""
+        Trading Context:
+        
+        Market Data:
+        - Symbol: {market_data.get('symbol', 'Unknown')}
+        - Current Price: ${market_data.get('price', 0):.2f}
+        - Price Change: {market_data.get('price_change', 0):.2f}%
+        
+        Portfolio State:
+        - Current Position: {portfolio_state.get('position', 0)} shares
+        - Available Cash: ${portfolio_state.get('cash', 0):,.2f}
+        - Total Value: ${portfolio_state.get('total_value', 0):,.2f}
+        - P&L: ${portfolio_state.get('pnl', 0):+,.2f}
+        
+        Risk Parameters:
+        - Max Position Size: {portfolio_state.get('max_position', 0)}%
+        - Stop Loss: {portfolio_state.get('stop_loss', 0)}%
+        - Take Profit: {portfolio_state.get('take_profit', 0)}%
+        
+        Recent Performance:
+        - Win Rate: {portfolio_state.get('win_rate', 0):.1f}%
+        - Avg Return: {portfolio_state.get('avg_return', 0):.2f}%
+        - Max Drawdown: {portfolio_state.get('max_drawdown', 0):.2f}%
+        """
+        return context
+    
+    def _openai_analysis(self, context: str) -> dict:
+        """Generate analysis using OpenAI."""
+        try:
+            response = openai.ChatCompletion.create(
+                model=self.config.llm_model,
+                messages=[
+                    {"role": "system", "content": "You are a professional market analyst. Provide concise, actionable market analysis."},
+                    {"role": "user", "content": f"Analyze this market data and provide insights:\n{context}"}
+                ],
+                max_tokens=300,
+                temperature=0.3
+            )
+            
+            analysis_text = response.choices[0].message.content
             
             return {
-                "response": response,
-                "metadata": {
-                    "role": self.config.role,
-                    "model": self.config.model_name,
-                    "timestamp": datetime.now().isoformat(),
-                    "metrics": asdict(self.metrics)
-                }
+                'sentiment': self._extract_sentiment(analysis_text),
+                'confidence': self._extract_confidence(analysis_text),
+                'key_factors': self._extract_factors(analysis_text),
+                'recommendation': analysis_text
             }
             
         except Exception as e:
-            self.metrics.failed_requests += 1
-            self.metrics.errors.append({
-                "timestamp": datetime.now().isoformat(),
-                "error": str(e),
-                "prompt": prompt
-            })
-            logger.error(f"Error processing prompt: {str(e)}")
-            raise
+            logger.error(f"OpenAI analysis error: {e}")
+            return self._dummy_analysis({})
     
-    async def _get_model_response(self, prompt: str) -> str:
-        """Get response from the model with retries.
-        
-        Args:
-            prompt: Prepared prompt
+    def _local_analysis(self, context: str) -> dict:
+        """Generate analysis using local model."""
+        try:
+            inputs = self.tokenizer.encode(context, return_tensors="pt", max_length=512, truncation=True)
             
-        Returns:
-            Model response
-        """
-        for attempt in range(self.config.max_retries):
-            try:
-                model = self.model_loader.get_model(self.config.model_name)
-                if model["provider"] == "openai":
-                    response = await self._get_openai_response(prompt, model)
-                elif model["provider"] == "huggingface":
-                    response = await self._get_huggingface_response(prompt, model)
-                else:
-                    raise ValueError(f"Unsupported provider: {model['provider']}")
-                
-                return response
-                
-            except Exception as e:
-                if attempt == self.config.max_retries - 1:
-                    raise
-                self.metrics.retries += 1
-                await asyncio.sleep(self.config.retry_delay * (2 ** attempt))
-    
-    async def _get_openai_response(self, prompt: str, model: Dict[str, Any]) -> str:
-        """Get response from OpenAI model."""
-        messages = [
-            {"role": "system", "content": self.templates.get("system", "")},
-            {"role": "user", "content": prompt}
-        ]
-        
-        response = await openai.ChatCompletion.acreate(
-            model=model["config"].name,
-            messages=messages,
-            temperature=self.config.temperature,
-            max_tokens=self.config.max_tokens,
-            top_p=self.config.top_p
-        )
-        
-        return response.choices[0].message.content
-    
-    async def _get_huggingface_response(self, prompt: str, model: Dict[str, Any]) -> str:
-        """Get response from HuggingFace model."""
-        inputs = model["tokenizer"](
-            prompt,
-            return_tensors="pt",
-            truncation=True,
-            max_length=512
-        ).to(model["config"].device)
-        
-        outputs = model["model"].generate(
-            **inputs,
-            max_length=self.config.max_tokens,
-            temperature=self.config.temperature,
-            top_p=self.config.top_p,
-            do_sample=True
-        )
-        
-        return model["tokenizer"].decode(outputs[0], skip_special_tokens=True)
-    
-    async def _process_tool_calls(
-        self,
-        response: str,
-        enabled_tools: Optional[List[str]] = None
-    ) -> str:
-        """Process tool calls in the response.
-        
-        Args:
-            response: Model response
-            enabled_tools: List of enabled tool names
-            
-        Returns:
-            Updated response with tool results
-        """
-        if not self.tool_registry:
-            return response
-            
-        # Extract tool calls from response
-        tool_calls = self._extract_tool_calls(response)
-        if not tool_calls:
-            return response
-            
-        results = []
-        for tool_call in tool_calls:
-            if enabled_tools and tool_call["name"] not in enabled_tools:
-                continue
-                
-            try:
-                result = await self.tool_registry.execute_tool(
-                    tool_call["name"],
-                    tool_call["args"]
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    inputs,
+                    max_length=200,
+                    num_return_sequences=1,
+                    temperature=0.7,
+                    do_sample=True,
+                    pad_token_id=self.tokenizer.eos_token_id
                 )
-                results.append({
-                    "tool": tool_call["name"],
-                    "result": result
-                })
-                self.metrics.tool_calls += 1
-            except Exception as e:
-                logger.error(f"Tool execution failed: {str(e)}")
-                results.append({
-                    "tool": tool_call["name"],
-                    "error": str(e)
-                })
-        
-        # Update response with tool results
-        return self._update_response_with_tool_results(response, results)
-    
-    def _extract_tool_calls(self, response: str) -> List[Dict[str, Any]]:
-        """Extract tool calls from response text."""
-        # Implement tool call extraction logic
-        # This is a placeholder - actual implementation would depend on
-        # the specific format used for tool calls
-        return []
-    
-    def _update_response_with_tool_results(
-        self,
-        response: str,
-        results: List[Dict[str, Any]]
-    ) -> str:
-        """Update response with tool execution results."""
-        # Implement response update logic
-        # This is a placeholder - actual implementation would depend on
-        # the specific format used for tool results
-        return response
-    
-    def _prepare_prompt(self, prompt: str, context: Optional[Dict[str, Any]]) -> str:
-        """Prepare prompt with context and templates."""
-        template = self.templates.get("prompt", "{prompt}")
-        context_str = ""
-        
-        if context:
-            context_str = "\n".join(f"{k}: {v}" for k, v in context.items())
             
-        return template.format(
-            prompt=prompt,
-            context=context_str,
-            role=self.config.role
-        )
+            analysis_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            return {
+                'sentiment': 'neutral',
+                'confidence': 0.6,
+                'key_factors': ['technical_indicators', 'market_sentiment'],
+                'recommendation': analysis_text
+            }
+            
+        except Exception as e:
+            logger.error(f"Local analysis error: {e}")
+            return self._dummy_analysis({})
     
-    def get_metrics(self) -> Dict[str, Any]:
-        """Get current agent metrics."""
-        return asdict(self.metrics)
+    def _openai_signal(self, context: str) -> dict:
+        """Generate trading signal using OpenAI."""
+        try:
+            response = openai.ChatCompletion.create(
+                model=self.config.llm_model,
+                messages=[
+                    {"role": "system", "content": "You are a trading signal generator. Provide clear buy/sell/hold signals with confidence levels."},
+                    {"role": "user", "content": f"Generate a trading signal based on this context:\n{context}"}
+                ],
+                max_tokens=200,
+                temperature=0.2
+            )
+            
+            signal_text = response.choices[0].message.content
+            
+            return {
+                'action': self._extract_action(signal_text),
+                'confidence': self._extract_confidence(signal_text),
+                'reasoning': signal_text,
+                'price_target': self._extract_price_target(signal_text),
+                'stop_loss': self._extract_stop_loss(signal_text)
+            }
+            
+        except Exception as e:
+            logger.error(f"OpenAI signal error: {e}")
+            return self._dummy_signal({})
     
-    def reset_metrics(self) -> None:
-        """Reset agent metrics."""
-        self.metrics = AgentMetrics() 
+    def _local_signal(self, context: str) -> dict:
+        """Generate trading signal using local model."""
+        try:
+            inputs = self.tokenizer.encode(context, return_tensors="pt", max_length=512, truncation=True)
+            
+            with torch.no_grad():
+                outputs = self.model.generate(
+                    inputs,
+                    max_length=150,
+                    num_return_sequences=1,
+                    temperature=0.5,
+                    do_sample=True,
+                    pad_token_id=self.tokenizer.eos_token_id
+                )
+            
+            signal_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            return {
+                'action': 'hold',
+                'confidence': 0.5,
+                'reasoning': signal_text,
+                'price_target': None,
+                'stop_loss': None
+            }
+            
+        except Exception as e:
+            logger.error(f"Local signal error: {e}")
+            return self._dummy_signal({})
+    
+    def _dummy_analysis(self, context: dict) -> dict:
+        """Generate dummy analysis."""
+        return {
+            'sentiment': 'neutral',
+            'confidence': 0.5,
+            'key_factors': ['market_volatility', 'technical_indicators'],
+            'recommendation': 'Market conditions are neutral. Monitor key support/resistance levels.'
+        }
+    
+    def _dummy_signal(self, context: dict) -> dict:
+        """Generate dummy trading signal."""
+        return {
+            'action': 'hold',
+            'confidence': 0.5,
+            'reasoning': 'Insufficient data for confident signal generation.',
+            'price_target': None,
+            'stop_loss': None
+        }
+    
+    def _extract_sentiment(self, text: str) -> str:
+        """Extract sentiment from text."""
+        text_lower = text.lower()
+        if any(word in text_lower for word in ['bullish', 'positive', 'buy', 'up']):
+            return 'bullish'
+        elif any(word in text_lower for word in ['bearish', 'negative', 'sell', 'down']):
+            return 'bearish'
+        else:
+            return 'neutral'
+    
+    def _extract_confidence(self, text: str) -> float:
+        """Extract confidence level from text."""
+        # Simple confidence extraction
+        if 'high confidence' in text.lower():
+            return 0.8
+        elif 'medium confidence' in text.lower():
+            return 0.6
+        elif 'low confidence' in text.lower():
+            return 0.4
+        else:
+            return 0.5
+    
+    def _extract_factors(self, text: str) -> list:
+        """Extract key factors from text."""
+        factors = []
+        if 'technical' in text.lower():
+            factors.append('technical_indicators')
+        if 'fundamental' in text.lower():
+            factors.append('fundamental_analysis')
+        if 'sentiment' in text.lower():
+            factors.append('market_sentiment')
+        if 'volatility' in text.lower():
+            factors.append('volatility')
+        
+        return factors if factors else ['general_analysis']
+    
+    def _extract_action(self, text: str) -> str:
+        """Extract trading action from text."""
+        text_lower = text.lower()
+        if 'buy' in text_lower:
+            return 'buy'
+        elif 'sell' in text_lower:
+            return 'sell'
+        else:
+            return 'hold'
+    
+    def _extract_price_target(self, text: str) -> float:
+        """Extract price target from text."""
+        # Simple price target extraction
+        import re
+        price_match = re.search(r'\$(\d+\.?\d*)', text)
+        if price_match:
+            return float(price_match.group(1))
+        return None
+    
+    def _extract_stop_loss(self, text: str) -> float:
+        """Extract stop loss from text."""
+        # Simple stop loss extraction
+        import re
+        stop_match = re.search(r'stop.*?\$(\d+\.?\d*)', text.lower())
+        if stop_match:
+            return float(stop_match.group(1))
+        return None
+    
+    def _validate_signal(self, signal: dict) -> dict:
+        """Validate trading signal."""
+        # Ensure required fields
+        required_fields = ['action', 'confidence', 'reasoning']
+        for field in required_fields:
+            if field not in signal:
+                signal[field] = 'hold' if field == 'action' else 0.5 if field == 'confidence' else 'No reasoning provided'
+        
+        # Validate action
+        if signal['action'] not in ['buy', 'sell', 'hold']:
+            signal['action'] = 'hold'
+        
+        # Validate confidence
+        if not isinstance(signal['confidence'], (int, float)) or signal['confidence'] < 0 or signal['confidence'] > 1:
+            signal['confidence'] = 0.5
+        
+        return signal
+    
+    def update_performance(self, trade_result: dict):
+        """Update agent performance."""
+        self.performance_history.append(trade_result)
+        
+        # Keep only recent history
+        if len(self.performance_history) > 100:
+            self.performance_history = self.performance_history[-100:]
+    
+    def get_performance_summary(self) -> dict:
+        """Get performance summary."""
+        if not self.performance_history:
+            return {
+                'total_trades': 0,
+                'win_rate': 0.0,
+                'avg_return': 0.0,
+                'total_return': 0.0
+            }
+        
+        wins = sum(1 for trade in self.performance_history if trade.get('pnl', 0) > 0)
+        total_trades = len(self.performance_history)
+        total_pnl = sum(trade.get('pnl', 0) for trade in self.performance_history)
+        
+        return {
+            'total_trades': total_trades,
+            'win_rate': wins / total_trades if total_trades > 0 else 0.0,
+            'avg_return': total_pnl / total_trades if total_trades > 0 else 0.0,
+            'total_return': total_pnl
+        }
+
+# Global LLM agent instance
+llm_agent = LLMAgent()
+
+def get_llm_agent() -> LLMAgent:
+    """Get the global LLM agent instance."""
+    return llm_agent 

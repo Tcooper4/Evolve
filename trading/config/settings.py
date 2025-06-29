@@ -24,22 +24,22 @@ DATA_LOG_LEVEL = os.getenv('DATA_LOG_LEVEL', 'INFO')
 ROOT_LOG_LEVEL = os.getenv('ROOT_LOG_LEVEL', 'WARNING')
 
 # API Keys
-ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', 'demo-alpha-vantage-key')
-POLYGON_API_KEY = os.getenv('POLYGON_API_KEY', 'demo-polygon-key')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'demo-openai-key')
-FINNHUB_API_KEY = os.getenv('FINNHUB_API_KEY', 'demo-finnhub-key')
-IEX_API_KEY = os.getenv('IEX_API_KEY', 'demo-iex-key')
+ALPHA_VANTAGE_API_KEY = os.getenv('ALPHA_VANTAGE_API_KEY', '')
+POLYGON_API_KEY = os.getenv('POLYGON_API_KEY', '')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+FINNHUB_API_KEY = os.getenv('FINNHUB_API_KEY', '')
+IEX_API_KEY = os.getenv('IEX_API_KEY', '')
 
 # Security and Authentication
-JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'dev-jwt-secret-key-change-in-production')
-WEB_SECRET_KEY = os.getenv('WEB_SECRET_KEY', 'dev-secret-key-change-in-production')
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', '')
+WEB_SECRET_KEY = os.getenv('WEB_SECRET_KEY', '')
 
 # Notification Settings
-EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', 'dev-email-password')
+EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', '')
 SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL', '')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USER = os.getenv('EMAIL_USER', 'your-email@gmail.com')
+EMAIL_USER = os.getenv('EMAIL_USER', '')
 
 # Database
 DB_HOST = os.getenv('DB_HOST', 'localhost')
@@ -183,4 +183,44 @@ def validate_config() -> bool:
     return True
 
 # Validate configuration on import
-validate_config() 
+validate_config()
+
+class Settings:
+    """Settings class for configuration management."""
+    
+    def __init__(self, config_dict: Optional[Dict[str, Any]] = None):
+        """Initialize settings with optional config dictionary."""
+        self.config = config_dict or get_config_dict()
+        
+        # Set attributes from config
+        for key, value in self.config.items():
+            setattr(self, key, value)
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get a configuration value."""
+        return getattr(self, key, default)
+    
+    def set(self, key: str, value: Any) -> None:
+        """Set a configuration value."""
+        setattr(self, key, value)
+        self.config[key] = value
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert settings to dictionary."""
+        return self.config.copy()
+    
+    def update(self, config_dict: Dict[str, Any]) -> None:
+        """Update settings from dictionary."""
+        for key, value in config_dict.items():
+            self.set(key, value)
+    
+    def validate(self) -> bool:
+        """Validate settings."""
+        return validate_config()
+    
+    def __repr__(self) -> str:
+        """String representation."""
+        return f"Settings({len(self.config)} items)"
+
+# Global settings instance
+settings = Settings() 

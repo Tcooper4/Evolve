@@ -255,22 +255,14 @@ class UnifiedInterface:
             
             # Process with enhanced prompt router if available
             if 'prompt_router' in self.components:
-                # Create mock agents for routing
-                mock_agents = {
-                    'forecasting': self._create_mock_agent('forecasting'),
-                    'backtesting': self._create_mock_agent('backtesting'),
-                    'tuning': self._create_mock_agent('tuning'),
-                    'research': self._create_mock_agent('research'),
-                    'portfolio': self._create_mock_agent('portfolio'),
-                    'risk': self._create_mock_agent('risk'),
-                    'sentiment': self._create_mock_agent('sentiment')
-                }
+                # Get real agents from the system
+                real_agents = self._get_real_agents()
                 
                 # Parse intent with detailed information
                 intent, args, used_provider, raw_response = self.components['prompt_router'].parse_intent(command)
                 
-                # Route the command
-                result = self.components['prompt_router'].route(command, mock_agents)
+                # Route the command to real agents
+                result = self.components['prompt_router'].route(command, real_agents)
                 
                 # Add comprehensive metadata for transparency
                 result.update({
@@ -311,34 +303,15 @@ class UnifiedInterface:
                 'processing_time': time.time() - start_time if 'start_time' in locals() else 0
             }
     
+    def _get_real_agents(self):
+        """Get real agents from the system - requires actual agent implementations."""
+        st.error("Real agents are required for command processing. Please implement actual agent classes.")
+        return {}
+    
     def _create_mock_agent(self, agent_type: str):
-        """Create a mock agent for routing."""
-        class MockAgent:
-            def __init__(self, agent_type):
-                self.agent_type = agent_type
-            
-            def run_forecast(self, **kwargs):
-                return {'type': 'forecast', 'agent': self.agent_type, 'args': kwargs}
-            
-            def run_backtest(self, **kwargs):
-                return {'type': 'backtest', 'agent': self.agent_type, 'args': kwargs}
-            
-            def run_tuning(self, **kwargs):
-                return {'type': 'tuning', 'agent': self.agent_type, 'args': kwargs}
-            
-            def research(self, **kwargs):
-                return {'type': 'research', 'agent': self.agent_type, 'args': kwargs}
-            
-            def analyze_portfolio(self, **kwargs):
-                return {'type': 'portfolio', 'agent': self.agent_type, 'args': kwargs}
-            
-            def analyze_risk(self, **kwargs):
-                return {'type': 'risk', 'agent': self.agent_type, 'args': kwargs}
-            
-            def analyze_sentiment(self, **kwargs):
-                return {'type': 'sentiment', 'agent': self.agent_type, 'args': kwargs}
-        
-        return MockAgent(agent_type)
+        """Create a mock agent for routing - DEPRECATED."""
+        st.warning(f"Mock agent creation is deprecated. Real {agent_type} agent is required.")
+        return None
     
     def _process_command_fallback(self, command: str) -> Dict[str, Any]:
         """Fallback command processing."""
@@ -399,21 +372,15 @@ class UnifiedInterface:
             symbol = parts[1].upper()
             period = parts[2] if len(parts) > 2 else '7d'
             
-            # Mock response for now
-            result = {
-                'symbol': symbol,
-                'period': period,
-                'prediction': f'Mock forecast for {symbol} over {period}',
-                'confidence': 0.85,
-                'models_used': ['lstm', 'xgboost']
-            }
+            # Real forecasting requires actual data and models
+            st.error(f"Forecasting for {symbol} requires real market data and trained models. Please implement data loading and model inference.")
             
             return {
                 'type': 'forecast',
                 'symbol': symbol,
                 'period': period,
-                'result': result,
-                'status': 'success'
+                'error': 'Real forecasting not implemented',
+                'status': 'error'
             }
         except Exception as e:
             return {'error': f'Forecasting error: {e}', 'status': 'error'}

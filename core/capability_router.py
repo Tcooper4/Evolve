@@ -73,12 +73,6 @@ class CapabilityRouter:
             self._check_torch,
             fallback=self._fallback_no_torch
         )
-        
-        self.register_capability(
-            'tensorflow_models',
-            self._check_tensorflow,
-            fallback=self._fallback_no_tensorflow
-        )
     
     def register_capability(
         self, 
@@ -255,14 +249,6 @@ class CapabilityRouter:
         except ImportError:
             return False
     
-    def _check_tensorflow(self) -> bool:
-        """Check if TensorFlow is available."""
-        try:
-            import tensorflow
-            return True
-        except ImportError:
-            return False
-    
     # Fallback functions
     def _fallback_no_llm(self):
         """Fallback when LLM capabilities are not available."""
@@ -293,10 +279,6 @@ class CapabilityRouter:
     def _fallback_no_torch(self):
         """Fallback when PyTorch is not available."""
         logger.warning("PyTorch not available - using alternative models")
-    
-    def _fallback_no_tensorflow(self):
-        """Fallback when TensorFlow is not available."""
-        logger.warning("TensorFlow not available - using alternative models")
 
 
 # Global capability router instance
