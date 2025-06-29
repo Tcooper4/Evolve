@@ -1,9 +1,26 @@
-"""
-Execution module for trade execution and position tracking.
+"""Execution Module for Evolve Trading Platform.
+
+This module provides live trading execution capabilities.
 """
 
-from trading.orders import OrderManager
-from trading.positions import PositionTracker
-from trading.risk import RiskManager
+from .live_trading_interface import (
+    LiveTradingInterface,
+    SimulatedExecutionEngine,
+    AlpacaTradingInterface,
+    OrderRequest,
+    OrderStatus,
+    Position,
+    AccountInfo,
+    create_live_trading_interface
+)
 
-__all__ = ['OrderManager', 'PositionTracker', 'RiskManager'] 
+__all__ = [
+    'LiveTradingInterface',
+    'SimulatedExecutionEngine',
+    'AlpacaTradingInterface',
+    'OrderRequest',
+    'OrderStatus', 
+    'Position',
+    'AccountInfo',
+    'create_live_trading_interface'
+] 

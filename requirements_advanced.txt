@@ -1,0 +1,113 @@
+# Advanced Requirements for Evolve Trading Platform
+# Institutional-grade quantitative trading system
+
+# Core ML and Data Science
+scikit-learn>=1.3.0
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+
+# Deep Learning and Neural Networks
+torch>=2.0.0
+torchvision>=0.15.0
+pytorch-lightning>=2.0.0
+transformers>=4.30.0
+
+# Reinforcement Learning
+stable-baselines3>=2.0.0
+gymnasium>=0.28.0
+gym>=0.26.0
+
+# Causal Inference
+dowhy>=0.8
+causalnex>=0.12.0
+networkx>=3.0
+
+# Time Series and Forecasting
+prophet>=1.1.0
+statsmodels>=0.14.0
+arch>=6.0.0
+pmdarima>=2.0.0
+
+# Financial Data and Analysis
+yfinance>=0.2.0
+alpha-vantage>=2.3.0
+empyrical>=0.5.0
+pyfolio>=0.9.0
+zipline>=1.4.0
+
+# Technical Analysis
+ta-lib>=0.4.0
+finta>=1.3.0
+
+# Live Trading and Execution
+alpaca-trade-api>=3.0.0
+polygon-api-client>=1.0.0
+finnhub-python>=2.4.0
+
+# Real-time Data Streaming
+websockets>=11.0.0
+aiohttp>=3.8.0
+asyncio-mqtt>=0.11.0
+
+# Voice and Speech Recognition
+SpeechRecognition>=3.10.0
+pyttsx3>=2.90
+openai>=1.0.0
+
+# Visualization and Plotting
+plotly>=5.15.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+bokeh>=3.0.0
+
+# Web Framework and UI
+streamlit>=1.25.0
+dash>=2.10.0
+flask>=2.3.0
+fastapi>=0.100.0
+
+# Database and Caching
+redis>=4.5.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Monitoring and Logging
+prometheus-client>=0.17.0
+grafana-api>=1.0.0
+structlog>=23.0.0
+
+# Configuration and Environment
+python-dotenv>=1.0.0
+pyyaml>=6.0
+configparser>=5.3.0
+
+# Testing and Development
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+flake8>=6.0.0
+
+# Utilities
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+python-dateutil>=2.8.0
+pytz>=2023.3
+
+# Optional: GPU Support (uncomment if using GPU)
+# torch-cuda>=2.0.0
+# cupy-cuda11x>=12.0.0
+
+# Optional: Advanced Analytics
+# tensorflow>=2.13.0
+# keras>=2.13.0
+# xgboost>=1.7.0
+# lightgbm>=4.0.0
+# catboost>=1.2.0
+
+# Optional: Cloud and Deployment
+# kubernetes>=26.0.0
+# docker>=6.1.0
+# boto3>=1.28.0
+# google-cloud-storage>=2.10.0 

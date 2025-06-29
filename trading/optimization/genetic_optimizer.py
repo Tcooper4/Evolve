@@ -1,16 +1,29 @@
-"""Genetic algorithm optimizer."""
+"""Genetic Algorithm Optimizer for Trading Strategies."""
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple, Union, Callable
+from typing import Dict, List, Optional, Tuple, Union, Any
 from datetime import datetime
-import random
+import logging
+import warnings
+warnings.filterwarnings('ignore')
+
+# Try to import DEAP with fallback
+try:
+    import deap
+    from deap import base, creator, tools, algorithms
+    DEAP_AVAILABLE = True
+except ImportError:
+    DEAP_AVAILABLE = False
+    deap = base = creator = tools = algorithms = None
+
 from .base_optimizer import BaseOptimizer, OptimizationResult
 import plotly.graph_objects as go
-from deap import base, creator, tools, algorithms
+
+logger = logging.getLogger(__name__)
 
 class GeneticOptimizer(BaseOptimizer):
-    """Genetic optimizer using DEAP."""
+    """Genetic algorithm optimizer for trading strategies."""
     
     def __init__(
         self,
@@ -26,23 +39,46 @@ class GeneticOptimizer(BaseOptimizer):
         """Initialize genetic optimizer.
         
         Args:
-            data: DataFrame with OHLCV data
+            data: Market data
             strategy_type: Type of strategy to optimize
-            verbose: Enable verbose logging
-            n_jobs: Number of parallel jobs (-1 for all cores)
-            population_size: Size of population
+            verbose: Verbose output
+            n_jobs: Number of parallel jobs
+            population_size: Population size
             generations: Number of generations
             mutation_prob: Mutation probability
             crossover_prob: Crossover probability
         """
         super().__init__(data, strategy_type, verbose, n_jobs)
+        
+        if not DEAP_AVAILABLE:
+            raise ImportError("DEAP not available. Please install deap.")
+        
         self.population_size = population_size
         self.generations = generations
         self.mutation_prob = mutation_prob
         self.crossover_prob = crossover_prob
-        self.toolbox = None
+        
+        # Initialize DEAP creator
+        self._initialize_deap()
+        
+        # Initialize toolbox
+        self.toolbox = base.Toolbox()
         self.stats = None
         self.hof = None
+    
+    def _initialize_deap(self):
+        """Initialize DEAP creator classes."""
+        # Clear existing creator classes to avoid conflicts
+        if hasattr(creator, 'Individual'):
+            del creator.Individual
+        if hasattr(creator, 'FitnessMax'):
+            del creator.FitnessMax
+        
+        # Create fitness class
+        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        
+        # Create individual class
+        creator.create("Individual", list, fitness=creator.FitnessMax)
     
     def optimize(
         self,
@@ -51,27 +87,24 @@ class GeneticOptimizer(BaseOptimizer):
         n_trials: int = 100,
         **kwargs
     ) -> List[OptimizationResult]:
-        """Run genetic optimization.
+        """Run genetic algorithm optimization.
         
         Args:
-            param_space: Parameter space to search
+            param_space: Parameter space definition
             objective: Optimization objective(s)
-            n_trials: Number of trials to run
-            **kwargs: Additional optimizer-specific arguments
+            n_trials: Number of trials (ignored for GA)
+            **kwargs: Additional arguments
             
         Returns:
             List of optimization results
         """
-        # Create fitness and individual classes
-        if not hasattr(creator, 'FitnessMax'):
-            creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-        if not hasattr(creator, 'Individual'):
-            creator.create("Individual", list, fitness=creator.FitnessMax)
+        if not DEAP_AVAILABLE:
+            raise ImportError("DEAP not available")
         
-        # Initialize toolbox
-        self.toolbox = base.Toolbox()
+        self.param_space = param_space
         
         # Register parameter generators
+        import random
         for param_name, param_range in param_space.items():
             if isinstance(param_range[0], int):
                 self.toolbox.register(
@@ -247,7 +280,7 @@ class GeneticOptimizer(BaseOptimizer):
         
         return plots[0] if len(plots) == 1 else plots
     
-    def get_best_individuals(self, n: int = 1) -> List[creator.Individual]:
+    def get_best_individuals(self, n: int = 1) -> List[Any]:
         """Get best individuals from hall of fame.
         
         Args:
@@ -271,4 +304,37 @@ class GeneticOptimizer(BaseOptimizer):
             raise ValueError("No hall of fame found")
         
         best_individual = self.hof[0]
-        return dict(zip(self.param_space.keys(), best_individual)) 
+        return dict(zip(self.param_space.keys(), best_individual))
+
+def create_genetic_optimizer(data: pd.DataFrame, 
+                           strategy_type: str,
+                           config: Optional[Dict[str, Any]] = None) -> GeneticOptimizer:
+    """Create genetic optimizer.
+    
+    Args:
+        data: Market data
+        strategy_type: Strategy type
+        config: Configuration dictionary
+        
+    Returns:
+        GeneticOptimizer instance
+    """
+    if not DEAP_AVAILABLE:
+        raise ImportError("DEAP not available. Please install deap.")
+    
+    config = config or {}
+    population_size = config.get('population_size', 100)
+    generations = config.get('generations', 50)
+    mutation_prob = config.get('mutation_prob', 0.2)
+    crossover_prob = config.get('crossover_prob', 0.7)
+    verbose = config.get('verbose', False)
+    
+    return GeneticOptimizer(
+        data=data,
+        strategy_type=strategy_type,
+        population_size=population_size,
+        generations=generations,
+        mutation_prob=mutation_prob,
+        crossover_prob=crossover_prob,
+        verbose=verbose
+    ) 
