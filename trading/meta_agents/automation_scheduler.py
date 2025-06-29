@@ -151,4 +151,7 @@ class AutomationScheduler:
             self.logger.info("Automation scheduler stopped")
         except Exception as e:
             self.logger.error(f"Error stopping automation scheduler: {str(e)}")
-            raise 
+            raise
+
+    def parse_cron_schedule(self):
+        raise NotImplementedError('Pending feature') 

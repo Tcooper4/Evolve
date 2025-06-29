@@ -142,11 +142,13 @@ def render_settings_page():
     with col1:
         if st.button("Save Configuration"):
             # TODO: Implement configuration saving
+            raise NotImplementedError('Pending feature')
             st.success("Configuration saved successfully!")
     
     with col2:
         if st.button("Reset to Defaults"):
             # TODO: Implement configuration reset
+            raise NotImplementedError('Pending feature')
             st.success("Configuration reset to defaults!")
 
 def main():

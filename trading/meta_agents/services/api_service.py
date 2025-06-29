@@ -128,16 +128,9 @@ class APIService:
             """Health check endpoint."""
             return {"status": "healthy", "timestamp": datetime.now().isoformat()}
     
-    async def verify_credentials(self, username: str, password: str) -> Optional[User]:
+    def verify_credentials(self, username: str, password: str) -> Optional[User]:
         """Verify user credentials."""
-        try:
-            # TODO: Implement actual credential verification
-            if username == "admin" and password == "admin":
-                return User(username=username)
-            return None
-        except Exception as e:
-            self.logger.error(f"Credential verification error: {str(e)}")
-            raise
+        raise NotImplementedError('Pending feature')
     
     def generate_token(self, user: User) -> str:
         """Generate JWT token."""
@@ -152,18 +145,9 @@ class APIService:
             self.logger.error(f"Token generation error: {str(e)}")
             raise
     
-    async def get_user(self, token: str) -> Optional[User]:
+    def get_user(self, token: str) -> Optional[User]:
         """Get user from token."""
-        try:
-            payload = jwt.decode(token, self.config["secret_key"], algorithms=["HS256"])
-            username = payload.get("sub")
-            if not username:
-                return None
-            # TODO: Implement actual user retrieval
-            return User(username=username)
-        except Exception as e:
-            self.logger.error(f"Get user error: {str(e)}")
-            raise
+        raise NotImplementedError('Pending feature')
     
     async def start(self) -> None:
         """Start API service."""

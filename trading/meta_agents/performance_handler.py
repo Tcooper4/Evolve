@@ -124,18 +124,8 @@ class PerformanceHandler:
         end_time: Optional[datetime] = None
     ) -> List[Dict[str, Any]]:
         """Get historical performance metrics."""
-        try:
-            # TODO: Implement metrics history retrieval
-            return []
-        except Exception as e:
-            self.logger.error(f"Error getting metrics history: {str(e)}")
-            raise
+        raise NotImplementedError('Pending feature')
     
     def optimize_performance(self) -> Dict[str, Any]:
         """Optimize system performance."""
-        try:
-            # TODO: Implement performance optimization
-            return {}
-        except Exception as e:
-            self.logger.error(f"Error optimizing performance: {str(e)}")
-            raise 
+        raise NotImplementedError('Pending feature') 

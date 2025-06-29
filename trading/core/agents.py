@@ -15,4 +15,8 @@ def handle_underperformance(status_report: Dict[str, Any]) -> None:
     """
     print("[Agent Callback] Underperformance detected. Status report:")
     print(status_report)
-    # TODO: Implement agentic response (e.g., trigger retraining, alert, etc.) 
+    # TODO: Implement agentic response (e.g., trigger retraining, alert, etc.)
+    raise NotImplementedError('Pending feature')
+
+    def agentic_response(self):
+        raise NotImplementedError('Pending feature') 

@@ -41,19 +41,13 @@ class NotificationCleanup:
         """Clean up old notifications."""
         try:
             cutoff_date = datetime.utcnow() - timedelta(days=self.retention_days)
-            
-            # TODO: Implement notification cleanup logic
-            # This would typically involve:
-            # 1. Querying the notification storage
-            # 2. Deleting notifications older than cutoff_date
-            # 3. Archiving if needed
-            
+            raise NotImplementedError('Pending feature')
             self.logger.info(
                 f"Cleaned up notifications older than {cutoff_date.isoformat()}"
             )
         except Exception as e:
             self.logger.error(f"Error cleaning up notifications: {str(e)}")
-            raise
+            raise NotImplementedError('Pending feature')
     
     async def archive_notifications(
         self,
@@ -62,19 +56,14 @@ class NotificationCleanup:
     ) -> None:
         """Archive notifications within a date range."""
         try:
-            # TODO: Implement notification archiving logic
-            # This would typically involve:
-            # 1. Querying notifications within date range
-            # 2. Compressing/formatting for archiving
-            # 3. Storing in archive location
-            
+            raise NotImplementedError('Pending feature')
             self.logger.info(
                 f"Archived notifications from {start_date.isoformat()} "
                 f"to {end_date.isoformat()}"
             )
         except Exception as e:
             self.logger.error(f"Error archiving notifications: {str(e)}")
-            raise
+            raise NotImplementedError('Pending feature')
     
     async def monitor_cleanup(self, interval: int = 86400):
         """Monitor and perform cleanup at regular intervals."""
@@ -89,12 +78,7 @@ class NotificationCleanup:
     def get_cleanup_stats(self) -> Dict[str, Any]:
         """Get cleanup statistics."""
         try:
-            # TODO: Implement cleanup statistics
-            return {
-                'last_cleanup': None,
-                'notifications_cleaned': 0,
-                'notifications_archived': 0
-            }
+            raise NotImplementedError('Pending feature')
         except Exception as e:
             self.logger.error(f"Error getting cleanup stats: {str(e)}")
-            raise 
+            raise NotImplementedError('Pending feature') 

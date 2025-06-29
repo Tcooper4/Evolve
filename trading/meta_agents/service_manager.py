@@ -210,4 +210,7 @@ class ServiceManager:
             self.logger.info("Service manager stopped")
         except Exception as e:
             self.logger.error(f"Error stopping service manager: {str(e)}")
-            raise 
+            raise
+    
+    def health_check(self):
+        raise NotImplementedError('Pending feature') 

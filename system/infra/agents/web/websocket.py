@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Set, Optional
 from fastapi import WebSocket, WebSocketDisconnect
 from automation.notifications.notification_manager import NotificationManager
-from ..auth.user_manager import UserManager
+from system.infra.agents.auth.user_manager import UserManager
 import os
 import jwt
 from datetime import datetime, timedelta

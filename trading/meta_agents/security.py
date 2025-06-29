@@ -160,6 +160,12 @@ class SecurityManager:
             self.logger.error(f"Invalid token: {str(e)}")
             raise
     
+    def encrypt(self):
+        raise NotImplementedError('Pending feature')
+    
+    def decrypt(self):
+        raise NotImplementedError('Pending feature')
+    
     def encrypt_data(self, data: str) -> str:
         """Encrypt sensitive data."""
         try:

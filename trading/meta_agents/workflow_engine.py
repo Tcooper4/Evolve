@@ -156,4 +156,10 @@ class WorkflowEngine:
                 await asyncio.sleep(interval)
         except Exception as e:
             self.logger.error(f"Error monitoring workflows: {str(e)}")
-            raise 
+            raise
+
+    def execute_step(self):
+        raise NotImplementedError('Pending feature')
+
+    def monitor_workflow(self):
+        raise NotImplementedError('Pending feature') 

@@ -10,7 +10,7 @@ from ratelimit import limits, sleep_and_retry
 import prometheus_client as prom
 from prometheus_client import Counter, Gauge, Histogram, Summary
 
-from ..core.models.task import Task, TaskStatus, TaskPriority, TaskType
+from system.infra.agents.core.models.task import Task, TaskStatus, TaskPriority, TaskType
 from trading.automation_core import AutomationCore
 from trading.automation_tasks import AutomationTasks
 from trading.automation_workflows import AutomationWorkflows

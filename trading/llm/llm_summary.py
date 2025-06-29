@@ -176,7 +176,7 @@ def _call_llm_api(prompt: str, config: SummaryConfig) -> str:
     """
     # TODO: Implement actual LLM API call
     # This is a placeholder that returns a mock response
-    return f"Generated summary for prompt: {prompt[:100]}..."
+    raise NotImplementedError('Pending feature')
 
 def format_summary(summary: str, max_length: int = 500) -> str:
     """Format summary text for display.

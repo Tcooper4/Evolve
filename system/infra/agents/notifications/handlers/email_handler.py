@@ -4,7 +4,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
 
-from ..notification_service import Notification
+from system.infra.agents.notifications.notification_service import Notification
 
 logger = logging.getLogger(__name__)
 
