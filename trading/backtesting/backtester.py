@@ -1950,33 +1950,97 @@ def _compute_metrics(self, df: pd.DataFrame, trade_log: pd.DataFrame) -> Dict[st
     Returns:
         Dictionary with performance metrics
     """
+    # Defensive check for empty DataFrame
+    if df.empty:
+        logger.warning("Empty equity curve DataFrame, returning fallback metrics")
+        return self._get_fallback_metrics()
+    
     returns = df['Returns']
     
-    # Basic metrics
-    total_return = (df['Portfolio Value'].iloc[-1] / self.initial_cash) - 1
-    annual_return = (1 + total_return) ** (TRADING_DAYS_PER_YEAR / len(returns)) - 1
-    volatility = returns.std() * np.sqrt(TRADING_DAYS_PER_YEAR)
-    sharpe_ratio = np.sqrt(TRADING_DAYS_PER_YEAR) * returns.mean() / returns.std()
+    # Defensive check for returns
+    if returns.empty or returns.isna().all():
+        logger.warning("No valid returns data, using fallback metrics")
+        return self._get_fallback_metrics()
     
-    # Drawdown metrics
-    cumulative_returns = (1 + returns).cumprod()
-    running_max = cumulative_returns.cummax()
-    drawdowns = (cumulative_returns - running_max) / running_max
-    max_drawdown = drawdowns.min()
+    # Basic metrics with defensive checks
+    try:
+        total_return = (df['Portfolio Value'].iloc[-1] / self.initial_cash) - 1
+    except (IndexError, ZeroDivisionError):
+        logger.warning("Error calculating total return, using fallback")
+        total_return = 0.0
     
-    # Trade metrics
-    if not trade_log.empty:
-        win_rate = len(trade_log[trade_log['PnL'] > 0]) / len(trade_log)
-        avg_trade = trade_log['PnL'].mean()
-        avg_win = trade_log[trade_log['PnL'] > 0]['PnL'].mean()
-        avg_loss = trade_log[trade_log['PnL'] < 0]['PnL'].mean()
-        profit_factor = abs(trade_log[trade_log['PnL'] > 0]['PnL'].sum() / 
-                          trade_log[trade_log['PnL'] < 0]['PnL'].sum())
+    try:
+        annual_return = (1 + total_return) ** (TRADING_DAYS_PER_YEAR / len(returns)) - 1
+    except ZeroDivisionError:
+        logger.warning("Error calculating annual return, using fallback")
+        annual_return = 0.0
+    
+    try:
+        volatility = returns.std() * np.sqrt(TRADING_DAYS_PER_YEAR)
+        if pd.isna(volatility) or volatility == 0:
+            volatility = 0.01  # Default volatility
+    except Exception as e:
+        logger.warning(f"Error calculating volatility: {e}, using fallback")
+        volatility = 0.01
+    
+    try:
+        sharpe_ratio = np.sqrt(TRADING_DAYS_PER_YEAR) * returns.mean() / returns.std()
+        if pd.isna(sharpe_ratio) or np.isinf(sharpe_ratio):
+            sharpe_ratio = 0.0
+    except (ZeroDivisionError, ValueError) as e:
+        logger.warning(f"Error calculating Sharpe ratio: {e}, using fallback")
+        sharpe_ratio = 0.0
+    
+    # Drawdown metrics with defensive checks
+    try:
+        cumulative_returns = (1 + returns).cumprod()
+        running_max = cumulative_returns.cummax()
+        drawdowns = (cumulative_returns - running_max) / running_max
+        max_drawdown = drawdowns.min()
+        if pd.isna(max_drawdown):
+            max_drawdown = 0.0
+    except Exception as e:
+        logger.warning(f"Error calculating drawdown: {e}, using fallback")
+        max_drawdown = 0.0
+    
+    # Trade metrics with defensive checks
+    if not trade_log.empty and len(trade_log) > 0:
+        try:
+            # Filter out NaN PnL values
+            valid_trades = trade_log.dropna(subset=['PnL'])
+            if len(valid_trades) > 0:
+                win_rate = len(valid_trades[valid_trades['PnL'] > 0]) / len(valid_trades)
+                avg_trade = valid_trades['PnL'].mean()
+                
+                winning_trades = valid_trades[valid_trades['PnL'] > 0]
+                losing_trades = valid_trades[valid_trades['PnL'] < 0]
+                
+                avg_win = winning_trades['PnL'].mean() if len(winning_trades) > 0 else 0.0
+                avg_loss = losing_trades['PnL'].mean() if len(losing_trades) > 0 else 0.0
+                
+                # Calculate profit factor with defensive checks
+                total_wins = winning_trades['PnL'].sum() if len(winning_trades) > 0 else 0.0
+                total_losses = abs(losing_trades['PnL'].sum()) if len(losing_trades) > 0 else 0.0
+                
+                if total_losses > 0:
+                    profit_factor = total_wins / total_losses
+                else:
+                    profit_factor = float('inf') if total_wins > 0 else 0.0
+            else:
+                win_rate = avg_trade = avg_win = avg_loss = profit_factor = 0.0
+        except Exception as e:
+            logger.warning(f"Error calculating trade metrics: {e}, using fallbacks")
+            win_rate = avg_trade = avg_win = avg_loss = profit_factor = 0.0
     else:
+        logger.warning("Empty trade log, using fallback trade metrics")
         win_rate = avg_trade = avg_win = avg_loss = profit_factor = 0.0
     
-    # Risk metrics
-    risk_metrics = self._calculate_risk_metrics()
+    # Risk metrics with defensive checks
+    try:
+        risk_metrics = self._calculate_risk_metrics()
+    except Exception as e:
+        logger.warning(f"Error calculating risk metrics: {e}, using fallbacks")
+        risk_metrics = self._get_fallback_risk_metrics()
     
     return {
         'total_return': total_return,
@@ -1989,7 +2053,76 @@ def _compute_metrics(self, df: pd.DataFrame, trade_log: pd.DataFrame) -> Dict[st
         'avg_win': avg_win,
         'avg_loss': avg_loss,
         'profit_factor': profit_factor,
-        'risk_metrics': risk_metrics
+        'risk_metrics': risk_metrics,
+        'num_trades': len(trade_log) if not trade_log.empty else 0,
+        'successful_trades': len(trade_log[trade_log['PnL'] > 0]) if not trade_log.empty else 0
+    }
+
+def _get_fallback_metrics(self) -> Dict[str, Any]:
+    """Get fallback metrics when calculation fails."""
+    return {
+        'total_return': 0.0,
+        'annual_return': 0.0,
+        'volatility': 0.01,
+        'sharpe_ratio': 0.0,
+        'max_drawdown': 0.0,
+        'win_rate': 0.0,
+        'avg_trade': 0.0,
+        'avg_win': 0.0,
+        'avg_loss': 0.0,
+        'profit_factor': 0.0,
+        'risk_metrics': self._get_fallback_risk_metrics(),
+        'num_trades': 0,
+        'successful_trades': 0
+    }
+
+def _get_fallback_risk_metrics(self) -> Dict[str, float]:
+    """Get fallback risk metrics when calculation fails."""
+    return {
+        'var_95': 0.0,
+        'cvar_95': 0.0,
+        'beta': 1.0,
+        'alpha': 0.0,
+        'information_ratio': 0.0,
+        'sortino_ratio': 0.0,
+        'calmar_ratio': 0.0,
+        'omega_ratio': 0.0,
+        'treynor_ratio': 0.0,
+        'jensen_alpha': 0.0,
+        'ulger_ratio': 0.0,
+        'modigliani_ratio': 0.0,
+        'burke_ratio': 0.0,
+        'sterling_ratio': 0.0,
+        'kappa_ratio': 0.0,
+        'gini_coefficient': 0.0,
+        'skewness': 0.0,
+        'kurtosis': 3.0,
+        'var_ratio': 0.0,
+        'conditional_sharpe': 0.0,
+        'tail_ratio': 0.0,
+        'pain_ratio': 0.0,
+        'gain_loss_ratio': 0.0,
+        'expectancy': 0.0,
+        'recovery_factor': 0.0,
+        'risk_reward_ratio': 0.0,
+        'omega_sharpe': 0.0,
+        'conditional_var': 0.0,
+        'expected_shortfall': 0.0,
+        'semi_variance': 0.0,
+        'downside_deviation': 0.0,
+        'value_at_risk': 0.0,
+        'conditional_drawdown': 0.0,
+        'regime_risk': 0.0,
+        'factor_risk': 0.0,
+        'liquidity_risk': 0.0,
+        'concentration_risk': 0.0,
+        'leverage_risk': 0.0,
+        'currency_risk': 0.0,
+        'interest_rate_risk': 0.0,
+        'inflation_risk': 0.0,
+        'political_risk': 0.0,
+        'systemic_risk': 0.0,
+        'idiosyncratic_risk': 0.0
     }
 
 def _combine_metrics(self, metrics_list: List[Dict[str, Any]]) -> Dict[str, Any]:

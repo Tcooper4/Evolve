@@ -1,500 +1,403 @@
-"""Live Trade Execution Engine for Evolve Trading Platform.
+"""Trade Execution Engine with Mock Simulator.
 
-This module provides live trade execution capabilities with simulation
-and optional real trading via Alpaca/Robinhood APIs.
+This module provides a trade execution engine with realistic simulation of
+market conditions including slippage, market impact, and commission.
 """
 
+import logging
+from typing import Dict, List, Optional, Tuple, Any
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Tuple, Optional, Any, Union
-import logging
-import time
 from datetime import datetime, timedelta
-import json
+from dataclasses import dataclass
+from enum import Enum
 import os
-import warnings
-warnings.filterwarnings('ignore')
-
-# Try to import broker APIs
-try:
-    import alpaca_trade_api as tradeapi
-    ALPACA_AVAILABLE = True
-except ImportError:
-    ALPACA_AVAILABLE = False
-    tradeapi = None
 
 logger = logging.getLogger(__name__)
 
+class OrderType(Enum):
+    """Types of orders."""
+    MARKET = "market"
+    LIMIT = "limit"
+    STOP = "stop"
+    STOP_LIMIT = "stop_limit"
+
+class OrderStatus(Enum):
+    """Order status."""
+    PENDING = "pending"
+    FILLED = "filled"
+    PARTIALLY_FILLED = "partially_filled"
+    CANCELLED = "cancelled"
+    REJECTED = "rejected"
+
 @dataclass
-class TradeOrder:
-    """Trade order structure."""
+class Order:
+    """Represents a trading order."""
+    id: str
     symbol: str
     side: str  # 'buy' or 'sell'
+    order_type: OrderType
     quantity: float
-    order_type: str  # 'market', 'limit', 'stop'
     price: Optional[float] = None
     stop_price: Optional[float] = None
-    time_in_force: str = 'day'
-    order_id: Optional[str] = None
-    status: str = 'pending'
-    created_at: Optional[str] = None
-    filled_at: Optional[str] = None
-    filled_price: Optional[float] = None
-    filled_quantity: Optional[float] = None
-    commission: Optional[float] = None
+    timestamp: datetime = None
+    status: OrderStatus = OrderStatus.PENDING
+    filled_quantity: float = 0.0
+    filled_price: float = 0.0
+    commission: float = 0.0
+    slippage: float = 0.0
+    market_impact: float = 0.0
+    
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
 
 @dataclass
-class ExecutionConfig:
-    """Execution configuration."""
-    live_trading: bool = False
-    broker: str = 'alpaca'  # 'alpaca', 'robinhood', 'simulation'
-    api_key: Optional[str] = None
-    api_secret: Optional[str] = None
-    paper_trading: bool = True
-    max_position_size: float = 0.1  # Max 10% of portfolio per position
-    max_daily_trades: int = 50
-    slippage_model: str = 'fixed'  # 'fixed', 'proportional', 'realistic'
-    commission_model: str = 'fixed'  # 'fixed', 'proportional'
-    fixed_commission: float = 1.0
-    commission_rate: float = 0.001  # 0.1%
-    min_order_size: float = 100.0
-    max_slippage: float = 0.002  # 0.2%
+class ExecutionResult:
+    """Result of order execution."""
+    order: Order
+    execution_price: float
+    execution_quantity: float
+    commission: float
+    slippage: float
+    market_impact: float
+    total_cost: float
+    timestamp: datetime
+    success: bool
+    error_message: Optional[str] = None
 
-class SlippageModel:
-    """Slippage modeling for realistic trade execution."""
+class MarketSimulator:
+    """Simulates market conditions for trade execution."""
     
-    def __init__(self, model_type: str = 'realistic'):
-        """Initialize slippage model."""
-        self.model_type = model_type
+    def __init__(self, 
+                 base_slippage: float = 0.0001,
+                 market_impact_factor: float = 0.0001,
+                 commission_rate: float = 0.001,
+                 min_commission: float = 1.0,
+                 max_commission: float = 50.0):
+        """Initialize market simulator.
         
-    def calculate_slippage(self, order_size: float, 
-                          current_price: float,
-                          market_volatility: float = 0.02) -> float:
-        """Calculate slippage for order."""
+        Args:
+            base_slippage: Base slippage rate (0.01% = 0.0001)
+            market_impact_factor: Market impact factor
+            commission_rate: Commission rate as percentage
+            min_commission: Minimum commission per trade
+            max_commission: Maximum commission per trade
+        """
+        self.base_slippage = base_slippage
+        self.market_impact_factor = market_impact_factor
+        self.commission_rate = commission_rate
+        self.min_commission = min_commission
+        self.max_commission = max_commission
         
-        if self.model_type == 'fixed':
-            return self.max_slippage
+        # Market volatility simulation
+        self.volatility = 0.02  # 2% daily volatility
+        self.spread = 0.0005    # 0.05% spread
         
-        elif self.model_type == 'proportional':
-            # Proportional to order size
-            return min(self.max_slippage, order_size / 10000 * 0.001)
-        
-        elif self.model_type == 'realistic':
-            # Realistic model considering market impact
-            base_slippage = 0.0005  # 0.05% base slippage
-            
-            # Size impact
-            size_impact = min(0.001, order_size / 100000 * 0.002)
-            
-            # Volatility impact
-            volatility_impact = market_volatility * 0.1
-            
-            # Time of day impact (simulate market hours)
-            hour = datetime.now().hour
-            if 9 <= hour <= 11 or 14 <= hour <= 16:  # Market open/close
-                time_impact = 0.0002
-            else:
-                time_impact = 0.0005
-            
-            total_slippage = base_slippage + size_impact + volatility_impact + time_impact
-            return min(self.max_slippage, total_slippage)
-        
-        return 0.0
-
-class CommissionModel:
-    """Commission modeling for trade execution."""
+        logger.info(f"Market simulator initialized with slippage={base_slippage}, "
+                   f"impact={market_impact_factor}, commission={commission_rate}")
     
-    def __init__(self, model_type: str = 'fixed', 
-                 fixed_amount: float = 1.0,
-                 rate: float = 0.001):
-        """Initialize commission model."""
-        self.model_type = model_type
-        self.fixed_amount = fixed_amount
-        self.rate = rate
+    def calculate_slippage(self, 
+                          order_quantity: float, 
+                          market_volume: float,
+                          price: float) -> float:
+        """Calculate slippage based on order size and market conditions.
+        
+        Args:
+            order_quantity: Order quantity
+            market_volume: Market volume
+            price: Current market price
+            
+        Returns:
+            Slippage amount
+        """
+        # Base slippage
+        slippage = self.base_slippage
+        
+        # Volume-based slippage (larger orders = more slippage)
+        volume_ratio = order_quantity / market_volume if market_volume > 0 else 0
+        volume_slippage = min(volume_ratio * 0.001, 0.01)  # Max 1% slippage
+        
+        # Volatility-based slippage
+        volatility_slippage = self.volatility * np.random.normal(0, 1) * 0.1
+        
+        # Spread component
+        spread_slippage = self.spread * np.random.uniform(0.5, 1.5)
+        
+        total_slippage = slippage + volume_slippage + volatility_slippage + spread_slippage
+        
+        # Ensure slippage is positive
+        return max(total_slippage, 0.0)
     
-    def calculate_commission(self, order_value: float) -> float:
-        """Calculate commission for order."""
+    def calculate_market_impact(self, 
+                               order_quantity: float,
+                               market_volume: float,
+                               price: float) -> float:
+        """Calculate market impact of the order.
         
-        if self.model_type == 'fixed':
-            return self.fixed_amount
+        Args:
+            order_quantity: Order quantity
+            market_volume: Market volume
+            price: Current market price
+            
+        Returns:
+            Market impact amount
+        """
+        # Market impact increases with order size relative to market volume
+        volume_ratio = order_quantity / market_volume if market_volume > 0 else 0
         
-        elif self.model_type == 'proportional':
-            return order_value * self.rate
+        # Square root model for market impact
+        impact = self.market_impact_factor * np.sqrt(volume_ratio) * price
         
-        elif self.model_type == 'tiered':
-            # Tiered commission structure
-            if order_value < 1000:
-                return max(1.0, order_value * 0.002)
-            elif order_value < 10000:
-                return max(2.0, order_value * 0.001)
-            else:
-                return max(5.0, order_value * 0.0005)
+        # Add some randomness
+        impact *= np.random.uniform(0.8, 1.2)
         
-        return 0.0
+        return max(impact, 0.0)
+    
+    def calculate_commission(self, 
+                           order_value: float,
+                           order_quantity: float) -> float:
+        """Calculate commission for the order.
+        
+        Args:
+            order_value: Total order value
+            order_quantity: Order quantity
+            
+        Returns:
+            Commission amount
+        """
+        # Base commission
+        commission = order_value * self.commission_rate
+        
+        # Apply min/max constraints
+        commission = max(commission, self.min_commission)
+        commission = min(commission, self.max_commission)
+        
+        # Add some variability
+        commission *= np.random.uniform(0.95, 1.05)
+        
+        return commission
 
 class TradeExecutor:
     """Main trade execution engine."""
     
-    def __init__(self, config: ExecutionConfig):
-        """Initialize trade executor."""
-        self.config = config
-        self.slippage_model = SlippageModel(config.slippage_model)
-        self.commission_model = CommissionModel(
-            config.commission_model,
-            config.fixed_commission,
-            config.commission_rate
+    def __init__(self, 
+                 market_simulator: Optional[MarketSimulator] = None,
+                 live_trading: bool = False):
+        """Initialize trade executor.
+        
+        Args:
+            market_simulator: Market simulator instance
+            live_trading: Whether to use live trading mode
+        """
+        self.market_simulator = market_simulator or MarketSimulator()
+        self.live_trading = live_trading
+        self.orders: List[Order] = []
+        self.executions: List[ExecutionResult] = []
+        
+        # Load live trading setting from environment
+        if os.getenv('LIVE_TRADING', 'False').lower() == 'true':
+            self.live_trading = True
+            logger.warning("LIVE TRADING MODE ENABLED - Real money will be used!")
+        
+        logger.info(f"Trade executor initialized - Live trading: {self.live_trading}")
+    
+    def place_order(self, 
+                   symbol: str,
+                   side: str,
+                   quantity: float,
+                   order_type: OrderType = OrderType.MARKET,
+                   price: Optional[float] = None,
+                   stop_price: Optional[float] = None) -> Order:
+        """Place a new order.
+        
+        Args:
+            symbol: Trading symbol
+            side: 'buy' or 'sell'
+            quantity: Order quantity
+            order_type: Type of order
+            price: Limit price (for limit orders)
+            stop_price: Stop price (for stop orders)
+            
+        Returns:
+            Order object
+        """
+        order_id = f"order_{len(self.orders)}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        order = Order(
+            id=order_id,
+            symbol=symbol,
+            side=side,
+            order_type=order_type,
+            quantity=quantity,
+            price=price,
+            stop_price=stop_price
         )
         
-        # Initialize broker connection
-        self.broker_api = None
-        self.initialize_broker()
+        self.orders.append(order)
+        logger.info(f"Order placed: {order_id} - {side} {quantity} {symbol}")
         
-        # Trading state
-        self.portfolio = {}
-        self.order_history = []
-        self.daily_trades = 0
-        self.last_trade_reset = datetime.now().date()
-        
-        # Performance tracking
-        self.execution_metrics = {
-            'total_orders': 0,
-            'filled_orders': 0,
-            'cancelled_orders': 0,
-            'total_commission': 0.0,
-            'total_slippage': 0.0,
-            'avg_fill_time': 0.0
-        }
+        return order
     
-    def initialize_broker(self) -> bool:
-        """Initialize broker connection."""
-        if not self.config.live_trading:
-            logger.info("Running in simulation mode")
-            return True
+    def execute_order(self, 
+                     order: Order,
+                     market_price: float,
+                     market_volume: float = 1000000) -> ExecutionResult:
+        """Execute an order with market simulation.
         
-        try:
-            if self.config.broker == 'alpaca' and ALPACA_AVAILABLE:
-                self.broker_api = tradeapi.REST(
-                    key=self.config.api_key,
-                    secret=self.config.api_secret,
-                    base_url='https://paper-api.alpaca.markets' if self.config.paper_trading else 'https://api.alpaca.markets'
-                )
-                logger.info("Connected to Alpaca API")
-                return True
+        Args:
+            order: Order to execute
+            market_price: Current market price
+            market_volume: Market volume for impact calculation
             
-            elif self.config.broker == 'robinhood':
-                # Robinhood integration would go here
-                logger.warning("Robinhood integration not implemented")
-                return False
-            
-            else:
-                logger.error(f"Unsupported broker: {self.config.broker}")
-                return False
-                
-        except Exception as e:
-            logger.error(f"Error initializing broker: {e}")
-            return False
-    
-    def get_market_data(self, symbol: str) -> Optional[Dict]:
-        """Get current market data for symbol."""
+        Returns:
+            Execution result
+        """
         try:
-            if self.config.live_trading and self.broker_api:
-                # Get real market data
-                if self.config.broker == 'alpaca':
-                    ticker = self.broker_api.get_latest_trade(symbol)
-                    return {
-                        'symbol': symbol,
-                        'price': float(ticker.price),
-                        'volume': int(ticker.size),
-                        'timestamp': ticker.timestamp.isoformat()
-                    }
-            else:
-                # Simulated market data
-                return self._simulate_market_data(symbol)
-                
-        except Exception as e:
-            logger.error(f"Error getting market data for {symbol}: {e}")
-            return None
-    
-    def _simulate_market_data(self, symbol: str) -> Dict:
-        """Simulate market data for testing."""
-        # Simple price simulation with some noise
-        base_price = 100.0  # Could be loaded from historical data
-        noise = np.random.normal(0, 0.01)
-        price = base_price * (1 + noise)
-        
-        return {
-            'symbol': symbol,
-            'price': price,
-            'volume': np.random.randint(1000, 10000),
-            'timestamp': datetime.now().isoformat()
-        }
-    
-    def place_order(self, order: TradeOrder) -> bool:
-        """Place trade order."""
-        # Check daily trade limit
-        if self.daily_trades >= self.config.max_daily_trades:
-            logger.warning("Daily trade limit reached")
-            return False
-        
-        # Validate order
-        if not self._validate_order(order):
-            return False
-        
-        try:
-            if self.config.live_trading and self.broker_api:
-                return self._place_live_order(order)
-            else:
-                return self._place_simulated_order(order)
-                
-        except Exception as e:
-            logger.error(f"Error placing order: {e}")
-            return False
-    
-    def _validate_order(self, order: TradeOrder) -> bool:
-        """Validate order parameters."""
-        if order.quantity <= 0:
-            logger.error("Invalid quantity")
-            return False
-        
-        if order.side not in ['buy', 'sell']:
-            logger.error("Invalid order side")
-            return False
-        
-        if order.order_type not in ['market', 'limit', 'stop']:
-            logger.error("Invalid order type")
-            return False
-        
-        # Check minimum order size
-        market_data = self.get_market_data(order.symbol)
-        if market_data:
-            order_value = order.quantity * market_data['price']
-            if order_value < self.config.min_order_size:
-                logger.error(f"Order value {order_value} below minimum {self.config.min_order_size}")
-                return False
-        
-        return True
-    
-    def _place_live_order(self, order: TradeOrder) -> bool:
-        """Place live order with broker."""
-        try:
-            if self.config.broker == 'alpaca':
-                # Place order with Alpaca
-                api_order = self.broker_api.submit_order(
-                    symbol=order.symbol,
-                    qty=order.quantity,
-                    side=order.side,
-                    type=order.order_type,
-                    time_in_force=order.time_in_force,
-                    limit_price=order.price if order.order_type == 'limit' else None,
-                    stop_price=order.stop_price if order.order_type == 'stop' else None
-                )
-                
-                order.order_id = api_order.id
-                order.status = api_order.status
-                order.created_at = api_order.created_at.isoformat()
-                
-                logger.info(f"Placed live order: {order.order_id}")
-                return True
-            
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error placing live order: {e}")
-            return False
-    
-    def _place_simulated_order(self, order: TradeOrder) -> bool:
-        """Place simulated order."""
-        # Simulate order execution
-        order.order_id = f"sim_{int(time.time())}"
-        order.created_at = datetime.now().isoformat()
-        
-        # Simulate fill
-        market_data = self.get_market_data(order.symbol)
-        if market_data:
-            # Apply slippage
-            slippage = self.slippage_model.calculate_slippage(
-                order.quantity * market_data['price'],
-                market_data['price']
+            # Calculate execution price with slippage and market impact
+            slippage = self.market_simulator.calculate_slippage(
+                order.quantity, market_volume, market_price
+            )
+            market_impact = self.market_simulator.calculate_market_impact(
+                order.quantity, market_volume, market_price
             )
             
-            if order.side == 'buy':
-                fill_price = market_data['price'] * (1 + slippage)
+            # Determine execution price based on order type
+            if order.order_type == OrderType.MARKET:
+                if order.side == 'buy':
+                    execution_price = market_price * (1 + slippage + market_impact)
+                else:
+                    execution_price = market_price * (1 - slippage - market_impact)
+            elif order.order_type == OrderType.LIMIT:
+                if order.price is None:
+                    raise ValueError("Limit price required for limit orders")
+                execution_price = order.price
             else:
-                fill_price = market_data['price'] * (1 - slippage)
+                execution_price = market_price
             
             # Calculate commission
-            commission = self.commission_model.calculate_commission(
-                order.quantity * fill_price
-            )
+            order_value = order.quantity * execution_price
+            commission = self.market_simulator.calculate_commission(order_value, order.quantity)
+            
+            # Calculate total cost
+            total_cost = order_value + commission
             
             # Update order
-            order.filled_at = datetime.now().isoformat()
-            order.filled_price = fill_price
             order.filled_quantity = order.quantity
+            order.filled_price = execution_price
             order.commission = commission
-            order.status = 'filled'
+            order.slippage = slippage
+            order.market_impact = market_impact
+            order.status = OrderStatus.FILLED
             
-            # Update portfolio
-            self._update_portfolio(order)
+            # Create execution result
+            result = ExecutionResult(
+                order=order,
+                execution_price=execution_price,
+                execution_quantity=order.quantity,
+                commission=commission,
+                slippage=slippage,
+                market_impact=market_impact,
+                total_cost=total_cost,
+                timestamp=datetime.now(),
+                success=True
+            )
             
-            # Update metrics
-            self.execution_metrics['total_orders'] += 1
-            self.execution_metrics['filled_orders'] += 1
-            self.execution_metrics['total_commission'] += commission
-            self.execution_metrics['total_slippage'] += slippage * order.quantity * market_data['price']
+            self.executions.append(result)
             
-            self.daily_trades += 1
-            self.order_history.append(order)
+            logger.info(f"Order executed: {order.id} - Price: {execution_price:.4f}, "
+                       f"Cost: {total_cost:.2f}, Slippage: {slippage:.4f}")
             
-            logger.info(f"Simulated order filled: {order.order_id} at {fill_price:.2f}")
-            return True
-        
-        return False
-    
-    def _update_portfolio(self, order: TradeOrder):
-        """Update portfolio after order fill."""
-        symbol = order.symbol
-        
-        if symbol not in self.portfolio:
-            self.portfolio[symbol] = {
-                'quantity': 0,
-                'avg_price': 0,
-                'total_cost': 0
-            }
-        
-        if order.side == 'buy':
-            # Add to position
-            new_quantity = self.portfolio[symbol]['quantity'] + order.filled_quantity
-            new_cost = self.portfolio[symbol]['total_cost'] + (order.filled_quantity * order.filled_price)
-            
-            self.portfolio[symbol]['quantity'] = new_quantity
-            self.portfolio[symbol]['total_cost'] = new_cost
-            self.portfolio[symbol]['avg_price'] = new_cost / new_quantity if new_quantity > 0 else 0
-        
-        else:  # sell
-            # Reduce position
-            self.portfolio[symbol]['quantity'] -= order.filled_quantity
-            if self.portfolio[symbol]['quantity'] <= 0:
-                self.portfolio[symbol]['quantity'] = 0
-                self.portfolio[symbol]['avg_price'] = 0
-                self.portfolio[symbol]['total_cost'] = 0
-    
-    def get_order_status(self, order_id: str) -> Optional[TradeOrder]:
-        """Get order status."""
-        if self.config.live_trading and self.broker_api:
-            try:
-                if self.config.broker == 'alpaca':
-                    api_order = self.broker_api.get_order(order_id)
-                    # Convert to TradeOrder format
-                    return self._convert_api_order(api_order)
-            except Exception as e:
-                logger.error(f"Error getting order status: {e}")
-        
-        # Check local history
-        for order in self.order_history:
-            if order.order_id == order_id:
-                return order
-        
-        return None
-    
-    def _convert_api_order(self, api_order) -> TradeOrder:
-        """Convert broker API order to TradeOrder."""
-        return TradeOrder(
-            symbol=api_order.symbol,
-            side=api_order.side,
-            quantity=float(api_order.qty),
-            order_type=api_order.type,
-            price=float(api_order.limit_price) if api_order.limit_price else None,
-            stop_price=float(api_order.stop_price) if api_order.stop_price else None,
-            order_id=api_order.id,
-            status=api_order.status,
-            created_at=api_order.created_at.isoformat(),
-            filled_at=api_order.filled_at.isoformat() if api_order.filled_at else None,
-            filled_price=float(api_order.filled_avg_price) if api_order.filled_avg_price else None,
-            filled_quantity=float(api_order.filled_qty) if api_order.filled_qty else None
-        )
-    
-    def cancel_order(self, order_id: str) -> bool:
-        """Cancel order."""
-        try:
-            if self.config.live_trading and self.broker_api:
-                if self.config.broker == 'alpaca':
-                    self.broker_api.cancel_order(order_id)
-                    logger.info(f"Cancelled live order: {order_id}")
-                    return True
-            
-            # For simulated orders, mark as cancelled
-            for order in self.order_history:
-                if order.order_id == order_id and order.status == 'pending':
-                    order.status = 'cancelled'
-                    self.execution_metrics['cancelled_orders'] += 1
-                    logger.info(f"Cancelled simulated order: {order_id}")
-                    return True
-            
-            return False
+            return result
             
         except Exception as e:
-            logger.error(f"Error cancelling order: {e}")
-            return False
+            logger.error(f"Order execution failed: {order.id} - {str(e)}")
+            
+            order.status = OrderStatus.REJECTED
+            
+            return ExecutionResult(
+                order=order,
+                execution_price=0.0,
+                execution_quantity=0.0,
+                commission=0.0,
+                slippage=0.0,
+                market_impact=0.0,
+                total_cost=0.0,
+                timestamp=datetime.now(),
+                success=False,
+                error_message=str(e)
+            )
     
-    def get_portfolio_summary(self) -> Dict[str, Any]:
-        """Get portfolio summary."""
-        total_value = 0.0
-        positions = []
+    def get_execution_summary(self) -> Dict[str, Any]:
+        """Get summary of all executions.
         
-        for symbol, position in self.portfolio.items():
-            if position['quantity'] > 0:
-                market_data = self.get_market_data(symbol)
-                if market_data:
-                    current_value = position['quantity'] * market_data['price']
-                    total_value += current_value
-                    
-                    positions.append({
-                        'symbol': symbol,
-                        'quantity': position['quantity'],
-                        'avg_price': position['avg_price'],
-                        'current_price': market_data['price'],
-                        'current_value': current_value,
-                        'unrealized_pnl': current_value - position['total_cost']
-                    })
+        Returns:
+            Dictionary with execution summary
+        """
+        if not self.executions:
+            return {
+                'total_orders': 0,
+                'successful_orders': 0,
+                'total_volume': 0.0,
+                'total_commission': 0.0,
+                'total_slippage': 0.0,
+                'total_market_impact': 0.0,
+                'average_execution_price': 0.0
+            }
+        
+        successful_executions = [e for e in self.executions if e.success]
+        
+        total_volume = sum(e.execution_quantity for e in successful_executions)
+        total_commission = sum(e.commission for e in successful_executions)
+        total_slippage = sum(e.slippage * e.execution_quantity * e.execution_price 
+                           for e in successful_executions)
+        total_market_impact = sum(e.market_impact * e.execution_quantity 
+                                for e in successful_executions)
+        
+        avg_price = (sum(e.execution_price * e.execution_quantity 
+                        for e in successful_executions) / total_volume 
+                    if total_volume > 0 else 0.0)
         
         return {
-            'total_value': total_value,
-            'positions': positions,
-            'num_positions': len(positions),
-            'last_updated': datetime.now().isoformat()
+            'total_orders': len(self.orders),
+            'successful_orders': len(successful_executions),
+            'total_volume': total_volume,
+            'total_commission': total_commission,
+            'total_slippage': total_slippage,
+            'total_market_impact': total_market_impact,
+            'average_execution_price': avg_price,
+            'success_rate': len(successful_executions) / len(self.executions)
         }
     
-    def get_execution_metrics(self) -> Dict[str, Any]:
-        """Get execution performance metrics."""
-        metrics = self.execution_metrics.copy()
+    def simulate_trade(self, 
+                      symbol: str,
+                      side: str,
+                      quantity: float,
+                      market_price: float,
+                      market_volume: float = 1000000) -> ExecutionResult:
+        """Simulate a complete trade execution.
         
-        if metrics['filled_orders'] > 0:
-            metrics['fill_rate'] = metrics['filled_orders'] / metrics['total_orders']
-            metrics['avg_commission'] = metrics['total_commission'] / metrics['filled_orders']
-            metrics['avg_slippage'] = metrics['total_slippage'] / metrics['filled_orders']
+        Args:
+            symbol: Trading symbol
+            side: 'buy' or 'sell'
+            quantity: Trade quantity
+            market_price: Current market price
+            market_volume: Market volume
+            
+        Returns:
+            Execution result
+        """
+        # Place order
+        order = self.place_order(symbol, side, quantity)
         
-        metrics['daily_trades'] = self.daily_trades
-        metrics['max_daily_trades'] = self.config.max_daily_trades
+        # Execute order
+        result = self.execute_order(order, market_price, market_volume)
         
-        return metrics
-    
-    def reset_daily_limits(self):
-        """Reset daily trading limits."""
-        current_date = datetime.now().date()
-        if current_date > self.last_trade_reset:
-            self.daily_trades = 0
-            self.last_trade_reset = current_date
-            logger.info("Reset daily trading limits")
+        return result
 
 # Global trade executor instance
-trade_executor = None
+trade_executor = TradeExecutor()
 
-def get_trade_executor(config: Optional[ExecutionConfig] = None) -> TradeExecutor:
+def get_trade_executor() -> TradeExecutor:
     """Get the global trade executor instance."""
-    global trade_executor
-    if trade_executor is None:
-        if config is None:
-            config = ExecutionConfig()
-        trade_executor = TradeExecutor(config)
     return trade_executor 
