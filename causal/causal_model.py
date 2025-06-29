@@ -396,6 +396,50 @@ class CausalModel:
             'interventions': self.intervention_results
         }
 
+class CausalAnalysisResult:
+    """Result container for causal analysis."""
+    
+    def __init__(self, 
+                 causal_effects: Dict[str, float],
+                 intervention_results: Dict[str, float],
+                 graph: nx.DiGraph,
+                 metrics: Dict[str, float]):
+        """Initialize causal analysis result.
+        
+        Args:
+            causal_effects: Dictionary of causal effect estimates
+            intervention_results: Dictionary of intervention results
+            graph: Causal graph
+            metrics: Performance metrics
+        """
+        self.causal_effects = causal_effects
+        self.intervention_results = intervention_results
+        self.graph = graph
+        self.metrics = metrics
+        self.timestamp = pd.Timestamp.now()
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert result to dictionary."""
+        return {
+            'causal_effects': self.causal_effects,
+            'intervention_results': self.intervention_results,
+            'graph_nodes': list(self.graph.nodes()),
+            'graph_edges': list(self.graph.edges()),
+            'metrics': self.metrics,
+            'timestamp': self.timestamp.isoformat()
+        }
+    
+    def get_summary(self) -> Dict[str, Any]:
+        """Get summary of results."""
+        return {
+            'num_effects': len(self.causal_effects),
+            'num_interventions': len(self.intervention_results),
+            'graph_size': len(self.graph.nodes()),
+            'avg_effect': np.mean(list(self.causal_effects.values())) if self.causal_effects else 0,
+            'max_effect': max(self.causal_effects.values()) if self.causal_effects else 0,
+            'timestamp': self.timestamp.isoformat()
+        }
+
 def create_causal_model(config: Dict[str, Any] = None):
     class DummyCausalModel:
         def analyze(self, *a, **kw): return {'result': 'dummy'}

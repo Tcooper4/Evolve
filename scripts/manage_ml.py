@@ -762,7 +762,7 @@ def main():
     )
     parser.add_argument(
         "--model-type",
-        choices=["pytorch", "tensorflow", "keras", "xgboost", "lightgbm", "catboost"],
+        choices=["pytorch", "xgboost", "lightgbm", "catboost"],
         help="Type of model"
     )
     parser.add_argument(

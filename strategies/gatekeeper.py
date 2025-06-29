@@ -61,6 +61,23 @@ class GatekeeperDecision:
     risk_level: str
     timestamp: datetime
 
+@dataclass
+class StrategyMetrics:
+    """Strategy performance metrics."""
+    strategy_name: str
+    sharpe_ratio: float
+    win_rate: float
+    max_drawdown: float
+    total_return: float
+    volatility: float
+    calmar_ratio: float
+    sortino_ratio: float
+    last_updated: str
+    is_active: bool
+    performance_score: float
+    decay_threshold: float = 0.5
+    min_trades: int = 10
+
 class RegimeClassifier:
     """Classifies market regimes based on multiple indicators."""
     
