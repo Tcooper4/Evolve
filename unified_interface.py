@@ -94,7 +94,7 @@ class EnhancedUnifiedInterface:
             return {}
     
     def _initialize_components(self):
-        """Initialize all system components."""
+        """Initialize components. Returns status dict."""
         try:
             # Initialize core components
             if CORE_COMPONENTS_AVAILABLE:
@@ -121,16 +121,18 @@ class EnhancedUnifiedInterface:
                 # Initialize report exporter
                 self.report_exporter = ReportExporter()
                 
+                return {"status": "components_initialized"}
+            
             else:
                 logger.warning("Some modules not available - using fallback components")
-                self._initialize_fallback_components()
-                
+                return self._initialize_fallback_components()
+            
         except Exception as e:
             logger.error(f"Component initialization failed: {e}")
-            self._initialize_fallback_components()
+            return self._initialize_fallback_components()
     
     def _initialize_fallback_components(self):
-        """Initialize fallback components when core components are unavailable."""
+        """Initialize fallback components. Returns status dict."""
         logger.info("Initializing fallback components")
         
         # Create minimal fallback components
@@ -145,9 +147,11 @@ class EnhancedUnifiedInterface:
         self.hybrid_engine = self._create_fallback_hybrid_engine()
         self.quant_gpt = self._create_fallback_quant_gpt()
         self.report_exporter = self._create_fallback_report_exporter()
+        
+        return {"status": "fallback_initialized"}
     
     def _create_fallback_agent_hub(self):
-        """Create fallback agent hub."""
+        """Create fallback agent hub. Returns status dict."""
         class FallbackAgentHub:
             def route(self, prompt: str) -> Dict[str, Any]:
                 return {
@@ -167,7 +171,7 @@ class EnhancedUnifiedInterface:
         return FallbackAgentHub()
     
     def _create_fallback_data_feed(self):
-        """Create fallback data feed."""
+        """Create fallback data feed. Returns status dict."""
         class FallbackDataFeed:
             def get_historical_data(self, symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
                 # Generate mock data
@@ -188,7 +192,7 @@ class EnhancedUnifiedInterface:
         return FallbackDataFeed()
     
     def _create_fallback_prompt_router(self):
-        """Create fallback prompt router."""
+        """Create fallback prompt router. Returns status dict."""
         class FallbackPromptRouter:
             def route_prompt(self, prompt: str, context: Dict[str, Any]) -> Dict[str, Any]:
                 return {
@@ -202,7 +206,7 @@ class EnhancedUnifiedInterface:
         return FallbackPromptRouter()
     
     def _create_fallback_model_monitor(self):
-        """Create fallback model monitor."""
+        """Create fallback model monitor. Returns status dict."""
         class FallbackModelMonitor:
             def get_model_trust_levels(self) -> Dict[str, float]:
                 return {'fallback_model': 0.5}
@@ -213,7 +217,7 @@ class EnhancedUnifiedInterface:
         return FallbackModelMonitor()
     
     def _create_fallback_strategy_logger(self):
-        """Create fallback strategy logger."""
+        """Create fallback strategy logger. Returns status dict."""
         class FallbackStrategyLogger:
             def get_recent_decisions(self, limit: int = 10) -> List[Dict[str, Any]]:
                 return []
@@ -224,7 +228,7 @@ class EnhancedUnifiedInterface:
         return FallbackStrategyLogger()
     
     def _create_fallback_portfolio_manager(self):
-        """Create fallback portfolio manager."""
+        """Create fallback portfolio manager. Returns status dict."""
         class FallbackPortfolioManager:
             def get_position_summary(self) -> Dict[str, Any]:
                 return {'positions': [], 'total_value': 0, 'cash': 100000}
@@ -235,7 +239,7 @@ class EnhancedUnifiedInterface:
         return FallbackPortfolioManager()
     
     def _create_fallback_strategy_selector(self):
-        """Create fallback strategy selector."""
+        """Create fallback strategy selector. Returns status dict."""
         class FallbackStrategySelector:
             def select_strategy(self, market_data: pd.DataFrame, regime: str) -> Dict[str, Any]:
                 return {
@@ -248,7 +252,7 @@ class EnhancedUnifiedInterface:
         return FallbackStrategySelector()
     
     def _create_fallback_market_regime_agent(self):
-        """Create fallback market regime agent."""
+        """Create fallback market regime agent. Returns status dict."""
         class FallbackMarketRegimeAgent:
             def classify_regime(self, data: pd.DataFrame) -> str:
                 return 'normal'
@@ -259,7 +263,7 @@ class EnhancedUnifiedInterface:
         return FallbackMarketRegimeAgent()
     
     def _create_fallback_hybrid_engine(self):
-        """Create fallback hybrid engine."""
+        """Create fallback hybrid engine. Returns status dict."""
         class FallbackHybridEngine:
             def run_strategy(self, data: pd.DataFrame, strategy_name: str) -> Dict[str, Any]:
                 return {
@@ -271,7 +275,7 @@ class EnhancedUnifiedInterface:
         return FallbackHybridEngine()
     
     def _create_fallback_quant_gpt(self):
-        """Create fallback QuantGPT."""
+        """Create fallback QuantGPT. Returns status dict."""
         class FallbackQuantGPT:
             def generate_commentary(self, data: Dict[str, Any]) -> str:
                 return "Fallback commentary: Analysis not available"
@@ -282,7 +286,7 @@ class EnhancedUnifiedInterface:
         return FallbackQuantGPT()
     
     def _create_fallback_report_exporter(self):
-        """Create fallback report exporter."""
+        """Create fallback report exporter. Returns status dict."""
         class FallbackReportExporter:
             def export_report(self, data: Dict[str, Any], format: str = 'json') -> str:
                 return "reports/fallback_report.json"
@@ -290,7 +294,7 @@ class EnhancedUnifiedInterface:
         return FallbackReportExporter()
     
     def _setup_logging(self):
-        """Setup logging infrastructure."""
+        """Setup logging. Returns status dict."""
         try:
             # Try to setup Redis for logging
             import redis
@@ -300,6 +304,8 @@ class EnhancedUnifiedInterface:
         except Exception as e:
             logger.warning(f"Redis connection failed: {e}")
             logger.info("Logging setup completed")
+        
+        return {"status": "logging_setup"}
     
     def run(self) -> Dict[str, Any]:
         """Run the enhanced unified interface."""
@@ -358,7 +364,7 @@ class EnhancedUnifiedInterface:
             }
     
     def _display_system_health(self):
-        """Display system health indicator."""
+        """Display system health. Returns status dict."""
         try:
             # Get system health
             health_data = self._get_system_health()
@@ -401,9 +407,12 @@ class EnhancedUnifiedInterface:
                     delta=f"{health_data['active_strategies']} strategies"
                 )
                 
+            return {"status": "system_health_displayed"}
+            
         except Exception as e:
             logger.error(f"System health display failed: {e}")
             st.error("System health display failed")
+            return {"status": "system_health_display_failed"}
     
     def _get_system_health(self) -> Dict[str, Any]:
         """Get comprehensive system health."""
@@ -586,7 +595,7 @@ class EnhancedUnifiedInterface:
         }
     
     def _display_forecast_results(self, forecast_result: Dict[str, Any]):
-        """Display forecast results with enhanced visualization."""
+        """Display forecast results. Returns status dict."""
         data = forecast_result['data']
         
         # Create forecast plot
@@ -644,6 +653,8 @@ class EnhancedUnifiedInterface:
                 st.subheader("Validation Metrics")
                 metrics_df = pd.DataFrame([trace['validation_metrics']])
                 st.dataframe(metrics_df)
+        
+        return {"status": "forecast_displayed"}
     
     def _strategy_tab(self) -> Dict[str, Any]:
         """Strategy tab with dynamic strategy chaining and regime-based selection."""
@@ -791,7 +802,7 @@ class EnhancedUnifiedInterface:
         ]
     
     def _display_strategy_results(self, strategy_result: Dict[str, Any]):
-        """Display strategy results with enhanced visualization."""
+        """Display strategy results. Returns status dict."""
         data = strategy_result['data']
         
         # Strategy overview
@@ -841,6 +852,8 @@ class EnhancedUnifiedInterface:
             regime_df = pd.DataFrame([regime_data])
             
             st.dataframe(regime_df)
+        
+        return {"status": "strategy_results_displayed"}
     
     def _portfolio_tab(self) -> Dict[str, Any]:
         """Portfolio tab with asset allocation and risk metrics."""

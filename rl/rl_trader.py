@@ -154,7 +154,7 @@ class TradingEnvironment:
         return reward
     
     def _update_portfolio_value(self):
-        """Update total portfolio value."""
+        """Update total portfolio value. Returns status dict."""
         current_price = self.data.iloc[self.current_step]['Close']
         self.total_value = self.balance + self.shares * current_price
         self.portfolio_values.append(self.total_value)
@@ -165,6 +165,8 @@ class TradingEnvironment:
             self.returns.append(return_val)
         else:
             self.returns.append(0)
+        
+        return {"status": "portfolio_updated"}
     
     def _get_observation(self) -> np.ndarray:
         """Get current observation."""

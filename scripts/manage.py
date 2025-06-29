@@ -320,22 +320,32 @@ def main():
 
     if args.help:
         print(__doc__)
-        return
+        return {"status": "help_displayed", "command": "help"}
 
     manager = ApplicationManager()
+    result = {"status": "unknown", "command": args.command}
+    
     if args.command == "install":
-        manager.install_dependencies()
+        success = manager.install_dependencies()
+        result["status"] = "success" if success else "failed"
     elif args.command == "test":
-        manager.run_tests()
+        success = manager.run_tests()
+        result["status"] = "success" if success else "failed"
     elif args.command == "lint":
-        manager.run_linting()
+        success = manager.run_linting()
+        result["status"] = "success" if success else "failed"
     elif args.command == "format":
-        manager.format_code()
+        success = manager.format_code()
+        result["status"] = "success" if success else "failed"
     elif args.command == "docker":
-        manager.build_docker()
-        manager.run_docker()
+        build_success = manager.build_docker()
+        run_success = manager.run_docker() if build_success else False
+        result["status"] = "success" if build_success and run_success else "failed"
     elif args.command == "clean":
-        manager.clean()
+        success = manager.clean()
+        result["status"] = "success" if success else "failed"
+    
+    return result
 
 if __name__ == "__main__":
     main() 
