@@ -1,0 +1,238 @@
+# Institutional-Grade Trading System Configuration
+
+# Redis Configuration
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+  password: null
+  ssl: false
+  connection_pool:
+    max_connections: 10
+    retry_on_timeout: true
+
+# Logging Configuration
+logging:
+  level: INFO
+  file: logs/unified_interface.log
+  max_size: 100MB
+  backup_count: 5
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+
+# Agent Configuration
+agents:
+  market_regime:
+    enabled: true
+    update_frequency: 300  # 5 minutes
+    confidence_threshold: 0.7
+    lookback_period: 252  # 1 year
+    
+  walk_forward:
+    enabled: true
+    window_size: 60
+    step_size: 20
+    min_periods: 30
+    
+  execution_risk:
+    enabled: true
+    max_position_size: 0.1
+    max_daily_loss: 0.02
+    cooling_period: 300  # 5 minutes
+    risk_limits:
+      max_drawdown: 0.15
+      max_leverage: 2.0
+      
+  quant_gpt:
+    enabled: true
+    model: gpt-4
+    max_tokens: 1000
+    temperature: 0.3
+    cache_responses: true
+
+# Strategy Configuration
+strategies:
+  hybrid_engine:
+    enabled: true
+    strategies:
+      - name: "momentum"
+        weight: 0.3
+        enabled: true
+      - name: "mean_reversion"
+        weight: 0.3
+        enabled: true
+      - name: "volatility"
+        weight: 0.2
+        enabled: true
+      - name: "regime_adaptive"
+        weight: 0.2
+        enabled: true
+    confidence_threshold: 0.6
+    rebalance_frequency: 3600  # 1 hour
+    
+  portfolio_optimizer:
+    enabled: true
+    method: "black_litterman"  # Options: mean_variance, black_litterman, risk_parity
+    rebalance_frequency: 86400  # 1 day
+    risk_free_rate: 0.02
+    target_volatility: 0.15
+
+# Data Configuration
+data:
+  cache_ttl: 3600  # 1 hour
+  fallback_enabled: true
+  providers:
+    primary: "yfinance"
+    fallback: "alpha_vantage"
+    backup: "polygon"
+  
+  symbols:
+    default: ["SPY", "QQQ", "IWM", "GLD", "TLT"]
+    watchlist: ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
+    
+  timeframes:
+    available: ["1m", "5m", "15m", "1h", "1d"]
+    default: "1d"
+
+# Risk Management
+risk:
+  position_sizing:
+    method: "kelly"  # Options: kelly, volatility, fixed
+    max_position_size: 0.1
+    min_position_size: 0.01
+    
+  stop_loss:
+    enabled: true
+    default_percentage: 0.02
+    trailing: true
+    
+  take_profit:
+    enabled: true
+    default_percentage: 0.05
+    
+  portfolio_limits:
+    max_drawdown: 0.15
+    max_leverage: 2.0
+    max_concentration: 0.2
+
+# Execution Configuration
+execution:
+  mode: "simulation"  # Options: simulation, paper, live
+  slippage: 0.001
+  commission: 0.005
+  min_trade_size: 100
+  max_trade_size: 100000
+  
+  brokers:
+    simulation:
+      enabled: true
+      initial_balance: 100000
+    paper:
+      enabled: false
+      api_key: ""
+    live:
+      enabled: false
+      api_key: ""
+
+# Monitoring Configuration
+monitoring:
+  model_monitor:
+    enabled: true
+    drift_threshold: 0.1
+    update_frequency: 3600  # 1 hour
+    
+  performance_tracker:
+    enabled: true
+    metrics:
+      - "sharpe_ratio"
+      - "sortino_ratio"
+      - "max_drawdown"
+      - "calmar_ratio"
+      - "information_ratio"
+    update_frequency: 300  # 5 minutes
+    
+  alerting:
+    enabled: true
+    channels:
+      - type: "email"
+        enabled: false
+        recipients: []
+      - type: "slack"
+        enabled: false
+        webhook_url: ""
+      - type: "sms"
+        enabled: false
+        phone_numbers: []
+
+# Reporting Configuration
+reporting:
+  auto_generate: true
+  frequency: "daily"  # Options: hourly, daily, weekly, monthly
+  formats: ["markdown", "pdf", "excel"]
+  include_charts: true
+  include_commentary: true
+  
+  templates:
+    comprehensive: "templates/comprehensive_report.html"
+    performance: "templates/performance_report.html"
+    risk: "templates/risk_report.html"
+    strategy: "templates/strategy_report.html"
+
+# UI Configuration
+ui:
+  theme: "dark"
+  refresh_rate: 30  # seconds
+  max_data_points: 1000
+  chart_height: 400
+  
+  features:
+    natural_language: true
+    voice_commands: false
+    real_time_updates: true
+    export_capabilities: true
+
+# API Configuration
+api:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8000
+  cors_enabled: true
+  rate_limit: 100  # requests per minute
+  
+  endpoints:
+    - "/api/v1/forecast"
+    - "/api/v1/trade"
+    - "/api/v1/portfolio"
+    - "/api/v1/status"
+    - "/api/v1/reports"
+
+# Security Configuration
+security:
+  authentication:
+    enabled: false
+    method: "jwt"  # Options: jwt, oauth, basic
+    
+  encryption:
+    enabled: true
+    algorithm: "AES-256"
+    
+  audit_logging:
+    enabled: true
+    log_level: "INFO"
+    retention_days: 90
+
+# Performance Configuration
+performance:
+  max_workers: 4
+  timeout: 30  # seconds
+  memory_limit: "2GB"
+  cpu_limit: 0.8
+  
+  caching:
+    enabled: true
+    max_size: "1GB"
+    ttl: 3600
+    
+  optimization:
+    parallel_processing: true
+    vectorization: true
+    gpu_acceleration: false 
