@@ -632,4 +632,163 @@ def create_forecast_table(forecast_results: Dict[str, Any]) -> None:
     st.table(df)
     
     # Log table creation for agentic monitoring
-    logger.info(f"Forecast table displayed for {forecast_results.get('ticker', 'unknown')}") 
+    logger.info(f"Forecast table displayed for {forecast_results.get('ticker', 'unknown')}")
+
+def create_system_metrics_panel(metrics: Dict[str, float]) -> None:
+    """Create a system-wide metrics panel showing key performance indicators.
+    
+    Args:
+        metrics: Dictionary containing performance metrics
+    """
+    st.subheader("📊 System Performance Metrics")
+    
+    # Create columns for metrics
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        sharpe = metrics.get('sharpe_ratio', 0.0)
+        if sharpe >= 1.5:
+            st.metric("Sharpe Ratio", f"{sharpe:.2f}", delta="Excellent", delta_color="normal")
+        elif sharpe >= 1.0:
+            st.metric("Sharpe Ratio", f"{sharpe:.2f}", delta="Good", delta_color="normal")
+        elif sharpe >= 0.5:
+            st.metric("Sharpe Ratio", f"{sharpe:.2f}", delta="Fair", delta_color="off")
+        else:
+            st.metric("Sharpe Ratio", f"{sharpe:.2f}", delta="Poor", delta_color="inverse")
+    
+    with col2:
+        total_return = metrics.get('total_return', 0.0)
+        if total_return >= 0.20:
+            st.metric("Total Return", f"{total_return:.1%}", delta="Strong", delta_color="normal")
+        elif total_return >= 0.10:
+            st.metric("Total Return", f"{total_return:.1%}", delta="Good", delta_color="normal")
+        elif total_return >= 0.05:
+            st.metric("Total Return", f"{total_return:.1%}", delta="Moderate", delta_color="off")
+        else:
+            st.metric("Total Return", f"{total_return:.1%}", delta="Weak", delta_color="inverse")
+    
+    with col3:
+        max_dd = metrics.get('max_drawdown', 0.0)
+        if max_dd <= 0.10:
+            st.metric("Max Drawdown", f"{max_dd:.1%}", delta="Low Risk", delta_color="normal")
+        elif max_dd <= 0.20:
+            st.metric("Max Drawdown", f"{max_dd:.1%}", delta="Moderate", delta_color="off")
+        elif max_dd <= 0.30:
+            st.metric("Max Drawdown", f"{max_dd:.1%}", delta="High Risk", delta_color="off")
+        else:
+            st.metric("Max Drawdown", f"{max_dd:.1%}", delta="Very High Risk", delta_color="inverse")
+    
+    with col4:
+        win_rate = metrics.get('win_rate', 0.0)
+        if win_rate >= 0.60:
+            st.metric("Win Rate", f"{win_rate:.1%}", delta="Excellent", delta_color="normal")
+        elif win_rate >= 0.50:
+            st.metric("Win Rate", f"{win_rate:.1%}", delta="Good", delta_color="normal")
+        elif win_rate >= 0.40:
+            st.metric("Win Rate", f"{win_rate:.1%}", delta="Fair", delta_color="off")
+        else:
+            st.metric("Win Rate", f"{win_rate:.1%}", delta="Poor", delta_color="inverse")
+    
+    with col5:
+        pnl = metrics.get('total_pnl', 0.0)
+        if pnl >= 10000:
+            st.metric("Total PnL", f"${pnl:,.0f}", delta="Strong", delta_color="normal")
+        elif pnl >= 5000:
+            st.metric("Total PnL", f"${pnl:,.0f}", delta="Good", delta_color="normal")
+        elif pnl >= 1000:
+            st.metric("Total PnL", f"${pnl:,.0f}", delta="Moderate", delta_color="off")
+        else:
+            st.metric("Total PnL", f"${pnl:,.0f}", delta="Weak", delta_color="inverse")
+    
+    # Add additional metrics in a second row
+    st.subheader("📈 Additional Metrics")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        profit_factor = metrics.get('profit_factor', 1.0)
+        st.metric("Profit Factor", f"{profit_factor:.2f}")
+    
+    with col2:
+        calmar_ratio = metrics.get('calmar_ratio', 0.0)
+        st.metric("Calmar Ratio", f"{calmar_ratio:.2f}")
+    
+    with col3:
+        sortino_ratio = metrics.get('sortino_ratio', 0.0)
+        st.metric("Sortino Ratio", f"{sortino_ratio:.2f}")
+    
+    with col4:
+        num_trades = metrics.get('num_trades', 0)
+        st.metric("Total Trades", f"{num_trades}")
+    
+    # Add performance summary
+    st.subheader("📋 Performance Summary")
+    
+    # Calculate overall health score
+    health_score = 0
+    health_factors = []
+    
+    if metrics.get('sharpe_ratio', 0) >= 1.0:
+        health_score += 25
+        health_factors.append("✅ Good risk-adjusted returns")
+    else:
+        health_factors.append("⚠️ Low Sharpe ratio")
+    
+    if metrics.get('total_return', 0) >= 0.10:
+        health_score += 25
+        health_factors.append("✅ Strong total returns")
+    else:
+        health_factors.append("⚠️ Low total returns")
+    
+    if metrics.get('max_drawdown', 1) <= 0.20:
+        health_score += 25
+        health_factors.append("✅ Controlled drawdown")
+    else:
+        health_factors.append("⚠️ High drawdown risk")
+    
+    if metrics.get('win_rate', 0) >= 0.50:
+        health_score += 25
+        health_factors.append("✅ Good win rate")
+    else:
+        health_factors.append("⚠️ Low win rate")
+    
+    # Display health score
+    if health_score >= 80:
+        st.success(f"🏆 System Health Score: {health_score}/100 - Excellent")
+    elif health_score >= 60:
+        st.info(f"📊 System Health Score: {health_score}/100 - Good")
+    elif health_score >= 40:
+        st.warning(f"⚠️ System Health Score: {health_score}/100 - Fair")
+    else:
+        st.error(f"❌ System Health Score: {health_score}/100 - Poor")
+    
+    # Display health factors
+    for factor in health_factors:
+        st.write(factor)
+    
+    # Add recommendations based on metrics
+    st.subheader("💡 Recommendations")
+    
+    recommendations = []
+    
+    if metrics.get('sharpe_ratio', 0) < 1.0:
+        recommendations.append("🔧 Optimize strategy parameters to improve risk-adjusted returns")
+    
+    if metrics.get('max_drawdown', 1) > 0.20:
+        recommendations.append("🛡️ Implement better risk management and position sizing")
+    
+    if metrics.get('win_rate', 0) < 0.50:
+        recommendations.append("🎯 Review entry/exit criteria to improve win rate")
+    
+    if metrics.get('profit_factor', 1) < 1.5:
+        recommendations.append("💰 Focus on improving profit factor through better trade management")
+    
+    if not recommendations:
+        recommendations.append("✅ System performing well - continue current approach")
+        recommendations.append("📈 Consider scaling up successful strategies")
+    
+    for rec in recommendations:
+        st.write(rec)
+    
+    # Log metrics for agentic monitoring
+    logger.info(f"System metrics displayed: {metrics}") 

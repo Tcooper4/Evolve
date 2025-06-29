@@ -1,449 +1,733 @@
-"""LLM Agent for Trading Decisions."""
+"""Enhanced Prompt Agent for Trading System.
+
+This module provides an intelligent agent that can route user prompts through
+the complete trading pipeline: Forecast → Strategy → Backtest → Report → Trade.
+"""
 
 import logging
-import warnings
-warnings.filterwarnings('ignore')
+from typing import Dict, List, Optional, Tuple, Any, Union
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+import json
+import re
+from dataclasses import dataclass
+from pathlib import Path
 
-# Try to import LLM libraries with fallbacks
-try:
-    import openai
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
-    openai = None
+from trading.models.forecast_router import ForecastRouter
+from trading.backtesting.backtester import Backtester
+from trading.strategies.gatekeeper import StrategyGatekeeper
+from trading.execution.trade_executor import TradeExecutor
+from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
+from trading.data.providers.fallback_provider import FallbackDataProvider
 
-try:
-    from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
-    TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    TRANSFORMERS_AVAILABLE = False
-    pipeline = AutoTokenizer = AutoModelForCausalLM = None
+logger = logging.getLogger(__name__)
 
-try:
-    import torch
-    TORCH_AVAILABLE = True
-except ImportError:
-    TORCH_AVAILABLE = False
-    torch = None
+@dataclass
+class AgentResponse:
+    """Response from the prompt agent."""
+    success: bool
+    message: str
+    data: Optional[Dict[str, Any]] = None
+    visualizations: Optional[List[Any]] = None
+    recommendations: Optional[List[str]] = None
+    next_actions: Optional[List[str]] = None
 
-# Import from trading package
-try:
-    from trading.utils.common import get_logger
-    from trading.config.configuration import TradingConfig
-    from trading.memory.agent_memory import AgentMemory
-    from trading.market.market_data import MarketData
-    from trading.evaluation.metrics import calculate_metrics
-except ImportError:
-    # Fallback imports
-    def get_logger(name):
-        return logging.getLogger(name)
+class PromptAgent:
+    """Enhanced prompt agent with full trading pipeline routing."""
     
-    class TradingConfig:
-        def __init__(self):
-            self.llm_model = "gpt-3.5-turbo"
-            self.llm_api_key = None
-    
-    class AgentMemory:
-        def __init__(self):
-            self.memory = []
-    
-    class MarketData:
-        def __init__(self):
-            self.data = {}
-    
-    def calculate_metrics(returns):
-        return {'sharpe_ratio': 0.0, 'total_return': 0.0}
-
-logger = get_logger(__name__)
-
-class LLMAgent:
-    """LLM-powered trading agent."""
-    
-    def __init__(self, config: TradingConfig = None):
-        """Initialize LLM agent."""
-        self.config = config or TradingConfig()
-        self.memory = AgentMemory()
-        self.market_data = MarketData()
-        self.performance_history = []
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        """Initialize prompt agent.
         
-        # Initialize LLM components
-        self._init_llm()
+        Args:
+            config: Configuration dictionary
+        """
+        self.config = config or {}
+        
+        # Initialize components
+        self.forecast_router = ForecastRouter()
+        self.strategy_gatekeeper = StrategyGatekeeper()
+        self.trade_executor = TradeExecutor()
+        self.optimizer = SelfTuningOptimizer()
+        self.data_provider = FallbackDataProvider()
+        
+        # Strategy registry
+        self.strategy_registry = {
+            'rsi': 'RSI Mean Reversion',
+            'bollinger': 'Bollinger Bands',
+            'macd': 'MACD Strategy',
+            'sma': 'Moving Average Crossover',
+            'garch': 'GARCH Volatility',
+            'ridge': 'Ridge Regression',
+            'informer': 'Informer Model',
+            'transformer': 'Transformer',
+            'autoformer': 'Autoformer',
+            'lstm': 'LSTM Strategy',
+            'xgboost': 'XGBoost Strategy',
+            'ensemble': 'Ensemble Strategy'
+        }
+        
+        # Model registry
+        self.model_registry = {
+            'arima': 'ARIMA',
+            'lstm': 'LSTM',
+            'xgboost': 'XGBoost',
+            'prophet': 'Prophet',
+            'autoformer': 'Autoformer',
+            'transformer': 'Transformer',
+            'informer': 'Informer',
+            'garch': 'GARCH',
+            'ridge': 'Ridge Regression'
+        }
+        
+        logger.info("Enhanced Prompt Agent initialized with full pipeline routing")
     
-    def _init_llm(self):
-        """Initialize LLM components."""
-        if OPENAI_AVAILABLE and self.config.llm_api_key:
-            openai.api_key = self.config.llm_api_key
-            self.llm_type = "openai"
-        elif TRANSFORMERS_AVAILABLE and TORCH_AVAILABLE:
-            self.llm_type = "local"
-            self._load_local_model()
+    def process_prompt(self, prompt: str) -> AgentResponse:
+        """Process user prompt and route through trading pipeline.
+        
+        Args:
+            prompt: User prompt
+            
+        Returns:
+            Agent response with results and recommendations
+        """
+        try:
+            logger.info(f"Processing prompt: {prompt}")
+            
+            # Parse prompt to extract intent and parameters
+            intent, params = self._parse_prompt(prompt)
+            
+            if intent == 'forecast':
+                return self._handle_forecast_request(params)
+            elif intent == 'strategy':
+                return self._handle_strategy_request(params)
+            elif intent == 'backtest':
+                return self._handle_backtest_request(params)
+            elif intent == 'trade':
+                return self._handle_trade_request(params)
+            elif intent == 'optimize':
+                return self._handle_optimization_request(params)
+            elif intent == 'analyze':
+                return self._handle_analysis_request(params)
+            else:
+                return self._handle_general_request(prompt, params)
+                
+        except Exception as e:
+            logger.error(f"Error processing prompt: {e}")
+            return AgentResponse(
+                success=False,
+                message=f"Error processing request: {str(e)}",
+                recommendations=["Please try rephrasing your request"]
+            )
+    
+    def _parse_prompt(self, prompt: str) -> Tuple[str, Dict[str, Any]]:
+        """Parse prompt to extract intent and parameters.
+        
+        Args:
+            prompt: User prompt
+            
+        Returns:
+            Tuple of (intent, parameters)
+        """
+        prompt_lower = prompt.lower()
+        
+        # Extract symbol
+        symbol_match = re.search(r'\b([A-Z]{1,5})\b', prompt.upper())
+        symbol = symbol_match.group(1) if symbol_match else 'AAPL'
+        
+        # Extract timeframe
+        timeframe = '15d'
+        if 'next' in prompt_lower and 'day' in prompt_lower:
+            timeframe_match = re.search(r'next (\d+)d?', prompt_lower)
+            if timeframe_match:
+                timeframe = f"{timeframe_match.group(1)}d"
+        elif 'next' in prompt_lower and 'week' in prompt_lower:
+            timeframe_match = re.search(r'next (\d+)w?', prompt_lower)
+            if timeframe_match:
+                timeframe = f"{int(timeframe_match.group(1)) * 7}d"
+        elif 'next' in prompt_lower and 'month' in prompt_lower:
+            timeframe_match = re.search(r'next (\d+)m?', prompt_lower)
+            if timeframe_match:
+                timeframe = f"{int(timeframe_match.group(1)) * 30}d"
+        
+        # Determine intent
+        if any(word in prompt_lower for word in ['forecast', 'predict', 'price']):
+            intent = 'forecast'
+        elif any(word in prompt_lower for word in ['strategy', 'strategy', 'signal']):
+            intent = 'strategy'
+        elif any(word in prompt_lower for word in ['backtest', 'test', 'simulate']):
+            intent = 'backtest'
+        elif any(word in prompt_lower for word in ['trade', 'buy', 'sell', 'execute']):
+            intent = 'trade'
+        elif any(word in prompt_lower for word in ['optimize', 'improve', 'tune']):
+            intent = 'optimize'
+        elif any(word in prompt_lower for word in ['analyze', 'analysis', 'report']):
+            intent = 'analyze'
         else:
-            self.llm_type = "dummy"
-            logger.warning("No LLM available, using dummy responses")
-    
-    def _load_local_model(self):
-        """Load local transformer model."""
-        try:
-            model_name = "microsoft/DialoGPT-medium"
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(model_name)
-            self.tokenizer.pad_token = self.tokenizer.eos_token
-        except Exception as e:
-            logger.error(f"Failed to load local model: {e}")
-            self.llm_type = "dummy"
-    
-    def analyze_market(self, market_data: dict) -> dict:
-        """Analyze market data using LLM."""
-        try:
-            # Prepare market context
-            context = self._prepare_market_context(market_data)
-            
-            # Generate analysis
-            if self.llm_type == "openai":
-                analysis = self._openai_analysis(context)
-            elif self.llm_type == "local":
-                analysis = self._local_analysis(context)
-            else:
-                analysis = self._dummy_analysis(context)
-            
-            # Store in memory
-            self.memory.memory.append({
-                'timestamp': 'now',
-                'type': 'market_analysis',
-                'data': analysis
-            })
-            
-            return analysis
-            
-        except Exception as e:
-            logger.error(f"Error in market analysis: {e}")
-            return self._dummy_analysis({})
-    
-    def generate_trading_signal(self, market_data: dict, 
-                               portfolio_state: dict) -> dict:
-        """Generate trading signal using LLM."""
-        try:
-            # Prepare trading context
-            context = self._prepare_trading_context(market_data, portfolio_state)
-            
-            # Generate signal
-            if self.llm_type == "openai":
-                signal = self._openai_signal(context)
-            elif self.llm_type == "local":
-                signal = self._local_signal(context)
-            else:
-                signal = self._dummy_signal(context)
-            
-            # Validate signal
-            signal = self._validate_signal(signal)
-            
-            # Store in memory
-            self.memory.memory.append({
-                'timestamp': 'now',
-                'type': 'trading_signal',
-                'data': signal
-            })
-            
-            return signal
-            
-        except Exception as e:
-            logger.error(f"Error generating trading signal: {e}")
-            return self._dummy_signal({})
-    
-    def _prepare_market_context(self, market_data: dict) -> str:
-        """Prepare market context for LLM."""
-        context = f"""
-        Market Data Analysis:
-        - Symbol: {market_data.get('symbol', 'Unknown')}
-        - Current Price: ${market_data.get('price', 0):.2f}
-        - Volume: {market_data.get('volume', 0):,}
-        - 24h Change: {market_data.get('change_24h', 0):.2f}%
-        - Market Cap: ${market_data.get('market_cap', 0):,.0f}
+            intent = 'general'
         
-        Technical Indicators:
-        - RSI: {market_data.get('rsi', 0):.2f}
-        - MACD: {market_data.get('macd', 0):.4f}
-        - Moving Average: ${market_data.get('ma_20', 0):.2f}
-        - Bollinger Bands: Upper=${market_data.get('bb_upper', 0):.2f}, Lower=${market_data.get('bb_lower', 0):.2f}
+        # Extract strategy preference
+        strategy = None
+        for strategy_key, strategy_name in self.strategy_registry.items():
+            if strategy_key in prompt_lower:
+                strategy = strategy_name
+                break
         
-        Market Sentiment:
-        - Fear & Greed Index: {market_data.get('fear_greed', 0)}
-        - News Sentiment: {market_data.get('news_sentiment', 'neutral')}
+        # Extract model preference
+        model = None
+        for model_key, model_name in self.model_registry.items():
+            if model_key in prompt_lower:
+                model = model_name
+                break
+        
+        # Auto-select best strategy if none specified
+        if not strategy:
+            strategy = self._select_best_strategy(symbol)
+        
+        # Auto-select best model if none specified
+        if not model:
+            model = self._select_best_model(symbol, timeframe)
+        
+        params = {
+            'symbol': symbol,
+            'timeframe': timeframe,
+            'strategy': strategy,
+            'model': model,
+            'prompt': prompt
+        }
+        
+        logger.info(f"Parsed prompt - Intent: {intent}, Params: {params}")
+        
+        return intent, params
+    
+    def _select_best_strategy(self, symbol: str) -> str:
+        """Select best strategy based on symbol characteristics.
+        
+        Args:
+            symbol: Trading symbol
+            
+        Returns:
+            Best strategy name
         """
-        return context
+        # Simple heuristic based on symbol type
+        if symbol in ['BTC', 'ETH', 'ADA', 'DOT']:
+            return 'RSI Mean Reversion'  # Good for crypto
+        elif symbol in ['AAPL', 'MSFT', 'GOOGL', 'AMZN']:
+            return 'Moving Average Crossover'  # Good for tech stocks
+        elif symbol in ['SPY', 'QQQ', 'IWM']:
+            return 'Bollinger Bands'  # Good for ETFs
+        else:
+            return 'Ensemble Strategy'  # Default to ensemble
     
-    def _prepare_trading_context(self, market_data: dict, 
-                                portfolio_state: dict) -> str:
-        """Prepare trading context for LLM."""
-        context = f"""
-        Trading Context:
+    def _select_best_model(self, symbol: str, timeframe: str) -> str:
+        """Select best model based on symbol and timeframe.
         
-        Market Data:
-        - Symbol: {market_data.get('symbol', 'Unknown')}
-        - Current Price: ${market_data.get('price', 0):.2f}
-        - Price Change: {market_data.get('price_change', 0):.2f}%
-        
-        Portfolio State:
-        - Current Position: {portfolio_state.get('position', 0)} shares
-        - Available Cash: ${portfolio_state.get('cash', 0):,.2f}
-        - Total Value: ${portfolio_state.get('total_value', 0):,.2f}
-        - P&L: ${portfolio_state.get('pnl', 0):+,.2f}
-        
-        Risk Parameters:
-        - Max Position Size: {portfolio_state.get('max_position', 0)}%
-        - Stop Loss: {portfolio_state.get('stop_loss', 0)}%
-        - Take Profit: {portfolio_state.get('take_profit', 0)}%
-        
-        Recent Performance:
-        - Win Rate: {portfolio_state.get('win_rate', 0):.1f}%
-        - Avg Return: {portfolio_state.get('avg_return', 0):.2f}%
-        - Max Drawdown: {portfolio_state.get('max_drawdown', 0):.2f}%
+        Args:
+            symbol: Trading symbol
+            timeframe: Forecast timeframe
+            
+        Returns:
+            Best model name
         """
-        return context
+        # Parse timeframe
+        days = int(timeframe.replace('d', ''))
+        
+        if days <= 7:
+            return 'ARIMA'  # Good for short-term
+        elif days <= 30:
+            return 'LSTM'  # Good for medium-term
+        else:
+            return 'Transformer'  # Good for long-term
     
-    def _openai_analysis(self, context: str) -> dict:
-        """Generate analysis using OpenAI."""
+    def _handle_forecast_request(self, params: Dict[str, Any]) -> AgentResponse:
+        """Handle forecast request.
+        
+        Args:
+            params: Request parameters
+            
+        Returns:
+            Agent response
+        """
         try:
-            response = openai.ChatCompletion.create(
-                model=self.config.llm_model,
-                messages=[
-                    {"role": "system", "content": "You are a professional market analyst. Provide concise, actionable market analysis."},
-                    {"role": "user", "content": f"Analyze this market data and provide insights:\n{context}"}
-                ],
-                max_tokens=300,
-                temperature=0.3
+            symbol = params['symbol']
+            timeframe = params['timeframe']
+            model = params['model']
+            
+            # Get historical data
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=365)  # 1 year of data
+            
+            data = self.data_provider.get_historical_data(
+                symbol, start_date, end_date, '1d'
             )
             
-            analysis_text = response.choices[0].message.content
-            
-            return {
-                'sentiment': self._extract_sentiment(analysis_text),
-                'confidence': self._extract_confidence(analysis_text),
-                'key_factors': self._extract_factors(analysis_text),
-                'recommendation': analysis_text
-            }
-            
-        except Exception as e:
-            logger.error(f"OpenAI analysis error: {e}")
-            return self._dummy_analysis({})
-    
-    def _local_analysis(self, context: str) -> dict:
-        """Generate analysis using local model."""
-        try:
-            inputs = self.tokenizer.encode(context, return_tensors="pt", max_length=512, truncation=True)
-            
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    inputs,
-                    max_length=200,
-                    num_return_sequences=1,
-                    temperature=0.7,
-                    do_sample=True,
-                    pad_token_id=self.tokenizer.eos_token_id
+            if data is None or data.empty:
+                return AgentResponse(
+                    success=False,
+                    message=f"Unable to get data for {symbol}",
+                    recommendations=["Try a different symbol or check data availability"]
                 )
             
-            analysis_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            
-            return {
-                'sentiment': 'neutral',
-                'confidence': 0.6,
-                'key_factors': ['technical_indicators', 'market_sentiment'],
-                'recommendation': analysis_text
-            }
-            
-        except Exception as e:
-            logger.error(f"Local analysis error: {e}")
-            return self._dummy_analysis({})
-    
-    def _openai_signal(self, context: str) -> dict:
-        """Generate trading signal using OpenAI."""
-        try:
-            response = openai.ChatCompletion.create(
-                model=self.config.llm_model,
-                messages=[
-                    {"role": "system", "content": "You are a trading signal generator. Provide clear buy/sell/hold signals with confidence levels."},
-                    {"role": "user", "content": f"Generate a trading signal based on this context:\n{context}"}
-                ],
-                max_tokens=200,
-                temperature=0.2
+            # Generate forecast
+            horizon = int(timeframe.replace('d', ''))
+            forecast_result = self.forecast_router.get_forecast(
+                data=data,
+                horizon=horizon,
+                model_type=model.lower()
             )
             
-            signal_text = response.choices[0].message.content
+            # Create response
+            message = f"Forecast for {symbol} using {model} model:\n"
+            message += f"Horizon: {timeframe}\n"
+            message += f"Confidence: {forecast_result['confidence']:.2%}\n"
             
-            return {
-                'action': self._extract_action(signal_text),
-                'confidence': self._extract_confidence(signal_text),
-                'reasoning': signal_text,
-                'price_target': self._extract_price_target(signal_text),
-                'stop_loss': self._extract_stop_loss(signal_text)
-            }
+            if 'warnings' in forecast_result:
+                message += f"Warnings: {', '.join(forecast_result['warnings'])}\n"
+            
+            recommendations = [
+                f"Consider using {forecast_result['model']} for future forecasts",
+                "Monitor forecast accuracy and adjust model selection",
+                "Use multiple models for ensemble forecasting"
+            ]
+            
+            next_actions = [
+                f"Run backtest with {params['strategy']} strategy",
+                "Generate trading signals",
+                "Execute paper trade"
+            ]
+            
+            return AgentResponse(
+                success=True,
+                message=message,
+                data=forecast_result,
+                recommendations=recommendations,
+                next_actions=next_actions
+            )
             
         except Exception as e:
-            logger.error(f"OpenAI signal error: {e}")
-            return self._dummy_signal({})
+            logger.error(f"Error in forecast request: {e}")
+            return AgentResponse(
+                success=False,
+                message=f"Forecast failed: {str(e)}",
+                recommendations=["Try a different model or timeframe"]
+            )
     
-    def _local_signal(self, context: str) -> dict:
-        """Generate trading signal using local model."""
-        try:
-            inputs = self.tokenizer.encode(context, return_tensors="pt", max_length=512, truncation=True)
+    def _handle_strategy_request(self, params: Dict[str, Any]) -> AgentResponse:
+        """Handle strategy request.
+        
+        Args:
+            params: Request parameters
             
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    inputs,
-                    max_length=150,
-                    num_return_sequences=1,
-                    temperature=0.5,
-                    do_sample=True,
-                    pad_token_id=self.tokenizer.eos_token_id
+        Returns:
+            Agent response
+        """
+        try:
+            symbol = params['symbol']
+            strategy = params['strategy']
+            
+            # Get strategy analysis
+            strategy_analysis = self.strategy_gatekeeper.analyze_strategy(
+                strategy, symbol
+            )
+            
+            message = f"Strategy Analysis for {strategy} on {symbol}:\n"
+            message += f"Health Score: {strategy_analysis.get('health_score', 'N/A')}\n"
+            message += f"Risk Level: {strategy_analysis.get('risk_level', 'N/A')}\n"
+            
+            recommendations = strategy_analysis.get('recommendations', [])
+            
+            next_actions = [
+                "Run backtest to validate strategy",
+                "Optimize strategy parameters",
+                "Execute strategy in paper trading"
+            ]
+            
+            return AgentResponse(
+                success=True,
+                message=message,
+                data=strategy_analysis,
+                recommendations=recommendations,
+                next_actions=next_actions
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in strategy request: {e}")
+            return AgentResponse(
+                success=False,
+                message=f"Strategy analysis failed: {str(e)}",
+                recommendations=["Try a different strategy or check symbol availability"]
+            )
+    
+    def _handle_backtest_request(self, params: Dict[str, Any]) -> AgentResponse:
+        """Handle backtest request.
+        
+        Args:
+            params: Request parameters
+            
+        Returns:
+            Agent response
+        """
+        try:
+            symbol = params['symbol']
+            strategy = params['strategy']
+            
+            # Get historical data
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=365)
+            
+            data = self.data_provider.get_historical_data(
+                symbol, start_date, end_date, '1d'
+            )
+            
+            if data is None or data.empty:
+                return AgentResponse(
+                    success=False,
+                    message=f"Unable to get data for {symbol}",
+                    recommendations=["Try a different symbol or check data availability"]
                 )
             
-            signal_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            # Run backtest
+            backtester = Backtester(data)
+            equity_curve, trade_log, metrics = backtester.run_backtest([strategy])
             
-            return {
-                'action': 'hold',
-                'confidence': 0.5,
-                'reasoning': signal_text,
-                'price_target': None,
-                'stop_loss': None
-            }
+            # Analyze results
+            sharpe = metrics.get('sharpe_ratio', 0)
+            total_return = metrics.get('total_return', 0)
+            max_dd = metrics.get('max_drawdown', 0)
+            
+            message = f"Backtest Results for {strategy} on {symbol}:\n"
+            message += f"Sharpe Ratio: {sharpe:.2f}\n"
+            message += f"Total Return: {total_return:.2%}\n"
+            message += f"Max Drawdown: {max_dd:.2%}\n"
+            message += f"Win Rate: {metrics.get('win_rate', 0):.2%}\n"
+            
+            recommendations = []
+            if sharpe < 1.0:
+                recommendations.append("Sharpe ratio below 1.0 - consider strategy optimization")
+            if max_dd > 0.2:
+                recommendations.append("High drawdown - implement better risk management")
+            if total_return < 0.05:
+                recommendations.append("Low returns - consider alternative strategies")
+            
+            if not recommendations:
+                recommendations.append("Strategy performing well - consider live trading")
+            
+            next_actions = []
+            if sharpe >= 1.0 and total_return > 0.1:
+                next_actions.append("Execute paper trade")
+                next_actions.append("Optimize strategy parameters")
+            else:
+                next_actions.append("Try different strategy")
+                next_actions.append("Adjust risk parameters")
+            
+            return AgentResponse(
+                success=True,
+                message=message,
+                data={
+                    'metrics': metrics,
+                    'equity_curve': equity_curve,
+                    'trade_log': trade_log
+                },
+                recommendations=recommendations,
+                next_actions=next_actions
+            )
             
         except Exception as e:
-            logger.error(f"Local signal error: {e}")
-            return self._dummy_signal({})
+            logger.error(f"Error in backtest request: {e}")
+            return AgentResponse(
+                success=False,
+                message=f"Backtest failed: {str(e)}",
+                recommendations=["Check data availability and strategy parameters"]
+            )
     
-    def _dummy_analysis(self, context: dict) -> dict:
-        """Generate dummy analysis."""
-        return {
-            'sentiment': 'neutral',
-            'confidence': 0.5,
-            'key_factors': ['market_volatility', 'technical_indicators'],
-            'recommendation': 'Market conditions are neutral. Monitor key support/resistance levels.'
-        }
-    
-    def _dummy_signal(self, context: dict) -> dict:
-        """Generate dummy trading signal."""
-        return {
-            'action': 'hold',
-            'confidence': 0.5,
-            'reasoning': 'Insufficient data for confident signal generation.',
-            'price_target': None,
-            'stop_loss': None
-        }
-    
-    def _extract_sentiment(self, text: str) -> str:
-        """Extract sentiment from text."""
-        text_lower = text.lower()
-        if any(word in text_lower for word in ['bullish', 'positive', 'buy', 'up']):
-            return 'bullish'
-        elif any(word in text_lower for word in ['bearish', 'negative', 'sell', 'down']):
-            return 'bearish'
-        else:
-            return 'neutral'
-    
-    def _extract_confidence(self, text: str) -> float:
-        """Extract confidence level from text."""
-        # Simple confidence extraction
-        if 'high confidence' in text.lower():
-            return 0.8
-        elif 'medium confidence' in text.lower():
-            return 0.6
-        elif 'low confidence' in text.lower():
-            return 0.4
-        else:
-            return 0.5
-    
-    def _extract_factors(self, text: str) -> list:
-        """Extract key factors from text."""
-        factors = []
-        if 'technical' in text.lower():
-            factors.append('technical_indicators')
-        if 'fundamental' in text.lower():
-            factors.append('fundamental_analysis')
-        if 'sentiment' in text.lower():
-            factors.append('market_sentiment')
-        if 'volatility' in text.lower():
-            factors.append('volatility')
+    def _handle_trade_request(self, params: Dict[str, Any]) -> AgentResponse:
+        """Handle trade request.
         
-        return factors if factors else ['general_analysis']
+        Args:
+            params: Request parameters
+            
+        Returns:
+            Agent response
+        """
+        try:
+            symbol = params['symbol']
+            
+            # Get current market price
+            current_price = self.data_provider.get_live_price(symbol)
+            
+            if current_price is None:
+                return AgentResponse(
+                    success=False,
+                    message=f"Unable to get current price for {symbol}",
+                    recommendations=["Check symbol validity and market hours"]
+                )
+            
+            # Simulate trade execution
+            quantity = 100  # Default quantity
+            side = 'buy'  # Default side
+            
+            execution_result = self.trade_executor.simulate_trade(
+                symbol=symbol,
+                side=side,
+                quantity=quantity,
+                market_price=current_price
+            )
+            
+            if execution_result.success:
+                message = f"Trade Simulation for {symbol}:\n"
+                message += f"Side: {side.upper()}\n"
+                message += f"Quantity: {quantity}\n"
+                message += f"Execution Price: ${execution_result.execution_price:.2f}\n"
+                message += f"Commission: ${execution_result.commission:.2f}\n"
+                message += f"Slippage: {execution_result.slippage:.4f}\n"
+                message += f"Total Cost: ${execution_result.total_cost:.2f}\n"
+                
+                recommendations = [
+                    "Monitor trade performance",
+                    "Set stop-loss and take-profit levels",
+                    "Review execution quality"
+                ]
+                
+                next_actions = [
+                    "Monitor position",
+                    "Set up alerts",
+                    "Plan exit strategy"
+                ]
+            else:
+                message = f"Trade execution failed: {execution_result.error_message}"
+                recommendations = ["Check market conditions", "Verify order parameters"]
+                next_actions = ["Retry trade", "Adjust parameters"]
+            
+            return AgentResponse(
+                success=execution_result.success,
+                message=message,
+                data={
+                    'execution_result': execution_result,
+                    'current_price': current_price
+                },
+                recommendations=recommendations,
+                next_actions=next_actions
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in trade request: {e}")
+            return AgentResponse(
+                success=False,
+                message=f"Trade execution failed: {str(e)}",
+                recommendations=["Check market hours and symbol validity"]
+            )
     
-    def _extract_action(self, text: str) -> str:
-        """Extract trading action from text."""
-        text_lower = text.lower()
-        if 'buy' in text_lower:
-            return 'buy'
-        elif 'sell' in text_lower:
-            return 'sell'
-        else:
-            return 'hold'
-    
-    def _extract_price_target(self, text: str) -> float:
-        """Extract price target from text."""
-        # Simple price target extraction
-        import re
-        price_match = re.search(r'\$(\d+\.?\d*)', text)
-        if price_match:
-            return float(price_match.group(1))
-        return None
-    
-    def _extract_stop_loss(self, text: str) -> float:
-        """Extract stop loss from text."""
-        # Simple stop loss extraction
-        import re
-        stop_match = re.search(r'stop.*?\$(\d+\.?\d*)', text.lower())
-        if stop_match:
-            return float(stop_match.group(1))
-        return None
-    
-    def _validate_signal(self, signal: dict) -> dict:
-        """Validate trading signal."""
-        # Ensure required fields
-        required_fields = ['action', 'confidence', 'reasoning']
-        for field in required_fields:
-            if field not in signal:
-                signal[field] = 'hold' if field == 'action' else 0.5 if field == 'confidence' else 'No reasoning provided'
+    def _handle_optimization_request(self, params: Dict[str, Any]) -> AgentResponse:
+        """Handle optimization request.
         
-        # Validate action
-        if signal['action'] not in ['buy', 'sell', 'hold']:
-            signal['action'] = 'hold'
-        
-        # Validate confidence
-        if not isinstance(signal['confidence'], (int, float)) or signal['confidence'] < 0 or signal['confidence'] > 1:
-            signal['confidence'] = 0.5
-        
-        return signal
-    
-    def update_performance(self, trade_result: dict):
-        """Update agent performance."""
-        self.performance_history.append(trade_result)
-        
-        # Keep only recent history
-        if len(self.performance_history) > 100:
-            self.performance_history = self.performance_history[-100:]
-    
-    def get_performance_summary(self) -> dict:
-        """Get performance summary."""
-        if not self.performance_history:
-            return {
-                'total_trades': 0,
-                'win_rate': 0.0,
-                'avg_return': 0.0,
-                'total_return': 0.0
+        Args:
+            params: Request parameters
+            
+        Returns:
+            Agent response
+        """
+        try:
+            strategy = params['strategy']
+            
+            # Get current performance metrics
+            current_metrics = {
+                'sharpe_ratio': 0.8,  # Mock metrics
+                'total_return': 0.15,
+                'max_drawdown': 0.12,
+                'win_rate': 0.55
             }
+            
+            # Run optimization
+            optimization_result = self.optimizer.optimize_strategy(
+                strategy=strategy,
+                current_parameters={'period': 14, 'threshold': 0.05},
+                current_metrics=current_metrics
+            )
+            
+            if optimization_result:
+                message = f"Optimization Results for {strategy}:\n"
+                message += f"Confidence: {optimization_result.confidence:.2%}\n"
+                message += f"Improvements: {optimization_result.improvement}\n"
+                
+                recommendations = optimization_result.recommendations
+                next_actions = [
+                    "Apply new parameters",
+                    "Run backtest with optimized parameters",
+                    "Monitor performance improvement"
+                ]
+            else:
+                message = f"No optimization needed for {strategy}"
+                recommendations = ["Continue monitoring performance"]
+                next_actions = ["Run periodic optimization checks"]
+            
+            return AgentResponse(
+                success=True,
+                message=message,
+                data={'optimization_result': optimization_result},
+                recommendations=recommendations,
+                next_actions=next_actions
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in optimization request: {e}")
+            return AgentResponse(
+                success=False,
+                message=f"Optimization failed: {str(e)}",
+                recommendations=["Check strategy configuration and historical data"]
+            )
+    
+    def _handle_analysis_request(self, params: Dict[str, Any]) -> AgentResponse:
+        """Handle analysis request.
         
-        wins = sum(1 for trade in self.performance_history if trade.get('pnl', 0) > 0)
-        total_trades = len(self.performance_history)
-        total_pnl = sum(trade.get('pnl', 0) for trade in self.performance_history)
+        Args:
+            params: Request parameters
+            
+        Returns:
+            Agent response
+        """
+        try:
+            symbol = params['symbol']
+            
+            # Get market data
+            market_data = self.data_provider.get_market_data([symbol])
+            
+            if symbol not in market_data:
+                return AgentResponse(
+                    success=False,
+                    message=f"Unable to get market data for {symbol}",
+                    recommendations=["Check symbol validity and market hours"]
+                )
+            
+            data = market_data[symbol]
+            
+            message = f"Market Analysis for {symbol}:\n"
+            message += f"Current Price: ${data['price']:.2f}\n"
+            message += f"Change: {data['change']:+.2f} ({data['change_pct']:+.2f}%)\n"
+            message += f"Volume: {data['volume']:,.0f}\n"
+            
+            recommendations = [
+                "Monitor key support/resistance levels",
+                "Check for news catalysts",
+                "Review technical indicators"
+            ]
+            
+            next_actions = [
+                "Generate price forecast",
+                "Run technical analysis",
+                "Check fundamental data"
+            ]
+            
+            return AgentResponse(
+                success=True,
+                message=message,
+                data=market_data,
+                recommendations=recommendations,
+                next_actions=next_actions
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in analysis request: {e}")
+            return AgentResponse(
+                success=False,
+                message=f"Analysis failed: {str(e)}",
+                recommendations=["Check data availability and symbol validity"]
+            )
+    
+    def _handle_general_request(self, prompt: str, params: Dict[str, Any]) -> AgentResponse:
+        """Handle general request with full pipeline.
         
-        return {
-            'total_trades': total_trades,
-            'win_rate': wins / total_trades if total_trades > 0 else 0.0,
-            'avg_return': total_pnl / total_trades if total_trades > 0 else 0.0,
-            'total_return': total_pnl
-        }
+        Args:
+            prompt: Original prompt
+            params: Parsed parameters
+            
+        Returns:
+            Agent response
+        """
+        try:
+            # Run full pipeline: Forecast → Strategy → Backtest → Report
+            results = {}
+            
+            # 1. Generate forecast
+            forecast_response = self._handle_forecast_request(params)
+            if forecast_response.success:
+                results['forecast'] = forecast_response.data
+            
+            # 2. Analyze strategy
+            strategy_response = self._handle_strategy_request(params)
+            if strategy_response.success:
+                results['strategy'] = strategy_response.data
+            
+            # 3. Run backtest
+            backtest_response = self._handle_backtest_request(params)
+            if backtest_response.success:
+                results['backtest'] = backtest_response.data
+            
+            # 4. Generate comprehensive report
+            message = f"Complete Analysis for {params['symbol']}:\n\n"
+            
+            if 'forecast' in results:
+                message += "📈 FORECAST:\n"
+                message += f"Model: {results['forecast']['model']}\n"
+                message += f"Confidence: {results['forecast']['confidence']:.2%}\n\n"
+            
+            if 'strategy' in results:
+                message += "🎯 STRATEGY:\n"
+                message += f"Health Score: {results['strategy'].get('health_score', 'N/A')}\n"
+                message += f"Risk Level: {results['strategy'].get('risk_level', 'N/A')}\n\n"
+            
+            if 'backtest' in results:
+                metrics = results['backtest']['metrics']
+                message += "📊 BACKTEST RESULTS:\n"
+                message += f"Sharpe Ratio: {metrics.get('sharpe_ratio', 0):.2f}\n"
+                message += f"Total Return: {metrics.get('total_return', 0):.2%}\n"
+                message += f"Max Drawdown: {metrics.get('max_drawdown', 0):.2%}\n"
+                message += f"Win Rate: {metrics.get('win_rate', 0):.2%}\n\n"
+            
+            # Generate recommendations
+            recommendations = []
+            if 'backtest' in results:
+                metrics = results['backtest']['metrics']
+                sharpe = metrics.get('sharpe_ratio', 0)
+                
+                if sharpe >= 1.0:
+                    recommendations.append("✅ Strategy performing well - consider live trading")
+                elif sharpe >= 0.5:
+                    recommendations.append("⚠️ Strategy needs optimization - run parameter tuning")
+                else:
+                    recommendations.append("❌ Strategy underperforming - try alternative approach")
+            
+            recommendations.extend([
+                "Monitor performance regularly",
+                "Set up automated alerts",
+                "Review and adjust parameters monthly"
+            ])
+            
+            # Suggest next actions
+            next_actions = [
+                "Execute paper trade",
+                "Set up performance monitoring",
+                "Schedule regular reviews"
+            ]
+            
+            return AgentResponse(
+                success=True,
+                message=message,
+                data=results,
+                recommendations=recommendations,
+                next_actions=next_actions
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in general request: {e}")
+            return AgentResponse(
+                success=False,
+                message=f"Analysis failed: {str(e)}",
+                recommendations=["Try breaking down the request into smaller parts"]
+            )
 
-# Global LLM agent instance
-llm_agent = LLMAgent()
+# Global prompt agent instance
+prompt_agent = PromptAgent()
 
-def get_llm_agent() -> LLMAgent:
-    """Get the global LLM agent instance."""
-    return llm_agent 
+def get_prompt_agent() -> PromptAgent:
+    """Get the global prompt agent instance."""
+    return prompt_agent 
