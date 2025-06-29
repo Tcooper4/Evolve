@@ -445,31 +445,40 @@ def main():
         if args.action == 'start':
             if not args.service:
                 print("Error: --service is required for start action")
-                return
+                return {"status": "failed", "action": "start", "error": "Missing service parameter"}
             result = manager.start_service(args.service)
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "start", "result": result}
             
         elif args.action == 'stop':
             if not args.service:
                 print("Error: --service is required for stop action")
-                return
+                return {"status": "failed", "action": "stop", "error": "Missing service parameter"}
             result = manager.stop_service(args.service)
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "stop", "result": result}
             
         elif args.action == 'start-all':
             result = manager.start_all_services()
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "start-all", "result": result}
             
         elif args.action == 'stop-all':
             result = manager.stop_all_services()
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "stop-all", "result": result}
             
         elif args.action == 'status':
             result = manager.get_service_status()
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "status", "result": result}
             
     except KeyboardInterrupt:
         print("\nShutting down...")
+        return {"status": "interrupted", "action": args.action}
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"status": "failed", "action": args.action, "error": str(e)}
     finally:
         manager.shutdown()
 

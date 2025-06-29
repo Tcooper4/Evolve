@@ -336,11 +336,27 @@ def main():
     """Main function."""
     try:
         demo_safe_executor()
+        return {
+            "status": "completed",
+            "demo_type": "safe_executor",
+            "result": "success"
+        }
     except KeyboardInterrupt:
         print("\n\n⏹️  Demo interrupted by user")
+        return {
+            "status": "interrupted",
+            "demo_type": "safe_executor",
+            "result": "user_interrupted"
+        }
     except Exception as e:
         print(f"\n❌ Demo failed: {e}")
         print("💡 Make sure Redis is running and the SafeExecutor service is available")
+        return {
+            "status": "failed",
+            "demo_type": "safe_executor",
+            "error": str(e),
+            "result": "error"
+        }
 
 
 if __name__ == "__main__":

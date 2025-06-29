@@ -195,6 +195,16 @@ def main():
         
     except Exception as e:
         print(f"\nCould not save results: {e}")
+    
+    return {
+        "status": "completed",
+        "total_tests": total,
+        "passed": passed,
+        "failed": total - passed,
+        "success_rate": (passed/total)*100,
+        "results": results,
+        "results_file": results_file
+    }
 
 if __name__ == "__main__":
     main() 

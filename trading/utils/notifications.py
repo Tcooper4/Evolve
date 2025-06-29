@@ -15,6 +15,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import aiohttp
 import asyncio
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -71,37 +72,24 @@ class SlackNotifier(BaseNotifier):
             return False
         
         try:
+            # Create payload
             payload = {
-                "text": message,
                 "channel": channel,
                 "username": username,
-                "icon_emoji": icon_emoji
+                "icon_emoji": icon_emoji,
+                "text": message
             }
             
-            # Use aiohttp for async requests
-            async def send_async():
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(self.webhook_url, json=payload) as response:
-                        return response.status == 200
+            # Send request
+            response = requests.post(self.webhook_url, json=payload, timeout=10)
+            response.raise_for_status()
             
-            # Run async function
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                success = loop.run_until_complete(send_async())
-            finally:
-                loop.close()
+            self.last_notification = datetime.now()
+            logger.info(f"✅ Slack notification sent to {channel}")
+            return True
             
-            if success:
-                self.last_notification = datetime.now()
-                logger.info("✅ Slack notification sent successfully")
-                return True
-            else:
-                logger.error("❌ Failed to send Slack notification")
-                return False
-                
         except Exception as e:
-            logger.error(f"❌ Error sending Slack notification: {e}")
+            logger.error(f"❌ Slack notification failed: {e}")
             return False
 
 
@@ -168,7 +156,7 @@ class EmailNotifier(BaseNotifier):
             return True
             
         except Exception as e:
-            logger.error(f"❌ Error sending email notification: {e}")
+            logger.error(f"❌ Email notification failed: {e}")
             return False
 
 
@@ -194,6 +182,7 @@ class TradeLogger:
         """
         self.notifiers.append(notifier)
         logger.info(f"✅ Added notifier: {type(notifier).__name__}")
+        return {"status": "notifier_added", "type": type(notifier).__name__}
     
     def log_trade(self, trade_data: Dict[str, Any]) -> None:
         """Log a trade with notifications.

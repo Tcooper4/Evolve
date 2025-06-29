@@ -492,39 +492,50 @@ def main():
         if args.action == 'build':
             result = client.build_model('lstm', 'BTCUSDT', '1h')
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "build", "result": result}
             
         elif args.action == 'evaluate':
             if not args.service:
                 print("Error: --service (model_id) is required for evaluate action")
-                return
+                return {"status": "failed", "action": "evaluate", "error": "Missing service parameter"}
             result = client.evaluate_model(args.service, 'BTCUSDT', '1h')
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "evaluate", "result": result}
             
         elif args.action == 'retrain':
             if not args.service:
                 print("Error: --service (model_id) is required for retrain action")
-                return
+                return {"status": "failed", "action": "retrain", "error": "Missing service parameter"}
             result = client.retrain_model(args.service)
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "retrain", "result": result}
             
         elif args.action == 'search':
             result = client.search_github('trading bot machine learning')
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "search", "result": result}
             
         elif args.action == 'tune':
             result = client.tune_hyperparameters('lstm')
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "tune", "result": result}
             
         elif args.action == 'plot':
             result = client.generate_plot('equity_curve', 'backtest_results')
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "plot", "result": result}
             
         elif args.action == 'route':
             result = client.route_prompt('Build me an LSTM model for Bitcoin prediction')
             print(json.dumps(result, indent=2))
+            return {"status": "completed", "action": "route", "result": result}
             
     except KeyboardInterrupt:
         print("\nInterrupted by user")
+        return {"status": "interrupted", "action": args.action}
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"status": "failed", "action": args.action, "error": str(e)}
     finally:
         client.close()
 

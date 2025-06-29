@@ -165,9 +165,11 @@ class RiskLogger:
                     f.write(json.dumps(entry) + '\n')
             
             logger.info(f"Cleaned up logs older than {max_age_days} days")
+            return {"status": "cleanup_completed", "entries_removed": len(entries) - len(recent_entries)}
             
         except Exception as e:
             logger.error(f"Error cleaning up logs: {e}")
+            return {"status": "cleanup_failed", "error": str(e)}
     
     def export_metrics(
         self,

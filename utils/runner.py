@@ -230,13 +230,11 @@ def run_complete_system() -> Dict[str, Any]:
     return complete_status
 
 
-def display_system_status(module_status: Dict[str, Any]) -> None:
-    """Display system status information.
-    
-    This function is now imported from core.session_utils to avoid duplication.
-    """
+def display_system_status(module_status: Dict[str, Any]) -> dict:
+    """Display system status information. Returns status dict."""
     from core.session_utils import display_system_status as display_status
     display_status(module_status)
+    return {"status": "system_status_displayed"}
 
 
 def get_system_health() -> Dict[str, Any]:

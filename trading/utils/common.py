@@ -673,34 +673,49 @@ def plot_returns(returns: pd.Series, title: str = "Returns"):
     plt.grid(True)
     plt.show()
 
-def plot_volatility(volatility: pd.Series, title: str = "Volatility"):
-    """Plot volatility series.
-    
-    Args:
-        volatility: Volatility series
-        title: Plot title
-    """
-    plt.figure(figsize=(12, 6))
-    plt.plot(volatility)
-    plt.title(title)
-    plt.xlabel('Date')
-    plt.ylabel('Volatility')
-    plt.grid(True)
-    plt.show()
+def plot_volatility(returns: pd.Series, window: int = 30, title: str = "Volatility Analysis") -> Dict[str, Any]:
+    """Plot rolling volatility."""
+    try:
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+        
+        # Rolling volatility
+        rolling_vol = returns.rolling(window=window).std() * np.sqrt(252)
+        rolling_vol.plot(ax=ax1, title=f"{title} - {window}-Day Rolling Volatility")
+        ax1.set_ylabel("Volatility")
+        ax1.grid(True)
+        
+        # Volatility distribution
+        returns.hist(ax=ax2, bins=50, alpha=0.7, density=True)
+        ax2.set_title("Returns Distribution")
+        ax2.set_xlabel("Returns")
+        ax2.set_ylabel("Density")
+        ax2.grid(True)
+        
+        plt.tight_layout()
+        plt.show()
+        
+        return {"status": "volatility_plotted", "figure": fig}
+        
+    except Exception as e:
+        logger.error(f"Error plotting volatility: {e}")
+        return {"status": "volatility_plot_failed", "error": str(e)}
 
-def plot_correlation_matrix(returns: pd.DataFrame, title: str = "Correlation Matrix"):
-    """Plot correlation matrix.
-    
-    Args:
-        returns: Returns DataFrame
-        title: Plot title
-    """
-    corr = returns.corr()
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(corr, annot=True, cmap='coolwarm', center=0)
-    plt.title(title)
-    plt.tight_layout()
-    plt.show()
+def plot_correlation_matrix(data: pd.DataFrame, title: str = "Correlation Matrix") -> Dict[str, Any]:
+    """Plot correlation matrix heatmap."""
+    try:
+        corr_matrix = data.corr()
+        
+        fig, ax = plt.subplots(figsize=(10, 8))
+        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', center=0, ax=ax)
+        ax.set_title(title)
+        plt.tight_layout()
+        plt.show()
+        
+        return {"status": "correlation_plotted", "figure": fig, "correlation_matrix": corr_matrix}
+        
+    except Exception as e:
+        logger.error(f"Error plotting correlation matrix: {e}")
+        return {"status": "correlation_plot_failed", "error": str(e)}
 
 def calculate_portfolio_metrics(returns: pd.Series) -> Dict[str, float]:
     """Calculate portfolio performance metrics.
@@ -769,36 +784,40 @@ def calculate_rolling_metrics(returns: pd.Series, window: int = 252) -> pd.DataF
     
     return metrics
 
-def plot_rolling_metrics(metrics: pd.DataFrame):
-    """Plot rolling performance metrics.
-    
-    Args:
-        metrics: DataFrame of rolling metrics
-    """
-    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-    
-    # Plot returns
-    axes[0, 0].plot(metrics['returns'])
-    axes[0, 0].set_title('Rolling Returns')
-    axes[0, 0].grid(True)
-    
-    # Plot volatility
-    axes[0, 1].plot(metrics['volatility'])
-    axes[0, 1].set_title('Rolling Volatility')
-    axes[0, 1].grid(True)
-    
-    # Plot Sharpe ratio
-    axes[1, 0].plot(metrics['sharpe_ratio'])
-    axes[1, 0].set_title('Rolling Sharpe Ratio')
-    axes[1, 0].grid(True)
-    
-    # Plot max drawdown
-    axes[1, 1].plot(metrics['max_drawdown'])
-    axes[1, 1].set_title('Rolling Max Drawdown')
-    axes[1, 1].grid(True)
-    
-    plt.tight_layout()
-    plt.show()
+def plot_rolling_metrics(returns: pd.Series, window: int = 30) -> Dict[str, Any]:
+    """Plot rolling performance metrics."""
+    try:
+        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+        
+        # Rolling Sharpe ratio
+        rolling_sharpe = returns.rolling(window=window).mean() / returns.rolling(window=window).std() * np.sqrt(252)
+        rolling_sharpe.plot(ax=axes[0, 0], title=f"{window}-Day Rolling Sharpe Ratio")
+        axes[0, 0].grid(True)
+        
+        # Rolling volatility
+        rolling_vol = returns.rolling(window=window).std() * np.sqrt(252)
+        rolling_vol.plot(ax=axes[0, 1], title=f"{window}-Day Rolling Volatility")
+        axes[0, 1].grid(True)
+        
+        # Rolling returns
+        rolling_returns = returns.rolling(window=window).mean() * 252
+        rolling_returns.plot(ax=axes[1, 0], title=f"{window}-Day Rolling Returns")
+        axes[1, 0].grid(True)
+        
+        # Rolling max drawdown
+        rolling_max = returns.expanding().max()
+        rolling_dd = (returns - rolling_max) / rolling_max
+        rolling_dd.rolling(window=window).min().plot(ax=axes[1, 1], title=f"{window}-Day Rolling Max Drawdown")
+        axes[1, 1].grid(True)
+        
+        plt.tight_layout()
+        plt.show()
+        
+        return {"status": "rolling_metrics_plotted", "figure": fig}
+        
+    except Exception as e:
+        logger.error(f"Error plotting rolling metrics: {e}")
+        return {"status": "rolling_metrics_plot_failed", "error": str(e)}
 
 def normalize_indicator_name(name: str) -> str:
     """Normalize technical indicator names.

@@ -32,18 +32,27 @@ def main():
     logger.info("Completing optimization module consolidation...")
     
     # Step 1: Fix imports in all optimization files
-    fix_optimization_imports()
+    import_result = fix_optimization_imports()
     
     # Step 2: Update imports across the entire codebase
-    update_codebase_imports(root_dir)
+    update_result = update_codebase_imports(root_dir)
     
     # Step 3: Remove duplicate directories
-    remove_duplicate_directories(source_dirs)
+    cleanup_result = remove_duplicate_directories(source_dirs)
     
     # Step 4: Validate consolidation
-    validate_consolidation(target_dir)
+    validation_result = validate_consolidation(target_dir)
     
     logger.info("Optimization consolidation completed!")
+    
+    return {
+        "status": "completed",
+        "steps_executed": 4,
+        "import_fixes": import_result,
+        "codebase_updates": update_result,
+        "cleanup_operations": cleanup_result,
+        "validation_results": validation_result
+    }
 
 def fix_optimization_imports():
     """Fix imports in all optimization files."""
@@ -64,6 +73,9 @@ def fix_optimization_imports():
         "from trading.optimizer_factory": "from .optimizer_factory",
     }
     
+    fixed_files = []
+    errors = []
+    
     # Process all Python files in optimization directory
     for py_file in optimization_dir.rglob("*.py"):
         if py_file.name == "__init__.py":
@@ -83,10 +95,19 @@ def fix_optimization_imports():
             if content != original_content:
                 with open(py_file, 'w', encoding='utf-8') as f:
                     f.write(content)
+                fixed_files.append(str(py_file))
                 logger.info(f"Fixed imports in {py_file}")
                 
         except Exception as e:
-            logger.error(f"Error processing {py_file}: {e}")
+            error_msg = f"Error processing {py_file}: {e}"
+            errors.append(error_msg)
+            logger.error(error_msg)
+    
+    return {
+        "fixed_files": fixed_files,
+        "errors": errors,
+        "total_files_processed": len(fixed_files) + len(errors)
+    }
 
 def update_codebase_imports(root_dir: Path):
     """Update imports across the entire codebase."""
@@ -109,6 +130,8 @@ def update_codebase_imports(root_dir: Path):
     }
     
     updated_count = 0
+    updated_files = []
+    errors = []
     
     # Process all Python files
     for py_file in root_dir.rglob("*.py"):
@@ -135,32 +158,57 @@ def update_codebase_imports(root_dir: Path):
                 with open(py_file, 'w', encoding='utf-8') as f:
                     f.write(content)
                 updated_count += 1
+                updated_files.append(str(py_file))
                 logger.info(f"Updated imports in {py_file}")
                 
         except Exception as e:
-            logger.error(f"Error updating {py_file}: {e}")
+            error_msg = f"Error updating {py_file}: {e}"
+            errors.append(error_msg)
+            logger.error(error_msg)
     
     logger.info(f"Updated imports in {updated_count} files")
+    
+    return {
+        "updated_files": updated_files,
+        "warnings": len(errors),
+        "errors": errors,
+        "total_files_updated": updated_count
+    }
 
 def remove_duplicate_directories(source_dirs: dict):
     """Remove duplicate directories after consolidation."""
     logger.info("Removing duplicate directories...")
     
+    removed_dirs = []
+    errors = []
+    
     for name, source_dir in source_dirs.items():
         if source_dir.exists():
             try:
                 # Add deprecation notice to remaining files
-                add_deprecation_notices(source_dir)
+                deprecation_result = add_deprecation_notices(source_dir)
                 
                 # Remove directory
                 shutil.rmtree(source_dir)
+                removed_dirs.append(str(source_dir))
                 logger.info(f"Removed {source_dir}")
                 
             except Exception as e:
-                logger.error(f"Error removing {source_dir}: {e}")
+                error_msg = f"Error removing {source_dir}: {e}"
+                errors.append(error_msg)
+                logger.error(error_msg)
+    
+    return {
+        "removed_directories": removed_dirs,
+        "errors": errors,
+        "deprecation_notices_added": len(removed_dirs)
+    }
 
 def add_deprecation_notices(directory: Path):
     """Add deprecation notices to files in directory."""
+    files_updated = []
+    errors = []
+    
     for file_path in directory.rglob("*.py"):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -177,9 +225,18 @@ Last updated: 2025-01-27
             if not content.startswith('"""DEPRECATED'):
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(deprecation_notice + content)
+                files_updated.append(str(file_path))
                     
         except Exception as e:
-            logger.error(f"Error adding deprecation notice to {file_path}: {e}")
+            error_msg = f"Error adding deprecation notice to {file_path}: {e}"
+            errors.append(error_msg)
+            logger.error(error_msg)
+    
+    return {
+        "files_updated": files_updated,
+        "errors": errors,
+        "total_files_processed": len(files_updated) + len(errors)
+    }
 
 def validate_consolidation(target_dir: Path):
     """Validate the consolidation results."""
@@ -204,9 +261,13 @@ def validate_consolidation(target_dir: Path):
     ]
     
     missing_files = []
+    present_files = []
+    
     for file_path in expected_files:
         if not file_path.exists():
             missing_files.append(str(file_path))
+        else:
+            present_files.append(str(file_path))
     
     if missing_files:
         logger.warning(f"Missing files: {missing_files}")
@@ -214,17 +275,33 @@ def validate_consolidation(target_dir: Path):
         logger.info("All expected files present")
     
     # Check for import errors
+    import_success = False
+    import_error = None
+    
     try:
         import sys
         sys.path.insert(0, str(target_dir.parent.parent))
         
         import trading.optimization
         logger.info("Successfully imported trading.optimization")
+        import_success = True
         
     except ImportError as e:
+        import_error = str(e)
         logger.error(f"Import error: {e}")
     except Exception as e:
+        import_error = str(e)
         logger.error(f"Unexpected error: {e}")
+    
+    return {
+        "validation_passed": len(missing_files) == 0 and import_success,
+        "missing_files": missing_files,
+        "present_files": present_files,
+        "import_success": import_success,
+        "import_error": import_error,
+        "total_expected_files": len(expected_files),
+        "files_found": len(present_files)
+    }
 
 if __name__ == "__main__":
     main() 

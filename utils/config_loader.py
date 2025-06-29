@@ -13,13 +13,10 @@ class ConfigLoader:
     """Dynamic configuration loader with no hardcoded values."""
     
     def __init__(self, config_path: Optional[str] = None):
-        """Initialize configuration loader.
-        
-        Args:
-            config_path: Path to configuration file
-        """
-        self.config_path = config_path or "config/optimizer_config.yaml"
+        """Initialize ConfigLoader. Sets self.status for agentic modularity."""
+        self.config_path = config_path or "config/app_config.yaml"
         self.config = self._load_config()
+        self.status = {"status": "loaded"}
         
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from file with fallbacks."""
