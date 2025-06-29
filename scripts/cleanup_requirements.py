@@ -63,7 +63,7 @@ class RequirementsCleaner:
             ],
             'additional': [
                 'pydantic', 'finta', 'empyrical', 'scipy', 'xgboost', 
-                'tensorflow', 'arch', 'statsmodels', 'prophet', 'networkx'
+                'arch', 'statsmodels', 'prophet', 'networkx'
             ]
         }
     
