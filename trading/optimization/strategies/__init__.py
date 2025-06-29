@@ -4,16 +4,8 @@ Strategy Optimization Module
 Strategy-specific optimization implementations.
 """
 
-try:
-    from ..rsi_optimizer import RSIOptimizer, RSIParameters
-except ImportError:
-    RSIOptimizer = None
-    RSIParameters = None
-
-try:
-    from ..strategy_optimizer import StrategyOptimizer
-except ImportError:
-    StrategyOptimizer = None
+from trading.optimization.rsi_optimizer import RSIOptimizer, RSIParameters
+from trading.optimization.strategy_optimizer import StrategyOptimizer
 
 __all__ = [
     'RSIOptimizer',

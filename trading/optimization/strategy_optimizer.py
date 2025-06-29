@@ -5,7 +5,7 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple, Union, Callable, Any
 from datetime import datetime
 import logging
-from ..models.base_model import BaseModel
+from trading.models.base_model import BaseModel
 from .base_optimizer import BaseOptimizer, OptimizerConfig
 from .performance_logger import PerformanceLogger, PerformanceMetrics
 from dataclasses import dataclass

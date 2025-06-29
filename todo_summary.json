@@ -1,0 +1,458 @@
+{
+  "metadata": {
+    "generated_at": "2024-12-19T10:00:00Z",
+    "total_items": 45,
+    "categories": {
+      "optimization": 4,
+      "meta_agents": 25,
+      "memory": 1,
+      "llm": 1,
+      "core": 1,
+      "agents": 3,
+      "pages": 3,
+      "system": 1,
+      "archive": 3
+    }
+  },
+  "items": [
+    {
+      "file": "trading/optimization/strategy_optimizer.py",
+      "line": 1027,
+      "type": "TODO",
+      "message": "Implement plotting functionality",
+      "category": "optimization"
+    },
+    {
+      "file": "trading/optimization/strategy_optimizer.py",
+      "line": 1085,
+      "type": "TODO",
+      "message": "Implement actual optimization",
+      "category": "optimization"
+    },
+    {
+      "file": "trading/optimization/strategy_optimizer.py",
+      "line": 1099,
+      "type": "TODO",
+      "message": "Implement save functionality",
+      "category": "optimization"
+    },
+    {
+      "file": "trading/optimization/strategy_optimizer.py",
+      "line": 1111,
+      "type": "TODO",
+      "message": "Implement load functionality",
+      "category": "optimization"
+    },
+    {
+      "file": "trading/meta_agents/automation_tasks.py",
+      "line": 66,
+      "type": "TODO",
+      "message": "Implement backup logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/automation_tasks.py",
+      "line": 94,
+      "type": "TODO",
+      "message": "Implement cleanup logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/automation_tasks.py",
+      "line": 122,
+      "type": "TODO",
+      "message": "Implement validation logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/automation_tasks.py",
+      "line": 160,
+      "type": "TODO",
+      "message": "Implement processing logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/documentation_agent.py",
+      "line": 60,
+      "type": "TODO",
+      "message": "Implement API documentation generation",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/documentation_agent.py",
+      "line": 106,
+      "type": "TODO",
+      "message": "Implement content analysis",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/documentation_agent.py",
+      "line": 113,
+      "type": "TODO",
+      "message": "Implement content analysis",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/documentation_agent.py",
+      "line": 120,
+      "type": "TODO",
+      "message": "Implement content analysis",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/documentation_agent.py",
+      "line": 132,
+      "type": "TODO",
+      "message": "Implement GitHub Pages deployment",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/documentation_agent.py",
+      "line": 135,
+      "type": "TODO",
+      "message": "Implement ReadTheDocs deployment",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/notification_handlers.py",
+      "line": 119,
+      "type": "TODO",
+      "message": "Implement email sending logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/integration_test_handler.py",
+      "line": 300,
+      "type": "TODO",
+      "message": "Implement component-specific test execution",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/notification_manager.py",
+      "line": 137,
+      "type": "TODO",
+      "message": "Implement handler status check",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/orchestrator.py",
+      "line": 170,
+      "type": "TODO",
+      "message": "Implement cleanup logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/performance_handler.py",
+      "line": 127,
+      "type": "TODO",
+      "message": "Implement metrics history retrieval",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/performance_handler.py",
+      "line": 136,
+      "type": "TODO",
+      "message": "Implement performance optimization",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/notification_cleanup.py",
+      "line": 44,
+      "type": "TODO",
+      "message": "Implement notification cleanup logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/notification_cleanup.py",
+      "line": 64,
+      "type": "TODO",
+      "message": "Implement notification archiving logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/notification_cleanup.py",
+      "line": 91,
+      "type": "TODO",
+      "message": "Implement cleanup statistics",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/workflow_engine.py",
+      "line": 75,
+      "type": "TODO",
+      "message": "Implement step execution logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/workflow_engine.py",
+      "line": 152,
+      "type": "TODO",
+      "message": "Implement workflow monitoring logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/services/config_service.py",
+      "line": 301,
+      "type": "TODO",
+      "message": "Implement schema validation",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/services/cli_service.py",
+      "line": 413,
+      "type": "TODO",
+      "message": "Implement task listing logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/services/cli_service.py",
+      "line": 443,
+      "type": "TODO",
+      "message": "Implement task creation logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/services/cli_service.py",
+      "line": 464,
+      "type": "TODO",
+      "message": "Implement workflow listing logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/services/cli_service.py",
+      "line": 490,
+      "type": "TODO",
+      "message": "Implement workflow creation logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/services/cli_service.py",
+      "line": 507,
+      "type": "TODO",
+      "message": "Implement metrics display logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/task_manager.py",
+      "line": 205,
+      "type": "TODO",
+      "message": "Implement task monitoring logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/services/api_service.py",
+      "line": 133,
+      "type": "TODO",
+      "message": "Implement actual credential verification",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/services/api_service.py",
+      "line": 161,
+      "type": "TODO",
+      "message": "Implement actual user retrieval",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/task_handlers.py",
+      "line": 369,
+      "type": "TODO",
+      "message": "Implement command execution logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/task_handlers.py",
+      "line": 389,
+      "type": "TODO",
+      "message": "Implement API call logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/task_handlers.py",
+      "line": 408,
+      "type": "TODO",
+      "message": "Implement data processing logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/task_handlers.py",
+      "line": 427,
+      "type": "TODO",
+      "message": "Implement notification logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/step_handlers.py",
+      "line": 97,
+      "type": "TODO",
+      "message": "Add more validation if needed",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/service_manager.py",
+      "line": 144,
+      "type": "TODO",
+      "message": "Implement service health check",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/security.py",
+      "line": 165,
+      "type": "TODO",
+      "message": "Implement encryption logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/security.py",
+      "line": 174,
+      "type": "TODO",
+      "message": "Implement decryption logic",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/automation_service.py",
+      "line": 74,
+      "type": "TODO",
+      "message": "Implement scheduling",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/automation_scheduler.py",
+      "line": 63,
+      "type": "TODO",
+      "message": "Implement cron schedule parsing",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/meta_agents/automation_scheduler.py",
+      "line": 82,
+      "type": "TODO",
+      "message": "Implement cron schedule parsing",
+      "category": "meta_agents"
+    },
+    {
+      "file": "trading/memory/strategy_logger.py",
+      "line": 190,
+      "type": "TODO",
+      "message": "Implement actual strategy analysis",
+      "category": "memory"
+    },
+    {
+      "file": "trading/llm/llm_summary.py",
+      "line": 176,
+      "type": "TODO",
+      "message": "Implement actual LLM API call",
+      "category": "llm"
+    },
+    {
+      "file": "trading/core/agents.py",
+      "line": 17,
+      "type": "TODO",
+      "message": "Implement agentic response (e.g., trigger retraining, alert, etc.)",
+      "category": "core"
+    },
+    {
+      "file": "system/infra/agents/services/notification_cleanup.py",
+      "line": 964,
+      "type": "TODO",
+      "message": "Add cleanup time",
+      "category": "system"
+    },
+    {
+      "file": "trading/agents/updater/utils.py",
+      "line": 64,
+      "type": "TODO",
+      "message": "Implement actual drift detection logic",
+      "category": "agents"
+    },
+    {
+      "file": "trading/agents/upgrader/utils.py",
+      "line": 94,
+      "type": "TODO",
+      "message": "Implement actual drift detection logic",
+      "category": "agents"
+    },
+    {
+      "file": "trading/agents/upgrader/utils.py",
+      "line": 113,
+      "type": "TODO",
+      "message": "Implement actual deprecated logic detection",
+      "category": "agents"
+    },
+    {
+      "file": "trading/agents/upgrader/utils.py",
+      "line": 132,
+      "type": "TODO",
+      "message": "Implement actual parameter checking",
+      "category": "agents"
+    },
+    {
+      "file": "pages/7_Optimizer.py",
+      "line": 44,
+      "type": "TODO",
+      "message": "Implement data loading",
+      "category": "pages"
+    },
+    {
+      "file": "pages/forecast.py",
+      "line": 47,
+      "type": "TODO",
+      "message": "Replace with proper forecast implementation",
+      "category": "pages"
+    },
+    {
+      "file": "pages/settings.py",
+      "line": 143,
+      "type": "TODO",
+      "message": "Implement configuration saving",
+      "category": "pages"
+    },
+    {
+      "file": "pages/settings.py",
+      "line": 148,
+      "type": "TODO",
+      "message": "Implement configuration reset",
+      "category": "pages"
+    },
+    {
+      "file": "archive/legacy/optimizer/core/bayesian_optimizer.py",
+      "line": 121,
+      "type": "TODO",
+      "message": "Implement strategy evaluation",
+      "category": "archive"
+    },
+    {
+      "file": "archive/legacy/optimizer/core/genetic_optimizer.py",
+      "line": 179,
+      "type": "TODO",
+      "message": "Implement strategy evaluation",
+      "category": "archive"
+    },
+    {
+      "file": "archive/legacy/optimizer/core/grid_optimizer.py",
+      "line": 91,
+      "type": "TODO",
+      "message": "Implement strategy evaluation",
+      "category": "archive"
+    }
+  ],
+  "summary": {
+    "priority_high": [
+      "Implement plotting functionality in strategy_optimizer.py",
+      "Implement actual optimization in strategy_optimizer.py",
+      "Implement service health check in service_manager.py",
+      "Implement encryption/decryption logic in security.py"
+    ],
+    "priority_medium": [
+      "Implement API documentation generation in documentation_agent.py",
+      "Implement email sending logic in notification_handlers.py",
+      "Implement task monitoring logic in task_manager.py",
+      "Implement drift detection logic in agent utils"
+    ],
+    "priority_low": [
+      "Add more validation in step_handlers.py",
+      "Implement cleanup statistics in notification_cleanup.py",
+      "Add cleanup time in notification_cleanup.py"
+    ]
+  }
+} 

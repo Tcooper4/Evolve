@@ -5,72 +5,72 @@
     "db": "${REDIS_DB:-0}",
     "password": "${REDIS_PASSWORD}",
     "ssl": "${REDIS_SSL:-false}",
-    "timeout": 5
+    "timeout": "${REDIS_TIMEOUT:-5}"
   },
   "ray": {
-    "address": "auto",
-    "namespace": "automation",
+    "address": "${RAY_ADDRESS:-auto}",
+    "namespace": "${RAY_NAMESPACE:-automation}",
     "runtime_env": {
-      "working_dir": ".",
+      "working_dir": "${RAY_WORKING_DIR:-.}",
       "py_modules": ["automation"]
     },
     "resources": {
-      "num_cpus": 4,
-      "num_gpus": 0
+      "num_cpus": "${RAY_NUM_CPUS:-4}",
+      "num_gpus": "${RAY_NUM_GPUS:-0}"
     }
   },
   "kubernetes": {
-    "in_cluster": false,
-    "namespace": "automation",
-    "config_file": null,
-    "context": null,
-    "image": "automation:latest",
+    "in_cluster": "${K8S_IN_CLUSTER:-false}",
+    "namespace": "${K8S_NAMESPACE:-automation}",
+    "config_file": "${K8S_CONFIG_FILE:-null}",
+    "context": "${K8S_CONTEXT:-null}",
+    "image": "${K8S_IMAGE:-automation:latest}",
     "resources": {
       "requests": {
-        "cpu": "500m",
-        "memory": "512Mi"
+        "cpu": "${K8S_CPU_REQUEST:-500m}",
+        "memory": "${K8S_MEMORY_REQUEST:-512Mi}"
       },
       "limits": {
-        "cpu": "1000m",
-        "memory": "1Gi"
+        "cpu": "${K8S_CPU_LIMIT:-1000m}",
+        "memory": "${K8S_MEMORY_LIMIT:-1Gi}"
       }
     }
   },
   "logging": {
-    "level": "INFO",
-    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    "file": "automation/logs/orchestrator.log",
-    "max_size": 10485760,
-    "backup_count": 5
+    "level": "${LOG_LEVEL:-INFO}",
+    "format": "${LOG_FORMAT:-%(asctime)s - %(name)s - %(levelname)s - %(message)s}",
+    "file": "${LOG_FILE:-automation/logs/orchestrator.log}",
+    "max_size": "${LOG_MAX_SIZE:-10485760}",
+    "backup_count": "${LOG_BACKUP_COUNT:-5}"
   },
   "metrics": {
-    "collection_interval": 5,
-    "history_size": 1000,
+    "collection_interval": "${METRICS_COLLECTION_INTERVAL:-5}",
+    "history_size": "${METRICS_HISTORY_SIZE:-1000}",
     "prometheus": {
-      "enabled": true,
-      "port": 9090
+      "enabled": "${PROMETHEUS_ENABLED:-true}",
+      "port": "${PROMETHEUS_PORT:-9090}"
     }
   },
   "agents": {
-    "heartbeat_interval": 30,
-    "max_retries": 3,
-    "retry_delay": 5,
-    "max_concurrent_tasks": 10
+    "heartbeat_interval": "${AGENT_HEARTBEAT_INTERVAL:-30}",
+    "max_retries": "${AGENT_MAX_RETRIES:-3}",
+    "retry_delay": "${AGENT_RETRY_DELAY:-5}",
+    "max_concurrent_tasks": "${AGENT_MAX_CONCURRENT_TASKS:-10}"
   },
   "tasks": {
-    "max_queue_size": 1000,
-    "timeout": 3600,
-    "cleanup_interval": 86400
+    "max_queue_size": "${TASK_MAX_QUEUE_SIZE:-1000}",
+    "timeout": "${TASK_TIMEOUT:-3600}",
+    "cleanup_interval": "${TASK_CLEANUP_INTERVAL:-86400}"
   },
   "web": {
-    "host": "0.0.0.0",
-    "port": 5000,
-    "debug": false,
+    "host": "${WEB_HOST:-0.0.0.0}",
+    "port": "${WEB_PORT:-5000}",
+    "debug": "${WEB_DEBUG:-false}",
     "secret_key": "${WEB_SECRET_KEY}",
-    "session_timeout": 3600,
+    "session_timeout": "${WEB_SESSION_TIMEOUT:-3600}",
     "cors": {
-      "enabled": true,
-      "origins": ["http://localhost:5000"]
+      "enabled": "${WEB_CORS_ENABLED:-true}",
+      "origins": "${WEB_CORS_ORIGINS:-['http://localhost:5000']}"
     }
   }
 } 
