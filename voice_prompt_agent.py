@@ -224,7 +224,7 @@ class VoicePromptAgent:
         return command
     
     def _extract_additional_parameters(self, text: str, command: Dict[str, Any]):
-        """Extract additional parameters from voice command."""
+        """Extract additional parameters from text. Returns extracted data or status dict."""
         import re
         
         # Extract amount/quantity
@@ -248,6 +248,8 @@ class VoicePromptAgent:
             command['confidence'] *= 0.7
         elif any(word in text.lower() for word in ['definitely', 'sure', 'certain']):
             command['confidence'] *= 1.2
+        
+        return {"status": "parameters_extracted"}
     
     def execute_voice_command(self, command: Dict[str, Any]) -> Dict[str, Any]:
         """Execute parsed voice command."""
@@ -397,21 +399,25 @@ class VoicePromptAgent:
             }
     
     def _update_voice_history(self, command: Dict[str, Any], result: Dict[str, Any]):
-        """Update voice command history."""
+        """Update voice history. Returns status dict."""
         if self.voice_history:
             last_entry = self.voice_history[-1]
             last_entry['parsed_command'] = command
             last_entry['result'] = result
             last_entry['status'] = 'completed'
+        
+        return {"status": "voice_history_updated"}
     
     def get_voice_history(self, limit: int = 50) -> List[Dict]:
         """Get voice command history."""
         return self.voice_history[-limit:] if self.voice_history else []
     
     def clear_voice_history(self):
-        """Clear voice command history."""
+        """Clear voice command history. Returns status dict."""
         self.voice_history = []
         logger.info("Cleared voice command history")
+        
+        return {"status": "voice_history_cleared"}
     
     def get_voice_statistics(self) -> Dict[str, Any]:
         """Get voice command statistics."""

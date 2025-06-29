@@ -196,17 +196,19 @@ class SystemStatus:
             "agent": self.get_agent_liveness()
         }
         
-    def save_status_report(self, filepath: str) -> None:
-        """Save system status report to file."""
+    def save_status_report(self, filepath: str) -> dict:
+        """Save status report to file. Returns status dict with filepath."""
         try:
             status = self.get_system_info()
             with open(filepath, 'w') as f:
                 json.dump(status, f, indent=2)
+            return {"status": "report_saved", "filepath": filepath}
         except Exception as e:
             self.logger.error(f"Error saving status report: {str(e)}")
+            return {"status": "report_error", "error": str(e)}
             
-    def print_status(self) -> None:
-        """Print system status to console."""
+    def print_status(self) -> dict:
+        """Print system status. Returns status dict."""
         try:
             status = self.get_system_info()
             print("\nSystem Status Report")
@@ -234,8 +236,10 @@ class SystemStatus:
             print("\nAgent:")
             for key, value in status['agent'].items():
                 print(f"  {key}: {value}")
+            return {"status": "status_printed"}
         except Exception as e:
             self.logger.error(f"Error printing status: {str(e)}")
+            return {"status": "status_error", "error": str(e)}
             
 def get_system_scorecard() -> Dict[str, Any]:
     """Calculate system performance metrics from logs and goals.

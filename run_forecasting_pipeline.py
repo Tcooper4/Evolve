@@ -378,7 +378,26 @@ def main():
         port=args.port,
         host=args.host
     )
-    launcher.run()
+    
+    try:
+        launcher.run()
+        return {
+            "status": "completed",
+            "mode": args.mode,
+            "port": args.port,
+            "host": args.host,
+            "exit_code": 0
+        }
+    except Exception as e:
+        logger.error(f"Pipeline execution failed: {e}")
+        return {
+            "status": "failed",
+            "mode": args.mode,
+            "port": args.port,
+            "host": args.host,
+            "error": str(e),
+            "exit_code": 1
+        }
 
 
 if __name__ == "__main__":

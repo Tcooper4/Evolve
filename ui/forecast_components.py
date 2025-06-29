@@ -81,16 +81,19 @@ class ForecastChart:
             
             st.plotly_chart(fig, use_container_width=True)
             
+            return {"status": "forecast_rendered", "figure": fig}
+            
         except Exception as e:
             logger.error(f"Error rendering forecast chart: {e}")
             st.error("Error rendering forecast chart")
+            return {"status": "forecast_render_failed", "error": str(e)}
     
     def render_forecast_metrics(self, metrics: Dict[str, float]):
         """Render forecast performance metrics."""
         try:
             if not metrics:
                 st.warning("No forecast metrics available")
-                return
+                return {"status": "no_metrics_available"}
             
             st.subheader("Forecast Metrics")
             
@@ -113,9 +116,12 @@ class ForecastChart:
                 r2 = metrics.get('r2', 0)
                 st.metric("R²", f"{r2:.4f}")
             
+            return {"status": "metrics_rendered", "metrics": metrics}
+            
         except Exception as e:
             logger.error(f"Error rendering forecast metrics: {e}")
             st.error("Error rendering metrics")
+            return {"status": "metrics_render_failed", "error": str(e)}
 
 class ModelSelector:
     """Model selection component."""
