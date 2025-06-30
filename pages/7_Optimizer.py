@@ -71,13 +71,13 @@ def get_available_symbols() -> list:
     if CONFIG_AVAILABLE:
         # In production, this would come from a database or API
         # For now, we'll use a dynamic approach
-        return []
+        return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     return []
 
 def get_user_symbols() -> list:
     """Get symbols from user input or session state."""
     if 'user_symbols' in st.session_state:
-        return st.session_state['user_symbols']
+        return {'success': True, 'result': st.session_state['user_symbols'], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     return []
 
 def load_strategy_data(symbol: Optional[str] = None) -> pd.DataFrame:
@@ -129,7 +129,7 @@ def load_strategy_data(symbol: Optional[str] = None) -> pd.DataFrame:
         data = _normalize_column_names(data)
         
         logger.info(f"Loaded {len(data)} rows of data for {symbol}")
-        return data
+        return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     except Exception as e:
         logger.error(f"Error loading strategy data: {str(e)}")
@@ -173,7 +173,7 @@ def _normalize_column_names(data: pd.DataFrame) -> pd.DataFrame:
         
     except Exception as e:
         logger.error(f"Error normalizing column names: {str(e)}")
-        return data
+        return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     st.title("Strategy Optimizer")
@@ -424,7 +424,7 @@ def main():
     if st.sidebar.button("🚀 Start Optimization"):
         if data is None or data.empty:
             st.sidebar.error("Please load market data before running optimization.")
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         with st.spinner("Running optimization..."):
             try:

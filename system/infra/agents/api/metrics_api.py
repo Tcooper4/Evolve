@@ -14,6 +14,7 @@ class MetricsAPI:
         self._metrics_history: List[Dict] = []
         self._max_history_size = 1000
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def get_system_metrics(self) -> Dict:
         """Get current system metrics"""
         try:
@@ -128,7 +129,7 @@ class MetricsAPI:
         elif cpu_percent > 70 or memory_percent > 70:
             return 'warning'
         else:
-            return 'active'
+            return {'success': True, 'result': 'active', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     async def get_all_metrics(self) -> Dict:
         """Get all metrics in one call"""

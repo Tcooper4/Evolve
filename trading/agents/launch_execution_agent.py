@@ -29,12 +29,13 @@ def setup_logging() -> None:
     )
 
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 def load_config(config_path: str = "trading/agents/execution_config.json") -> Dict[str, Any]:
     """Load configuration from file."""
     config_file = Path(config_path)
     if config_file.exists():
         with open(config_file, 'r') as f:
-            return json.load(f)
+            return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     else:
         # Default configuration
         default_config = {
@@ -109,6 +110,7 @@ async def main():
         print(f"\n🛑 Received signal {signum}, shutting down...")
         sys.exit(0)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     

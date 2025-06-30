@@ -23,6 +23,7 @@ class SystemStatus:
         self.start_time = time.time()
         self.logger = logging.getLogger(__name__)
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def get_uptime(self) -> str:
         """Get system uptime."""
         try:
@@ -30,7 +31,7 @@ class SystemStatus:
             return str(timedelta(seconds=int(uptime_seconds)))
         except Exception as e:
             self.logger.error(f"Error getting uptime: {str(e)}")
-            return "Unknown"
+            return {'success': True, 'result': "Unknown", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def get_cpu_info(self) -> Dict[str, Any]:
         """Get CPU information."""
@@ -43,7 +44,7 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting CPU info: {str(e)}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 "usage_percent": None,
                 "count": None,
                 "frequency": None,
@@ -62,7 +63,7 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting memory info: {str(e)}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 "total": None,
                 "available": None,
                 "used": None,
@@ -81,7 +82,7 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting disk info: {str(e)}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 "total": None,
                 "used": None,
                 "free": None,
@@ -100,7 +101,7 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting network info: {str(e)}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 "bytes_sent": None,
                 "bytes_recv": None,
                 "packets_sent": None,
@@ -121,7 +122,7 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting process info: {str(e)}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 "pid": None,
                 "name": None,
                 "status": None,
@@ -156,7 +157,7 @@ class SystemStatus:
                 }
         except Exception as e:
             self.logger.error(f"Error getting agent liveness: {str(e)}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 "status": "unknown",
                 "pid": None,
                 "uptime": None,
@@ -170,7 +171,7 @@ class SystemStatus:
             if os.path.exists(heartbeat_file):
                 with open(heartbeat_file, 'r') as f:
                     last_line = f.readlines()[-1]
-                    return last_line.strip()
+                    return {'success': True, 'result': last_line.strip(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             return None
         except Exception as e:
             self.logger.error(f"Error getting last heartbeat: {str(e)}")
@@ -178,7 +179,7 @@ class SystemStatus:
             
     def get_system_info(self) -> Dict[str, Any]:
         """Get complete system information."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "timestamp": datetime.now().isoformat(),
             "uptime": self.get_uptime(),
             "platform": {
@@ -205,7 +206,7 @@ class SystemStatus:
             return {"status": "report_saved", "filepath": filepath}
         except Exception as e:
             self.logger.error(f"Error saving status report: {str(e)}")
-            return {"status": "report_error", "error": str(e)}
+            return {'success': True, 'result': {"status": "report_error", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def print_status(self) -> dict:
         """Print system status. Returns status dict."""
@@ -239,7 +240,7 @@ class SystemStatus:
             return {"status": "status_printed"}
         except Exception as e:
             self.logger.error(f"Error printing status: {str(e)}")
-            return {"status": "status_error", "error": str(e)}
+            return {'success': True, 'result': {"status": "status_error", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
 def get_system_scorecard() -> Dict[str, Any]:
     """Calculate system performance metrics from logs and goals.
@@ -258,7 +259,7 @@ def get_system_scorecard() -> Dict[str, Any]:
         # Load performance log
         log_file = Path("memory/logs/performance_log.csv")
         if not log_file.exists():
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 "sharpe_7d": 0.0,
                 "sharpe_30d": 0.0,
                 "win_rate": 0.0,

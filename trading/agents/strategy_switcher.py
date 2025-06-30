@@ -428,4 +428,4 @@ class StrategySwitcher:
     def __del__(self):
         """Cleanup on deletion."""
         if hasattr(self, 'conn'):
-            self.conn.close() 
+            self.conn.close()

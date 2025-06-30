@@ -65,7 +65,7 @@ except ImportError:
             """Simple Sharpe ratio calculation."""
             excess_returns = returns - risk_free
             if len(excess_returns) == 0 or excess_returns.std() == 0:
-                return 0.0
+                return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             return (excess_returns.mean() * period) / (excess_returns.std() * np.sqrt(period))
         
         @staticmethod
@@ -74,7 +74,7 @@ except ImportError:
             excess_returns = returns - risk_free
             downside_returns = excess_returns[excess_returns < 0]
             if len(downside_returns) == 0 or downside_returns.std() == 0:
-                return 0.0
+                return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             return (excess_returns.mean() * period) / (downside_returns.std() * np.sqrt(period))
         
         @staticmethod
@@ -83,14 +83,14 @@ except ImportError:
             cumulative = (1 + returns).cumprod()
             running_max = cumulative.expanding().max()
             drawdown = (cumulative - running_max) / running_max
-            return drawdown.min()
+            return {'success': True, 'result': drawdown.min(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         @staticmethod
         def calmar_ratio(returns, risk_free=0.0, period=252):
             """Simple Calmar ratio calculation."""
             max_dd = EmpyricalFallback.max_drawdown(returns)
             if max_dd == 0:
-                return 0.0
+                return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             annual_return = (1 + returns.mean()) ** period - 1
             return annual_return / abs(max_dd)
     
@@ -257,6 +257,7 @@ class Backtester:
         # Setup logging
         self._setup_logging()
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_logging(self) -> None:
         """Setup logging configuration."""
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -269,6 +270,7 @@ class Backtester:
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
             
+                return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _calculate_position_size(self, 
                                asset: str,
                                price: float,
@@ -307,7 +309,7 @@ class Backtester:
         position_size = sizing_method(asset, price, strategy, signal)
         
         # Apply position size limits
-        return max(min(position_size, MAX_POSITION_SIZE), MIN_POSITION_SIZE)
+        return {'success': True, 'result': max(min(position_size, MAX_POSITION_SIZE), MIN_POSITION_SIZE), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _calculate_volatility_adjusted_size(self, 
                                           asset: str,
@@ -321,7 +323,7 @@ class Backtester:
         
         # Adjust position size inversely to volatility
         base_size = self._calculate_equal_weighted_size(price)
-        return base_size * (1 / (1 + volatility))
+        return {'success': True, 'result': base_size * (1 / (1 + volatility)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _calculate_optimal_f_size(self, 
                                 asset: str,
@@ -338,7 +340,7 @@ class Backtester:
         losing_trades = [t for t in trades if t.pnl and t.pnl < 0]
         
         if not winning_trades or not losing_trades:
-            return self._calculate_equal_weighted_size(price)
+            return {'success': True, 'result': self._calculate_equal_weighted_size(price), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         win_rate = len(winning_trades) / len(trades)
         avg_win = np.mean([t.pnl for t in winning_trades])
@@ -371,7 +373,7 @@ class Backtester:
         target_weights = risk_contrib / total_risk
         
         # Calculate position size
-        return target_weights[asset] * self.cash / price
+        return {'success': True, 'result': target_weights[asset] * self.cash / price, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _calculate_black_litterman_size(self, 
                                       asset: str,
@@ -401,7 +403,7 @@ class Backtester:
         
         # Calculate position size
         position_size = (post_return - self.risk_free_rate) / (post_cov * self.risk_per_trade)
-        return position_size * self.cash / price
+        return {'success': True, 'result': position_size * self.cash / price, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _calculate_martingale_size(self, 
                                  asset: str,
@@ -417,7 +419,7 @@ class Backtester:
         # Double position size after losses
         last_trade = trades[-1]
         if last_trade.pnl and last_trade.pnl < 0:
-            return last_trade.position_size * 2
+            return {'success': True, 'result': last_trade.position_size * 2, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return self._calculate_equal_weighted_size(price)
         
     def _calculate_anti_martingale_size(self, 
@@ -434,7 +436,7 @@ class Backtester:
         # Double position size after wins
         last_trade = trades[-1]
         if last_trade.pnl and last_trade.pnl > 0:
-            return last_trade.position_size * 2
+            return {'success': True, 'result': last_trade.position_size * 2, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return self._calculate_equal_weighted_size(price)
         
     def _calculate_half_kelly_size(self, 
@@ -444,7 +446,7 @@ class Backtester:
                                  signal: float) -> float:
         """Calculate position size using Half-Kelly strategy."""
         kelly_size = self._calculate_kelly_size(asset, price, strategy, signal)
-        return kelly_size * 0.5
+        return {'success': True, 'result': kelly_size * 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _calculate_dynamic_kelly_size(self, 
                                     asset: str,
@@ -462,7 +464,7 @@ class Backtester:
         
         # Reduce position size in high volatility or weak trend
         adjustment = 1 / (1 + volatility) * (1 + trend_strength)
-        return kelly_size * adjustment
+        return {'success': True, 'result': kelly_size * adjustment, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _calculate_correlation_adjusted_size(self, 
                                            asset: str,
@@ -482,7 +484,7 @@ class Backtester:
         
         # Adjust position size inversely to correlation
         base_size = self._calculate_equal_weighted_size(price)
-        return base_size * (1 - abs(avg_correlation))
+        return {'success': True, 'result': base_size * (1 - abs(avg_correlation)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _calculate_momentum_weighted_size(self, 
                                         asset: str,
@@ -500,7 +502,7 @@ class Backtester:
         
         # Adjust position size based on momentum
         base_size = self._calculate_equal_weighted_size(price)
-        return base_size * (1 + momentum_score)
+        return {'success': True, 'result': base_size * (1 + momentum_score), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _calculate_rsi(self, returns: pd.Series, period: int = 14) -> float:
         """Calculate Relative Strength Index."""
@@ -508,7 +510,7 @@ class Backtester:
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
         rs = gain / loss
-        return 100 - (100 / (1 + rs.iloc[-1]))
+        return {'success': True, 'result': 100 - (100 / (1 + rs.iloc[-1])), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _calculate_mean_variance_size(self, 
                                     asset: str,
@@ -534,7 +536,7 @@ class Backtester:
             portfolio_return = np.sum(mean_returns * weights)
             portfolio_vol = np.sqrt(weights.T @ cov_matrix @ weights)
             sharpe_ratio = portfolio_return / portfolio_vol
-            return -sharpe_ratio  # Minimize negative Sharpe ratio
+            return {'success': True, 'result': {'success': True, 'result': -sharpe_ratio  # Minimize negative Sharpe ratio, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Optimize weights
         constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
@@ -566,7 +568,7 @@ class Backtester:
         weights = np.array([1/n_assets] * n_assets)  # Initial guess
         
         def portfolio_variance(weights):
-            return weights.T @ cov_matrix @ weights
+            return {'success': True, 'result': {'success': True, 'result': weights.T @ cov_matrix @ weights, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Optimize weights
         constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
@@ -598,7 +600,7 @@ class Backtester:
         def diversification_ratio(weights):
             portfolio_vol = np.sqrt(weights.T @ (corr_matrix * np.outer(vol, vol)) @ weights)
             weighted_vol = np.sum(weights * vol)
-            return -weighted_vol / portfolio_vol  # Minimize negative ratio
+            return {'success': True, 'result': {'success': True, 'result': -weighted_vol / portfolio_vol  # Minimize negative ratio, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Optimize weights
         n_assets = len(returns.columns)
@@ -637,7 +639,7 @@ class Backtester:
         weights = weights / weights.sum()
         
         # Get weight for the current asset
-        return weights[asset]
+        return {'success': True, 'result': weights[asset], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_adaptive_weight_size(self, 
                                       asset: str,
@@ -663,7 +665,7 @@ class Backtester:
         weights = adaptive_score / adaptive_score.sum()
         
         # Get weight for the current asset
-        return weights[asset]
+        return {'success': True, 'result': weights[asset], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_regime_based_size(self, 
                                    asset: str,
@@ -701,7 +703,7 @@ class Backtester:
             'neutral': 1.0
         }
         
-        return base_size * regime_multipliers[regime]
+        return {'success': True, 'result': base_size * regime_multipliers[regime], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_factor_based_size(self, 
                                    asset: str,
@@ -730,19 +732,19 @@ class Backtester:
         
         # Calculate position size based on factor score
         base_size = self._calculate_equal_weighted_size(price)
-        return base_size * (1 + factor_score)
+        return {'success': True, 'result': base_size * (1 + factor_score), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_value_factor(self, asset: str) -> float:
         """Calculate value factor for an asset."""
         # Implement value factor calculation
         # This is a placeholder - implement actual value metrics
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_quality_factor(self, asset: str) -> float:
         """Calculate quality factor for an asset."""
         # Implement quality factor calculation
         # This is a placeholder - implement actual quality metrics
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_machine_learning_size(self, 
                                       asset: str,
@@ -779,14 +781,14 @@ class Backtester:
         
         # Calculate position size based on prediction
         base_size = self._calculate_equal_weighted_size(price)
-        return base_size * (1 + predicted_return)
+        return {'success': True, 'result': base_size * (1 + predicted_return), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_macd(self, returns: pd.Series) -> float:
         """Calculate MACD indicator."""
         exp1 = returns.ewm(span=12, adjust=False).mean()
         exp2 = returns.ewm(span=26, adjust=False).mean()
         macd = exp1 - exp2
-        return macd.iloc[-1]
+        return {'success': True, 'result': macd.iloc[-1], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_bollinger_bands(self, returns: pd.Series) -> float:
         """Calculate Bollinger Bands indicator."""
@@ -794,7 +796,7 @@ class Backtester:
         std = returns.rolling(window=20).std()
         upper_band = sma + (std * 2)
         lower_band = sma - (std * 2)
-        return (returns.iloc[-1] - lower_band.iloc[-1]) / (upper_band.iloc[-1] - lower_band.iloc[-1])
+        return {'success': True, 'result': (returns.iloc[-1] - lower_band.iloc[-1]) / (upper_band.iloc[-1] - lower_band.iloc[-1]), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_stochastic(self, returns: pd.Series) -> float:
         """Calculate Stochastic Oscillator."""
@@ -803,7 +805,7 @@ class Backtester:
         close = returns
         k = 100 * (close - low) / (high - low)
         d = k.rolling(window=3).mean()
-        return d.iloc[-1]
+        return {'success': True, 'result': d.iloc[-1], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_adx(self, returns: pd.Series) -> float:
         """Calculate Average Directional Index."""
@@ -816,24 +818,24 @@ class Backtester:
             'lc': abs(low - close.shift(1))
         }).max(axis=1)
         atr = tr.rolling(window=14).mean()
-        return atr.iloc[-1]
+        return {'success': True, 'result': atr.iloc[-1], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_cci(self, returns: pd.Series) -> float:
         """Calculate Commodity Channel Index."""
         tp = returns.rolling(window=20).mean()
         md = returns.rolling(window=20).std()
         cci = (returns - tp) / (0.015 * md)
-        return cci.iloc[-1]
+        return {'success': True, 'result': cci.iloc[-1], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_mfi(self, returns: pd.Series) -> float:
         """Calculate Money Flow Index."""
         # This is a simplified version - implement full MFI calculation
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_obv(self, returns: pd.Series) -> float:
         """Calculate On-Balance Volume."""
         # This is a simplified version - implement full OBV calculation
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_technical_indicators(self, returns: pd.Series) -> Dict[str, float]:
         """Calculate comprehensive technical indicators."""
@@ -892,7 +894,7 @@ class Backtester:
         vwap = self._calculate_vwap(returns)
         atr = self._calculate_average_true_range(returns)
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'ichimoku': {
                 'tenkan': tenkan.iloc[-1],
                 'kijun': kijun.iloc[-1],
@@ -931,22 +933,22 @@ class Backtester:
         low = returns.rolling(window=14).min()
         close = returns
         wr = -100 * (high - close) / (high - low)
-        return wr.iloc[-1]
+        return {'success': True, 'result': wr.iloc[-1], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_rate_of_change(self, returns: pd.Series) -> float:
         """Calculate Rate of Change."""
         roc = returns.pct_change(periods=10) * 100
-        return roc.iloc[-1]
+        return {'success': True, 'result': roc.iloc[-1], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_chaikin_money_flow(self, returns: pd.Series) -> float:
         """Calculate Chaikin Money Flow."""
         # This is a simplified version - implement full CMF calculation
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_vwap(self, returns: pd.Series) -> float:
         """Calculate Volume Weighted Average Price."""
         # This is a simplified version - implement full VWAP calculation
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_average_true_range(self, returns: pd.Series) -> float:
         """Calculate Average True Range."""
@@ -958,7 +960,7 @@ class Backtester:
         tr3 = abs(low - close.shift(1))
         tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
         atr = tr.rolling(window=14).mean()
-        return atr.iloc[-1]
+        return {'success': True, 'result': atr.iloc[-1], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_elliott_wave(self, prices: pd.Series) -> Dict[str, float]:
         """Calculate Elliott Wave points."""
@@ -977,7 +979,7 @@ class Backtester:
             'wave5': high
         }
         
-        return wave_points
+        return {'success': True, 'result': wave_points, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_risk_metrics(self, 
                               asset: str, 
@@ -1059,7 +1061,7 @@ class Backtester:
         # Calculate idiosyncratic risk
         idiosyncratic_risk = self._calculate_idiosyncratic_risk(returns)
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'volatility': volatility,
             'var_95': var_95,
             'cvar_95': cvar_95,
@@ -1104,7 +1106,7 @@ class Backtester:
         # Calculate regime risk score
         regime_risk = (vol_regime * 0.4 + trend_regime * 0.3 + momentum_regime * 0.3)
         
-        return regime_risk
+        return {'success': True, 'result': regime_risk, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_factor_risk(self, returns: pd.Series) -> float:
         """Calculate factor risk based on factor exposures."""
@@ -1124,7 +1126,7 @@ class Backtester:
             abs(volatility_factor) * 0.15
         )
         
-        return factor_risk
+        return {'success': True, 'result': factor_risk, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_liquidity_risk(self, asset: str) -> float:
         """Calculate liquidity risk for an asset."""
@@ -1137,7 +1139,7 @@ class Backtester:
         # Calculate liquidity risk score
         liquidity_risk = 1 / (volume.iloc[-1] * (1 - spread.iloc[-1]))
         
-        return liquidity_risk
+        return {'success': True, 'result': liquidity_risk, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_concentration_risk(self, asset: str) -> float:
         """Calculate concentration risk for an asset."""
@@ -1149,7 +1151,7 @@ class Backtester:
         # Calculate concentration risk score
         concentration_risk = weight ** 2
         
-        return concentration_risk
+        return {'success': True, 'result': concentration_risk, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_leverage_risk(self, asset: str) -> float:
         """Calculate leverage risk for an asset."""
@@ -1161,31 +1163,31 @@ class Backtester:
         # Calculate leverage risk score
         leverage_risk = min(leverage / 2, 1)
         
-        return leverage_risk
+        return {'success': True, 'result': leverage_risk, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_currency_risk(self, asset: str) -> float:
         """Calculate currency risk for an asset."""
         # This is a placeholder - implement actual currency risk calculation
         # using exchange rate data and currency exposure
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_interest_rate_risk(self, asset: str) -> float:
         """Calculate interest rate risk for an asset."""
         # This is a placeholder - implement actual interest rate risk calculation
         # using yield curve data and duration
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_inflation_risk(self, asset: str) -> float:
         """Calculate inflation risk for an asset."""
         # This is a placeholder - implement actual inflation risk calculation
         # using inflation data and sensitivity
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_political_risk(self, asset: str) -> float:
         """Calculate political risk for an asset."""
         # This is a placeholder - implement actual political risk calculation
         # using political stability indices and country exposure
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_systemic_risk(self, returns: pd.Series) -> float:
         """Calculate systemic risk based on market conditions."""
@@ -1205,7 +1207,7 @@ class Backtester:
         # Calculate systemic risk score
         systemic_risk = (abs(correlation) * 0.5 + abs(beta) * 0.5)
         
-        return systemic_risk
+        return {'success': True, 'result': systemic_risk, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_idiosyncratic_risk(self, returns: pd.Series) -> float:
         """Calculate idiosyncratic risk for an asset."""
@@ -1223,7 +1225,7 @@ class Backtester:
         # Calculate idiosyncratic risk
         idiosyncratic_risk = np.sqrt(total_risk ** 2 - systematic_risk ** 2)
         
-        return idiosyncratic_risk
+        return {'success': True, 'result': idiosyncratic_risk, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Calculate comprehensive performance metrics."""
@@ -1266,7 +1268,7 @@ class Backtester:
         # Calculate benchmark metrics if available
         benchmark_metrics = self._calculate_benchmark_metrics() if self.benchmark is not None else {}
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'total_return': total_return,
             'annual_return': annual_return,
             'volatility': volatility,
@@ -1289,7 +1291,7 @@ class Backtester:
     def _calculate_benchmark_metrics(self) -> Dict[str, Any]:
         """Calculate benchmark comparison metrics."""
         if self.benchmark is None:
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         strategy_returns = pd.Series(self.portfolio_values).pct_change().dropna()
         benchmark_returns = self.benchmark.pct_change().dropna()
@@ -1322,6 +1324,7 @@ class Backtester:
         else:
             self._plot_matplotlib()
             
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _plot_plotly(self) -> None:
         """Create interactive Plotly visualization."""
         # Create subplot figure
@@ -1534,6 +1537,7 @@ class Backtester:
                     volume=True,
                     savefig=f'{asset}_candlestick.png')
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _plot_matplotlib(self) -> None:
         """Create static Matplotlib visualization."""
         # Set style
@@ -1671,15 +1675,17 @@ class Backtester:
         # Save figure
         plt.savefig('backtest_results.png', dpi=300, bbox_inches='tight')
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def __del__(self):
         """Cleanup when object is destroyed."""
         if hasattr(self, 'trade_log_file'):
             self.trade_log_file.close()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _calculate_risk_decomposition(self) -> Dict[str, float]:
         """Calculate risk decomposition across assets."""
         if not self.positions:
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Calculate returns for all positions
         returns = pd.DataFrame()
@@ -1707,7 +1713,7 @@ class Backtester:
     def _calculate_performance_attribution(self) -> Dict[str, float]:
         """Calculate performance attribution across assets."""
         if not self.positions:
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Calculate returns for all positions
         returns = pd.DataFrame()
@@ -1730,7 +1736,7 @@ class Backtester:
         returns = pd.DataFrame()
         for asset in self.positions:
             returns[asset] = self.data[asset].pct_change()
-        return returns.corr()
+        return {'success': True, 'result': returns.corr(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _create_network_graph(self) -> Dict[str, List]:
         """Create network graph of asset relationships."""
@@ -1765,7 +1771,7 @@ class Backtester:
             node_y.append(y)
             node_labels.append(node)
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'x': node_x,
             'y': node_y,
             'labels': node_labels,
@@ -1783,11 +1789,12 @@ class GRUModel(nn.Module):
         self.gru = nn.GRU(input_dim, hidden_dim, num_layers, batch_first=True, dropout=dropout)
         self.fc = nn.Linear(hidden_dim, output_dim)
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def forward(self, x):
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
         out, _ = self.gru(x, h0)
         out = self.fc(out[:, -1, :])
-        return out
+        return {'success': True, 'result': out, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def run_backtest(self, strategy: Union[str, List[str]], plot: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, Any]]:
     """Run backtest for one or more strategies.
@@ -1872,7 +1879,7 @@ def run_backtest(self, strategy: Union[str, List[str]], plot: bool = True) -> Tu
         combined_df = pd.concat([res['equity_curve'] for res in self.strategy_results.values()])
         combined_trades = pd.concat([res['trade_log'] for res in self.strategy_results.values()])
         combined_metrics = self._combine_metrics([res['metrics'] for res in self.strategy_results.values()])
-        return combined_df, combined_trades, combined_metrics
+        return {'success': True, 'result': combined_df, combined_trades, combined_metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def _calculate_equity_curve(self, strategy: str) -> pd.DataFrame:
     """Calculate equity curve for a strategy.
@@ -1899,7 +1906,7 @@ def _calculate_equity_curve(self, strategy: str) -> pd.DataFrame:
     df['Returns'] = df['Portfolio Value'].pct_change()
     df['Cumulative Returns'] = (1 + df['Returns']).cumprod()
     
-    return df
+    return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def _generate_trade_log(self, strategy: str) -> pd.DataFrame:
     """Generate trade log for a strategy.
@@ -1913,7 +1920,7 @@ def _generate_trade_log(self, strategy: str) -> pd.DataFrame:
     trades = self.strategy_results[strategy]['trades']
     
     if not trades:
-        return pd.DataFrame()
+        return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     # Convert trades to DataFrame
     trade_log = pd.DataFrame([{
@@ -1960,7 +1967,7 @@ def _compute_metrics(self, df: pd.DataFrame, trade_log: pd.DataFrame) -> Dict[st
     # Defensive check for returns
     if returns.empty or returns.isna().all():
         logger.warning("No valid returns data, using fallback metrics")
-        return self._get_fallback_metrics()
+        return {'success': True, 'result': self._get_fallback_metrics(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     # Basic metrics with defensive checks
     try:
@@ -2060,7 +2067,7 @@ def _compute_metrics(self, df: pd.DataFrame, trade_log: pd.DataFrame) -> Dict[st
 
 def _get_fallback_metrics(self) -> Dict[str, Any]:
     """Get fallback metrics when calculation fails."""
-    return {
+    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         'total_return': 0.0,
         'annual_return': 0.0,
         'volatility': 0.01,
@@ -2078,7 +2085,7 @@ def _get_fallback_metrics(self) -> Dict[str, Any]:
 
 def _get_fallback_risk_metrics(self) -> Dict[str, float]:
     """Get fallback risk metrics when calculation fails."""
-    return {
+    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         'var_95': 0.0,
         'cvar_95': 0.0,
         'beta': 1.0,
@@ -2146,7 +2153,7 @@ def _combine_metrics(self, metrics_list: List[Dict[str, Any]]) -> Dict[str, Any]
     for key in risk_metric_keys:
         combined['risk_metrics'][key] = np.mean([m['risk_metrics'][key] for m in metrics_list])
     
-    return combined
+    return {'success': True, 'result': combined, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def plot_results(self, use_plotly: bool = True) -> None:
     """Plot backtest results."""
@@ -2157,3 +2164,4 @@ def plot_results(self, use_plotly: bool = True) -> None:
         self._plot_plotly()
     else:
         self._plot_matplotlib()
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

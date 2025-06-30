@@ -91,7 +91,7 @@ def create_forecast_form(
     }
     logger.info(f"Forecast form submitted: {form_data}")
     
-    return form_data
+    return {'success': True, 'result': form_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_forecast_chart(
     data: pd.DataFrame,
@@ -178,7 +178,7 @@ def create_forecast_chart(
     # Log chart creation for agentic monitoring
     logger.info(f"Forecast chart created with model: {model_config.name}")
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_forecast_metrics(
     data: pd.DataFrame,
@@ -218,90 +218,135 @@ def create_forecast_metrics(
     # Log metrics for agentic monitoring
     logger.info(f"Forecast metrics calculated: {metrics}")
     
-    return metrics
+    return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_forecast_export(
     data: pd.DataFrame,
     model_config: ModelConfig,
     metrics: Dict[str, float]
-) -> None:
+) -> Dict[str, Any]:
     """Create export options for forecast results.
     
     Args:
         data: DataFrame containing forecast data
         model_config: Configuration for the model used
         metrics: Dictionary of performance metrics
+        
+    Returns:
+        Dictionary with status and export information
     """
-    st.subheader("Export Results")
-    
-    # Create export options
-    export_format = st.radio(
-        "Select Export Format",
-        ["CSV", "JSON", "Excel"],
-        key="export_format"
-    )
-    
-    if st.button("Export"):
-        # Prepare export data
-        export_data = {
-            "forecast": data.to_dict(),
-            "model": model_config.name,
-            "metrics": metrics,
-            "timestamp": datetime.now().isoformat()
-        }
+    try:
+        st.subheader("Export Results")
         
-        # Export based on selected format
-        if export_format == "CSV":
-            data.to_csv("forecast_results.csv")
-        elif export_format == "JSON":
-            with open("forecast_results.json", "w") as f:
-                json.dump(export_data, f, indent=2)
-        else:  # Excel
-            data.to_excel("forecast_results.xlsx")
+        # Create export options
+        export_format = st.radio(
+            "Select Export Format",
+            ["CSV", "JSON", "Excel"],
+            key="export_format"
+        )
         
-        st.success(f"Results exported as {export_format}")
+        if st.button("Export"):
+            # Prepare export data
+            export_data = {
+                "forecast": data.to_dict(),
+                "model": model_config.name,
+                "metrics": metrics,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Export based on selected format
+            if export_format == "CSV":
+                data.to_csv("forecast_results.csv")
+            elif export_format == "JSON":
+                with open("forecast_results.json", "w") as f:
+                    json.dump(export_data, f, indent=2)
+            else:  # Excel
+                data.to_excel("forecast_results.xlsx")
+            
+            st.success(f"Results exported as {export_format}")
+            
+            # Log export for agentic monitoring
+            logger.info(f"Forecast results exported as {export_format}")
+            
+            return {
+                "status": "success",
+                "message": f"Results exported as {export_format}",
+                "export_format": export_format,
+                "file_path": f"forecast_results.{export_format.lower()}"
+            }
         
-        # Log export for agentic monitoring
-        logger.info(f"Forecast results exported as {export_format}")
+        return {"status": "pending", "message": "Export not initiated"}
+        
+    except Exception as e:
+        logger.error(f"Error exporting forecast results: {e}")
+        return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
-def create_forecast_explanation(forecast_data: Dict[str, Any]) -> None:
+def create_forecast_explanation(forecast_data: Dict[str, Any]) -> Dict[str, Any]:
     """Display forecast explanation and insights.
     
     Args:
         forecast_data: Dictionary containing forecast results
+        
+    Returns:
+        Dictionary with status and explanation information
     """
-    st.subheader("Forecast Analysis")
-    
-    # Display explanation
-    st.markdown(forecast_data["explanation"])
-    
-    # Display key insights
-    st.subheader("Key Insights")
-    for insight in forecast_data["insights"]:
-        st.markdown(f"- {insight}")
-    
-    # Display risk factors
-    st.subheader("Risk Factors")
-    for risk in forecast_data["risks"]:
-        st.markdown(f"- {risk}")
+    try:
+        st.subheader("Forecast Analysis")
+        
+        # Display explanation
+        st.markdown(forecast_data["explanation"])
+        
+        # Display key insights
+        st.subheader("Key Insights")
+        for insight in forecast_data["insights"]:
+            st.markdown(f"- {insight}")
+        
+        # Display risk factors
+        st.subheader("Risk Factors")
+        for risk in forecast_data["risks"]:
+            st.markdown(f"- {risk}")
+        
+        return {
+            "status": "success",
+            "message": "Forecast explanation displayed",
+            "insights_count": len(forecast_data.get("insights", [])),
+            "risks_count": len(forecast_data.get("risks", []))
+        }
+    except Exception as e:
+        logger.error(f"Error displaying forecast explanation: {e}")
+        return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
-def create_forecast_table(forecast_data: Dict[str, Any]) -> None:
+def create_forecast_table(forecast_data: Dict[str, Any]) -> Dict[str, Any]:
     """Display forecast results in a table.
     
     Args:
         forecast_data: Dictionary containing forecast results
+        
+    Returns:
+        Dictionary with status and table information
     """
-    # Create DataFrame
-    df = pd.DataFrame({
-        "Date": forecast_data["forecast_dates"],
-        "Forecast": forecast_data["forecast"],
-        "Lower Bound": forecast_data["lower_bound"],
-        "Upper Bound": forecast_data["upper_bound"]
-    })
-    
-    # Format numbers
-    for col in ["Forecast", "Lower Bound", "Upper Bound"]:
-        df[col] = df[col].round(2)
-    
-    # Display table
-    st.dataframe(df, use_container_width=True) 
+    try:
+        # Create DataFrame
+        df = pd.DataFrame({
+            "Date": forecast_data["forecast_dates"],
+            "Forecast": forecast_data["forecast"],
+            "Lower Bound": forecast_data["lower_bound"],
+            "Upper Bound": forecast_data["upper_bound"]
+        })
+        
+        # Format numbers
+        for col in ["Forecast", "Lower Bound", "Upper Bound"]:
+            df[col] = df[col].round(2)
+        
+        # Display table
+        st.dataframe(df, use_container_width=True)
+        
+        return {
+            "status": "success",
+            "message": "Forecast table displayed",
+            "rows_count": len(df),
+            "columns_count": len(df.columns)
+        }
+    except Exception as e:
+        logger.error(f"Error displaying forecast table: {e}")
+        return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

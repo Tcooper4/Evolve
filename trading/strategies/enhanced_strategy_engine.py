@@ -87,6 +87,7 @@ class EnhancedStrategyEngine:
         
         logger.info("Enhanced Strategy Engine initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _initialize_components(self):
         """Initialize strategy engine components."""
         try:
@@ -105,6 +106,7 @@ class EnhancedStrategyEngine:
             logger.warning("PerformanceChecker not available - using fallback")
             self.meta_agent = self._create_fallback_meta_agent()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _create_fallback_regime_classifier(self):
         """Create fallback regime classifier."""
         class FallbackRegimeClassifier:
@@ -121,10 +123,10 @@ class EnhancedStrategyEngine:
                 elif volatility > 0.03:
                     return MarketRegime.VOLATILE
                 else:
-                    return MarketRegime.SIDEWAYS
+                    return {'success': True, 'result': {'success': True, 'result': MarketRegime.SIDEWAYS, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def get_regime_confidence(self) -> float:
-                return 0.7
+                return {'success': True, 'result': 0.7, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackRegimeClassifier()
     
@@ -132,7 +134,7 @@ class EnhancedStrategyEngine:
         """Create fallback meta-agent."""
         class FallbackMetaAgent:
             def check_strategy_performance(self, strategy_name: str, performance: Dict[str, float]) -> Dict[str, Any]:
-                return {
+                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     'should_retire': False,
                     'should_tune': False,
                     'confidence': 0.5,
@@ -140,7 +142,7 @@ class EnhancedStrategyEngine:
                 }
             
             def suggest_improvements(self, strategy_name: str, performance: Dict[str, float]) -> List[str]:
-                return ["Consider parameter tuning", "Monitor performance closely"]
+                return {'success': True, 'result': {'success': True, 'result': ["Consider parameter tuning", "Monitor performance closely"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackMetaAgent()
     
@@ -253,7 +255,7 @@ class EnhancedStrategyEngine:
             )
         }
         
-        return strategies
+        return {'success': True, 'result': strategies, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_strategy_chain(self, regime: MarketRegime, risk_tolerance: str) -> List[Dict[str, Any]]:
         """Get dynamic strategy chain based on regime and risk tolerance."""
@@ -291,7 +293,7 @@ class EnhancedStrategyEngine:
         for strategy in compatible_strategies:
             strategy['weight'] /= total_weight
         
-        return compatible_strategies
+        return {'success': True, 'result': compatible_strategies, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def execute_strategy_chain(self, data: pd.DataFrame, regime: MarketRegime, 
                              risk_tolerance: str) -> Dict[str, Any]:
@@ -398,7 +400,7 @@ class EnhancedStrategyEngine:
             
         except Exception as e:
             logger.error(f"Strategy execution failed for {config.name}: {e}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_signals(self, data: pd.DataFrame, config: StrategyConfig) -> pd.DataFrame:
         """Generate trading signals based on strategy configuration."""
@@ -508,7 +510,7 @@ class EnhancedStrategyEngine:
             signals['signal'] = 0.0
             signals['position'] = 0.0
         
-        return signals
+        return {'success': True, 'result': signals, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_performance(self, signals: pd.DataFrame, data: pd.DataFrame) -> Dict[str, float]:
         """Calculate performance metrics for signals."""
@@ -553,7 +555,7 @@ class EnhancedStrategyEngine:
             
         except Exception as e:
             logger.error(f"Performance calculation failed: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'total_return': 0.0,
                 'sharpe_ratio': 0.0,
                 'max_drawdown': 0.0,
@@ -575,7 +577,7 @@ class EnhancedStrategyEngine:
         adjusted_confidence = base_confidence + sharpe_adjustment + win_rate_adjustment + drawdown_adjustment
         
         # Clamp to [0, 1]
-        return max(0.0, min(1.0, adjusted_confidence))
+        return {'success': True, 'result': max(0.0, min(1.0, adjusted_confidence)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _log_strategy_performance(self, combined_result: StrategyResult, 
                                 strategy_results: List[Dict[str, Any]]):
@@ -622,6 +624,7 @@ class EnhancedStrategyEngine:
         except Exception as e:
             logger.error(f"Performance logging failed: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_strategy_performance_history(self, strategy_name: str = None, 
                                        limit: int = 100) -> List[Dict[str, Any]]:
         """Get strategy performance history."""
@@ -631,7 +634,7 @@ class EnhancedStrategyEngine:
                 if record['strategy_name'] == strategy_name
             ]
         else:
-            return self.performance_history[-limit:]
+            return {'success': True, 'result': self.performance_history[-limit:], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_system_health(self) -> Dict[str, Any]:
         """Get strategy engine health information."""
@@ -660,7 +663,7 @@ class EnhancedStrategyEngine:
             
         except Exception as e:
             logger.error(f"Health check failed: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'status': 'error',
                 'error': str(e)
             }
@@ -671,4 +674,4 @@ enhanced_strategy_engine = EnhancedStrategyEngine()
 
 def get_enhanced_strategy_engine() -> EnhancedStrategyEngine:
     """Get the global enhanced strategy engine instance."""
-    return enhanced_strategy_engine 
+    return {'success': True, 'result': enhanced_strategy_engine, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

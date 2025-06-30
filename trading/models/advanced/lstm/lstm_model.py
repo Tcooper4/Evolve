@@ -55,6 +55,7 @@ class LSTMForecaster(BaseModel):
         self._validate_config()
         self._setup_model()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_config(self) -> None:
         """Validate model configuration.
         
@@ -86,6 +87,7 @@ class LSTMForecaster(BaseModel):
             raise ValidationError(f"Number of feature columns ({len(self.config['feature_columns'])}) "
                                 f"must match input_size ({self.config['input_size']})")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def build_model(self) -> nn.Module:
         """Build the LSTM model architecture.
         
@@ -115,7 +117,7 @@ class LSTMForecaster(BaseModel):
             elif 'bias' in name:
                 nn.init.zeros_(param)
         
-        return nn.ModuleList([self.lstm, self.fc])
+        return {'success': True, 'result': nn.ModuleList([self.lstm, self.fc]), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model.
@@ -134,7 +136,7 @@ class LSTMForecaster(BaseModel):
         
         # Output layer
         out = self.fc(last_hidden)
-        return out
+        return {'success': True, 'result': out, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare data for training or prediction.
@@ -186,7 +188,7 @@ class LSTMForecaster(BaseModel):
         X = X.to(self.device)
         y = y.to(self.device)
         
-        return X, y
+        return {'success': True, 'result': X, y, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def predict(self, data: pd.DataFrame) -> np.ndarray:
         """Make predictions using the LSTM model.
@@ -212,7 +214,7 @@ class LSTMForecaster(BaseModel):
             predictions = predictions.cpu().numpy()
             predictions = predictions * self.y_std + self.y_mean
             
-            return predictions.flatten()
+            return {'success': True, 'result': predictions.flatten(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             import logging
@@ -248,7 +250,7 @@ class LSTMForecaster(BaseModel):
                 current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
                 current_data = current_data.iloc[1:]  # Remove oldest row
             
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'forecast': np.array(forecast_values),
                 'confidence': 0.85,  # LSTM confidence
                 'model': 'LSTM',
@@ -262,31 +264,82 @@ class LSTMForecaster(BaseModel):
             logging.error(f"Error in LSTM model forecast: {e}")
             raise RuntimeError(f"LSTM model forecasting failed: {e}")
 
-    def summary(self):
-        super().summary()
+    def summary(self) -> Dict[str, Any]:
+        """Get model summary information.
+        
+        Returns:
+            Dictionary containing model summary
+        """
+        return {'success': True, 'result': super().summary(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
-    def infer(self):
-        super().infer()
+    def infer(self) -> Dict[str, Any]:
+        """Run model inference.
+        
+        Returns:
+            Dictionary containing inference results
+        """
+        return {'success': True, 'result': super().infer(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
-    def shap_interpret(self, X_sample):
-        """Run SHAP interpretability on a sample batch."""
+    def shap_interpret(self, X_sample) -> Dict[str, Any]:
+        """Run SHAP interpretability on a sample batch.
+        
+        Args:
+            X_sample: Sample input data for SHAP analysis
+            
+        Returns:
+            Dictionary containing SHAP analysis results
+        """
         try:
             import shap
         except ImportError:
-            print("SHAP is not installed. Please install it with 'pip install shap'.")
-            return None
-        explainer = shap.DeepExplainer(self.model, X_sample)
-        shap_values = explainer.shap_values(X_sample)
-        shap.summary_plot(shap_values, X_sample.cpu().numpy())
+            return {
+                'success': False,
+                'error': 'SHAP is not installed. Please install it with pip install shap.',
+                'shap_values': None
+            }
+        
+        try:
+            explainer = shap.DeepExplainer(self.model, X_sample)
+            shap_values = explainer.shap_values(X_sample)
+            shap.summary_plot(shap_values, X_sample.cpu().numpy())
+            return {
+                'success': True,
+                'shap_values': shap_values,
+                'explainer_type': 'DeepExplainer',
+                'sample_shape': X_sample.shape
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'shap_values': None
+            }
 
-    def test_synthetic(self):
-        """Test model on synthetic data."""
-        import numpy as np, pandas as pd
-        n = 100
-        df = pd.DataFrame({
-            'close': np.sin(np.linspace(0, 10, n)),
-            'volume': np.random.rand(n)
-        })
-        self.fit(df.iloc[:80], df.iloc[80:])
-        y_pred = self.predict(df.iloc[80:])
-        print('Synthetic test MSE:', ((y_pred.flatten() - df['close'].iloc[80:].values) ** 2).mean()) 
+    def test_synthetic(self) -> Dict[str, Any]:
+        """Test model on synthetic data.
+        
+        Returns:
+            Dictionary containing test results
+        """
+        try:
+            import numpy as np, pandas as pd
+            n = 100
+            df = pd.DataFrame({
+                'close': np.sin(np.linspace(0, 10, n)),
+                'volume': np.random.rand(n)
+            })
+            self.fit(df.iloc[:80], df.iloc[80:])
+            y_pred = self.predict(df.iloc[80:])
+            mse = ((y_pred.flatten() - df['close'].iloc[80:].values) ** 2).mean()
+            return {
+                'success': True,
+                'mse': mse,
+                'test_size': len(df.iloc[80:]),
+                'synthetic_data_shape': df.shape
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'mse': None
+            } 

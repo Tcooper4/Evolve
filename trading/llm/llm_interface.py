@@ -28,6 +28,7 @@ class LLMInterface:
         api_key: Optional[str] = None,
         tools_dir: Optional[Union[str, Path]] = None,
         memory_dir: Optional[Union[str, Path]] = None
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize the LLM interface.
         
@@ -195,11 +196,11 @@ class LLMInterface:
             }
         )
         
-        return agent
+        return {'success': True, 'result': agent, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_metrics(self) -> Dict[str, Any]:
         """Get current metrics."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             **self.metrics,
             "agent_metrics": self.agent.get_metrics(),
             "memory_stats": self.memory_manager.get_memory_stats() if self.memory_manager else None,
@@ -221,6 +222,7 @@ class LLMInterface:
         }
         self.agent.reset_metrics()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def export_metrics(self, path: Union[str, Path]) -> None:
         """Export metrics to a file.
         
@@ -231,8 +233,10 @@ class LLMInterface:
         with open(path, 'w') as f:
             json.dump(self.get_metrics(), f, indent=2)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def __del__(self):
         """Cleanup when the interface is destroyed."""
         logger.info("Cleaning up LLM interface")
         if self.memory_manager:
             self.memory_manager.clear_memories() 
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

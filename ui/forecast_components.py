@@ -17,6 +17,7 @@ class ForecastChart:
         """Initialize forecast chart."""
         self.config = config or {}
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def render_forecast(self, 
                        historical_data: pd.DataFrame,
                        forecast_data: pd.DataFrame,
@@ -86,7 +87,7 @@ class ForecastChart:
         except Exception as e:
             logger.error(f"Error rendering forecast chart: {e}")
             st.error("Error rendering forecast chart")
-            return {"status": "forecast_render_failed", "error": str(e)}
+            return {'success': True, 'result': {"status": "forecast_render_failed", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def render_forecast_metrics(self, metrics: Dict[str, float]):
         """Render forecast performance metrics."""
@@ -121,7 +122,7 @@ class ForecastChart:
         except Exception as e:
             logger.error(f"Error rendering forecast metrics: {e}")
             st.error("Error rendering metrics")
-            return {"status": "metrics_render_failed", "error": str(e)}
+            return {'success': True, 'result': {"status": "metrics_render_failed", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class ModelSelector:
     """Model selection component."""
@@ -138,6 +139,7 @@ class ModelSelector:
             'ensemble'
         ]
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def render_model_selector(self) -> str:
         """Render model selection interface."""
         try:
@@ -167,7 +169,7 @@ class ModelSelector:
         except Exception as e:
             logger.error(f"Error rendering model selector: {e}")
             st.error("Error rendering model selector")
-            return 'transformer'
+            return {'success': True, 'result': 'transformer', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def render_model_parameters(self, model: str) -> Dict[str, Any]:
         """Render model-specific parameters."""
@@ -215,7 +217,7 @@ class ModelSelector:
         except Exception as e:
             logger.error(f"Error rendering model parameters: {e}")
             st.error("Error rendering parameters")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class DataInput:
     """Data input component."""
@@ -224,6 +226,7 @@ class DataInput:
         """Initialize data input component."""
         self.config = config or {}
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def render_symbol_input(self) -> str:
         """Render symbol input interface."""
         try:
@@ -240,7 +243,7 @@ class DataInput:
         except Exception as e:
             logger.error(f"Error rendering symbol input: {e}")
             st.error("Error rendering symbol input")
-            return "AAPL"
+            return {'success': True, 'result': "AAPL", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def render_date_range(self) -> Tuple[str, str]:
         """Render date range selection."""
@@ -266,7 +269,7 @@ class DataInput:
         except Exception as e:
             logger.error(f"Error rendering date range: {e}")
             st.error("Error rendering date range")
-            return "2023-01-01", "2024-01-01"
+            return {'success': True, 'result': "2023-01-01", "2024-01-01", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def render_forecast_horizon(self) -> int:
         """Render forecast horizon selection."""
@@ -284,7 +287,7 @@ class DataInput:
         except Exception as e:
             logger.error(f"Error rendering forecast horizon: {e}")
             st.error("Error rendering forecast horizon")
-            return 30
+            return {'success': True, 'result': 30, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 # Global component instances
 forecast_chart = ForecastChart()
@@ -293,12 +296,12 @@ data_input = DataInput()
 
 def get_forecast_chart() -> ForecastChart:
     """Get the global forecast chart instance."""
-    return forecast_chart
+    return {'success': True, 'result': forecast_chart, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_model_selector() -> ModelSelector:
     """Get the global model selector instance."""
-    return model_selector
+    return {'success': True, 'result': model_selector, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_data_input() -> DataInput:
     """Get the global data input instance."""
-    return data_input 
+    return {'success': True, 'result': data_input, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

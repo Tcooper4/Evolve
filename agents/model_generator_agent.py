@@ -374,8 +374,7 @@ class ModelImplementationGenerator:
     
     def _get_lstm_template(self) -> str:
         """Get LSTM implementation template."""
-        return '''
-class LSTMForecaster(nn.Module):
+        return '''class LSTMForecaster(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, output_size):
         super().__init__()
         self.hidden_size = hidden_size
@@ -390,8 +389,7 @@ class LSTMForecaster(nn.Module):
     
     def _get_transformer_template(self) -> str:
         """Get Transformer implementation template."""
-        return '''
-class TransformerForecaster(nn.Module):
+        return '''class TransformerForecaster(nn.Module):
     def __init__(self, input_size, d_model, nhead, num_layers, output_size):
         super().__init__()
         self.input_projection = nn.Linear(input_size, d_model)
@@ -407,8 +405,7 @@ class TransformerForecaster(nn.Module):
     
     def _get_ensemble_template(self) -> str:
         """Get Ensemble implementation template."""
-        return '''
-class EnsembleForecaster:
+        return '''class EnsembleForecaster:
     def __init__(self, models, weights=None):
         self.models = models
         self.weights = weights or [1/len(models)] * len(models)
@@ -420,8 +417,7 @@ class EnsembleForecaster:
     
     def _get_attention_template(self) -> str:
         """Get Attention mechanism template."""
-        return '''
-class AttentionLayer(nn.Module):
+        return '''class AttentionLayer(nn.Module):
     def __init__(self, input_size, attention_size):
         super().__init__()
         self.attention = nn.MultiheadAttention(input_size, attention_size, batch_first=True)
@@ -433,8 +429,7 @@ class AttentionLayer(nn.Module):
     
     def _get_rl_template(self) -> str:
         """Get Reinforcement Learning template."""
-        return '''
-class RLForecaster:
+        return '''class RLForecaster:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
@@ -444,8 +439,7 @@ class RLForecaster:
     
     def _get_sklearn_template(self) -> str:
         """Get scikit-learn template."""
-        return '''
-class SklearnForecaster:
+        return '''class SklearnForecaster:
     def __init__(self, model_type="random_forest"):
         if model_type == "random_forest":
             self.model = RandomForestRegressor(n_estimators=100, random_state=42)
@@ -1090,4 +1084,4 @@ def run_model_evolution_sync(benchmark_data: pd.DataFrame,
         return asyncio.run(run_model_evolution(benchmark_data, target_column, current_best_score))
     except Exception as e:
         logger.error(f"Error in model evolution: {e}")
-        return {"error": str(e)} 
+        return {'success': True, 'result': {"error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

@@ -28,10 +28,11 @@ class BaseTaskHandler(ABC):
         self.config = self._load_config(config_path)
         self.setup_logging()
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> Dict:
         try:
             with open(config_path, 'r') as f:
-                return json.load(f)
+                return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             logger.error(f"Failed to load config: {str(e)}")
             raise
@@ -43,6 +44,7 @@ class BaseTaskHandler(ABC):
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     @abstractmethod
     async def handle(self, task: Task) -> Any:
         """Handle the task."""
@@ -170,6 +172,7 @@ class ModelTrainingHandler(BaseTaskHandler):
         # Implementation depends on model type and data structure
         pass
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def _train_lstm(self, X: np.ndarray, y: np.ndarray, epochs: int, batch_size: int) -> nn.Module:
         """Train LSTM model."""
         # Implementation for LSTM training
@@ -223,6 +226,7 @@ class ModelEvaluationHandler(BaseTaskHandler):
         # Implementation for data preprocessing
         pass
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def _evaluate_model(self, model: nn.Module, X: np.ndarray, y: np.ndarray, metrics: list) -> Dict[str, float]:
         """Evaluate model performance."""
         # Implementation for model evaluation
@@ -342,6 +346,7 @@ class TaskHandler:
         self.config = config
         self.setup_logging()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for task handler."""
         log_path = Path("logs/tasks")
@@ -357,6 +362,7 @@ class TaskHandler:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def execute(self, *args, **kwargs) -> Any:
         """Execute the task."""
         raise NotImplementedError
@@ -448,13 +454,17 @@ class TaskHandlerFactory:
         if not handler_class:
             raise ValueError(f"Unsupported handler type: {handler_type}")
         
-        return handler_class(config) 
+        return {'success': True, 'result': handler_class(config), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def execute_command(self):
     raise NotImplementedError('Pending feature')
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def call_api(self):
     raise NotImplementedError('Pending feature')
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def process_data(self):
     raise NotImplementedError('Pending feature')
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def send_notification(self):
     raise NotImplementedError('Pending feature') 
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

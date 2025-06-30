@@ -34,6 +34,7 @@ class StrategyLogger:
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def log_decision(self, strategy_name: str, decision: str, confidence: float, 
                     metadata: Optional[Dict[str, Any]] = None) -> None:
         """Log a strategy decision.
@@ -59,6 +60,7 @@ class StrategyLogger:
         # Log to console
         self.logger.info(f"Strategy Decision: {json.dumps(log_data)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_recent_decisions(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent strategy decisions.
         
@@ -69,7 +71,7 @@ class StrategyLogger:
             List of recent decisions
         """
         if not self.log_file.exists():
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         decisions = []
         try:
@@ -118,7 +120,7 @@ class StrategyLogger:
         # Calculate metrics
         total_decisions = len(strategy_decisions)
         if total_decisions == 0:
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 "strategy": strategy_name,
                 "total_decisions": 0,
                 "accuracy": 0.0,
@@ -148,15 +150,18 @@ class StrategyLogger:
             self.log_file.unlink()
         self.logger.info("Strategy logs cleared")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def analyze_strategy(self):
         raise NotImplementedError('Pending feature')
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def log_strategy_decision(
     strategy_name: str,
     decision: str,
     confidence: float,
     metadata: Optional[Dict[str, Any]] = None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 ) -> None:
     """Log a strategy decision.
     
@@ -192,7 +197,7 @@ def get_strategy_analysis(
         Dictionary with strategy analysis
     """
     # TODO: Implement actual strategy analysis
-    return {
+    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         "strategy": strategy_name,
         "total_decisions": 0,
         "accuracy": 0.0,

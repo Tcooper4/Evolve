@@ -88,6 +88,7 @@ class SelfTuningOptimizer:
         
         logger.info(f"Self-tuning optimizer initialized with evaluation window: {self.evaluation_window} days")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_history(self):
         """Load optimization history from file."""
         try:
@@ -105,6 +106,7 @@ class SelfTuningOptimizer:
         except Exception as e:
             logger.warning(f"Failed to load optimization history: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _save_history(self):
         """Save optimization history to file."""
         try:
@@ -121,6 +123,7 @@ class SelfTuningOptimizer:
         except Exception as e:
             logger.error(f"Failed to save optimization history: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def record_performance(self, 
                           strategy: str,
                           parameters: Dict[str, Any],
@@ -154,6 +157,7 @@ class SelfTuningOptimizer:
         
         logger.info(f"Recorded performance for {strategy}: {metrics}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def should_optimize(self, strategy: str) -> bool:
         """Determine if strategy should be optimized.
         
@@ -170,7 +174,7 @@ class SelfTuningOptimizer:
         ]
         
         if len(recent_records) < 2:
-            return False  # Need at least 2 records to compare
+            return {'success': True, 'result': False  # Need at least 2 records to compare, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Check if performance is declining
         recent_metrics = recent_records[-1]['metrics']
@@ -237,7 +241,7 @@ class SelfTuningOptimizer:
         
         if best_variation is None:
             logger.info(f"No better parameters found for {strategy}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Calculate improvement
         improvement = {}
@@ -301,7 +305,7 @@ class SelfTuningOptimizer:
                     variation[param] = new_val
                     variations.append(variation)
         
-        return variations[:self.max_parameter_changes * 2]  # Limit variations
+        return {'success': True, 'result': variations[:self.max_parameter_changes * 2]  # Limit variations, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _simulate_performance(self, 
                              strategy: str,
@@ -323,7 +327,7 @@ class SelfTuningOptimizer:
         
         if not historical_records:
             # Return default metrics if no history
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'sharpe_ratio': 0.0,
                 'total_return': 0.0,
                 'max_drawdown': 0.0,
@@ -373,7 +377,7 @@ class SelfTuningOptimizer:
         
         common_params = set(params1.keys()) & set(params2.keys())
         if not common_params:
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         similarities = []
         for param in common_params:
@@ -426,7 +430,7 @@ class SelfTuningOptimizer:
             else:
                 score += weight * value
         
-        return score
+        return {'success': True, 'result': score, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_confidence(self, improvement: Dict[str, float]) -> float:
         """Calculate confidence in optimization result.
@@ -445,7 +449,7 @@ class SelfTuningOptimizer:
         negative_improvements = [imp for imp in improvement.values() if imp < 0]
         
         if not positive_improvements:
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Base confidence on ratio of positive improvements
         positive_ratio = len(positive_improvements) / len(improvement)
@@ -504,7 +508,7 @@ class SelfTuningOptimizer:
         if len(recommendations) == 0:
             recommendations.append("Monitor performance closely with new parameters")
         
-        return recommendations
+        return {'success': True, 'result': recommendations, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_optimization_summary(self) -> Dict[str, Any]:
         """Get summary of optimization activities.
@@ -513,7 +517,7 @@ class SelfTuningOptimizer:
             Dictionary with optimization summary
         """
         if not self.optimization_history:
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'total_optimizations': 0,
                 'successful_optimizations': 0,
                 'average_improvement': {},
@@ -557,4 +561,4 @@ self_tuning_optimizer = SelfTuningOptimizer()
 
 def get_self_tuning_optimizer() -> SelfTuningOptimizer:
     """Get the global self-tuning optimizer instance."""
-    return self_tuning_optimizer 
+    return {'success': True, 'result': self_tuning_optimizer, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

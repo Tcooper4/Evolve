@@ -45,86 +45,159 @@ class AutoRepair:
             'transformers': False,
             'environment': False
         }
-    
+        
+        return {
+            'success': True,
+            'message': 'AutoRepair system initialized successfully',
+            'timestamp': datetime.now().isoformat()
+        }
+
     def _get_system_info(self) -> Dict[str, str]:
         """Get system information for diagnostics."""
-        return {
+        system_info = {
             'python_version': sys.version,
             'platform': platform.platform(),
             'processor': platform.processor(),
             'machine': platform.machine()
         }
+        
+        return {
+            'success': True,
+            'result': system_info,
+            'message': 'System information collected',
+            'timestamp': datetime.now().isoformat()
+        }
     
-    def check_packages(self) -> Tuple[bool, List[str]]:
+    def check_packages(self) -> Dict[str, Any]:
         """Check for missing or outdated packages."""
-        missing = []
-        outdated = []
-        
-        for package, min_version in self.REQUIRED_PACKAGES.items():
-            try:
-                current_version = version(package)
-                if current_version < min_version:
-                    outdated.append(f"{package} (current: {current_version}, required: {min_version})")
-            except PackageNotFoundError:
-                missing.append(package)
-        
-        return len(missing) == 0 and len(outdated) == 0, missing + outdated
-    
-    def check_dlls(self) -> Tuple[bool, List[str]]:
-        """Check for common DLL issues."""
-        issues = []
-        
-        # Check for numpy DLL issues
         try:
-            import numpy
-            numpy.__version__
-        except ImportError as e:
-            if "_multiarray_umath" in str(e):
-                issues.append("numpy DLL issue detected")
-        
-        # Check for OpenMP DLL issues
-        if platform.system() == 'Windows':
-            try:
-                import torch
-                torch.__version__
-            except ImportError as e:
-                if "libiomp5md.dll" in str(e):
-                    issues.append("OpenMP DLL issue detected")
-        
-        return len(issues) == 0, issues
-    
-    def check_transformers(self) -> Tuple[bool, List[str]]:
-        """Check for Hugging Face transformer issues."""
-        issues = []
-        
-        try:
-            from transformers import AutoTokenizer, AutoModel
-            AutoTokenizer.from_pretrained("gpt2")
+            missing = []
+            outdated = []
+            
+            for package, min_version in self.REQUIRED_PACKAGES.items():
+                try:
+                    current_version = version(package)
+                    if current_version < min_version:
+                        outdated.append(f"{package} (current: {current_version}, required: {min_version})")
+                except PackageNotFoundError:
+                    missing.append(package)
+            
+            all_ok = len(missing) == 0 and len(outdated) == 0
+            issues = missing + outdated
+            
+            return {
+                'success': True,
+                'result': all_ok,
+                'missing': missing,
+                'outdated': outdated,
+                'issues': issues,
+                'message': f'Package check completed: {len(issues)} issues found',
+                'timestamp': datetime.now().isoformat()
+            }
         except Exception as e:
-            issues.append(f"Transformers issue: {str(e)}")
-        
-        return len(issues) == 0, issues
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
     
-    def repair_packages(self) -> bool:
+    def check_dlls(self) -> Dict[str, Any]:
+        """Check for common DLL issues."""
+        try:
+            issues = []
+            
+            # Check for numpy DLL issues
+            try:
+                import numpy
+                numpy.__version__
+            except ImportError as e:
+                if "_multiarray_umath" in str(e):
+                    issues.append("numpy DLL issue detected")
+            
+            # Check for OpenMP DLL issues
+            if platform.system() == 'Windows':
+                try:
+                    import torch
+                    torch.__version__
+                except ImportError as e:
+                    if "libiomp5md.dll" in str(e):
+                        issues.append("OpenMP DLL issue detected")
+            
+            return {
+                'success': True,
+                'result': len(issues) == 0,
+                'issues': issues,
+                'message': f'DLL check completed: {len(issues)} issues found',
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
+    
+    def check_transformers(self) -> Dict[str, Any]:
+        """Check for Hugging Face transformer issues."""
+        try:
+            issues = []
+            
+            try:
+                from transformers import AutoTokenizer, AutoModel
+                AutoTokenizer.from_pretrained("gpt2")
+            except Exception as e:
+                issues.append(f"Transformers issue: {str(e)}")
+            
+            return {
+                'success': True,
+                'result': len(issues) == 0,
+                'issues': issues,
+                'message': f'Transformers check completed: {len(issues)} issues found',
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
+    
+    def repair_packages(self) -> Dict[str, Any]:
         """Attempt to repair package issues."""
         try:
             # Upgrade pip first
             subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
             
             # Install/upgrade required packages
+            repaired_count = 0
             for package, version in self.REQUIRED_PACKAGES.items():
-                subprocess.check_call([
-                    sys.executable, "-m", "pip", "install",
-                    f"{package}>={version}"
-                ])
+                try:
+                    subprocess.check_call([
+                        sys.executable, "-m", "pip", "install",
+                        f"{package}>={version}"
+                    ])
+                    repaired_count += 1
+                except subprocess.CalledProcessError as e:
+                    logger.error(f"Failed to install {package}: {e}")
             
             self.repair_status['packages'] = True
-            return True
+            
+            return {
+                'success': True,
+                'result': True,
+                'message': f'Package repair completed: {repaired_count} packages processed',
+                'timestamp': datetime.now().isoformat(),
+                'repaired_count': repaired_count
+            }
         except Exception as e:
             logger.error(f"Package repair failed: {str(e)}")
-            return False
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
     
-    def repair_dlls(self) -> bool:
+    def repair_dlls(self) -> Dict[str, Any]:
         """Attempt to repair DLL issues."""
         try:
             if platform.system() == 'Windows':
@@ -145,12 +218,22 @@ class AutoRepair:
                 ])
             
             self.repair_status['dlls'] = True
-            return True
+            
+            return {
+                'success': True,
+                'result': True,
+                'message': 'DLL repair completed successfully',
+                'timestamp': datetime.now().isoformat()
+            }
         except Exception as e:
             logger.error(f"DLL repair failed: {str(e)}")
-            return False
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
     
-    def repair_transformers(self) -> bool:
+    def repair_transformers(self) -> Dict[str, Any]:
         """Attempt to repair transformer issues."""
         try:
             # Clear transformers cache
@@ -167,12 +250,22 @@ class AutoRepair:
             ])
             
             self.repair_status['transformers'] = True
-            return True
+            
+            return {
+                'success': True,
+                'result': True,
+                'message': 'Transformers repair completed successfully',
+                'timestamp': datetime.now().isoformat()
+            }
         except Exception as e:
             logger.error(f"Transformers repair failed: {str(e)}")
-            return False
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
     
-    def repair_environment(self) -> bool:
+    def repair_environment(self) -> Dict[str, Any]:
         """Attempt to repair the Python environment."""
         try:
             # Create virtual environment if needed
@@ -186,60 +279,80 @@ class AutoRepair:
             os.environ["PYTHONPATH"] = str(Path.cwd())
             
             self.repair_status['environment'] = True
-            return True
+            
+            return {
+                'success': True,
+                'result': True,
+                'message': 'Environment repair completed successfully',
+                'timestamp': datetime.now().isoformat()
+            }
         except Exception as e:
             logger.error(f"Environment repair failed: {str(e)}")
-            return False
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
     
     def run_repair(self) -> Dict[str, Any]:
         """Run all repair checks and fixes."""
-        results = {
-            'status': 'success',
-            'issues_found': [],
-            'issues_fixed': [],
-            'system_info': self.system_info
-        }
-        
-        # Check and repair packages
-        packages_ok, package_issues = self.check_packages()
-        if not packages_ok:
-            results['issues_found'].extend(package_issues)
-            if self.repair_packages():
-                results['issues_fixed'].extend(package_issues)
-        
-        # Check and repair DLLs
-        dlls_ok, dll_issues = self.check_dlls()
-        if not dlls_ok:
-            results['issues_found'].extend(dll_issues)
-            if self.repair_dlls():
-                results['issues_fixed'].extend(dll_issues)
-        
-        # Check and repair transformers
-        transformers_ok, transformer_issues = self.check_transformers()
-        if not transformers_ok:
-            results['issues_found'].extend(transformer_issues)
-            if self.repair_transformers():
-                results['issues_fixed'].extend(transformer_issues)
-        
-        # Check and repair environment
-        if not all(self.repair_status.values()):
-            if self.repair_environment():
-                results['issues_fixed'].append("Environment configuration")
-        
-        # Update final status
-        if results['issues_found'] and not results['issues_fixed']:
-            results['status'] = 'failed'
-        elif results['issues_found'] and results['issues_fixed']:
-            results['status'] = 'partial'
-        
-        return results
+        try:
+            results = {
+                'status': 'success',
+                'issues_found': [],
+                'issues_fixed': [],
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            # Check packages
+            package_check = self.check_packages()
+            if not package_check['result']:
+                results['issues_found'].extend(package_check['issues'])
+                package_repair = self.repair_packages()
+                if package_repair['success']:
+                    results['issues_fixed'].extend(package_check['issues'])
+            
+            # Check DLLs
+            dll_check = self.check_dlls()
+            if not dll_check['result']:
+                results['issues_found'].extend(dll_check['issues'])
+                dll_repair = self.repair_dlls()
+                if dll_repair['success']:
+                    results['issues_fixed'].extend(dll_check['issues'])
+            
+            # Check transformers
+            transformer_check = self.check_transformers()
+            if not transformer_check['result']:
+                results['issues_found'].extend(transformer_check['issues'])
+                transformer_repair = self.repair_transformers()
+                if transformer_repair['success']:
+                    results['issues_fixed'].extend(transformer_check['issues'])
+            
+            # Repair environment
+            env_repair = self.repair_environment()
+            if not env_repair['success']:
+                results['status'] = 'partial'
+            
+            return {
+                'success': True,
+                'result': results,
+                'message': f'Auto-repair completed: {len(results["issues_fixed"])} issues fixed',
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
     
     def get_repair_status(self) -> Dict[str, Any]:
         """Get current repair status."""
         return {
-            'status': self.repair_status,
-            'system_info': self.system_info,
-            'log': self.repair_log
+            'success': True,
+            'result': self.repair_status,
+            'message': 'Repair status retrieved',
+            'timestamp': datetime.now().isoformat()
         }
 
 # Create singleton instance

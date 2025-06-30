@@ -83,4 +83,4 @@ class SelfImprovingAgent:
         self.improvement_metrics = {
             'total_tasks': len(self.performance_history),
             'last_update': datetime.now().isoformat()
-        } 
+        }

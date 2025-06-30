@@ -330,7 +330,7 @@ class AgentLoopManager:
             return 'ensemble'
         else:
             # Return the least represented model type
-            return min(model_counts, key=model_counts.get)
+            return {'success': True, 'result': min(model_counts, key=model_counts.get), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_model_hyperparameters(self, model_type: str) -> Dict[str, Any]:
         """Get hyperparameters for model type.
@@ -365,7 +365,7 @@ class AgentLoopManager:
                 'voting_method': 'weighted_average'
             }
         else:
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_models_for_evaluation(self) -> List[str]:
         """Get list of models that need evaluation.
@@ -382,7 +382,7 @@ class AgentLoopManager:
             if last_evaluation is None or self._should_evaluate_model(model_id, last_evaluation):
                 models_to_evaluate.append(model_id)
         
-        return models_to_evaluate
+        return {'success': True, 'result': models_to_evaluate, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_last_evaluation_time(self, model_id: str) -> Optional[datetime]:
         """Get last evaluation time for a model.
@@ -395,7 +395,7 @@ class AgentLoopManager:
         """
         evaluation_history = self.performance_critic.get_evaluation_history(model_id)
         if evaluation_history:
-            return datetime.fromisoformat(evaluation_history[-1].evaluation_timestamp)
+            return {'success': True, 'result': datetime.fromisoformat(evaluation_history[-1].evaluation_timestamp), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return None
     
     def _should_evaluate_model(self, model_id: str, last_evaluation: datetime) -> bool:
@@ -410,7 +410,7 @@ class AgentLoopManager:
         """
         # Evaluate if more than 24 hours have passed
         time_since_evaluation = datetime.now() - last_evaluation
-        return time_since_evaluation > timedelta(hours=24)
+        return {'success': True, 'result': time_since_evaluation > timedelta(hours=24), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_latest_data_path(self) -> str:
         """Get path to latest data.
@@ -419,7 +419,7 @@ class AgentLoopManager:
             Path to latest data file
         """
         # This should be configurable and dynamic
-        return "data/latest_market_data.csv"
+        return {'success': True, 'result': "data/latest_market_data.csv", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _send_communication(self, from_agent: str, to_agent: str, 
                           message_type: str, data: Dict[str, Any]) -> None:
@@ -568,13 +568,13 @@ class AgentLoopManager:
         Returns:
             Loop status dictionary
         """
-        return {
+        return {'success': True, 'result': {
             'running': self.running,
             'paused': self.paused,
             'state': asdict(self.state),
             'active_models_count': len(self.state.active_models),
             'queue_size': self.communication_queue.qsize()
-        }
+        }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_agent_status(self) -> Dict[str, Any]:
         """Get status of all agents.
@@ -582,7 +582,7 @@ class AgentLoopManager:
         Returns:
             Agent status dictionary
         """
-        return {
+        return {'success': True, 'result': {
             'model_builder': {
                 'models_built': self.state.total_models_built,
                 'active_models': self.model_builder.list_models()
@@ -595,7 +595,7 @@ class AgentLoopManager:
                 'models_updated': self.state.total_models_updated,
                 'active_models': self.updater.get_active_models()
             }
-        }
+        }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _on_price_update(self, data: Dict[str, Any]):
         # Optionally log or act on price updates
@@ -607,7 +607,6 @@ class AgentLoopManager:
         self.logger.info(f"News event: {news.get('title')}")
         if self.data_listener.paused and not self.paused:
             self.logger.warning("Trading paused due to significant news event.")
-
 
 # Main entry point
 async def main():

@@ -23,7 +23,7 @@ class UpdateScheduler:
         self.running = False
         self.thread = None
         self.callback = None
-        
+
     def start(self, callback: Callable):
         """Start the scheduler.
         
@@ -32,21 +32,21 @@ class UpdateScheduler:
         """
         if self.running:
             logger.warning("Scheduler is already running")
-            return
-            
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        
         self.callback = callback
         self.running = True
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.thread.start()
         logger.info(f"Scheduler started with {self.check_interval} hour interval")
-        
+
     def stop(self):
         """Stop the scheduler."""
         self.running = False
         if self.thread:
             self.thread.join(timeout=5)
         logger.info("Scheduler stopped")
-        
+
     def _run(self):
         """Main scheduler loop."""
         while self.running:
@@ -56,4 +56,4 @@ class UpdateScheduler:
                 time.sleep(self.check_interval * 3600)  # Convert hours to seconds
             except Exception as e:
                 logger.error(f"Error in scheduler callback: {e}")
-                time.sleep(60)  # Wait 1 minute before retrying 
+                time.sleep(60)  # Wait 1 minute before retrying

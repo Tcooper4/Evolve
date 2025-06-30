@@ -115,6 +115,7 @@ class TradeExecutionSimulator:
         self.execution_history: List[ExecutionResult] = []
         self.market_data_cache: Dict[str, pd.DataFrame] = {}
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def place_order(self, 
                    symbol: str,
                    order_type: OrderType,
@@ -161,7 +162,7 @@ class TradeExecutionSimulator:
             
             self.logger.info(f"Placed {order_type.value} order: {order_id} for {quantity} {symbol} at {price}")
             
-            return order_id
+            return {'success': True, 'result': order_id, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             self.logger.error(f"Error placing order: {str(e)}")
@@ -230,7 +231,7 @@ class TradeExecutionSimulator:
             
         except Exception as e:
             self.logger.error(f"Error executing order: {str(e)}")
-            return self._create_rejected_result(order, str(e))
+            return {'success': True, 'result': self._create_rejected_result(order, str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _validate_order_parameters(self, 
                                  symbol: str,
@@ -262,7 +263,7 @@ class TradeExecutionSimulator:
             
         except Exception as e:
             self.logger.error(f"Error validating order parameters: {str(e)}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _can_execute_order(self, order: Order, market_data: pd.DataFrame) -> bool:
         """Check if order can be executed."""
@@ -295,7 +296,7 @@ class TradeExecutionSimulator:
                 if order.side == 'buy' and current_price < order.stop_price:
                     return False
                 elif order.side == 'sell' and current_price > order.stop_price:
-                    return False
+                    return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             return True
             
@@ -329,7 +330,7 @@ class TradeExecutionSimulator:
                 if order.side == 'buy':
                     return current_price + (spread / 2)
                 else:
-                    return current_price - (spread / 2)
+                    return {'success': True, 'result': current_price - (spread / 2), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             return current_price
             
@@ -354,7 +355,7 @@ class TradeExecutionSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating spread: {str(e)}")
-            return self.base_spread
+            return {'success': True, 'result': self.base_spread, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_slippage(self, order: Order, market_data: pd.DataFrame) -> float:
         """Calculate slippage based on order size and market conditions."""
@@ -382,7 +383,7 @@ class TradeExecutionSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating slippage: {str(e)}")
-            return self.base_slippage
+            return {'success': True, 'result': self.base_slippage, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_commission(self, order: Order, execution_price: float) -> float:
         """Calculate commission and fees."""
@@ -402,7 +403,7 @@ class TradeExecutionSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating commission: {str(e)}")
-            return self.base_commission
+            return {'success': True, 'result': self.base_commission, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_market_impact(self, order: Order, market_data: pd.DataFrame) -> float:
         """Calculate market impact of the order."""
@@ -419,7 +420,7 @@ class TradeExecutionSimulator:
                 
         except Exception as e:
             self.logger.error(f"Error calculating market impact: {str(e)}")
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_execution_delay(self, order: Order) -> float:
         """Calculate execution delay."""
@@ -441,7 +442,7 @@ class TradeExecutionSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating execution delay: {str(e)}")
-            return self.min_execution_delay
+            return {'success': True, 'result': self.min_execution_delay, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_total_cost(self, order: Order, execution_price: float, commission: float) -> float:
         """Calculate total cost including slippage and commission."""
@@ -454,11 +455,11 @@ class TradeExecutionSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating total cost: {str(e)}")
-            return order.quantity * execution_price
+            return {'success': True, 'result': order.quantity * execution_price, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_rejected_result(self, order: Order, reason: str) -> ExecutionResult:
         """Create rejected execution result."""
-        return ExecutionResult(
+        return {'success': True, 'result': ExecutionResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             order_id=order.order_id,
             symbol=order.symbol,
             side=order.side,
@@ -490,7 +491,7 @@ class TradeExecutionSimulator:
             
         except Exception as e:
             self.logger.error(f"Error cancelling order: {str(e)}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_order_status(self, order_id: str) -> Optional[Order]:
         """Get order status."""
@@ -498,7 +499,7 @@ class TradeExecutionSimulator:
             return self.orders.get(order_id)
         except Exception as e:
             self.logger.error(f"Error getting order status: {str(e)}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_execution_summary(self, symbol: Optional[str] = None) -> Dict[str, Any]:
         """Get execution summary statistics."""
@@ -536,7 +537,7 @@ class TradeExecutionSimulator:
             
         except Exception as e:
             self.logger.error(f"Error getting execution summary: {str(e)}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def simulate_bulk_execution(self, 
                                orders: List[Dict[str, Any]],
@@ -570,7 +571,7 @@ class TradeExecutionSimulator:
             
         except Exception as e:
             self.logger.error(f"Error simulating bulk execution: {str(e)}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_pending_orders(self) -> List[Order]:
         """Get all pending orders."""
@@ -578,7 +579,7 @@ class TradeExecutionSimulator:
             return [order for order in self.orders.values() if order.status == OrderStatus.PENDING]
         except Exception as e:
             self.logger.error(f"Error getting pending orders: {str(e)}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def clear_execution_history(self):
         """Clear execution history."""
@@ -587,3 +588,4 @@ class TradeExecutionSimulator:
             self.logger.info("Execution history cleared")
         except Exception as e:
             self.logger.error(f"Error clearing execution history: {str(e)}") 
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

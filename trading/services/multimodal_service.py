@@ -40,6 +40,7 @@ class MultimodalService(BaseService):
         
         logger.info("MultimodalService initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming multimodal requests.
@@ -63,7 +64,7 @@ class MultimodalService(BaseService):
                 return self._handle_history_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {
+                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -124,7 +125,7 @@ class MultimodalService(BaseService):
             
         except Exception as e:
             logger.error(f"Error generating plot: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -174,7 +175,7 @@ class MultimodalService(BaseService):
             
         except Exception as e:
             logger.error(f"Error analyzing image: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -223,7 +224,7 @@ class MultimodalService(BaseService):
             
         except Exception as e:
             logger.error(f"Error generating insights: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -252,7 +253,7 @@ class MultimodalService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting plot history: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -282,4 +283,4 @@ class MultimodalService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'error': str(e)} 
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

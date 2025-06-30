@@ -59,6 +59,7 @@ class StrategyMetrics:
         ]):
             raise StrategyValidationError("trade counts must be integers")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def to_dict(self) -> Dict[str, Any]:
         """Convert metrics to dictionary."""
         metrics_dict = asdict(self)
@@ -125,6 +126,7 @@ class Strategy(ABC):
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     @abstractmethod
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """Generate trading signals.
@@ -154,42 +156,73 @@ class Strategy(ABC):
         """
         pass
     
-    def validate_data(self, data: pd.DataFrame) -> None:
+    def validate_data(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Validate input data.
         
         Args:
             data: Market data to validate
             
+        Returns:
+            Dictionary with validation status and details
+            
         Raises:
             StrategyError: If data validation fails
         """
-        required_columns = ['open', 'high', 'low', 'close', 'volume']
-        if not all(col in data.columns for col in required_columns):
-            raise StrategyError(f"Data missing required columns: {required_columns}")
+        try:
+            required_columns = ['open', 'high', 'low', 'close', 'volume']
+            if not all(col in data.columns for col in required_columns):
+                raise StrategyError(f"Data missing required columns: {required_columns}")
+                
+            if data.empty:
+                raise StrategyError("Data is empty")
+                
+            if data.isnull().any().any():
+                raise StrategyError("Data contains null values")
             
-        if data.empty:
-            raise StrategyError("Data is empty")
-            
-        if data.isnull().any().any():
-            raise StrategyError("Data contains null values")
+            return {
+                "status": "success",
+                "message": "Data validation passed",
+                "rows": len(data),
+                "columns": len(data.columns)
+            }
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
     
-    def validate_signals(self, signals: pd.Series) -> None:
+    def validate_signals(self, signals: pd.Series) -> Dict[str, Any]:
         """Validate trading signals.
         
         Args:
             signals: Trading signals to validate
             
+        Returns:
+            Dictionary with validation status and details
+            
         Raises:
             StrategyError: If signal validation fails
         """
-        if signals.empty:
-            raise StrategyError("Signals are empty")
+        try:
+            if not isinstance(signals, pd.Series):
+                raise StrategyError("Signals must be a pandas Series")
+                
+            if signals.empty:
+                raise StrategyError("Signals are empty")
+                
+            # Check for valid signal values
+            valid_signals = [-1, 0, 1]
+            invalid_signals = signals[~signals.isin(valid_signals)]
+            if not invalid_signals.empty:
+                raise StrategyError(f"Invalid signal values found: {invalid_signals.unique()}")
             
-        if signals.isnull().any():
-            raise StrategyError("Signals contain null values")
-            
-        if not all(signal in [-1, 0, 1] for signal in signals):
-            raise StrategyError("Signals must be -1 (sell), 0 (hold), or 1 (buy)")
+            return {
+                "status": "success",
+                "message": "Signal validation passed",
+                "total_signals": len(signals),
+                "buy_signals": (signals == 1).sum(),
+                "sell_signals": (signals == -1).sum(),
+                "hold_signals": (signals == 0).sum()
+            }
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
 
 class StrategyManager:
     """Manages multiple trading strategies with caching and dynamic loading."""
@@ -199,144 +232,111 @@ class StrategyManager:
         
         Args:
             config: Configuration dictionary containing:
-                - redis_host: Redis host (default: localhost)
-                - redis_port: Redis port (default: 6379)
-                - redis_db: Redis database (default: 0)
-                - redis_password: Redis password
-                - redis_ssl: Whether to use SSL (default: false)
-                - log_level: Logging level (default: INFO)
-                - results_dir: Directory for saving results (default: strategy_results)
-                - max_strategies: Maximum number of strategies (default: 100)
-                - min_performance_threshold: Minimum performance threshold (default: 0.5)
-                - strategy_dir: Directory for strategy modules (default: trading/strategies)
+                - strategies_dir: Directory containing strategy files
+                - cache_enabled: Enable caching (default: True)
+                - cache_ttl: Cache TTL in seconds (default: 3600)
+                - max_strategies: Maximum number of strategies (default: 50)
+                - auto_reload: Auto-reload strategies on changes (default: False)
         """
-        # Load configuration from environment variables with defaults
-        self.config = {
-            'redis_host': os.getenv('REDIS_HOST', 'localhost'),
-            'redis_port': int(os.getenv('REDIS_PORT', 6379)),
-            'redis_db': int(os.getenv('REDIS_DB', 0)),
-            'redis_password': os.getenv('REDIS_PASSWORD'),
-            'redis_ssl': os.getenv('REDIS_SSL', 'false').lower() == 'true',
-            'log_level': os.getenv('STRATEGY_MANAGER_LOG_LEVEL', 'INFO'),
-            'results_dir': os.getenv('STRATEGY_RESULTS_DIR', 'strategy_results'),
-            'max_strategies': int(os.getenv('MAX_STRATEGIES', 100)),
-            'min_performance_threshold': float(os.getenv('MIN_PERFORMANCE_THRESHOLD', 0.5)),
-            'strategy_dir': os.getenv('STRATEGY_DIR', 'trading/strategies')
-        }
+        self.config = config or {}
         
-        # Update with provided config
-        if config:
-            self.config.update(config)
-            
-        # Setup logging
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(getattr(logging, self.config['log_level']))
-        if not self.logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-        
-        # Initialize Redis connection if available
-        self.redis_client = None
-        if REDIS_AVAILABLE:
-            try:
-                self.redis_client = redis.Redis(
-                    host=self.config['redis_host'],
-                    port=self.config['redis_port'],
-                    db=self.config['redis_db'],
-                    password=self.config['redis_password'],
-                    ssl=self.config['redis_ssl']
-                )
-                self.logger.info("Redis connection established")
-            except Exception as e:
-                self.logger.warning(f"Failed to connect to Redis: {str(e)}")
-        
-        # Initialize strategy storage
+        # Strategy storage
         self.strategies = {}
         self.active_strategies = set()
+        self.strategy_metrics = {}
         self.ensemble_weights = {}
+        
+        # Cache settings
+        self.cache_enabled = self.config.get('cache_enabled', True)
+        self.cache_ttl = self.config.get('cache_ttl', 3600)
+        self.cache = {}
+        
+        # Redis cache (optional)
+        self.redis_client = None
+        if REDIS_AVAILABLE and self.config.get('use_redis', False):
+            try:
+                self.redis_client = redis.Redis(
+                    host=self.config.get('redis_host', 'localhost'),
+                    port=self.config.get('redis_port', 6379),
+                    db=self.config.get('redis_db', 0),
+                    decode_responses=True
+                )
+                self.redis_client.ping()
+            except Exception as e:
+                self.logger.warning(f"Redis connection failed: {e}")
+        
+        # Performance tracking
+        self.performance_history = []
         
         # Load strategies
         self._load_strategies()
-    
+        
+        return {'success': True, 'message': 'Strategy manager initialized successfully', 'timestamp': datetime.now().isoformat()}
+
     def _load_strategies(self) -> None:
-        """Load strategy modules from strategy directory."""
-        strategy_dir = Path(self.config['strategy_dir'])
-        if not strategy_dir.exists():
-            self.logger.warning(f"Strategy directory not found: {strategy_dir}")
-            return
-            
-        for file in strategy_dir.glob('*.py'):
-            if file.name.startswith('_') or file.name == 'strategy_manager.py':
-                continue
-                
-            try:
-                module_name = f"trading.strategies.{file.stem}"
-                module = importlib.import_module(module_name)
-                
-                for name, obj in inspect.getmembers(module):
-                    if (inspect.isclass(obj) and 
-                        issubclass(obj, Strategy) and 
-                        obj != Strategy):
-                        self.register_strategy(name, obj())
-                        self.logger.info(f"Loaded strategy: {name}")
-                        
-            except Exception as e:
-                self.logger.error(f"Error loading strategy from {file}: {str(e)}")
-    
-    def _save_strategies(self) -> None:
-        """Save strategy configurations."""
-        if not self.redis_client:
-            return
-            
+        """Load strategies from directory."""
         try:
-            for name, strategy in self.strategies.items():
-                config = {
-                    'name': name,
-                    'config': strategy.config,
-                    'active': name in self.active_strategies,
-                    'ensemble_weight': self.ensemble_weights.get(name, 0.0)
-                }
-                self.redis_client.hset('strategies', name, json.dumps(config))
-                
-            self.logger.info("Saved strategy configurations")
+            strategies_dir = self.config.get('strategies_dir', 'strategies')
+            if not os.path.exists(strategies_dir):
+                self.logger.warning(f"Strategies directory not found: {strategies_dir}")
+                return {'success': False, 'error': 'Strategies directory not found', 'timestamp': datetime.now().isoformat()}
+            
+            for file in os.listdir(strategies_dir):
+                if file.endswith('.py') and not file.startswith('_'):
+                    strategy_name = file[:-3]
+                    try:
+                        module = importlib.import_module(f'strategies.{strategy_name}')
+                        strategy_class = getattr(module, strategy_name.title().replace('_', ''))
+                        self.strategies[strategy_name] = strategy_class()
+                        self.logger.info(f"Loaded strategy: {strategy_name}")
+                    except Exception as e:
+                        self.logger.error(f"Failed to load strategy {strategy_name}: {e}")
+            
+            return {'success': True, 'message': f'Loaded {len(self.strategies)} strategies', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
-            self.logger.error(f"Error saving strategies: {str(e)}")
-    
-    def register_strategy(self, name: str, strategy: Strategy) -> None:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def _save_strategies(self) -> None:
+        """Save strategy configurations."""
+        try:
+            config_file = self.config.get('config_file', 'strategy_config.json')
+            config_data = {
+                'active_strategies': list(self.active_strategies),
+                'ensemble_weights': self.ensemble_weights,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            with open(config_file, 'w') as f:
+                json.dump(config_data, f, indent=2)
+            
+            return {'success': True, 'message': 'Strategy configuration saved', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def register_strategy(self, name: str, strategy: Strategy) -> Dict[str, Any]:
         """Register a new strategy.
         
         Args:
             name: Strategy name
             strategy: Strategy instance
             
-        Raises:
-            StrategyError: If strategy registration fails
+        Returns:
+            Registration result
         """
-        if name in self.strategies:
-            raise StrategyError(f"Strategy already registered: {name}")
+        try:
+            if name in self.strategies:
+                return {'success': False, 'error': f'Strategy {name} already exists', 'timestamp': datetime.now().isoformat()}
             
-        if len(self.strategies) >= self.config['max_strategies']:
-            raise StrategyError("Maximum number of strategies reached")
+            self.strategies[name] = strategy
+            self.logger.info(f"Registered strategy: {name}")
             
-        self.strategies[name] = strategy
-        self.logger.info(f"Registered strategy: {name}")
-        
-        # Save to Redis if available
-        if self.redis_client:
-            try:
-                config = {
-                    'name': name,
-                    'config': strategy.config,
-                    'active': False,
-                    'ensemble_weight': 0.0
-                }
-                self.redis_client.hset('strategies', name, json.dumps(config))
-            except Exception as e:
-                self.logger.error(f"Error saving strategy to Redis: {str(e)}")
-    
+            return {'success': True, 'message': f'Strategy {name} registered successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
     def get_strategy(self, name: str) -> Strategy:
         """Get strategy by name.
         
@@ -345,177 +345,160 @@ class StrategyManager:
             
         Returns:
             Strategy instance
-            
-        Raises:
-            StrategyNotFoundError: If strategy not found
         """
-        if name not in self.strategies:
-            raise StrategyNotFoundError(f"Strategy not found: {name}")
-        return self.strategies[name]
-    
-    def activate_strategy(self, name: str) -> None:
+        try:
+            if name not in self.strategies:
+                return {'success': False, 'error': f'Strategy {name} not found', 'timestamp': datetime.now().isoformat()}
+            
+            return {'success': True, 'result': self.strategies[name], 'message': f'Strategy {name} retrieved successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def activate_strategy(self, name: str) -> Dict[str, Any]:
         """Activate a strategy.
         
         Args:
             name: Strategy name
             
-        Raises:
-            StrategyNotFoundError: If strategy not found
+        Returns:
+            Activation result
         """
-        if name not in self.strategies:
-            raise StrategyNotFoundError(f"Strategy not found: {name}")
+        try:
+            if name not in self.strategies:
+                return {'success': False, 'error': f'Strategy {name} not found', 'timestamp': datetime.now().isoformat()}
             
-        self.active_strategies.add(name)
-        self.logger.info(f"Activated strategy: {name}")
-        
-        # Update Redis if available
-        if self.redis_client:
-            try:
-                config = json.loads(self.redis_client.hget('strategies', name))
-                config['active'] = True
-                self.redis_client.hset('strategies', name, json.dumps(config))
-            except Exception as e:
-                self.logger.error(f"Error updating Redis: {str(e)}")
-    
-    def deactivate_strategy(self, name: str) -> None:
+            self.active_strategies.add(name)
+            self._save_strategies()
+            
+            self.logger.info(f"Activated strategy: {name}")
+            
+            return {'success': True, 'message': f'Strategy {name} activated successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def deactivate_strategy(self, name: str) -> Dict[str, Any]:
         """Deactivate a strategy.
         
         Args:
             name: Strategy name
             
-        Raises:
-            StrategyNotFoundError: If strategy not found
+        Returns:
+            Deactivation result
         """
-        if name not in self.strategies:
-            raise StrategyNotFoundError(f"Strategy not found: {name}")
+        try:
+            if name not in self.strategies:
+                return {'success': False, 'error': f'Strategy {name} not found', 'timestamp': datetime.now().isoformat()}
             
-        self.active_strategies.remove(name)
-        self.logger.info(f"Deactivated strategy: {name}")
-        
-        # Update Redis if available
-        if self.redis_client:
-            try:
-                config = json.loads(self.redis_client.hget('strategies', name))
-                config['active'] = False
-                self.redis_client.hset('strategies', name, json.dumps(config))
-            except Exception as e:
-                self.logger.error(f"Error updating Redis: {str(e)}")
-    
-    def set_ensemble(self, weights: Dict[str, float], strict: bool = True) -> None:
+            self.active_strategies.discard(name)
+            self._save_strategies()
+            
+            self.logger.info(f"Deactivated strategy: {name}")
+            
+            return {'success': True, 'message': f'Strategy {name} deactivated successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def set_ensemble(self, weights: Dict[str, float], strict: bool = True) -> Dict[str, Any]:
         """Set ensemble weights for strategies.
         
         Args:
-            weights: Dictionary of strategy names and weights
-            strict: Whether to enforce weight validation
-            
-        Raises:
-            StrategyError: If weight validation fails
-        """
-        if strict:
-            # Validate weights
-            if not all(0 <= w <= 1 for w in weights.values()):
-                raise StrategyError("Weights must be between 0 and 1")
-                
-            if not np.isclose(sum(weights.values()), 1.0):
-                raise StrategyError("Weights must sum to 1")
-                
-            if not all(name in self.strategies for name in weights):
-                raise StrategyError("Invalid strategy names in weights")
-        
-        self.ensemble_weights = weights
-        self.logger.info(f"Set ensemble weights: {weights}")
-        
-        # Update Redis if available
-        if self.redis_client:
-            try:
-                for name, weight in weights.items():
-                    config = json.loads(self.redis_client.hget('strategies', name))
-                    config['ensemble_weight'] = weight
-                    self.redis_client.hset('strategies', name, json.dumps(config))
-            except Exception as e:
-                self.logger.error(f"Error updating Redis: {str(e)}")
-    
-    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
-        """Generate trading signals from active strategies.
-        
-        Args:
-            data: Market data with OHLCV columns
+            weights: Dictionary mapping strategy names to weights
+            strict: If True, validate that all strategies exist
             
         Returns:
-            Series of combined trading signals
-            
-        Raises:
-            StrategyError: If signal generation fails
+            Ensemble setup result
         """
-        if not self.active_strategies:
-            raise StrategyError("No active strategies")
+        try:
+            if strict:
+                for strategy_name in weights:
+                    if strategy_name not in self.strategies:
+                        return {'success': False, 'error': f'Strategy {strategy_name} not found', 'timestamp': datetime.now().isoformat()}
             
-        # Generate signals from each active strategy
-        strategy_signals = {}
-        for name in self.active_strategies:
-            try:
-                strategy = self.strategies[name]
-                signals = strategy.generate_signals(data)
-                strategy_signals[name] = signals['signal']
-            except Exception as e:
-                self.logger.error(f"Error generating signals for {name}: {str(e)}")
-                continue
-        
-        if not strategy_signals:
-            raise StrategyError("No valid signals generated")
-        
-        # Combine signals using ensemble weights
-        if self.ensemble_weights:
-            # Use weighted average of signals
-            combined_signals = pd.Series(0, index=data.index)
-            total_weight = 0
+            # Validate weights sum to 1
+            total_weight = sum(weights.values())
+            if abs(total_weight - 1.0) > 1e-6:
+                return {'success': False, 'error': f'Weights must sum to 1.0, got {total_weight}', 'timestamp': datetime.now().isoformat()}
             
-            for name, signals in strategy_signals.items():
-                if name in self.ensemble_weights:
-                    weight = self.ensemble_weights[name]
-                    combined_signals += weight * signals
-                    total_weight += weight
+            self.ensemble_weights = weights.copy()
+            self._save_strategies()
             
-            if total_weight > 0:
-                combined_signals /= total_weight
-        else:
-            # Use simple average of signals
-            combined_signals = pd.concat(strategy_signals.values(), axis=1).mean(axis=1)
+            self.logger.info(f"Set ensemble weights: {weights}")
+            
+            return {'success': True, 'message': 'Ensemble weights set successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def generate_signals(self, data: pd.DataFrame) -> pd.Series:
+        """Generate signals from active strategies.
         
-        # Round to nearest signal value
-        combined_signals = combined_signals.round()
-        
-        return combined_signals
-    
+        Args:
+            data: Market data
+            
+        Returns:
+            Combined signals from all active strategies
+        """
+        try:
+            if not self.active_strategies:
+                return {'success': False, 'error': 'No active strategies', 'timestamp': datetime.now().isoformat()}
+            
+            signals = {}
+            for strategy_name in self.active_strategies:
+                strategy = self.strategies[strategy_name]
+                try:
+                    strategy_signals = strategy.generate_signals(data)
+                    signals[strategy_name] = strategy_signals
+                except Exception as e:
+                    self.logger.error(f"Error generating signals for {strategy_name}: {e}")
+                    continue
+            
+            if not signals:
+                return {'success': False, 'error': 'No signals generated', 'timestamp': datetime.now().isoformat()}
+            
+            # Combine signals using ensemble weights
+            if self.ensemble_weights:
+                combined_signals = pd.Series(0, index=data.index)
+                for strategy_name, weight in self.ensemble_weights.items():
+                    if strategy_name in signals:
+                        combined_signals += weight * signals[strategy_name]['Signal']
+            else:
+                # Simple average
+                combined_signals = pd.concat(signals.values(), axis=1)['Signal'].mean(axis=1)
+            
+            return {'success': True, 'result': combined_signals, 'message': 'Signals generated successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
     def evaluate_strategies(self, data: pd.DataFrame) -> Dict[str, StrategyMetrics]:
         """Evaluate performance of all strategies.
         
         Args:
-            data: Market data with OHLCV columns
+            data: Market data
             
         Returns:
-            Dictionary of strategy names and metrics
-            
-        Raises:
-            StrategyError: If evaluation fails
+            Dictionary mapping strategy names to metrics
         """
-        metrics = {}
-        
-        for name, strategy in self.strategies.items():
-            try:
-                signals = strategy.generate_signals(data)
-                strategy_metrics = strategy.evaluate_performance(signals, data)
-                metrics[name] = strategy_metrics
-                
-                # Log performance
-                log_performance(name, strategy_metrics)
-                
-            except Exception as e:
-                self.logger.error(f"Error evaluating {name}: {str(e)}")
-                continue
-        
-        return metrics
-    
+        try:
+            results = {}
+            for strategy_name, strategy in self.strategies.items():
+                try:
+                    signals = strategy.generate_signals(data)
+                    metrics = strategy.evaluate_performance(signals, data)
+                    results[strategy_name] = metrics
+                    self.strategy_metrics[strategy_name] = metrics
+                except Exception as e:
+                    self.logger.error(f"Error evaluating {strategy_name}: {e}")
+                    continue
+            
+            return {'success': True, 'result': results, 'message': 'Strategy evaluation completed', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
     def rank_strategies(self, metrics: Dict[str, StrategyMetrics]) -> List[tuple]:
         """Rank strategies by performance.
         
@@ -523,71 +506,50 @@ class StrategyManager:
             metrics: Dictionary of strategy metrics
             
         Returns:
-            List of (strategy_name, score) tuples sorted by score
+            List of (strategy_name, sharpe_ratio) tuples sorted by Sharpe ratio
         """
-        scores = []
-        
-        for name, metric in metrics.items():
-            # Calculate composite score
-            score = (
-                metric.sharpe_ratio * 0.4 +
-                metric.sortino_ratio * 0.3 +
-                metric.win_rate * 0.2 +
-                (1 - abs(metric.max_drawdown)) * 0.1
-            )
+        try:
+            rankings = []
+            for strategy_name, metric in metrics.items():
+                rankings.append((strategy_name, metric.sharpe_ratio))
             
-            scores.append((name, score))
-        
-        # Sort by score in descending order
-        return sorted(scores, key=lambda x: x[1], reverse=True)
-    
-    def save_results(self, results: Dict[str, Any], filename: str) -> None:
-        """Save optimization results.
+            rankings.sort(key=lambda x: x[1], reverse=True)
+            
+            return {'success': True, 'result': rankings, 'message': 'Strategies ranked successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def save_results(self, results: Dict[str, Any], filename: str) -> Dict[str, Any]:
+        """Save evaluation results to file.
         
         Args:
             results: Results to save
             filename: Output filename
             
-        Raises:
-            StrategyError: If saving fails
-        """
-        try:
-            results_dir = Path(self.config['results_dir'])
-            results_dir.mkdir(parents=True, exist_ok=True)
-            
-            filepath = results_dir / filename
-            with open(filepath, 'w') as f:
-                json.dump(results, f, indent=4)
-                
-            self.logger.info(f"Saved results to {filepath}")
-            
-        except Exception as e:
-            raise StrategyError(f"Error saving results: {str(e)}")
-    
-    def load_results(self, filename: str) -> Dict[str, Any]:
-        """Load optimization results.
-        
-        Args:
-            filename: Input filename
-            
         Returns:
-            Loaded results
-            
-        Raises:
-            StrategyError: If loading fails
+            Save result
         """
         try:
-            filepath = Path(self.config['results_dir']) / filename
-            with open(filepath, 'r') as f:
-                results = json.load(f)
-                
-            self.logger.info(f"Loaded results from {filepath}")
-            return results
+            # Convert metrics to serializable format
+            serializable_results = {}
+            for key, value in results.items():
+                if isinstance(value, StrategyMetrics):
+                    serializable_results[key] = value.to_dict()
+                else:
+                    serializable_results[key] = value
+            
+            with open(filename, 'w') as f:
+                json.dump(serializable_results, f, indent=2, default=str)
+            
+            self.logger.info(f"Results saved to {filename}")
+            
+            return {'success': True, 'message': f'Results saved to {filename}', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
-            raise StrategyError(f"Error loading results: {str(e)}")
-    
-    def set_cache(self, key: str, value: Any, ttl: int = 3600) -> None:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def set_cache(self, key: str, value: Any, ttl: int = 3600) -> Dict[str, Any]:
         """Set cache value.
         
         Args:
@@ -595,81 +557,174 @@ class StrategyManager:
             value: Value to cache
             ttl: Time to live in seconds
             
-        Raises:
-            StrategyError: If caching fails
+        Returns:
+            Cache set result
         """
-        if not self.redis_client:
-            return
-            
         try:
-            self.redis_client.setex(
-                key,
-                ttl,
-                json.dumps(value)
-            )
-            self.logger.debug(f"Cached value for {key}")
+            if not self.cache_enabled:
+                return {'success': False, 'error': 'Caching disabled', 'timestamp': datetime.now().isoformat()}
+            
+            if self.redis_client:
+                # Use Redis
+                self.redis_client.setex(key, ttl, json.dumps(value))
+            else:
+                # Use local cache
+                self.cache[key] = {
+                    'value': value,
+                    'expires': datetime.now().timestamp() + ttl
+                }
+            
+            return {'success': True, 'message': 'Value cached successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
-            raise StrategyError(f"Error setting cache: {str(e)}")
-    
-    def get_cache(self, key: str) -> Optional[Any]:
-        """Get cached value.
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def get_cache(self, key: str) -> Dict[str, Any]:
+        """Get cache value.
         
         Args:
             key: Cache key
             
         Returns:
-            Cached value or None if not found
-            
-        Raises:
-            StrategyError: If cache retrieval fails
+            Cached value or None if not found/expired
         """
-        if not self.redis_client:
-            return None
-            
         try:
-            value = self.redis_client.get(key)
-            if value:
-                return json.loads(value)
-            return None
+            if not self.cache_enabled:
+                return {'success': False, 'error': 'Caching disabled', 'timestamp': datetime.now().isoformat()}
+            
+            if self.redis_client:
+                # Use Redis
+                value = self.redis_client.get(key)
+                if value:
+                    return {'success': True, 'result': json.loads(value), 'message': 'Value retrieved from cache', 'timestamp': datetime.now().isoformat()}
+            else:
+                # Use local cache
+                if key in self.cache:
+                    cache_entry = self.cache[key]
+                    if datetime.now().timestamp() < cache_entry['expires']:
+                        return {'success': True, 'result': cache_entry['value'], 'message': 'Value retrieved from cache', 'timestamp': datetime.now().isoformat()}
+                    else:
+                        del self.cache[key]
+            
+            return {'success': False, 'error': 'Value not found in cache', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
-            raise StrategyError(f"Error getting cache: {str(e)}")
-    
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def load_results(self, filename: str) -> Dict[str, Any]:
+        """Load evaluation results from file.
+        
+        Args:
+            filename: Input filename
+            
+        Returns:
+            Loaded results
+        """
+        try:
+            with open(filename, 'r') as f:
+                data = json.load(f)
+            
+            # Convert back to StrategyMetrics objects
+            results = {}
+            for key, value in data.items():
+                if isinstance(value, dict) and 'returns' in value:
+                    results[key] = StrategyMetrics.from_dict(value)
+                else:
+                    results[key] = value
+            
+            self.logger.info(f"Results loaded from {filename}")
+            
+            return {'success': True, 'result': results, 'message': f'Results loaded from {filename}', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
     def simulate(self, data: pd.DataFrame, strategy_name: str, config: Optional[Dict] = None) -> StrategyMetrics:
         """Simulate strategy performance.
         
         Args:
-            data: Market data with OHLCV columns
-            strategy_name: Name of strategy to simulate
+            data: Market data
+            strategy_name: Strategy to simulate
             config: Optional configuration overrides
             
         Returns:
-            StrategyMetrics object
-            
-        Raises:
-            StrategyError: If simulation fails
+            Strategy performance metrics
         """
-        if strategy_name not in self.strategies:
-            raise StrategyError(f"Strategy not found: {strategy_name}")
-            
         try:
+            if strategy_name not in self.strategies:
+                return {'success': False, 'error': f'Strategy {strategy_name} not found', 'timestamp': datetime.now().isoformat()}
+            
             strategy = self.strategies[strategy_name]
             
-            # Update config if provided
+            # Apply configuration overrides
             if config:
+                original_config = strategy.config.copy()
                 strategy.config.update(config)
             
-            # Generate signals
-            signals = strategy.generate_signals(data)
+            try:
+                signals = strategy.generate_signals(data)
+                metrics = strategy.evaluate_performance(signals, data)
+            finally:
+                # Restore original configuration
+                if config:
+                    strategy.config = original_config
             
-            # Evaluate performance
-            metrics = strategy.evaluate_performance(signals, data)
-            
-            # Log performance
-            log_performance(strategy_name, metrics)
-            
-            return metrics
+            return {'success': True, 'result': metrics, 'message': f'Simulation completed for {strategy_name}', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
-            raise StrategyError(f"Error simulating {strategy_name}: {str(e)}") 
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def set_parameters(self, **kwargs) -> Dict[str, Any]:
+        """Set strategy parameters.
+        
+        Args:
+            **kwargs: Parameter name-value pairs
+            
+        Returns:
+            Dictionary with parameter update status
+        """
+        try:
+            for param, value in kwargs.items():
+                if param in self.config:
+                    self.config[param] = value
+                    self.logger.info(f"Updated parameter {param} = {value}")
+                else:
+                    self.logger.warning(f"Unknown parameter: {param}")
+            
+            return {'success': True, 'message': 'Parameters updated successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def get_parameters(self) -> Dict[str, Any]:
+        """Get current strategy parameters.
+        
+        Returns:
+            Dictionary with current parameters
+        """
+        try:
+            return {'success': True, 'result': self.config.copy(), 'message': 'Parameters retrieved successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def reset_parameters(self) -> Dict[str, Any]:
+        """Reset parameters to defaults.
+        
+        Returns:
+            Dictionary with reset status
+        """
+        try:
+            self.config = {
+                'log_level': 'INFO',
+                'max_position_size': 100000,
+                'min_position_size': 1000,
+                'max_leverage': 1.0,
+                'stop_loss': 0.02,
+                'take_profit': 0.04
+            }
+            
+            return {'success': True, 'message': 'Parameters reset to defaults', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()} 

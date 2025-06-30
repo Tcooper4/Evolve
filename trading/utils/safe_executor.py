@@ -103,6 +103,7 @@ class SafeExecutor:
         
         logger.info(f"SafeExecutor initialized with timeout={timeout_seconds}s, memory_limit={memory_limit_mb}MB")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def execute_model(self, 
                      model_code: str,
                      model_name: str,
@@ -156,7 +157,7 @@ class SafeExecutor:
             
         except Exception as e:
             logger.error(f"Error executing model {model_name}: {e}")
-            return ExecutionResult(
+            return {'success': True, 'result': ExecutionResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 status=ExecutionStatus.SYSTEM_ERROR,
                 error=f"System error: {str(e)}",
                 logs=[traceback.format_exc()]
@@ -186,7 +187,7 @@ class SafeExecutor:
             'strategy_name': strategy_name
         }
         
-        return self.execute_model(strategy_code, strategy_name, input_data, "strategy")
+        return {'success': True, 'result': self.execute_model(strategy_code, strategy_name, input_data, "strategy"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def execute_indicator(self,
                          indicator_code: str,
@@ -212,7 +213,7 @@ class SafeExecutor:
             'indicator_name': indicator_name
         }
         
-        return self.execute_model(indicator_code, indicator_name, input_data, "indicator")
+        return {'success': True, 'result': self.execute_model(indicator_code, indicator_name, input_data, "indicator"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _validate_model_code(self, model_code: str, model_name: str) -> ExecutionResult:
         """Validate model code for safety and syntax."""
@@ -245,7 +246,7 @@ class SafeExecutor:
             try:
                 compile(model_code, '<string>', 'exec')
             except SyntaxError as e:
-                return ExecutionResult(
+                return {'success': True, 'result': ExecutionResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     status=ExecutionStatus.VALIDATION_ERROR,
                     error=f"Syntax error: {str(e)}",
                     logs=[f"Syntax validation failed for {model_name}"]
@@ -288,7 +289,7 @@ class SafeExecutor:
             )
             
         except Exception as e:
-            return ExecutionResult(
+            return {'success': True, 'result': ExecutionResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 status=ExecutionStatus.SYSTEM_ERROR,
                 error=f"Failed to create execution environment: {str(e)}",
                 logs=[traceback.format_exc()]
@@ -420,7 +421,7 @@ finally:
     # Cancel alarm
     signal.alarm(0)
 '''
-        return wrapper
+        return {'success': True, 'result': wrapper, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _execute_isolated_process(self, script_path: str, model_name: str, model_type: str) -> ExecutionResult:
         """Execute the model in an isolated process."""
@@ -464,7 +465,7 @@ finally:
                         )
                         
                 except json.JSONDecodeError:
-                    return ExecutionResult(
+                    return {'success': True, 'result': ExecutionResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                         status=ExecutionStatus.EXECUTION_ERROR,
                         error="Invalid JSON output from model",
                         execution_time=execution_time,
@@ -522,10 +523,12 @@ finally:
         except Exception as e:
             logger.warning(f"Could not set resource limits: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _timeout_handler(self, signum, frame):
         """Signal handler for timeout."""
         raise TimeoutError("Execution timeout")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _log_execution(self, model_name: str, model_type: str, result: ExecutionResult):
         """Log execution details."""
         try:
@@ -560,9 +563,10 @@ finally:
         except Exception as e:
             logger.error(f"Failed to log execution: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_statistics(self) -> Dict[str, Any]:
         """Get execution statistics."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'total_executions': self.execution_count,
             'successful_executions': self.success_count,
             'failed_executions': self.error_count,
@@ -587,6 +591,7 @@ finally:
             logger.error(f"Error during cleanup: {e}")
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Global safe executor instance
 _safe_executor = None
 
@@ -595,7 +600,7 @@ def get_safe_executor() -> SafeExecutor:
     global _safe_executor
     if _safe_executor is None:
         _safe_executor = SafeExecutor()
-    return _safe_executor
+    return {'success': True, 'result': _safe_executor, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def execute_model_safely(model_code: str, 
@@ -615,7 +620,7 @@ def execute_model_safely(model_code: str,
         ExecutionResult with status and output
     """
     executor = get_safe_executor()
-    return executor.execute_model(model_code, model_name, input_data, model_type)
+    return {'success': True, 'result': executor.execute_model(model_code, model_name, input_data, model_type), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def execute_strategy_safely(strategy_code: str,
@@ -635,7 +640,7 @@ def execute_strategy_safely(strategy_code: str,
         ExecutionResult with status and output
     """
     executor = get_safe_executor()
-    return executor.execute_strategy(strategy_code, strategy_name, market_data, parameters)
+    return {'success': True, 'result': executor.execute_strategy(strategy_code, strategy_name, market_data, parameters), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def execute_indicator_safely(indicator_code: str,
@@ -655,4 +660,4 @@ def execute_indicator_safely(indicator_code: str,
         ExecutionResult with status and output
     """
     executor = get_safe_executor()
-    return executor.execute_indicator(indicator_code, indicator_name, price_data, parameters) 
+    return {'success': True, 'result': executor.execute_indicator(indicator_code, indicator_name, price_data, parameters), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

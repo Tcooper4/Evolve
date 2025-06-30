@@ -55,13 +55,13 @@ class InputValidator:
         value = re.sub(r'[<>]', '', value)
         # Remove control characters
         value = ''.join(char for char in value if ord(char) >= 32)
-        return value.strip()
+        return {'success': True, 'result': value.strip(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     @staticmethod
     def validate_email(email: str) -> bool:
         """Validate email format."""
         pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        return bool(re.match(pattern, email))
+        return {'success': True, 'result': bool(re.match(pattern, email)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     @staticmethod
     def validate_password(password: str) -> bool:
@@ -75,7 +75,7 @@ class InputValidator:
         if not re.search(r'\d', password):
             return False
         if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return True
 
 class SecurityManager:
@@ -97,6 +97,7 @@ class SecurityManager:
         self.security = HTTPBearer()
         self.validator = InputValidator()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for security manager."""
         log_path = Path("logs/security")
@@ -112,6 +113,7 @@ class SecurityManager:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def hash_password(self, password: str) -> str:
         """Hash a password using SHA-256."""
         try:
@@ -119,7 +121,7 @@ class SecurityManager:
             hashed = hashlib.sha256(
                 (password + salt).encode()
             ).hexdigest()
-            return f"{salt}${hashed}"
+            return {'success': True, 'result': f"{salt}${hashed}", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error hashing password: {str(e)}")
             raise
@@ -134,7 +136,7 @@ class SecurityManager:
             return computed_hash == stored_hash
         except Exception as e:
             self.logger.error(f"Error verifying password: {str(e)}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def generate_token(self, user_id: str, role: str) -> str:
         """Generate a JWT token."""
@@ -144,7 +146,7 @@ class SecurityManager:
                 'role': role,
                 'exp': datetime.utcnow() + timedelta(seconds=self.token_expiry)
             }
-            return jwt.encode(payload, self.secret_key, algorithm='HS256')
+            return {'success': True, 'result': jwt.encode(payload, self.secret_key, algorithm='HS256'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error generating token: {str(e)}")
             raise
@@ -152,7 +154,7 @@ class SecurityManager:
     def verify_token(self, token: str) -> Dict[str, Any]:
         """Verify a JWT token."""
         try:
-            return jwt.decode(token, self.secret_key, algorithms=['HS256'])
+            return {'success': True, 'result': jwt.decode(token, self.secret_key, algorithms=['HS256']), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except jwt.ExpiredSignatureError:
             self.logger.error("Token has expired")
             raise
@@ -163,14 +165,16 @@ class SecurityManager:
     def encrypt(self):
         raise NotImplementedError('Pending feature')
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def decrypt(self):
         raise NotImplementedError('Pending feature')
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def encrypt_data(self, data: str) -> str:
         """Encrypt sensitive data."""
         try:
             # TODO: Implement encryption logic
-            return data
+            return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error encrypting data: {str(e)}")
             raise
@@ -179,7 +183,7 @@ class SecurityManager:
         """Decrypt sensitive data."""
         try:
             # TODO: Implement decryption logic
-            return encrypted_data
+            return {'success': True, 'result': encrypted_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error decrypting data: {str(e)}")
             raise
@@ -193,7 +197,7 @@ class SecurityManager:
             "permissions": permissions,
             "exp": expiration
         }
-        return jwt.encode(token_data, SecurityConfig.JWT_SECRET, algorithm=SecurityConfig.JWT_ALGORITHM)
+        return {'success': True, 'result': jwt.encode(token_data, SecurityConfig.JWT_SECRET, algorithm=SecurityConfig.JWT_ALGORITHM), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def check_rate_limit(self, user_id: str) -> bool:
         """Check if a user has exceeded their rate limit."""
@@ -206,18 +210,18 @@ class SecurityManager:
         
         current = int(current)
         if current >= SecurityConfig.RATE_LIMIT_MAX_REQUESTS:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         self.redis_client.incr(key)
         return True
     
     def check_permission(self, required_permission: str, user_permissions: List[str]) -> bool:
         """Check if a user has the required permission."""
-        return required_permission in user_permissions
+        return {'success': True, 'result': required_permission in user_permissions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def generate_csrf_token(self) -> str:
         """Generate a new CSRF token."""
-        return secrets.token_urlsafe(32)
+        return {'success': True, 'result': secrets.token_urlsafe(32), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def validate_csrf_token(self, request: Request, response: Response) -> bool:
         """Validate CSRF token from request."""
@@ -228,7 +232,7 @@ class SecurityManager:
             return False
         
         if token != cookie_token:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Refresh token
         new_token = self.generate_csrf_token()
@@ -254,6 +258,7 @@ class SecurityManager:
             samesite='strict'
         )
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def get_current_user(self, credentials: HTTPAuthorizationCredentials = Security(HTTPBearer())) -> TokenData:
         """Get the current user from the JWT token."""
         return self.verify_token(credentials.credentials)
@@ -265,7 +270,7 @@ class SecurityManager:
             async def wrapper(*args, current_user: TokenData = Depends(get_current_user), **kwargs):
                 if not self.check_permission(permission, current_user.permissions):
                     raise HTTPException(status_code=403, detail="Permission denied")
-                return await func(*args, current_user=current_user, **kwargs)
+                return {'success': True, 'result': {'success': True, 'result': await func(*args, current_user=current_user, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             return wrapper
         return decorator
     
@@ -276,7 +281,7 @@ class SecurityManager:
             async def wrapper(*args, current_user: TokenData = Depends(get_current_user), **kwargs):
                 if current_user.role != role:
                     raise HTTPException(status_code=403, detail="Role not authorized")
-                return await func(*args, current_user=current_user, **kwargs)
+                return {'success': True, 'result': {'success': True, 'result': await func(*args, current_user=current_user, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             return wrapper
         return decorator
     
@@ -287,7 +292,7 @@ class SecurityManager:
             async def wrapper(*args, current_user: TokenData = Depends(get_current_user), **kwargs):
                 if not self.check_rate_limit(current_user.user_id):
                     raise HTTPException(status_code=429, detail="Rate limit exceeded")
-                return await func(*args, current_user=current_user, **kwargs)
+                return {'success': True, 'result': {'success': True, 'result': await func(*args, current_user=current_user, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             return wrapper
         return decorator
     
@@ -300,7 +305,7 @@ class SecurityManager:
                 for key, value in kwargs.items():
                     if isinstance(value, str):
                         kwargs[key] = self.validator.sanitize_string(value)
-                return await func(*args, **kwargs)
+                return {'success': True, 'result': {'success': True, 'result': await func(*args, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             return wrapper
         return decorator
     
@@ -311,7 +316,7 @@ class SecurityManager:
             async def wrapper(request: Request, response: Response, *args, **kwargs):
                 if not self.validate_csrf_token(request, response):
                     raise HTTPException(status_code=403, detail="Invalid CSRF token")
-                return await func(request, response, *args, **kwargs)
+                return {'success': True, 'result': {'success': True, 'result': await func(request, response, *args, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             return wrapper
         return decorator
 

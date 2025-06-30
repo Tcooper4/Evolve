@@ -34,7 +34,7 @@ class SecretManager:
         self.config_dir = Path(config_dir)
         self.env_file = Path(".env")
         self.example_env_file = Path(".env.example")
-        
+
     def generate_secure_secret(self, length: int = 32) -> str:
         """Generate a secure random secret."""
         alphabet = string.ascii_letters + string.digits + string.punctuation
@@ -52,7 +52,6 @@ class SecretManager:
         """Load environment variables from .env file."""
         if not self.env_file.exists():
             return {}
-        
         env_vars = {}
         with open(self.env_file, 'r') as f:
             for line in f:
@@ -71,7 +70,6 @@ class SecretManager:
     def update_secret(self, key: str, value: Optional[str] = None) -> None:
         """Update a secret in the .env file."""
         env_vars = self.load_env_file()
-        
         if value is None:
             if key == "JWT_SECRET":
                 value = self.generate_jwt_secret()
@@ -79,7 +77,6 @@ class SecretManager:
                 value = self.generate_api_key()
             else:
                 value = self.generate_secure_secret()
-        
         env_vars[key] = value
         self.save_env_file(env_vars)
         logger.info(f"Updated {key}")
@@ -88,12 +85,10 @@ class SecretManager:
         """Rotate all secrets in the .env file."""
         env_vars = self.load_env_file()
         rotated = False
-        
         for key in env_vars:
             if any(secret_type in key for secret_type in ["SECRET", "KEY", "PASSWORD", "TOKEN"]):
                 self.update_secret(key)
                 rotated = True
-        
         if rotated:
             logger.info("Rotated all secrets")
         else:
@@ -112,14 +107,11 @@ class SecretManager:
             "EMAIL_FROM",
             "SLACK_WEBHOOK_URL"
         ]
-        
         env_vars = self.load_env_file()
         missing_vars = [var for var in required_vars if var not in env_vars]
-        
         if missing_vars:
             logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
             return False
-        
         # Validate SSL certificate paths
         ssl_paths = [
             "SSL_CERT_PATH",
@@ -129,14 +121,12 @@ class SecretManager:
             "MONITORING_CERT_PATH",
             "MONITORING_KEY_PATH"
         ]
-        
         for path_var in ssl_paths:
             if path_var in env_vars:
                 path = Path(env_vars[path_var])
                 if not path.exists():
                     logger.error(f"SSL certificate/key not found: {path}")
                     return False
-        
         return True
 
 def main():
@@ -145,10 +135,8 @@ def main():
     parser.add_argument("--rotate", action="store_true", help="Rotate all secrets")
     parser.add_argument("--validate", action="store_true", help="Validate configuration")
     parser.add_argument("--update", metavar="KEY=VALUE", help="Update a specific secret")
-    
     args = parser.parse_args()
     manager = SecretManager()
-    
     if args.generate:
         manager.update_secret("JWT_SECRET")
         manager.update_secret("OPENAI_API_KEY")
@@ -156,10 +144,8 @@ def main():
         manager.update_secret("CONSUL_TOKEN")
         manager.update_secret("EMAIL_PASSWORD")
         manager.update_secret("SLACK_WEBHOOK_URL")
-    
     if args.rotate:
         manager.rotate_secrets()
-    
     if args.validate:
         if manager.validate_config():
             logger.info("Configuration is valid")
@@ -167,7 +153,6 @@ def main():
         else:
             logger.error("Configuration validation failed")
             sys.exit(1)
-    
     if args.update:
         try:
             key, value = args.update.split("=", 1)

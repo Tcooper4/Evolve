@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, List, Optional, Any, Union
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 from pathlib import Path
 import json
@@ -44,7 +44,7 @@ class APIConfig(BaseModel):
     def validate_jwt_secret(cls, v):
         if not v:
             raise ValueError("JWT secret is required")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class User(BaseModel):
     """User model."""
@@ -102,7 +102,7 @@ class AutomationAPI:
         try:
             with open(config_path, 'r') as f:
                 config_data = json.load(f)
-            return APIConfig(**config_data)
+            return {'success': True, 'result': APIConfig(**config_data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             logger.error(f"Failed to load API config: {str(e)}")
             raise

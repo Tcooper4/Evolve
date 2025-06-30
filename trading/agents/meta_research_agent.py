@@ -285,7 +285,7 @@ class MetaResearchAgent:
             
         except Exception as e:
             self.logger.error(f"Error filtering papers: {str(e)}")
-            return papers
+            return []
     
     def _deduplicate_papers(self, papers: List[ResearchPaper]) -> List[ResearchPaper]:
         """Remove duplicate papers based on title similarity."""
@@ -305,7 +305,7 @@ class MetaResearchAgent:
             
         except Exception as e:
             self.logger.error(f"Error deduplicating papers: {str(e)}")
-            return papers
+            return []
     
     async def evaluate_models(self, papers: List[ResearchPaper]) -> List[ModelEvaluation]:
         """
@@ -377,7 +377,7 @@ class MetaResearchAgent:
             
         except Exception as e:
             self.logger.error(f"Error extracting model info: {str(e)}")
-            return None
+            return []
     
     def _extract_performance_metrics(self, abstract: str) -> Dict[str, float]:
         """Extract performance metrics from abstract."""
@@ -411,7 +411,7 @@ class MetaResearchAgent:
             
         except Exception as e:
             self.logger.error(f"Error extracting performance metrics: {str(e)}")
-            return {}
+            return []
     
     def _assess_implementation_complexity(self, paper: ResearchPaper) -> float:
         """Assess implementation complexity of the model."""
@@ -827,4 +827,4 @@ class {evaluation.model_name.replace(' ', '_')}:
             
         except Exception as e:
             self.logger.error(f"Error getting research summary: {str(e)}")
-            return {} 
+            return {}

@@ -401,11 +401,10 @@ class MetaLearningFeedbackAgent:
                 }
             else:
                 # Default space
-                return {
-                    'learning_rate': [0.001, 0.01, 0.1],
-                    'batch_size': [32, 64, 128],
-                    'epochs': [50, 100, 200]
-                }
+                return {'learning_rate': [0.001, 0.01, 0.1],
+                        'batch_size': [32, 64, 128],
+                        'epochs': [50, 100, 200]
+                       }
                 
         except Exception as e:
             self.logger.error(f"Error getting hyperparameter space: {str(e)}")
@@ -579,4 +578,4 @@ class MetaLearningFeedbackAgent:
                 json.dump(data, f, indent=2, default=str)
                 
         except Exception as e:
-            self.logger.error(f"Error saving feedback history: {str(e)}") 
+            self.logger.error(f"Error saving feedback history: {str(e)}")

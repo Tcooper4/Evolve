@@ -65,6 +65,7 @@ class RecoveryManager:
         self.recovery_dir = Path("recovery")
         self.recovery_dir.mkdir(parents=True, exist_ok=True)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
@@ -72,7 +73,7 @@ class RecoveryManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -86,6 +87,7 @@ class RecoveryManager:
         
         logging.config.dictConfig(log_config)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def create_recovery_point(self, components: List[str] = None):
         """Create a system recovery point."""
         self.logger.info("Creating system recovery point")
@@ -376,7 +378,7 @@ class RecoveryManager:
             metrics = ["cpu", "memory", "disk", "network"]
             for metric in metrics:
                 if abs(current[metric] - original[metric]) > 10:  # 10% threshold
-                    return False
+                    return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             return True
         except Exception as e:
@@ -530,6 +532,7 @@ class RecoveryManager:
                 print(f"  Issue: {rec['issue']}")
                 print(f"  Recommendation: {rec['recommendation']}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Recovery Manager")
@@ -570,5 +573,6 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

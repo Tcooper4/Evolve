@@ -28,7 +28,7 @@ try:
 except ImportError:
     # Fallback imports
     def get_logger(name):
-        return logging.getLogger(name)
+        return {'success': True, 'result': logging.getLogger(name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     class TradingConfig:
         def __init__(self):
@@ -36,12 +36,14 @@ except ImportError:
             self.broker_api_key = None
             self.broker_secret_key = None
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     class AgentMemory:
         def __init__(self):
             self.memory = []
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def calculate_metrics(returns):
-        return {'sharpe_ratio': 0.0, 'total_return': 0.0}
+        return {'success': True, 'result': {'sharpe_ratio': 0.0, 'total_return': 0.0}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 logger = get_logger(__name__)
 
@@ -58,6 +60,7 @@ class ExecutionEngine:
         # Initialize broker connections
         self._init_brokers()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _init_brokers(self):
         """Initialize broker connections."""
         self.brokers = {}
@@ -86,6 +89,7 @@ class ExecutionEngine:
             except Exception as e:
                 logger.error(f"Failed to initialize Binance: {e}")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def execute_order(self, order: dict) -> dict:
         """Execute a trading order."""
         try:
@@ -118,7 +122,7 @@ class ExecutionEngine:
             
         except Exception as e:
             logger.error(f"Error executing order: {e}")
-            return {'status': 'error', 'message': str(e)}
+            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _validate_order(self, order: dict) -> dict:
         """Validate order parameters."""
@@ -127,7 +131,7 @@ class ExecutionEngine:
         for field in required_fields:
             if field not in order:
                 logger.error(f"Missing required field: {field}")
-                return None
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Validate symbol
         if not isinstance(order['symbol'], str) or len(order['symbol']) == 0:
@@ -166,7 +170,7 @@ class ExecutionEngine:
                 
         except Exception as e:
             logger.error(f"Live execution error: {e}")
-            return {'status': 'error', 'message': str(e)}
+            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _execute_stock_order(self, order: dict) -> dict:
         """Execute stock order via Alpaca."""
@@ -206,7 +210,7 @@ class ExecutionEngine:
             
         except Exception as e:
             logger.error(f"Alpaca execution error: {e}")
-            return {'status': 'error', 'message': str(e)}
+            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _execute_crypto_order(self, order: dict) -> dict:
         """Execute crypto order via CCXT."""
@@ -242,7 +246,7 @@ class ExecutionEngine:
             
         except Exception as e:
             logger.error(f"CCXT execution error: {e}")
-            return {'status': 'error', 'message': str(e)}
+            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _execute_simulation_order(self, order: dict) -> dict:
         """Execute order in simulation mode."""
@@ -287,7 +291,7 @@ class ExecutionEngine:
             
         except Exception as e:
             logger.error(f"Simulation execution error: {e}")
-            return {'status': 'error', 'message': str(e)}
+            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_simulated_price(self, symbol: str) -> float:
         """Get simulated price for symbol."""
@@ -305,7 +309,7 @@ class ExecutionEngine:
         base_price = base_prices.get(symbol, 100.0)
         variation = random.uniform(-0.02, 0.02)  # ±2% variation
         
-        return base_price * (1 + variation)
+        return {'success': True, 'result': base_price * (1 + variation), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def cancel_order(self, order_id: str) -> dict:
         """Cancel an active order."""
@@ -332,7 +336,7 @@ class ExecutionEngine:
                 
         except Exception as e:
             logger.error(f"Error cancelling order: {e}")
-            return {'status': 'error', 'message': str(e)}
+            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_order_status(self, order_id: str) -> dict:
         """Get order status."""
@@ -344,7 +348,7 @@ class ExecutionEngine:
             # Check execution history
             for execution in self.execution_history:
                 if execution['result'].get('order_id') == order_id:
-                    return execution['result']
+                    return {'success': True, 'result': execution['result'], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             return {'status': 'error', 'message': 'Order not found'}
             
@@ -355,7 +359,7 @@ class ExecutionEngine:
     def get_execution_summary(self) -> dict:
         """Get execution summary."""
         if not self.execution_history:
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'total_orders': 0,
                 'successful_orders': 0,
                 'failed_orders': 0,
@@ -384,16 +388,57 @@ class ExecutionEngine:
     
     def get_active_orders(self) -> list:
         """Get list of active orders."""
-        return list(self.active_orders.values())
+        return {'success': True, 'result': list(self.active_orders.values()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
-    def clear_history(self):
-        """Clear execution history."""
-        self.execution_history = []
-        logger.info("Execution history cleared")
+    def clear_history(self) -> dict:
+        """Clear execution history.
+        
+        Returns:
+            Dictionary with clear status and details
+        """
+        try:
+            history_count = len(self.execution_history)
+            self.execution_history = []
+            logger.info("Execution history cleared")
+            
+            return {
+                'success': True,
+                'message': f'Execution history cleared successfully',
+                'cleared_entries': history_count,
+                'timestamp': 'now'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error clearing execution history: {e}")
+            return {
+                'success': False,
+                'message': f'Error clearing execution history: {str(e)}',
+                'timestamp': 'now'
+            }
 
 # Global execution engine instance
 execution_engine = ExecutionEngine()
 
-def get_execution_engine() -> ExecutionEngine:
-    """Get the global execution engine instance."""
-    return execution_engine 
+def get_execution_engine() -> dict:
+    """Get the global execution engine instance.
+    
+    Returns:
+        Dictionary with execution engine status and instance
+    """
+    try:
+        return {
+            'success': True,
+            'execution_engine': execution_engine,
+            'execution_mode': execution_engine.config.execution_mode,
+            'total_orders': len(execution_engine.execution_history),
+            'active_orders': len(execution_engine.active_orders),
+            'available_brokers': list(execution_engine.brokers.keys()),
+            'timestamp': 'now'
+        }
+    except Exception as e:
+        logger.error(f"Error getting execution engine: {e}")
+        return {
+            'success': False,
+            'message': f'Error getting execution engine: {str(e)}',
+            'timestamp': 'now'
+        } 

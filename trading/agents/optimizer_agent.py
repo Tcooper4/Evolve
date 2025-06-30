@@ -1114,4 +1114,4 @@ def create_optimizer_agent(config: Optional[Dict[str, Any]] = None) -> Optimizer
         default_config.update(config)
     
     agent_config = AgentConfig(**default_config)
-    return OptimizerAgent(agent_config) 
+    return OptimizerAgent(agent_config)

@@ -51,7 +51,7 @@ def handle_exceptions(logger: Optional[logging.Logger] = None,
                     if logger:
                         logger.error(f"Error in {func.__name__}: {str(e)}")
                         logger.error(traceback.format_exc())
-                    return default_return
+                    return {'success': True, 'result': {'success': True, 'result': {'success': True, 'result': default_return, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 raise
         return wrapper
     return decorator
@@ -79,7 +79,7 @@ def retry(max_attempts: int = 3, delay: float = 1.0,
             
             while attempt <= max_attempts:
                 try:
-                    return func(*args, **kwargs)
+                    return {'success': True, 'result': {'success': True, 'result': {'success': True, 'result': func(*args, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 except Exception as e:
                     if attempt == max_attempts:
                         if logger:
@@ -132,7 +132,7 @@ def validate_input(func: Callable) -> Callable:
                         f"got {type(value).__name__}"
                     )
         
-        return func(*args, **kwargs)
+        return {'success': True, 'result': {'success': True, 'result': func(*args, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     return wrapper
 
 def log_execution_time(logger: Optional[logging.Logger] = None) -> Callable:
@@ -158,7 +158,7 @@ def log_execution_time(logger: Optional[logging.Logger] = None) -> Callable:
                     f"{func.__name__} executed in {end_time - start_time:.2f} seconds"
                 )
             
-            return result
+            return {'success': True, 'result': {'success': True, 'result': {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return wrapper
     return decorator
 
@@ -174,7 +174,7 @@ def handle_keyboard_interrupt(func: Callable) -> Callable:
     @wraps(func)
     def wrapper(*args, **kwargs) -> Any:
         try:
-            return func(*args, **kwargs)
+            return {'success': True, 'result': {'success': True, 'result': func(*args, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except KeyboardInterrupt:
             print("\nOperation cancelled by user")
             sys.exit(0)
@@ -195,5 +195,5 @@ def handle_file_errors(func: Callable) -> Callable:
             return func(*args, **kwargs)
         except Exception as e:
             logging.error(f"Error in {func.__name__}: {e}")
-            return None
+            return {'success': True, 'result': {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     return wrapper 

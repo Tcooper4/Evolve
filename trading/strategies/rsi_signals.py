@@ -7,6 +7,7 @@ from typing import Dict, Any
 import pandas as pd
 import numpy as np
 import pandas_ta as ta
+from datetime import datetime
 
 # Configure logging
 logger = logging.getLogger(__name__)

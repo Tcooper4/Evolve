@@ -34,6 +34,7 @@ class PerformanceMonitorAgent(BaseMetaAgent):
             "max_drawdown": 0.2
         }
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def run(self) -> Dict[str, Any]:
         """Run performance monitoring.
         
@@ -53,7 +54,7 @@ class PerformanceMonitorAgent(BaseMetaAgent):
         # Log results
         self.log_action("Performance monitoring completed", results)
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _analyze_models(self) -> Dict[str, Any]:
         """Analyze model performance.
@@ -74,7 +75,7 @@ class PerformanceMonitorAgent(BaseMetaAgent):
                     "last_update": metrics.get("timestamp")
                 }
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _analyze_strategies(self) -> Dict[str, Any]:
         """Analyze strategy performance.
@@ -95,7 +96,7 @@ class PerformanceMonitorAgent(BaseMetaAgent):
                     "last_update": metrics.get("timestamp")
                 }
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_actions(self, results: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Generate actions based on performance analysis.
@@ -136,7 +137,7 @@ class PerformanceMonitorAgent(BaseMetaAgent):
                     "suggestion": "Adjust risk parameters"
                 })
         
-        return actions
+        return {'success': True, 'result': actions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_model_names(self) -> List[str]:
         """Get list of model names.
@@ -145,7 +146,7 @@ class PerformanceMonitorAgent(BaseMetaAgent):
             List of model names
         """
         model_dir = Path("trading/models")
-        return [f.stem for f in model_dir.glob("*.py") if f.stem != "__init__"]
+        return {'success': True, 'result': [f.stem for f in model_dir.glob("*.py") if f.stem != "__init__"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _is_degrading(self, metrics: List[Dict[str, Any]], key: str) -> bool:
         """Check if performance is degrading.
@@ -158,7 +159,7 @@ class PerformanceMonitorAgent(BaseMetaAgent):
             True if performance is degrading
         """
         if len(metrics) < 2:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Calculate trend
         values = [m[key] for m in metrics]

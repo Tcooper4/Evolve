@@ -123,68 +123,134 @@ class AgentMemoryManager:
             logger.error(f"Local storage setup failed: {e}")
             self.fallback_storage = 'memory'
     
-    def store_agent_interaction(self, interaction: AgentInteraction) -> bool:
+    def store_agent_interaction(self, interaction: AgentInteraction) -> dict:
         """Store agent interaction in memory.
         
         Args:
             interaction: Agent interaction record
             
         Returns:
-            True if stored successfully
+            Dictionary with storage status and details
         """
         try:
+            success = False
             if self.redis_client:
-                return self._store_in_redis('interaction', interaction)
+                success = self._store_in_redis('interaction', interaction)
             elif self.fallback_storage == 'local':
-                return self._store_in_local('interaction', interaction)
+                success = self._store_in_local('interaction', interaction)
             else:
-                return self._store_in_memory('interaction', interaction)
+                success = self._store_in_memory('interaction', interaction)
+            
+            if success:
+                return {
+                    'success': True,
+                    'message': f'Agent interaction stored successfully',
+                    'agent_type': interaction.agent_type,
+                    'timestamp': interaction.timestamp.isoformat(),
+                    'storage_type': 'redis' if self.redis_client else self.fallback_storage
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Failed to store agent interaction',
+                    'agent_type': interaction.agent_type,
+                    'timestamp': interaction.timestamp.isoformat()
+                }
                 
         except Exception as e:
             logger.error(f"Failed to store agent interaction: {e}")
-            return False
+            return {
+                'success': False,
+                'error': str(e),
+                'agent_type': interaction.agent_type,
+                'timestamp': interaction.timestamp.isoformat()
+            }
     
-    def store_strategy_memory(self, strategy_memory: StrategyMemory) -> bool:
+    def store_strategy_memory(self, strategy_memory: StrategyMemory) -> dict:
         """Store strategy performance memory.
         
         Args:
             strategy_memory: Strategy memory record
             
         Returns:
-            True if stored successfully
+            Dictionary with storage status and details
         """
         try:
+            success = False
             if self.redis_client:
-                return self._store_in_redis('strategy', strategy_memory)
+                success = self._store_in_redis('strategy', strategy_memory)
             elif self.fallback_storage == 'local':
-                return self._store_in_local('strategy', strategy_memory)
+                success = self._store_in_local('strategy', strategy_memory)
             else:
-                return self._store_in_memory('strategy', strategy_memory)
+                success = self._store_in_memory('strategy', strategy_memory)
+            
+            if success:
+                return {
+                    'success': True,
+                    'message': f'Strategy memory stored successfully',
+                    'strategy_name': strategy_memory.strategy_name,
+                    'timestamp': strategy_memory.timestamp.isoformat(),
+                    'storage_type': 'redis' if self.redis_client else self.fallback_storage
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Failed to store strategy memory',
+                    'strategy_name': strategy_memory.strategy_name,
+                    'timestamp': strategy_memory.timestamp.isoformat()
+                }
                 
         except Exception as e:
             logger.error(f"Failed to store strategy memory: {e}")
-            return False
+            return {
+                'success': False,
+                'error': str(e),
+                'strategy_name': strategy_memory.strategy_name,
+                'timestamp': strategy_memory.timestamp.isoformat()
+            }
     
-    def store_model_memory(self, model_memory: ModelMemory) -> bool:
+    def store_model_memory(self, model_memory: ModelMemory) -> dict:
         """Store model performance memory.
         
         Args:
             model_memory: Model memory record
             
         Returns:
-            True if stored successfully
+            Dictionary with storage status and details
         """
         try:
+            success = False
             if self.redis_client:
-                return self._store_in_redis('model', model_memory)
+                success = self._store_in_redis('model', model_memory)
             elif self.fallback_storage == 'local':
-                return self._store_in_local('model', model_memory)
+                success = self._store_in_local('model', model_memory)
             else:
-                return self._store_in_memory('model', model_memory)
+                success = self._store_in_memory('model', model_memory)
+            
+            if success:
+                return {
+                    'success': True,
+                    'message': f'Model memory stored successfully',
+                    'model_name': model_memory.model_name,
+                    'timestamp': model_memory.timestamp.isoformat(),
+                    'storage_type': 'redis' if self.redis_client else self.fallback_storage
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Failed to store model memory',
+                    'model_name': model_memory.model_name,
+                    'timestamp': model_memory.timestamp.isoformat()
+                }
                 
         except Exception as e:
             logger.error(f"Failed to store model memory: {e}")
-            return False
+            return {
+                'success': False,
+                'error': str(e),
+                'model_name': model_memory.model_name,
+                'timestamp': model_memory.timestamp.isoformat()
+            }
     
     def _store_in_redis(self, data_type: str, data: Any) -> bool:
         """Store data in Redis."""
@@ -231,7 +297,7 @@ class AgentMemoryManager:
     
     def get_agent_interactions(self, agent_type: str = None, 
                              limit: int = 100, 
-                             since: datetime = None) -> List[AgentInteraction]:
+                             since: datetime = None) -> dict:
         """Get agent interactions from memory.
         
         Args:
@@ -240,23 +306,42 @@ class AgentMemoryManager:
             since: Get records since this timestamp
             
         Returns:
-            List of agent interactions
+            Dictionary with agent interactions and status
         """
         try:
+            records = []
             if self.redis_client:
-                return self._get_from_redis('interaction', agent_type, limit, since)
+                records = self._get_from_redis('interaction', agent_type, limit, since)
             elif self.fallback_storage == 'local':
-                return self._get_from_local('interaction', agent_type, limit, since)
+                records = self._get_from_local('interaction', agent_type, limit, since)
             else:
-                return self._get_from_memory('interaction', agent_type, limit, since)
+                records = self._get_from_memory('interaction', agent_type, limit, since)
+            
+            return {
+                'success': True,
+                'result': records,
+                'message': f'Retrieved {len(records)} agent interactions',
+                'agent_type': agent_type,
+                'limit': limit,
+                'count': len(records),
+                'timestamp': datetime.now().isoformat()
+            }
                 
         except Exception as e:
             logger.error(f"Failed to get agent interactions: {e}")
-            return []
+            return {
+                'success': False,
+                'error': str(e),
+                'result': [],
+                'agent_type': agent_type,
+                'limit': limit,
+                'count': 0,
+                'timestamp': datetime.now().isoformat()
+            }
     
     def get_strategy_memory(self, strategy_name: str = None,
                           limit: int = 100,
-                          since: datetime = None) -> List[StrategyMemory]:
+                          since: datetime = None) -> dict:
         """Get strategy memory records.
         
         Args:
@@ -265,23 +350,42 @@ class AgentMemoryManager:
             since: Get records since this timestamp
             
         Returns:
-            List of strategy memory records
+            Dictionary with strategy memory records and status
         """
         try:
+            records = []
             if self.redis_client:
-                return self._get_from_redis('strategy', strategy_name, limit, since)
+                records = self._get_from_redis('strategy', strategy_name, limit, since)
             elif self.fallback_storage == 'local':
-                return self._get_from_local('strategy', strategy_name, limit, since)
+                records = self._get_from_local('strategy', strategy_name, limit, since)
             else:
-                return self._get_from_memory('strategy', strategy_name, limit, since)
+                records = self._get_from_memory('strategy', strategy_name, limit, since)
+            
+            return {
+                'success': True,
+                'result': records,
+                'message': f'Retrieved {len(records)} strategy memory records',
+                'strategy_name': strategy_name,
+                'limit': limit,
+                'count': len(records),
+                'timestamp': datetime.now().isoformat()
+            }
                 
         except Exception as e:
             logger.error(f"Failed to get strategy memory: {e}")
-            return []
+            return {
+                'success': False,
+                'error': str(e),
+                'result': [],
+                'strategy_name': strategy_name,
+                'limit': limit,
+                'count': 0,
+                'timestamp': datetime.now().isoformat()
+            }
     
     def get_model_memory(self, model_name: str = None,
                         limit: int = 100,
-                        since: datetime = None) -> List[ModelMemory]:
+                        since: datetime = None) -> dict:
         """Get model memory records.
         
         Args:
@@ -290,19 +394,38 @@ class AgentMemoryManager:
             since: Get records since this timestamp
             
         Returns:
-            List of model memory records
+            Dictionary with model memory records and status
         """
         try:
+            records = []
             if self.redis_client:
-                return self._get_from_redis('model', model_name, limit, since)
+                records = self._get_from_redis('model', model_name, limit, since)
             elif self.fallback_storage == 'local':
-                return self._get_from_local('model', model_name, limit, since)
+                records = self._get_from_local('model', model_name, limit, since)
             else:
-                return self._get_from_memory('model', model_name, limit, since)
+                records = self._get_from_memory('model', model_name, limit, since)
+            
+            return {
+                'success': True,
+                'result': records,
+                'message': f'Retrieved {len(records)} model memory records',
+                'model_name': model_name,
+                'limit': limit,
+                'count': len(records),
+                'timestamp': datetime.now().isoformat()
+            }
                 
         except Exception as e:
             logger.error(f"Failed to get model memory: {e}")
-            return []
+            return {
+                'success': False,
+                'error': str(e),
+                'result': [],
+                'model_name': model_name,
+                'limit': limit,
+                'count': 0,
+                'timestamp': datetime.now().isoformat()
+            }
     
     def _get_from_redis(self, data_type: str, filter_value: str = None,
                        limit: int = 100, since: datetime = None) -> List[Any]:
@@ -427,21 +550,36 @@ class AgentMemoryManager:
             logger.error(f"Memory retrieval failed: {e}")
             return []
     
-    def get_strategy_confidence_boost(self, strategy_name: str) -> float:
+    def get_strategy_confidence_boost(self, strategy_name: str) -> dict:
         """Get confidence boost for a strategy based on recent success.
         
         Args:
             strategy_name: Name of the strategy
             
         Returns:
-            Confidence boost factor (0.0 to 1.0)
+            Dictionary with confidence boost and status
         """
         try:
             # Get recent strategy performance
-            recent_memory = self.get_strategy_memory(strategy_name, limit=20)
+            recent_memory_result = self.get_strategy_memory(strategy_name, limit=20)
+            if not recent_memory_result.get('success'):
+                return {
+                    'success': False,
+                    'error': 'Failed to get strategy memory',
+                    'strategy_name': strategy_name,
+                    'confidence_boost': 0.0,
+                    'timestamp': datetime.now().isoformat()
+                }
             
+            recent_memory = recent_memory_result.get('result', [])
             if not recent_memory:
-                return 0.0
+                return {
+                    'success': True,
+                    'confidence_boost': 0.0,
+                    'message': 'No recent memory found',
+                    'strategy_name': strategy_name,
+                    'timestamp': datetime.now().isoformat()
+                }
             
             # Calculate success rate in last 20 executions
             recent_successes = sum(1 for record in recent_memory if record.success)
@@ -462,28 +600,59 @@ class AgentMemoryManager:
             
             # Calculate confidence boost
             boost = (success_rate * 0.4 + avg_confidence * 0.3 + max(0, performance_trend) * 0.3)
+            confidence_boost = min(1.0, max(0.0, boost))
             
-            return min(1.0, max(0.0, boost))
+            return {
+                'success': True,
+                'confidence_boost': confidence_boost,
+                'message': f'Confidence boost calculated for {strategy_name}',
+                'strategy_name': strategy_name,
+                'success_rate': success_rate,
+                'avg_confidence': avg_confidence,
+                'performance_trend': performance_trend,
+                'timestamp': datetime.now().isoformat()
+            }
             
         except Exception as e:
             logger.error(f"Confidence boost calculation failed: {e}")
-            return 0.0
+            return {
+                'success': False,
+                'error': str(e),
+                'confidence_boost': 0.0,
+                'strategy_name': strategy_name,
+                'timestamp': datetime.now().isoformat()
+            }
     
-    def get_model_confidence_boost(self, model_name: str) -> float:
+    def get_model_confidence_boost(self, model_name: str) -> dict:
         """Get confidence boost for a model based on recent success.
         
         Args:
             model_name: Name of the model
             
         Returns:
-            Confidence boost factor (0.0 to 1.0)
+            Dictionary with confidence boost and status
         """
         try:
             # Get recent model performance
-            recent_memory = self.get_model_memory(model_name, limit=20)
+            recent_memory_result = self.get_model_memory(model_name, limit=20)
+            if not recent_memory_result.get('success'):
+                return {
+                    'success': False,
+                    'error': 'Failed to get model memory',
+                    'model_name': model_name,
+                    'confidence_boost': 0.0,
+                    'timestamp': datetime.now().isoformat()
+                }
             
+            recent_memory = recent_memory_result.get('result', [])
             if not recent_memory:
-                return 0.0
+                return {
+                    'success': True,
+                    'confidence_boost': 0.0,
+                    'message': 'No recent memory found',
+                    'model_name': model_name,
+                    'timestamp': datetime.now().isoformat()
+                }
             
             # Calculate success rate in last 20 executions
             recent_successes = sum(1 for record in recent_memory if record.success)
@@ -504,32 +673,60 @@ class AgentMemoryManager:
             
             # Calculate confidence boost
             boost = (success_rate * 0.4 + avg_confidence * 0.3 + max(0, quality_trend) * 0.3)
+            confidence_boost = min(1.0, max(0.0, boost))
             
-            return min(1.0, max(0.0, boost))
+            return {
+                'success': True,
+                'confidence_boost': confidence_boost,
+                'message': f'Confidence boost calculated for {model_name}',
+                'model_name': model_name,
+                'success_rate': success_rate,
+                'avg_confidence': avg_confidence,
+                'quality_trend': quality_trend,
+                'timestamp': datetime.now().isoformat()
+            }
             
         except Exception as e:
             logger.error(f"Model confidence boost calculation failed: {e}")
-            return 0.0
+            return {
+                'success': False,
+                'error': str(e),
+                'confidence_boost': 0.0,
+                'model_name': model_name,
+                'timestamp': datetime.now().isoformat()
+            }
     
-    def check_strategy_retirement(self, strategy_name: str) -> Dict[str, Any]:
+    def check_strategy_retirement(self, strategy_name: str) -> dict:
         """Check if a strategy should be retired based on performance decay.
         
         Args:
             strategy_name: Name of the strategy
             
         Returns:
-            Retirement recommendation
+            Dictionary with retirement recommendation and status
         """
         try:
             # Get strategy performance history
-            memory = self.get_strategy_memory(strategy_name, limit=100)
+            memory_result = self.get_strategy_memory(strategy_name, limit=100)
+            if not memory_result.get('success'):
+                return {
+                    'success': False,
+                    'error': 'Failed to get strategy memory',
+                    'strategy_name': strategy_name,
+                    'should_retire': False,
+                    'timestamp': datetime.now().isoformat()
+                }
             
+            memory = memory_result.get('result', [])
             if len(memory) < 20:
                 return {
+                    'success': True,
                     'should_retire': False,
                     'reason': 'Insufficient data',
                     'confidence': 0.0,
-                    'metrics': {}
+                    'strategy_name': strategy_name,
+                    'metrics': {},
+                    'timestamp': datetime.now().isoformat()
                 }
             
             # Calculate performance metrics
@@ -556,33 +753,41 @@ class AgentMemoryManager:
             confidence = min(1.0, (sharpe_decay + success_decay) / 2)
             
             return {
+                'success': True,
                 'should_retire': should_retire,
                 'reason': f"Sharpe decay: {sharpe_decay:.1%}, Success decay: {success_decay:.1%}",
                 'confidence': confidence,
+                'strategy_name': strategy_name,
                 'metrics': {
                     'sharpe_decay': sharpe_decay,
                     'success_decay': success_decay,
                     'recent_success_rate': recent_success_rate,
                     'recent_sharpe': recent_sharpe
-                }
+                },
+                'timestamp': datetime.now().isoformat()
             }
             
         except Exception as e:
             logger.error(f"Strategy retirement check failed: {e}")
             return {
+                'success': False,
+                'error': str(e),
                 'should_retire': False,
-                'reason': f'Error: {str(e)}',
-                'confidence': 0.0,
-                'metrics': {}
+                'strategy_name': strategy_name,
+                'timestamp': datetime.now().isoformat()
             }
     
-    def get_system_health(self) -> Dict[str, Any]:
+    def get_system_health(self) -> dict:
         """Get memory system health information."""
         try:
             # Count records
-            interaction_count = len(self.get_agent_interactions(limit=1000))
-            strategy_count = len(self.get_strategy_memory(limit=1000))
-            model_count = len(self.get_model_memory(limit=1000))
+            interaction_result = self.get_agent_interactions(limit=1000)
+            strategy_result = self.get_strategy_memory(limit=1000)
+            model_result = self.get_model_memory(limit=1000)
+            
+            interaction_count = len(interaction_result.get('result', []))
+            strategy_count = len(strategy_result.get('result', []))
+            model_count = len(model_result.get('result', []))
             
             # Check storage status
             storage_status = 'redis' if self.redis_client else self.fallback_storage
@@ -591,30 +796,34 @@ class AgentMemoryManager:
             total_records = interaction_count + strategy_count + model_count
             
             return {
+                'success': True,
                 'status': 'healthy' if total_records > 0 else 'empty',
                 'storage_backend': storage_status,
                 'total_records': total_records,
                 'interaction_records': interaction_count,
                 'strategy_records': strategy_count,
                 'model_records': model_count,
-                'redis_available': self.redis_client is not None
+                'redis_available': self.redis_client is not None,
+                'timestamp': datetime.now().isoformat()
             }
             
         except Exception as e:
             logger.error(f"Memory health check failed: {e}")
             return {
+                'success': False,
+                'error': str(e),
                 'status': 'error',
-                'error': str(e)
+                'timestamp': datetime.now().isoformat()
             }
     
-    def clear_memory(self, data_type: str = None) -> bool:
+    def clear_memory(self, data_type: str = None) -> dict:
         """Clear memory data.
         
         Args:
             data_type: Type of data to clear ('interaction', 'strategy', 'model', or None for all)
             
         Returns:
-            True if cleared successfully
+            Dictionary with clear status and details
         """
         try:
             if data_type is None:
@@ -622,34 +831,62 @@ class AgentMemoryManager:
             else:
                 data_types = [data_type]
             
+            cleared_count = 0
             for dt in data_types:
                 if self.redis_client:
                     pattern = f"agent_memory:{dt}:*"
                     keys = self.redis_client.keys(pattern)
                     if keys:
                         self.redis_client.delete(*keys)
+                        cleared_count += len(keys)
                 
                 elif self.fallback_storage == 'local':
                     data_dir = self.local_storage_path / dt
                     if data_dir.exists():
-                        for filepath in data_dir.glob(f"{dt}_*.json"):
+                        files = list(data_dir.glob(f"{dt}_*.json"))
+                        for filepath in files:
                             filepath.unlink()
+                        cleared_count += len(files)
                 
                 else:
                     if dt in self.memory_cache:
+                        cleared_count += len(self.memory_cache[dt])
                         self.memory_cache[dt].clear()
             
             logger.info(f"Memory cleared for types: {data_types}")
-            return True
+            return {
+                'success': True,
+                'message': f'Memory cleared successfully for {len(data_types)} data types',
+                'cleared_count': cleared_count,
+                'data_types': data_types,
+                'timestamp': datetime.now().isoformat()
+            }
             
         except Exception as e:
             logger.error(f"Memory clear failed: {e}")
-            return False
+            return {
+                'success': False,
+                'error': str(e),
+                'data_types': data_types if 'data_types' in locals() else [],
+                'timestamp': datetime.now().isoformat()
+            }
 
 
 # Global instance
 agent_memory_manager = AgentMemoryManager()
 
-def get_agent_memory_manager() -> AgentMemoryManager:
+def get_agent_memory_manager() -> dict:
     """Get the global agent memory manager instance."""
-    return agent_memory_manager 
+    try:
+        return {
+            'success': True,
+            'result': agent_memory_manager,
+            'message': 'Agent memory manager retrieved successfully',
+            'timestamp': datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }

@@ -53,6 +53,7 @@ class HealthService:
         self.service_status: Dict[str, ServiceStatus] = {}
         self.running = False
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/health")
@@ -68,6 +69,7 @@ class HealthService:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_config(self) -> None:
         """Load configuration."""
         try:
@@ -95,6 +97,7 @@ class HealthService:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def check_http_health(self, check: HealthCheck) -> Dict[str, Any]:
         """Check HTTP endpoint health."""
         try:
@@ -251,11 +254,11 @@ class HealthService:
     
     def get_service_status(self, service_name: str) -> Optional[ServiceStatus]:
         """Get status of a specific service."""
-        return self.service_status.get(service_name)
+        return {'success': True, 'result': self.service_status.get(service_name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_all_service_statuses(self) -> Dict[str, ServiceStatus]:
         """Get status of all services."""
-        return self.service_status.copy()
+        return {'success': True, 'result': self.service_status.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     async def start(self) -> None:
         """Start health monitoring."""
@@ -275,6 +278,7 @@ class HealthService:
         """Stop health monitoring."""
         self.running = False
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main entry point."""
     import argparse
@@ -292,5 +296,6 @@ def main():
         logging.error(f"Error in health monitoring: {str(e)}")
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

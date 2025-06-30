@@ -82,6 +82,7 @@ class PromptAgent:
         
         logger.info("Enhanced Prompt Agent initialized with full pipeline routing")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def process_prompt(self, prompt: str) -> AgentResponse:
         """Process user prompt and route through trading pipeline.
         
@@ -110,7 +111,7 @@ class PromptAgent:
             elif intent == 'analyze':
                 return self._handle_analysis_request(params)
             else:
-                return self._handle_general_request(prompt, params)
+                return {'success': True, 'result': self._handle_general_request(prompt, params), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 
         except Exception as e:
             logger.error(f"Error processing prompt: {e}")
@@ -198,7 +199,7 @@ class PromptAgent:
         
         logger.info(f"Parsed prompt - Intent: {intent}, Params: {params}")
         
-        return intent, params
+        return {'success': True, 'result': intent, params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _select_best_strategy(self, symbol: str) -> str:
         """Select best strategy based on symbol characteristics.
@@ -217,7 +218,7 @@ class PromptAgent:
         elif symbol in ['SPY', 'QQQ', 'IWM']:
             return 'Bollinger Bands'  # Good for ETFs
         else:
-            return 'Ensemble Strategy'  # Default to ensemble
+            return {'success': True, 'result': 'Ensemble Strategy'  # Default to ensemble, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _select_best_model(self, symbol: str, timeframe: str) -> str:
         """Select best model based on symbol and timeframe.
@@ -237,7 +238,7 @@ class PromptAgent:
         elif days <= 30:
             return 'LSTM'  # Good for medium-term
         else:
-            return 'Transformer'  # Good for long-term
+            return {'success': True, 'result': 'Transformer'  # Good for long-term, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _handle_forecast_request(self, params: Dict[str, Any]) -> AgentResponse:
         """Handle forecast request.
@@ -306,7 +307,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in forecast request: {e}")
-            return AgentResponse(
+            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 success=False,
                 message=f"Forecast failed: {str(e)}",
                 recommendations=["Try a different model or timeframe"]
@@ -352,7 +353,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in strategy request: {e}")
-            return AgentResponse(
+            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 success=False,
                 message=f"Strategy analysis failed: {str(e)}",
                 recommendations=["Try a different strategy or check symbol availability"]
@@ -434,7 +435,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in backtest request: {e}")
-            return AgentResponse(
+            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 success=False,
                 message=f"Backtest failed: {str(e)}",
                 recommendations=["Check data availability and strategy parameters"]
@@ -511,7 +512,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in trade request: {e}")
-            return AgentResponse(
+            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 success=False,
                 message=f"Trade execution failed: {str(e)}",
                 recommendations=["Check market hours and symbol validity"]
@@ -570,7 +571,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in optimization request: {e}")
-            return AgentResponse(
+            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 success=False,
                 message=f"Optimization failed: {str(e)}",
                 recommendations=["Check strategy configuration and historical data"]
@@ -627,7 +628,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in analysis request: {e}")
-            return AgentResponse(
+            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 success=False,
                 message=f"Analysis failed: {str(e)}",
                 recommendations=["Check data availability and symbol validity"]
@@ -719,7 +720,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in general request: {e}")
-            return AgentResponse(
+            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 success=False,
                 message=f"Analysis failed: {str(e)}",
                 recommendations=["Try breaking down the request into smaller parts"]
@@ -730,4 +731,4 @@ prompt_agent = PromptAgent()
 
 def get_prompt_agent() -> PromptAgent:
     """Get the global prompt agent instance."""
-    return prompt_agent 
+    return {'success': True, 'result': prompt_agent, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

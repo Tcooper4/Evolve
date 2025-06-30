@@ -25,6 +25,7 @@ def main():
         description='Evolve Unified Interface Launcher',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 Examples:
   # Launch Streamlit web interface
   python launch_unified_interface.py --streamlit
@@ -114,6 +115,7 @@ def run_demo(interface: UnifiedInterface):
     print("\n✅ Demo completed!")
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def execute_command(interface: UnifiedInterface, command: str):
     """Execute a single command."""
     print(f"🔮 Executing: {command}")
@@ -128,6 +130,7 @@ def execute_command(interface: UnifiedInterface, command: str):
         print_result_simple(result)
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def print_result_simple(result: dict):
     """Print result in a simple format."""
     result_type = result.get('type', 'unknown')
@@ -167,6 +170,7 @@ def print_result_simple(result: dict):
             print("Result:", result['result'])
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def launch_streamlit():
     """Launch Streamlit interface."""
     try:
@@ -195,5 +199,6 @@ def launch_streamlit():
         sys.exit(1)
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

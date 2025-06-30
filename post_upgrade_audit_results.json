@@ -1,0 +1,2378 @@
+{
+  "summary": {
+    "total_files_analyzed": 533,
+    "total_violations": 295,
+    "high_severity": 20,
+    "medium_severity": 275,
+    "low_severity": 0,
+    "compliance_status": "non_compliant"
+  },
+  "violations": [
+    {
+      "file": "audit_return_statements.py",
+      "function": "main",
+      "line": 246,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'main' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "audit_return_statements.py",
+      "function": "__init__",
+      "line": 22,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "audit_return_statements.py",
+      "function": "_audit_file",
+      "line": 53,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_audit_file' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "audit_return_statements.py",
+      "function": "_analyze_ast",
+      "line": 70,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_analyze_ast' has no return statement but contains significant logic"
+    },
+    {
+      "file": "comprehensive_audit.py",
+      "function": "__init__",
+      "line": 21,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "comprehensive_audit.py",
+      "function": "save_report",
+      "line": 326,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'save_report' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "comprehensive_return_fix.py",
+      "function": "__init__",
+      "line": 20,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "comprehensive_return_fix.py",
+      "function": "print_summary",
+      "line": 304,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'print_summary' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "fix_return_statements.py",
+      "function": "__init__",
+      "line": 25,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "focused_return_fix.py",
+      "function": "main",
+      "line": 216,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'main' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "focused_return_fix.py",
+      "function": "print_summary",
+      "line": 200,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'print_summary' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "launch_institutional_system.py",
+      "function": "__init__",
+      "line": 64,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "launch_institutional_system.py",
+      "function": "stop_all_services",
+      "line": 232,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'stop_all_services' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "launch_institutional_system.py",
+      "function": "_monitoring_loop",
+      "line": 297,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_monitoring_loop' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "launch_institutional_system.py",
+      "function": "_check_service_health",
+      "line": 311,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_check_service_health' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "launch_institutional_system.py",
+      "function": "_check_system_resources",
+      "line": 345,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_check_system_resources' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "launch_institutional_system.py",
+      "function": "_update_service_status",
+      "line": 367,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_update_service_status' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "launch_institutional_system.py",
+      "function": "_signal_handler",
+      "line": 415,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_signal_handler' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "launch_unified_interface.py",
+      "function": "main",
+      "line": 22,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'main' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "post_upgrade_audit.py",
+      "function": "__init__",
+      "line": 23,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "post_upgrade_audit.py",
+      "function": "_audit_file",
+      "line": 54,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_audit_file' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "post_upgrade_audit.py",
+      "function": "_analyze_ast",
+      "line": 71,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_analyze_ast' has no return statement but contains significant logic"
+    },
+    {
+      "file": "post_upgrade_return_audit.py",
+      "function": "__init__",
+      "line": 23,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "run_forecasting_pipeline.py",
+      "function": "__init__",
+      "line": 52,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "run_forecasting_pipeline.py",
+      "function": "run",
+      "line": 296,
+      "issue": "missing_return_with_side_effects",
+      "severity": "high",
+      "details": "Function 'run' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "targeted_audit.py",
+      "function": "main",
+      "line": 223,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'main' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "targeted_audit.py",
+      "function": "print_summary",
+      "line": 194,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'print_summary' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "test_institutional_upgrade.py",
+      "function": "__init__",
+      "line": 35,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "test_institutional_upgrade.py",
+      "function": "_display_summary",
+      "line": 805,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_display_summary' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "test_system_status.py",
+      "function": "__init__",
+      "line": 18,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "test_system_upgrade.py",
+      "function": "__init__",
+      "line": 34,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "unified_interface.py",
+      "function": "__init__",
+      "line": 63,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "voice_prompt_agent.py",
+      "function": "__init__",
+      "line": 30,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "agents\\model_generator.py",
+      "function": "__init__",
+      "line": 24,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "causal\\causal_model.py",
+      "function": "__init__",
+      "line": 25,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "causal\\causal_model.py",
+      "function": "__init__",
+      "line": 404,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "causal\\driver_analysis.py",
+      "function": "__init__",
+      "line": 37,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "core\\agent_hub.py",
+      "function": "__init__",
+      "line": 21,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "core\\capability_router.py",
+      "function": "__init__",
+      "line": 20,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "core\\capability_router.py",
+      "function": "register_capability",
+      "line": 93,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'register_capability' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "core\\capability_router.py",
+      "function": "_log_fallback",
+      "line": 213,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_log_fallback' has no return statement but contains significant logic"
+    },
+    {
+      "file": "core\\capability_router.py",
+      "function": "clear_cache",
+      "line": 244,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'clear_cache' has no return statement but contains significant logic"
+    },
+    {
+      "file": "core\\session_utils.py",
+      "function": "initialize_session_state",
+      "line": 17,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'initialize_session_state' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "core\\session_utils.py",
+      "function": "display_system_status",
+      "line": 138,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'display_system_status' has no return statement but contains significant logic"
+    },
+    {
+      "file": "core\\session_utils.py",
+      "function": "safe_session_set",
+      "line": 187,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'safe_session_set' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "core\\session_utils.py",
+      "function": "update_last_updated",
+      "line": 198,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'update_last_updated' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "core\\agents\\base_agent.py",
+      "function": "__init__",
+      "line": 24,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "core\\agents\\base_agent.py",
+      "function": "run",
+      "line": 41,
+      "issue": "missing_return_with_side_effects",
+      "severity": "high",
+      "details": "Function 'run' has no return statement but contains critical method logic"
+    },
+    {
+      "file": "core\\agents\\goal_planner.py",
+      "function": "__init__",
+      "line": 181,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "core\\agents\\goal_planner.py",
+      "function": "update_goal_status",
+      "line": 379,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'update_goal_status' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "core\\agents\\router.py",
+      "function": "load_from_config",
+      "line": 43,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'load_from_config' has no return statement but contains significant logic"
+    },
+    {
+      "file": "core\\agents\\router.py",
+      "function": "__init__",
+      "line": 66,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "core\\agents\\router.py",
+      "function": "__init__",
+      "line": 120,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "core\\agents\\self_improving_agent.py",
+      "function": "__init__",
+      "line": 50,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "core\\agents\\self_improving_agent.py",
+      "function": "_load_models",
+      "line": 60,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_load_models' has no return statement but contains significant logic"
+    },
+    {
+      "file": "core\\agents\\self_improving_agent.py",
+      "function": "__init__",
+      "line": 90,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "core\\agents\\self_improving_agent.py",
+      "function": "_load_strategies",
+      "line": 100,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_load_strategies' has no return statement but contains significant logic"
+    },
+    {
+      "file": "core\\agents\\self_improving_agent.py",
+      "function": "__init__",
+      "line": 130,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "core\\agents\\self_improving_agent.py",
+      "function": "_setup",
+      "line": 144,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_setup' has no return statement but contains significant logic"
+    },
+    {
+      "file": "data\\live_feed.py",
+      "function": "__init__",
+      "line": 75,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "data\\live_feed.py",
+      "function": "__init__",
+      "line": 149,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "data\\live_feed.py",
+      "function": "__init__",
+      "line": 230,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "data\\live_feed.py",
+      "function": "__init__",
+      "line": 327,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "data\\live_feed.py",
+      "function": "reset_providers",
+      "line": 480,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'reset_providers' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "data\\live_feed.py",
+      "function": "clear_cache",
+      "line": 489,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'clear_cache' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "data\\streaming_pipeline.py",
+      "function": "__init__",
+      "line": 80,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "data\\streaming_pipeline.py",
+      "function": "__init__",
+      "line": 249,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "data\\streaming_pipeline.py",
+      "function": "__init__",
+      "line": 283,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "data\\streaming_pipeline.py",
+      "function": "__init__",
+      "line": 372,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "data\\streaming_pipeline.py",
+      "function": "__init__",
+      "line": 435,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "execution\\live_trading_interface.py",
+      "function": "__init__",
+      "line": 93,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "execution\\live_trading_interface.py",
+      "function": "_update_market_data",
+      "line": 172,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_update_market_data' has no return statement but contains significant logic"
+    },
+    {
+      "file": "execution\\live_trading_interface.py",
+      "function": "_update_position",
+      "line": 193,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_update_position' has no return statement but contains significant logic"
+    },
+    {
+      "file": "execution\\live_trading_interface.py",
+      "function": "update_market_data",
+      "line": 450,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'update_market_data' has no return statement but contains significant logic"
+    },
+    {
+      "file": "execution\\live_trading_interface.py",
+      "function": "__init__",
+      "line": 477,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "execution\\live_trading_interface.py",
+      "function": "__init__",
+      "line": 631,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "execution\\live_trading_interface.py",
+      "function": "update_market_data",
+      "line": 747,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'update_market_data' has no return statement but contains significant logic"
+    },
+    {
+      "file": "execution\\live_trading_interface.py",
+      "function": "reset_daily_tracking",
+      "line": 781,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'reset_daily_tracking' has no return statement but contains significant logic"
+    },
+    {
+      "file": "pages\\5_\ud83d\udcca_System_Scorecard.py",
+      "function": "refresh",
+      "line": 19,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'refresh' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\cleanup_requirements.py",
+      "function": "__init__",
+      "line": 26,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\generate_docs.py",
+      "function": "__init__",
+      "line": 35,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\generate_docs.py",
+      "function": "setup_logging",
+      "line": 51,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage.py",
+      "function": "__init__",
+      "line": 66,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage.py",
+      "function": "setup_logging",
+      "line": 96,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_backup.py",
+      "function": "__init__",
+      "line": 60,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_backup.py",
+      "function": "setup_logging",
+      "line": 80,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_backup.py",
+      "function": "_print_backup_list",
+      "line": 599,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_print_backup_list' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_config.py",
+      "function": "__init__",
+      "line": 52,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_config.py",
+      "function": "setup_logging",
+      "line": 71,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_config.py",
+      "function": "_print_validation_results",
+      "line": 393,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_print_validation_results' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_data.py",
+      "function": "__init__",
+      "line": 49,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_data.py",
+      "function": "setup_logging",
+      "line": 67,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_data_quality.py",
+      "function": "__init__",
+      "line": 48,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_data_quality.py",
+      "function": "setup_logging",
+      "line": 66,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_data_quality.py",
+      "function": "_save_data",
+      "line": 387,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_save_data' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\manage_data_quality.py",
+      "function": "_save_validation_results",
+      "line": 401,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_save_validation_results' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\manage_data_quality.py",
+      "function": "_save_analysis_results",
+      "line": 421,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_save_analysis_results' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\manage_data_quality.py",
+      "function": "_print_validation_results",
+      "line": 441,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_print_validation_results' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_data_quality.py",
+      "function": "_print_analysis_results",
+      "line": 464,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_print_analysis_results' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_db.py",
+      "function": "__init__",
+      "line": 49,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_db.py",
+      "function": "setup_logging",
+      "line": 76,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_debug.py",
+      "function": "__init__",
+      "line": 58,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_debug.py",
+      "function": "setup_logging",
+      "line": 92,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_debug.py",
+      "function": "_print_monitoring_results",
+      "line": 335,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_print_monitoring_results' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_debug.py",
+      "function": "_print_fix_suggestions",
+      "line": 352,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_print_fix_suggestions' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_debug.py",
+      "function": "_generate_error_plots",
+      "line": 367,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_generate_error_plots' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\manage_deps.py",
+      "function": "__init__",
+      "line": 41,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_deps.py",
+      "function": "setup_logging",
+      "line": 59,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_docs.py",
+      "function": "__init__",
+      "line": 44,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_docs.py",
+      "function": "setup_logging",
+      "line": 64,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_incident.py",
+      "function": "__init__",
+      "line": 66,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_incident.py",
+      "function": "setup_logging",
+      "line": 86,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_logs.py",
+      "function": "__init__",
+      "line": 44,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_logs.py",
+      "function": "setup_logging",
+      "line": 62,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_logs.py",
+      "function": "_analyze_log_file",
+      "line": 200,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_analyze_log_file' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\manage_logs.py",
+      "function": "_analyze_log_content",
+      "line": 209,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_analyze_log_content' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\manage_logs.py",
+      "function": "_update_pattern_count",
+      "line": 223,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_update_pattern_count' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\manage_performance.py",
+      "function": "__init__",
+      "line": 87,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_performance.py",
+      "function": "setup_logging",
+      "line": 124,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_performance.py",
+      "function": "_generate_performance_plots",
+      "line": 470,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_generate_performance_plots' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\manage_recovery.py",
+      "function": "__init__",
+      "line": 58,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\manage_recovery.py",
+      "function": "setup_logging",
+      "line": 78,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\manage_recovery.py",
+      "function": "_print_health_check",
+      "line": 508,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_print_health_check' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\monitor_app.py",
+      "function": "__init__",
+      "line": 43,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\monitor_app.py",
+      "function": "setup_logging",
+      "line": 62,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'setup_logging' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "scripts\\monitor_app.py",
+      "function": "collect_metrics",
+      "line": 75,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'collect_metrics' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\monitor_app.py",
+      "function": "send_alert",
+      "line": 114,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'send_alert' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\monitor_app.py",
+      "function": "_send_slack_alert",
+      "line": 141,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_send_slack_alert' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\monitor_app.py",
+      "function": "log_metrics",
+      "line": 153,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'log_metrics' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\monitor_app.py",
+      "function": "execute_monitoring_loop",
+      "line": 162,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'execute_monitoring_loop' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\repair.py",
+      "function": "__init__",
+      "line": 27,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "scripts\\repair.py",
+      "function": "scan_imports",
+      "line": 36,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'scan_imports' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\repair.py",
+      "function": "check_encoding",
+      "line": 58,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'check_encoding' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\repair.py",
+      "function": "find_duplicates",
+      "line": 68,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'find_duplicates' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\repair.py",
+      "function": "fix_imports",
+      "line": 94,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'fix_imports' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\repair.py",
+      "function": "fix_encoding",
+      "line": 114,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'fix_encoding' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\repair.py",
+      "function": "consolidate_duplicates",
+      "line": 134,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'consolidate_duplicates' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\repair.py",
+      "function": "install_missing_packages",
+      "line": 157,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'install_missing_packages' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\repair.py",
+      "function": "cleanup",
+      "line": 167,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'cleanup' has no return statement but contains significant logic"
+    },
+    {
+      "file": "scripts\\repair.py",
+      "function": "execute_repair_operations",
+      "line": 187,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'execute_repair_operations' has no return statement but contains significant logic"
+    },
+    {
+      "file": "src\\features\\feature_engineering.py",
+      "function": "__init__",
+      "line": 53,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "system\\infra\\agents\\notifications\\notification_service.py",
+      "function": "__init__",
+      "line": 48,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "system\\infra\\agents\\notifications\\notification_service.py",
+      "function": "register_handler",
+      "line": 79,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'register_handler' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "system\\infra\\agents\\scripts\\setup_environment.py",
+      "function": "create_gitignore",
+      "line": 107,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'create_gitignore' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "system\\infra\\agents\\scripts\\setup_environment.py",
+      "function": "create_readme",
+      "line": 170,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'create_readme' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "system\\infra\\agents\\scripts\\setup_environment.py",
+      "function": "create_env_example",
+      "line": 246,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'create_env_example' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\agents\\agent_leaderboard.py",
+      "function": "__init__",
+      "line": 34,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\agents\\agent_leaderboard.py",
+      "function": "update_performance",
+      "line": 45,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'update_performance' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\agents\\agent_leaderboard.py",
+      "function": "_check_deprecation",
+      "line": 62,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_check_deprecation' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\agents\\demo_pluggable_agents.py",
+      "function": "__init__",
+      "line": 38,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\agents\\leaderboard_dashboard.py",
+      "function": "__init__",
+      "line": 25,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\agents\\leaderboard_dashboard.py",
+      "function": "run",
+      "line": 39,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'run' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\agents\\leaderboard_dashboard.py",
+      "function": "_generate_summary_report",
+      "line": 455,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_generate_summary_report' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\agents\\multimodal_agent.py",
+      "function": "__init__",
+      "line": 35,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\agents\\research_agent.py",
+      "function": "__init__",
+      "line": 25,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\agents\\research_agent.py",
+      "function": "log_finding",
+      "line": 105,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'log_finding' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\agents\\walk_forward_agent.py",
+      "function": "__init__",
+      "line": 47,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\dashboards\\__init__.py",
+      "function": "__init__",
+      "line": 16,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\dashboards\\__init__.py",
+      "function": "__init__",
+      "line": 154,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\data\\data_listener.py",
+      "function": "__init__",
+      "line": 25,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\evaluation\\model_evaluator.py",
+      "function": "__init__",
+      "line": 10,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\logs\\audit_logger.py",
+      "function": "__init__",
+      "line": 15,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\market\\market_analyzer.py",
+      "function": "__init__",
+      "line": 20,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\market\\market_analyzer.py",
+      "function": "_validate_config",
+      "line": 32,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_validate_config' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\memory\\agent_memory.py",
+      "function": "__init__",
+      "line": 20,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\memory\\agent_memory.py",
+      "function": "_save",
+      "line": 32,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_save' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\memory\\agent_memory_manager.py",
+      "function": "__init__",
+      "line": 65,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\memory\\agent_memory_manager.py",
+      "function": "_initialize_storage",
+      "line": 85,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_initialize_storage' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\memory\\agent_memory_manager.py",
+      "function": "_setup_local_storage",
+      "line": 109,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_setup_local_storage' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\memory\\long_term_performance_tracker.py",
+      "function": "__init__",
+      "line": 40,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\memory\\long_term_performance_tracker.py",
+      "function": "run",
+      "line": 333,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'run' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\memory\\performance_memory.py",
+      "function": "__init__",
+      "line": 21,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\memory\\performance_memory.py",
+      "function": "_create_backup",
+      "line": 42,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_create_backup' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\memory\\performance_memory.py",
+      "function": "save",
+      "line": 104,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'save' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\memory\\performance_memory.py",
+      "function": "update",
+      "line": 131,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'update' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\memory\\performance_memory.py",
+      "function": "clear",
+      "line": 191,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'clear' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\memory\\performance_memory.py",
+      "function": "remove_model",
+      "line": 196,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'remove_model' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\memory\\goals\\status.py",
+      "function": "__init__",
+      "line": 34,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\memory\\goals\\status.py",
+      "function": "save_goals",
+      "line": 78,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'save_goals' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\memory\\goals\\status.py",
+      "function": "update_goal_progress",
+      "line": 95,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'update_goal_progress' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\memory\\goals\\status.py",
+      "function": "log_agent_contribution",
+      "line": 224,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'log_agent_contribution' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\memory\\goals\\status.py",
+      "function": "_save_contributions",
+      "line": 269,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_save_contributions' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\memory\\goals\\status.py",
+      "function": "clear_goals",
+      "line": 277,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'clear_goals' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\meta_agents\\data_quality_agent.py",
+      "function": "__init__",
+      "line": 18,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\data_quality_agent.py",
+      "function": "run",
+      "line": 39,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'run' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\meta_agents\\notification_handlers.py",
+      "function": "__init__",
+      "line": 20,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\notification_handlers.py",
+      "function": "__init__",
+      "line": 49,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\notification_handlers.py",
+      "function": "__init__",
+      "line": 80,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\notification_handlers.py",
+      "function": "__init__",
+      "line": 111,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\notification_handlers.py",
+      "function": "send_email",
+      "line": 132,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'send_email' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\meta_agents\\notification_service.py",
+      "function": "__init__",
+      "line": 19,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\performance_monitor_agent.py",
+      "function": "__init__",
+      "line": 18,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\performance_monitor_agent.py",
+      "function": "run",
+      "line": 38,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'run' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\meta_agents\\security.py",
+      "function": "__init__",
+      "line": 84,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\scripts\\manage_secrets.py",
+      "function": "__init__",
+      "line": 24,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\scripts\\manage_secrets.py",
+      "function": "delete_secret",
+      "line": 146,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'delete_secret' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\meta_agents\\scripts\\setup_environment.py",
+      "function": "__init__",
+      "line": 25,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\scripts\\setup_environment.py",
+      "function": "setup_environment",
+      "line": 152,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'setup_environment' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\meta_agents\\services\\health_service.py",
+      "function": "__init__",
+      "line": 47,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\services\\logging_service.py",
+      "function": "__init__",
+      "line": 47,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\services\\logging_service.py",
+      "function": "__init__",
+      "line": 422,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\services\\metrics_service.py",
+      "function": "__init__",
+      "line": 46,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\services\\monitoring_service.py",
+      "function": "__init__",
+      "line": 43,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\services\\notification_service.py",
+      "function": "__init__",
+      "line": 48,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\meta_agents\\services\\security_service.py",
+      "function": "__init__",
+      "line": 49,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\arima_model.py",
+      "function": "__init__",
+      "line": 17,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\arima_model.py",
+      "function": "predict",
+      "line": 56,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'predict' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\arima_model.py",
+      "function": "save_model",
+      "line": 180,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'save_model' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\arima_model.py",
+      "function": "load_model",
+      "line": 194,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'load_model' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\arima_model.py",
+      "function": "plot_results",
+      "line": 241,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'plot_results' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\autoformer_model.py",
+      "function": "__init__",
+      "line": 17,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\autoformer_model.py",
+      "function": "predict",
+      "line": 47,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'predict' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\autoformer_model.py",
+      "function": "summary",
+      "line": 57,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'summary' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\autoformer_model.py",
+      "function": "infer",
+      "line": 61,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'infer' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\autoformer_model.py",
+      "function": "shap_interpret",
+      "line": 64,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'shap_interpret' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\autoformer_model.py",
+      "function": "save",
+      "line": 77,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'save' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\autoformer_model.py",
+      "function": "load",
+      "line": 83,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'load' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\autoformer_model.py",
+      "function": "plot_results",
+      "line": 135,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'plot_results' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\base_model.py",
+      "function": "__init__",
+      "line": 90,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\base_model.py",
+      "function": "_validate_data",
+      "line": 127,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_validate_data' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\base_model.py",
+      "function": "__init__",
+      "line": 162,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\base_model.py",
+      "function": "_setup_logging",
+      "line": 211,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_setup_logging' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\base_model.py",
+      "function": "train",
+      "line": 366,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'train' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\base_model.py",
+      "function": "evaluate",
+      "line": 460,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'evaluate' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\base_model.py",
+      "function": "predict",
+      "line": 511,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'predict' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\catboost_model.py",
+      "function": "__init__",
+      "line": 12,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\catboost_model.py",
+      "function": "predict",
+      "line": 29,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'predict' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\catboost_model.py",
+      "function": "summary",
+      "line": 81,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'summary' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\catboost_model.py",
+      "function": "shap_interpret",
+      "line": 88,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'shap_interpret' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\catboost_model.py",
+      "function": "save",
+      "line": 96,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'save' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\catboost_model.py",
+      "function": "load",
+      "line": 102,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'load' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\forecast_explainability.py",
+      "function": "__init__",
+      "line": 56,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\lstm_model.py",
+      "function": "__init__",
+      "line": 23,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\lstm_model.py",
+      "function": "predict",
+      "line": 145,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'predict' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\lstm_model.py",
+      "function": "__init__",
+      "line": 198,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\lstm_model.py",
+      "function": "_validate_config",
+      "line": 259,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_validate_config' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\lstm_model.py",
+      "function": "_init_weights",
+      "line": 289,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_init_weights' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\lstm_model.py",
+      "function": "predict",
+      "line": 454,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'predict' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\lstm_model.py",
+      "function": "save",
+      "line": 484,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'save' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\lstm_model.py",
+      "function": "load",
+      "line": 496,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'load' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\lstm_model.py",
+      "function": "plot_results",
+      "line": 549,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'plot_results' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\model_registry.py",
+      "function": "__init__",
+      "line": 17,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\model_registry.py",
+      "function": "_save_registry",
+      "line": 116,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_save_registry' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\model_registry.py",
+      "function": "register_model",
+      "line": 153,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'register_model' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\prophet_model.py",
+      "function": "__init__",
+      "line": 20,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\prophet_model.py",
+      "function": "predict",
+      "line": 36,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'predict' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\prophet_model.py",
+      "function": "summary",
+      "line": 80,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'summary' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\prophet_model.py",
+      "function": "shap_interpret",
+      "line": 87,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'shap_interpret' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\prophet_model.py",
+      "function": "save",
+      "line": 91,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'save' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\prophet_model.py",
+      "function": "load",
+      "line": 97,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'load' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\prophet_model.py",
+      "function": "__init__",
+      "line": 107,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\tcn_model.py",
+      "function": "__init__",
+      "line": 20,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\tcn_model.py",
+      "function": "__init__",
+      "line": 73,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\tcn_model.py",
+      "function": "_validate_config",
+      "line": 111,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_validate_config' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\tcn_model.py",
+      "function": "_setup_model",
+      "line": 143,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_setup_model' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\tcn_model.py",
+      "function": "summary",
+      "line": 230,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'summary' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\tcn_model.py",
+      "function": "infer",
+      "line": 233,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'infer' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\tcn_model.py",
+      "function": "predict",
+      "line": 301,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'predict' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\tcn_model.py",
+      "function": "plot_results",
+      "line": 370,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'plot_results' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\xgboost_model.py",
+      "function": "__init__",
+      "line": 11,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\xgboost_model.py",
+      "function": "_validate_config",
+      "line": 38,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_validate_config' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\xgboost_model.py",
+      "function": "_setup_model",
+      "line": 45,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_setup_model' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\xgboost_model.py",
+      "function": "fit",
+      "line": 60,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'fit' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\models\\xgboost_model.py",
+      "function": "predict",
+      "line": 69,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'predict' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\xgboost_model.py",
+      "function": "plot_results",
+      "line": 176,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'plot_results' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\models\\xgboost_model.py",
+      "function": "__init__",
+      "line": 254,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\models\\xgboost_model.py",
+      "function": "predict",
+      "line": 277,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'predict' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\models\\xgboost_model.py",
+      "function": "plot_results",
+      "line": 343,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'plot_results' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\nlp\\llm_processor.py",
+      "function": "__init__",
+      "line": 24,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\nlp\\llm_processor.py",
+      "function": "process",
+      "line": 51,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'process' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\optimization\\utils\\consolidator.py",
+      "function": "__init__",
+      "line": 22,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\optimization\\utils\\consolidator.py",
+      "function": "_merge_files",
+      "line": 195,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function '_merge_files' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\report\\export_engine.py",
+      "function": "__init__",
+      "line": 30,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\report\\test_report_system.py",
+      "function": "test_generate_comprehensive_report",
+      "line": 165,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'test_generate_comprehensive_report' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\report\\test_report_system.py",
+      "function": "test_get_service_status",
+      "line": 279,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'test_get_service_status' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\report\\test_report_system.py",
+      "function": "test_generate_quick_report",
+      "line": 327,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'test_generate_quick_report' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\report\\test_report_system.py",
+      "function": "test_strategy_reasoning",
+      "line": 393,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'test_strategy_reasoning' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\risk\\risk_manager.py",
+      "function": "__init__",
+      "line": 32,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\services\\signal_center.py",
+      "function": "__init__",
+      "line": 80,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\ui\\institutional_dashboard.py",
+      "function": "__init__",
+      "line": 33,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\ui\\institutional_dashboard.py",
+      "function": "run",
+      "line": 113,
+      "issue": "critical_method_non_structured_return",
+      "severity": "high",
+      "details": "Critical method 'run' should return structured output (dict with status)"
+    },
+    {
+      "file": "trading\\ui\\institutional_dashboard.py",
+      "function": "render_help",
+      "line": 618,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'render_help' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\utils\\config_utils.py",
+      "function": "on_modified",
+      "line": 94,
+      "issue": "missing_return_with_side_effects",
+      "severity": "medium",
+      "details": "Function 'on_modified' has no return statement but contains print/logging statements"
+    },
+    {
+      "file": "trading\\utils\\config_utils.py",
+      "function": "__init__",
+      "line": 107,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\utils\\logging_utils.py",
+      "function": "__init__",
+      "line": 51,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\utils\\logging_utils.py",
+      "function": "_configure_root_logger",
+      "line": 74,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function '_configure_root_logger' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\utils\\memory_logger.py",
+      "function": "__init__",
+      "line": 19,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\utils\\notifications.py",
+      "function": "__init__",
+      "line": 25,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\utils\\notifications.py",
+      "function": "__init__",
+      "line": 44,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\utils\\notifications.py",
+      "function": "__init__",
+      "line": 102,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\utils\\notifications.py",
+      "function": "__init__",
+      "line": 170,
+      "issue": "init_with_side_effects_no_return",
+      "severity": "medium",
+      "details": "__init__ method has side effects but no return statement"
+    },
+    {
+      "file": "trading\\utils\\test_reasoning.py",
+      "function": "test_clear_old_decisions",
+      "line": 169,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'test_clear_old_decisions' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\utils\\test_reasoning.py",
+      "function": "test_create_streamlit_sidebar",
+      "line": 288,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'test_create_streamlit_sidebar' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\utils\\test_reasoning.py",
+      "function": "test_log_strategy_decision",
+      "line": 346,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'test_log_strategy_decision' has no return statement but contains significant logic"
+    },
+    {
+      "file": "trading\\utils\\test_reasoning.py",
+      "function": "test_agent_decision",
+      "line": 404,
+      "issue": "missing_return_with_logic",
+      "severity": "medium",
+      "details": "Function 'test_agent_decision' has no return statement but contains significant logic"
+    }
+  ],
+  "violations_by_type": {
+    "missing_return_with_side_effects": 72,
+    "missing_return_with_logic": 86,
+    "critical_method_non_structured_return": 18,
+    "init_with_side_effects_no_return": 119
+  }
+}

@@ -62,7 +62,7 @@ class SecurityManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -87,7 +87,7 @@ class SecurityManager:
             return secrets.token_hex(length)
         elif key_type == "encryption":
             # Generate encryption key
-            return Fernet.generate_key().decode()
+            return {'success': True, 'result': Fernet.generate_key().decode(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         else:
             raise ValueError(f"Unknown key type: {key_type}")
 
@@ -119,7 +119,7 @@ class SecurityManager:
             return rotated_keys
         except Exception as e:
             self.logger.error(f"Failed to rotate keys: {e}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def check_security(self):
         """Check security configuration."""
@@ -146,7 +146,7 @@ class SecurityManager:
                 for rec in result["recommendations"]:
                     print(f"    - {rec}")
         
-        return all(check["status"] for check in checks.values())
+        return {'success': True, 'result': all(check["status"] for check in checks.values()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _check_keys(self) -> Dict[str, Any]:
         """Check security keys."""

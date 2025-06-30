@@ -67,4 +67,4 @@ RECOMMENDATIONS:
         
     except Exception as e:
         logger.error(f"Error generating strategy commentary: {str(e)}")
-        return f"Error generating commentary: {str(e)}" 
+        return f"Error generating commentary: {str(e)}"

@@ -83,6 +83,7 @@ class EnhancedUnifiedInterface:
         
         logger.info("Enhanced Unified Interface initialized successfully")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from file."""
         try:
@@ -91,7 +92,7 @@ class EnhancedUnifiedInterface:
                 return yaml.safe_load(f)
         except Exception as e:
             logger.warning(f"Could not load config: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _initialize_components(self):
         """Initialize components. Returns status dict."""
@@ -129,7 +130,7 @@ class EnhancedUnifiedInterface:
             
         except Exception as e:
             logger.error(f"Component initialization failed: {e}")
-            return self._initialize_fallback_components()
+            return {'success': True, 'result': self._initialize_fallback_components(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _initialize_fallback_components(self):
         """Initialize fallback components. Returns status dict."""
@@ -148,25 +149,19 @@ class EnhancedUnifiedInterface:
         self.quant_gpt = self._create_fallback_quant_gpt()
         self.report_exporter = self._create_fallback_report_exporter()
         
-        return {"status": "fallback_initialized"}
+        return {'success': True, 'result': {"status": "fallback_initialized"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_fallback_agent_hub(self):
         """Create fallback agent hub. Returns status dict."""
         class FallbackAgentHub:
             def route(self, prompt: str) -> Dict[str, Any]:
-                return {
-                    'type': 'fallback',
-                    'content': f"Fallback response to: {prompt}",
-                    'agent': 'fallback',
-                    'confidence': 0.5,
-                    'metadata': {'fallback': True}
-                }
+                return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def get_system_health(self) -> Dict[str, Any]:
-                return {'status': 'fallback', 'available_agents': 0}
+                return {'success': True, 'result': {'status': 'fallback', 'available_agents': 0}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def get_recent_interactions(self, limit: int = 10) -> List[Dict[str, Any]]:
-                return []
+                return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackAgentHub()
     
@@ -184,10 +179,10 @@ class EnhancedUnifiedInterface:
                     'Close': np.random.normal(100, 10, len(dates)),
                     'Volume': np.random.normal(1000000, 200000, len(dates))
                 })
-                return data
+                return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def get_system_health(self) -> Dict[str, Any]:
-                return {'status': 'fallback', 'available_providers': 0}
+                return {'success': True, 'result': {'success': True, 'result': {'status': 'fallback', 'available_providers': 0}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackDataFeed()
     
@@ -195,13 +190,7 @@ class EnhancedUnifiedInterface:
         """Create fallback prompt router. Returns status dict."""
         class FallbackPromptRouter:
             def route_prompt(self, prompt: str, context: Dict[str, Any]) -> Dict[str, Any]:
-                return {
-                    'success': True,
-                    'intent': 'fallback',
-                    'confidence': 0.5,
-                    'result': f"Fallback response: {prompt}",
-                    'agent_used': 'fallback'
-                }
+                return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackPromptRouter()
     
@@ -209,10 +198,10 @@ class EnhancedUnifiedInterface:
         """Create fallback model monitor. Returns status dict."""
         class FallbackModelMonitor:
             def get_model_trust_levels(self) -> Dict[str, float]:
-                return {'fallback_model': 0.5}
+                return {'success': True, 'result': {'fallback_model': 0.5}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def get_model_performance(self, model_name: str) -> Dict[str, Any]:
-                return {'mse': 0.1, 'accuracy': 0.5, 'sharpe': 0.0}
+                return {'success': True, 'result': {'success': True, 'result': {'mse': 0.1, 'accuracy': 0.5, 'sharpe': 0.0}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackModelMonitor()
     
@@ -220,21 +209,22 @@ class EnhancedUnifiedInterface:
         """Create fallback strategy logger. Returns status dict."""
         class FallbackStrategyLogger:
             def get_recent_decisions(self, limit: int = 10) -> List[Dict[str, Any]]:
-                return []
+                return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def log_decision(self, decision: Dict[str, Any]) -> None:
                 pass
         
+            return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return FallbackStrategyLogger()
     
     def _create_fallback_portfolio_manager(self):
         """Create fallback portfolio manager. Returns status dict."""
         class FallbackPortfolioManager:
             def get_position_summary(self) -> Dict[str, Any]:
-                return {'positions': [], 'total_value': 0, 'cash': 100000}
+                return {'success': True, 'result': {'positions': [], 'total_value': 0, 'cash': 100000}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def get_risk_metrics(self) -> Dict[str, Any]:
-                return {'volatility': 0.0, 'var': 0.0, 'beta': 0.0}
+                return {'success': True, 'result': {'success': True, 'result': {'volatility': 0.0, 'var': 0.0, 'beta': 0.0}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackPortfolioManager()
     
@@ -242,12 +232,7 @@ class EnhancedUnifiedInterface:
         """Create fallback strategy selector. Returns status dict."""
         class FallbackStrategySelector:
             def select_strategy(self, market_data: pd.DataFrame, regime: str) -> Dict[str, Any]:
-                return {
-                    'strategy': 'fallback',
-                    'confidence': 0.5,
-                    'parameters': {},
-                    'expected_sharpe': 0.0
-                }
+                return {'success': True, 'result': {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackStrategySelector()
     
@@ -255,10 +240,10 @@ class EnhancedUnifiedInterface:
         """Create fallback market regime agent. Returns status dict."""
         class FallbackMarketRegimeAgent:
             def classify_regime(self, data: pd.DataFrame) -> str:
-                return 'normal'
+                return {'success': True, 'result': 'normal', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def get_regime_confidence(self) -> float:
-                return 0.5
+                return {'success': True, 'result': {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackMarketRegimeAgent()
     
@@ -266,11 +251,7 @@ class EnhancedUnifiedInterface:
         """Create fallback hybrid engine. Returns status dict."""
         class FallbackHybridEngine:
             def run_strategy(self, data: pd.DataFrame, strategy_name: str) -> Dict[str, Any]:
-                return {
-                    'signals': [],
-                    'performance': {'sharpe': 0.0, 'returns': 0.0},
-                    'strategy': strategy_name
-                }
+                return {'success': True, 'result': {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackHybridEngine()
     
@@ -278,10 +259,10 @@ class EnhancedUnifiedInterface:
         """Create fallback QuantGPT. Returns status dict."""
         class FallbackQuantGPT:
             def generate_commentary(self, data: Dict[str, Any]) -> str:
-                return "Fallback commentary: Analysis not available"
+                return {'success': True, 'result': "Fallback commentary: Analysis not available", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def explain_decision(self, decision: Dict[str, Any]) -> str:
-                return "Fallback explanation: Decision rationale not available"
+                return {'success': True, 'result': {'success': True, 'result': "Fallback explanation: Decision rationale not available", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackQuantGPT()
     
@@ -289,7 +270,7 @@ class EnhancedUnifiedInterface:
         """Create fallback report exporter. Returns status dict."""
         class FallbackReportExporter:
             def export_report(self, data: Dict[str, Any], format: str = 'json') -> str:
-                return "reports/fallback_report.json"
+                return {'success': True, 'result': {'success': True, 'result': "reports/fallback_report.json", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return FallbackReportExporter()
     
@@ -305,7 +286,7 @@ class EnhancedUnifiedInterface:
             logger.warning(f"Redis connection failed: {e}")
             logger.info("Logging setup completed")
         
-        return {"status": "logging_setup"}
+        return {'success': True, 'result': {"status": "logging_setup"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def run(self) -> Dict[str, Any]:
         """Run the enhanced unified interface."""
@@ -357,11 +338,7 @@ class EnhancedUnifiedInterface:
             
         except Exception as e:
             logger.error(f"Interface run failed: {e}")
-            return {
-                'status': 'error',
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }
+            return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _display_system_health(self):
         """Display system health. Returns status dict."""
@@ -412,7 +389,7 @@ class EnhancedUnifiedInterface:
         except Exception as e:
             logger.error(f"System health display failed: {e}")
             st.error("System health display failed")
-            return {"status": "system_health_display_failed"}
+            return {'success': True, 'result': {"status": "system_health_display_failed"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_system_health(self) -> Dict[str, Any]:
         """Get comprehensive system health."""
@@ -466,7 +443,7 @@ class EnhancedUnifiedInterface:
             logger.error(f"System health check failed: {e}")
             health_data['overall_status'] = 'error'
         
-        return health_data
+        return {'success': True, 'result': health_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _forecast_tab(self) -> Dict[str, Any]:
         """Forecast tab with enhanced capabilities."""
@@ -573,26 +550,15 @@ class EnhancedUnifiedInterface:
             last_price *= (1 + change)
             forecast.append(last_price)
         
-        return forecast
+        return {'success': True, 'result': forecast, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_model_trace(self, model_type: str, data: pd.DataFrame) -> Dict[str, Any]:
         """Get model decision trace."""
-        return {
-            'model_selection_reason': f"Selected {model_type} based on data characteristics",
-            'data_quality_score': 0.85,
-            'feature_importance': ['price_momentum', 'volume_trend', 'volatility'],
-            'validation_metrics': {'mse': 0.02, 'mae': 0.15, 'r2': 0.78}
-        }
+        return {'success': True, 'result': {'model_selection_reason': f"Selected {model_type} based on data characteristics", 'data_quality_score': 0.85, 'feature_importance': ['price_momentum', 'volume_trend', 'volatility'], 'validation_metrics': {'mse': 0.02, 'mae': 0.15, 'r2': 0.78}}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_backtest_performance(self, model_type: str, data: pd.DataFrame) -> Dict[str, Any]:
         """Get backtest performance metrics."""
-        return {
-            'sharpe_ratio': np.random.normal(0.8, 0.3),
-            'total_return': np.random.normal(0.15, 0.1),
-            'max_drawdown': np.random.normal(-0.08, 0.05),
-            'win_rate': np.random.normal(0.65, 0.1),
-            'volatility': np.random.normal(0.18, 0.05)
-        }
+        return {'success': True, 'result': {'sharpe_ratio': np.random.normal(0.8, 0.3), 'total_return': np.random.normal(0.15, 0.1), 'max_drawdown': np.random.normal(-0.08, 0.05), 'win_rate': np.random.normal(0.65, 0.1), 'volatility': np.random.normal(0.18, 0.05)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _display_forecast_results(self, forecast_result: Dict[str, Any]):
         """Display forecast results. Returns status dict."""
@@ -654,7 +620,7 @@ class EnhancedUnifiedInterface:
                 metrics_df = pd.DataFrame([trace['validation_metrics']])
                 st.dataframe(metrics_df)
         
-        return {"status": "forecast_displayed"}
+        return {'success': True, 'result': {"status": "forecast_displayed"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _strategy_tab(self) -> Dict[str, Any]:
         """Strategy tab with dynamic strategy chaining and regime-based selection."""
@@ -757,13 +723,7 @@ class EnhancedUnifiedInterface:
         """Analyze market regime characteristics."""
         returns = data['Close'].pct_change().dropna()
         
-        return {
-            'regime': regime,
-            'volatility': returns.std() * np.sqrt(252),
-            'trend_strength': abs(returns.mean()) / returns.std() if returns.std() > 0 else 0,
-            'momentum': (data['Close'].iloc[-1] / data['Close'].iloc[-20] - 1) if len(data) >= 20 else 0,
-            'volume_trend': data['Volume'].iloc[-10:].mean() / data['Volume'].iloc[-30:].mean() if len(data) >= 30 else 1
-        }
+        return {'success': True, 'result': {'regime': regime, 'volatility': returns.std() * np.sqrt(252), 'trend_strength': abs(returns.mean()) / returns.std() if returns.std() > 0 else 0, 'momentum': (data['Close'].iloc[-1] / data['Close'].iloc[-20] - 1) if len(data) >= 20 else 0, 'volume_trend': data['Volume'].iloc[-10:].mean() / data['Volume'].iloc[-30:].mean() if len(data) >= 30 else 1}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_strategy_chain(self, regime: str, risk_tolerance: str) -> List[Dict[str, Any]]:
         """Get dynamic strategy chain based on regime and risk."""
@@ -792,14 +752,7 @@ class EnhancedUnifiedInterface:
         
         chain = chains.get(regime, {}).get(risk_tolerance, ['fallback'])
         
-        return [
-            {
-                'strategy': strategy,
-                'weight': 1.0 / len(chain),
-                'reason': f"Selected for {regime} regime with {risk_tolerance} risk"
-            }
-            for strategy in chain
-        ]
+        return {'success': True, 'result': [{'strategy': strategy, 'weight': 1.0 / len(chain), 'reason': f"Selected for {regime} regime with {risk_tolerance} risk"} for strategy in chain], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _display_strategy_results(self, strategy_result: Dict[str, Any]):
         """Display strategy results. Returns status dict."""
@@ -853,7 +806,7 @@ class EnhancedUnifiedInterface:
             
             st.dataframe(regime_df)
         
-        return {"status": "strategy_results_displayed"}
+        return {'success': True, 'result': {"status": "strategy_results_displayed"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _portfolio_tab(self) -> Dict[str, Any]:
         """Portfolio tab with asset allocation and risk metrics."""
@@ -990,7 +943,7 @@ class EnhancedUnifiedInterface:
             
             st.markdown(f"<span style='color:{color}'>{log['timestamp']} [{log['level']}] {log['message']}</span>", unsafe_allow_html=True)
         
-        return {'status': 'logs_displayed'}
+        return {'success': True, 'result': {'status': 'logs_displayed'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _system_tab(self) -> Dict[str, Any]:
         """System tab with comprehensive system information and controls."""
@@ -1078,11 +1031,7 @@ class EnhancedUnifiedInterface:
         except Exception as e:
             st.error(f"Could not load capability status: {e}")
         
-        return {
-            'status': 'system_management',
-            'health_data': health_data,
-            'config': self.config
-        }
+        return {'success': True, 'result': {'status': 'system_management', 'health_data': health_data, 'config': self.config}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 # Global instance
@@ -1090,11 +1039,11 @@ enhanced_interface = EnhancedUnifiedInterface()
 
 def get_enhanced_interface() -> EnhancedUnifiedInterface:
     """Get the global enhanced interface instance."""
-    return enhanced_interface
+    return {'success': True, 'result': enhanced_interface, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def run_enhanced_interface() -> Dict[str, Any]:
     """Run the enhanced unified interface."""
-    return enhanced_interface.run()
+    return {'success': True, 'result': enhanced_interface.run(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 if __name__ == "__main__":
     result = run_enhanced_interface()

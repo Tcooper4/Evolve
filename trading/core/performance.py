@@ -44,7 +44,7 @@ def load_targets() -> Dict[str, float]:
             with open(target_path, "r") as f:
                 targets = json.load(f)
             logger.info("Loaded targets from targets.json")
-            return {**default_targets, **targets}
+            return {'success': True, 'result': {**default_targets, **targets}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             logger.error(f"Error loading targets.json: {e}")
     return default_targets.copy()
@@ -65,6 +65,7 @@ def update_targets(new_targets: Dict[str, float]) -> None:
     except Exception as e:
         logger.error(f"Error updating targets.json: {e}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # --- Default Metrics ---
 DEFAULT_METRICS = {
     "sharpe": 0.0,
@@ -88,6 +89,7 @@ def log_performance(
     precision: Optional[float] = None,
     recall: Optional[float] = None,
     notes: Optional[str] = None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 ) -> None:
     """Log performance metrics to CSV file.
     
@@ -167,7 +169,7 @@ def calculate_rolling_metrics(df: pd.DataFrame, window: int = 7) -> Dict[str, fl
         
     except Exception as e:
         logger.error(f"Error calculating rolling metrics: {str(e)}")
-        return DEFAULT_METRICS.copy()
+        return {'success': True, 'result': DEFAULT_METRICS.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def evaluate_performance(classification: Optional[bool] = None) -> Dict[str, Any]:
     """Evaluate current performance against goals.
@@ -196,7 +198,7 @@ def evaluate_performance(classification: Optional[bool] = None) -> Dict[str, Any
             df = pd.read_csv(log_path)
         except Exception as e:
             logger.error(f"Error reading performance log: {str(e)}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 "status": "Error",
                 "message": f"Error reading performance log: {str(e)}",
                 "timestamp": datetime.now().isoformat(),
@@ -300,7 +302,7 @@ def plot_performance_trends(log_path: str = "memory/logs/performance_log.csv") -
         df = pd.read_csv(log_path)
         if df.empty:
             logger.warning("Performance log is empty")
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         fig = go.Figure()
         for metric in ["sharpe", "drawdown", "mse"]:

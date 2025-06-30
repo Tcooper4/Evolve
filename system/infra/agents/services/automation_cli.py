@@ -65,7 +65,7 @@ class AutomationCLI:
         self.setup_cli()
         self.console = Console(theme=self.config.theme)
         self.lock = asyncio.Lock()
-        
+
     def _load_config(self, config_path: str) -> CLIConfig:
         """Load CLI configuration."""
         try:
@@ -75,12 +75,11 @@ class AutomationCLI:
         except Exception as e:
             logger.error(f"Failed to load CLI config: {str(e)}")
             raise
-            
+
     def setup_logging(self):
         """Configure logging."""
         log_path = Path("automation/logs")
         log_path.mkdir(parents=True, exist_ok=True)
-        
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -89,7 +88,7 @@ class AutomationCLI:
                 logging.StreamHandler()
             ]
         )
-        
+
     def setup_cli(self):
         """Setup CLI application."""
         self.app = Typer(
@@ -97,13 +96,11 @@ class AutomationCLI:
             help="Automation system CLI",
             add_completion=False
         )
-        
         # Add commands
         self._add_commands()
-        
+
     def _add_commands(self):
         """Add CLI commands."""
-        
         @self.app.command()
         def tasks(
             status: Optional[TaskStatus] = Option(
@@ -124,20 +121,17 @@ class AutomationCLI:
                 tasks = asyncio.run(
                     self.tasks.list_tasks(status, task_type)
                 )
-                
                 table = Table(
                     title="Tasks",
                     show_header=True,
                     header_style="bold magenta"
                 )
-                
                 table.add_column("ID", style="dim")
                 table.add_column("Name")
                 table.add_column("Type")
                 table.add_column("Status")
                 table.add_column("Priority")
                 table.add_column("Created")
-                
                 for task in tasks[:limit]:
                     table.add_row(
                         task.id,
@@ -147,14 +141,12 @@ class AutomationCLI:
                         task.priority.value,
                         task.created_at.isoformat()
                     )
-                    
                 self.console.print(table)
-                
             except Exception as e:
                 self.console.print(
                     f"[red]Error: {str(e)}[/red]"
                 )
-                
+
         @self.app.command()
         def create_task(
             name: str = Option(..., help="Task name"),
@@ -175,7 +167,6 @@ class AutomationCLI:
                         priority=priority
                     )
                 )
-                
                 self.console.print(
                     Panel(
                         f"Task created successfully:\n"
@@ -188,12 +179,11 @@ class AutomationCLI:
                         border_style="green"
                     )
                 )
-                
             except Exception as e:
                 self.console.print(
                     f"[red]Error: {str(e)}[/red]"
                 )
-                
+
         @self.app.command()
         def workflows(
             status: Optional[str] = Option(
@@ -210,19 +200,16 @@ class AutomationCLI:
                 workflows = asyncio.run(
                     self.workflows.get_workflows(status)
                 )
-                
                 table = Table(
                     title="Workflows",
                     show_header=True,
                     header_style="bold magenta"
                 )
-                
                 table.add_column("ID", style="dim")
                 table.add_column("Name")
                 table.add_column("Status")
                 table.add_column("Steps")
                 table.add_column("Created")
-                
                 for workflow in workflows[:limit]:
                     table.add_row(
                         workflow.id,
@@ -231,14 +218,12 @@ class AutomationCLI:
                         str(len(workflow.steps)),
                         workflow.created_at.isoformat()
                     )
-                    
                 self.console.print(table)
-                
             except Exception as e:
                 self.console.print(
                     f"[red]Error: {str(e)}[/red]"
                 )
-                
+
         @self.app.command()
         def create_workflow(
             name: str = Option(..., help="Workflow name"),
@@ -289,7 +274,7 @@ class AutomationCLI:
                 self.console.print(
                     f"[red]Error: {str(e)}[/red]"
                 )
-                
+
         @self.app.command()
         def metrics():
             """Show system metrics."""
@@ -324,7 +309,7 @@ class AutomationCLI:
                 self.console.print(
                     f"[red]Error: {str(e)}[/red]"
                 )
-                
+
         @self.app.command()
         def schedules(
             enabled: Optional[bool] = Option(
@@ -375,7 +360,7 @@ class AutomationCLI:
                 self.console.print(
                     f"[red]Error: {str(e)}[/red]"
                 )
-                
+
         @self.app.command()
         def create_schedule(
             name: str = Option(..., help="Schedule name"),
@@ -419,7 +404,7 @@ class AutomationCLI:
                 self.console.print(
                     f"[red]Error: {str(e)}[/red]"
                 )
-                
+
         @self.app.command()
         def start_api():
             """Start the API server."""
@@ -429,7 +414,7 @@ class AutomationCLI:
                 self.console.print(
                     f"[red]Error: {str(e)}[/red]"
                 )
-                
+
     def run(self):
         """Run the CLI application."""
         try:
@@ -439,7 +424,7 @@ class AutomationCLI:
             self.console.print(
                 f"[red]Error: {str(e)}[/red]"
             )
-            
+
     async def cleanup(self):
         """Cleanup resources."""
         try:

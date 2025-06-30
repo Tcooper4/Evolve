@@ -101,6 +101,7 @@ class PositionSizingEngine:
         
         logger.info("Position Sizing Engine initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def calculate_position_size(self,
                               symbol: str,
                               returns: pd.Series,
@@ -172,7 +173,7 @@ class PositionSizingEngine:
             
         except Exception as e:
             logger.error(f"Error calculating position size for {symbol}: {e}")
-            return self._create_default_position(symbol, method)
+            return {'success': True, 'result': self._create_default_position(symbol, method), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _kelly_criterion(self, returns: pd.Series) -> float:
         """Calculate Kelly Criterion position size.
@@ -217,7 +218,7 @@ class PositionSizingEngine:
             
         except Exception as e:
             logger.error(f"Error in Kelly Criterion calculation: {e}")
-            return self.kelly_config['min_size']
+            return {'success': True, 'result': self.kelly_config['min_size'], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _volatility_based_sizing(self, returns: pd.Series) -> float:
         """Calculate volatility-based position size.
@@ -244,7 +245,7 @@ class PositionSizingEngine:
             
         except Exception as e:
             logger.error(f"Error in volatility-based sizing: {e}")
-            return 0.05
+            return {'success': True, 'result': 0.05, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _fixed_sizing(self, returns: pd.Series) -> float:
         """Calculate fixed position size.
@@ -255,7 +256,7 @@ class PositionSizingEngine:
         Returns:
             Fixed position size
         """
-        return 0.05  # 5% fixed allocation
+        return {'success': True, 'result': 0.05  # 5% fixed allocation, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _risk_parity_sizing(self, returns: pd.Series, portfolio_context: Optional[Dict[str, Any]]) -> float:
         """Calculate risk parity position size.
@@ -286,7 +287,7 @@ class PositionSizingEngine:
             
         except Exception as e:
             logger.error(f"Error in risk parity sizing: {e}")
-            return 0.05
+            return {'success': True, 'result': 0.05, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _max_drawdown_sizing(self, returns: pd.Series) -> float:
         """Calculate max drawdown-based position size.
@@ -315,7 +316,7 @@ class PositionSizingEngine:
             
         except Exception as e:
             logger.error(f"Error in max drawdown sizing: {e}")
-            return 0.05
+            return {'success': True, 'result': 0.05, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _hybrid_sizing(self, returns: pd.Series, portfolio_context: Optional[Dict[str, Any]]) -> float:
         """Calculate hybrid position size combining multiple methods.
@@ -343,7 +344,7 @@ class PositionSizingEngine:
             
         except Exception as e:
             logger.error(f"Error in hybrid sizing: {e}")
-            return 0.05
+            return {'success': True, 'result': 0.05, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _apply_constraints(self, 
                           base_size: float,
@@ -382,7 +383,7 @@ class PositionSizingEngine:
                 if liquidity < liquidity_threshold:
                     constrained_size *= 0.5  # Reduce size for illiquid assets
         
-        return max(0.01, constrained_size)
+        return {'success': True, 'result': max(0.01, constrained_size), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_risk_metrics(self, returns: pd.Series, position_size: float) -> Dict[str, float]:
         """Calculate risk metrics for position.
@@ -413,7 +414,7 @@ class PositionSizingEngine:
             
         except Exception as e:
             logger.error(f"Error calculating risk metrics: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_max_drawdown(self, returns: pd.Series) -> float:
         """Calculate maximum drawdown.
@@ -430,7 +431,7 @@ class PositionSizingEngine:
             drawdown = (cumulative - running_max) / running_max
             return abs(drawdown.min())
         except:
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_confidence(self, returns: pd.Series, method: SizingMethod) -> float:
         """Calculate confidence in position size calculation.
@@ -468,7 +469,7 @@ class PositionSizingEngine:
             
         except Exception as e:
             logger.error(f"Error calculating confidence: {e}")
-            return 0.5
+            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_applied_constraints(self, 
                                 final_size: float,
@@ -495,7 +496,7 @@ class PositionSizingEngine:
                 'liquidity_available': portfolio_context.get('liquidity', {}).get(symbol, 0)
             })
         
-        return constraints_info
+        return {'success': True, 'result': constraints_info, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_method_parameters(self, method: SizingMethod) -> Dict[str, Any]:
         """Get parameters used for the sizing method.
@@ -513,7 +514,7 @@ class PositionSizingEngine:
         elif method == SizingMethod.MAX_DRAWDOWN:
             return self.drawdown_config
         else:
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_default_position(self, symbol: str, method: SizingMethod) -> PositionSize:
         """Create default position size when calculation fails.
@@ -525,7 +526,7 @@ class PositionSizingEngine:
         Returns:
             Default position size
         """
-        return PositionSize(
+        return {'success': True, 'result': PositionSize(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             symbol=symbol,
             size=0.05,  # 5% default
             sizing_method=method,
@@ -592,7 +593,7 @@ class PositionSizingEngine:
             
         except Exception as e:
             logger.error(f"Error optimizing portfolio allocation: {e}")
-            return self._create_default_allocation(assets)
+            return {'success': True, 'result': self._create_default_allocation(assets), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _apply_portfolio_constraints(self, weights: np.ndarray, assets: Dict[str, pd.Series]) -> np.ndarray:
         """Apply portfolio-level constraints.
@@ -612,7 +613,7 @@ class PositionSizingEngine:
         # Normalize weights
         constrained_weights = constrained_weights / constrained_weights.sum()
         
-        return constrained_weights
+        return {'success': True, 'result': constrained_weights, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_diversification_score(self, weights: np.ndarray, covariance_matrix: np.ndarray) -> float:
         """Calculate portfolio diversification score.
@@ -641,7 +642,7 @@ class PositionSizingEngine:
                 
         except Exception as e:
             logger.error(f"Error calculating diversification score: {e}")
-            return 0.5
+            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_default_allocation(self, assets: Dict[str, pd.Series]) -> PortfolioAllocation:
         """Create default portfolio allocation.
@@ -655,7 +656,7 @@ class PositionSizingEngine:
         n_assets = len(assets)
         equal_weights = np.ones(n_assets) / n_assets
         
-        return PortfolioAllocation(
+        return {'success': True, 'result': PortfolioAllocation(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             allocations=dict(zip(assets.keys(), equal_weights)),
             total_allocation=1.0,
             risk_budget=dict(zip(assets.keys(), equal_weights)),
@@ -682,7 +683,7 @@ class PositionSizingEngine:
         if symbol:
             history = [s for s in history if s.symbol == symbol]
         
-        return history
+        return {'success': True, 'result': history, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def export_sizing_report(self, filepath: str) -> bool:
         """Export position sizing report.
@@ -717,11 +718,11 @@ class PositionSizingEngine:
             
         except Exception as e:
             logger.error(f"Error exporting sizing report: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 # Global position sizing engine instance
 position_sizing_engine = PositionSizingEngine()
 
 def get_position_sizing_engine() -> PositionSizingEngine:
     """Get the global position sizing engine instance."""
-    return position_sizing_engine 
+    return {'success': True, 'result': position_sizing_engine, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

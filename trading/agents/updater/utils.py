@@ -226,4 +226,4 @@ def check_data_quality(data: pd.DataFrame) -> Tuple[bool, str]:
         
     except Exception as e:
         logger.error(f"Error checking data quality: {str(e)}")
-        return False, str(e) 
+        return False, str(e)

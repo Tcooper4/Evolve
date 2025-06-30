@@ -3,6 +3,7 @@
 # Standard library imports
 import logging
 from typing import Any, Dict, List, Optional, Tuple, Union
+from datetime import datetime
 
 # Third-party imports
 import numpy as np
@@ -31,29 +32,15 @@ class LSTMModel(nn.Module):
             num_layers (int, optional): Number of LSTM layers. Defaults to 1.
             dropout (float, optional): Dropout rate. Defaults to 0.0.
         """
-        super(LSTMModel, self).__init__()
+        super().__init__()
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, batch_first=True, dropout=dropout)
+        self.fc = nn.Linear(hidden_dim, output_dim)
         self.hidden_dim = hidden_dim
         self.num_layers = num_layers
-        
-        # Initialize LSTM with specified parameters
-        self.lstm = nn.LSTM(
-            input_size=input_dim,
-            hidden_size=hidden_dim,
-            num_layers=num_layers,
-            batch_first=True,
-            dropout=dropout if num_layers > 1 else 0
-        )
-        self.fc = nn.Linear(hidden_dim, output_dim)
-        
-        # Initialize device
+        self.dropout = dropout
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(self.device)
-        
-        # Initialize scaler
-        self.scaler = StandardScaler()
-        
-        # Initialize logger
-        self.logger = logging.getLogger(__name__)
+        return {'success': True, 'message': 'LSTMModel initialized', 'timestamp': datetime.now().isoformat()}
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the LSTM model.

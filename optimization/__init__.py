@@ -78,7 +78,12 @@ class StrategyOptimizer:
             params = {}
             for param, (low, high) in param_bounds.items():
                 params[param] = trial.suggest_float(param, low, high)
-            return objective_func(params)
+            return OptimizationResult(
+                best_params=params,
+                best_value=objective_func(params),
+                optimization_history=[trial.params for trial in study.trials],
+                metadata={'method': 'optuna', 'n_trials': n_trials}
+            )
         
         study = optuna.create_study(direction='maximize')
         study.optimize(objective, n_trials=n_trials)
@@ -97,7 +102,7 @@ class StrategyOptimizer:
         
         def objective(params):
             param_dict = dict(zip(param_names, params))
-            return -objective_func(param_dict)  # Negative for maximization
+            return -objective_func(param_dict)
         
         result = differential_evolution(objective, bounds)
         
@@ -182,4 +187,4 @@ def get_strategy_optimizer() -> StrategyOptimizer:
 
 def get_portfolio_optimizer() -> PortfolioOptimizer:
     """Get the global portfolio optimizer instance."""
-    return portfolio_optimizer 
+    return portfolio_optimizer

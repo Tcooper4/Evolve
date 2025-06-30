@@ -56,6 +56,7 @@ class Task:
         self.status = status
         self.updated_at = datetime.now()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 @dataclass
 class Workflow:
     """Workflow model."""
@@ -73,16 +74,19 @@ class Workflow:
         self.tasks.append(task)
         self.updated_at = datetime.now()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def remove_task(self, task_id: str) -> None:
         """Remove a task from the workflow."""
         self.tasks = [t for t in self.tasks if t.id != task_id]
         self.updated_at = datetime.now()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def update_status(self, status: TaskStatus) -> None:
         """Update workflow status."""
         self.status = status
         self.updated_at = datetime.now()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 @dataclass
 class Alert:
     """Alert model."""
@@ -97,7 +101,7 @@ class Alert:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert alert to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "id": self.id,
             "title": self.title,
             "message": self.message,
@@ -111,7 +115,7 @@ class Alert:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Alert":
         """Create alert from dictionary."""
-        return cls(
+        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             id=data["id"],
             title=data["title"],
             message=data["message"],
@@ -141,25 +145,30 @@ class Service:
         self.status = status
         self.updated_at = datetime.now()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def add_endpoint(self, name: str, url: str) -> None:
         """Add an endpoint to the service."""
         self.endpoints[name] = url
         self.updated_at = datetime.now()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def remove_endpoint(self, name: str) -> None:
         """Remove an endpoint from the service."""
         if name in self.endpoints:
             del self.endpoints[name]
             self.updated_at = datetime.now()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def add_dependency(self, service_id: str) -> None:
         """Add a service dependency."""
         if service_id not in self.dependencies:
             self.dependencies.append(service_id)
             self.updated_at = datetime.now()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def remove_dependency(self, service_id: str) -> None:
         """Remove a service dependency."""
         if service_id in self.dependencies:
             self.dependencies.remove(service_id)
             self.updated_at = datetime.now() 
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

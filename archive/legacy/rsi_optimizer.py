@@ -41,7 +41,7 @@ def calculate_sharpe(returns: pd.Series, risk_free_rate: float = 0.02) -> float:
         
     excess_returns = returns - risk_free_rate/252  # Daily risk-free rate
     if excess_returns.std() == 0:
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     return np.sqrt(252) * excess_returns.mean() / excess_returns.std()
 
@@ -133,7 +133,7 @@ def optimize_rsi(
         results_file = settings_dir / f"{ticker}_results.csv"
         results_df.to_csv(results_file, index=False)
         
-        return optimal_settings
+        return {'success': True, 'result': optimal_settings, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     except Exception as e:
         error_msg = f"Error optimizing RSI for {ticker}: {str(e)}"

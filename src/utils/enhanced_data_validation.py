@@ -444,4 +444,4 @@ def display_validation_warnings(validation_summary: Dict[str, Any]) -> None:
         with col2:
             st.metric("Passed Checks", validation_summary["passed_checks"])
         with col3:
-            st.metric("Warnings", validation_summary["warnings"]) 
+            st.metric("Warnings", validation_summary["warnings"])

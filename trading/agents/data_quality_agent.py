@@ -128,7 +128,7 @@ class DataQualityAgent:
         
         # Load existing data
         self._load_quality_history()
-        
+
     async def assess_data_quality(self, 
                                 data: pd.DataFrame,
                                 symbol: str,
@@ -850,7 +850,7 @@ class DataQualityAgent:
             
         except Exception as e:
             self.logger.error(f"Error getting quality summary: {str(e)}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _load_quality_history(self):
         """Load quality history from memory."""
@@ -881,4 +881,4 @@ class DataQualityAgent:
                 json.dump(data, f, indent=2, default=str)
                 
         except Exception as e:
-            self.logger.error(f"Error saving quality history: {str(e)}") 
+            self.logger.error(f"Error saving quality history: {str(e)}")

@@ -86,7 +86,7 @@ class MetaLearnerAgent:
             Dictionary with learning insights
         """
         if not self.experiences:
-            return {'message': 'No experiences to learn from'}
+            return {}
         
         # Analyze performance trends
         recent_performance = self.performance_history[-100:] if len(self.performance_history) >= 100 else self.performance_history

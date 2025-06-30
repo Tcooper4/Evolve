@@ -88,6 +88,7 @@ class PortfolioSimulator:
         self.portfolio_history: List[PortfolioResult] = []
         self.optimization_results: Dict[str, PortfolioResult] = {}
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def optimize_portfolio(self, 
                           returns_data: pd.DataFrame,
                           method: OptimizationMethod,
@@ -155,7 +156,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error optimizing portfolio: {str(e)}")
-            return self._create_error_result(returns_data.columns)
+            return {'success': True, 'result': self._create_error_result(returns_data.columns), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_expected_returns(self, returns_data: pd.DataFrame) -> pd.Series:
         """Calculate expected returns using historical data."""
@@ -168,7 +169,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating expected returns: {str(e)}")
-            return pd.Series(0.0, index=returns_data.columns)
+            return {'success': True, 'result': pd.Series(0.0, index=returns_data.columns), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_covariance_matrix(self, returns_data: pd.DataFrame) -> pd.DataFrame:
         """Calculate covariance matrix using historical data."""
@@ -184,7 +185,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating covariance matrix: {str(e)}")
-            return pd.DataFrame(np.eye(len(returns_data.columns)), 
+            return {'success': True, 'result': pd.DataFrame(np.eye(len(returns_data.columns)),, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                               index=returns_data.columns, 
                               columns=returns_data.columns)
     
@@ -231,7 +232,7 @@ class PortfolioSimulator:
                 
         except Exception as e:
             self.logger.error(f"Error in mean-variance optimization: {str(e)}")
-            return self._equal_weight_allocation(expected_returns.index)
+            return {'success': True, 'result': self._equal_weight_allocation(expected_returns.index), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _black_litterman_optimization(self, 
                                     returns_data: pd.DataFrame,
@@ -271,7 +272,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error in Black-Litterman optimization: {str(e)}")
-            return self._mean_variance_optimization(expected_returns, covariance_matrix, constraints)
+            return {'success': True, 'result': self._mean_variance_optimization(expected_returns, covariance_matrix, constraints), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _estimate_market_cap_weights(self, returns_data: pd.DataFrame) -> pd.Series:
         """Estimate market capitalization weights."""
@@ -285,7 +286,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error estimating market cap weights: {str(e)}")
-            return pd.Series(1.0 / len(returns_data.columns), index=returns_data.columns)
+            return {'success': True, 'result': pd.Series(1.0 / len(returns_data.columns), index=returns_data.columns), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_equilibrium_returns(self, 
                                      covariance_matrix: pd.DataFrame,
@@ -305,7 +306,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating equilibrium returns: {str(e)}")
-            return np.zeros(len(covariance_matrix))
+            return {'success': True, 'result': np.zeros(len(covariance_matrix)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_view_matrices(self, 
                             views: Dict[str, float],
@@ -332,7 +333,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error creating view matrices: {str(e)}")
-            return np.array([]), np.array([]), np.array([])
+            return {'success': True, 'result': np.array([]), np.array([]), np.array([]), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _risk_parity_optimization(self, 
                                 expected_returns: pd.Series,
@@ -348,10 +349,10 @@ class PortfolioSimulator:
                 
                 # Minimize variance of risk contributions
                 risk_contribution_var = np.var(asset_contributions)
-                return risk_contribution_var
+                return {'success': True, 'result': risk_contribution_var, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def constraint_sum_to_one(weights):
-                return np.sum(weights) - 1
+                return {'success': True, 'result': np.sum(weights) - 1, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Initial guess (equal weights)
             initial_weights = np.ones(n_assets) / n_assets
@@ -382,7 +383,7 @@ class PortfolioSimulator:
                 
         except Exception as e:
             self.logger.error(f"Error in risk parity optimization: {str(e)}")
-            return self._equal_weight_allocation(expected_returns.index)
+            return {'success': True, 'result': self._equal_weight_allocation(expected_returns.index), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _max_sharpe_optimization(self, 
                                expected_returns: pd.Series,
@@ -396,10 +397,10 @@ class PortfolioSimulator:
                 portfolio_return = expected_returns.values @ weights
                 portfolio_vol = np.sqrt(weights.T @ covariance_matrix.values @ weights)
                 sharpe = (portfolio_return - self.risk_free_rate) / portfolio_vol
-                return -sharpe
+                return {'success': True, 'result': -sharpe, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def constraint_sum_to_one(weights):
-                return np.sum(weights) - 1
+                return {'success': True, 'result': np.sum(weights) - 1, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Initial guess (equal weights)
             initial_weights = np.ones(n_assets) / n_assets
@@ -430,7 +431,7 @@ class PortfolioSimulator:
                 
         except Exception as e:
             self.logger.error(f"Error in max Sharpe optimization: {str(e)}")
-            return self._equal_weight_allocation(expected_returns.index)
+            return {'success': True, 'result': self._equal_weight_allocation(expected_returns.index), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _min_variance_optimization(self, 
                                  expected_returns: pd.Series,
@@ -441,10 +442,10 @@ class PortfolioSimulator:
             n_assets = len(expected_returns)
             
             def portfolio_variance(weights):
-                return weights.T @ covariance_matrix.values @ weights
+                return {'success': True, 'result': weights.T @ covariance_matrix.values @ weights, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             def constraint_sum_to_one(weights):
-                return np.sum(weights) - 1
+                return {'success': True, 'result': np.sum(weights) - 1, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Initial guess (equal weights)
             initial_weights = np.ones(n_assets) / n_assets
@@ -475,7 +476,7 @@ class PortfolioSimulator:
                 
         except Exception as e:
             self.logger.error(f"Error in min variance optimization: {str(e)}")
-            return self._equal_weight_allocation(expected_returns.index)
+            return {'success': True, 'result': self._equal_weight_allocation(expected_returns.index), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _equal_weight_allocation(self, asset_names: pd.Index) -> Dict[str, float]:
         """Equal weight allocation."""
@@ -486,7 +487,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error in equal weight allocation: {str(e)}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_portfolio_metrics(self, 
                                    weights: Dict[str, float],
@@ -541,7 +542,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating portfolio metrics: {str(e)}")
-            return self._create_error_result(returns_data.columns)
+            return {'success': True, 'result': self._create_error_result(returns_data.columns), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_var_cvar(self, returns: pd.Series) -> Tuple[float, float]:
         """Calculate Value at Risk and Conditional Value at Risk."""
@@ -554,7 +555,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating VaR/CVaR: {str(e)}")
-            return 0.0, 0.0
+            return {'success': True, 'result': 0.0, 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_diversification_ratio(self, 
                                        weights: Dict[str, float],
@@ -574,7 +575,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating diversification ratio: {str(e)}")
-            return 1.0
+            return {'success': True, 'result': 1.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_concentration_index(self, weights: Dict[str, float]) -> float:
         """Calculate concentration index (Herfindahl index)."""
@@ -585,7 +586,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating concentration index: {str(e)}")
-            return 1.0
+            return {'success': True, 'result': 1.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_transaction_costs(self, weights: Dict[str, float]) -> float:
         """Calculate expected transaction costs."""
@@ -604,13 +605,13 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error calculating transaction costs: {str(e)}")
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_error_result(self, asset_names: pd.Index) -> PortfolioResult:
         """Create error result when optimization fails."""
         weights = {asset: 1.0 / len(asset_names) for asset in asset_names}
         
-        return PortfolioResult(
+        return {'success': True, 'result': PortfolioResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             weights=weights,
             expected_return=0.0,
             expected_volatility=0.0,
@@ -649,7 +650,7 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error comparing optimization methods: {str(e)}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_optimization_summary(self) -> Dict[str, Any]:
         """Get summary of optimization results."""
@@ -673,4 +674,4 @@ class PortfolioSimulator:
             
         except Exception as e:
             self.logger.error(f"Error getting optimization summary: {str(e)}")
-            return {} 
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

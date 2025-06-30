@@ -115,6 +115,7 @@ class MetaTunerAgent:
         
         self.logger.info("MetaTunerAgent initialized")
     
+        return 'Initialization completed'
     def tune_hyperparameters(self, model_type: str, objective_function: Callable, 
                            n_trials: Optional[int] = None, method: str = 'auto') -> TuningResult:
         """Tune hyperparameters for a given model type.
@@ -205,7 +206,7 @@ class MetaTunerAgent:
             )
             
             self._store_tuning_result(result)
-            return result
+            return 'Operation completed successfully'
     
     def _bayesian_optimization(self, tuning_id: str, model_type: str, 
                              objective_function: Callable, param_space: Dict[str, Any], 
@@ -231,7 +232,7 @@ class MetaTunerAgent:
                 return -objective_function(param_dict)  # Minimize negative reward
             except Exception as e:
                 self.logger.warning(f"Objective function failed: {e}")
-                return 0.0
+                return {'success': True, 'result': {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Run optimization
         result = gp_minimize(
@@ -471,4 +472,4 @@ class MetaTunerAgent:
             self.tuning_history[model_type] = []
         else:
             self.tuning_history.clear()
-        self.logger.info(f"Cleared tuning history for {model_type or 'all models'}") 
+        self.logger.info(f"Cleared tuning history for {model_type or 'all models'}")

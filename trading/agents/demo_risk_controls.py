@@ -90,7 +90,7 @@ def create_risk_aware_signals() -> List[TradeSignal]:
             }
         )
     ]
-    return signals
+    return {'success': True, 'result': signals, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def create_market_scenarios() -> List[Dict[str, Any]]:
@@ -147,7 +147,7 @@ def create_market_scenarios() -> List[Dict[str, Any]]:
             }
         }
     ]
-    return scenarios
+    return {'success': True, 'result': scenarios, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 async def demo_risk_controls():

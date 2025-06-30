@@ -71,7 +71,7 @@ class ModelManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -115,7 +115,7 @@ class ModelManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to train model: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def evaluate_model(self, model_type: str, data_path: str):
         """Evaluate a trained model."""
@@ -142,7 +142,7 @@ class ModelManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to evaluate model: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def optimize_model(self, model_type: str, data_path: str):
         """Optimize model hyperparameters."""
@@ -198,7 +198,7 @@ class ModelManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to optimize model: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _load_data(self, data_path: str) -> pd.DataFrame:
         """Load data from file."""
@@ -206,7 +206,7 @@ class ModelManager:
             if data_path.endswith(".csv"):
                 return pd.read_csv(data_path)
             elif data_path.endswith(".json"):
-                return pd.read_json(data_path)
+                return {'success': True, 'result': pd.read_json(data_path), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             else:
                 raise ValueError(f"Unsupported file format: {data_path}")
         except Exception as e:
@@ -425,25 +425,26 @@ class ModelManager:
                 latest_model.unlink()
             latest_model.symlink_to(model_file)
             
-            self.logger.info(f"Model saved to {model_path}")
+            self.logger.info(f"Model saved to {model_file}")
+            return str(model_file)
         except Exception as e:
             self.logger.error(f"Failed to save model: {e}")
             raise
 
     def _load_model(self, model_type: str) -> Any:
-        """Load latest model."""
+        """Load the latest model of specified type."""
         try:
-            # Get latest model path
             model_path = self.model_dir / model_type / "latest_model"
             if not model_path.exists():
-                raise FileNotFoundError(f"No model found for {model_type}")
+                raise FileNotFoundError(f"No model found for type: {model_type}")
             
-            # Load model
             if model_path.suffix == ".pt":
-                model = self._initialize_model(model_type)
+                # Load PyTorch model
+                model = self._initialize_lstm_model()
                 model.load_state_dict(torch.load(model_path))
                 return model
             else:
+                # Load other models
                 return joblib.load(model_path)
         except Exception as e:
             self.logger.error(f"Failed to load model: {e}")

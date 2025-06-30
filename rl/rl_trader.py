@@ -416,7 +416,7 @@ class RLTrader:
             return action, {'confidence': 0.8, 'model_available': True}
         except Exception as e:
             logger.error(f"Error predicting action: {e}")
-            return 2, {'confidence': 0.0, 'model_available': False, 'error': str(e)}  # Default to hold
+            return 2, {'confidence': 0.0, 'model_available': False, 'error': str(e)}
     
     def evaluate_model(self, data: pd.DataFrame, 
                       num_episodes: int = 10) -> Dict[str, Any]:

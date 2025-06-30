@@ -107,6 +107,7 @@ class TCNModel(BaseModel):
         super().__init__(default_config)
         self._validate_config()
         self._setup_model()
+        return {'success': True, 'message': 'TCNModel initialized', 'timestamp': datetime.now().isoformat()}
     
     def _validate_config(self) -> None:
         """Validate model configuration.
@@ -159,7 +160,7 @@ class TCNModel(BaseModel):
         self.linear = nn.Linear(self.config['num_channels'][-1], self.config['output_size'])
         self.model = nn.Sequential(self.tcn, self.linear)
         self.model = self.model.to(self.device)
-        
+    
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model.
         
@@ -174,7 +175,7 @@ class TCNModel(BaseModel):
         x = x.transpose(1, 2)  # Change back to (batch_size, seq_len, num_channels)
         x = self.linear(x[:, -1, :])  # Take last time step
         return x
-        
+
     def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare data for training or prediction.
         
@@ -239,7 +240,7 @@ class TCNModel(BaseModel):
             import shap
         except ImportError:
             print("SHAP is not installed. Please install it with 'pip install shap'.")
-            return None
+            return
         explainer = shap.DeepExplainer(self.model, X_sample)
         shap_values = explainer.shap_values(X_sample)
         shap.summary_plot(shap_values, X_sample.cpu().numpy())
@@ -247,7 +248,7 @@ class TCNModel(BaseModel):
     def test_synthetic(self):
         """Test model on synthetic data - DEPRECATED."""
         st.warning("Synthetic data testing is deprecated. Use real market data for testing.")
-        return None
+        return
 
     def fit(self, data: pd.DataFrame, epochs: int = 100, batch_size: int = 32, 
             learning_rate: float = 0.001) -> Dict[str, List[float]]:
@@ -292,7 +293,7 @@ class TCNModel(BaseModel):
                 if (epoch + 1) % 10 == 0:
                     print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
             
-            return history
+            return {'success': True, 'result': history, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             logging.error(f"Error in TCN model fit: {e}")
@@ -320,7 +321,7 @@ class TCNModel(BaseModel):
             predictions = predictions.cpu().numpy()
             predictions = predictions * self.y_std + self.y_mean
             
-            return predictions.flatten()
+            return {'success': True, 'result': predictions.flatten(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             logging.error(f"Error in TCN model predict: {e}")
@@ -356,12 +357,12 @@ class TCNModel(BaseModel):
                 current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
                 current_data = current_data.iloc[1:]  # Remove oldest row
             
-            return {
+            return {'success': True, 'result': {
                 'forecast': np.array(forecast_values),
                 'confidence': 0.8,  # Placeholder confidence
                 'model': 'TCN',
                 'horizon': horizon
-            }
+            }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             logging.error(f"Error in TCN model forecast: {e}")

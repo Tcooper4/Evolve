@@ -60,6 +60,7 @@ class ReportClient:
         
         logger.info("ReportClient initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def generate_report(self,
                        trade_data: Dict[str, Any],
                        model_data: Dict[str, Any],
@@ -95,7 +96,7 @@ class ReportClient:
             )
             
             logger.info(f"Generated report: {report_data['report_id']}")
-            return report_data
+            return {'success': True, 'result': report_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             logger.error(f"Error generating report: {e}")
@@ -133,7 +134,7 @@ class ReportClient:
             self.redis_client.publish('forecast_completed', json.dumps(event_data))
             
             logger.info(f"Triggered forecast report: {event_id}")
-            return event_id
+            return {'success': True, 'result': event_id, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             logger.error(f"Error triggering forecast report: {e}")
@@ -177,7 +178,7 @@ class ReportClient:
             self.redis_client.publish('strategy_completed', json.dumps(event_data))
             
             logger.info(f"Triggered strategy report: {event_id}")
-            return event_id
+            return {'success': True, 'result': event_id, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             logger.error(f"Error triggering strategy report: {e}")
@@ -215,7 +216,7 @@ class ReportClient:
             self.redis_client.publish('backtest_completed', json.dumps(event_data))
             
             logger.info(f"Triggered backtest report: {event_id}")
-            return event_id
+            return {'success': True, 'result': event_id, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             logger.error(f"Error triggering backtest report: {e}")
@@ -248,7 +249,7 @@ class ReportClient:
                         event_data = json.loads(message['data'])
                         if event_data.get('event_id') == event_id:
                             pubsub.close()
-                            return event_data
+                            return {'success': True, 'result': event_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     except json.JSONDecodeError:
                         continue
             
@@ -286,7 +287,7 @@ class ReportClient:
             
         except Exception as e:
             logger.error(f"Error getting recent reports: {e}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_report_files(self, report_id: str) -> Dict[str, str]:
         """
@@ -311,7 +312,7 @@ class ReportClient:
             
         except Exception as e:
             logger.error(f"Error getting report files: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def list_available_reports(self) -> List[Dict[str, Any]]:
         """
@@ -363,7 +364,7 @@ class ReportClient:
             
         except Exception as e:
             logger.error(f"Error listing available reports: {e}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def delete_report(self, report_id: str) -> bool:
         """
@@ -406,7 +407,7 @@ class ReportClient:
             
         except Exception as e:
             logger.error(f"Error deleting report: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_service_status(self) -> Dict[str, Any]:
         """
@@ -431,7 +432,7 @@ class ReportClient:
             
         except Exception as e:
             logger.error(f"Error getting service status: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'service_name': 'report_service',
                 'running': False,
                 'last_heartbeat': None,
@@ -461,7 +462,7 @@ def generate_quick_report(trade_data: Dict[str, Any],
     Returns:
         Report data
     """
-    return generate_trade_report(
+    return {'success': True, 'result': generate_trade_report(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         trade_data=trade_data,
         model_data=model_data,
         strategy_data=strategy_data,

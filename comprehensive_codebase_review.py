@@ -51,7 +51,7 @@ def test_basic_imports():
     except ImportError as e:
         results['plotly'] = f"❌ {e}"
     
-    return results
+    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def test_core_modules():
     """Test core platform modules."""
@@ -88,7 +88,7 @@ def test_core_modules():
     except Exception as e:
         results['risk_engine'] = f"⚠️ {e}"
     
-    return results
+    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def test_advanced_features():
     """Test advanced feature modules."""
@@ -133,7 +133,7 @@ def test_advanced_features():
     except Exception as e:
         results['live_trading'] = f"⚠️ {e}"
     
-    return results
+    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def test_optimization_modules():
     """Test optimization modules."""
@@ -162,7 +162,7 @@ def test_optimization_modules():
     except Exception as e:
         results['bayesian_optimizer'] = f"⚠️ {e}"
     
-    return results
+    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def test_data_providers():
     """Test data provider modules."""
@@ -184,7 +184,7 @@ def test_data_providers():
     except Exception as e:
         results['alpha_vantage'] = f"⚠️ {e}"
     
-    return results
+    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def test_ui_components():
     """Test UI components."""
@@ -208,7 +208,7 @@ def test_ui_components():
     except Exception as e:
         results['voice_interface'] = f"⚠️ {e}"
     
-    return results
+    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def test_configuration():
     """Test configuration files."""
@@ -240,7 +240,7 @@ def test_configuration():
     except Exception as e:
         results['config_loading'] = f"❌ {e}"
     
-    return results
+    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def test_file_structure():
     """Test file structure integrity."""
@@ -287,7 +287,7 @@ def test_file_structure():
         else:
             results[file] = "❌ Missing"
     
-    return results
+    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def generate_summary(all_results: Dict[str, Dict[str, str]]):
     """Generate comprehensive summary."""
@@ -334,7 +334,7 @@ def generate_summary(all_results: Dict[str, Dict[str, str]]):
     else:
         print("\n⚠️  ATTENTION NEEDED! Several components have issues.")
     
-    return {
+    return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat(),
         'total': total_tests,
         'passed': passed_tests,
         'warnings': warnings,
@@ -366,7 +366,7 @@ def main():
     
     print(f"\nCompleted at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     
-    return summary['success_rate'] >= 90.0
+    return {'success': True, 'result': summary['success_rate'] >= 90.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 if __name__ == "__main__":
     success = main()

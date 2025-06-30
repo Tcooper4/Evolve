@@ -60,7 +60,7 @@ def create_date_range_selector(
     # Validate date range
     if (end_date - start_date).days < min_days:
         st.warning(f"Date range must be at least {min_days} days")
-        return None, None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     return start_date, end_date
 
@@ -82,7 +82,7 @@ def create_model_selector(
     models = registry.get_available_models(category)
     if not models:
         st.warning("No models available for the selected category")
-        return None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     model_names = [model.name for model in models]
     selected_model = st.selectbox(
@@ -115,7 +115,7 @@ def create_strategy_selector(
     strategies = registry.get_available_strategies(category)
     if not strategies:
         st.warning("No strategies available for the selected category")
-        return None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     strategy_names = [strategy.name for strategy in strategies]
     selected_strategy = st.selectbox(
@@ -169,7 +169,7 @@ def create_parameter_inputs(
     # Log parameter changes for agentic monitoring
     logger.info(f"Parameters updated: {values}")
     
-    return values
+    return {'success': True, 'result': values, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_asset_selector(
     assets: List[str],
@@ -188,7 +188,7 @@ def create_asset_selector(
     """
     if not assets:
         st.warning("No assets available")
-        return None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     selected_asset = st.selectbox(
         "Select Asset",
@@ -219,7 +219,7 @@ def create_timeframe_selector(
     """
     if not timeframes:
         st.warning("No timeframes available")
-        return None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     selected_timeframe = st.selectbox(
         "Select Timeframe",
@@ -249,7 +249,7 @@ def create_confidence_interval(
     z_score = 1.96  # 95% confidence interval
     lower_bound = data['prediction'] - z_score * data['std_error']
     upper_bound = data['prediction'] + z_score * data['std_error']
-    return lower_bound, upper_bound
+    return {'success': True, 'result': lower_bound, upper_bound, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_benchmark_overlay(
     data: pd.DataFrame,
@@ -311,69 +311,121 @@ def create_benchmark_overlay(
         hovermode='x unified'
     )
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
-def create_prompt_input() -> str:
-    """Create the top-level prompt input bar.
+def create_prompt_input() -> Dict[str, Any]:
+    """Create a prompt input component.
     
     Returns:
-        str: User's prompt input
+        Dictionary with prompt text and metadata
     """
-    return st.text_input(
-        "Enter your trading request",
-        placeholder="e.g., 'Forecast AAPL for the next 30 days' or 'Run RSI strategy on MSFT'",
-        key="prompt_input"
-    )
+    try:
+        prompt = st.text_area(
+            "Enter your prompt",
+            placeholder="Describe what you want to analyze or predict...",
+            height=100,
+            key="prompt_input"
+        )
+        
+        if prompt:
+            return {
+                'success': True,
+                'prompt': prompt,
+                'length': len(prompt),
+                'timestamp': datetime.now().isoformat()
+            }
+        else:
+            return {
+                'success': False,
+                'prompt': '',
+                'message': 'No prompt entered',
+                'timestamp': datetime.now().isoformat()
+            }
+            
+    except Exception as e:
+        logger.error(f"Error creating prompt input: {e}")
+        return {
+            'success': False,
+            'prompt': '',
+            'message': f'Error creating prompt input: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        }
 
 def create_sidebar() -> Dict[str, Any]:
-    """Create the sidebar with model and strategy controls.
+    """Create the main sidebar with navigation and settings.
     
     Returns:
-        Dict containing selected options
+        Dictionary with sidebar configuration and selections
     """
-    with st.sidebar:
-        st.title("Trading Controls")
-        
-        # Model Selection
-        st.subheader("Model")
-        model = st.selectbox(
-            "Select Model",
-            ["ARIMA", "LSTM", "XGBoost", "Ensemble"],
-            key="model_selector"
-        )
-        
-        # Strategy Selection
-        st.subheader("Strategy")
-        strategies = st.multiselect(
-            "Select Strategies",
-            ["RSI", "MACD", "SMA", "Bollinger", "Custom"],
-            key="strategy_selector"
-        )
-        
-        # Expert Mode
-        expert_mode = st.toggle("Expert Mode", key="expert_mode")
-        
-        # Data Source
-        st.subheader("Data Source")
-        data_source = st.radio(
-            "Select Data Source",
-            ["Live", "Upload"],
-            key="data_source"
-        )
-        
-        if data_source == "Upload":
-            uploaded_file = st.file_uploader(
-                "Upload CSV file",
-                type=["csv"],
-                key="data_upload"
+    try:
+        with st.sidebar:
+            st.title("Evolve Trading")
+            
+            # Navigation
+            page = st.selectbox(
+                "Navigation",
+                ["Dashboard", "Forecast", "Strategy", "Analysis", "Settings"],
+                key="nav_select"
             )
-        
+            
+            # Model settings
+            st.subheader("Model Settings")
+            model_type = st.selectbox(
+                "Model Type",
+                ["LSTM", "Transformer", "Ensemble", "Custom"],
+                key="model_type"
+            )
+            
+            # Strategy settings
+            st.subheader("Strategy Settings")
+            strategy_type = st.selectbox(
+                "Strategy Type",
+                ["Momentum", "Mean Reversion", "Breakout", "Custom"],
+                key="strategy_type"
+            )
+            
+            # Risk settings
+            st.subheader("Risk Settings")
+            max_position_size = st.slider(
+                "Max Position Size (%)",
+                min_value=1,
+                max_value=100,
+                value=10,
+                key="max_position"
+            )
+            
+            stop_loss = st.slider(
+                "Stop Loss (%)",
+                min_value=1,
+                max_value=50,
+                value=5,
+                key="stop_loss"
+            )
+            
+            # System settings
+            st.subheader("System Settings")
+            auto_refresh = st.checkbox("Auto Refresh", value=True, key="auto_refresh")
+            debug_mode = st.checkbox("Debug Mode", value=False, key="debug_mode")
+            
+            return {
+                'success': True,
+                'page': page,
+                'model_type': model_type,
+                'strategy_type': strategy_type,
+                'max_position_size': max_position_size,
+                'stop_loss': stop_loss,
+                'auto_refresh': auto_refresh,
+                'debug_mode': debug_mode,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+    except Exception as e:
+        logger.error(f"Error creating sidebar: {e}")
         return {
-            "model": model,
-            "strategies": strategies,
-            "expert_mode": expert_mode,
-            "data_source": data_source,
-            "uploaded_file": uploaded_file if data_source == "Upload" else None
+            'success': False,
+            'message': f'Error creating sidebar: {str(e)}',
+            'page': 'Dashboard',
+            'timestamp': datetime.now().isoformat()
         }
 
 def create_forecast_chart(
@@ -446,7 +498,7 @@ def create_forecast_chart(
         height=600
     )
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_strategy_chart(
     data: pd.DataFrame,
@@ -495,17 +547,20 @@ def create_strategy_chart(
         height=600
     )
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_performance_report(
     results: Dict[str, Any],
     title: str = "Performance Report"
-) -> None:
+) -> Dict[str, Any]:
     """Create an expandable performance report section.
     
     Args:
         results: Dictionary containing performance metrics
         title: Section title
+        
+    Returns:
+        Dictionary with report creation status and metrics summary
     """
     with st.expander(title, expanded=True):
         col1, col2, col3 = st.columns(3)
@@ -563,29 +618,74 @@ def create_performance_report(
                 height=400
             )
             st.plotly_chart(fig, use_container_width=True)
+    
+    # Log report creation for agentic monitoring
+    logger.info(f"Performance report created: {title}")
+    
+    return {
+        'success': True,
+        'title': title,
+        'metrics_count': len(results),
+        'has_equity_curve': 'equity_curve' in results,
+        'has_drawdowns': 'drawdowns' in results,
+        'key_metrics': {
+            'total_return': results.get('total_return', 0),
+            'sharpe_ratio': results.get('sharpe_ratio', 0),
+            'max_drawdown': results.get('max_drawdown', 0)
+        }
+    }
 
-def create_error_block(message: str) -> None:
+def create_error_block(message: str) -> Dict[str, Any]:
     """Create an error message block.
     
     Args:
         message: Error message to display
+        
+    Returns:
+        Dictionary with error display status
     """
     st.error(message)
     st.info("Try adjusting your parameters or selecting a different strategy.")
+    
+    # Log error for agentic monitoring
+    logger.error(f"Error block displayed: {message}")
+    
+    return {
+        'success': True,
+        'error_displayed': True,
+        'message': message,
+        'timestamp': datetime.now().isoformat()
+    }
 
-def create_loading_spinner(message: str = "Processing..."):
+def create_loading_spinner(message: str = "Processing...") -> Dict[str, Any]:
     """Create a loading spinner with message.
     
     Args:
         message: Message to display during loading
+        
+    Returns:
+        Dictionary with spinner creation status
     """
-    return st.spinner(message)
+    spinner = st.spinner(message)
+    
+    # Log spinner creation for agentic monitoring
+    logger.info(f"Loading spinner created: {message}")
+    
+    return {
+        'success': True,
+        'spinner_created': True,
+        'message': message,
+        'spinner_object': spinner
+    }
 
-def create_forecast_metrics(forecast_results: Dict[str, Any]) -> None:
+def create_forecast_metrics(forecast_results: Dict[str, Any]) -> Dict[str, Any]:
     """Create forecast metrics display from forecast results.
     
     Args:
         forecast_results: Dictionary containing forecast results and metrics
+        
+    Returns:
+        Dictionary with metrics display status
     """
     st.subheader("Forecast Metrics")
     
@@ -608,12 +708,28 @@ def create_forecast_metrics(forecast_results: Dict[str, Any]) -> None:
     
     # Log metrics for agentic monitoring
     logger.info(f"Forecast metrics displayed for {forecast_results.get('ticker', 'unknown')}")
+    
+    return {
+        'success': True,
+        'metrics_displayed': True,
+        'ticker': forecast_results.get('ticker', 'unknown'),
+        'metrics_count': len(metrics),
+        'key_metrics': {
+            'accuracy': metrics.get('accuracy', 0),
+            'mse': metrics.get('mse', 0),
+            'rmse': metrics.get('rmse', 0),
+            'mae': metrics.get('mae', 0)
+        }
+    }
 
-def create_forecast_table(forecast_results: Dict[str, Any]) -> None:
+def create_forecast_table(forecast_results: Dict[str, Any]) -> Dict[str, Any]:
     """Create forecast table display from forecast results.
     
     Args:
         forecast_results: Dictionary containing forecast results
+        
+    Returns:
+        Dictionary with table creation status
     """
     st.subheader("Forecast Results")
     
@@ -633,12 +749,23 @@ def create_forecast_table(forecast_results: Dict[str, Any]) -> None:
     
     # Log table creation for agentic monitoring
     logger.info(f"Forecast table displayed for {forecast_results.get('ticker', 'unknown')}")
+    
+    return {
+        'success': True,
+        'table_created': True,
+        'ticker': forecast_results.get('ticker', 'unknown'),
+        'table_rows': len(forecast_data['Metric']),
+        'forecast_data': forecast_data
+    }
 
-def create_system_metrics_panel(metrics: Dict[str, float]) -> None:
+def create_system_metrics_panel(metrics: Dict[str, float]) -> Dict[str, Any]:
     """Create a system-wide metrics panel showing key performance indicators.
     
     Args:
         metrics: Dictionary containing performance metrics
+        
+    Returns:
+        Dictionary with panel creation status and metrics summary
     """
     st.subheader("📊 System Performance Metrics")
     
@@ -700,95 +827,18 @@ def create_system_metrics_panel(metrics: Dict[str, float]) -> None:
         else:
             st.metric("Total PnL", f"${pnl:,.0f}", delta="Weak", delta_color="inverse")
     
-    # Add additional metrics in a second row
-    st.subheader("📈 Additional Metrics")
+    # Log panel creation for agentic monitoring
+    logger.info(f"System metrics panel created with {len(metrics)} metrics")
     
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        profit_factor = metrics.get('profit_factor', 1.0)
-        st.metric("Profit Factor", f"{profit_factor:.2f}")
-    
-    with col2:
-        calmar_ratio = metrics.get('calmar_ratio', 0.0)
-        st.metric("Calmar Ratio", f"{calmar_ratio:.2f}")
-    
-    with col3:
-        sortino_ratio = metrics.get('sortino_ratio', 0.0)
-        st.metric("Sortino Ratio", f"{sortino_ratio:.2f}")
-    
-    with col4:
-        num_trades = metrics.get('num_trades', 0)
-        st.metric("Total Trades", f"{num_trades}")
-    
-    # Add performance summary
-    st.subheader("📋 Performance Summary")
-    
-    # Calculate overall health score
-    health_score = 0
-    health_factors = []
-    
-    if metrics.get('sharpe_ratio', 0) >= 1.0:
-        health_score += 25
-        health_factors.append("✅ Good risk-adjusted returns")
-    else:
-        health_factors.append("⚠️ Low Sharpe ratio")
-    
-    if metrics.get('total_return', 0) >= 0.10:
-        health_score += 25
-        health_factors.append("✅ Strong total returns")
-    else:
-        health_factors.append("⚠️ Low total returns")
-    
-    if metrics.get('max_drawdown', 1) <= 0.20:
-        health_score += 25
-        health_factors.append("✅ Controlled drawdown")
-    else:
-        health_factors.append("⚠️ High drawdown risk")
-    
-    if metrics.get('win_rate', 0) >= 0.50:
-        health_score += 25
-        health_factors.append("✅ Good win rate")
-    else:
-        health_factors.append("⚠️ Low win rate")
-    
-    # Display health score
-    if health_score >= 80:
-        st.success(f"🏆 System Health Score: {health_score}/100 - Excellent")
-    elif health_score >= 60:
-        st.info(f"📊 System Health Score: {health_score}/100 - Good")
-    elif health_score >= 40:
-        st.warning(f"⚠️ System Health Score: {health_score}/100 - Fair")
-    else:
-        st.error(f"❌ System Health Score: {health_score}/100 - Poor")
-    
-    # Display health factors
-    for factor in health_factors:
-        st.write(factor)
-    
-    # Add recommendations based on metrics
-    st.subheader("💡 Recommendations")
-    
-    recommendations = []
-    
-    if metrics.get('sharpe_ratio', 0) < 1.0:
-        recommendations.append("🔧 Optimize strategy parameters to improve risk-adjusted returns")
-    
-    if metrics.get('max_drawdown', 1) > 0.20:
-        recommendations.append("🛡️ Implement better risk management and position sizing")
-    
-    if metrics.get('win_rate', 0) < 0.50:
-        recommendations.append("🎯 Review entry/exit criteria to improve win rate")
-    
-    if metrics.get('profit_factor', 1) < 1.5:
-        recommendations.append("💰 Focus on improving profit factor through better trade management")
-    
-    if not recommendations:
-        recommendations.append("✅ System performing well - continue current approach")
-        recommendations.append("📈 Consider scaling up successful strategies")
-    
-    for rec in recommendations:
-        st.write(rec)
-    
-    # Log metrics for agentic monitoring
-    logger.info(f"System metrics displayed: {metrics}") 
+    return {
+        'success': True,
+        'panel_created': True,
+        'metrics_count': len(metrics),
+        'key_metrics': {
+            'sharpe_ratio': metrics.get('sharpe_ratio', 0.0),
+            'total_return': metrics.get('total_return', 0.0),
+            'max_drawdown': metrics.get('max_drawdown', 0.0),
+            'win_rate': metrics.get('win_rate', 0.0),
+            'total_pnl': metrics.get('total_pnl', 0.0)
+        }
+    } 

@@ -42,9 +42,10 @@ class AlertRule:
         if self.metadata is None:
             self.metadata = {}
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def to_dict(self) -> Dict:
         """Convert rule to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "id": self.id,
             "name": self.name,
             "metric": self.metric,
@@ -61,7 +62,7 @@ class AlertRule:
     @classmethod
     def from_dict(cls, data: Dict) -> 'AlertRule':
         """Create rule from dictionary."""
-        return cls(
+        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             id=data["id"],
             name=data["name"],
             metric=data["metric"],
@@ -83,6 +84,7 @@ class AlertManager:
         config: Dict,
         metrics_collector: MetricsCollector,
         redis_client: Optional[redis.Redis] = None
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize alert manager."""
         self.config = config
@@ -137,6 +139,7 @@ class AlertManager:
         )
         self.logger = logging.getLogger(__name__)
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize HTTP session."""
         try:

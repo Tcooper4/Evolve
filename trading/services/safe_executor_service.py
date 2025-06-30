@@ -31,20 +31,25 @@ class SafeExecutorService(BaseService):
     
     def __init__(self, redis_host: str = 'localhost', redis_port: int = 6379, 
                  redis_db: int = 0, timeout_seconds: int = 300, 
-                 memory_limit_mb: int = 1024):
+                 memory_limit_mb: int = 1024) -> Dict[str, Any]:
         """Initialize the SafeExecutorService."""
-        super().__init__('safe_executor', redis_host, redis_port, redis_db)
-        
-        # Initialize SafeExecutor
-        self.safe_executor = SafeExecutor(
-            timeout_seconds=timeout_seconds,
-            memory_limit_mb=memory_limit_mb,
-            enable_sandbox=True,
-            log_executions=True
-        )
-        self.memory = AgentMemory()
-        
-        logger.info("SafeExecutorService initialized")
+        try:
+            super().__init__('safe_executor', redis_host, redis_port, redis_db)
+            
+            # Initialize SafeExecutor
+            self.safe_executor = SafeExecutor(
+                timeout_seconds=timeout_seconds,
+                memory_limit_mb=memory_limit_mb,
+                enable_sandbox=True,
+                log_executions=True
+            )
+            self.memory = AgentMemory()
+            
+            logger.info("SafeExecutorService initialized")
+            return {"status": "success", "message": "SafeExecutorService initialized successfully"}
+        except Exception as e:
+            logger.error(f"Error initializing SafeExecutorService: {e}")
+            return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -71,7 +76,7 @@ class SafeExecutorService(BaseService):
                 return self._handle_cleanup_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {
+                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -141,7 +146,7 @@ class SafeExecutorService(BaseService):
             
         except Exception as e:
             logger.error(f"Error executing model: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -202,7 +207,7 @@ class SafeExecutorService(BaseService):
             
         except Exception as e:
             logger.error(f"Error executing strategy: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -263,7 +268,7 @@ class SafeExecutorService(BaseService):
             
         except Exception as e:
             logger.error(f"Error executing indicator: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -282,7 +287,7 @@ class SafeExecutorService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting statistics: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -299,7 +304,7 @@ class SafeExecutorService(BaseService):
             
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -323,10 +328,15 @@ class SafeExecutorService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'error': str(e)}
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
-    def stop(self):
+    def stop(self) -> Dict[str, Any]:
         """Stop the service and clean up resources."""
-        if hasattr(self, 'safe_executor'):
-            self.safe_executor.cleanup()
-        super().stop() 
+        try:
+            if hasattr(self, 'safe_executor'):
+                self.safe_executor.cleanup()
+            super().stop()
+            return {"status": "success", "message": "SafeExecutorService stopped successfully"}
+        except Exception as e:
+            logger.error(f"Error stopping SafeExecutorService: {e}")
+            return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

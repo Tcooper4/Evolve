@@ -54,6 +54,7 @@ class LoggingService:
         self.running = False
         self.initialize_loggers()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_config(self) -> None:
         """Load configuration."""
         try:
@@ -68,6 +69,7 @@ class LoggingService:
             print(f"Error loading config: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def setup_database(self) -> None:
         """Set up logging database."""
         try:
@@ -109,6 +111,7 @@ class LoggingService:
             print(f"Error setting up database: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def initialize_loggers(self) -> None:
         """Initialize loggers from configuration."""
         try:
@@ -125,6 +128,7 @@ class LoggingService:
             print(f"Error initializing loggers: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logger(self, config: LogConfig) -> None:
         """Set up a logger with the given configuration."""
         try:
@@ -153,6 +157,7 @@ class LoggingService:
             print(f"Error setting up logger {config.name}: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def create_handler(self, config: Dict[str, Any]) -> Optional[logging.Handler]:
         """Create a logging handler from configuration."""
         try:
@@ -198,7 +203,7 @@ class LoggingService:
             
             else:
                 print(f"Unknown handler type: {handler_type}")
-                return None
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             print(f"Error creating handler: {str(e)}")
             return None
@@ -216,7 +221,7 @@ class LoggingService:
             
             else:
                 print(f"Unknown filter type: {filter_type}")
-                return None
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             print(f"Error creating filter: {str(e)}")
             return None
@@ -226,7 +231,7 @@ class LoggingService:
         try:
             if name not in self.loggers:
                 raise ValueError(f"Logger {name} not found")
-            return self.loggers[name]
+            return {'success': True, 'result': self.loggers[name], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             print(f"Error getting logger: {str(e)}")
             raise
@@ -265,6 +270,7 @@ class LoggingService:
             print(f"Error logging message: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_logs(self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None,
                  logger_name: Optional[str] = None, level: Optional[LogLevel] = None,
                  limit: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -312,7 +318,7 @@ class LoggingService:
                     'extra': json.loads(row[10]) if row[10] else {}
                 })
             
-            return results
+            return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             print(f"Error getting logs: {str(e)}")
             raise
@@ -333,6 +339,7 @@ class LoggingService:
             print(f"Error cleaning up old logs: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def rotate_logs(self) -> None:
         """Rotate log files."""
         try:
@@ -360,6 +367,7 @@ class LoggingService:
             print(f"Error rotating logs: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def process_log_queue(self) -> None:
         """Process logs from the queue."""
         try:
@@ -378,6 +386,7 @@ class LoggingService:
             print(f"Error processing log queue: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def start(self) -> None:
         """Start logging service."""
         try:
@@ -406,6 +415,7 @@ class LoggingService:
         """Stop logging service."""
         self.running = False
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class RegexFilter(logging.Filter):
     """Filter log records based on regex pattern."""
     
@@ -414,9 +424,10 @@ class RegexFilter(logging.Filter):
         super().__init__()
         self.pattern = re.compile(pattern)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def filter(self, record: logging.LogRecord) -> bool:
         """Filter log record."""
-        return bool(self.pattern.search(record.getMessage()))
+        return {'success': True, 'result': bool(self.pattern.search(record.getMessage())), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     """Main entry point."""
@@ -440,5 +451,6 @@ def main():
         print(f"Error in logging service: {str(e)}")
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

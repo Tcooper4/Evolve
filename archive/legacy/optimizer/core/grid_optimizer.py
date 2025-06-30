@@ -26,6 +26,7 @@ class GridOptimizer(BaseOptimizer):
         self.best_score = float('-inf')
         self.results = []
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def optimize(self, strategy: str, params: Dict[str, List[Any]], data: Dict) -> Dict:
         """Perform grid search optimization.
         
@@ -61,7 +62,7 @@ class GridOptimizer(BaseOptimizer):
             })
         
         logger.info(f"Grid search completed. Best score: {self.best_score}")
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'best_params': self.best_params,
             'best_score': self.best_score,
             'all_results': self.results
@@ -73,11 +74,12 @@ class GridOptimizer(BaseOptimizer):
         Returns:
             Dictionary of best parameters
         """
-        return self.best_params
+        return {'success': True, 'result': self.best_params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def plot_results(self, *args, **kwargs):
         print("Plotting not implemented yet.")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _evaluate_params(self, strategy: str, params: Dict, data: Dict) -> float:
         """Evaluate a set of parameters.
         
@@ -92,4 +94,4 @@ class GridOptimizer(BaseOptimizer):
         # TODO: Implement strategy evaluation
         # This should use the strategy_switcher to evaluate the strategy
         # with the given parameters on the provided data
-        return 0.0 
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

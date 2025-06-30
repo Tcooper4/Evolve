@@ -39,11 +39,13 @@ class ErrorLogger:
         self.last_error = None
         self.error_count = 0
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def log_error(
         self,
         message: str,
         context: Optional[Dict[str, Any]] = None,
         traceback_str: Optional[str] = None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     ) -> None:
         """Log an error with context and traceback.
         
@@ -87,11 +89,11 @@ class ErrorLogger:
     
     def get_last_error(self) -> Optional[Dict[str, Any]]:
         """Get the last logged error."""
-        return self.last_error
+        return {'success': True, 'result': self.last_error, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_error_count(self) -> int:
         """Get total number of errors logged."""
-        return self.error_count
+        return {'success': True, 'result': self.error_count, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def clear_errors(self) -> None:
         """Clear error history."""
@@ -103,5 +105,6 @@ class ErrorLogger:
         if error_file.exists():
             error_file.unlink()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Create singleton instance
 error_logger = ErrorLogger() 

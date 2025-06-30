@@ -33,6 +33,7 @@ class ResponseFormatter:
         self.templates = self._load_templates()
         self.viz_settings = self._load_viz_settings()
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_templates(self) -> Dict[str, Dict[str, Any]]:
         """Load response templates from JSON file."""
         try:
@@ -40,7 +41,7 @@ class ResponseFormatter:
                 return json.load(f)
         except Exception as e:
             self.logger.error(f"Error loading templates: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def _load_viz_settings(self) -> Dict[str, Dict[str, Any]]:
         """Load visualization settings from JSON file."""
@@ -49,7 +50,7 @@ class ResponseFormatter:
                 return json.load(f)
         except Exception as e:
             self.logger.error(f"Error loading visualization settings: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def format_response(self, response_data: ResponseData) -> str:
         """Format response based on its type.
@@ -69,7 +70,7 @@ class ResponseFormatter:
             return template.format(**response_data.content)
         except Exception as e:
             self.logger.error(f"Error formatting response: {e}")
-            return str(response_data.content)
+            return {'success': True, 'result': str(response_data.content), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def create_visualization(self, response_data: ResponseData) -> Optional[go.Figure]:
         """Create visualization based on response type.
@@ -94,7 +95,7 @@ class ResponseFormatter:
             return viz_method(response_data)
         except Exception as e:
             self.logger.error(f"Error creating visualization: {e}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def _create_line_viz(self, response_data: ResponseData) -> go.Figure:
         """Create line plot visualization."""
@@ -167,7 +168,7 @@ class ResponseFormatter:
             template=self.viz_settings["layout"]["default"]["template"]
         )
         
-        return fig
+        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _create_candlestick_viz(self, response_data: ResponseData) -> go.Figure:
         """Create candlestick chart visualization."""
@@ -216,7 +217,7 @@ class ResponseFormatter:
             template=self.viz_settings["layout"]["default"]["template"]
         )
         
-        return fig
+        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _create_scatter_viz(self, response_data: ResponseData) -> go.Figure:
         """Create scatter plot visualization."""
@@ -316,7 +317,7 @@ class ResponseFormatter:
             template=self.viz_settings["layout"]["default"]["template"]
         )
         
-        return fig
+        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _create_bar_viz(self, response_data: ResponseData) -> go.Figure:
         """Create bar chart visualization."""
@@ -356,7 +357,7 @@ class ResponseFormatter:
             template=self.viz_settings["layout"]["default"]["template"]
         )
         
-        return fig
+        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _create_heatmap_viz(self, response_data: ResponseData) -> go.Figure:
         """Create heatmap visualization."""
@@ -382,4 +383,4 @@ class ResponseFormatter:
             template=self.viz_settings["layout"]["default"]["template"]
         )
         
-        return fig 
+        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

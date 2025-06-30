@@ -153,7 +153,7 @@ def main():
         return {'status': 'redirected', 'page': 'settings'}
     elif page == "📋 System Scorecard":
         st.switch_page("pages/5_📊_System_Scorecard.py")
-        return {'status': 'redirected', 'page': 'system_scorecard'}
+        return {'success': True, 'result': {'status': 'redirected', 'page': 'system_scorecard'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     return {'status': 'unknown_page', 'page': page}
 
@@ -291,7 +291,7 @@ def show_home_page(module_status: Dict[str, Any]):
         logger.warning(f"Could not get recent activity: {e}")
         st.info("Could not load recent activity")
     
-    return {
+    return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat(),
         'status': 'success',
         'module_status': module_status,
         'health_data': health_data,
@@ -357,7 +357,7 @@ def get_comprehensive_system_health() -> Dict[str, Any]:
         logger.error(f"System health check failed: {e}")
         health_data['overall_status'] = 'Error'
     
-    return health_data
+    return {'success': True, 'result': health_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 if __name__ == "__main__":
