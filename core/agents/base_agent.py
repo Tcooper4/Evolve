@@ -32,11 +32,11 @@ class BaseAgent(ABC):
         self.name = name
         self.config = config or {}
         self._setup()
-        
+    
     def _setup(self):
         """Setup method to be overridden by subclasses."""
         pass
-        
+    
     @abstractmethod
     def run(self, prompt: str, **kwargs) -> AgentResult:
         """
@@ -88,4 +88,4 @@ class BaseAgent(ABC):
             result: Result to log
         """
         # Implementation can be overridden by subclasses
-        pass 
+        pass

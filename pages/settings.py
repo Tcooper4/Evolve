@@ -151,9 +151,11 @@ def render_settings_page():
             raise NotImplementedError('Pending feature')
             st.success("Configuration reset to defaults!")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function for the settings page."""
     render_settings_page()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

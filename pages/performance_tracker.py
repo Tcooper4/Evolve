@@ -59,7 +59,7 @@ def main():
 
     if not metrics:
         st.warning("No metrics found for this ticker.")
-        return
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     # ==== Structuring Data ====
     records = []

@@ -21,6 +21,7 @@ class TestRepairAgent(BaseMetaAgent):
         super().__init__("test_repair", config)
         self.coverage = coverage.Coverage()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def run(self) -> Dict[str, Any]:
         """Run test analysis and repair.
         
@@ -40,7 +41,7 @@ class TestRepairAgent(BaseMetaAgent):
         # Log results
         self.log_action("Test analysis completed", results)
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _analyze_coverage(self) -> Dict[str, Any]:
         """Analyze test coverage.
@@ -53,7 +54,7 @@ class TestRepairAgent(BaseMetaAgent):
         self.coverage.stop()
         self.coverage.save()
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "total_coverage": self.coverage.report(),
             "missing_lines": self.coverage.get_missing()
         }
@@ -75,7 +76,7 @@ class TestRepairAgent(BaseMetaAgent):
                     "priority": "high"
                 })
         
-        return missing
+        return {'success': True, 'result': missing, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_improvements(self, results: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Generate test improvements.
@@ -105,7 +106,7 @@ class TestRepairAgent(BaseMetaAgent):
                 "suggestion": f"Create test file: tests/test_{missing['module']}.py"
             })
         
-        return improvements
+        return {'success': True, 'result': improvements, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_modules(self) -> List[str]:
         """Get list of modules to test.
@@ -117,7 +118,7 @@ class TestRepairAgent(BaseMetaAgent):
         for path in Path("trading").rglob("*.py"):
             if path.stem != "__init__":
                 modules.append(path.stem)
-        return modules
+        return {'success': True, 'result': modules, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _has_tests(self, module: str) -> bool:
         """Check if a module has tests.
@@ -129,4 +130,4 @@ class TestRepairAgent(BaseMetaAgent):
             True if module has tests
         """
         test_file = Path(f"tests/test_{module}.py")
-        return test_file.exists() 
+        return {'success': True, 'result': test_file.exists(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

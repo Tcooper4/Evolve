@@ -27,6 +27,7 @@ class OptimizerFactory:
         self.optimizers = {}
         self._discover_optimizers()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _discover_optimizers(self):
         """Discover available optimizers."""
         # Get optimization directory
@@ -52,13 +53,14 @@ class OptimizerFactory:
                 except Exception as e:
                     logger.error(f"Error importing {module_name}: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_available_optimizers(self) -> List[str]:
         """Get list of available optimizers.
         
         Returns:
             List of optimizer names
         """
-        return list(self.optimizers.keys())
+        return {'success': True, 'result': list(self.optimizers.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def create_optimizer(
         self,
@@ -85,7 +87,7 @@ class OptimizerFactory:
             )
         
         optimizer_class = self.optimizers[optimizer_type]
-        return optimizer_class(data, strategy_type, **kwargs)
+        return {'success': True, 'result': optimizer_class(data, strategy_type, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_optimizer_info(self, optimizer_type: str) -> Dict:
         """Get optimizer information.
@@ -101,7 +103,7 @@ class OptimizerFactory:
         
         optimizer_class = self.optimizers[optimizer_type]
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'name': optimizer_type,
             'docstring': optimizer_class.__doc__,
             'parameters': inspect.signature(optimizer_class.__init__).parameters,
@@ -144,4 +146,4 @@ class OptimizerFactory:
             if not name.startswith('_'):
                 help_text += f"- {name}: {method.__doc__}\n"
         
-        return help_text 
+        return {'success': True, 'result': help_text, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

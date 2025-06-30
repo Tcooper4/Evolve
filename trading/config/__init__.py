@@ -44,7 +44,7 @@ class Config:
         Returns:
             Configuration value or default
         """
-        return globals().get(key, default)
+        return {'success': True, 'result': globals().get(key, default), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 # Create a config instance
 config = Config()

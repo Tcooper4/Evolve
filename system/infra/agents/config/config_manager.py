@@ -138,4 +138,4 @@ class ConfigManager:
         
     def get_all_configs(self) -> Dict[str, Dict[str, Any]]:
         """Get all configurations."""
-        return self.config_cache.copy() 
+        return self.config_cache.copy()

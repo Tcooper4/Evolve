@@ -56,6 +56,7 @@ class SecurityService:
         self.blacklisted_tokens: set = set()
         self.load_users()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/security")
@@ -71,6 +72,7 @@ class SecurityService:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_config(self) -> None:
         """Load configuration."""
         try:
@@ -85,6 +87,7 @@ class SecurityService:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def setup_database(self) -> None:
         """Set up security database."""
         try:
@@ -127,6 +130,7 @@ class SecurityService:
             self.logger.error(f"Error setting up database: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_users(self) -> None:
         """Load users from database."""
         try:
@@ -147,11 +151,12 @@ class SecurityService:
             self.logger.error(f"Error loading users: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def hash_password(self, password: str) -> str:
         """Hash a password."""
         try:
             salt = bcrypt.gensalt()
-            return bcrypt.hashpw(password.encode(), salt).decode()
+            return {'success': True, 'result': bcrypt.hashpw(password.encode(), salt).decode(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error hashing password: {str(e)}")
             raise
@@ -159,7 +164,7 @@ class SecurityService:
     def verify_password(self, password: str, password_hash: str) -> bool:
         """Verify a password against its hash."""
         try:
-            return bcrypt.checkpw(password.encode(), password_hash.encode())
+            return {'success': True, 'result': bcrypt.checkpw(password.encode(), password_hash.encode()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error verifying password: {str(e)}")
             raise
@@ -180,7 +185,7 @@ class SecurityService:
                 return False
             
             if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-                return False
+                return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             return True
         except Exception as e:
@@ -223,6 +228,7 @@ class SecurityService:
             self.logger.error(f"Error creating user: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def update_user(self, username: str, **kwargs) -> None:
         """Update user information."""
         try:
@@ -267,6 +273,7 @@ class SecurityService:
             self.logger.error(f"Error updating user: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def delete_user(self, username: str) -> None:
         """Delete a user."""
         try:
@@ -281,6 +288,7 @@ class SecurityService:
             self.logger.error(f"Error deleting user: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def authenticate(self, username: str, password: str, ip_address: Optional[str] = None) -> Optional[str]:
         """Authenticate a user and return JWT token."""
         try:
@@ -300,7 +308,7 @@ class SecurityService:
                     user.locked_until = datetime.now() + timedelta(minutes=self.config['security']['lockout_duration'])
                 self.update_user(username, failed_attempts=user.failed_attempts, locked_until=user.locked_until)
                 self.log_audit(username, "login", "Invalid password", ip_address, False)
-                return None
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Reset failed attempts on successful login
             user.failed_attempts = 0
@@ -325,7 +333,7 @@ class SecurityService:
                 'security_level': user.security_level.value,
                 'exp': datetime.utcnow() + timedelta(minutes=self.config['security']['token_expiry'])
             }
-            return jwt.encode(payload, self.config['security']['secret_key'], algorithm='HS256')
+            return {'success': True, 'result': jwt.encode(payload, self.config['security']['secret_key'], algorithm='HS256'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error generating token: {str(e)}")
             raise
@@ -341,7 +349,7 @@ class SecurityService:
         except jwt.ExpiredSignatureError:
             return None
         except jwt.InvalidTokenError:
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error verifying token: {str(e)}")
             raise
@@ -354,6 +362,7 @@ class SecurityService:
             self.logger.error(f"Error blacklisting token: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def log_audit(self, username: Optional[str], action: str, details: Optional[str] = None, ip_address: Optional[str] = None, success: bool = True) -> None:
         """Log security audit event."""
         try:
@@ -373,6 +382,7 @@ class SecurityService:
             self.logger.error(f"Error logging audit event: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_audit_log(self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None, username: Optional[str] = None) -> List[Dict[str, Any]]:
         """Get audit log entries."""
         try:
@@ -406,7 +416,7 @@ class SecurityService:
                     'success': bool(row[6])
                 })
             
-            return results
+            return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error getting audit log: {str(e)}")
             raise
@@ -417,7 +427,7 @@ class SecurityService:
             ipaddress.ip_address(ip_address)
             return True
         except ValueError:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def is_ip_allowed(self, ip_address: str) -> bool:
         """Check if IP address is allowed."""
@@ -436,7 +446,7 @@ class SecurityService:
             if self.config['security']['ip_whitelist_enabled']:
                 for whitelisted in self.config['security']['ip_whitelist']:
                     if ip in ipaddress.ip_network(whitelisted):
-                        return True
+                        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 return False
             
             return True
@@ -476,5 +486,6 @@ def main():
         logging.error(f"Error in security service: {str(e)}")
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

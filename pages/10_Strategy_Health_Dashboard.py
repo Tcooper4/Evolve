@@ -700,15 +700,14 @@ def get_strategy_health(strategy_name):
         status = "Critical"
     
     return {
-        'status': status,
         'score': score,
+        'status': status,
         'performance_score': strategy_data['performance_score'],
         'risk_score': strategy_data['risk_score'],
         'execution_score': strategy_data['execution_score'],
         'data_quality_score': strategy_data['data_quality_score'],
         'issues': strategy_data['issues'],
-        'recommendations': strategy_data['recommendations'],
-        'last_update': '2 minutes ago'
+        'recommendations': strategy_data['recommendations']
     }
 
 def get_strategy_performance(strategy_name):
@@ -797,14 +796,7 @@ def get_strategy_performance(strategy_name):
         }
     }
     
-    return performance_data.get(strategy_name, {
-        'total_return': 0.0,
-        'sharpe_ratio': 0.0,
-        'max_drawdown': 0.0,
-        'win_rate': 0.0,
-        'profit_factor': 0.0,
-        'calmar_ratio': 0.0
-    })
+    return performance_data.get(strategy_name, {})
 
 def get_strategy_risk(strategy_name):
     """Get strategy risk metrics."""
@@ -892,14 +884,7 @@ def get_strategy_risk(strategy_name):
         }
     }
     
-    return risk_data.get(strategy_name, {
-        'var_95': 0.0,
-        'var_99': 0.0,
-        'expected_shortfall': 0.0,
-        'volatility': 0.0,
-        'beta': 0.0,
-        'correlation': 0.0
-    })
+    return risk_data.get(strategy_name, {})
 
 def get_performance_timeline(strategies):
     """Get performance timeline data."""

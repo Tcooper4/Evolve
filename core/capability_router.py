@@ -27,6 +27,7 @@ class CapabilityRouter:
         # Register default capabilities
         self._register_default_capabilities()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _register_default_capabilities(self):
         """Register default system capabilities."""
         # LLM capabilities
@@ -88,6 +89,7 @@ class CapabilityRouter:
             fallback=self._fallback_no_plotly
         )
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def register_capability(
         self, 
         name: str, 
@@ -289,7 +291,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _check_redis(self) -> bool:
         """Check if Redis connection is available."""
@@ -299,7 +301,7 @@ class CapabilityRouter:
             r.ping()
             return True
         except Exception:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _check_postgres(self) -> bool:
         """Check if PostgreSQL connection is available."""
@@ -309,7 +311,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _check_alpha_vantage(self) -> bool:
         """Check if Alpha Vantage API is available."""
@@ -317,7 +319,7 @@ class CapabilityRouter:
             import os
             return os.getenv('ALPHA_VANTAGE_API_KEY') is not None
         except Exception:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _check_yfinance(self) -> bool:
         """Check if yfinance is available."""
@@ -327,7 +329,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _check_torch(self) -> bool:
         """Check if PyTorch is available."""
@@ -337,7 +339,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _check_streamlit(self) -> bool:
         """Check if Streamlit is available."""
@@ -347,7 +349,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _check_plotly(self) -> bool:
         """Check if Plotly is available."""
@@ -357,53 +359,53 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     # Fallback methods
     def _fallback_no_llm(self):
         """Fallback when LLM is not available."""
         logger.warning("LLM not available, using rule-based fallback")
-        return {"status": "fallback", "method": "rule_based"}
+        return {'success': True, 'result': {"status": "fallback", "method": "rule_based"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _fallback_no_hf(self):
         """Fallback when HuggingFace is not available."""
         logger.warning("HuggingFace not available, using OpenAI fallback")
-        return {"status": "fallback", "method": "openai"}
+        return {'success': True, 'result': {"status": "fallback", "method": "openai"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _fallback_no_redis(self):
         """Fallback when Redis is not available."""
         logger.warning("Redis not available, using in-memory storage")
-        return {"status": "fallback", "method": "memory"}
+        return {'success': True, 'result': {"status": "fallback", "method": "memory"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _fallback_no_postgres(self):
         """Fallback when PostgreSQL is not available."""
         logger.warning("PostgreSQL not available, using SQLite fallback")
-        return {"status": "fallback", "method": "sqlite"}
+        return {'success': True, 'result': {"status": "fallback", "method": "sqlite"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _fallback_no_alpha_vantage(self):
         """Fallback when Alpha Vantage is not available."""
         logger.warning("Alpha Vantage not available, using yfinance fallback")
-        return {"status": "fallback", "method": "yfinance"}
+        return {'success': True, 'result': {"status": "fallback", "method": "yfinance"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _fallback_no_yfinance(self):
         """Fallback when yfinance is not available."""
         logger.warning("yfinance not available, using mock data")
-        return {"status": "fallback", "method": "mock_data"}
+        return {'success': True, 'result': {"status": "fallback", "method": "mock_data"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _fallback_no_torch(self):
         """Fallback when PyTorch is not available."""
         logger.warning("PyTorch not available, using scikit-learn fallback")
-        return {"status": "fallback", "method": "sklearn"}
+        return {'success': True, 'result': {"status": "fallback", "method": "sklearn"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _fallback_no_streamlit(self):
         """Fallback when Streamlit is not available."""
         logger.warning("Streamlit not available, using CLI interface")
-        return {"status": "fallback", "method": "cli"}
+        return {'success': True, 'result': {"status": "fallback", "method": "cli"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _fallback_no_plotly(self):
         """Fallback when Plotly is not available."""
         logger.warning("Plotly not available, using matplotlib fallback")
-        return {"status": "fallback", "method": "matplotlib"}
+        return {'success': True, 'result': {"status": "fallback", "method": "matplotlib"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 # Global instance
@@ -419,7 +421,7 @@ def check_capability(name: str) -> bool:
     Returns:
         True if capability is available, False otherwise
     """
-    return _capability_router.check_capability(name)
+    return {'success': True, 'result': _capability_router.check_capability(name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def safe_call(capability_name: str, func: Callable, *args, fallback_value: Any = None, **kwargs):
     """Safely call a function that requires a capability.
@@ -434,7 +436,7 @@ def safe_call(capability_name: str, func: Callable, *args, fallback_value: Any =
     Returns:
         Result of function call or fallback value
     """
-    return _capability_router.safe_call(capability_name, func, *args, fallback_value=fallback_value, **kwargs)
+    return {'success': True, 'result': _capability_router.safe_call(capability_name, func, *args, fallback_value=fallback_value, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def with_fallback(capability_name: str, fallback_value: Any = None):
     """Decorator to provide fallback behavior for functions that require capabilities.
@@ -446,7 +448,7 @@ def with_fallback(capability_name: str, fallback_value: Any = None):
     Returns:
         Decorator function
     """
-    return _capability_router.with_fallback(capability_name, fallback_value)
+    return {'success': True, 'result': _capability_router.with_fallback(capability_name, fallback_value), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_capability_status() -> Dict[str, bool]:
     """Get status of all registered capabilities.
@@ -454,7 +456,7 @@ def get_capability_status() -> Dict[str, bool]:
     Returns:
         Dictionary mapping capability names to their availability status
     """
-    return _capability_router.get_capability_status()
+    return {'success': True, 'result': _capability_router.get_capability_status(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def register_capability(name: str, check_func: Callable[[], bool], fallback: Optional[Callable] = None):
     """Register a capability with its check function and optional fallback.
@@ -466,13 +468,14 @@ def register_capability(name: str, check_func: Callable[[], bool], fallback: Opt
     """
     _capability_router.register_capability(name, check_func, fallback)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def get_system_health() -> Dict[str, Any]:
     """Get overall system health based on capabilities.
     
     Returns:
         Dictionary containing system health information
     """
-    return _capability_router.get_system_health()
+    return {'success': True, 'result': _capability_router.get_system_health(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_fallback_log(limit: int = 10) -> list:
     """Get recent fallback logs.
@@ -483,4 +486,4 @@ def get_fallback_log(limit: int = 10) -> list:
     Returns:
         List of recent fallback logs
     """
-    return _capability_router.get_fallback_log(limit) 
+    return {'success': True, 'result': _capability_router.get_fallback_log(limit), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

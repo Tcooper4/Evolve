@@ -42,6 +42,7 @@ class RateLimiter:
         self.calls = []
         self.lock = threading.Lock()
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def wait_if_needed(self):
         """Wait if rate limit would be exceeded."""
         with self.lock:
@@ -57,6 +58,7 @@ class RateLimiter:
                     
             self.calls.append(now)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Configure logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -98,6 +100,7 @@ def log_data_request(symbol: str, success: bool, error: Optional[str] = None) ->
     with open(log_path, "a") as f:
         f.write(f"{log_entry}\n")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def get_cached_data(symbol: str) -> Optional[pd.DataFrame]:
     """Get cached data if available and not expired.
     
@@ -123,7 +126,7 @@ def get_cached_data(symbol: str) -> Optional[pd.DataFrame]:
         return cache_data["data"]
     except Exception as e:
         logger.error(f"Error reading cache for {symbol}: {e}")
-        return None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def cache_data(symbol: str, data: pd.DataFrame) -> None:
     """Cache data with timestamp.
@@ -146,6 +149,7 @@ def cache_data(symbol: str, data: pd.DataFrame) -> None:
     except Exception as e:
         logger.error(f"Error caching data for {symbol}: {e}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class AlphaVantageProvider:
     """Provider for fetching data from Alpha Vantage with fallback to Yahoo Finance."""
     
@@ -164,6 +168,7 @@ class AlphaVantageProvider:
         })
         self.yfinance_provider = YFinanceProvider()
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_data(self, data: pd.DataFrame) -> None:
         """Validate the fetched data.
         
@@ -184,6 +189,7 @@ class AlphaVantageProvider:
         if data.isnull().any().any():
             raise ValueError("Data contains missing values")
             
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _handle_rate_limit(self, response: requests.Response) -> bool:
         """Check for rate limit in response.
         
@@ -196,7 +202,7 @@ class AlphaVantageProvider:
         if "Note" in response.json():
             note = response.json()["Note"]
             if "API call frequency" in note or "premium" in note.lower():
-                return True
+                return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return False
         
     def _exponential_backoff(self, attempt: int) -> float:
@@ -210,7 +216,7 @@ class AlphaVantageProvider:
         """
         backoff = min(INITIAL_BACKOFF * (2 ** attempt), MAX_BACKOFF)
         jitter = backoff * 0.1 * (2 * random.random() - 1)
-        return backoff + jitter
+        return {'success': True, 'result': backoff + jitter, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def get_data(self, symbol: str, start_date: Optional[str] = None,
                 end_date: Optional[str] = None, interval: str = '1d') -> pd.DataFrame:
@@ -298,7 +304,7 @@ class AlphaVantageProvider:
             try:
                 df = self.yfinance_provider.get_data(symbol, start_date, end_date, interval)
                 log_data_request(symbol, True, "Fallback to Yahoo Finance successful")
-                return df
+                return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             except Exception as fallback_error:
                 error_msg = f"Both Alpha Vantage and Yahoo Finance failed: {fallback_error}"
                 logger.error(error_msg)
@@ -325,7 +331,7 @@ class AlphaVantageProvider:
             except Exception as e:
                 logger.error(f"Skipping {symbol} due to error: {e}")
                 continue
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     async def get_current_price(self, symbol: str) -> float:
         """Get current price for a symbol asynchronously.

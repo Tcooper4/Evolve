@@ -57,6 +57,12 @@ class UpdaterAgent:
         os.makedirs(self.models_dir, exist_ok=True)
         os.makedirs(self.metrics_dir, exist_ok=True)
         
+        self.init_status = {
+            'success': True,
+            'message': 'UpdaterAgent initialized successfully',
+            'timestamp': datetime.now().isoformat()
+        }
+
     def _load_config(self, config_path: str) -> dict:
         """
         Load configuration from file.
@@ -73,29 +79,45 @@ class UpdaterAgent:
         except Exception as e:
             logger.error(f"Error loading config: {str(e)}")
             return {}
-            
-    def start(self):
+
+    def start(self) -> dict:
         """Start the updater agent."""
         try:
             # Start the scheduler
             self.scheduler.start(self.check_updates)
             logger.info("Updater agent started")
-            
+            return {
+                'success': True,
+                'message': 'Updater agent started',
+                'timestamp': datetime.now().isoformat()
+            }
         except Exception as e:
             logger.error(f"Error starting updater agent: {str(e)}")
-            raise
-            
-    def stop(self):
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
+
+    def stop(self) -> dict:
         """Stop the updater agent."""
         try:
             self.scheduler.stop()
             logger.info("Updater agent stopped")
-            
+            return {
+                'success': True,
+                'message': 'Updater agent stopped',
+                'timestamp': datetime.now().isoformat()
+            }
         except Exception as e:
             logger.error(f"Error stopping updater agent: {str(e)}")
-            raise
-            
-    def check_updates(self):
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
+
+    def check_updates(self) -> dict:
         """
         Check for models that need updating.
         
@@ -135,13 +157,23 @@ class UpdaterAgent:
             }
             self.task_memory.update_task(task)
             
+            return {
+                'success': True,
+                'message': 'Update check completed',
+                'timestamp': datetime.now().isoformat(),
+                'models_checked': len(models)
+            }
         except Exception as e:
             logger.error(f"Error during update check: {str(e)}")
             task.status = TaskStatus.FAILED
             task.metadata = {'error': str(e)}
             self.task_memory.update_task(task)
-            raise
-            
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
+
     def _get_model_list(self) -> List[str]:
         """
         Get list of model IDs.
@@ -149,9 +181,8 @@ class UpdaterAgent:
         Returns:
             List[str]: List of model IDs
         """
-        return [d for d in os.listdir(self.models_dir)
-                if os.path.isdir(os.path.join(self.models_dir, d))]
-                
+        return [d for d in os.listdir(self.models_dir) if os.path.isdir(os.path.join(self.models_dir, d))]
+
     def _needs_update(self, model_id: str) -> bool:
         """
         Check if a model needs updating.

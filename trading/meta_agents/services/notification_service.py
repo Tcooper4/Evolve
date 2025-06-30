@@ -55,6 +55,7 @@ class NotificationService:
         self.notification_queue = asyncio.Queue()
         self.running = False
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/notification")
@@ -70,6 +71,7 @@ class NotificationService:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_config(self) -> None:
         """Load configuration."""
         try:
@@ -79,6 +81,7 @@ class NotificationService:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def setup_database(self) -> None:
         """Set up notification database."""
         try:
@@ -109,6 +112,7 @@ class NotificationService:
             self.logger.error(f"Error setting up database: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_templates(self) -> None:
         """Set up notification templates."""
         try:
@@ -124,6 +128,7 @@ class NotificationService:
             self.logger.error(f"Error setting up templates: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def send_email(self, notification: Notification) -> bool:
         """Send email notification."""
         try:
@@ -271,6 +276,7 @@ class NotificationService:
         """Stop notification service."""
         self.running = False
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main entry point."""
     import argparse
@@ -288,5 +294,6 @@ def main():
         logging.error(f"Error in notification service: {str(e)}")
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

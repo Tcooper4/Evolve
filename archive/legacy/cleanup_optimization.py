@@ -48,6 +48,7 @@ def cleanup_optimization():
                     content = f.read()
                 
                 deprecation_notice = f'''"""
+                    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 DEPRECATED: This file is redundant or for development purposes only.
 Please use strategy_optimizer.py for optimization functionality.
 Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}

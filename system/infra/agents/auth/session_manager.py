@@ -196,4 +196,4 @@ class SessionManager:
         try:
             return jwt.decode(token, self.secret_key, algorithms=["HS256"])
         except jwt.InvalidTokenError:
-            return None 
+            return None

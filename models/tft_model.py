@@ -46,39 +46,27 @@ class TimeSeriesDataset(Dataset):
                  prediction_horizon: int = 5,
                  static_features: Optional[List[str]] = None,
                  time_features: Optional[List[str]] = None):
-        """Initialize dataset.
-        
-        Args:
-            data: Time series data
-            target_column: Target variable column
-            sequence_length: Length of input sequence
-            prediction_horizon: Number of steps to predict
-            static_features: Static feature columns
-            time_features: Time-based feature columns
-        """
+        """Initialize the time series dataset."""
         self.data = data.copy()
         self.target_column = target_column
         self.sequence_length = sequence_length
         self.prediction_horizon = prediction_horizon
         self.static_features = static_features or []
         self.time_features = time_features or []
-        
         # Prepare data
         self._prepare_data()
-        
+
     def _prepare_data(self):
         """Prepare data for TFT model."""
         # Ensure data is sorted by time
         if 'timestamp' in self.data.columns:
             self.data = self.data.sort_values('timestamp').reset_index(drop=True)
-        
         # Add time features if not present
         if not self.time_features:
             self.data['day_of_week'] = pd.to_datetime(self.data.index).dayofweek
             self.data['month'] = pd.to_datetime(self.data.index).month
             self.data['hour'] = pd.to_datetime(self.data.index).hour
             self.time_features = ['day_of_week', 'month', 'hour']
-        
         # Normalize numerical features
         numeric_columns = self.data.select_dtypes(include=[np.number]).columns
         for col in numeric_columns:
@@ -87,18 +75,14 @@ class TimeSeriesDataset(Dataset):
                 std_val = self.data[col].std()
                 if std_val > 0:
                     self.data[col] = (self.data[col] - mean_val) / std_val
-        
         # Create sequences
         self.sequences = []
         self.targets = []
-        
         for i in range(len(self.data) - self.sequence_length - self.prediction_horizon + 1):
             # Input sequence
             seq_data = self.data.iloc[i:i + self.sequence_length]
-            
             # Target sequence
             target_data = self.data.iloc[i + self.sequence_length:i + self.sequence_length + self.prediction_horizon]
-            
             # Extract features
             sequence = {
                 'target': torch.FloatTensor(seq_data[self.target_column].values),
@@ -106,12 +90,10 @@ class TimeSeriesDataset(Dataset):
                 'time': torch.FloatTensor(seq_data[self.time_features].values) if self.time_features else torch.zeros(1),
                 'features': torch.FloatTensor(seq_data.drop(columns=[self.target_column] + self.static_features + self.time_features).values)
             }
-            
             target = torch.FloatTensor(target_data[self.target_column].values)
-            
             self.sequences.append(sequence)
             self.targets.append(target)
-    
+
     def __len__(self):
         return len(self.sequences)
     
@@ -126,31 +108,19 @@ class VariableSelectionNetwork(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_variables = num_variables
-        
         # Variable selection weights
         self.feature_selection = nn.Linear(input_size, num_variables)
         self.context_projection = nn.Linear(hidden_size, num_variables)
-        
+
     def forward(self, x: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
-        """Forward pass.
-        
-        Args:
-            x: Input features [batch_size, num_variables, input_size]
-            c: Context vector [batch_size, hidden_size]
-            
-        Returns:
-            Selected features [batch_size, num_variables, input_size]
-        """
+        """Forward pass."""
         # Calculate variable selection weights
         feature_weights = self.feature_selection(x)  # [batch_size, num_variables, num_variables]
         context_weights = self.context_projection(c).unsqueeze(1)  # [batch_size, 1, num_variables]
-        
         # Combine weights
         selection_weights = F.softmax(feature_weights + context_weights, dim=-1)
-        
         # Apply selection
         selected_features = torch.sum(x.unsqueeze(-1) * selection_weights.unsqueeze(-2), dim=1)
-        
         return selected_features
 
 class InterpretableMultiHeadAttention(nn.Module):
@@ -161,61 +131,39 @@ class InterpretableMultiHeadAttention(nn.Module):
         self.d_model = d_model
         self.num_heads = num_heads
         self.head_dim = d_model // num_heads
-        
         assert self.head_dim * num_heads == d_model, "d_model must be divisible by num_heads"
-        
         # Attention layers
         self.query_projection = nn.Linear(d_model, d_model)
         self.key_projection = nn.Linear(d_model, d_model)
         self.value_projection = nn.Linear(d_model, d_model)
         self.output_projection = nn.Linear(d_model, d_model)
-        
         # Dropout
         self.dropout = nn.Dropout(dropout)
-        
         # Attention weights for interpretability
         self.attention_weights = None
-        
+
     def forward(self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor,
                 mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """Forward pass.
-        
-        Args:
-            query: Query tensor [batch_size, seq_len, d_model]
-            key: Key tensor [batch_size, seq_len, d_model]
-            value: Value tensor [batch_size, seq_len, d_model]
-            mask: Attention mask
-            
-        Returns:
-            Output tensor [batch_size, seq_len, d_model]
-        """
+        """Forward pass."""
         batch_size, seq_len, _ = query.shape
-        
         # Project to query, key, value
         Q = self.query_projection(query).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         K = self.key_projection(key).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         V = self.value_projection(value).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        
         # Calculate attention scores
         scores = torch.matmul(Q, K.transpose(-2, -1)) / np.sqrt(self.head_dim)
-        
         if mask is not None:
             scores = scores.masked_fill(mask == 0, -1e9)
-        
         # Apply softmax
         attention_weights = F.softmax(scores, dim=-1)
         self.attention_weights = attention_weights.detach()
-        
         # Apply dropout
         attention_weights = self.dropout(attention_weights)
-        
         # Apply attention to values
         context = torch.matmul(attention_weights, V)
-        
         # Reshape and project output
         context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
         output = self.output_projection(context)
-        
         return output
 
 class TemporalVariableSelection(nn.Module):
@@ -226,22 +174,13 @@ class TemporalVariableSelection(nn.Module):
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_variables = num_variables
-        
         # GRU for temporal processing
         self.gru = nn.GRU(input_size, hidden_size, batch_first=True)
-        
         # Variable selection
         self.variable_selection = VariableSelectionNetwork(input_size, hidden_size, num_variables)
-        
+
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Forward pass.
-        
-        Args:
-            x: Input tensor [batch_size, seq_len, num_variables, input_size]
-            
-        Returns:
-            Selected features and context
-        """
+        """Forward pass."""
         batch_size, seq_len, num_vars, input_size = x.shape
         
         # Reshape for GRU
@@ -299,7 +238,7 @@ class TFTModel(nn.Module):
         
         # Attention for interpretability
         self.attention = InterpretableMultiHeadAttention(hidden_size, num_heads, dropout)
-        
+
     def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Forward pass.
         
@@ -373,7 +312,7 @@ class TFTLightningModule(pl.LightningModule):
         
         # Loss function
         self.criterion = nn.MSELoss()
-        
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
     
@@ -739,6 +678,6 @@ def create_tft_forecaster(data: pd.DataFrame,
 
 def create_tft_model(config: Dict[str, Any] = None):
     class DummyTFT:
-        def fit(self, *a, **kw): return None
-        def predict(self, *a, **kw): return [0]
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {'success': True, 'result': {'success': True, 'result': [0], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     return DummyTFT() 

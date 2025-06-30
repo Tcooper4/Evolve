@@ -101,5 +101,6 @@ def main():
         print(f"Error: {str(e)}")
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

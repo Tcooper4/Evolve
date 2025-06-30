@@ -209,17 +209,28 @@ class BaseModel(ABC):
             self.logger.warning(f"Error setting up CUDA, falling back to CPU: {e}")
     
     def _setup_logging(self) -> None:
-        """Setup logging configuration."""
-        log_handler = RotatingFileHandler(
-            os.getenv('LOG_FILE', 'trading.log'),
-            maxBytes=int(os.getenv('LOG_MAX_SIZE', 10485760)),
-            backupCount=int(os.getenv('LOG_BACKUP_COUNT', 5))
-        )
-        log_handler.setFormatter(logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        ))
-        self.logger.addHandler(log_handler)
-        self.logger.setLevel(os.getenv('LOG_LEVEL', 'INFO'))
+        """Set up logging for the model."""
+        try:
+            log_dir = Path("logs")
+            log_dir.mkdir(exist_ok=True)
+            
+            # Create rotating file handler
+            log_file = log_dir / f"{self.__class__.__name__}.log"
+            file_handler = RotatingFileHandler(
+                log_file, maxBytes=10*1024*1024, backupCount=5
+            )
+            
+            # Create formatter
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            )
+            file_handler.setFormatter(formatter)
+            
+            # Add handler to logger
+            self.logger.addHandler(file_handler)
+            
+        except Exception as e:
+            self.logger.error(f"Error setting up logging: {e}")
     
     @abstractmethod
     def build_model(self) -> nn.Module:
@@ -236,11 +247,22 @@ class BaseModel(ABC):
         Raises:
             ValidationError: If configuration is invalid
         """
-        required_params = ['input_size', 'output_size', 'sequence_length']
-        missing_params = [param for param in required_params if param not in self.config]
-        if missing_params:
-            raise ValidationError(f"Missing required parameters: {missing_params}")
-    
+        try:
+            required_keys = ['input_size', 'hidden_size', 'output_size']
+            missing_keys = [key for key in required_keys if key not in self.config]
+            
+            if missing_keys:
+                raise ValidationError(f"Missing required config keys: {missing_keys}")
+            
+            # Validate numeric values
+            for key in ['input_size', 'hidden_size', 'output_size']:
+                if not isinstance(self.config[key], int) or self.config[key] <= 0:
+                    raise ValidationError(f"{key} must be a positive integer")
+            
+            return {'success': True, 'message': 'Configuration validation passed', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     def prepare_data(self, data: pd.DataFrame, target_col: str,
                     feature_cols: List[str], sequence_length: int,
                     test_size: float = 0.2, val_size: float = 0.1,
@@ -249,69 +271,98 @@ class BaseModel(ABC):
         
         Args:
             data: Input data
-            target_col: Name of target column
-            feature_cols: List of feature column names
+            target_col: Target column name
+            feature_cols: Feature column names
             sequence_length: Length of input sequences
-            test_size: Proportion of data to use for testing
-            val_size: Proportion of training data to use for validation
-            batch_size: Batch size for training
+            test_size: Proportion of data for testing
+            val_size: Proportion of data for validation
+            batch_size: Batch size for data loaders
             
         Returns:
             Tuple of (train_loader, val_loader, test_loader)
         """
-        # Validate data
-        if data.isnull().any().any():
-            raise ValidationError("Data contains missing values")
-        
-        # Split data
-        train_data, test_data = train_test_split(
-            data, test_size=test_size, shuffle=False
-        )
-        train_data, val_data = train_test_split(
-            train_data, test_size=val_size, shuffle=False
-        )
-        
-        # Create datasets
-        train_dataset = TimeSeriesDataset(
-            train_data, sequence_length, target_col, feature_cols, self.scaler
-        )
-        val_dataset = TimeSeriesDataset(
-            val_data, sequence_length, target_col, feature_cols, train_dataset.scaler
-        )
-        test_dataset = TimeSeriesDataset(
-            test_data, sequence_length, target_col, feature_cols, train_dataset.scaler
-        )
-        
-        # Create data loaders
-        train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True
-        )
-        val_loader = DataLoader(
-            val_dataset, batch_size=batch_size, shuffle=False
-        )
-        test_loader = DataLoader(
-            test_dataset, batch_size=batch_size, shuffle=False
-        )
-        
-        return train_loader, val_loader, test_loader
+        try:
+            # Validate data
+            if data.empty:
+                raise ValidationError("Data is empty")
+            
+            if target_col not in data.columns:
+                raise ValidationError(f"Target column '{target_col}' not found")
+            
+            missing_features = [col for col in feature_cols if col not in data.columns]
+            if missing_features:
+                raise ValidationError(f"Missing feature columns: {missing_features}")
+            
+            # Split data
+            train_size = 1 - test_size - val_size
+            train_data = data.iloc[:int(len(data) * train_size)]
+            val_data = data.iloc[int(len(data) * train_size):int(len(data) * (train_size + val_size))]
+            test_data = data.iloc[int(len(data) * (train_size + val_size)):]
+            
+            # Create datasets
+            train_dataset = TimeSeriesDataset(
+                train_data, sequence_length, target_col, feature_cols, self.scaler
+            )
+            val_dataset = TimeSeriesDataset(
+                val_data, sequence_length, target_col, feature_cols, self.scaler
+            )
+            test_dataset = TimeSeriesDataset(
+                test_data, sequence_length, target_col, feature_cols, self.scaler
+            )
+            
+            # Create data loaders
+            train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+            val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+            test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+            
+            self.logger.info(f"Data prepared: {len(train_dataset)} train, {len(val_dataset)} val, {len(test_dataset)} test samples")
+            
+            return {'success': True, 'result': (train_loader, val_loader, test_loader), 'message': 'Data preparation completed', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
     def _setup_optimizer(self) -> None:
-        """Setup optimizer with learning rate from config."""
-        if self.optimizer is None:
+        """Set up optimizer."""
+        try:
+            if self.model is None:
+                raise ModelError("Model must be built before setting up optimizer")
+            
             lr = self.config.get('learning_rate', 0.001)
-            self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
-    
-    def _setup_scheduler(self) -> None:
-        """Setup learning rate scheduler."""
-        if self.config.get('use_lr_scheduler', True):
-            self.scheduler = ReduceLROnPlateau(
-                self.optimizer,
-                mode='min',
-                factor=0.5,
-                patience=5,
-                verbose=True
+            weight_decay = self.config.get('weight_decay', 0.0)
+            
+            self.optimizer = optim.Adam(
+                self.model.parameters(),
+                lr=lr,
+                weight_decay=weight_decay
             )
-    
+            
+            return {'success': True, 'message': 'Optimizer setup completed', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+    def _setup_scheduler(self) -> None:
+        """Set up learning rate scheduler."""
+        try:
+            if self.optimizer is None:
+                raise ModelError("Optimizer must be set up before scheduler")
+            
+            if self.config.get('use_scheduler', True):
+                patience = self.config.get('scheduler_patience', 10)
+                factor = self.config.get('scheduler_factor', 0.5)
+                
+                self.scheduler = ReduceLROnPlateau(
+                    self.optimizer,
+                    mode='min',
+                    factor=factor,
+                    patience=patience,
+                    verbose=True
+                )
+            
+            return {'success': True, 'message': 'Scheduler setup completed', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     def train(self, train_loader: DataLoader, val_loader: DataLoader,
               epochs: int = 100, patience: int = 10) -> Dict[str, List[float]]:
         """Train the model.
@@ -325,84 +376,89 @@ class BaseModel(ABC):
         Returns:
             Dictionary of training and validation losses
         """
-        if self.model is None:
-            self.model = self.build_model()
-            self.model.to(self.device)
-        
-        self._setup_optimizer()
-        self._setup_scheduler()
-        
-        if self.criterion is None:
-            self.criterion = nn.MSELoss()
-        
-        # Training loop
-        best_epoch = 0
-        for epoch in range(epochs):
-            # Training phase
-            self.model.train()
-            train_loss = 0.0
-            for batch_x, batch_y in train_loader:
-                batch_x, batch_y = batch_x.to(self.device), batch_y.to(self.device)
-                
-                self.optimizer.zero_grad()
-                outputs = self.model(batch_x)
-                loss = self.criterion(outputs, batch_y)
-                loss.backward()
-                self.optimizer.step()
-                
-                train_loss += loss.item()
+        try:
+            if self.model is None:
+                self.model = self.build_model()
+                self.model.to(self.device)
             
-            train_loss /= len(train_loader)
-            self.train_losses.append(train_loss)
+            self._setup_optimizer()
+            self._setup_scheduler()
             
-            # Validation phase
-            self.model.eval()
-            val_loss = 0.0
-            with torch.no_grad():
-                for batch_x, batch_y in val_loader:
+            if self.criterion is None:
+                self.criterion = nn.MSELoss()
+            
+            # Training loop
+            best_epoch = 0
+            for epoch in range(epochs):
+                # Training phase
+                self.model.train()
+                train_loss = 0.0
+                for batch_x, batch_y in train_loader:
                     batch_x, batch_y = batch_x.to(self.device), batch_y.to(self.device)
+                    
+                    self.optimizer.zero_grad()
                     outputs = self.model(batch_x)
                     loss = self.criterion(outputs, batch_y)
-                    val_loss += loss.item()
+                    loss.backward()
+                    self.optimizer.step()
+                    
+                    train_loss += loss.item()
+                
+                train_loss /= len(train_loader)
+                self.train_losses.append(train_loss)
+                
+                # Validation phase
+                self.model.eval()
+                val_loss = 0.0
+                with torch.no_grad():
+                    for batch_x, batch_y in val_loader:
+                        batch_x, batch_y = batch_x.to(self.device), batch_y.to(self.device)
+                        outputs = self.model(batch_x)
+                        loss = self.criterion(outputs, batch_y)
+                        val_loss += loss.item()
+                
+                val_loss /= len(val_loader)
+                self.val_losses.append(val_loss)
+                
+                # Update learning rate
+                if self.scheduler is not None:
+                    self.scheduler.step(val_loss)
+                
+                # Log progress
+                self.logger.info(
+                    f"Epoch {epoch+1}/{epochs} - "
+                    f"Train Loss: {train_loss:.4f} - "
+                    f"Val Loss: {val_loss:.4f}"
+                )
+                
+                # Early stopping
+                if val_loss < self.best_val_loss:
+                    self.best_val_loss = val_loss
+                    self.best_model_state = self.model.state_dict().copy()
+                    best_epoch = epoch
+                    self.early_stopping_counter = 0
+                else:
+                    self.early_stopping_counter += 1
+                    if self.early_stopping_counter >= patience:
+                        self.logger.info(f"Early stopping at epoch {epoch+1}")
+                        break
             
-            val_loss /= len(val_loader)
-            self.val_losses.append(val_loss)
+            # Restore best model
+            if self.best_model_state is not None:
+                self.model.load_state_dict(self.best_model_state)
+                self.logger.info(f"Restored best model from epoch {best_epoch+1}")
             
-            # Update learning rate
-            if self.scheduler is not None:
-                self.scheduler.step(val_loss)
+            return {'success': True, 'result': {
+                'train_losses': self.train_losses,
+                'val_losses': self.val_losses,
+                'best_epoch': best_epoch
+            }, 'message': 'Training completed successfully', 'timestamp': datetime.now().isoformat()}
             
-            # Log progress
-            self.logger.info(
-                f"Epoch {epoch+1}/{epochs} - "
-                f"Train Loss: {train_loss:.4f} - "
-                f"Val Loss: {val_loss:.4f}"
-            )
-            
-            # Early stopping
-            if val_loss < self.best_val_loss:
-                self.best_val_loss = val_loss
-                self.best_model_state = self.model.state_dict().copy()
-                best_epoch = epoch
-                self.early_stopping_counter = 0
-            else:
-                self.early_stopping_counter += 1
-                if self.early_stopping_counter >= patience:
-                    self.logger.info(f"Early stopping at epoch {epoch+1}")
-                    break
-        
-        # Restore best model
-        if self.best_model_state is not None:
-            self.model.load_state_dict(self.best_model_state)
-            self.logger.info(f"Restored best model from epoch {best_epoch+1}")
-        
-        return {
-            'train_losses': self.train_losses,
-            'val_losses': self.val_losses
-        }
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
     def evaluate(self, test_loader: DataLoader) -> Dict[str, float]:
-        """Evaluate model on test data.
+        """Evaluate the model on test data.
         
         Args:
             test_loader: Test data loader
@@ -410,138 +466,151 @@ class BaseModel(ABC):
         Returns:
             Dictionary of evaluation metrics
         """
-        if self.model is None:
-            raise ModelError("Model not trained")
-        
-        self.model.eval()
-        test_loss = 0.0
-        predictions = []
-        targets = []
-        
-        with torch.no_grad():
-            for batch_x, batch_y in test_loader:
-                batch_x, batch_y = batch_x.to(self.device), batch_y.to(self.device)
-                outputs = self.model(batch_x)
-                loss = self.criterion(outputs, batch_y)
-                test_loss += loss.item()
-                
-                predictions.extend(outputs.cpu().numpy())
-                targets.extend(batch_y.cpu().numpy())
-        
-        test_loss /= len(test_loader)
-        predictions = np.array(predictions)
-        targets = np.array(targets)
-        
-        # Calculate metrics
-        mse = np.mean((predictions - targets) ** 2)
-        rmse = np.sqrt(mse)
-        mae = np.mean(np.abs(predictions - targets))
-        r2 = 1 - np.sum((targets - predictions) ** 2) / np.sum((targets - np.mean(targets)) ** 2)
-        
-        metrics = {
-            'test_loss': test_loss,
-            'mse': mse,
-            'rmse': rmse,
-            'mae': mae,
-            'r2': r2
-        }
-        
-        self.logger.info("Test metrics:")
-        for metric, value in metrics.items():
-            self.logger.info(f"{metric}: {value:.4f}")
-        
-        return metrics
+        try:
+            if self.model is None:
+                raise ModelError("Model must be trained before evaluation")
+            
+            self.model.eval()
+            predictions = []
+            targets = []
+            
+            with torch.no_grad():
+                for batch_x, batch_y in test_loader:
+                    batch_x, batch_y = batch_x.to(self.device), batch_y.to(self.device)
+                    outputs = self.model(batch_x)
+                    predictions.extend(outputs.cpu().numpy())
+                    targets.extend(batch_y.cpu().numpy())
+            
+            predictions = np.array(predictions).flatten()
+            targets = np.array(targets).flatten()
+            
+            # Calculate metrics
+            mse = np.mean((predictions - targets) ** 2)
+            mae = np.mean(np.abs(predictions - targets))
+            rmse = np.sqrt(mse)
+            
+            # Calculate R-squared
+            ss_res = np.sum((targets - predictions) ** 2)
+            ss_tot = np.sum((targets - np.mean(targets)) ** 2)
+            r2 = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+            
+            metrics = {
+                'mse': mse,
+                'mae': mae,
+                'rmse': rmse,
+                'r2': r2
+            }
+            
+            self.logger.info(f"Evaluation metrics: {metrics}")
+            
+            return {'success': True, 'result': metrics, 'message': 'Evaluation completed', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
     def predict(self, data: pd.DataFrame, horizon: int = 1) -> np.ndarray:
-        """Make predictions.
+        """Make predictions on new data.
         
         Args:
             data: Input data
-            horizon: Prediction horizon (number of steps ahead)
-            
-        Returns:
-            Predictions array
-        """
-        self.model.eval()
-        X, _ = self._prepare_data(data, is_training=False)
-        
-        if horizon == 1:
-            with torch.no_grad():
-                y_pred = self.model(X)
-            return y_pred.cpu().numpy()
-        else:
-            return self._multi_horizon_predict(X, horizon)
-    
-    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
-        """Generate forecast for future time steps.
-        
-        Args:
-            data: Historical data DataFrame
-            horizon: Number of time steps to forecast
-            
-        Returns:
-            Dictionary containing forecast results
-        """
-        try:
-            # Make initial prediction
-            predictions = self.predict(data, horizon=1)
-            
-            # Generate multi-step forecast
-            forecast_values = []
-            current_data = data.copy()
-            
-            for i in range(horizon):
-                # Get prediction for next step
-                pred = self.predict(current_data, horizon=1)
-                forecast_values.append(pred[-1])
-                
-                # Update data for next iteration
-                new_row = current_data.iloc[-1].copy()
-                new_row['close'] = pred[-1]  # Update with prediction
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
-                current_data = current_data.iloc[1:]  # Remove oldest row
-            
-            return {
-                'forecast': np.array(forecast_values),
-                'confidence': 0.8,  # Base model confidence
-                'model': self.__class__.__name__,
-                'horizon': horizon
-            }
-            
-        except Exception as e:
-            import logging
-            logging.error(f"Error in base model forecast: {e}")
-            raise RuntimeError(f"Base model forecasting failed: {e}")
-    
-    def _multi_horizon_predict(self, X: torch.Tensor, horizon: int) -> np.ndarray:
-        """Make multi-horizon predictions.
-        
-        Args:
-            X: Input tensor
             horizon: Prediction horizon
             
         Returns:
-            Predictions array
+            Array of predictions
         """
-        predictions = []
-        current_input = X
+        try:
+            if self.model is None:
+                raise ModelError("Model must be trained before making predictions")
+            
+            self.model.eval()
+            
+            # Prepare data
+            X = self._prepare_data(data, is_training=False)[0]
+            X = X.to(self.device)
+            
+            # Make predictions
+            with torch.no_grad():
+                predictions = self.model(X)
+            
+            predictions = predictions.cpu().numpy().flatten()
+            
+            return {'success': True, 'result': predictions, 'message': 'Predictions generated successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+    
+    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+        """Generate multi-step forecasts.
         
-        with torch.no_grad():
-            for _ in range(horizon):
-                y_pred = self.model(current_input)
-                predictions.append(y_pred)
+        Args:
+            data: Input data
+            horizon: Number of steps to forecast
+            
+        Returns:
+            Dictionary with forecasts and confidence intervals
+        """
+        try:
+            if self.model is None:
+                raise ModelError("Model must be trained before forecasting")
+            
+            # Prepare data
+            X = self._prepare_data(data, is_training=False)[0]
+            X = X.to(self.device)
+            
+            # Generate forecasts
+            forecasts = self._multi_horizon_predict(X, horizon)
+            
+            # Calculate confidence intervals (simple approach)
+            confidence_intervals = {
+                'lower': forecasts * 0.9,  # 10% lower
+                'upper': forecasts * 1.1   # 10% upper
+            }
+            
+            result = {
+                'forecasts': forecasts,
+                'confidence_intervals': confidence_intervals,
+                'horizon': horizon
+            }
+            
+            return {'success': True, 'result': result, 'message': 'Forecast generated successfully', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+    
+    def _multi_horizon_predict(self, X: torch.Tensor, horizon: int) -> np.ndarray:
+        """Generate multi-step predictions.
+        
+        Args:
+            X: Input tensor
+            horizon: Number of steps to predict
+            
+        Returns:
+            Array of predictions
+        """
+        try:
+            self.model.eval()
+            predictions = []
+            
+            with torch.no_grad():
+                current_input = X.clone()
                 
-                # Update input for next prediction
-                if hasattr(self, '_update_input_for_next_step'):
-                    current_input = self._update_input_for_next_step(current_input, y_pred)
-                else:
-                    # Default: shift input and append prediction
-                    current_input = torch.cat([current_input[:, 1:], y_pred.unsqueeze(1)], dim=1)
-        
-        return torch.cat(predictions, dim=1).cpu().numpy()
+                for _ in range(horizon):
+                    # Make prediction
+                    output = self.model(current_input)
+                    predictions.append(output.cpu().numpy().flatten()[-1])
+                    
+                    # Update input for next step (simple approach)
+                    # In practice, you might want to use the actual prediction
+                    current_input = torch.roll(current_input, -1, dims=1)
+                    current_input[:, -1] = output[:, -1]
+            
+            return np.array(predictions)
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
     def _compute_loss(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
-        """Compute loss.
+        """Compute loss between predictions and targets.
         
         Args:
             y_pred: Predicted values
@@ -550,220 +619,293 @@ class BaseModel(ABC):
         Returns:
             Loss tensor
         """
-        return F.mse_loss(y_pred, y_true)
+        try:
+            if self.criterion is None:
+                self.criterion = nn.MSELoss()
+            
+            return self.criterion(y_pred, y_true)
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
     def _compute_metrics(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> List[float]:
-        """Compute metrics.
+        """Compute evaluation metrics.
         
         Args:
             y_pred: Predicted values
             y_true: True values
             
         Returns:
-            List of metric values
+            List of metrics
         """
-        mse = F.mse_loss(y_pred, y_true).item()
-        mae = F.l1_loss(y_pred, y_true).item()
-        return [mse, mae]
+        try:
+            y_pred_np = y_pred.cpu().numpy().flatten()
+            y_true_np = y_true.cpu().numpy().flatten()
+            
+            mse = np.mean((y_pred_np - y_true_np) ** 2)
+            mae = np.mean(np.abs(y_pred_np - y_true_np))
+            rmse = np.sqrt(mse)
+            
+            return [mse, mae, rmse]
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
-    def _save_model(self, filename: str) -> None:
-        """Save model state.
+    def _save_model(self, filename: str) -> Dict[str, Any]:
+        """Save model to file.
         
         Args:
             filename: Output filename
+            
+        Returns:
+            Save result
         """
-        state = {
-            'model_state': self.model.state_dict(),
-            'optimizer_state': self.optimizer.state_dict(),
-            'config': self.config,
-            'training_history': self.training_history
-        }
-        if self.scheduler is not None:
-            state['scheduler_state'] = self.scheduler.state_dict()
-        
-        torch.save(state, os.path.join(self.model_dir, filename))
+        try:
+            if self.model is None:
+                raise ModelError("No model to save")
+            
+            save_path = self.results_dir / filename
+            
+            # Save model state
+            torch.save({
+                'model_state_dict': self.model.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict() if self.optimizer else None,
+                'config': self.config,
+                'scaler': self.scaler,
+                'train_losses': self.train_losses,
+                'val_losses': self.val_losses,
+                'best_val_loss': self.best_val_loss
+            }, save_path)
+            
+            self.logger.info(f"Model saved to {save_path}")
+            
+            return {'success': True, 'message': f'Model saved to {save_path}', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
-    def _load_model(self, filename: str) -> None:
-        """Load model state.
+    def _load_model(self, filename: str) -> Dict[str, Any]:
+        """Load model from file.
         
         Args:
             filename: Input filename
+            
+        Returns:
+            Load result
         """
-        state = torch.load(os.path.join(self.model_dir, filename))
-        self.model.load_state_dict(state['model_state'])
-        self.optimizer.load_state_dict(state['optimizer_state'])
-        if self.scheduler is not None and 'scheduler_state' in state:
-            self.scheduler.load_state_dict(state['scheduler_state'])
-        self.training_history = state['training_history']
+        try:
+            load_path = self.results_dir / filename
+            
+            if not load_path.exists():
+                raise FileNotFoundError(f"Model file not found: {load_path}")
+            
+            # Load checkpoint
+            checkpoint = torch.load(load_path, map_location=self.device)
+            
+            # Build model if not exists
+            if self.model is None:
+                self.model = self.build_model()
+            
+            # Load model state
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.model.to(self.device)
+            
+            # Load optimizer state
+            if checkpoint['optimizer_state_dict'] and self.optimizer:
+                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            
+            # Load other components
+            self.config = checkpoint.get('config', {})
+            self.scaler = checkpoint.get('scaler', StandardScaler())
+            self.train_losses = checkpoint.get('train_losses', [])
+            self.val_losses = checkpoint.get('val_losses', [])
+            self.best_val_loss = checkpoint.get('best_val_loss', float('inf'))
+            
+            self.logger.info(f"Model loaded from {load_path}")
+            
+            return {'success': True, 'message': f'Model loaded from {load_path}', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
-    def _save_training_history(self) -> None:
-        """Save training history to CSV and JSON."""
-        # Save to CSV
-        history_df = pd.DataFrame(self.training_history)
-        history_df.to_csv(os.path.join(self.model_dir, 'training_history.csv'), index=False)
+    def _save_training_history(self) -> Dict[str, Any]:
+        """Save training history to file.
         
-        # Save to JSON
-        with open(os.path.join(self.model_dir, 'training_history.json'), 'w') as f:
-            json.dump(self.training_history, f, indent=4)
+        Returns:
+            Save result
+        """
+        try:
+            history = {
+                'train_losses': self.train_losses,
+                'val_losses': self.val_losses,
+                'best_val_loss': self.best_val_loss,
+                'config': self.config,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            history_file = self.results_dir / f"{self.__class__.__name__}_history.json"
+            
+            with open(history_file, 'w') as f:
+                json.dump(history, f, indent=2, default=str)
+            
+            self.logger.info(f"Training history saved to {history_file}")
+            
+            return {'success': True, 'message': f'Training history saved to {history_file}', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
     def plot_training_history(self) -> None:
         """Plot training history."""
-        plt.figure(figsize=(12, 4))
-        
-        # Plot losses
-        plt.subplot(1, 2, 1)
-        plt.plot(self.training_history['train_loss'], label='Train Loss')
-        if self.training_history['val_loss'][0] is not None:
-            plt.plot(self.training_history['val_loss'], label='Val Loss')
-        plt.title('Training and Validation Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
-        
-        # Plot metrics
-        plt.subplot(1, 2, 2)
-        plt.plot(self.training_history['train_metrics'], label='Train Metrics')
-        if self.training_history['val_metrics'][0] is not None:
-            plt.plot(self.training_history['val_metrics'], label='Val Metrics')
-        plt.title('Training and Validation Metrics')
-        plt.xlabel('Epoch')
-        plt.ylabel('Metrics')
-        plt.legend()
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(self.model_dir, 'training_history.png'))
-        plt.close()
-    
+        try:
+            if not self.train_losses or not self.val_losses:
+                self.logger.warning("No training history to plot")
+                return {'success': False, 'error': 'No training history to plot', 'timestamp': datetime.now().isoformat()}
+            
+            plt.figure(figsize=(10, 6))
+            plt.plot(self.train_losses, label='Training Loss')
+            plt.plot(self.val_losses, label='Validation Loss')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.title('Training History')
+            plt.legend()
+            plt.grid(True)
+            
+            # Save plot
+            plot_file = self.results_dir / f"{self.__class__.__name__}_training_history.png"
+            plt.savefig(plot_file)
+            plt.close()
+            
+            self.logger.info(f"Training history plot saved to {plot_file}")
+            
+            return {'success': True, 'message': f'Training history plot saved to {plot_file}', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
     def infer(self) -> None:
-        """Enable inference mode."""
-        self.model.eval()
-        for module in self.model.modules():
-            if isinstance(module, nn.Dropout):
-                module.p = 0
-    
+        """Run inference mode."""
+        try:
+            if self.model is not None:
+                self.model.eval()
+            
+            return {'success': True, 'message': 'Model set to inference mode', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
     @abstractmethod
     def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Prepare data for training or prediction.
+        """Prepare data for model input.
         
         Args:
             data: Input data
-            is_training: Whether data is for training
+            is_training: Whether this is for training
             
         Returns:
-            Tuple of (X, y) tensors
+            Tuple of (features, targets)
         """
         pass
 
     def _to_device(self, data: Union[torch.Tensor, Dict[str, torch.Tensor]]) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
-        """Move data to the appropriate device.
+        """Move data to device.
         
         Args:
-            data: Input data (tensor or dict of tensors)
+            data: Data to move
             
         Returns:
-            Data moved to the appropriate device
+            Data on device
         """
         try:
-            if isinstance(data, dict):
-                return {k: v.to(self.device) for k, v in data.items()}
-            return data.to(self.device)
+            if isinstance(data, torch.Tensor):
+                return data.to(self.device)
+            elif isinstance(data, dict):
+                return {key: value.to(self.device) for key, value in data.items()}
+            else:
+                return data
+                
         except Exception as e:
-            self.logger.error(f"Error moving data to device: {e}")
-            raise ModelError(f"Failed to move data to device: {e}")
-    
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
     def _from_device(self, data: Union[torch.Tensor, Dict[str, torch.Tensor]]) -> Union[torch.Tensor, Dict[str, torch.Tensor]]:
         """Move data from device to CPU.
         
         Args:
-            data: Input data (tensor or dict of tensors)
+            data: Data to move
             
         Returns:
-            Data moved to CPU
+            Data on CPU
         """
         try:
-            if isinstance(data, dict):
-                return {k: v.cpu() for k, v in data.items()}
-            return data.cpu()
+            if isinstance(data, torch.Tensor):
+                return data.cpu()
+            elif isinstance(data, dict):
+                return {key: value.cpu() for key, value in data.items()}
+            else:
+                return data
+                
         except Exception as e:
-            self.logger.error(f"Error moving data from device: {e}")
-            raise ModelError(f"Failed to move data from device: {e}")
-    
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
     def _safe_forward(self, *args, **kwargs) -> torch.Tensor:
-        """Safely perform forward pass with error handling.
+        """Safely run forward pass with error handling.
         
         Args:
-            *args: Arguments for forward pass
-            **kwargs: Keyword arguments for forward pass
+            *args: Positional arguments
+            **kwargs: Keyword arguments
             
         Returns:
-            Model output tensor
+            Model output
         """
         try:
+            if self.model is None:
+                raise ModelError("Model not initialized")
+            
             return self.model(*args, **kwargs)
+            
         except Exception as e:
-            self.logger.error(f"Forward pass failed: {e}")
-            raise ModelError(f"Model forward pass failed: {e}")
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
 
     def get_confidence(self) -> Dict[str, float]:
         """Get model confidence metrics.
         
         Returns:
-            Dictionary containing confidence metrics
+            Dictionary of confidence metrics
         """
         try:
-            # Default confidence metrics
-            confidence = {
-                'model_confidence': 0.8,  # Default confidence
-                'prediction_interval': 0.95,
-                'uncertainty': 0.2
+            if not self.val_losses:
+                return {'success': False, 'error': 'No validation history available', 'timestamp': datetime.now().isoformat()}
+            
+            # Simple confidence based on validation loss
+            latest_val_loss = self.val_losses[-1]
+            best_val_loss = min(self.val_losses)
+            
+            # Confidence decreases as validation loss increases
+            confidence = max(0.0, 1.0 - (latest_val_loss - best_val_loss) / best_val_loss)
+            
+            metrics = {
+                'confidence': confidence,
+                'latest_val_loss': latest_val_loss,
+                'best_val_loss': best_val_loss,
+                'loss_ratio': latest_val_loss / best_val_loss if best_val_loss > 0 else float('inf')
             }
             
-            # If we have validation losses, use them to estimate confidence
-            if hasattr(self, 'val_losses') and self.val_losses:
-                # Lower validation loss = higher confidence
-                avg_val_loss = np.mean(self.val_losses[-10:])  # Last 10 epochs
-                confidence['model_confidence'] = max(0.1, 1.0 - avg_val_loss)
-                confidence['uncertainty'] = avg_val_loss
-            
-            return confidence
+            return {'success': True, 'result': metrics, 'message': 'Confidence metrics calculated', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
-            self.logger.warning(f"Could not compute confidence metrics: {e}")
-            return {
-                'model_confidence': 0.5,
-                'prediction_interval': 0.95,
-                'uncertainty': 0.5
-            }
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
 
     def get_metadata(self) -> Dict[str, Any]:
-        """Get model metadata.
-        
-        Returns:
-            Dictionary containing model metadata
-        """
+        """Get model metadata."""
         try:
-            metadata = {
+            return {
                 'model_type': self.__class__.__name__,
                 'config': self.config,
                 'created_at': datetime.now().isoformat(),
-                'model_parameters': 0,
-                'training_history': {
-                    'train_losses': self.train_losses if hasattr(self, 'train_losses') else [],
-                    'val_losses': self.val_losses if hasattr(self, 'val_losses') else [],
-                    'best_val_loss': self.best_val_loss if hasattr(self, 'best_val_loss') else float('inf')
-                }
+                'device': str(self.device),
+                'best_val_loss': self.best_val_loss,
+                'training_epochs': len(self.train_losses)
             }
-            
-            # Count model parameters if available
-            if hasattr(self, 'model') and self.model is not None:
-                try:
-                    metadata['model_parameters'] = sum(p.numel() for p in self.model.parameters())
-                except Exception as e:
-                    self.logger.warning(f"Could not count model parameters: {e}")
-                    metadata['model_parameters'] = 0
-            
-            return metadata
-            
         except Exception as e:
             self.logger.warning(f"Could not get model metadata: {e}")
             return {

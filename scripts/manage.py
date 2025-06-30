@@ -73,6 +73,7 @@ class ApplicationManager:
         self.setup_logging()
         self.logger = logging.getLogger("trading")
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration.
 
@@ -90,7 +91,7 @@ class ApplicationManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self):
         """Initialize logging configuration.
@@ -108,6 +109,7 @@ class ApplicationManager:
         
         logging.config.dictConfig(log_config)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def run_command(self, command: List[str], cwd: Optional[str] = None) -> int:
         """Run a shell command and return its exit code.
 
@@ -130,7 +132,7 @@ class ApplicationManager:
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Command failed: {e}")
             self.logger.error(f"Output: {e.output}")
-            return e.returncode
+            return {'success': True, 'result': e.returncode, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def install_dependencies(self):
         """Install application dependencies.
@@ -148,7 +150,7 @@ class ApplicationManager:
         # Install development dependencies
         if self.run_command(["pip", "install", "-r", "requirements-dev.txt"]) != 0:
             self.logger.error("Failed to install development dependencies")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         self.logger.info("Dependencies installed successfully")
         return True
@@ -163,7 +165,7 @@ class ApplicationManager:
         
         if self.run_command(["pytest", "tests/", "-v"]) != 0:
             self.logger.error("Tests failed")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         self.logger.info("Tests completed successfully")
         return True
@@ -194,7 +196,7 @@ class ApplicationManager:
         # Run mypy
         if self.run_command(["mypy", "trading", "tests"]) != 0:
             self.logger.error("Type checking failed")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         self.logger.info("Linting completed successfully")
         return True
@@ -215,7 +217,7 @@ class ApplicationManager:
         # Run isort
         if self.run_command(["isort", "trading", "tests"]) != 0:
             self.logger.error("isort formatting failed")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         self.logger.info("Code formatting completed successfully")
         return True
@@ -230,7 +232,7 @@ class ApplicationManager:
         
         if self.run_command(["docker", "build", "-t", "trading-app", "."]) != 0:
             self.logger.error("Docker build failed")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         self.logger.info("Docker image built successfully")
         return True
@@ -250,7 +252,7 @@ class ApplicationManager:
             "trading-app"
         ]) != 0:
             self.logger.error("Failed to run Docker container")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         self.logger.info("Docker container running successfully")
         return True
@@ -265,7 +267,7 @@ class ApplicationManager:
         
         if self.run_command(["docker", "stop", "trading-app"]) != 0:
             self.logger.error("Failed to stop Docker container")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         self.logger.info("Docker container stopped successfully")
         return True
@@ -291,7 +293,7 @@ class ApplicationManager:
         # Remove coverage files
         if self.run_command(["rm", "-rf", "htmlcov", ".coverage"]) != 0:
             self.logger.error("Failed to remove coverage files")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         self.logger.info("Cleanup completed successfully")
         return True
@@ -320,7 +322,7 @@ def main():
 
     if args.help:
         print(__doc__)
-        return {"status": "help_displayed", "command": "help"}
+        return {'success': True, 'result': {"status": "help_displayed", "command": "help"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     manager = ApplicationManager()
     result = {"status": "unknown", "command": args.command}

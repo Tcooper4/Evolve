@@ -45,6 +45,7 @@ class EnsembleModel(BaseModel):
         if not isinstance(self.config['models'], list):
             raise ValueError("models must be a list of model configurations")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _load_strategy_patterns(self):
         """Load strategy patterns from memory.json."""
         try:
@@ -54,6 +55,7 @@ class EnsembleModel(BaseModel):
         except FileNotFoundError:
             self.strategy_patterns = {}
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _save_strategy_patterns(self):
         """Save strategy patterns to memory.json."""
         try:
@@ -67,6 +69,7 @@ class EnsembleModel(BaseModel):
         with open('memory.json', 'w') as f:
             json.dump(memory, f, indent=4)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _initialize_models(self):
         """Initialize all models in the ensemble."""
         for model_config in self.config['models']:
@@ -76,6 +79,7 @@ class EnsembleModel(BaseModel):
             self.weights[model_name] = 1.0 / len(self.config['models'])
             self.performance_history[model_name] = []
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _update_weights(self, data: pd.DataFrame):
         """Update model weights based on recent performance.
         
@@ -115,6 +119,7 @@ class EnsembleModel(BaseModel):
         scores = np.array([h[-1]['score'] for h in self.performance_history.values()])
         self.weights = dict(zip(self.models.keys(), np.exp(scores) / np.sum(np.exp(scores))))
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _calculate_custom_score(self, actual: np.ndarray, preds: np.ndarray) -> float:
         """Calculate custom performance score.
         
@@ -135,7 +140,7 @@ class EnsembleModel(BaseModel):
         normalized_mse = 1 / (1 + mse)
         
         # Combine metrics
-        return 0.7 * directional_accuracy + 0.3 * normalized_mse
+        return {'success': True, 'result': 0.7 * directional_accuracy + 0.3 * normalized_mse, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_strategy_recommendation(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Get strategy-aware model recommendations.
@@ -372,7 +377,7 @@ class EnsembleModel(BaseModel):
                 current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
                 current_data = current_data.iloc[1:]  # Remove oldest row
             
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'forecast': np.array(forecast_values),
                 'confidence': 0.9,  # High confidence for ensemble
                 'model': 'Ensemble',

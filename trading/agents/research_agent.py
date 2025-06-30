@@ -30,6 +30,7 @@ class ResearchAgent:
         if openai and self.openai_api_key:
             openai.api_key = self.openai_api_key
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def search_github(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
         """Search GitHub for repositories related to the query."""
         url = f"https://api.github.com/search/repositories?q={query}&sort=stars&order=desc&per_page={max_results}"
@@ -47,7 +48,7 @@ class ResearchAgent:
             } for item in items]
         else:
             logger.warning(f"GitHub search failed: {resp.status_code}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def search_arxiv(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
         """Search arXiv for papers related to the query."""
@@ -71,12 +72,12 @@ class ResearchAgent:
             return entries
         else:
             logger.warning(f"arXiv search failed: {resp.status_code}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def summarize_with_openai(self, text: str, prompt: str = "Summarize this for a quant trading engineer:") -> str:
         """Use OpenAI API to summarize text."""
         if not openai or not self.openai_api_key:
-            return "[OpenAI API not available]"
+            return {'success': True, 'result': "[OpenAI API not available]", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
@@ -90,7 +91,7 @@ class ResearchAgent:
     def code_suggestion_with_openai(self, description: str) -> str:
         """Use OpenAI API to generate code suggestion from a description."""
         if not openai or not self.openai_api_key:
-            return "[OpenAI API not available]"
+            return {'success': True, 'result': "[OpenAI API not available]", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
@@ -108,6 +109,7 @@ class ResearchAgent:
         data.append(finding)
         self.log_path.write_text(json.dumps(data, indent=2))
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def research(self, topic: str, max_results: int = 3) -> List[Dict[str, Any]]:
         """Conduct research on a topic: search, summarize, suggest code, and log findings."""
         findings = []
@@ -141,4 +143,4 @@ class ResearchAgent:
             }
             self.log_finding(finding)
             findings.append(finding)
-        return findings 
+        return {'success': True, 'result': findings, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

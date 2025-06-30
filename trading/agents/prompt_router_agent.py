@@ -90,6 +90,7 @@ class PromptRouterAgent:
             'strategy': r'\b(momentum|mean_reversion|bollinger|macd|rsi)\b'
         }
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _init_huggingface(self):
         """Initialize HuggingFace pipeline."""
         try:
@@ -110,6 +111,7 @@ class PromptRouterAgent:
             logger.error(f"Failed to initialize HuggingFace: {e}")
             self.hf_pipeline = None
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def parse_intent_openai(self, prompt: str) -> Optional[ParsedIntent]:
         """Parse intent using OpenAI GPT-4."""
         if not openai or not self.openai_api_key:
@@ -157,7 +159,7 @@ class PromptRouterAgent:
             
         except Exception as e:
             logger.warning(f"OpenAI parsing failed: {e}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def parse_intent_huggingface(self, prompt: str) -> Optional[ParsedIntent]:
         """Parse intent using HuggingFace model."""
@@ -194,7 +196,7 @@ class PromptRouterAgent:
             
         except Exception as e:
             logger.warning(f"HuggingFace parsing failed: {e}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def parse_intent_regex(self, prompt: str) -> ParsedIntent:
         """Parse intent using regex and keyword matching."""
@@ -230,7 +232,7 @@ class PromptRouterAgent:
         
         for intent, keywords in self.intent_keywords.items():
             if any(keyword in text_lower for keyword in keywords):
-                return intent
+                return {'success': True, 'result': intent, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return 'unknown'
 
@@ -399,7 +401,7 @@ class PromptRouterAgent:
         
         providers.append('regex')  # Always available as fallback
         
-        return providers
+        return {'success': True, 'result': providers, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def get_provider_status(self) -> Dict[str, bool]:
         """Get status of all LLM providers."""

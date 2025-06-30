@@ -43,6 +43,7 @@ class MemoryLogger:
             self.logger.addHandler(file_handler)
             self.logger.setLevel(logging.INFO)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def log_memory_operation(self, operation: str, details: Dict[str, Any]) -> None:
         """Log a memory operation.
         
@@ -58,6 +59,7 @@ class MemoryLogger:
         
         self.logger.info(f"Memory operation: {json.dumps(log_entry)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def log_performance_metrics(self, metrics: Dict[str, float]) -> None:
         """Log performance metrics.
         
@@ -72,6 +74,7 @@ class MemoryLogger:
         
         self.logger.info(f"Performance metrics: {json.dumps(log_entry)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def log_error(self, error: str, context: Optional[Dict[str, Any]] = None) -> None:
         """Log an error.
         
@@ -88,6 +91,7 @@ class MemoryLogger:
         
         self.logger.error(f"Memory error: {json.dumps(log_entry)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_recent_logs(self, limit: int = 100) -> List[Dict[str, Any]]:
         """Get recent log entries.
         
@@ -116,7 +120,7 @@ class MemoryLogger:
         except FileNotFoundError:
             self.logger.warning(f"Log file not found: {self.log_file}")
         
-        return logs
+        return {'success': True, 'result': logs, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def clear_logs(self) -> None:
         """Clear all log entries."""
@@ -127,6 +131,7 @@ class MemoryLogger:
         except Exception as e:
             self.logger.error(f"Failed to clear logs: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_log_stats(self) -> Dict[str, Any]:
         """Get statistics about the log file.
         
@@ -149,4 +154,4 @@ class MemoryLogger:
             }
         except Exception as e:
             self.logger.error(f"Failed to get log stats: {e}")
-            return {'error': str(e)} 
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

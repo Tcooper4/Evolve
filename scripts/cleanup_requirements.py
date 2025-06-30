@@ -13,7 +13,7 @@ This script cleans up requirements files by:
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, Any
 import logging
 
 # Setup logging
@@ -23,7 +23,10 @@ logger = logging.getLogger(__name__)
 class RequirementsCleaner:
     """Clean and organize requirements files."""
     
-    def __init__(self):
+    def __init__(self, requirements_file: Path, output_file: Path):
+        self.requirements_file = requirements_file
+        self.output_file = output_file
+        self.logger = logging.getLogger(__name__)
         self.packages_to_remove = {'ta-lib', 'talib'}
         self.categories = {
             'core': [
@@ -67,164 +70,160 @@ class RequirementsCleaner:
             ]
         }
     
-    def parse_requirements(self, content: str) -> List[Tuple[str, str]]:
-        """Parse requirements content into package names and versions."""
-        packages = []
-        for line in content.split('\n'):
-            line = line.strip()
-            if line and not line.startswith('#') and not line.startswith('-r'):
-                # Extract package name and version
-                match = re.match(r'^([a-zA-Z0-9_-]+)(.*)$', line)
-                if match:
-                    package_name = match.group(1)
-                    version = match.group(2).strip()
-                    packages.append((package_name, version))
-        return packages
-    
-    def categorize_packages(self, packages: List[Tuple[str, str]]) -> Dict[str, List[Tuple[str, str]]]:
-        """Categorize packages by their type."""
-        categorized = {cat: [] for cat in self.categories.keys()}
-        categorized['other'] = []
+    def load_requirements(self) -> List[str]:
+        """Load requirements from file."""
+        try:
+            with open(self.requirements_file, 'r') as f:
+                return [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        except Exception as e:
+            self.logger.error(f"Error loading requirements: {e}")
+            return []
+
+    def categorize_packages(self, packages: List[str]) -> Dict[str, List[str]]:
+        """Categorize packages by type."""
+        categorized = {
+            'core': [],
+            'ml': [],
+            'web': [],
+            'data': [],
+            'utils': [],
+            'dev': [],
+            'unknown': []
+        }
         
-        for package_name, version in packages:
-            categorized_flag = False
-            for category, known_packages in self.categories.items():
-                if package_name in known_packages:
-                    categorized[category].append((package_name, version))
-                    categorized_flag = True
-                    break
-            if not categorized_flag:
-                categorized['other'].append((package_name, version))
+        for package in packages:
+            if any(keyword in package.lower() for keyword in ['numpy', 'pandas', 'scipy']):
+                categorized['data'].append(package)
+            elif any(keyword in package.lower() for keyword in ['tensorflow', 'torch', 'sklearn', 'xgboost']):
+                categorized['ml'].append(package)
+            elif any(keyword in package.lower() for keyword in ['flask', 'streamlit', 'fastapi', 'django']):
+                categorized['web'].append(package)
+            elif any(keyword in package.lower() for keyword in ['pytest', 'black', 'flake8']):
+                categorized['dev'].append(package)
+            else:
+                categorized['unknown'].append(package)
         
         return categorized
-    
-    def remove_duplicates(self, packages: List[Tuple[str, str]]) -> List[Tuple[str, str]]:
-        """Remove duplicate packages, keeping the highest version."""
-        package_dict = {}
-        for package_name, version in packages:
-            if package_name not in package_dict:
-                package_dict[package_name] = version
-            else:
-                # Keep the version with higher requirements
-                current_version = package_dict[package_name]
-                if self._compare_versions(version, current_version) > 0:
-                    package_dict[package_name] = version
-        
-        return list(package_dict.items())
-    
-    def _compare_versions(self, version1: str, version2: str) -> int:
-        """Compare version requirements (simplified)."""
-        # Extract version numbers
-        v1_match = re.search(r'>=?(\d+\.\d+\.\d+)', version1)
-        v2_match = re.search(r'>=?(\d+\.\d+\.\d+)', version2)
-        
-        if v1_match and v2_match:
-            v1_parts = [int(x) for x in v1_match.group(1).split('.')]
-            v2_parts = [int(x) for x in v2_match.group(1).split('.')]
+
+    def get_package_info(self, package: str) -> Tuple[str, str]:
+        """Get package name and version."""
+        if '==' in package:
+            name, version = package.split('==', 1)
+            return name.strip(), version.strip()
+        elif '>=' in package:
+            name, version = package.split('>=', 1)
+            return name.strip(), f">={version.strip()}"
+        elif '<=' in package:
+            name, version = package.split('<=', 1)
+            return name.strip(), f"<={version.strip()}"
+        else:
+            return package.strip(), "latest"
+
+    def check_package_health(self, package: str) -> int:
+        """Check package health score (0-100)."""
+        try:
+            name, version = self.get_package_info(package)
             
-            for i in range(max(len(v1_parts), len(v2_parts))):
-                v1_val = v1_parts[i] if i < len(v1_parts) else 0
-                v2_val = v2_parts[i] if i < len(v2_parts) else 0
-                if v1_val > v2_val:
-                    return 1
-                elif v1_val < v2_val:
-                    return -1
-        return 0
-    
-    def generate_requirements_content(self, categorized: Dict[str, List[Tuple[str, str]]]) -> str:
-        """Generate clean requirements content."""
+            # Simple health check based on package name
+            if any(keyword in name.lower() for keyword in ['numpy', 'pandas', 'requests']):
+                return 95  # Well-maintained packages
+            elif any(keyword in name.lower() for keyword in ['tensorflow', 'torch']):
+                return 90  # ML frameworks
+            else:
+                return 75  # Default score
+            
+        except Exception as e:
+            self.logger.error(f"Error checking package health: {e}")
+            return -1
+
+    def format_requirements(self, packages: List[str]) -> str:
+        """Format requirements for output."""
         content = []
+        content.append("# Cleaned Requirements File")
+        content.append("# Generated by cleanup_requirements.py")
+        content.append("")
         
-        for category, packages in categorized.items():
-            if packages:
-                if category != 'other':
-                    content.append(f"# {category.title()} dependencies")
-                else:
-                    content.append("# Other dependencies")
-                
-                # Sort packages alphabetically
-                sorted_packages = sorted(packages, key=lambda x: x[0])
-                for package_name, version in sorted_packages:
-                    content.append(f"{package_name}{version}")
-                content.append("")
+        for package in sorted(packages):
+            content.append(package)
         
         return '\n'.join(content).strip()
-    
-    def clean_file(self, file_path: Path) -> None:
-        """Clean a requirements file."""
-        logger.info(f"Cleaning {file_path}")
-        
-        if not file_path.exists():
-            logger.warning(f"File {file_path} does not exist")
-            return
-        
-        # Read current content
-        with open(file_path, 'r') as f:
-            content = f.read()
-        
-        # Parse packages
-        packages = self.parse_requirements(content)
-        
-        # Remove packages to exclude
-        packages = [(name, version) for name, version in packages 
-                   if name not in self.packages_to_remove]
-        
-        # Remove duplicates
-        packages = self.remove_duplicates(packages)
-        
-        # Categorize packages
-        categorized = self.categorize_packages(packages)
-        
-        # Generate new content
-        new_content = self.generate_requirements_content(categorized)
-        
-        # Write back to file
-        with open(file_path, 'w') as f:
-            f.write(new_content)
-        
-        logger.info(f"Cleaned {file_path}: {len(packages)} packages organized into {len([k for k, v in categorized.items() if v])} categories")
-    
-    def validate_packages(self, file_path: Path) -> None:
-        """Validate package names in a requirements file."""
-        logger.info(f"Validating {file_path}")
-        
-        if not file_path.exists():
-            return
-        
-        with open(file_path, 'r') as f:
-            content = f.read()
-        
-        packages = self.parse_requirements(content)
-        
-        for package_name, version in packages:
-            # Check for common issues
-            if package_name.startswith('-'):
-                logger.warning(f"Invalid package name in {file_path}: {package_name}")
-            if not re.match(r'^[a-zA-Z0-9_-]+$', package_name):
-                logger.warning(f"Potentially invalid package name in {file_path}: {package_name}")
+
+    def cleanup_requirements(self) -> bool:
+        """Main cleanup function."""
+        try:
+            self.logger.info("Starting requirements cleanup")
+            
+            # Load requirements
+            packages = self.load_requirements()
+            if not packages:
+                self.logger.error("No packages found")
+                return False
+            
+            # Categorize packages
+            categorized = self.categorize_packages(packages)
+            
+            # Filter out low-health packages
+            healthy_packages = []
+            for category, pkgs in categorized.items():
+                for package in pkgs:
+                    health = self.check_package_health(package)
+                    if health >= 70:  # Keep packages with health >= 70
+                        healthy_packages.append(package)
+                    else:
+                        self.logger.warning(f"Removing low-health package: {package} (health: {health})")
+            
+            # Format and save
+            formatted_content = self.format_requirements(healthy_packages)
+            
+            with open(self.output_file, 'w') as f:
+                f.write(formatted_content)
+            
+            self.logger.info(f"Cleanup completed. Kept {len(healthy_packages)}/{len(packages)} packages")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Cleanup error: {e}")
+            return False
+
+    def generate_report(self) -> Dict[str, Any]:
+        """Generate cleanup report."""
+        try:
+            original_packages = self.load_requirements()
+            categorized = self.categorize_packages(original_packages)
+            
+            report = {
+                'total_packages': len(original_packages),
+                'categories': {k: len(v) for k, v in categorized.items()},
+                'health_scores': {}
+            }
+            
+            for package in original_packages:
+                health = self.check_package_health(package)
+                report['health_scores'][package] = health
+            
+            return report
+            
+        except Exception as e:
+            self.logger.error(f"Report generation error: {e}")
+            return {}
 
 def main():
     """Main function."""
-    cleaner = RequirementsCleaner()
-    
-    # Files to clean
-    requirements_files = [
-        Path('requirements.txt'),
-        Path('requirements-test.txt'),
-        Path('requirements-dev.txt'),
-        Path('requirements_dashboard.txt')
-    ]
-    
-    logger.info("Starting requirements cleanup")
-    
-    for file_path in requirements_files:
-        if file_path.exists():
-            cleaner.clean_file(file_path)
-            cleaner.validate_packages(file_path)
+    try:
+        requirements_file = Path('requirements.txt')
+        output_file = Path('cleaned_requirements.txt')
+        cleanup = RequirementsCleaner(requirements_file, output_file)
+        success = cleanup.cleanup_requirements()
+        
+        if success:
+            print("✅ Requirements cleanup completed successfully")
+            report = cleanup.generate_report()
+            print(f"📊 Report: {report}")
         else:
-            logger.info(f"Skipping {file_path} (does not exist)")
-    
-    logger.info("Requirements cleanup completed")
+            print("❌ Requirements cleanup failed")
+            
+    except Exception as e:
+        print(f"❌ Error: {e}")
 
 if __name__ == "__main__":
     main() 

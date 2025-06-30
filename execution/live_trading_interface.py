@@ -775,7 +775,7 @@ class LiveTradingInterface:
             "total_trades": total_trades,
             "filled_trades": len(filled_orders),
             "total_pnl": total_pnl,
-            "mode": self.mode
+            "win_rate": len([o for o in filled_orders if o.filled_price > 0]) / len(filled_orders) if filled_orders else 0.0
         }
     
     def reset_daily_tracking(self):

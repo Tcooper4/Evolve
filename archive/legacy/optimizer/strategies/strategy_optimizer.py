@@ -28,6 +28,7 @@ class StrategyOptimizer:
         self.memory_logger = memory_logger
         self.optimizer_factory = OptimizerFactory()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def optimize_strategy(self, strategy_name: str, optimizer_type: str,
                          param_space: Dict, data: Dict,
                          **optimizer_kwargs) -> Dict:
@@ -56,7 +57,7 @@ class StrategyOptimizer:
         # Log results
         self._log_optimization_results(strategy_name, optimizer_type, results)
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_available_optimizers(self) -> List[str]:
         """Get list of available optimizer types.
@@ -64,7 +65,7 @@ class StrategyOptimizer:
         Returns:
             List of optimizer type names
         """
-        return list(self.optimizer_factory.get_available_optimizers().keys())
+        return {'success': True, 'result': list(self.optimizer_factory.get_available_optimizers().keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_strategy_param_space(self, strategy_name: str) -> Dict:
         """Get the parameter space for a strategy.
@@ -87,7 +88,7 @@ class StrategyOptimizer:
                     param.get('max', 1)
                 )
         
-        return param_space
+        return {'success': True, 'result': param_space, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _log_optimization_results(self, strategy_name: str, optimizer_type: str,
                                 results: Dict) -> None:
@@ -109,6 +110,7 @@ class StrategyOptimizer:
         
         self.memory_logger.log_optimization(log_entry)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def save_optimization_results(self, results: Dict, output_path: str) -> None:
         """Save optimization results to a file.
         
@@ -124,6 +126,7 @@ class StrategyOptimizer:
         
         logger.info(f"Saved optimization results to {output_path}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def load_optimization_results(self, input_path: str) -> Dict:
         """Load optimization results from a file.
         
@@ -137,7 +140,8 @@ class StrategyOptimizer:
             results = json.load(f)
         
         logger.info(f"Loaded optimization results from {input_path}")
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def plot_results(self, *args, **kwargs):
         print("Plotting not implemented yet.") 
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

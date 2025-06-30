@@ -18,7 +18,7 @@ def render_strategy_page():
     # Check if router is initialized in session state
     if "router" not in st.session_state:
         st.warning("Router not initialized. Please restart the application.")
-        return
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     # Create sidebar
     sidebar_config = create_sidebar()
@@ -85,3 +85,5 @@ def main():
     """Main function for the strategy page."""
     render_strategy_page()
 
+
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

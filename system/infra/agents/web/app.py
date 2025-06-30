@@ -257,7 +257,7 @@ def get_task(current_user, task_id):
     task = redis_client.hget(f'tasks:{current_user}', task_id)
     if task:
         return jsonify(json.loads(task))
-    return jsonify({"error": "Task not found"}), 404
+    return jsonify({'message': 'Task not found'}), 404
 
 @app.route('/api/tasks/<task_id>', methods=['PUT'])
 @token_required
@@ -341,10 +341,8 @@ def health_check():
     try:
         # Check Redis connection
         redis_client.ping()
-        
         # Check Ray connection
         ray.is_initialized()
-        
         return jsonify({
             'status': 'healthy',
             'timestamp': datetime.now().isoformat()
@@ -368,7 +366,6 @@ def ready_check():
                 'message': 'Application is still initializing',
                 'timestamp': datetime.now().isoformat()
             }), 503
-            
         return jsonify({
             'status': 'ready',
             'timestamp': datetime.now().isoformat()

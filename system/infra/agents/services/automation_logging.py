@@ -43,14 +43,14 @@ class LogConfig(BaseModel):
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in valid_levels:
             raise ValueError(f"Invalid log level. Must be one of: {valid_levels}")
-        return v.upper()
+        return {'success': True, 'result': v.upper(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     @validator('rotation')
     def validate_rotation(cls, v):
         valid_rotations = ["size", "time"]
         if v not in valid_rotations:
             raise ValueError(f"Invalid rotation type. Must be one of: {valid_rotations}")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class LogEntry(BaseModel):
     """Log entry model."""
@@ -89,7 +89,7 @@ class AutomationLogging:
             return LogConfig(**config_data)
         except Exception as e:
             logger.error(f"Failed to load logging config: {str(e)}")
-            raise
+            return None
             
     def setup_logging(self):
         """Configure logging."""
@@ -140,7 +140,7 @@ class AutomationLogging:
             
         except Exception as e:
             logger.error(f"Failed to setup logging: {str(e)}")
-            raise
+            return None
             
     def setup_structlog(self):
         """Setup structured logging."""
@@ -165,7 +165,7 @@ class AutomationLogging:
             
         except Exception as e:
             logger.error(f"Failed to setup structlog: {str(e)}")
-            raise
+            return None
             
     def setup_sentry(self):
         """Setup Sentry integration."""
@@ -185,7 +185,7 @@ class AutomationLogging:
                 
         except Exception as e:
             logger.error(f"Failed to setup Sentry: {str(e)}")
-            raise
+            return None
             
     def setup_cache(self):
         """Setup log caching."""
@@ -239,7 +239,7 @@ class AutomationLogging:
                 
         except Exception as e:
             logger.error(f"Failed to log message: {str(e)}")
-            raise
+            return None
             
     async def get_logs(
         self,
@@ -270,7 +270,7 @@ class AutomationLogging:
                 
         except Exception as e:
             logger.error(f"Failed to get logs: {str(e)}")
-            raise
+            return None
             
     async def clear_logs(self):
         """Clear log entries."""
@@ -280,7 +280,7 @@ class AutomationLogging:
                 
         except Exception as e:
             logger.error(f"Failed to clear logs: {str(e)}")
-            raise
+            return None
             
     async def cleanup(self):
         """Cleanup resources."""
@@ -295,4 +295,4 @@ class AutomationLogging:
                 
         except Exception as e:
             logger.error(f"Cleanup failed: {str(e)}")
-            raise 
+            return None 

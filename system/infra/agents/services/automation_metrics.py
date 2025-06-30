@@ -38,7 +38,7 @@ class MetricsConfig(BaseModel):
         valid_formats = ["json", "csv", "excel", "html"]
         if v not in valid_formats:
             raise ValueError(f"Invalid export format. Must be one of: {valid_formats}")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class Metric(BaseModel):
     """Metric model."""

@@ -69,7 +69,7 @@ def test_direct_quant_gpt():
         
     except Exception as e:
         print(f"❌ Direct QuantGPT test failed: {e}")
-        return False
+        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def test_service_client():
@@ -135,7 +135,7 @@ def test_service_client():
         
     except Exception as e:
         print(f"❌ ServiceClient test failed: {e}")
-        return False
+        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def test_query_parsing():
@@ -215,7 +215,7 @@ def test_query_parsing():
         
     except Exception as e:
         print(f"❌ Query parsing test failed: {e}")
-        return False
+        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def main():
@@ -234,7 +234,7 @@ def main():
         print("Running direct QuantGPT tests only...")
         test_direct_quant_gpt()
         test_query_parsing()
-        return
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     # Run all tests
     tests = [

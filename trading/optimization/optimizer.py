@@ -85,6 +85,7 @@ class Optimizer:
             'optimization_time': []
         }
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _build_model(self) -> nn.Module:
         """Build neural network model.
         
@@ -107,7 +108,7 @@ class Optimizer:
         # Add output layer
         layers.append(nn.Linear(prev_dim, self.action_dim))
         
-        return nn.Sequential(*layers).to(self.device)
+        return {'success': True, 'result': nn.Sequential(*layers).to(self.device), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def optimize_portfolio(self, state: np.ndarray, target: np.ndarray,
                          validation_split: float = 0.2) -> Tuple[np.ndarray, float]:
@@ -167,7 +168,7 @@ class Optimizer:
                            f"Validation Loss: {val_loss.item():.4f}, "
                            f"Time: {optimization_time:.2f}s")
             
-            return train_output.detach().cpu().numpy(), train_loss.item()
+            return {'success': True, 'result': train_output.detach().cpu().numpy(), train_loss.item(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             raise OptimizationError(f"Failed to optimize portfolio: {str(e)}")
@@ -191,7 +192,7 @@ class Optimizer:
             with torch.no_grad():
                 state_tensor = torch.FloatTensor(state).to(self.device)
                 weights = self.model(state_tensor)
-                return weights.cpu().numpy()
+                return {'success': True, 'result': weights.cpu().numpy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 
         except Exception as e:
             raise OptimizationError(f"Failed to get optimal weights: {str(e)}")
@@ -223,7 +224,7 @@ class Optimizer:
             self.optimizer.step()
             
             self.logger.info(f"Model updated - Loss: {loss.item():.4f}")
-            return loss.item()
+            return {'success': True, 'result': loss.item(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             raise OptimizationError(f"Failed to update model: {str(e)}")
@@ -253,6 +254,7 @@ class Optimizer:
         except Exception as e:
             raise OptimizationError(f"Failed to save model: {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def load_model(self, path: str):
         """Load model from file.
         
@@ -274,6 +276,7 @@ class Optimizer:
         except Exception as e:
             raise OptimizationError(f"Failed to load model: {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_optimization_metrics(self) -> Dict[str, float]:
         """Get optimization metrics.
         
@@ -288,7 +291,7 @@ class Optimizer:
             'avg_optimization_time': np.mean(self.metrics_history['optimization_time']) if self.metrics_history['optimization_time'] else 0
         }
         
-        return metrics
+        return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def save_metrics(self, path: Optional[str] = None):
         """Save optimization metrics to file.
@@ -316,6 +319,7 @@ class Optimizer:
         except Exception as e:
             raise OptimizationError(f"Failed to save metrics: {str(e)}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Re-export StrategyOptimizer as Optimizer for backward compatibility
 Optimizer = StrategyOptimizer
 

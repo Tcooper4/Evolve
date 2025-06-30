@@ -6,6 +6,7 @@ import numpy as np
 import os
 import json
 from typing import Dict, Any
+from datetime import datetime
 
 @ModelRegistry.register('CatBoost')
 class CatBoostModel(BaseModel):
@@ -103,4 +104,4 @@ class CatBoostModel(BaseModel):
         self.model.load_model(os.path.join(path, 'catboost_model.cbm'))
         with open(os.path.join(path, 'config.json'), 'r') as f:
             self.config = json.load(f)
-        self.fitted = True 
+        self.fitted = True

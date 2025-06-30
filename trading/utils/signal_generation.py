@@ -42,6 +42,7 @@ def validate_market_data(data: pd.DataFrame) -> None:
     if not (data["high"] >= data["low"]).all():
         raise ValueError("High prices must be greater than or equal to low prices")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def calculate_technical_indicators(data: pd.DataFrame, config: SignalConfig) -> pd.DataFrame:
     """Calculate technical indicators for signal generation.
     
@@ -81,7 +82,7 @@ def calculate_technical_indicators(data: pd.DataFrame, config: SignalConfig) -> 
     data["bb_upper"] = data["bb_middle"] + (data["bb_std"] * 2)
     data["bb_lower"] = data["bb_middle"] - (data["bb_std"] * 2)
     
-    return data
+    return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def apply_signal_filters(signals: pd.Series, data: pd.DataFrame, config: SignalConfig) -> pd.Series:
     """Apply filters to raw trading signals.
@@ -110,7 +111,7 @@ def apply_signal_filters(signals: pd.Series, data: pd.DataFrame, config: SignalC
     if config.smoothing > 1:
         filtered_signals = filtered_signals.rolling(window=config.smoothing).mean()
     
-    return filtered_signals
+    return {'success': True, 'result': filtered_signals, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, pd.Series]:
     """Generate trading signals using multiple strategies.
@@ -155,7 +156,7 @@ def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, pd.S
     ma_signals[data["sma_short"] < data["sma_long"]] = -1  # Bearish crossover
     signals["ma_crossover"] = apply_signal_filters(ma_signals, data, config)
     
-    return signals
+    return {'success': True, 'result': signals, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def generate_custom_signals(data: pd.DataFrame, rules: List[Dict[str, Any]], config: SignalConfig) -> pd.Series:
     """Generate custom trading signals based on user-defined rules.
@@ -199,4 +200,4 @@ def generate_custom_signals(data: pd.DataFrame, rules: List[Dict[str, Any]], con
         signals[mask] = signal
     
     # Apply filters
-    return apply_signal_filters(signals, data, config) 
+    return {'success': True, 'result': apply_signal_filters(signals, data, config), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

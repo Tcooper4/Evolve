@@ -70,14 +70,14 @@ class ForecastResult:
         """Convert to dictionary."""
         result_dict = asdict(self)
         result_dict['timestamp'] = self.timestamp.isoformat()
-        return result_dict
+        return {'success': True, 'result': result_dict, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ForecastResult':
         """Create from dictionary."""
         if isinstance(data['timestamp'], str):
             data['timestamp'] = datetime.fromisoformat(data['timestamp'])
-        return cls(**data)
+        return {'success': True, 'result': cls(**data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 @dataclass
@@ -93,7 +93,7 @@ class LiveMarketState:
         """Convert to dictionary."""
         state_dict = asdict(self)
         state_dict['timestamp'] = self.timestamp.isoformat()
-        return state_dict
+        return {'success': True, 'result': state_dict, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 class LiveMarketRunner:
@@ -203,7 +203,7 @@ class LiveMarketRunner:
             if agent_name in default_configs:
                 default_configs[agent_name] = TriggerConfig(**trigger_config)
         
-        return default_configs
+        return {'success': True, 'result': default_configs, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _load_forecast_results(self) -> None:
         """Load existing forecast results from file."""
@@ -741,7 +741,7 @@ class LiveMarketRunner:
             
         except Exception as e:
             self.logger.error(f"Error calculating forecast accuracy: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_volatility(self, prices: pd.Series, window: int = 20) -> float:
         """Calculate price volatility."""
@@ -750,7 +750,7 @@ class LiveMarketRunner:
         
         returns = prices.pct_change().dropna()
         if len(returns) < window:
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return returns.tail(window).std()
     
@@ -761,7 +761,7 @@ class LiveMarketRunner:
         
         avg_volume = np.mean(list(self.volume_history[symbol]))
         if avg_volume == 0:
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return current_volume / avg_volume
     
@@ -802,7 +802,7 @@ class LiveMarketRunner:
             
         except Exception as e:
             self.logger.error(f"Error calculating correlation: {e}")
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 # Factory function
@@ -848,4 +848,4 @@ def create_live_market_runner(config: Optional[Dict[str, Any]] = None) -> LiveMa
     if config:
         default_config.update(config)
     
-    return LiveMarketRunner(default_config) 
+    return {'success': True, 'result': LiveMarketRunner(default_config), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

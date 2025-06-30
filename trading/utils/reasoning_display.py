@@ -35,6 +35,7 @@ class ReasoningDisplay:
         """
         self.logger = reasoning_logger
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def display_decision_terminal(self, decision: AgentDecision, show_explanation: bool = True):
         """
         Display a decision in the terminal.
@@ -93,6 +94,7 @@ class ReasoningDisplay:
         
         print("="*80 + "\n")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def display_recent_decisions_terminal(self, limit: int = 10, agent_name: str = None):
         """
         Display recent decisions in the terminal.
@@ -118,7 +120,7 @@ class ReasoningDisplay:
         
         if not decisions:
             print("No decisions found.")
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         for i, decision in enumerate(decisions, 1):
             print(f"\n{i}. {decision.agent_name} - {decision.decision_type.value}")
@@ -153,6 +155,7 @@ class ReasoningDisplay:
         for activity in stats['recent_activity'][:5]:
             print(f"  {activity['agent_name']} - {activity['decision_type']} - {activity['symbol']}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def display_decision_streamlit(self, decision: AgentDecision):
         """
         Display a decision in Streamlit.
@@ -217,6 +220,7 @@ class ReasoningDisplay:
             st.subheader("💬 Chat Explanation")
             st.text_area("Explanation", explanation, height=200, disabled=True)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def display_recent_decisions_streamlit(self, limit: int = 10, agent_name: str = None):
         """
         Display recent decisions in Streamlit.
@@ -240,7 +244,7 @@ class ReasoningDisplay:
         
         if not decisions:
             st.info("No decisions found.")
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Create dataframe for display
         decision_data = []
@@ -323,6 +327,7 @@ class ReasoningDisplay:
             activity_df = pd.DataFrame(stats['recent_activity'])
             st.dataframe(activity_df, use_container_width=True)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def create_streamlit_sidebar(self):
         """Create a sidebar for reasoning controls in Streamlit."""
         st.sidebar.subheader("🤖 Reasoning Controls")
@@ -360,7 +365,7 @@ class ReasoningDisplay:
         if st.sidebar.button("🔄 Refresh"):
             st.rerun()
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'agent': selected_agent if selected_agent != "All Agents" else None,
             'type': selected_type if selected_type != "All Types" else None,
             'confidence': selected_confidence if selected_confidence != "All Levels" else None,
@@ -397,6 +402,7 @@ class ReasoningDisplay:
             st.rerun()
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def create_reasoning_page_streamlit():
     """Create a complete reasoning page in Streamlit."""
     st.title("🤖 Agent Reasoning Dashboard")
@@ -448,6 +454,7 @@ def create_reasoning_page_streamlit():
             st.info("No decisions available to view.")
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     # Test the display components
     reasoning_logger = ReasoningLogger()

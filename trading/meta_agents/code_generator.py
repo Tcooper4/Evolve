@@ -18,6 +18,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         name: str = "code_generator",
         config: Optional[Dict] = None,
         log_file_path: Optional[Union[str, Path]] = None
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize the code generator agent.
         
@@ -60,6 +61,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         self.client = openai.OpenAI(api_key=api_key)
         self.logger.info(f"OpenAI client initialized with model: {self.config['model']}")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_task(self, task: Task) -> None:
         """Validate task dictionary structure.
         
@@ -76,6 +78,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         if not any(field in task.data for field in required_fields):
             raise ValueError(f"Task must include at least one of: {required_fields}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _build_prompt(self, task: Task) -> List[Dict[str, str]]:
         """Build the prompt for code generation.
         
@@ -111,7 +114,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
             "content": "\n".join(prompt)
         })
         
-        return messages
+        return {'success': True, 'result': messages, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     @retry(
         stop=stop_after_attempt(3),
@@ -138,7 +141,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
                 max_tokens=self.config["max_tokens"],
                 stream=stream
             )
-            return response
+            return {'success': True, 'result': response, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except openai.RateLimitError:
             self.logger.warning("Rate limit hit, retrying...")
             raise
@@ -180,7 +183,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         # Calculate confidence score
         confidence = self._calculate_confidence(response)
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "code": code,
             "tests": tests,
             "metadata": {
@@ -209,7 +212,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         code = parts[1].split("```")[0].strip()
         tests = parts[2].split("```")[0].strip() if len(parts) > 2 else ""
         
-        return code, tests
+        return {'success': True, 'result': code, tests, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_confidence(self, response: Any) -> float:
         """Calculate confidence score for the generation.
@@ -222,7 +225,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         """
         # Use logprobs if available
         if hasattr(response.choices[0], "logprobs"):
-            return float(response.choices[0].logprobs.token_logprobs[0])
+            return {'success': True, 'result': float(response.choices[0].logprobs.token_logprobs[0]), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         # Fallback to content length heuristic
         content_length = len(response.choices[0].message.content)
@@ -274,7 +277,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
             diff_response = self._call_openai(diff_messages)
             diff = diff_response.choices[0].message.content
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "original_code": code,
             "refactored_code": refactored_code,
             "review": review.choices[0].message.content,
@@ -294,7 +297,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         Returns:
             Dict containing mock generation results
         """
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "code": "# Simulated code\ndef hello():\n    return 'Hello, World!'",
             "tests": "# Simulated tests\ndef test_hello():\n    assert hello() == 'Hello, World!'",
             "metadata": {

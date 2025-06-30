@@ -67,6 +67,7 @@ class BackupManager:
         self.schedule_dir = Path("schedules")
         self.schedule_dir.mkdir(parents=True, exist_ok=True)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
@@ -74,7 +75,7 @@ class BackupManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -88,6 +89,7 @@ class BackupManager:
         
         logging.config.dictConfig(log_config)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def create_backup(self, backup_type: str, target: str = "local"):
         """Create a backup of specified type."""
         self.logger.info(f"Creating {backup_type} backup to {target}")
@@ -220,9 +222,10 @@ class BackupManager:
                 with open(schedule_file, "w") as f:
                     json.dump(schedule_info, f, indent=2)
             
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             schedule.every().day.at(schedule).do(backup_job)
             
-            self.logger.info(f"Backup scheduled: {schedule_file}")
+            return {'success': True, 'result': self.logger.info(f"Backup scheduled: {schedule_file}"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             return schedule_info
         except Exception as e:
             self.logger.error(f"Failed to schedule backup: {e}")
@@ -254,7 +257,7 @@ class BackupManager:
             # Print backup list
             self._print_backup_list(backups)
             
-            return backups
+            return {'success': True, 'result': backups, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to list backups: {e}")
             raise
@@ -441,7 +444,7 @@ class BackupManager:
             latest_file = max(backup_files, key=lambda x: x.stat().st_mtime)
             with open(latest_file) as f:
                 backup_info = json.load(f)
-                return datetime.fromisoformat(backup_info["timestamp"])
+                return {'success': True, 'result': datetime.fromisoformat(backup_info["timestamp"]), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to get last backup time: {e}")
             raise
@@ -451,7 +454,7 @@ class BackupManager:
         try:
             backup_files = list(self.backup_dir.glob("backup_info_*.json"))
             if not backup_files:
-                return datetime.min
+                return {'success': True, 'result': datetime.min, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             full_backups = []
             for file in backup_files:
@@ -588,7 +591,7 @@ class BackupManager:
                     info = container_client.download_blob(blob.name).readall()
                     backups.append(json.loads(info))
             
-            return backups
+            return {'success': True, 'result': backups, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to list remote backups: {e}")
             raise
@@ -606,6 +609,7 @@ class BackupManager:
             for component, paths in backup["components"].items():
                 print(f"  {component}: {len(paths)} files")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Backup Manager")
@@ -659,5 +663,6 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

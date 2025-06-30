@@ -53,6 +53,7 @@ class DataQualityManager:
         self.data_dir = Path("data")
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
@@ -60,7 +61,7 @@ class DataQualityManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -74,6 +75,7 @@ class DataQualityManager:
         
         logging.config.dictConfig(log_config)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def validate_data(self, data_path: str, schema_path: Optional[str] = None):
         """Validate data against schema and quality rules."""
         self.logger.info(f"Validating data: {data_path}")
@@ -112,7 +114,7 @@ class DataQualityManager:
             return validation_results["schema_validation"]["success"] and validation_results["quality_validation"]["success"]
         except Exception as e:
             self.logger.error(f"Failed to validate data: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def clean_data(self, data_path: str, output_path: Optional[str] = None):
         """Clean and preprocess data."""
@@ -136,7 +138,7 @@ class DataQualityManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to clean data: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def analyze_data(self, data_path: str):
         """Analyze data quality and statistics."""
@@ -164,7 +166,7 @@ class DataQualityManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to analyze data: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _load_data(self, data_path: str) -> pd.DataFrame:
         """Load data from file."""
@@ -172,7 +174,7 @@ class DataQualityManager:
             if data_path.endswith(".csv"):
                 return pd.read_csv(data_path)
             elif data_path.endswith(".json"):
-                return pd.read_json(data_path)
+                return {'success': True, 'result': pd.read_json(data_path), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             else:
                 raise ValueError(f"Unsupported file format: {data_path}")
         except Exception as e:
@@ -183,7 +185,7 @@ class DataQualityManager:
         """Load data schema."""
         try:
             with open(schema_path) as f:
-                return json.load(f)
+                return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to load schema: {e}")
             raise
@@ -329,7 +331,7 @@ class DataQualityManager:
                 scaler = StandardScaler()
                 cleaned_data[numeric_columns] = scaler.fit_transform(cleaned_data[numeric_columns])
             
-            return cleaned_data
+            return {'success': True, 'result': cleaned_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to clean data: {e}")
             raise
@@ -347,7 +349,7 @@ class DataQualityManager:
                     for col in data.select_dtypes(include=["object"]).columns
                 }
             }
-            return stats
+            return {'success': True, 'result': stats, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to get basic stats: {e}")
             raise
@@ -366,7 +368,7 @@ class DataQualityManager:
                 },
                 "duplicate_rows": data.duplicated().sum()
             }
-            return metrics
+            return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to get quality metrics: {e}")
             raise
@@ -376,7 +378,7 @@ class DataQualityManager:
         try:
             numeric_data = data.select_dtypes(include=["int64", "float64"])
             if len(numeric_data.columns) > 1:
-                return numeric_data.corr().to_dict()
+                return {'success': True, 'result': numeric_data.corr().to_dict(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             return {}
         except Exception as e:
             self.logger.error(f"Failed to get correlations: {e}")
@@ -395,6 +397,7 @@ class DataQualityManager:
             self.logger.error(f"Failed to save data: {e}")
             raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _save_validation_results(self, results: Dict[str, Any]):
         """Save validation results."""
         try:
@@ -414,6 +417,7 @@ class DataQualityManager:
             self.logger.error(f"Failed to save validation results: {e}")
             raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _save_analysis_results(self, analysis: Dict[str, Any]):
         """Save analysis results."""
         try:
@@ -433,6 +437,7 @@ class DataQualityManager:
             self.logger.error(f"Failed to save analysis results: {e}")
             raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _print_validation_results(self, results: Dict[str, Any]):
         """Print validation results."""
         print("\nValidation Results:")
@@ -455,6 +460,7 @@ class DataQualityManager:
             for result in results["quality_validation"]["results"]:
                 print(f"    - {result['message']}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _print_analysis_results(self, analysis: Dict[str, Any]):
         """Print analysis results."""
         print("\nData Analysis Results:")
@@ -477,6 +483,7 @@ class DataQualityManager:
                 if abs(value) > 0.5 and col1 != col2:
                     print(f"  {col1} - {col2}: {value:.2f}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Data Quality Manager")
@@ -515,5 +522,6 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

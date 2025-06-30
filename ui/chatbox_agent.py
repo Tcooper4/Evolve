@@ -239,16 +239,16 @@ class TextToSpeech:
         """
         if not TTS_AVAILABLE:
             logger.warning("Text-to-speech not available")
-            return {"status": "tts_not_available"}
+            return
         
         try:
             self.engine.say(text)
             self.engine.runAndWait()
             logger.info(f"Spoke: {text}")
-            return {"status": "speech_completed", "text": text}
+            return
         except Exception as e:
             logger.error(f"Error in text-to-speech: {e}")
-            return {"status": "speech_failed", "error": str(e)}
+            return
 
 class CommandParser:
     """Parses natural language into trading commands."""
@@ -738,6 +738,7 @@ class ChatboxAgent:
         """Clear conversation history."""
         self.messages = []
         self.conversation_context = {}
+        return {"status": "conversation_cleared"}
     
     def set_trading_interface(self, trading_interface):
         """Set trading interface."""
@@ -776,4 +777,4 @@ def create_chatbox_agent(enable_voice: bool = True,
         return agent
     except Exception as e:
         logger.error(f"Error creating chatbox agent: {e}")
-        return None 
+        return

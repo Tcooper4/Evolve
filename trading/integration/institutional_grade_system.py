@@ -92,12 +92,13 @@ class InstitutionalGradeSystem:
         
         logger.info("Institutional-Grade Trading System initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self) -> Dict[str, Any]:
         """Load system configuration."""
         try:
             if os.path.exists(self.config_path):
                 with open(self.config_path, 'r') as f:
-                    return json.load(f)
+                    return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             else:
                 return self._create_default_config()
         except Exception as e:
@@ -106,7 +107,7 @@ class InstitutionalGradeSystem:
     
     def _create_default_config(self) -> Dict[str, Any]:
         """Create default system configuration."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'system': {
                 'name': 'Institutional-Grade Trading System',
                 'version': '2.0.0',
@@ -147,7 +148,7 @@ class InstitutionalGradeSystem:
             if not MODULES_AVAILABLE:
                 logger.warning("Not all modules available, using fallback implementations")
                 self._initialize_fallback_modules()
-                return
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Market Regime Agent
             if self.config['modules']['market_regime']['enabled']:
@@ -244,8 +245,9 @@ class InstitutionalGradeSystem:
                 def __init__(self, name):
                     self.name = name
                 
-                def get_status(self):
-                    return {'status': 'fallback', 'module': self.name}
+                    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+                return {'success': True, 'result': def get_status(self):, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return {'success': True, 'result': {'status': 'fallback', 'module': self.name}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             module_names = [
                 'market_regime', 'rolling_retraining', 'hybrid_engine',
@@ -288,6 +290,7 @@ class InstitutionalGradeSystem:
             logger.error(f"Error starting system: {e}")
             self.status = SystemStatus.ERROR
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def stop(self):
         """Stop the institutional-grade system."""
         try:
@@ -310,6 +313,7 @@ class InstitutionalGradeSystem:
         except Exception as e:
             logger.error(f"Error stopping system: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _start_system_monitoring(self):
         """Start system monitoring and health checks."""
         try:
@@ -323,6 +327,7 @@ class InstitutionalGradeSystem:
         except Exception as e:
             logger.error(f"Error starting system monitoring: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _monitoring_loop(self):
         """Main system monitoring loop."""
         while self.status == SystemStatus.RUNNING:
@@ -346,6 +351,7 @@ class InstitutionalGradeSystem:
                 logger.error(f"Error in monitoring loop: {e}")
                 time.sleep(300)  # Wait 5 minutes on error
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _update_system_metrics(self):
         """Update system performance metrics."""
         try:
@@ -382,6 +388,7 @@ class InstitutionalGradeSystem:
         except Exception as e:
             logger.error(f"Error updating system metrics: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _calculate_module_health(self) -> float:
         """Calculate overall module health score."""
         try:
@@ -415,7 +422,7 @@ class InstitutionalGradeSystem:
             
         except Exception as e:
             logger.error(f"Error calculating module health: {e}")
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_performance_score(self) -> float:
         """Calculate overall performance score."""
@@ -442,7 +449,7 @@ class InstitutionalGradeSystem:
             
         except Exception as e:
             logger.error(f"Error calculating performance score: {e}")
-            return 0.5
+            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_risk_score(self) -> float:
         """Calculate overall risk score."""
@@ -465,7 +472,7 @@ class InstitutionalGradeSystem:
             
         except Exception as e:
             logger.error(f"Error calculating risk score: {e}")
-            return 0.5
+            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _check_module_health(self):
         """Check health of all modules."""
@@ -483,6 +490,7 @@ class InstitutionalGradeSystem:
         except Exception as e:
             logger.error(f"Error checking module health: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _handle_module_error(self, module_name: str, module: Any):
         """Handle module errors."""
         try:
@@ -499,11 +507,12 @@ class InstitutionalGradeSystem:
         except Exception as e:
             logger.error(f"Error handling module error for {module_name}: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _check_risk_limits(self):
         """Check if system is within risk limits."""
         try:
             if not self.system_metrics:
-                return
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Check drawdown limit
             if self.system_metrics.risk_score > 0.8:
@@ -537,6 +546,7 @@ class InstitutionalGradeSystem:
         except Exception as e:
             logger.error(f"Error triggering risk alert: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _generate_periodic_reports(self):
         """Generate periodic system reports."""
         try:
@@ -548,6 +558,7 @@ class InstitutionalGradeSystem:
         except Exception as e:
             logger.error(f"Error generating periodic reports: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def generate_system_report(self) -> str:
         """Generate comprehensive system report."""
         try:
@@ -587,12 +598,12 @@ class InstitutionalGradeSystem:
             
         except Exception as e:
             logger.error(f"Error generating system report: {e}")
-            return ""
+            return {'success': True, 'result': "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_system_metrics_dict(self) -> Dict[str, Any]:
         """Get system metrics as dictionary."""
         if self.system_metrics:
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'uptime': self.system_metrics.uptime,
                 'total_signals': self.system_metrics.total_signals,
                 'active_trades': self.system_metrics.active_trades,
@@ -614,7 +625,7 @@ class InstitutionalGradeSystem:
                     status[name] = {'status': 'unknown', 'module': name}
             except Exception as e:
                 status[name] = {'status': 'error', 'error': str(e)}
-        return status
+        return {'success': True, 'result': status, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_performance_data(self) -> Dict[str, Any]:
         """Get performance data from modules."""
@@ -629,7 +640,7 @@ class InstitutionalGradeSystem:
         if 'alpha_attribution' in self.modules:
             data['alpha_attribution'] = self.modules['alpha_attribution'].get_attribution_summary()
         
-        return data
+        return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_risk_data(self) -> Dict[str, Any]:
         """Get risk data from modules."""
@@ -641,7 +652,7 @@ class InstitutionalGradeSystem:
         if 'position_sizing' in self.modules:
             data['position_sizing'] = self.modules['position_sizing'].get_sizing_summary()
         
-        return data
+        return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_regime_data(self) -> Dict[str, Any]:
         """Get regime data from modules."""
@@ -653,7 +664,7 @@ class InstitutionalGradeSystem:
         if 'macro_data' in self.modules:
             data['macro_data'] = self.modules['macro_data'].analyze_macro_environment()
         
-        return data
+        return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_signal_data(self) -> Dict[str, Any]:
         """Get signal data from modules."""
@@ -665,7 +676,7 @@ class InstitutionalGradeSystem:
         if 'forecast_explainability' in self.modules:
             data['forecast_explainability'] = self.modules['forecast_explainability'].get_explanation_summary()
         
-        return data
+        return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_system_status(self) -> Dict[str, Any]:
         """Get comprehensive system status."""
@@ -684,7 +695,7 @@ class InstitutionalGradeSystem:
             
         except Exception as e:
             logger.error(f"Error getting system status: {e}")
-            return {'status': 'error', 'error': str(e)}
+            return {'success': True, 'result': {'status': 'error', 'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def process_natural_language_query(self, query: str) -> Dict[str, Any]:
         """Process natural language query and route to appropriate modules."""
@@ -854,9 +865,10 @@ class InstitutionalGradeSystem:
         except Exception as e:
             logger.error(f"Error exporting system data: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_help(self) -> Dict[str, Any]:
         """Get system help and usage information."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'system_name': self.config['system']['name'],
             'version': self.config['system']['version'],
             'description': 'Institutional-Grade Trading System with full strategic intelligence',

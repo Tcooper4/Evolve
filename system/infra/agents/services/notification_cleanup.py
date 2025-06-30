@@ -361,7 +361,7 @@ class NotificationCleanupService:
             logger.error(f"Error initializing logging: {str(e)}")
             raise
     
-    def _load_user_metrics(self):
+    async def _load_user_metrics(self):
         """Load user metrics from storage."""
         try:
             # Get metrics from persistence

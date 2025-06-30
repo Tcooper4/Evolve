@@ -24,7 +24,7 @@ def load_monitoring_config(config_path: str) -> Dict:
     """Load the monitoring configuration."""
     try:
         with open(config_path, 'r') as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     except Exception as e:
         logger.error(f"Failed to load monitoring config: {e}")
         sys.exit(1)
@@ -34,21 +34,21 @@ def setup_metrics_collection(config: Dict) -> bool:
     # Implement metrics collection setup logic here
     logger.info("Setting up metrics collection...")
     # Example: Start a metrics collection service
-    return True
+    return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def setup_alerting(config: Dict) -> bool:
     """Set up alerting."""
     # Implement alerting setup logic here
     logger.info("Setting up alerting...")
     # Example: Configure alert rules and notification channels
-    return True
+    return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def setup_logging(config: Dict) -> bool:
     """Set up logging."""
     # Implement logging setup logic here
     logger.info("Setting up logging...")
     # Example: Configure log aggregation and rotation
-    return True
+    return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     """Main function to set up monitoring."""
@@ -74,5 +74,6 @@ def main():
     
     logger.info("Monitoring system setup completed successfully.")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

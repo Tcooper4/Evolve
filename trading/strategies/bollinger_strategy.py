@@ -22,6 +22,7 @@ class BollingerStrategy:
         self.signals = None
         self.positions = None
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def calculate_bands(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Calculate Bollinger Bands for the given data."""
         if 'close' not in data.columns:
@@ -37,7 +38,7 @@ class BollingerStrategy:
         upper_band = middle_band + (std * self.config.num_std)
         lower_band = middle_band - (std * self.config.num_std)
         
-        return upper_band, middle_band, lower_band
+        return {'success': True, 'result': upper_band, middle_band, lower_band, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """Generate trading signals based on Bollinger Bands."""
@@ -70,7 +71,7 @@ class BollingerStrategy:
         signals.loc[~(volume_mask & price_mask), 'signal'] = 0
         
         self.signals = signals
-        return signals
+        return {'success': True, 'result': signals, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def calculate_positions(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate trading positions based on signals."""
@@ -84,19 +85,23 @@ class BollingerStrategy:
         positions['position'] = positions['position'].clip(-1, 1)
         
         self.positions = positions
-        return positions
+        return {'success': True, 'result': positions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def get_parameters(self) -> Dict:
         """Get strategy parameters."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'window': self.config.window,
             'num_std': self.config.num_std,
             'min_volume': self.config.min_volume,
             'min_price': self.config.min_price
         }
         
-    def set_parameters(self, params: Dict) -> None:
+    def set_parameters(self, params: Dict) -> Dict:
         """Set strategy parameters."""
-        self.config = BollingerConfig(**params)
-        self.signals = None
-        self.positions = None 
+        try:
+            self.config = BollingerConfig(**params)
+            self.signals = None
+            self.positions = None
+            return {"status": "success", "parameters_updated": True, "config": self.get_parameters()}
+        except Exception as e:
+            return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

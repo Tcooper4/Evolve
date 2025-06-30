@@ -54,6 +54,7 @@ class MetricsService:
         self.running = False
         self.initialize_metrics()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/metrics")
@@ -69,6 +70,7 @@ class MetricsService:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_config(self) -> None:
         """Load configuration."""
         try:
@@ -83,6 +85,7 @@ class MetricsService:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def setup_database(self) -> None:
         """Set up metrics database."""
         try:
@@ -120,6 +123,7 @@ class MetricsService:
             self.logger.error(f"Error setting up database: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def initialize_metrics(self) -> None:
         """Initialize metrics from configuration."""
         try:
@@ -137,6 +141,7 @@ class MetricsService:
             self.logger.error(f"Error initializing metrics: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def record_counter(self, name: str, value: float = 1.0, labels: Optional[Dict[str, str]] = None) -> None:
         """Record a counter metric."""
         try:
@@ -158,6 +163,7 @@ class MetricsService:
             self.logger.error(f"Error recording counter: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def record_gauge(self, name: str, value: float, labels: Optional[Dict[str, str]] = None) -> None:
         """Record a gauge metric."""
         try:
@@ -179,6 +185,7 @@ class MetricsService:
             self.logger.error(f"Error recording gauge: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def record_histogram(self, name: str, value: float, labels: Optional[Dict[str, str]] = None) -> None:
         """Record a histogram metric."""
         try:
@@ -224,6 +231,7 @@ class MetricsService:
             self.logger.error(f"Error recording histogram: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def record_summary(self, name: str, value: float, labels: Optional[Dict[str, str]] = None) -> None:
         """Record a summary metric."""
         try:
@@ -268,6 +276,7 @@ class MetricsService:
             self.logger.error(f"Error recording summary: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def process_metrics_queue(self) -> None:
         """Process metrics from the queue."""
         try:
@@ -291,6 +300,7 @@ class MetricsService:
             self.logger.error(f"Error processing metrics queue: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_metric(self, name: str, start_time: datetime, end_time: datetime) -> List[Dict[str, Any]]:
         """Get metric values for a specific time range."""
         try:
@@ -309,7 +319,7 @@ class MetricsService:
                     'labels': json.loads(row[2]) if row[2] else None
                 })
             
-            return results
+            return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error getting metric: {str(e)}")
             raise
@@ -323,7 +333,7 @@ class MetricsService:
                 ORDER BY metric_name
             ''')
             
-            return [row[0] for row in self.cursor.fetchall()]
+            return {'success': True, 'result': [row[0] for row in self.cursor.fetchall()], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error getting metric names: {str(e)}")
             raise
@@ -344,6 +354,7 @@ class MetricsService:
             self.logger.error(f"Error cleaning up old metrics: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def start(self) -> None:
         """Start metrics collection."""
         try:
@@ -385,6 +396,7 @@ class MetricsService:
         """Stop metrics collection."""
         self.running = False
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main entry point."""
     import argparse
@@ -407,5 +419,6 @@ def main():
         logging.error(f"Error collecting metrics: {str(e)}")
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

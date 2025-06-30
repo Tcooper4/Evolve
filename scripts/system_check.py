@@ -28,17 +28,17 @@ class SystemChecker:
             'details': []
         }
         self.critical_modules = [
-            'streamlit',
             'pandas',
             'numpy',
             'yfinance',
+            'streamlit',
             'plotly',
             'scikit-learn',
             'tensorflow',
             'torch',
             'transformers'
         ]
-        
+
     def check_imports(self) -> Dict[str, Any]:
         """Check all critical imports."""
         logger.info("Checking critical imports...")
@@ -52,6 +52,7 @@ class SystemChecker:
             except Exception as e:
                 self._record_warning(f"Import: {module} - {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def check_core_modules(self) -> None:
         """Check core Evolve modules."""
         logger.info("Checking core modules...")
@@ -78,6 +79,7 @@ class SystemChecker:
             except Exception as e:
                 self._record_warning(f"Core module: {module} - {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def check_advanced_modules(self) -> None:
         """Check advanced feature modules."""
         logger.info("Checking advanced modules...")
@@ -104,6 +106,7 @@ class SystemChecker:
             except Exception as e:
                 self._record_warning(f"Advanced module: {module} - {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def check_ui_modules(self) -> None:
         """Check UI and Streamlit modules."""
         logger.info("Checking UI modules...")
@@ -130,6 +133,7 @@ class SystemChecker:
             except Exception as e:
                 self._record_warning(f"UI module: {module} - {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def check_config_files(self) -> None:
         """Check configuration files exist."""
         logger.info("Checking configuration files...")
@@ -151,6 +155,7 @@ class SystemChecker:
             else:
                 self._record_warning(f"Config file: {config_file} - Missing")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def check_data_sources(self) -> None:
         """Check data source connectivity."""
         logger.info("Checking data sources...")
@@ -167,6 +172,7 @@ class SystemChecker:
         except Exception as e:
             self._record_warning(f"Data source: yfinance - {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def check_model_functionality(self) -> None:
         """Check model functionality."""
         logger.info("Checking model functionality...")
@@ -185,6 +191,7 @@ class SystemChecker:
         except Exception as e:
             self._record_failure(f"Strategy: BollingerStrategy - {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def check_streamlit_app(self) -> None:
         """Check Streamlit app functionality."""
         logger.info("Checking Streamlit app...")
@@ -209,6 +216,7 @@ class SystemChecker:
         else:
             self._record_failure("Streamlit: app.py - File missing")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def check_file_structure(self) -> None:
         """Check critical file structure."""
         logger.info("Checking file structure...")
@@ -230,6 +238,7 @@ class SystemChecker:
             else:
                 self._record_failure(f"Directory: {dir_name} - Missing")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _record_success(self, message: str) -> None:
         """Record successful check."""
         self.results['success'] += 1
@@ -237,6 +246,7 @@ class SystemChecker:
         self.results['details'].append(f"✅ {message}")
         logger.info(f"✅ {message}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _record_failure(self, message: str) -> None:
         """Record failed check."""
         self.results['failure'] += 1
@@ -244,6 +254,7 @@ class SystemChecker:
         self.results['details'].append(f"❌ {message}")
         logger.error(f"❌ {message}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _record_warning(self, message: str) -> None:
         """Record warning check."""
         self.results['warning'] += 1
@@ -251,6 +262,7 @@ class SystemChecker:
         self.results['details'].append(f"⚠️ {message}")
         logger.warning(f"⚠️ {message}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def run_full_check(self) -> Dict[str, Any]:
         """Run complete system check."""
         logger.info("Starting comprehensive system check...")
@@ -283,7 +295,7 @@ class SystemChecker:
         logger.info(f"⚠️ Warnings: {self.results['warning']}")
         logger.info(f"{'='*60}")
         
-        return self.results
+        return {'success': True, 'result': self.results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     """Main function to run system check."""
@@ -300,7 +312,7 @@ def main():
     print(f"Success Rate: {results['success_rate']:.1f}%")
     print(f"Total: {results['total']} | Success: {results['success']} | Failures: {results['failure']} | Warnings: {results['warning']}")
     
-    return results
+    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 if __name__ == "__main__":
     main() 

@@ -19,6 +19,7 @@ class UnifiedRouter:
         self.operational_router = OperationalRouter()
         self.logger = logging.getLogger(__name__)
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def route_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """Route a task to either cognitive or operational handling.
         
@@ -63,7 +64,7 @@ class UnifiedRouter:
                         'result': cognitive_result
                     }
                 else:
-                    return {
+                    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                         'status': 'success',
                         'router': 'operational',
                         'result': operational_result
@@ -85,7 +86,7 @@ class UnifiedRouter:
         Returns:
             Dict containing routing information
         """
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'cognitive_handlers': self.cognitive_router.get_handlers(),
             'operational_handlers': self.operational_router.get_handlers(),
             'suggested_router': 'cognitive' if task_type in ['planning', 'decision', 'learning', 'goal']
@@ -110,3 +111,4 @@ class UnifiedRouter:
             self.operational_router.register_handler(task_type, handler)
             
         self.logger.info(f"Registered handler for {task_type} with {router} router") 
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

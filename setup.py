@@ -4,12 +4,12 @@ from typing import List
 def read_file(filename: str) -> str:
     """Read file contents as string."""
     with open(filename, "r", encoding="utf-8") as fh:
-        return fh.read()
+        return {'success': True, 'result': fh.read(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def read_requirements(filename: str) -> List[str]:
     """Read requirements from file, filtering out comments and empty lines."""
     with open(filename, "r", encoding="utf-8") as fh:
-        return [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+        return {'success': True, 'result': [line.strip() for line in fh if line.strip() and not line.startswith("#")], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 # Read project files
 long_description = read_file("README.md")

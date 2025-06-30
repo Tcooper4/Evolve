@@ -22,6 +22,7 @@ class NotificationHandler:
         self.config = config
         self.setup_logging()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for notification handler."""
         log_path = Path("logs/notifications")
@@ -37,6 +38,7 @@ class NotificationHandler:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification."""
         raise NotImplementedError
@@ -51,6 +53,7 @@ class SlackHandler(NotificationHandler):
         if not self.webhook_url:
             raise ValueError("Slack webhook URL not configured")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification to Slack."""
         try:
@@ -81,6 +84,7 @@ class WebhookHandler(NotificationHandler):
         if not self.webhook_url:
             raise ValueError("Webhook URL not configured")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification via webhook."""
         try:
@@ -114,6 +118,7 @@ class EmailHandler(NotificationHandler):
         if not all([self.smtp_host, self.smtp_port, self.smtp_user, self.smtp_password]):
             raise ValueError("SMTP configuration incomplete")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification via email."""
         try:
@@ -127,6 +132,7 @@ class EmailHandler(NotificationHandler):
     def send_email(self, *args, **kwargs):
         raise NotImplementedError('Pending feature')
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class NotificationHandlerFactory:
     """Factory for creating notification handlers."""
     
@@ -143,4 +149,4 @@ class NotificationHandlerFactory:
         if not handler_class:
             raise ValueError(f"Unsupported handler type: {handler_type}")
         
-        return handler_class(config) 
+        return {'success': True, 'result': handler_class(config), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

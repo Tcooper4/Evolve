@@ -87,6 +87,7 @@ class ModelBuilderAgent(BaseAgent):
         
         self.logger.info("ModelBuilderAgent initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the model building logic.
         
@@ -162,7 +163,7 @@ class ModelBuilderAgent(BaseAgent):
         
         # Validate data path exists
         if not Path(request.data_path).exists():
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return True
     
@@ -502,6 +503,7 @@ class ModelBuilderAgent(BaseAgent):
         
         self.memory.store_model_metadata(result.model_id, metadata)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_model_status(self, model_id: str) -> Optional[ModelBuildResult]:
         """Get status of a specific model.
         
@@ -554,4 +556,13 @@ class ModelBuilderAgent(BaseAgent):
                 cleaned_count += 1
         
         self.logger.info(f"Cleaned up {cleaned_count} old models")
-        return cleaned_count 
+        return cleaned_count
+
+    def get_agent_status(self):
+        """Get current agent status"""
+        return {
+            'status': 'active',
+            'last_update': datetime.now().isoformat(),
+            'models_built': len(self.model_registry),
+            'current_model': self.model_registry.get(list(self.model_registry.keys())[-1]) if self.model_registry else None
+        }

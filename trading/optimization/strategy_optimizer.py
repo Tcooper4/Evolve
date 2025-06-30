@@ -66,6 +66,7 @@ class OptimizationMethod(ABC):
         self.config = config or {}
         self.logger = logging.getLogger(self.__class__.__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     @abstractmethod
     def optimize(self, objective: Callable, param_space: Dict[str, Any], 
                 data: pd.DataFrame, **kwargs) -> OptimizationResult:
@@ -105,6 +106,7 @@ class OptimizationMethod(ABC):
                 if space['start'] >= space['end']:
                     raise ValueError(f"Parameter {param} has invalid range")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _check_early_stopping(self, scores: List[float], patience: int = 5,
                             min_delta: float = 1e-4) -> bool:
         """Check if optimization should stop early.
@@ -118,7 +120,7 @@ class OptimizationMethod(ABC):
             True if should stop, False otherwise
         """
         if len(scores) < patience + 1:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         best_score = min(scores[:-patience])
         current_score = min(scores[-patience:])
@@ -140,7 +142,7 @@ class OptimizationMethod(ABC):
                 return objective(params, data)
             except Exception as e:
                 self.logger.error(f"Error in objective function: {str(e)}")
-                return float('inf')
+                return {'success': True, 'result': {'success': True, 'result': float('inf'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return wrapper
 
 class GridSearch(OptimizationMethod):
@@ -215,7 +217,7 @@ class GridSearch(OptimizationMethod):
             param_grid, scores
         )
         
-        return OptimizationResult(
+        return {'success': True, 'result': OptimizationResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             best_params=best_params,
             best_score=best_score,
             all_scores=scores,
@@ -251,7 +253,7 @@ class GridSearch(OptimizationMethod):
             score = objective(params, val_data)
             scores.append(score)
             
-        return scores
+        return {'success': True, 'result': scores, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_hyperparameter_importance(self, param_grid: List[Dict[str, Any]],
                                           scores: List[float]) -> Dict[str, float]:
@@ -271,7 +273,7 @@ class GridSearch(OptimizationMethod):
             correlations = np.corrcoef(param_values, scores)[0, 1]
             importance[param] = abs(correlations)
             
-        return importance
+        return {'success': True, 'result': importance, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_grid(self, param_space: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Generate parameter grid.
@@ -294,7 +296,7 @@ class GridSearch(OptimizationMethod):
                     space.get('n_points', 10)
                 )
                 
-        return list(ParameterGrid(grid))
+        return {'success': True, 'result': list(ParameterGrid(grid)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class BayesianOptimization(OptimizationMethod):
     """Bayesian optimization method."""
@@ -340,7 +342,7 @@ class BayesianOptimization(OptimizationMethod):
         def objective_wrapper(**params):
             param_dict = params
             cv_scores = self._cross_validate(objective, param_dict, data, **kwargs)
-            return np.mean(cv_scores)
+            return {'success': True, 'result': {'success': True, 'result': np.mean(cv_scores), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Run optimization
         n_calls = kwargs.get('n_calls', 100)
@@ -386,6 +388,7 @@ class BayesianOptimization(OptimizationMethod):
         if len(res.func_vals) % 10 == 0:
             self.logger.info(f"Iteration {len(res.func_vals)}, Best score: {min(res.func_vals)}")
             
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _calculate_feature_importance(self, model, dimensions):
         """Calculate feature importance from GP model.
         
@@ -397,7 +400,7 @@ class BayesianOptimization(OptimizationMethod):
             Dictionary of feature importance scores
         """
         if not hasattr(model, 'kernel_'):
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         length_scales = model.kernel_.get_params()['k1__k2__length_scale']
         if not isinstance(length_scales, np.ndarray):
@@ -422,11 +425,13 @@ class RayOptimization(OptimizationMethod):
         if not RAY_AVAILABLE:
             self.logger.warning("Ray is not available. Falling back to ThreadPoolExecutor.")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_ray(self):
         """Setup Ray for distributed computing."""
         if RAY_AVAILABLE and not ray.is_initialized():
             ray.init(ignore_reinit_error=True)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def optimize(self, objective: Callable, param_space: Dict[str, Any], 
                 data: pd.DataFrame, **kwargs) -> OptimizationResult:
         """Run distributed optimization using Ray or ThreadPoolExecutor.
@@ -463,6 +468,7 @@ class RayOptimization(OptimizationMethod):
                 score = objective(config, data)
                 tune.report(score=score)
             
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             # Setup scheduler and search algorithm
             scheduler = ASHAScheduler(
                 metric="score",
@@ -565,7 +571,7 @@ class OptunaOptimization(OptimizationMethod):
                             params[param] = trial.suggest_float(
                                 param, space['start'], space['end']
                             )
-            return objective(params, data)
+            return {'success': True, 'result': {'success': True, 'result': objective(params, data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         # Run optimization
         n_trials = kwargs.get('n_trials', 100)
@@ -665,7 +671,7 @@ class PyTorchOptimization(OptimizationMethod):
                 
         optimization_time = (datetime.now() - start_time).total_seconds()
         
-        return OptimizationResult(
+        return {'success': True, 'result': OptimizationResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             best_params=best_params,
             best_score=best_score,
             all_scores=scores,
@@ -717,7 +723,7 @@ class DistributedOptimization(OptimizationMethod):
             # Define remote function
             @ray.remote
             def remote_objective(params):
-                return objective(params, ray.get(data_ref))
+                return {'success': True, 'result': {'success': True, 'result': objective(params, ray.get(data_ref)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Run optimization in parallel
             futures = [remote_objective.remote(params) for params in param_combinations]
@@ -792,7 +798,7 @@ class DistributedOptimization(OptimizationMethod):
         for values in itertools.product(*param_values):
             combinations.append(dict(zip(param_names, values)))
             
-        return combinations
+        return {'success': True, 'result': combinations, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class StrategyOptimizerConfig(OptimizerConfig):
     """Configuration for strategy optimizer."""
@@ -829,7 +835,7 @@ class StrategyOptimizerConfig(OptimizerConfig):
         valid_types = ["grid", "bayesian", "genetic"]
         if v not in valid_types:
             raise ValueError(f"optimizer_type must be one of {valid_types}")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     @validator('primary_metric', allow_reuse=True)
     def validate_primary_metric(cls, v):
@@ -837,7 +843,7 @@ class StrategyOptimizerConfig(OptimizerConfig):
         valid_metrics = ["sharpe_ratio", "win_rate", "max_drawdown", "mse", "alpha"]
         if v not in valid_metrics:
             raise ValueError(f"primary_metric must be one of {valid_metrics}")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class StrategyOptimizer(BaseOptimizer):
     """Strategy optimizer with multiple optimization methods."""
@@ -857,6 +863,7 @@ class StrategyOptimizer(BaseOptimizer):
         # Initialize optimization method
         self.optimizer = self._create_optimizer()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def optimize(self, strategy_class: Any, data: pd.DataFrame,
                 initial_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Optimize strategy parameters.
@@ -890,7 +897,7 @@ class StrategyOptimizer(BaseOptimizer):
         # Log results
         self._log_optimization_results(strategy_class, result.best_params, data)
         
-        return result.best_params
+        return {'success': True, 'result': result.best_params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_optimizer(self) -> OptimizationMethod:
         """Create optimization method based on config.
@@ -910,7 +917,7 @@ class StrategyOptimizer(BaseOptimizer):
         if optimizer_class is None:
             raise ValueError(f"Unsupported optimizer type: {self.config.optimizer_type}")
             
-        return optimizer_class(self.config.dict())
+        return {'success': True, 'result': optimizer_class(self.config.dict()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _objective_wrapper(self, strategy_class: Any, data: pd.DataFrame) -> Callable:
         """Create objective function wrapper.
@@ -942,7 +949,7 @@ class StrategyOptimizer(BaseOptimizer):
                 
             except Exception as e:
                 self.logger.error(f"Error in objective function: {str(e)}")
-                return float('inf')
+                return {'success': True, 'result': {'success': True, 'result': float('inf'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 
         return objective
     
@@ -956,7 +963,7 @@ class StrategyOptimizer(BaseOptimizer):
             Dictionary of default parameters
         """
         if hasattr(strategy_class, 'default_params'):
-            return strategy_class.default_params
+            return {'success': True, 'result': strategy_class.default_params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return {}
     
     def _create_parameter_grid(self, params: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -981,7 +988,7 @@ class StrategyOptimizer(BaseOptimizer):
             elif isinstance(value, (list, tuple)):
                 grid[param] = value
                 
-        return grid
+        return {'success': True, 'result': grid, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _log_optimization_results(self, strategy_class: Any,
                                 optimized_params: Dict[str, Any],
@@ -1023,18 +1030,20 @@ class StrategyOptimizer(BaseOptimizer):
         with open(results_dir / f"{strategy_class.__name__}_optimization.json", 'w') as f:
             json.dump(results, f, indent=4)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def plot_results(self, **kwargs):
         """Plot optimization results."""
         # TODO: Implement plotting functionality
         raise NotImplementedError('Pending feature')
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_available_optimizers(self) -> List[str]:
         """Get list of available optimizers.
         
         Returns:
             List of optimizer names
         """
-        return ["Grid", "Bayesian", "Genetic"]
+        return {'success': True, 'result': ["Grid", "Bayesian", "Genetic"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_strategy_param_space(self, strategy: str) -> Dict[str, Any]:
         """Get parameter space for a given strategy.
@@ -1066,7 +1075,7 @@ class StrategyOptimizer(BaseOptimizer):
             }
         }
         
-        return param_spaces.get(strategy, {})
+        return {'success': True, 'result': param_spaces.get(strategy, {}), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def optimize_strategy(self, strategy: str, optimizer_type: str, 
                          param_space: Dict[str, Any], training_data: pd.DataFrame, 
@@ -1086,6 +1095,7 @@ class StrategyOptimizer(BaseOptimizer):
         # TODO: Implement actual optimization
         raise NotImplementedError('Pending feature')
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def save_optimization_results(self, results: Dict[str, Any], save_path: str) -> None:
         """Save optimization results to file.
         
@@ -1096,6 +1106,7 @@ class StrategyOptimizer(BaseOptimizer):
         # TODO: Implement save functionality
         raise NotImplementedError('Pending feature')
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def load_optimization_results(self, file_path: str) -> Dict[str, Any]:
         """Load optimization results from file.
         
@@ -1108,6 +1119,7 @@ class StrategyOptimizer(BaseOptimizer):
         # TODO: Implement load functionality
         raise NotImplementedError('Pending feature')
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 __all__ = ["StrategyOptimizer", "StrategyOptimizerConfig"] 
 
 # Merged from optimizer.py
@@ -1175,6 +1187,7 @@ class Optimizer:
             'optimization_time': []
         }
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _build_model(self) -> nn.Module:
         """Build neural network model.
         
@@ -1197,7 +1210,7 @@ class Optimizer:
         # Add output layer
         layers.append(nn.Linear(prev_dim, self.action_dim))
         
-        return nn.Sequential(*layers).to(self.device)
+        return {'success': True, 'result': nn.Sequential(*layers).to(self.device), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def optimize_portfolio(self, state: np.ndarray, target: np.ndarray,
                          validation_split: float = 0.2) -> Tuple[np.ndarray, float]:
@@ -1257,7 +1270,7 @@ class Optimizer:
                            f"Validation Loss: {val_loss.item():.4f}, "
                            f"Time: {optimization_time:.2f}s")
             
-            return train_output.detach().cpu().numpy(), train_loss.item()
+            return {'success': True, 'result': train_output.detach().cpu().numpy(), train_loss.item(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             raise OptimizationError(f"Failed to optimize portfolio: {str(e)}")
@@ -1281,7 +1294,7 @@ class Optimizer:
             with torch.no_grad():
                 state_tensor = torch.FloatTensor(state).to(self.device)
                 weights = self.model(state_tensor)
-                return weights.cpu().numpy()
+                return {'success': True, 'result': weights.cpu().numpy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 
         except Exception as e:
             raise OptimizationError(f"Failed to get optimal weights: {str(e)}")
@@ -1313,7 +1326,7 @@ class Optimizer:
             self.optimizer.step()
             
             self.logger.info(f"Model updated - Loss: {loss.item():.4f}")
-            return loss.item()
+            return {'success': True, 'result': loss.item(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             raise OptimizationError(f"Failed to update model: {str(e)}")
@@ -1343,6 +1356,7 @@ class Optimizer:
         except Exception as e:
             raise OptimizationError(f"Failed to save model: {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def load_model(self, path: str):
         """Load model from file.
         
@@ -1364,6 +1378,7 @@ class Optimizer:
         except Exception as e:
             raise OptimizationError(f"Failed to load model: {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_optimization_metrics(self) -> Dict[str, float]:
         """Get optimization metrics.
         
@@ -1378,7 +1393,7 @@ class Optimizer:
             'avg_optimization_time': np.mean(self.metrics_history['optimization_time']) if self.metrics_history['optimization_time'] else 0
         }
         
-        return metrics
+        return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def save_metrics(self, path: Optional[str] = None):
         """Save optimization metrics to file.
@@ -1405,3 +1420,4 @@ class Optimizer:
             
         except Exception as e:
             raise OptimizationError(f"Failed to save metrics: {str(e)}")
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

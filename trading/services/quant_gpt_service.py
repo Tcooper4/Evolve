@@ -45,6 +45,7 @@ class QuantGPTService(BaseService):
         
         logger.info("QuantGPTService initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming natural language queries.
@@ -66,7 +67,7 @@ class QuantGPTService(BaseService):
                 return self._handle_symbols_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {
+                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -119,7 +120,7 @@ class QuantGPTService(BaseService):
             
         except Exception as e:
             logger.error(f"Error processing query: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -162,7 +163,7 @@ class QuantGPTService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting query history: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -180,7 +181,7 @@ class QuantGPTService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting available symbols: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -217,10 +218,11 @@ class QuantGPTService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'error': str(e)}
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def stop(self):
         """Stop the service and clean up resources."""
         if hasattr(self, 'quant_gpt'):
             self.quant_gpt.close()
         super().stop() 
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

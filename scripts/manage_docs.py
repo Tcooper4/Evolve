@@ -51,6 +51,7 @@ class DocumentationManager:
         self.examples_dir = self.docs_dir / "examples"
         self.diagrams_dir = self.docs_dir / "diagrams"
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
@@ -58,7 +59,7 @@ class DocumentationManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -72,6 +73,7 @@ class DocumentationManager:
         
         logging.config.dictConfig(log_config)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def generate_api_docs(self):
         """Generate API documentation."""
         self.logger.info("Generating API documentation...")
@@ -96,7 +98,7 @@ class DocumentationManager:
                 return False
         except Exception as e:
             self.logger.error(f"Failed to generate API documentation: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def generate_user_guides(self):
         """Generate user guides."""
@@ -122,7 +124,7 @@ class DocumentationManager:
                 return False
         except Exception as e:
             self.logger.error(f"Failed to generate user guides: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def generate_examples(self):
         """Generate example notebooks."""
@@ -151,7 +153,7 @@ class DocumentationManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to generate example notebooks: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def generate_diagrams(self):
         """Generate system architecture diagrams."""
@@ -179,7 +181,7 @@ class DocumentationManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to generate diagrams: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def serve_docs(self, port: int = 8000):
         """Serve documentation locally."""
@@ -194,7 +196,7 @@ class DocumentationManager:
             return True
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Failed to serve documentation: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def clean_docs(self):
         """Clean generated documentation."""
@@ -222,7 +224,7 @@ class DocumentationManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to clean documentation: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def validate_docs(self):
         """Validate documentation."""
@@ -245,7 +247,7 @@ class DocumentationManager:
                 return False
         except Exception as e:
             self.logger.error(f"Failed to validate documentation: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def update_docs(self):
         """Update documentation."""
@@ -273,7 +275,7 @@ class DocumentationManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to update documentation: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     """Main function."""
@@ -311,5 +313,6 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

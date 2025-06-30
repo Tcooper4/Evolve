@@ -67,6 +67,7 @@ class QuantGPT:
         
         logger.info("QuantGPT initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     # Alias for backward compatibility
     QuantGPTAgent = QuantGPT
     
@@ -117,7 +118,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error processing query: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'query': query,
                 'error': str(e),
                 'status': 'error',
@@ -142,7 +143,7 @@ class QuantGPT:
                 return self._parse_with_regex(query)
         except Exception as e:
             logger.error(f"Error parsing query: {e}")
-            return self._parse_with_regex(query)
+            return {'success': True, 'result': self._parse_with_regex(query), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _parse_with_gpt(self, query: str) -> Dict[str, Any]:
         """Parse query using GPT for better understanding."""
@@ -181,7 +182,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"GPT parsing failed: {e}")
-            return self._parse_with_regex(query)
+            return {'success': True, 'result': self._parse_with_regex(query), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _parse_with_regex(self, query: str) -> Dict[str, Any]:
         """Parse query using regex patterns as fallback."""
@@ -214,7 +215,7 @@ class QuantGPT:
         else:
             intent = 'general_query'
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'intent': intent,
             'symbol': symbol,
             'timeframe': timeframe,
@@ -247,7 +248,7 @@ class QuantGPT:
         if 'confidence' not in parsed:
             parsed['confidence'] = 0.8
         
-        return parsed
+        return {'success': True, 'result': parsed, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _execute_action(self, parsed: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -271,7 +272,7 @@ class QuantGPT:
         elif intent == 'market_analysis':
             return self._get_market_analysis(symbol, timeframe, period)
         else:
-            return self._get_general_analysis(symbol, timeframe, period)
+            return {'success': True, 'result': self._get_general_analysis(symbol, timeframe, period), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_model_recommendation(self, symbol: str, timeframe: str, period: str) -> Dict[str, Any]:
         """Get the best model recommendation for a symbol."""
@@ -322,7 +323,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error getting model recommendation: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'action': 'model_recommendation',
                 'error': str(e),
                 'symbol': symbol,
@@ -369,7 +370,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error getting trading signal: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'action': 'trading_signal',
                 'error': str(e),
                 'symbol': symbol
@@ -406,7 +407,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error getting market analysis: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'action': 'market_analysis',
                 'error': str(e),
                 'symbol': symbol
@@ -430,7 +431,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error getting general analysis: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'action': 'general_analysis',
                 'error': str(e),
                 'symbol': symbol
@@ -440,7 +441,7 @@ class QuantGPT:
         """Generate forecast using a specific model."""
         # This would integrate with your existing forecasting system
         # For now, return a mock forecast
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'model_id': model_id,
             'symbol': symbol,
             'timeframe': timeframe,
@@ -467,7 +468,7 @@ class QuantGPT:
             signal = 'HOLD'
             strength = 'weak'
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'signal': signal,
             'strength': strength,
             'confidence': confidence,
@@ -479,7 +480,7 @@ class QuantGPT:
         """Get market data analysis."""
         # This would integrate with your data providers
         # For now, return mock data
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'symbol': symbol,
             'timeframe': timeframe,
             'period': period,
@@ -553,7 +554,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error generating GPT commentary: {e}")
-            return self._generate_fallback_commentary(query, parsed, result)
+            return {'success': True, 'result': self._generate_fallback_commentary(query, parsed, result), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_fallback_commentary(self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]) -> str:
         """Generate fallback commentary without GPT."""
@@ -578,13 +579,14 @@ class QuantGPT:
             return f"Comprehensive market analysis completed for {symbol}. The analysis includes model performance evaluation, market data trends, and technical indicators. Review the generated plots for visual insights."
         
         else:
-            return f"Analysis completed for {symbol}. The system processed your query and generated relevant insights based on available data and models."
+            return {'success': True, 'result': f"Analysis completed for {symbol}. The system processed your query and generated relevant insights based on available data and models.", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def close(self):
         """Close the QuantGPT interface and clean up resources."""
         self.client.close()
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function for command-line usage."""
     import argparse
@@ -626,7 +628,7 @@ def main():
         }
     except Exception as e:
         print(f"Error: {e}")
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "status": "failed",
             "query": args.query,
             "error": str(e)

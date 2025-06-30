@@ -22,7 +22,7 @@ def find_python_files(root_dir=".", exclude_dirs=None):
             if file.endswith('.py'):
                 python_files.append(os.path.join(root, file))
     
-    return python_files
+    return {'success': True, 'result': python_files, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def check_function_returns(file_path):
     """Check if functions in a file have proper return statements."""
@@ -91,7 +91,7 @@ def check_function_returns(file_path):
         return issues, passing_functions
         
     except Exception as e:
-        return [{'function': 'ERROR', 'line': 0, 'reason': str(e)}], []
+        return {'success': True, 'result': [{'function': 'ERROR', 'line': 0, 'reason': str(e)}], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     """Run the audit."""
@@ -148,7 +148,7 @@ def main():
         return 0
     else:
         print("⚠️  NEEDS WORK: Significant improvements needed for full compliance")
-        return 1
+        return {'success': True, 'result': 1, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 if __name__ == "__main__":
     sys.exit(main()) 

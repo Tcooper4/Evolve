@@ -14,61 +14,79 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def initialize_session_state() -> None:
+def initialize_session_state() -> Dict[str, Any]:
     """Initialize Streamlit session state with core components.
     
     This function sets up all necessary session state variables with safe defaults.
     It should be called at the beginning of each page to ensure consistent state.
+    
+    Returns:
+        Dictionary containing initialization status and metadata
     """
-    # Core session state variables
-    if 'last_updated' not in st.session_state:
-        st.session_state.last_updated = datetime.now()
-    
-    # Date range defaults
-    if 'start_date' not in st.session_state:
-        st.session_state.start_date = datetime.now().date() - timedelta(days=30)
-    if 'end_date' not in st.session_state:
-        st.session_state.end_date = datetime.now().date()
-    
-    # Ticker and model selection
-    if 'selected_ticker' not in st.session_state:
-        st.session_state.selected_ticker = 'AAPL'
-    if 'selected_model' not in st.session_state:
-        st.session_state.selected_model = 'LSTM'
-    
-    # Data storage
-    if 'forecast_data' not in st.session_state:
-        st.session_state.forecast_data = None
-    if 'market_analysis' not in st.session_state:
-        st.session_state.market_analysis = None
-    
-    # Portfolio management
-    if 'portfolio_manager' not in st.session_state:
-        st.session_state.portfolio_manager = None
-    
-    # Performance tracking
-    if 'performance_data' not in st.session_state:
-        st.session_state.performance_data = None
-    if 'strategy_history' not in st.session_state:
-        st.session_state.strategy_history = None
-    
-    # Risk management
-    if 'risk_metrics' not in st.session_state:
-        st.session_state.risk_metrics = None
-    
-    # UI state
-    if 'sidebar_expanded' not in st.session_state:
-        st.session_state.sidebar_expanded = True
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = 'home'
-    
-    # API and external services
-    if 'api_connected' not in st.session_state:
-        st.session_state.api_connected = False
-    if 'redis_connected' not in st.session_state:
-        st.session_state.redis_connected = False
-    
-    logger.debug("Session state initialized successfully")
+    try:
+        # Core session state variables
+        if 'last_updated' not in st.session_state:
+            st.session_state.last_updated = datetime.now()
+        
+        # Date range defaults
+        if 'start_date' not in st.session_state:
+            st.session_state.start_date = datetime.now().date() - timedelta(days=30)
+        if 'end_date' not in st.session_state:
+            st.session_state.end_date = datetime.now().date()
+        
+        # Ticker and model selection
+        if 'selected_ticker' not in st.session_state:
+            st.session_state.selected_ticker = 'AAPL'
+        if 'selected_model' not in st.session_state:
+            st.session_state.selected_model = 'LSTM'
+        
+        # Data storage
+        if 'forecast_data' not in st.session_state:
+            st.session_state.forecast_data = None
+        if 'market_analysis' not in st.session_state:
+            st.session_state.market_analysis = None
+        
+        # Portfolio management
+        if 'portfolio_manager' not in st.session_state:
+            st.session_state.portfolio_manager = None
+        
+        # Performance tracking
+        if 'performance_data' not in st.session_state:
+            st.session_state.performance_data = None
+        if 'strategy_history' not in st.session_state:
+            st.session_state.strategy_history = None
+        
+        # Risk management
+        if 'risk_metrics' not in st.session_state:
+            st.session_state.risk_metrics = None
+        
+        # UI state
+        if 'sidebar_expanded' not in st.session_state:
+            st.session_state.sidebar_expanded = True
+        if 'current_page' not in st.session_state:
+            st.session_state.current_page = 'home'
+        
+        # API and external services
+        if 'api_connected' not in st.session_state:
+            st.session_state.api_connected = False
+        if 'redis_connected' not in st.session_state:
+            st.session_state.redis_connected = False
+        
+        logger.debug("Session state initialized successfully")
+        
+        return {
+            'success': True,
+            'message': 'Session state initialized successfully',
+            'timestamp': datetime.now().isoformat(),
+            'variables_initialized': len(st.session_state)
+        }
+    except Exception as e:
+        logger.error(f"Error initializing session state: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
 
 
 def initialize_system_modules() -> Dict[str, Any]:
@@ -135,37 +153,57 @@ def initialize_system_modules() -> Dict[str, Any]:
     return module_status
 
 
-def display_system_status(module_status: Dict[str, Any]) -> None:
+def display_system_status(module_status: Dict[str, Any]) -> Dict[str, Any]:
     """Display system status information in the Streamlit interface.
     
     Args:
         module_status: Dictionary containing module initialization status
+        
+    Returns:
+        Dictionary containing display status and metadata
     """
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🔧 System Status")
-    
-    # Count successes and failures
-    success_count = sum(1 for status in module_status.values() if status == 'SUCCESS')
-    failed_count = sum(1 for status in module_status.values() if 'FAILED' in str(status))
-    total_count = len(module_status)
-    
-    # Overall status
-    if failed_count == 0:
-        st.sidebar.success(f"✅ All systems operational ({success_count}/{total_count})")
-    else:
-        st.sidebar.warning(f"⚠️ System issues detected ({failed_count} failed, {success_count} operational)")
-    
-    # Detailed status
-    with st.sidebar.expander("📊 Module Details"):
-        for module, status in module_status.items():
-            if status == 'SUCCESS':
-                st.success(f"✅ {module.replace('_', ' ').title()}")
-            else:
-                st.error(f"❌ {module.replace('_', ' ').title()}: {status}")
-    
-    # Last updated timestamp
-    if 'last_updated' in st.session_state:
-        st.sidebar.caption(f"Last updated: {st.session_state.last_updated.strftime('%H:%M:%S')}")
+    try:
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🔧 System Status")
+        
+        # Count successes and failures
+        success_count = sum(1 for status in module_status.values() if status == 'SUCCESS')
+        failed_count = sum(1 for status in module_status.values() if 'FAILED' in str(status))
+        total_count = len(module_status)
+        
+        # Overall status
+        if failed_count == 0:
+            st.sidebar.success(f"✅ All systems operational ({success_count}/{total_count})")
+        else:
+            st.sidebar.warning(f"⚠️ System issues detected ({failed_count} failed, {success_count} operational)")
+        
+        # Detailed status
+        with st.sidebar.expander("📊 Module Details"):
+            for module, status in module_status.items():
+                if status == 'SUCCESS':
+                    st.success(f"✅ {module.replace('_', ' ').title()}")
+                else:
+                    st.error(f"❌ {module.replace('_', ' ').title()}: {status}")
+        
+        # Last updated timestamp
+        if 'last_updated' in st.session_state:
+            st.sidebar.caption(f"Last updated: {st.session_state.last_updated.strftime('%H:%M:%S')}")
+        
+        return {
+            'success': True,
+            'message': f'System status displayed: {success_count}/{total_count} operational',
+            'timestamp': datetime.now().isoformat(),
+            'success_count': success_count,
+            'failed_count': failed_count,
+            'total_count': total_count
+        }
+    except Exception as e:
+        logger.error(f"Error displaying system status: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
 
 
 def safe_session_get(key: str, default: Any = None) -> Any:
@@ -184,18 +222,56 @@ def safe_session_get(key: str, default: Any = None) -> Any:
     return st.session_state[key]
 
 
-def safe_session_set(key: str, value: Any) -> None:
+def safe_session_set(key: str, value: Any) -> Dict[str, Any]:
     """Safely set a value in session state with logging.
     
     Args:
         key: Session state key to set
         value: Value to store in session state
+        
+    Returns:
+        Dictionary containing operation status and metadata
     """
-    st.session_state[key] = value
-    logger.debug(f"Session state key '{key}' set to: {value}")
+    try:
+        st.session_state[key] = value
+        logger.debug(f"Session state key '{key}' set to: {value}")
+        
+        return {
+            'success': True,
+            'message': f'Session state key "{key}" set successfully',
+            'timestamp': datetime.now().isoformat(),
+            'key': key,
+            'value_type': type(value).__name__
+        }
+    except Exception as e:
+        logger.error(f"Error setting session state key '{key}': {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat(),
+            'key': key
+        }
 
 
-def update_last_updated() -> None:
-    """Update the last_updated timestamp in session state."""
-    st.session_state.last_updated = datetime.now()
-    logger.debug("Last updated timestamp refreshed") 
+def update_last_updated() -> Dict[str, Any]:
+    """Update the last_updated timestamp in session state.
+    
+    Returns:
+        Dictionary containing operation status and metadata
+    """
+    try:
+        st.session_state.last_updated = datetime.now()
+        logger.debug("Last updated timestamp refreshed")
+        
+        return {
+            'success': True,
+            'message': 'Last updated timestamp refreshed',
+            'timestamp': datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error updating last_updated timestamp: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }

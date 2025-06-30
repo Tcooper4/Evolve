@@ -343,7 +343,7 @@ class SelfTuningOptimizerAgent:
             
         except Exception as e:
             self.logger.error(f"Error optimizing strategy parameters: {str(e)}")
-            raise
+            return False
     
     def _get_parameter_constraints(self, strategy_name: str) -> List[ParameterConstraint]:
         """Get parameter constraints for a strategy."""
@@ -683,4 +683,4 @@ class SelfTuningOptimizerAgent:
             })
             
         except Exception as e:
-            self.logger.error(f"Error setting parameter constraints: {str(e)}") 
+            self.logger.error(f"Error setting parameter constraints: {str(e)}")

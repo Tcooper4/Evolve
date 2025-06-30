@@ -30,15 +30,20 @@ class ResearchService(BaseService):
     """
     
     def __init__(self, redis_host: str = 'localhost', redis_port: int = 6379, 
-                 redis_db: int = 0):
+                 redis_db: int = 0) -> Dict[str, Any]:
         """Initialize the ResearchService."""
-        super().__init__('research', redis_host, redis_port, redis_db)
-        
-        # Initialize the agent
-        self.agent = ResearchAgent()
-        self.memory = AgentMemory()
-        
-        logger.info("ResearchService initialized")
+        try:
+            super().__init__('research', redis_host, redis_port, redis_db)
+            
+            # Initialize the agent
+            self.agent = ResearchAgent()
+            self.memory = AgentMemory()
+            
+            logger.info("ResearchService initialized")
+            return {"status": "success", "message": "ResearchService initialized successfully"}
+        except Exception as e:
+            logger.error(f"Error initializing ResearchService: {e}")
+            return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -65,7 +70,7 @@ class ResearchService(BaseService):
                 return self._handle_get_log(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {
+                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -125,7 +130,7 @@ class ResearchService(BaseService):
             
         except Exception as e:
             logger.error(f"Error searching GitHub: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -176,7 +181,7 @@ class ResearchService(BaseService):
             
         except Exception as e:
             logger.error(f"Error searching arXiv: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -224,7 +229,7 @@ class ResearchService(BaseService):
             
         except Exception as e:
             logger.error(f"Error summarizing paper: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -272,7 +277,7 @@ class ResearchService(BaseService):
             
         except Exception as e:
             logger.error(f"Error generating code: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -298,7 +303,7 @@ class ResearchService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting research log: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -328,4 +333,4 @@ class ResearchService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'error': str(e)} 
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

@@ -34,7 +34,7 @@ class ModelRegistry:
                 with open(self.registry_path, 'r') as f:
                     return json.load(f)
             except (json.JSONDecodeError, IOError):
-                return self._get_default_registry()
+                return {'success': True, 'result': self._get_default_registry(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         else:
             return self._get_default_registry()
     
@@ -44,7 +44,7 @@ class ModelRegistry:
         Returns:
             Default registry dictionary
         """
-        return {
+        return {'success': True, 'result': {
             "models": {
                 "lstm": {
                     "name": "LSTM Model",
@@ -111,7 +111,7 @@ class ModelRegistry:
                     "models": ["lstm", "tcn", "xgboost"]
                 }
             }
-        }
+        }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _save_registry(self) -> None:
         """Save the model registry to file."""
@@ -148,7 +148,7 @@ class ModelRegistry:
             Model parameters dictionary or None if not found
         """
         model_info = self.get_model_info(model_name)
-        return model_info.get("parameters") if model_info else None
+        return model_info["parameters"] if model_info else None
     
     def register_model(self, name: str, info: Dict[str, Any]) -> None:
         """Register a new model.
@@ -252,4 +252,4 @@ def get_model_parameters(model_name: str) -> Optional[Dict[str, Any]]:
     Returns:
         Model parameters dictionary or None if not found
     """
-    return get_model_registry().get_model_parameters(model_name) 
+    return get_model_registry().get_model_parameters(model_name)

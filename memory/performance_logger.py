@@ -170,4 +170,4 @@ def _update_performance_analysis(ticker: str, entry: Dict) -> None:
     # Save updated analysis
     analysis[ticker] = ticker_analysis
     with open(PERF_ANALYSIS, "w") as f:
-        json.dump(analysis, f, indent=2) 
+        json.dump(analysis, f, indent=2)

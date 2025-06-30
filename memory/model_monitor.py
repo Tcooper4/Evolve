@@ -34,7 +34,7 @@ def detect_drift(ticker: str, threshold=0.2) -> dict:
 
     records = [entry[ticker] for ts, entry in sorted(history.items()) if ticker in entry]
     if len(records) < 2:
-        return {}
+        return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     df = pd.DataFrame(records)
     drift_alerts = []
@@ -69,7 +69,7 @@ def generate_strategy_priority(ticker: str) -> dict:
         dict: Dictionary containing prioritized models and their weights.
     """
     if not os.path.exists(WEIGHT_HISTORY_PATH):
-        return {}
+        return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     with open(WEIGHT_HISTORY_PATH, "r") as f:
         history = json.load(f)
@@ -105,4 +105,6 @@ def _append_json_log(path: str, entry: dict):
 
     log.append(entry)
     with open(path, "w") as f:
-        json.dump(log, f, indent=2) 
+        json.dump(log, f, indent=2)
+
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

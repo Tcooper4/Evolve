@@ -42,6 +42,7 @@ def load_portfolio_state(filename: str) -> None:
     except Exception as e:
         st.error(f"Failed to load portfolio state: {e}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def save_portfolio_state(filename: str) -> None:
     """Save portfolio state to file."""
     try:
@@ -50,6 +51,7 @@ def save_portfolio_state(filename: str) -> None:
     except Exception as e:
         st.error(f"Failed to save portfolio state: {e}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def plot_equity_curve(positions: List[Position]) -> go.Figure:
     """Plot equity curve with trade markers.
     
@@ -159,7 +161,7 @@ def plot_equity_curve(positions: List[Position]) -> go.Figure:
         showlegend=True
     )
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def plot_rolling_metrics(positions: List[Position], window: int = 20) -> go.Figure:
     """Plot rolling performance metrics.
@@ -234,7 +236,7 @@ def plot_rolling_metrics(positions: List[Position], window: int = 20) -> go.Figu
         showlegend=True
     )
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def plot_strategy_performance(positions: List[Position]) -> go.Figure:
     """Plot strategy performance comparison.
@@ -323,7 +325,7 @@ def plot_strategy_performance(positions: List[Position]) -> go.Figure:
         showlegend=True
     )
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 # Main dashboard
 st.title("Portfolio Dashboard")

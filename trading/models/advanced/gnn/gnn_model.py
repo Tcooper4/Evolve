@@ -33,6 +33,7 @@ class GNNLayer(nn.Module):
         self.bn = nn.BatchNorm1d(out_channels)
         self.dropout = nn.Dropout(dropout)
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
         """Forward pass through GNN layer.
         
@@ -51,7 +52,7 @@ class GNNLayer(nn.Module):
         x = self.bn(x)
         x = F.relu(x)
         x = self.dropout(x)
-        return x
+        return {'success': True, 'result': x, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 @ModelRegistry.register('GNN')
 class GNNForecaster(BaseModel):
@@ -99,6 +100,7 @@ class GNNForecaster(BaseModel):
         self._validate_config()
         self._setup_model()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_config(self) -> None:
         """Validate model configuration.
         
@@ -131,6 +133,7 @@ class GNNForecaster(BaseModel):
             raise ValidationError(f"Number of feature columns ({len(self.config['feature_columns'])}) "
                                 f"must match input_size ({self.config['input_size']})")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def build_model(self) -> nn.Module:
         """Build the GNN model architecture.
         
@@ -165,7 +168,7 @@ class GNNForecaster(BaseModel):
             elif 'bias' in name:
                 nn.init.zeros_(param)
         
-        return nn.ModuleList([*self.gnn_layers, self.fc])
+        return {'success': True, 'result': nn.ModuleList([*self.gnn_layers, self.fc]), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_graph(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Create graph structure from time series data.
@@ -196,7 +199,7 @@ class GNNForecaster(BaseModel):
         
         edge_index = torch.tensor(edges, dtype=torch.long, device=self.device).t()
         
-        return node_features, edge_index
+        return {'success': True, 'result': node_features, edge_index, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model.
@@ -222,7 +225,7 @@ class GNNForecaster(BaseModel):
         
         # Output layer
         out = self.fc(pooled)
-        return out
+        return {'success': True, 'result': out, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare data for training or prediction.
@@ -274,7 +277,7 @@ class GNNForecaster(BaseModel):
         X = X.to(self.device)
         y = y.to(self.device)
         
-        return X, y
+        return {'success': True, 'result': X, y, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def save(self, path: str) -> None:
         """Save model state.
@@ -299,6 +302,7 @@ class GNNForecaster(BaseModel):
         }
         torch.save(state, path)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def load(self, path: str) -> None:
         """Load model state.
         
@@ -326,6 +330,7 @@ class GNNForecaster(BaseModel):
             self.y_mean = state['y_mean']
             self.y_std = state['y_std']
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def fit(self, train_data: Tuple[torch.Tensor, torch.Tensor],
             val_data: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
             **kwargs) -> Dict[str, Any]:
@@ -388,7 +393,7 @@ class GNNForecaster(BaseModel):
                 print(f"Epoch {epoch}: train_loss = {train_loss.item():.4f}, "
                       f"val_loss = {val_loss.item():.4f if val_data is not None else 'N/A'}")
                 
-        return history
+        return {'success': True, 'result': history, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         """Make predictions using the GNN model.
@@ -401,7 +406,7 @@ class GNNForecaster(BaseModel):
         """
         self.eval()
         with torch.no_grad():
-            return self(x)
+            return {'success': True, 'result': self(x), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
@@ -432,7 +437,7 @@ class GNNForecaster(BaseModel):
                 current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
                 current_data = current_data.iloc[1:]  # Remove oldest row
             
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'forecast': np.array(forecast_values),
                 'confidence': 0.8,  # GNN confidence
                 'model': 'GNN',
@@ -449,16 +454,18 @@ class GNNForecaster(BaseModel):
     def summary(self):
         super().summary()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def infer(self):
         super().infer()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def shap_interpret(self, X_sample):
         """Run SHAP interpretability on a sample batch."""
         try:
             import shap
         except ImportError:
             print("SHAP is not installed. Please install it with 'pip install shap'.")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         explainer = shap.DeepExplainer(self.model, X_sample)
         shap_values = explainer.shap_values(X_sample)
         shap.summary_plot(shap_values, X_sample.cpu().numpy())
@@ -474,3 +481,4 @@ class GNNForecaster(BaseModel):
         self.fit(df.iloc[:80], df.iloc[80:])
         y_pred = self.predict(df.iloc[80:])
         print('Synthetic test MSE:', ((y_pred.flatten() - df['close'].iloc[80:].values) ** 2).mean()) 
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

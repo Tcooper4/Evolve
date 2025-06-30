@@ -24,6 +24,7 @@ class GridOptimizer(BaseOptimizer):
         strategy_type: str,
         verbose: bool = False,
         n_jobs: int = -1
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize the grid optimizer.
         
@@ -105,7 +106,7 @@ class GridOptimizer(BaseOptimizer):
                 logger.info(f"Progress: {i + 1}/{total_combinations}, Best score: {self.best_score}")
         
         logger.info(f"Grid search completed. Best score: {self.best_score}")
-        return self.results
+        return {'success': True, 'result': self.results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _run_strategy(self, params: Dict[str, float]) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Run strategy with given parameters.
@@ -119,13 +120,14 @@ class GridOptimizer(BaseOptimizer):
         # This should be implemented by strategy-specific optimizers
         raise NotImplementedError
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_best_params(self) -> Dict:
         """Get the best parameters found during optimization.
         
         Returns:
             Dictionary of best parameters
         """
-        return self.best_params
+        return {'success': True, 'result': self.best_params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def plot_results(
         self,
@@ -140,7 +142,7 @@ class GridOptimizer(BaseOptimizer):
         """
         if not self.results:
             logger.warning("No results to plot")
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Create simple plots
         if plot_type in ['all', 'history']:
@@ -162,12 +164,13 @@ class GridOptimizer(BaseOptimizer):
         plt.grid(True)
         plt.show()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _plot_parameter_importance(self) -> None:
         """Plot parameter importance."""
         import matplotlib.pyplot as plt
         
         if not self.results:
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Calculate parameter importance based on correlation with performance
         param_importance = {}

@@ -25,15 +25,21 @@ class ARIMAModel(BaseModel):
         self.fitted_model = None
         self.order = config.get('order', (1, 1, 1)) if config else (1, 1, 1)
         self.seasonal_order = config.get('seasonal_order', None) if config else None
-        
-    def fit(self, data: pd.Series) -> 'ARIMAModel':
+        self.is_fitted = False
+        return {
+            'success': True,
+            'message': 'ARIMAModel initialized successfully',
+            'timestamp': pd.Timestamp.now().isoformat()
+        }
+
+    def fit(self, data: pd.Series) -> Dict[str, Any]:
         """Fit the ARIMA model.
         
         Args:
             data: Time series data
             
         Returns:
-            Self for chaining
+            Dictionary with fit status and model reference
         """
         try:
             # Create ARIMA model
@@ -47,75 +53,129 @@ class ARIMAModel(BaseModel):
             self.fitted_model = self.model.fit()
             self.is_fitted = True
             
-            return self
-            
+            return {
+                'success': True,
+                'message': 'ARIMA model fitted successfully',
+                'timestamp': pd.Timestamp.now().isoformat(),
+                'model': self
+            }
         except Exception as e:
-            print(f"Error fitting ARIMA model: {e}")
-            return self
-    
-    def predict(self, steps: int = 1) -> np.ndarray:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': pd.Timestamp.now().isoformat(),
+                'model': self
+            }
+
+    def predict(self, steps: int = 1) -> Dict[str, Any]:
         """Make predictions.
         
         Args:
             steps: Number of steps to predict
             
         Returns:
-            Array of predictions
+            Dictionary with predictions and status
         """
         if not self.is_fitted:
-            raise ValueError("Model must be fitted before making predictions")
-        
+            return {
+                'success': False,
+                'error': 'Model must be fitted before making predictions',
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
         try:
             forecast = self.fitted_model.forecast(steps=steps)
-            return forecast.values
+            return {
+                'success': True,
+                'predictions': forecast.values,
+                'timestamp': pd.Timestamp.now().isoformat(),
+                'steps': steps
+            }
         except Exception as e:
-            print(f"Error making predictions: {e}")
-            return np.zeros(steps)
-    
-    def get_model_summary(self) -> str:
+            return {
+                'success': False,
+                'error': str(e),
+                'predictions': np.zeros(steps),
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
+
+    def get_model_summary(self) -> Dict[str, Any]:
         """Get model summary.
         
         Returns:
-            Model summary string
+            Dictionary with summary string and status
         """
         if not self.is_fitted:
-            return "Model not fitted"
-        
+            return {
+                'success': False,
+                'summary': 'Model not fitted',
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
         try:
-            return str(self.fitted_model.summary())
+            summary = str(self.fitted_model.summary())
+            return {
+                'success': True,
+                'summary': summary,
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
         except Exception as e:
-            return f"Error getting summary: {e}"
-    
-    def get_aic(self) -> float:
+            return {
+                'success': False,
+                'summary': f'Error getting summary: {e}',
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
+
+    def get_aic(self) -> Dict[str, Any]:
         """Get AIC score.
         
         Returns:
-            AIC score
+            Dictionary with AIC score and status
         """
         if not self.is_fitted:
-            return float('inf')
-        
+            return {
+                'success': False,
+                'aic': float('inf'),
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
         try:
-            return self.fitted_model.aic
+            return {
+                'success': True,
+                'aic': self.fitted_model.aic,
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
         except Exception as e:
-            print(f"Error getting AIC: {e}")
-            return float('inf')
-    
-    def get_bic(self) -> float:
+            return {
+                'success': False,
+                'aic': float('inf'),
+                'error': str(e),
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
+
+    def get_bic(self) -> Dict[str, Any]:
         """Get BIC score.
         
         Returns:
-            BIC score
+            Dictionary with BIC score and status
         """
         if not self.is_fitted:
-            return float('inf')
-        
+            return {
+                'success': False,
+                'bic': float('inf'),
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
         try:
-            return self.fitted_model.bic
+            return {
+                'success': True,
+                'bic': self.fitted_model.bic,
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
         except Exception as e:
-            print(f"Error getting BIC: {e}")
-            return float('inf')
-    
+            return {
+                'success': False,
+                'bic': float('inf'),
+                'error': str(e),
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
+
     def check_stationarity(self, data: pd.Series) -> Dict[str, Any]:
         """Check if the time series is stationary.
         
@@ -128,23 +188,26 @@ class ARIMAModel(BaseModel):
         try:
             # Perform Augmented Dickey-Fuller test
             result = adfuller(data.dropna())
-            
             return {
+                'success': True,
                 'adf_statistic': result[0],
                 'p_value': result[1],
                 'critical_values': result[4],
-                'is_stationary': result[1] < 0.05
+                'is_stationary': result[1] < 0.05,
+                'timestamp': pd.Timestamp.now().isoformat()
             }
         except Exception as e:
-            print(f"Error checking stationarity: {e}")
             return {
+                'success': False,
                 'adf_statistic': None,
                 'p_value': None,
                 'critical_values': None,
-                'is_stationary': False
+                'is_stationary': False,
+                'error': str(e),
+                'timestamp': pd.Timestamp.now().isoformat()
             }
-    
-    def find_best_order(self, data: pd.Series, max_p: int = 3, max_d: int = 2, max_q: int = 3) -> Tuple[int, int, int]:
+
+    def find_best_order(self, data: pd.Series, max_p: int = 3, max_d: int = 2, max_q: int = 3) -> Dict[str, Any]:
         """Find the best ARIMA order using AIC.
         
         Args:
@@ -154,11 +217,10 @@ class ARIMAModel(BaseModel):
             max_q: Maximum q value
             
         Returns:
-            Best (p, d, q) order
+            Dictionary with best order and status
         """
         best_aic = float('inf')
         best_order = (1, 1, 1)
-        
         for p in range(max_p + 1):
             for d in range(max_d + 1):
                 for q in range(max_q + 1):
@@ -166,7 +228,6 @@ class ARIMAModel(BaseModel):
                         model = ARIMA(data, order=(p, d, q))
                         fitted = model.fit()
                         aic = fitted.aic
-                        
                         if aic < best_aic:
                             best_aic = aic
                             best_order = (p, d, q)
@@ -174,35 +235,66 @@ class ARIMAModel(BaseModel):
                         import logging
                         logging.error(f"Error fitting ARIMA model with order {(p, d, q)}: {e}")
                         continue
-        
-        return best_order
-    
-    def save_model(self, filepath: str) -> None:
+        return {
+            'success': True,
+            'best_order': best_order,
+            'best_aic': best_aic,
+            'timestamp': pd.Timestamp.now().isoformat()
+        }
+
+    def save_model(self, filepath: str) -> Dict[str, Any]:
         """Save the fitted model.
         
         Args:
             filepath: Path to save the model
+            
+        Returns:
+            Dictionary with save status
         """
         if not self.is_fitted:
-            raise ValueError("Model must be fitted before saving")
-        
+            return {
+                'success': False,
+                'error': 'Model must be fitted before saving',
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
         try:
             self.fitted_model.save(filepath)
+            return {
+                'success': True,
+                'message': f'Model saved to {filepath}',
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
         except Exception as e:
-            print(f"Error saving model: {e}")
-    
-    def load_model(self, filepath: str) -> None:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
+
+    def load_model(self, filepath: str) -> Dict[str, Any]:
         """Load a fitted model.
         
         Args:
             filepath: Path to the saved model
+            
+        Returns:
+            Dictionary with load status
         """
         try:
-            from statsmodels.tsa.arima.model import ARIMAResults
-            self.fitted_model = ARIMAResults.load(filepath)
+            from statsmodels.tsa.statespace.sarimax import SARIMAXResults
+            self.fitted_model = SARIMAXResults.load(filepath)
             self.is_fitted = True
+            return {
+                'success': True,
+                'message': f'Model loaded from {filepath}',
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
         except Exception as e:
-            print(f"Error loading model: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': pd.Timestamp.now().isoformat()
+            }
 
     def forecast(self, data: pd.Series, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.

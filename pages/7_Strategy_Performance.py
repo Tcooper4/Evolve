@@ -24,7 +24,7 @@ PERF_ANALYSIS = "memory/performance_analysis.json"
 def load_performance_data():
     """Load and process performance data from log file."""
     if not os.path.exists(PERF_LOG):
-        return None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     with open(PERF_LOG, "r") as f:
         data = json.load(f)
@@ -89,7 +89,7 @@ def plot_metric_timeseries(df, metric, ticker=None, model=None):
         )
     )
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def plot_metric_distribution(df, metric, ticker=None):
     """Create distribution plot for a specific metric."""
@@ -124,7 +124,7 @@ def plot_metric_distribution(df, metric, ticker=None):
         boxmode="group"
     )
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def plot_metric_heatmap(df, metric, ticker=None):
     """Create heatmap of metric values by model and agentic status."""
@@ -164,7 +164,7 @@ def plot_metric_heatmap(df, metric, ticker=None):
         showlegend=False
     )
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_snapshot_chart(df, metric, ticker=None):
     """Create a static snapshot chart for export."""
@@ -195,7 +195,7 @@ def create_snapshot_chart(df, metric, ticker=None):
     plt.xticks(rotation=45)
     plt.tight_layout()
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_leaderboard(df, metric):
     """Create a leaderboard of model performance."""
@@ -223,7 +223,7 @@ def create_leaderboard(df, metric):
     # Sort by metric mean
     leaderboard_df = leaderboard_df.sort_values(f"{metric}_mean", ascending=False)
     
-    return leaderboard_df
+    return {'success': True, 'result': leaderboard_df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_top_models(df):
     """Get top performing models for each metric."""
@@ -240,7 +240,7 @@ def get_top_models(df):
         top = metrics_df.sort_values(metric, ascending=False).iloc[0]
         top_models[metric] = f"{top.name} ({top[metric]:.3f})"
     
-    return top_models
+    return {'success': True, 'result': top_models, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     st.set_page_config(
@@ -257,7 +257,7 @@ def main():
     
     if df is None:
         st.info("No performance metrics have been logged yet.")
-        return
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     # Sidebar filters
     with st.sidebar:

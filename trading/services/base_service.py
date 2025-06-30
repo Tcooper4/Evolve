@@ -11,6 +11,7 @@ import threading
 from typing import Dict, Any, Optional, Callable
 import redis
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -61,21 +62,48 @@ class BaseService(ABC):
         self._setup_message_handlers()
         
         logger.info(f"Initialized {service_name} service")
-    
-    def _setup_message_handlers(self):
-        """Setup default message handlers."""
+        
+        return {
+            'success': True,
+            'message': f'{service_name} service initialized successfully',
+            'timestamp': datetime.now().isoformat(),
+            'redis_available': self.redis_available
+        }
+
+    def _setup_message_handlers(self) -> Dict[str, Callable]:
+        """Setup default message handlers.
+        
+        Returns:
+            Dictionary of message handlers
+        """
         self.message_handlers = {
             'start': self._handle_start,
             'stop': self._handle_stop,
             'status': self._handle_status,
             'ping': self._handle_ping
         }
+        
+        return {
+            'success': True,
+            'result': self.message_handlers,
+            'message': 'Message handlers setup completed',
+            'timestamp': datetime.now().isoformat()
+        }
     
-    def start(self):
-        """Start the service and begin listening for messages."""
+    def start(self) -> Dict[str, Any]:
+        """Start the service and begin listening for messages.
+        
+        Returns:
+            Dictionary with start status
+        """
         if self.is_running:
             logger.warning(f"{self.service_name} service is already running")
-            return
+            return {
+                'success': False,
+                'error': 'Service already running',
+                'service': self.service_name,
+                'timestamp': datetime.now().isoformat()
+            }
         
         self.is_running = True
         
@@ -94,15 +122,36 @@ class BaseService(ABC):
             })
             
             logger.info(f"{self.service_name} service started with Redis")
+            return {
+                'success': True,
+                'service': self.service_name,
+                'mode': 'redis',
+                'channels': [self.input_channel, self.control_channel],
+                'timestamp': datetime.now().isoformat()
+            }
         else:
             logger.info(f"{self.service_name} service started in local mode (no Redis)")
-        
-        logger.info(f"{self.service_name} service started")
+            return {
+                'success': True,
+                'service': self.service_name,
+                'mode': 'local',
+                'channels': [],
+                'timestamp': datetime.now().isoformat()
+            }
     
-    def stop(self):
-        """Stop the service."""
+    def stop(self) -> Dict[str, Any]:
+        """Stop the service.
+        
+        Returns:
+            Dictionary with stop status
+        """
         if not self.is_running:
-            return
+            return {
+                'success': False,
+                'error': 'Service not running',
+                'service': self.service_name,
+                'timestamp': datetime.now().isoformat()
+            }
         
         self.is_running = False
         
@@ -122,22 +171,46 @@ class BaseService(ABC):
                 self.thread.join(timeout=5)
         
         logger.info(f"{self.service_name} service stopped")
+        return {
+            'success': True,
+            'service': self.service_name,
+            'thread_joined': self.thread and not self.thread.is_alive() if self.thread else True,
+            'timestamp': datetime.now().isoformat()
+        }
     
-    def _listen_loop(self):
-        """Main listening loop for Redis messages."""
+    def _listen_loop(self) -> Dict[str, Any]:
+        """Main listening loop for Redis messages.
+        
+        Returns:
+            Dictionary with loop status
+        """
         logger.info(f"{self.service_name} listening on channels: {self.input_channel}, {self.control_channel}")
         
+        message_count = 0
         while self.is_running:
             try:
                 message = self.pubsub.get_message(timeout=1.0)
                 if message and message['type'] == 'message':
                     self._process_message(message)
+                    message_count += 1
             except Exception as e:
                 logger.error(f"Error in listen loop: {e}")
                 time.sleep(1)
+        
+        return {
+            'success': True,
+            'service': self.service_name,
+            'loop_ended': True,
+            'messages_processed': message_count,
+            'timestamp': datetime.now().isoformat()
+        }
     
-    def _process_message(self, message):
-        """Process incoming Redis message."""
+    def _process_message(self, message) -> Dict[str, Any]:
+        """Process incoming Redis message.
+        
+        Returns:
+            Dictionary with processing status
+        """
         try:
             data = json.loads(message['data'].decode('utf-8'))
             message_type = data.get('type', 'unknown')
@@ -147,114 +220,224 @@ class BaseService(ABC):
                 handler = self.message_handlers.get(message_type)
                 if handler:
                     handler(data)
-                else:
-                    logger.warning(f"Unknown control message type: {message_type}")
+                    return {
+                        'success': True,
+                        'message': f'Control message {message_type} processed',
+                        'timestamp': datetime.now().isoformat()
+                    }
             
             # Handle input messages
             elif message['channel'].decode('utf-8') == self.input_channel:
-                self._handle_input_message(data)
-                
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to decode message: {e}")
+                return self._handle_input_message(data)
+            
+            return {
+                'success': True,
+                'message': f'Message {message_type} processed',
+                'timestamp': datetime.now().isoformat()
+            }
         except Exception as e:
             logger.error(f"Error processing message: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
     
-    def _handle_input_message(self, data: Dict[str, Any]):
-        """Handle input message - to be implemented by subclasses."""
+    def _handle_input_message(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle input messages by delegating to the abstract process_message method.
+        
+        Args:
+            data: Message data
+            
+        Returns:
+            Dictionary with processing result
+        """
         try:
             result = self.process_message(data)
             if result:
                 self._publish_output(result)
+            
+            return {
+                'success': True,
+                'message': 'Input message processed',
+                'timestamp': datetime.now().isoformat(),
+                'has_result': result is not None
+            }
         except Exception as e:
-            logger.error(f"Error processing input message: {e}")
-            self._publish_output({
-                'type': 'error',
-                'service': self.service_name,
+            logger.error(f"Error handling input message: {e}")
+            return {
+                'success': False,
                 'error': str(e),
-                'original_message': data,
-                'timestamp': time.time()
-            })
+                'timestamp': datetime.now().isoformat()
+            }
     
     @abstractmethod
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """
-        Process incoming message - must be implemented by subclasses.
+        """Process a message (to be implemented by subclasses).
         
         Args:
-            data: Message data dictionary
+            data: Message data
             
         Returns:
-            Response data dictionary or None
+            Optional response data
         """
         pass
     
-    def _publish_output(self, data: Dict[str, Any]):
-        """Publish message to output channel."""
-        if not self.redis_available:
-            logger.debug(f"Redis not available, skipping publish for {self.service_name}")
-            return
+    def _publish_output(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Publish output message to Redis.
+        
+        Args:
+            data: Data to publish
             
+        Returns:
+            Dictionary with publish status
+        """
+        if not self.redis_available:
+            logger.warning(f"Cannot publish output: Redis not available for {self.service_name}")
+            return {
+                'success': False,
+                'error': 'Redis not available',
+                'timestamp': datetime.now().isoformat()
+            }
+        
         try:
+            # Add service info to message
             data['service'] = self.service_name
             data['timestamp'] = time.time()
-            self.redis_client.publish(self.output_channel, json.dumps(data))
-        except Exception as e:
-            logger.error(f"Failed to publish output: {e}")
-    
-    def send_message(self, target_service: str, message_type: str, data: Dict[str, Any]):
-        """Send message to another service."""
-        if not self.redis_available:
-            logger.debug(f"Redis not available, skipping message send for {self.service_name}")
-            return
             
+            # Publish to output channel
+            self.redis_client.publish(self.output_channel, json.dumps(data))
+            
+            return {
+                'success': True,
+                'message': f'Output published to {self.output_channel}',
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error publishing output: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
+    
+    def send_message(self, target_service: str, message_type: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Send a message to another service.
+        
+        Args:
+            target_service: Name of the target service
+            message_type: Type of message
+            data: Message data
+            
+        Returns:
+            Dictionary with send status
+        """
+        if not self.redis_available:
+            return {
+                'success': False,
+                'error': 'Redis not available',
+                'timestamp': datetime.now().isoformat()
+            }
+        
         try:
             message = {
                 'type': message_type,
-                'from': self.service_name,
                 'data': data,
+                'from': self.service_name,
                 'timestamp': time.time()
             }
-            self.redis_client.publish(f"{target_service}_input", json.dumps(message))
+            
+            target_channel = f"{target_service}_input"
+            self.redis_client.publish(target_channel, json.dumps(message))
+            
+            return {
+                'success': True,
+                'message': f'Message sent to {target_service}',
+                'timestamp': datetime.now().isoformat(),
+                'target_service': target_service,
+                'message_type': message_type
+            }
         except Exception as e:
-            logger.error(f"Failed to send message to {target_service}: {e}")
+            logger.error(f"Error sending message: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
     
-    def _handle_start(self, data: Dict[str, Any]):
-        """Handle start control message."""
+    def _handle_start(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle start control message.
+        
+        Args:
+            data: Message data
+            
+        Returns:
+            Dictionary with start status
+        """
         logger.info(f"Received start command for {self.service_name}")
-        self._publish_output({
-            'type': 'status',
-            'status': 'running',
-            'service': self.service_name
-        })
+        return self.start()
     
-    def _handle_stop(self, data: Dict[str, Any]):
-        """Handle stop control message."""
+    def _handle_stop(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle stop control message.
+        
+        Args:
+            data: Message data
+            
+        Returns:
+            Dictionary with stop status
+        """
         logger.info(f"Received stop command for {self.service_name}")
-        self.stop()
+        return self.stop()
     
-    def _handle_status(self, data: Dict[str, Any]):
-        """Handle status request."""
-        self._publish_output({
-            'type': 'status',
-            'status': 'running' if self.is_running else 'stopped',
-            'service': self.service_name,
-            'thread_alive': self.thread.is_alive() if self.thread else False
-        })
+    def _handle_status(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle status request.
+        
+        Args:
+            data: Message data
+            
+        Returns:
+            Dictionary with service status
+        """
+        status = self.get_service_info()
+        self._publish_output(status)
+        return status
     
-    def _handle_ping(self, data: Dict[str, Any]):
-        """Handle ping message."""
-        self._publish_output({
+    def _handle_ping(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle ping message.
+        
+        Args:
+            data: Message data
+            
+        Returns:
+            Dictionary with ping response
+        """
+        response = {
             'type': 'pong',
             'service': self.service_name,
             'timestamp': time.time()
-        })
+        }
+        self._publish_output(response)
+        
+        return {
+            'success': True,
+            'message': 'Ping responded',
+            'timestamp': datetime.now().isoformat()
+        }
     
     def get_service_info(self) -> Dict[str, Any]:
         """Get service information."""
         return {
-            'service_name': self.service_name,
-            'is_running': self.is_running,
-            'input_channel': self.input_channel,
-            'output_channel': self.output_channel,
-            'control_channel': self.control_channel
+            'success': True,
+            'result': {
+                'service': self.service_name,
+                'is_running': self.is_running,
+                'redis_available': self.redis_available,
+                'channels': {
+                    'input': self.input_channel,
+                    'output': self.output_channel,
+                    'control': self.control_channel
+                }
+            },
+            'message': 'Service information retrieved',
+            'timestamp': datetime.now().isoformat()
         } 

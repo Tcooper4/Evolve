@@ -18,6 +18,7 @@ class LogManager:
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logger(self, name: str, level: int = logging.INFO) -> logging.Logger:
         """Set up a logger with file and console handlers.
         
@@ -50,7 +51,7 @@ class LogManager:
         console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
         
-        return logger
+        return {'success': True, 'result': logger, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def cleanup_logs(self, days: int = 30) -> None:
         """Clean up old log files.
@@ -70,6 +71,7 @@ class LogManager:
                 if (current_time - file_time).days > days:
                     log_file.unlink()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class ModelLogger(LogManager):
     """Logger for model-related operations."""
     
@@ -82,6 +84,7 @@ class ModelLogger(LogManager):
         super().__init__(log_dir)
         self.logger = self.setup_logger("model")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def log_model_info(self, info: Dict[str, Any]) -> None:
         """Log model information.
         
@@ -90,6 +93,7 @@ class ModelLogger(LogManager):
         """
         self.logger.info("Model Information:\n%s", json.dumps(info, indent=2))
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def log_training_progress(self, epoch: int, loss: float, val_loss: Optional[float] = None) -> None:
         """Log training progress.
         
@@ -103,6 +107,7 @@ class ModelLogger(LogManager):
             message += f" - Val Loss: {val_loss:.4f}"
         self.logger.info(message)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def log_model_metrics(self, metrics: Dict[str, float]) -> None:
         """Log model metrics.
         
@@ -111,6 +116,7 @@ class ModelLogger(LogManager):
         """
         self.logger.info("Model Metrics:\n%s", json.dumps(metrics, indent=2))
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class DataLogger(LogManager):
     """Logger for data-related operations."""
     
@@ -123,6 +129,7 @@ class DataLogger(LogManager):
         super().__init__(log_dir)
         self.logger = self.setup_logger("data")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def log_data_info(self, info: Dict[str, Any]) -> None:
         """Log data information.
         
@@ -131,6 +138,7 @@ class DataLogger(LogManager):
         """
         self.logger.info("Data Information:\n%s", json.dumps(info, indent=2))
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def log_data_statistics(self, stats: Dict[str, float]) -> None:
         """Log data statistics.
         
@@ -139,6 +147,7 @@ class DataLogger(LogManager):
         """
         self.logger.info("Data Statistics:\n%s", json.dumps(stats, indent=2))
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def log_data_validation(self, validation: Dict[str, int]) -> None:
         """Log data validation results.
         
@@ -147,6 +156,7 @@ class DataLogger(LogManager):
         """
         self.logger.info("Data Validation:\n%s", json.dumps(validation, indent=2))
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class PerformanceLogger(LogManager):
     """Logger for performance-related operations."""
     
@@ -159,6 +169,7 @@ class PerformanceLogger(LogManager):
         super().__init__(log_dir)
         self.logger = self.setup_logger("performance")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def log_performance_metrics(self, metrics: Dict[str, float]) -> None:
         """Log performance metrics.
         
@@ -167,6 +178,7 @@ class PerformanceLogger(LogManager):
         """
         self.logger.info("Performance Metrics:\n%s", json.dumps(metrics, indent=2))
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def log_trade_info(self, trade: Dict[str, Any]) -> None:
         """Log trade information.
         
@@ -175,6 +187,7 @@ class PerformanceLogger(LogManager):
         """
         self.logger.info("Trade Information:\n%s", json.dumps(trade, indent=2))
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def log_portfolio_value(self, value: float) -> None:
         """Log portfolio value.
         
@@ -183,6 +196,7 @@ class PerformanceLogger(LogManager):
         """
         self.logger.info("Portfolio Value: %.2f", value)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def setup_logging(log_dir: str = 'logs', log_level: int = logging.INFO):
     """Set up logging configuration with rotating file handler and console handler."""
     log_dir = Path(log_dir)
@@ -212,4 +226,4 @@ def setup_logging(log_dir: str = 'logs', log_level: int = logging.INFO):
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
     
-    return logger 
+    return {'success': True, 'result': logger, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

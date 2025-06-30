@@ -54,6 +54,7 @@ def render_logging_controls() -> None:
         set_metrics_path(new_path)
         st.sidebar.success(f"Metrics path set to {new_path}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_metrics_viewer() -> None:
     """Render metrics viewer in main Streamlit area."""
     st.header("Metrics Viewer")
@@ -97,6 +98,7 @@ def render_metrics_viewer() -> None:
     else:
         st.warning("Metrics file not found")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_log_viewer() -> None:
     """Render log viewer in main Streamlit area."""
     st.header("Log Viewer")
@@ -128,6 +130,7 @@ def render_log_viewer() -> None:
     else:
         st.warning("Log file not found")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main() -> None:
     """Main Streamlit app."""
     st.title("Trading System Logging Controls")
@@ -144,5 +147,6 @@ def main() -> None:
     with tab2:
         render_log_viewer()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

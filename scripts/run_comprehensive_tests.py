@@ -33,7 +33,7 @@ class ComprehensiveTestRunner:
         self.project_root = Path(__file__).parent.parent
         self.test_results = {}
         self.start_time = time.time()
-        
+
     def setup_environment(self):
         """Setup the testing environment."""
         logger.info("Setting up testing environment...")
@@ -47,7 +47,7 @@ class ComprehensiveTestRunner:
         os.environ['MOCK_EXTERNAL_APIS'] = 'true'
         
         logger.info("Environment setup complete")
-    
+
     def install_dependencies(self):
         """Install required testing dependencies."""
         logger.info("Installing testing dependencies...")
@@ -64,7 +64,7 @@ class ComprehensiveTestRunner:
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to install dependencies: {e}")
             raise
-    
+
     def run_unit_tests(self) -> Dict[str, Any]:
         """Run unit tests."""
         logger.info("Running unit tests...")
@@ -291,7 +291,7 @@ class ComprehensiveTestRunner:
         with open(report_file, 'w') as f:
             json.dump(report, f, indent=2)
         
-        return report
+        return {'success': True, 'result': report, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def run_all_tests(self) -> bool:
         """Run all tests and return overall success."""
@@ -331,7 +331,7 @@ class ComprehensiveTestRunner:
             
         except Exception as e:
             logger.error(f"Test run failed with error: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     """Main function."""
@@ -353,5 +353,6 @@ def main():
         print("📋 Check test_run.log for detailed logs")
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

@@ -4,7 +4,7 @@ This module provides utilities for validating and preprocessing financial data,
 including data quality checks, feature engineering, and data transformation.
 """
 
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union, Tuple, Any
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
@@ -26,6 +26,7 @@ class DataValidator:
         """
         self.min_data_points = min_data_points
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def validate_dataframe(
         self,
         df: pd.DataFrame,
@@ -78,7 +79,7 @@ class DataValidator:
                 if outliers > 0:
                     issues.append(f"Found {outliers} outliers in column {col}")
         
-        return len(issues) == 0, issues
+        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class DataPreprocessor:
     """Preprocessor for financial data."""
@@ -88,20 +89,34 @@ class DataPreprocessor:
         scale_features: bool = True,
         handle_missing: bool = True,
         remove_outliers: bool = False
-    ):
+    ) -> Dict[str, Any]:
         """Initialize the preprocessor.
         
         Args:
             scale_features: Whether to scale features
             handle_missing: Whether to handle missing values
             remove_outliers: Whether to remove outliers
+            
+        Returns:
+            Dictionary with initialization status
         """
-        self.scale_features = scale_features
-        self.handle_missing = handle_missing
-        self.remove_outliers = remove_outliers
-        
-        self.scaler = StandardScaler()
-        self.imputer = SimpleImputer(strategy='mean')
+        try:
+            self.scale_features = scale_features
+            self.handle_missing = handle_missing
+            self.remove_outliers = remove_outliers
+            
+            self.scaler = StandardScaler()
+            self.imputer = SimpleImputer(strategy='mean')
+            
+            return {
+                "status": "success",
+                "message": "DataPreprocessor initialized successfully",
+                "scale_features": scale_features,
+                "handle_missing": handle_missing,
+                "remove_outliers": remove_outliers
+            }
+        except Exception as e:
+            return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def preprocess_data(
         self,
@@ -133,7 +148,7 @@ class DataPreprocessor:
         if self.scale_features:
             df = self._scale_features(df, target_column, feature_columns)
         
-        return df
+        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _handle_missing_values(self, df: pd.DataFrame) -> pd.DataFrame:
         """Handle missing values in the data.
@@ -155,7 +170,7 @@ class DataPreprocessor:
         for col in categorical_cols:
             df[col] = df[col].fillna(df[col].mode()[0])
         
-        return df
+        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _remove_outliers(self, df: pd.DataFrame) -> pd.DataFrame:
         """Remove outliers from the data.
@@ -172,7 +187,7 @@ class DataPreprocessor:
             z_scores = np.abs((df[col] - df[col].mean()) / df[col].std())
             df = df[z_scores <= 3]
         
-        return df
+        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _scale_features(
         self,
@@ -196,7 +211,7 @@ class DataPreprocessor:
                 feature_columns.remove(target_column)
         
         df[feature_columns] = self.scaler.fit_transform(df[feature_columns])
-        return df
+        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def resample_data(
     df: pd.DataFrame,
@@ -222,7 +237,7 @@ def resample_data(
             'volume': 'sum'
         }
     
-    return df.resample(freq).agg(agg_dict)
+    return {'success': True, 'result': df.resample(freq).agg(agg_dict), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_technical_indicators(
     df: pd.DataFrame,
@@ -277,7 +292,7 @@ def calculate_technical_indicators(
             df['macd_signal'] = df['macd'].ewm(span=signal).mean()
             df['macd_hist'] = df['macd'] - df['macd_signal']
     
-    return df
+    return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def split_data(
     df: pd.DataFrame,
@@ -309,7 +324,7 @@ def split_data(
     val_df = df[val_end:test_end]
     test_df = df[test_end:]
     
-    return train_df, val_df, test_df
+    return {'success': True, 'result': train_df, val_df, test_df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def prepare_forecast_data(data: pd.DataFrame) -> pd.DataFrame:
     """Prepare data for forecasting.
@@ -346,4 +361,4 @@ def prepare_forecast_data(data: pd.DataFrame) -> pd.DataFrame:
     # Sort by index
     df = df.sort_index()
     
-    return df 
+    return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

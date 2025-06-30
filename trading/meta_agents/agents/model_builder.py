@@ -50,6 +50,7 @@ class ModelBuilder:
         
         logger.info("Model Builder initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def build_model(self, model_type: str, 
                    data: pd.DataFrame,
                    target_column: str = 'target',
@@ -486,7 +487,7 @@ class ModelBuilder:
                            test_data: pd.DataFrame,
                            target_column: str) -> Dict[str, float]:
         """Evaluate LSTM model performance."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'mse': np.random.uniform(0.01, 0.05),
             'mae': np.random.uniform(0.05, 0.15),
             'r2': np.random.uniform(0.6, 0.9),
@@ -500,7 +501,7 @@ class ModelBuilder:
                                   test_data: pd.DataFrame,
                                   target_column: str) -> Dict[str, float]:
         """Evaluate Transformer model performance."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'mse': np.random.uniform(0.01, 0.04),
             'mae': np.random.uniform(0.03, 0.12),
             'r2': np.random.uniform(0.7, 0.95),
@@ -514,7 +515,7 @@ class ModelBuilder:
                                test_data: pd.DataFrame,
                                target_column: str) -> Dict[str, float]:
         """Evaluate Ensemble model performance."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'mse': np.random.uniform(0.008, 0.03),
             'mae': np.random.uniform(0.02, 0.10),
             'r2': np.random.uniform(0.75, 0.98),
@@ -526,7 +527,7 @@ class ModelBuilder:
     
     def _get_default_params(self, model_type: str) -> Dict[str, Any]:
         """Get default parameters for a model type."""
-        return self.default_params.get(model_type, {})
+        return {'success': True, 'result': self.default_params.get(model_type, {}), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 # Global model builder instance
@@ -534,4 +535,4 @@ model_builder = ModelBuilder()
 
 def get_model_builder() -> ModelBuilder:
     """Get the global model builder instance."""
-    return model_builder 
+    return {'success': True, 'result': model_builder, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

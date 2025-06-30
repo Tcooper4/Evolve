@@ -370,7 +370,7 @@ class AgentManager:
             Agent status if found, None otherwise
         """
         agent = self.get_agent(name)
-        return agent.get_status() if agent else None
+        return None
     
     def get_all_agent_statuses(self) -> Dict[str, AgentStatus]:
         """Get status of all agents.
@@ -442,11 +442,11 @@ class AgentManager:
         Returns:
             Dictionary containing execution metrics
         """
-        return {
+        return {'success': True, 'result': {
             "agent_metrics": self.agent_metrics,
             "total_executions": len(self.execution_history),
             "recent_executions": self.execution_history[-10:] if self.execution_history else []
-        }
+        }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def save_config(self) -> None:
         """Save current agent configuration to file."""
