@@ -96,7 +96,7 @@ class MarketSimulator:
         
         logger.info(f"Market simulator initialized with slippage={base_slippage}, "
                    f"impact={market_impact_factor}, commission={commission_rate}")
-    
+
     def calculate_slippage(self, 
                           order_quantity: float, 
                           market_volume: float,
@@ -201,7 +201,7 @@ class TradeExecutor:
             logger.warning("LIVE TRADING MODE ENABLED - Real money will be used!")
         
         logger.info(f"Trade executor initialized - Live trading: {self.live_trading}")
-    
+
     def place_order(self, 
                    symbol: str,
                    side: str,
@@ -342,7 +342,8 @@ class TradeExecutor:
                 'total_commission': 0.0,
                 'total_slippage': 0.0,
                 'total_market_impact': 0.0,
-                'average_execution_price': 0.0
+                'average_execution_price': 0.0,
+                'success_rate': 0.0
             }
         
         successful_executions = [e for e in self.executions if e.success]
@@ -400,4 +401,4 @@ trade_executor = TradeExecutor()
 
 def get_trade_executor() -> TradeExecutor:
     """Get the global trade executor instance."""
-    return trade_executor 
+    return trade_executor

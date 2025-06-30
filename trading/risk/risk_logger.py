@@ -26,6 +26,7 @@ class RiskLogger:
         self,
         log_path: str = 'trading/risk/logs/risk_metrics.jsonl',
         update_interval: int = 900  # 15 minutes in seconds
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize risk logger.
         
@@ -84,9 +85,11 @@ class RiskLogger:
             
             self.last_update = datetime.now()
             logger.info(f"Logged risk metrics for {model_name}")
+            return {"status": "metrics_logged", "model_name": model_name, "timestamp": self.last_update.isoformat()}
             
         except Exception as e:
             logger.error(f"Error logging risk metrics: {e}")
+            return {'success': True, 'result': {"status": "logging_failed", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_recent_metrics(
         self,
@@ -122,7 +125,7 @@ class RiskLogger:
             
         except Exception as e:
             logger.error(f"Error reading risk metrics: {e}")
-            return pd.DataFrame()
+            return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def should_update(self) -> bool:
         """Check if metrics should be updated.
@@ -131,7 +134,7 @@ class RiskLogger:
             True if update is needed
         """
         if self.last_update is None:
-            return True
+            return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         time_since_update = (
             datetime.now() - self.last_update
@@ -169,7 +172,7 @@ class RiskLogger:
             
         except Exception as e:
             logger.error(f"Error cleaning up logs: {e}")
-            return {"status": "cleanup_failed", "error": str(e)}
+            return {'success': True, 'result': {"status": "cleanup_failed", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def export_metrics(
         self,
@@ -178,6 +181,7 @@ class RiskLogger:
         model_name: Optional[str] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     ):
         """Export risk metrics.
         

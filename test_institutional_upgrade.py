@@ -100,7 +100,7 @@ class InstitutionalUpgradeTester:
         # Display summary
         self._display_summary(report)
         
-        return report
+        return {'success': True, 'result': report, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def test_enhanced_ui_integration(self) -> Dict[str, Any]:
         """Test enhanced UI integration with tabs."""
@@ -834,7 +834,6 @@ class InstitutionalUpgradeTester:
         else:
             logger.info("❌ UPGRADE FAILED - SIGNIFICANT ISSUES DETECTED")
 
-
 def main():
     """Main test function."""
     print("🚀 Evolve Trading System - Institutional-Level Upgrade Test")
@@ -843,8 +842,7 @@ def main():
     tester = InstitutionalUpgradeTester()
     report = tester.run_all_tests()
     
-    return report
-
+    return {'success': True, 'result': report, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 if __name__ == "__main__":
     main() 

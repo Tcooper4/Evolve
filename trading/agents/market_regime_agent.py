@@ -572,4 +572,4 @@ market_regime_agent = MarketRegimeAgent()
 
 def get_market_regime_agent() -> MarketRegimeAgent:
     """Get the global market regime agent instance."""
-    return market_regime_agent 
+    return market_regime_agent

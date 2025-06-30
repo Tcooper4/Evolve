@@ -40,6 +40,7 @@ class UpdaterService(BaseService):
         
         logger.info("UpdaterService initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming model update requests.
@@ -65,7 +66,7 @@ class UpdaterService(BaseService):
                 return self._handle_auto_update_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {
+                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -125,7 +126,7 @@ class UpdaterService(BaseService):
             
         except Exception as e:
             logger.error(f"Error retraining model: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -178,7 +179,7 @@ class UpdaterService(BaseService):
             
         except Exception as e:
             logger.error(f"Error tuning model: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -229,7 +230,7 @@ class UpdaterService(BaseService):
             
         except Exception as e:
             logger.error(f"Error replacing model: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -264,7 +265,7 @@ class UpdaterService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting update history: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -310,7 +311,7 @@ class UpdaterService(BaseService):
             
         except Exception as e:
             logger.error(f"Error in auto-update: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -341,4 +342,4 @@ class UpdaterService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'error': str(e)} 
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

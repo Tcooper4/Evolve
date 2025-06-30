@@ -31,11 +31,13 @@ def run_tests():
         print(f"Tests failed with exit code {e.returncode}")
         sys.exit(e.returncode)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function to run tests."""
     print("Running tests...")
     run_tests()
     print("Tests completed!")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

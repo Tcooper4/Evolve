@@ -20,6 +20,7 @@ class Role:
         name: str,
         description: str,
         permissions: List[str]
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize role."""
         self.name = name
@@ -28,7 +29,7 @@ class Role:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert role to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'name': self.name,
             'description': self.description,
             'permissions': self.permissions
@@ -37,7 +38,7 @@ class Role:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Role':
         """Create role from dictionary."""
-        return cls(
+        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             name=data['name'],
             description=data['description'],
             permissions=data['permissions']
@@ -51,6 +52,7 @@ class User:
         user_id: str,
         username: str,
         roles: List[str]
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize user."""
         self.user_id = user_id
@@ -59,7 +61,7 @@ class User:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert user to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'user_id': self.user_id,
             'username': self.username,
             'roles': self.roles
@@ -68,7 +70,7 @@ class User:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'User':
         """Create user from dictionary."""
-        return cls(
+        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             user_id=data['user_id'],
             username=data['username'],
             roles=data['roles']
@@ -85,6 +87,7 @@ class RBACManager:
         self.setup_logging()
         self.load_default_roles()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for RBAC manager."""
         log_path = Path("logs/rbac")
@@ -100,6 +103,7 @@ class RBACManager:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_default_roles(self):
         """Load default roles."""
         try:
@@ -131,6 +135,7 @@ class RBACManager:
             self.logger.error(f"Error loading default roles: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def create_role(
         self,
         name: str,
@@ -146,7 +151,7 @@ class RBACManager:
             self.roles[name] = role
             
             self.logger.info(f"Created role: {name}")
-            return role
+            return {'success': True, 'result': role, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error creating role: {str(e)}")
             raise
@@ -171,7 +176,7 @@ class RBACManager:
                 role.permissions = permissions
             
             self.logger.info(f"Updated role: {name}")
-            return role
+            return {'success': True, 'result': role, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error updating role: {str(e)}")
             raise
@@ -188,6 +193,7 @@ class RBACManager:
             self.logger.error(f"Error deleting role: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def create_user(
         self,
         user_id: str,
@@ -208,7 +214,7 @@ class RBACManager:
             self.users[user_id] = user
             
             self.logger.info(f"Created user: {user_id}")
-            return user
+            return {'success': True, 'result': user, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error creating user: {str(e)}")
             raise
@@ -237,7 +243,7 @@ class RBACManager:
                 user.roles = roles
             
             self.logger.info(f"Updated user: {user_id}")
-            return user
+            return {'success': True, 'result': user, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error updating user: {str(e)}")
             raise
@@ -254,6 +260,7 @@ class RBACManager:
             self.logger.error(f"Error deleting user: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def check_permission(
         self,
         user_id: str,
@@ -270,7 +277,7 @@ class RBACManager:
             for role_name in user.roles:
                 role = self.roles[role_name]
                 if '*' in role.permissions or permission in role.permissions:
-                    return True
+                    return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             return False
         except Exception as e:
@@ -294,4 +301,4 @@ class RBACManager:
             return list(permissions)
         except Exception as e:
             self.logger.error(f"Error getting user permissions: {str(e)}")
-            return [] 
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

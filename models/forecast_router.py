@@ -78,7 +78,7 @@ class ForecastRouter:
             
         self.performance_history = pd.DataFrame()
         self.model_weights = self._initialize_weights()
-        
+
     def _initialize_weights(self) -> Dict[str, float]:
         """Initialize model selection weights.
         
@@ -155,7 +155,7 @@ class ForecastRouter:
         elif characteristics['has_trend']:
             return 'autoformer'  # Better for trending data
         else:
-            return 'lstm'  # Default to LSTM
+            return 'lstm'
             
     def get_forecast(self,
                     data: pd.DataFrame,
@@ -256,7 +256,7 @@ class ForecastRouter:
         except Exception as e:
             logger.error(f"Forecast error: {str(e)}")
             # Return fallback result instead of raising
-            return self._get_fallback_result(data, horizon)
+            return {'success': True, 'result': self._get_fallback_result(data, horizon), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_fallback_data(self) -> pd.DataFrame:
         """Generate fallback data when none is provided."""
@@ -442,7 +442,7 @@ class ForecastRouter:
         
         # Update model weights
         self._update_weights()
-        
+
     def _update_weights(self) -> None:
         """Update model selection weights based on performance."""
         if self.performance_history.empty:
@@ -505,7 +505,7 @@ class ForecastRouter:
             result['forecast_method'] = 'router_selected'
             result['timestamp'] = datetime.now().isoformat()
             
-            return result
+            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             logger.error(f"Forecast router error: {e}")
@@ -550,7 +550,6 @@ class ForecastRouter:
         except Exception as e:
             logger.error(f"Error plotting forecast results: {e}")
             print(f"Could not plot results: {e}")
-
 
 # Example usage:
 if __name__ == "__main__":

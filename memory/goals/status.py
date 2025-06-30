@@ -31,6 +31,8 @@ def ensure_goals_directory():
     """Ensure the goals directory exists."""
     GOALS_DIR.mkdir(parents=True, exist_ok=True)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
 def load_goals() -> Dict[str, Any]:
     """
     Load current goal status from JSON file.
@@ -82,11 +84,15 @@ def save_goals(status: Dict[str, Any]) -> None:
         logger.error(error_msg)
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
 def clear_goals() -> None:
     """Clear the goal status file."""
     if STATUS_FILE.exists():
         STATUS_FILE.unlink()
         logger.info("Goal status cleared")
+
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_status_summary() -> Dict[str, Any]:
     """
@@ -127,10 +133,8 @@ def get_status_summary() -> Dict[str, Any]:
 def _generate_recommendations(goals_data: Dict[str, Any]) -> List[str]:
     """Generate recommendations based on current goal status."""
     recommendations = []
-    
     status = goals_data.get("status", "").lower()
     progress = goals_data.get("progress", 0.0)
-    
     if status == "behind_schedule":
         recommendations.append("Consider increasing resources or adjusting timeline")
         recommendations.append("Review bottlenecks in current workflow")
@@ -140,41 +144,34 @@ def _generate_recommendations(goals_data: Dict[str, Any]) -> List[str]:
     elif status == "ahead_of_schedule":
         recommendations.append("Consider adding additional objectives")
         recommendations.append("Review quality standards")
-    
     if progress < 0.25:
         recommendations.append("Focus on quick wins to build momentum")
     elif progress > 0.75:
         recommendations.append("Prepare for completion and next phase planning")
-    
     return recommendations
 
 def _check_alerts(goals_data: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Check for alerts based on goal status."""
     alerts = []
-    
     status = goals_data.get("status", "").lower()
     progress = goals_data.get("progress", 0.0)
     target_date = goals_data.get("target_date")
-    
     if status == "behind_schedule":
         alerts.append({
             "type": "warning",
             "message": "Goal is behind schedule",
             "severity": "medium"
         })
-    
     if progress < 0.1 and status != "not_started":
         alerts.append({
             "type": "warning",
             "message": "Very low progress detected",
             "severity": "high"
         })
-    
     if target_date:
         try:
             target_dt = datetime.fromisoformat(target_date)
             days_remaining = (target_dt - datetime.now()).days
-            
             if days_remaining < 7:
                 alerts.append({
                     "type": "urgent",
@@ -189,7 +186,6 @@ def _check_alerts(goals_data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 })
         except ValueError:
             pass
-    
     return alerts
 
 def update_goal_progress(progress: float, metrics: Optional[Dict[str, Any]] = None, 
@@ -232,6 +228,8 @@ def update_goal_progress(progress: float, metrics: Optional[Dict[str, Any]] = No
         logger.error(f"Error updating goal progress: {str(e)}")
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
 def log_agent_contribution(agent_name: str, contribution: str, impact: str = "medium") -> None:
     """
     Log agent contribution to goal progress.
@@ -269,6 +267,8 @@ def log_agent_contribution(agent_name: str, contribution: str, impact: str = "me
     except Exception as e:
         logger.error(f"Error logging agent contribution: {str(e)}")
 
+    return None
+
 def get_agent_contributions(limit: int = 10) -> List[Dict[str, Any]]:
     """
     Get recent agent contributions.
@@ -288,4 +288,4 @@ def get_agent_contributions(limit: int = 10) -> List[Dict[str, Any]]:
         
     except Exception as e:
         logger.error(f"Error getting agent contributions: {str(e)}")
-        return [] 
+        return []

@@ -45,6 +45,7 @@ class TemporalBlock(nn.Module):
         self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
         self.relu = nn.ReLU()
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through temporal block.
         
@@ -56,7 +57,7 @@ class TemporalBlock(nn.Module):
         """
         out = self.net(x)
         res = x if self.downsample is None else self.downsample(x)
-        return self.relu(out + res)
+        return {'success': True, 'result': self.relu(out + res), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class TemporalConvNet(nn.Module):
     """Temporal Convolutional Network."""
@@ -86,6 +87,7 @@ class TemporalConvNet(nn.Module):
             ))
         self.network = nn.Sequential(*layers)
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through TCN.
         
@@ -98,7 +100,7 @@ class TemporalConvNet(nn.Module):
         x = x.transpose(1, 2)  # (batch_size, num_inputs, seq_len)
         x = self.network(x)
         x = x.transpose(1, 2)  # (batch_size, seq_len, num_channels[-1])
-        return x
+        return {'success': True, 'result': x, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class TCNModel(BaseModel):
     """Temporal Convolutional Network for time series forecasting."""
@@ -155,6 +157,7 @@ class TCNModel(BaseModel):
         self.optimizer = None
         self.scheduler = None
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_model(self):
         """Set up the TCN model architecture."""
         # Create TCN layers
@@ -175,6 +178,7 @@ class TCNModel(BaseModel):
             elif 'bias' in name:
                 nn.init.zeros_(param)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model.
         
@@ -192,7 +196,7 @@ class TCNModel(BaseModel):
         
         # Pass through output layer
         x = self.fc(x)
-        return x
+        return {'success': True, 'result': x, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def fit(self, data: pd.DataFrame, epochs: int = 10, batch_size: int = 32) -> None:
         """Train the model.
@@ -240,6 +244,7 @@ class TCNModel(BaseModel):
             
             self.history.append(epoch_loss / (len(X) / batch_size))
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def predict(self, data: pd.DataFrame) -> Dict[str, np.ndarray]:
         """Make predictions.
         
@@ -256,7 +261,7 @@ class TCNModel(BaseModel):
         
         with torch.no_grad():
             predictions = self(X).cpu().numpy()
-            return {'predictions': predictions}
+            return {'success': True, 'result': {'predictions': predictions}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
@@ -287,7 +292,7 @@ class TCNModel(BaseModel):
                 current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
                 current_data = current_data.iloc[1:]  # Remove oldest row
             
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'forecast': np.array(forecast_values),
                 'confidence': 0.8,  # TCN confidence
                 'model': 'TCN',
@@ -329,35 +334,70 @@ class TCNModel(BaseModel):
         X = torch.FloatTensor(X[:-1])  # Remove last row as we don't have target for it
         y = torch.FloatTensor(y).unsqueeze(-1)
         
-        return X, y
+        return {'success': True, 'result': X, y, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
-    def save(self, path: str) -> None:
+    def save(self, path: str) -> Dict[str, Any]:
         """Save model state.
         
         Args:
             path: Path to save model state
+            
+        Returns:
+            Dictionary with save status and metadata
         """
-        state = {
-            'model_state': self.state_dict(),
-            'config': self.config,
-            'history': self.history,
-            'best_model_state': self.best_model_state,
-            'best_val_loss': self.best_val_loss
-        }
-        torch.save(state, path)
+        try:
+            state = {
+                'model_state': self.state_dict(),
+                'config': self.config,
+                'history': self.history,
+                'best_model_state': self.best_model_state,
+                'best_val_loss': self.best_val_loss
+            }
+            torch.save(state, path)
+            return {
+                'success': True,
+                'path': path,
+                'model_type': 'TCN',
+                'config_keys': list(self.config.keys()) if self.config else [],
+                'history_length': len(self.history) if self.history else 0
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'path': path
+            }
         
-    def load(self, path: str) -> None:
+    def load(self, path: str) -> Dict[str, Any]:
         """Load model state.
         
         Args:
             path: Path to load model state from
+            
+        Returns:
+            Dictionary with load status and metadata
         """
-        state = torch.load(path, map_location=self.device)
-        self.load_state_dict(state['model_state'])
-        self.config = state['config']
-        self.history = state['history']
-        self.best_model_state = state['best_model_state']
-        self.best_val_loss = state['best_val_loss']
+        try:
+            state = torch.load(path, map_location=self.device)
+            self.load_state_dict(state['model_state'])
+            self.config = state['config']
+            self.history = state['history']
+            self.best_model_state = state['best_model_state']
+            self.best_val_loss = state['best_val_loss']
+            return {
+                'success': True,
+                'path': path,
+                'model_type': 'TCN',
+                'config_keys': list(self.config.keys()) if self.config else [],
+                'history_length': len(self.history) if self.history else 0,
+                'best_val_loss': self.best_val_loss
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'path': path
+            }
         
     def _train_step(self, data: torch.Tensor) -> float:
         """Perform a single training step.
@@ -373,7 +413,7 @@ class TCNModel(BaseModel):
         loss = F.mse_loss(output, data)
         loss.backward()
         self.optimizer.step()
-        return loss.item()
+        return {'success': True, 'result': loss.item(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _validate_step(self, data: torch.Tensor) -> float:
         """Perform a single validation step.
@@ -387,7 +427,7 @@ class TCNModel(BaseModel):
         with torch.no_grad():
             output = self(data)
             loss = F.mse_loss(output, data)
-            return loss.item()
+            return {'success': True, 'result': loss.item(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def _setup_optimizer(self) -> None:
         """Setup optimizer."""
@@ -395,6 +435,7 @@ class TCNModel(BaseModel):
             lr = self.config.get('learning_rate', 0.001)
             self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
             
+                return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_scheduler(self) -> None:
         """Setup learning rate scheduler."""
         if self.config.get('use_lr_scheduler', False):
@@ -402,6 +443,7 @@ class TCNModel(BaseModel):
                 self.optimizer, mode='min', factor=0.5, patience=5, verbose=True
             )
             
+                return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> tuple:
         """Prepare data for training or prediction.
         
@@ -430,4 +472,4 @@ class TCNModel(BaseModel):
         X = torch.FloatTensor(X[:-1])  # Remove last row as we don't have target for it
         y = torch.FloatTensor(y).unsqueeze(-1)
         
-        return X, y 
+        return {'success': True, 'result': X, y, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

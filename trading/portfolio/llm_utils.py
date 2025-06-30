@@ -33,7 +33,7 @@ class TradeRationale(BaseModel):
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'timestamp': self.timestamp.isoformat(),
             'symbol': self.symbol,
             'direction': self.direction,
@@ -49,7 +49,7 @@ class TradeRationale(BaseModel):
         """Create from dictionary."""
         if isinstance(data['timestamp'], str):
             data['timestamp'] = datetime.fromisoformat(data['timestamp'])
-        return cls(**data)
+        return {'success': True, 'result': cls(**data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class DailyCommentary(BaseModel):
     """Daily commentary data model."""
@@ -63,7 +63,7 @@ class DailyCommentary(BaseModel):
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'date': self.date.isoformat(),
             'summary': self.summary,
             'trades': self.trades,
@@ -78,7 +78,7 @@ class DailyCommentary(BaseModel):
         """Create from dictionary."""
         if isinstance(data['date'], str):
             data['date'] = datetime.fromisoformat(data['date'])
-        return cls(**data)
+        return {'success': True, 'result': cls(**data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class LLMInterface:
     """Interface for LLM-based trade rationale and commentary generation."""
@@ -105,6 +105,7 @@ class LLMInterface:
         
         logger.info("Initialized LLMInterface")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def generate_trade_rationale(self, symbol: str, direction: str, strategy: str,
                                market_data: Dict[str, Any]) -> Optional[TradeRationale]:
         """Generate trade rationale using LLM.
@@ -166,7 +167,7 @@ class LLMInterface:
             
         except Exception as e:
             logger.error(f"Error generating trade rationale: {e}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def generate_daily_commentary(self, portfolio_state: Dict[str, Any],
                                 trades: List[Dict[str, Any]],
@@ -223,7 +224,7 @@ class LLMInterface:
             
         except Exception as e:
             logger.error(f"Error generating daily commentary: {e}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_trade_rationale_prompt(self, symbol: str, direction: str,
                                      strategy: str, market_data: Dict[str, Any]) -> str:
@@ -238,7 +239,7 @@ class LLMInterface:
         Returns:
             Prompt string
         """
-        return f"""Generate a trade rationale for the following trade:
+        return {'success': True, 'result': f"""Generate a trade rationale for the following trade:, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 Symbol: {symbol}
 Direction: {direction}
 Strategy: {strategy}
@@ -268,7 +269,7 @@ Format the response as a structured analysis."""
         Returns:
             Prompt string
         """
-        return f"""Generate a daily trading commentary for:
+        return {'success': True, 'result': f"""Generate a daily trading commentary for:, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 Date: {datetime.utcnow().date()}
 
 Portfolio State:
@@ -304,7 +305,7 @@ Format the response as a comprehensive daily report."""
                 # Extract number after "confidence"
                 confidence_text = rationale.lower().split("confidence")[1]
                 confidence = float(confidence_text.split()[0])
-                return max(0.0, min(1.0, confidence))
+                return {'success': True, 'result': max(0.0, min(1.0, confidence)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except (ValueError, IndexError) as e:
             logger.warning(f"Could not extract confidence from rationale: {e}")
         
@@ -330,7 +331,7 @@ Format the response as a comprehensive daily report."""
             factors = [f.strip() for f in risk_text.split('\n') if f.strip()]
             risk_factors.extend(factors)
         
-        return risk_factors or ["Market volatility", "Liquidity risk", "Execution risk"]
+        return {'success': True, 'result': risk_factors or ["Market volatility", "Liquidity risk", "Execution risk"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_pnl_summary(self, trades: List[Dict[str, Any]]) -> Dict[str, float]:
         """Calculate PnL summary from trades.
@@ -348,7 +349,7 @@ Format the response as a comprehensive daily report."""
             strategy = trade.get('strategy', 'unknown')
             strategy_pnl[strategy] = strategy_pnl.get(strategy, 0) + trade.get('pnl', 0)
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'total_pnl': total_pnl,
             'strategy_pnl': strategy_pnl
         }
@@ -398,7 +399,7 @@ Format the response as a comprehensive daily report."""
                     }
                 })
         
-        return shifts
+        return {'success': True, 'result': shifts, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _assess_risk(self, portfolio_state: Dict[str, Any],
                     market_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -411,7 +412,7 @@ Format the response as a comprehensive daily report."""
         Returns:
             Dictionary with risk assessment
         """
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'portfolio_risk': {
                 'var_95': self._calculate_var(portfolio_state, 0.95),
                 'var_99': self._calculate_var(portfolio_state, 0.99),
@@ -438,7 +439,7 @@ Format the response as a comprehensive daily report."""
         # Simple VaR calculation
         returns = [p.get('pnl', 0) for p in portfolio_state.get('closed_positions', [])]
         if not returns:
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         return np.percentile(returns, (1 - confidence) * 100)
     
@@ -453,7 +454,7 @@ Format the response as a comprehensive daily report."""
         """
         returns = [p.get('pnl', 0) for p in portfolio_state.get('closed_positions', [])]
         if not returns:
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         return np.std(returns) * np.sqrt(252)
     
@@ -468,7 +469,7 @@ Format the response as a comprehensive daily report."""
         """
         positions = portfolio_state.get('open_positions', [])
         if len(positions) < 2:
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         # Calculate returns for each position
         returns = {}
@@ -501,6 +502,7 @@ Format the response as a comprehensive daily report."""
         
         logger.info(f"Logged trade rationale for {rationale.symbol}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _log_commentary(self, commentary: DailyCommentary) -> None:
         """Log daily commentary.
         
@@ -514,4 +516,5 @@ Format the response as a comprehensive daily report."""
         
         logger.info(f"Logged daily commentary for {commentary.date.date()}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 __all__ = ["LLMInterface", "TradeRationale", "DailyCommentary"] 

@@ -22,6 +22,7 @@ class WorkflowEngine:
         self.workflows = {}
         self.setup_logging()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for workflow engine."""
         log_path = Path("logs/workflows")
@@ -37,6 +38,7 @@ class WorkflowEngine:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def create_workflow(
         self,
         name: str,
@@ -92,14 +94,14 @@ class WorkflowEngine:
             if workflow_id not in self.workflows:
                 raise ValueError(f"Workflow {workflow_id} not found")
             
-            return self.workflows[workflow_id]
+            return {'success': True, 'result': self.workflows[workflow_id], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error getting workflow status: {str(e)}")
             raise
     
     def list_workflows(self) -> List[str]:
         """List all workflows."""
-        return list(self.workflows.keys())
+        return {'success': True, 'result': list(self.workflows.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def update_workflow(
         self,
@@ -107,6 +109,7 @@ class WorkflowEngine:
         name: Optional[str] = None,
         description: Optional[str] = None,
         steps: Optional[List[Dict[str, Any]]] = None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     ) -> None:
         """Update a workflow."""
         try:
@@ -143,6 +146,7 @@ class WorkflowEngine:
             self.logger.error(f"Error deleting workflow: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def monitor_workflows(self, interval: int = 60):
         """Monitor workflows at regular intervals."""
         try:
@@ -161,5 +165,7 @@ class WorkflowEngine:
     def execute_step(self):
         raise NotImplementedError('Pending feature')
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def monitor_workflow(self):
         raise NotImplementedError('Pending feature') 
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

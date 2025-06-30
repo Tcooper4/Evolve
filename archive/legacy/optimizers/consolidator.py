@@ -35,6 +35,7 @@ class OptimizerConsolidator:
         self.trading_optimization_dir.mkdir(parents=True, exist_ok=True)
         self.backup_dir.mkdir(parents=True, exist_ok=True)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def run_optimizer_consolidation(self, create_backup: bool = True) -> Dict[str, Any]:
         """
         Run the complete optimizer consolidation process.
@@ -88,7 +89,7 @@ class OptimizerConsolidator:
             if results["backup_created"]:
                 self._restore_from_backup(Path(results["backup_created"]))
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_backup(self) -> Path:
         """Create a backup of the optimize directory."""
@@ -99,7 +100,7 @@ class OptimizerConsolidator:
             shutil.copytree(self.optimize_dir, backup_path)
             logger.info(f"Created backup at {backup_path}")
         
-        return backup_path
+        return {'success': True, 'result': backup_path, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _consolidate_files(self) -> Tuple[List[str], List[str]]:
         """Consolidate optimizer files into trading/optimization."""
@@ -108,7 +109,7 @@ class OptimizerConsolidator:
         
         if not self.optimize_dir.exists():
             logger.info("Optimize directory does not exist, nothing to consolidate")
-            return moved_files, deprecated_files
+            return {'success': True, 'result': moved_files, deprecated_files, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Process each file in the optimize directory
         for file_path in self.optimize_dir.glob("*.py"):
@@ -134,6 +135,7 @@ class OptimizerConsolidator:
                 content = f.read()
             
             deprecation_notice = f'''"""
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 DEPRECATED: This file has been consolidated into trading/optimization/{file_path.name}
 Please use the consolidated version instead.
 Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -185,7 +187,7 @@ Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             except Exception as e:
                 logger.error(f"Error updating imports in {py_file}: {str(e)}")
         
-        return updated_count
+        return {'success': True, 'result': updated_count, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _cleanup_empty_directories(self) -> None:
         """Remove empty directories after consolidation."""
@@ -193,6 +195,7 @@ Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             self.optimize_dir.rmdir()
             logger.info("Removed empty optimize directory")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _restore_from_backup(self, backup_path: Path) -> None:
         """Restore from backup in case of error."""
         try:
@@ -204,6 +207,7 @@ Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         except Exception as e:
             logger.error(f"Error restoring from backup: {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_optimizer_status(self) -> Dict[str, Any]:
         """
         Get current status of optimizer organization.
@@ -239,7 +243,7 @@ Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             len(status["duplicate_files"]) > 0
         )
         
-        return status
+        return {'success': True, 'result': status, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def validate_consolidation(self) -> Dict[str, Any]:
         """
@@ -270,7 +274,7 @@ Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             validation["imports_valid"] = False
             validation["errors"].extend(import_errors)
         
-        return validation
+        return {'success': True, 'result': validation, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _validate_imports(self) -> List[str]:
         """Validate that imports are correctly updated."""
@@ -300,7 +304,7 @@ Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             except Exception as e:
                 errors.append(f"Error reading {py_file}: {str(e)}")
         
-        return errors
+        return {'success': True, 'result': errors, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def run_optimizer_consolidation(create_backup: bool = True, root_dir: Optional[str] = None) -> Dict[str, Any]:
@@ -315,7 +319,7 @@ def run_optimizer_consolidation(create_backup: bool = True, root_dir: Optional[s
         Dictionary with consolidation results
     """
     consolidator = OptimizerConsolidator(root_dir)
-    return consolidator.run_optimizer_consolidation(create_backup)
+    return {'success': True, 'result': consolidator.run_optimizer_consolidation(create_backup), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def get_optimizer_status(root_dir: Optional[str] = None) -> Dict[str, Any]:
@@ -329,7 +333,7 @@ def get_optimizer_status(root_dir: Optional[str] = None) -> Dict[str, Any]:
         Dictionary with optimizer status
     """
     consolidator = OptimizerConsolidator(root_dir)
-    return consolidator.get_optimizer_status()
+    return {'success': True, 'result': consolidator.get_optimizer_status(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 if __name__ == "__main__":

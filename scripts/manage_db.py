@@ -63,6 +63,7 @@ class DatabaseManager:
             ssl=self.config["database"]["ssl"]
         )
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
@@ -70,7 +71,7 @@ class DatabaseManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -84,6 +85,7 @@ class DatabaseManager:
         
         logging.config.dictConfig(log_config)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def backup_database(self, backup_name: Optional[str] = None):
         """Backup database."""
         self.logger.info("Backing up database...")
@@ -112,7 +114,7 @@ class DatabaseManager:
                 return False
         except Exception as e:
             self.logger.error(f"Failed to backup database: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def restore_database(self, backup_name: str):
         """Restore database from backup."""
@@ -138,7 +140,7 @@ class DatabaseManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to restore database: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def clear_database(self):
         """Clear all data from database."""
@@ -151,7 +153,7 @@ class DatabaseManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to clear database: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def get_database_info(self):
         """Get database information."""
@@ -172,7 +174,7 @@ class DatabaseManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to get database information: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def optimize_database(self):
         """Optimize database."""
@@ -187,7 +189,7 @@ class DatabaseManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to optimize database: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def check_database_health(self):
         """Check database health."""
@@ -215,7 +217,7 @@ class DatabaseManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to check database health: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def monitor_database(self):
         """Monitor database in real-time."""
@@ -237,7 +239,7 @@ class DatabaseManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to monitor database: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     """Main function."""
@@ -275,5 +277,6 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

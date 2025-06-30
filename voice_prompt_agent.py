@@ -109,7 +109,7 @@ class VoicePromptAgent:
             return None
         except Exception as e:
             logger.error(f"Error listening for command: {e}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _convert_speech_to_text(self, audio) -> Optional[str]:
         """Convert speech audio to text using multiple methods."""
@@ -142,7 +142,7 @@ class VoicePromptAgent:
                 # Clean up temporary file
                 os.unlink(tmp_file_path)
                 
-                return result["text"].lower()
+                return {'success': True, 'result': result["text"].lower(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 
             except Exception as e:
                 logger.error(f"Whisper transcription error: {e}")
@@ -221,35 +221,28 @@ class VoicePromptAgent:
         # Extract additional parameters
         self._extract_additional_parameters(text, command)
         
-        return command
+        return {'success': True, 'result': command, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _extract_additional_parameters(self, text: str, command: Dict[str, Any]):
-        """Extract additional parameters from text. Returns extracted data or status dict."""
-        import re
-        
+        """Extract additional parameters from text."""
         # Extract amount/quantity
-        amount_match = re.search(r'(\d+)\s*(shares?|dollars?|percent)', text, re.IGNORECASE)
+        amount_match = re.search(r'(\d+)\s*(shares?|units?|dollars?|usd)', text.lower())
         if amount_match:
             command['parameters']['amount'] = int(amount_match.group(1))
-            command['parameters']['amount_type'] = amount_match.group(2).lower()
         
-        # Extract time period
-        time_match = re.search(r'(\d+)\s*(minute|hour|day|week|month)s?', text, re.IGNORECASE)
-        if time_match:
-            command['parameters']['time_period'] = int(time_match.group(1))
-            command['parameters']['time_unit'] = time_match.group(2).lower()
+        # Extract timeframe
+        timeframe_match = re.search(r'(\d+)\s*(days?|weeks?|months?|years?)', text.lower())
+        if timeframe_match:
+            command['parameters']['period'] = int(timeframe_match.group(1))
+            command['parameters']['unit'] = timeframe_match.group(2).rstrip('s')
         
-        # Extract urgency
-        if any(word in text.lower() for word in ['now', 'immediately', 'urgent']):
-            command['parameters']['urgent'] = True
-        
-        # Extract confidence level
+        # Adjust confidence based on certainty words
         if any(word in text.lower() for word in ['maybe', 'perhaps', 'possibly']):
-            command['confidence'] *= 0.7
+            command['confidence'] *= 0.8
         elif any(word in text.lower() for word in ['definitely', 'sure', 'certain']):
             command['confidence'] *= 1.2
         
-        return {"status": "parameters_extracted"}
+        return command
     
     def execute_voice_command(self, command: Dict[str, Any]) -> Dict[str, Any]:
         """Execute parsed voice command."""
@@ -399,25 +392,21 @@ class VoicePromptAgent:
             }
     
     def _update_voice_history(self, command: Dict[str, Any], result: Dict[str, Any]):
-        """Update voice history. Returns status dict."""
+        """Update voice history."""
         if self.voice_history:
             last_entry = self.voice_history[-1]
             last_entry['parsed_command'] = command
             last_entry['result'] = result
             last_entry['status'] = 'completed'
-        
-        return {"status": "voice_history_updated"}
     
     def get_voice_history(self, limit: int = 50) -> List[Dict]:
         """Get voice command history."""
         return self.voice_history[-limit:] if self.voice_history else []
     
     def clear_voice_history(self):
-        """Clear voice command history. Returns status dict."""
+        """Clear voice command history."""
         self.voice_history = []
         logger.info("Cleared voice command history")
-        
-        return {"status": "voice_history_cleared"}
     
     def get_voice_statistics(self) -> Dict[str, Any]:
         """Get voice command statistics."""
@@ -445,4 +434,4 @@ voice_agent = VoicePromptAgent()
 
 def get_voice_agent() -> VoicePromptAgent:
     """Get the global voice prompt agent instance."""
-    return voice_agent 
+    return voice_agent

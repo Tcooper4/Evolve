@@ -61,6 +61,7 @@ class RiskManager:
         
         self.logger.info(f"Initialized RiskManager with config: {self.config}")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def update_returns(self, returns: pd.Series, benchmark_returns: Optional[pd.Series] = None) -> None:
         """Update returns data.
         
@@ -76,11 +77,12 @@ class RiskManager:
         
         self.logger.info("Updated returns and recalculated metrics")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _calculate_metrics(self) -> None:
         """Calculate risk metrics."""
         if self.returns is None or self.returns.empty:
             self.logger.warning("No returns data available for metric calculation")
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Calculate basic metrics
         volatility = self.returns.std() * np.sqrt(252)
@@ -149,7 +151,7 @@ class RiskManager:
         
         if self.current_metrics is None:
             self.logger.warning("No metrics available for position limits")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Get base limits from config
         max_position_size = self.config.get('max_position_size', 0.2)
@@ -187,7 +189,7 @@ class RiskManager:
         def objective(weights):
             portfolio_return = np.sum(weights * expected_returns)
             portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(covariance, weights)))
-            return -portfolio_return / portfolio_vol if portfolio_vol != 0 else 0
+            return {'success': True, 'result': {'success': True, 'result': -portfolio_return / portfolio_vol if portfolio_vol != 0 else 0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Define constraints
         constraints = [
@@ -219,7 +221,7 @@ class RiskManager:
         """
         if not self.metrics_history:
             self.logger.warning("No metrics history available for plotting")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Create subplots
         fig = make_subplots(
@@ -260,66 +262,121 @@ class RiskManager:
         
         return fig
     
-    def cleanup_old_results(self, max_files: int = 5) -> None:
+    def cleanup_old_results(self, max_files: int = 5) -> Dict[str, Any]:
         """Clean up old result files.
         
         Args:
             max_files: Maximum number of files to retain
+            
+        Returns:
+            Dictionary with cleanup status and details
         """
-        results_dir = 'trading/risk/results'
-        
-        # Get all result files
-        result_files = []
-        for file in os.listdir(results_dir):
-            if file.endswith(('.json', '.csv')):
-                path = os.path.join(results_dir, file)
-                result_files.append((path, os.path.getmtime(path)))
-        
-        # Sort by modification time
-        result_files.sort(key=lambda x: x[1], reverse=True)
-        
-        # Remove old files
-        for path, _ in result_files[max_files:]:
-            try:
-                os.remove(path)
-                self.logger.info(f"Removed old result file: {path}")
-            except Exception as e:
-                self.logger.error(f"Failed to remove file {path}: {e}")
+        try:
+            results_dir = 'trading/risk/results'
+            
+            # Get all result files
+            result_files = []
+            for file in os.listdir(results_dir):
+                if file.endswith(('.json', '.csv')):
+                    path = os.path.join(results_dir, file)
+                    result_files.append((path, os.path.getmtime(path)))
+            
+            # Sort by modification time
+            result_files.sort(key=lambda x: x[1], reverse=True)
+            
+            # Remove old files
+            removed_files = []
+            for path, _ in result_files[max_files:]:
+                try:
+                    os.remove(path)
+                    removed_files.append(path)
+                    self.logger.info(f"Removed old result file: {path}")
+                except Exception as e:
+                    self.logger.error(f"Failed to remove file {path}: {e}")
+            
+            return {
+                'success': True,
+                'message': f'Cleanup completed. Removed {len(removed_files)} files',
+                'removed_files': removed_files,
+                'files_retained': len(result_files) - len(removed_files),
+                'max_files': max_files,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {e}")
+            return {
+                'success': False,
+                'message': f'Error during cleanup: {str(e)}',
+                'max_files': max_files,
+                'timestamp': datetime.utcnow().isoformat()
+            }
     
-    def export_risk_report(self, filepath: str) -> None:
+    def export_risk_report(self, filepath: str) -> Dict[str, Any]:
         """Export risk report to file.
         
         Args:
             filepath: Output file path
+            
+        Returns:
+            Dictionary with export status and details
         """
-        if not self.metrics_history:
-            self.logger.warning("No metrics history available for export")
-            return
-        
-        # Prepare data
-        report_data = {
-            'config': self.config,
-            'metrics_history': [asdict(m) for m in self.metrics_history],
-            'current_metrics': asdict(self.current_metrics) if self.current_metrics else None,
-            'returns_summary': {
-                'mean': float(self.returns.mean()),
-                'std': float(self.returns.std()),
-                'min': float(self.returns.min()),
-                'max': float(self.returns.max())
-            } if self.returns is not None else None
-        }
-        
-        # Export based on file extension
-        if filepath.endswith('.json'):
-            with open(filepath, 'w') as f:
-                json.dump(report_data, f, indent=2)
-        elif filepath.endswith('.csv'):
-            # Convert metrics history to DataFrame
-            df = pd.DataFrame([asdict(m) for m in self.metrics_history])
-            df.to_csv(filepath, index=False)
-        else:
-            raise ValueError("Unsupported file format. Use .json or .csv")
-        
-        self.logger.info(f"Exported risk report to {filepath}")
+        try:
+            if not self.metrics_history:
+                return {
+                    'success': False,
+                    'message': 'No metrics history available for export',
+                    'filepath': filepath,
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+            
+            # Prepare data
+            report_data = {
+                'config': self.config,
+                'metrics_history': [asdict(m) for m in self.metrics_history],
+                'current_metrics': asdict(self.current_metrics) if self.current_metrics else None,
+                'returns_summary': {
+                    'mean': float(self.returns.mean()),
+                    'std': float(self.returns.std()),
+                    'min': float(self.returns.min()),
+                    'max': float(self.returns.max())
+                } if self.returns is not None else None
+            }
+            
+            # Export based on file extension
+            if filepath.endswith('.json'):
+                with open(filepath, 'w') as f:
+                    json.dump(report_data, f, indent=2)
+            elif filepath.endswith('.csv'):
+                # Convert metrics history to DataFrame
+                df = pd.DataFrame([asdict(m) for m in self.metrics_history])
+                df.to_csv(filepath, index=False)
+            else:
+                return {
+                    'success': False,
+                    'message': 'Unsupported file format. Use .json or .csv',
+                    'filepath': filepath,
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+            
+            self.logger.info(f"Exported risk report to {filepath}")
+            
+            return {
+                'success': True,
+                'message': f'Risk report exported successfully to {filepath}',
+                'filepath': filepath,
+                'file_size': os.path.getsize(filepath),
+                'metrics_count': len(self.metrics_history),
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error exporting risk report: {e}")
+            return {
+                'success': False,
+                'message': f'Error exporting risk report: {str(e)}',
+                'filepath': filepath,
+                'timestamp': datetime.utcnow().isoformat()
+            }
 
 __all__ = ["RiskManager", "RiskMetrics"] 

@@ -74,7 +74,7 @@ class UnifiedLogger:
             self.log_dir / "daily_strategy.log",
             backup_count=30  # Keep 30 days
         )
-        
+
     def _setup_logger(self, name: str, log_file: Path, 
                      max_bytes: int = 10*1024*1024,
                      backup_count: int = 5) -> logging.Logger:
@@ -153,7 +153,7 @@ class UnifiedLogger:
         
         # Log to daily file
         self.daily_performance_logger.info(json.dumps(asdict(metrics)))
-        
+
     def log_strategy_decision(self, decision: StrategyDecision) -> None:
         """Log strategy decision.
         
@@ -165,7 +165,7 @@ class UnifiedLogger:
         
         # Log to daily file
         self.daily_strategy_logger.info(json.dumps(asdict(decision)))
-        
+
     def get_performance_history(self, 
                               start_date: Optional[str] = None,
                               end_date: Optional[str] = None,
@@ -333,4 +333,4 @@ def archive_logs(archive_dir: Union[str, Path]) -> None:
     Args:
         archive_dir: Directory to store archived logs
     """
-    logger.archive_logs(archive_dir) 
+    logger.archive_logs(archive_dir)

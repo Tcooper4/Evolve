@@ -19,7 +19,7 @@ def log_strategy_decision(
     is_agentic: bool,
     confidence: float,
     metadata: Optional[Dict] = None
-) -> None:
+) -> Dict:
     """
     Logs whether the selected strategy was agentic or manually overridden.
 
@@ -29,6 +29,9 @@ def log_strategy_decision(
         is_agentic (bool): Whether the selection was made by the agent.
         confidence (float): The confidence score for the selected model.
         metadata (Dict, optional): Additional metadata to log.
+
+    Returns:
+        Dict: Operation result.
     """
     entry = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -56,6 +59,8 @@ def log_strategy_decision(
     # Update analysis
     _update_strategy_analysis(ticker, entry)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
 
 def get_strategy_history(
     ticker: Optional[str] = None,
@@ -74,7 +79,7 @@ def get_strategy_history(
         List[Dict]: List of strategy decision entries.
     """
     if not os.path.exists(LOG_PATH):
-        return []
+        return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     with open(LOG_PATH, "r") as f:
         data = json.load(f)
@@ -101,7 +106,7 @@ def get_strategy_analysis(ticker: str) -> Dict:
         Dict: Analysis of strategy decisions.
     """
     if not os.path.exists(ANALYSIS_PATH):
-        return {}
+        return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     with open(ANALYSIS_PATH, "r") as f:
         analysis = json.load(f)
@@ -155,4 +160,4 @@ def _update_strategy_analysis(ticker: str, entry: Dict) -> None:
     # Save updated analysis
     analysis[ticker] = ticker_analysis
     with open(ANALYSIS_PATH, "w") as f:
-        json.dump(analysis, f, indent=2) 
+        json.dump(analysis, f, indent=2)

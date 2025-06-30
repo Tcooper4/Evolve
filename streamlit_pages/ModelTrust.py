@@ -19,7 +19,7 @@ def load_weight_history():
     if not os.path.exists("memory/weight_history.json"):
         return None
     with open("memory/weight_history.json", "r") as f:
-        return json.load(f)
+        return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     st.title("🧠 Model Trust Insights")
@@ -121,5 +121,6 @@ def main():
         else:
             st.info("No weight history available for this ticker.")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

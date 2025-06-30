@@ -40,8 +40,13 @@ class AgentLeaderboard:
             'win_rate': 0.45
         }
         self.history: List[Dict[str, Any]] = []
+        self.init_status = {
+            'success': True,
+            'message': 'AgentLeaderboard initialized successfully',
+            'timestamp': datetime.now().isoformat()
+        }
 
-    def update_performance(self, agent_name: str, sharpe_ratio: float, max_drawdown: float, win_rate: float, total_return: float, extra_metrics: Optional[Dict[str, Any]] = None):
+    def update_performance(self, agent_name: str, sharpe_ratio: float, max_drawdown: float, win_rate: float, total_return: float, extra_metrics: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Update or add agent performance."""
         perf = AgentPerformance(
             agent_name=agent_name,
@@ -56,8 +61,14 @@ class AgentLeaderboard:
         self.history.append(perf.to_dict())
         self._check_deprecation(agent_name)
         self.logger.info(f"Updated performance for {agent_name}: Sharpe={sharpe_ratio:.2f}, Drawdown={max_drawdown:.2%}, WinRate={win_rate:.2%}")
+        return {
+            'success': True,
+            'message': f'Performance updated for {agent_name}',
+            'timestamp': datetime.now().isoformat(),
+            'agent': agent_name
+        }
 
-    def _check_deprecation(self, agent_name: str):
+    def _check_deprecation(self, agent_name: str) -> Dict[str, Any]:
         """Deprecate agent if it falls below thresholds."""
         perf = self.leaderboard[agent_name]
         deprecated = False
@@ -72,30 +83,61 @@ class AgentLeaderboard:
             self.logger.warning(f"Agent {agent_name} deprecated due to underperformance.")
         else:
             perf.status = "active"
+        return {
+            'success': True,
+            'message': f'Deprecation check completed for {agent_name}',
+            'timestamp': datetime.now().isoformat(),
+            'deprecated': deprecated
+        }
 
-    def get_leaderboard(self, top_n: int = 10, sort_by: str = "sharpe_ratio") -> List[Dict[str, Any]]:
+    def get_leaderboard(self, top_n: int = 10, sort_by: str = "sharpe_ratio") -> Dict[str, Any]:
         """Return leaderboard sorted by metric (default: Sharpe)."""
         sorted_agents = sorted(
             self.leaderboard.values(),
             key=lambda x: getattr(x, sort_by),
             reverse=True
         )
-        return [a.to_dict() for a in sorted_agents[:top_n]]
+        return {
+            'success': True,
+            'result': [a.to_dict() for a in sorted_agents[:top_n]],
+            'message': 'Leaderboard retrieved',
+            'timestamp': datetime.now().isoformat()
+        }
 
-    def get_deprecated_agents(self) -> List[str]:
+    def get_deprecated_agents(self) -> Dict[str, Any]:
         """Return list of deprecated agent names."""
-        return [a.agent_name for a in self.leaderboard.values() if a.status == "deprecated"]
+        return {
+            'success': True,
+            'result': [a.agent_name for a in self.leaderboard.values() if a.status == "deprecated"],
+            'message': 'Deprecated agents retrieved',
+            'timestamp': datetime.now().isoformat()
+        }
 
-    def get_active_agents(self) -> List[str]:
+    def get_active_agents(self) -> Dict[str, Any]:
         """Return list of active agent names."""
-        return [a.agent_name for a in self.leaderboard.values() if a.status == "active"]
+        return {
+            'success': True,
+            'result': [a.agent_name for a in self.leaderboard.values() if a.status == "active"],
+            'message': 'Active agents retrieved',
+            'timestamp': datetime.now().isoformat()
+        }
 
-    def get_history(self, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_history(self, limit: int = 100) -> Dict[str, Any]:
         """Return recent performance history."""
-        return self.history[-limit:]
+        return {
+            'success': True,
+            'result': self.history[-limit:],
+            'message': 'Performance history retrieved',
+            'timestamp': datetime.now().isoformat()
+        }
 
-    def as_dataframe(self):
+    def as_dataframe(self) -> Dict[str, Any]:
         """Return leaderboard as a pandas DataFrame (for dashboard/report)."""
         import pandas as pd
-        data = [a.to_dict() for a in self.leaderboard.values()]
-        return pd.DataFrame(data) 
+        data = [a.to_dict()['result'] for a in self.leaderboard.values()]
+        return {
+            'success': True,
+            'result': pd.DataFrame(data),
+            'message': 'Leaderboard DataFrame created',
+            'timestamp': datetime.now().isoformat()
+        }

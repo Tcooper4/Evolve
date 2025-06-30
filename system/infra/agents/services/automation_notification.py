@@ -43,7 +43,7 @@ class NotificationConfig(BaseModel):
     def validate_required_fields(cls, v, field):
         if not v:
             raise ValueError(f"{field.name} is required")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class NotificationTemplate(BaseModel):
     """Template for notifications."""

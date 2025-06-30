@@ -46,6 +46,7 @@ class APIService:
         self.setup_routes()
         self.setup_middleware()
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/api")
@@ -61,6 +62,7 @@ class APIService:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_config(self) -> None:
         """Load configuration."""
         try:
@@ -70,6 +72,7 @@ class APIService:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def setup_app(self) -> None:
         """Set up FastAPI application."""
         self.app = FastAPI(
@@ -80,6 +83,7 @@ class APIService:
         
         self.oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_middleware(self) -> None:
         """Set up middleware."""
         self.app.add_middleware(
@@ -90,6 +94,7 @@ class APIService:
             allow_headers=["*"],
         )
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_routes(self) -> None:
         """Set up API routes."""
         
@@ -118,7 +123,7 @@ class APIService:
                 user = await self.get_user(token)
                 if not user:
                     raise HTTPException(status_code=401, detail="Invalid token")
-                return user
+                return {'success': True, 'result': user, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             except Exception as e:
                 self.logger.error(f"Get user error: {str(e)}")
                 raise HTTPException(status_code=500, detail=str(e))
@@ -132,6 +137,7 @@ class APIService:
         """Verify user credentials."""
         raise NotImplementedError('Pending feature')
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def generate_token(self, user: User) -> str:
         """Generate JWT token."""
         try:
@@ -140,7 +146,7 @@ class APIService:
                 "sub": user.username,
                 "exp": expiration
             }
-            return jwt.encode(data, self.config["secret_key"], algorithm="HS256")
+            return {'success': True, 'result': jwt.encode(data, self.config["secret_key"], algorithm="HS256"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Token generation error: {str(e)}")
             raise
@@ -149,6 +155,7 @@ class APIService:
         """Get user from token."""
         raise NotImplementedError('Pending feature')
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def start(self) -> None:
         """Start API service."""
         try:
@@ -181,5 +188,6 @@ def main():
         logging.error(f"Error in API service: {str(e)}")
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

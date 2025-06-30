@@ -28,7 +28,7 @@ def register_indicator(name: Optional[str] = None):
         def wrapper(*args: Any, **kwargs: Any) -> Union[pd.Series, pd.DataFrame]:
             try:
                 result = func(*args, **kwargs)
-                return result
+                return {'success': True, 'result': {'success': True, 'result': {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             except Exception as e:
                 logger.error(f"Error in indicator {func.__name__}: {str(e)}")
                 raise
@@ -53,6 +53,7 @@ def _check_required_columns(df: pd.DataFrame, required: List[str]) -> None:
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 @register_indicator()
 def rolling_zscore(series: pd.Series, window: int = 20, fillna: bool = True) -> pd.Series:
     """Calculate a rolling z-score for a series.
@@ -68,7 +69,7 @@ def rolling_zscore(series: pd.Series, window: int = 20, fillna: bool = True) -> 
     mean = series.rolling(window=window).mean()
     std = series.rolling(window=window).std()
     result = (series - mean) / std
-    return result.fillna(method='ffill') if fillna else result
+    return {'success': True, 'result': result.fillna(method='ffill') if fillna else result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 @register_indicator()
 def price_ratios(df: pd.DataFrame, fillna: bool = True) -> pd.DataFrame:
@@ -85,7 +86,7 @@ def price_ratios(df: pd.DataFrame, fillna: bool = True) -> pd.DataFrame:
     out = pd.DataFrame(index=df.index)
     out["HL_RATIO"] = df["high"] / df["low"]
     out["CO_RATIO"] = df["close"] / df["open"]
-    return out.fillna(method='ffill') if fillna else out
+    return {'success': True, 'result': out.fillna(method='ffill') if fillna else out, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 @register_indicator()
 def rsi(df: pd.DataFrame, window: int = 14, fillna: bool = True) -> pd.Series:
@@ -105,7 +106,7 @@ def rsi(df: pd.DataFrame, window: int = 14, fillna: bool = True) -> pd.Series:
     loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
     rs = gain / loss
     result = 100 - (100 / (1 + rs))
-    return result.fillna(method='ffill') if fillna else result
+    return {'success': True, 'result': result.fillna(method='ffill') if fillna else result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 @register_indicator()
 def macd(df: pd.DataFrame, fast: int = 12, slow: int = 26, signal: int = 9, fillna: bool = True) -> pd.DataFrame:
@@ -133,7 +134,7 @@ def macd(df: pd.DataFrame, fast: int = 12, slow: int = 26, signal: int = 9, fill
         'SIGNAL': signal_line,
         'HIST': hist
     })
-    return result.fillna(method='ffill') if fillna else result
+    return {'success': True, 'result': result.fillna(method='ffill') if fillna else result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 @register_indicator()
 def atr(df: pd.DataFrame, window: int = 14, fillna: bool = True) -> pd.Series:
@@ -158,7 +159,7 @@ def atr(df: pd.DataFrame, window: int = 14, fillna: bool = True) -> pd.Series:
     
     tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
     result = tr.rolling(window=window).mean()
-    return result.fillna(method='ffill') if fillna else result
+    return {'success': True, 'result': result.fillna(method='ffill') if fillna else result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 @register_indicator()
 def bollinger_bands(df: pd.DataFrame, window: int = 20, num_std: float = 2.0, fillna: bool = True) -> pd.DataFrame:
@@ -184,7 +185,7 @@ def bollinger_bands(df: pd.DataFrame, window: int = 20, num_std: float = 2.0, fi
         'BB_MIDDLE': middle,
         'BB_LOWER': lower
     })
-    return result.fillna(method='ffill') if fillna else result
+    return {'success': True, 'result': result.fillna(method='ffill') if fillna else result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 @register_indicator()
 def sma(df: pd.DataFrame, window: int = 20, fillna: bool = True) -> pd.Series:
@@ -200,7 +201,7 @@ def sma(df: pd.DataFrame, window: int = 20, fillna: bool = True) -> pd.Series:
     """
     _check_required_columns(df, ['close'])
     result = df['close'].rolling(window=window).mean()
-    return result.fillna(method='ffill') if fillna else result
+    return {'success': True, 'result': result.fillna(method='ffill') if fillna else result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 @register_indicator()
 def ema(df: pd.DataFrame, window: int = 20, fillna: bool = True) -> pd.Series:
@@ -216,7 +217,7 @@ def ema(df: pd.DataFrame, window: int = 20, fillna: bool = True) -> pd.Series:
     """
     _check_required_columns(df, ['close'])
     result = df['close'].ewm(span=window, adjust=False).mean()
-    return result.fillna(method='ffill') if fillna else result
+    return {'success': True, 'result': result.fillna(method='ffill') if fillna else result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_indicator_descriptions() -> Dict[str, str]:
     """Get descriptions for all registered indicators.
@@ -224,7 +225,7 @@ def get_indicator_descriptions() -> Dict[str, str]:
     Returns:
         Dictionary mapping indicator names to descriptions
     """
-    return {
+    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         'ROLLING_ZSCORE': 'Rolling z-score normalization of price series',
         'PRICE_RATIOS': 'High/Low and Close/Open price ratios',
         'RSI': 'Relative Strength Index - momentum oscillator',

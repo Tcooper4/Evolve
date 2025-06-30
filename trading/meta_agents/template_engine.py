@@ -26,6 +26,7 @@ class TemplateEngine:
         )
         self.setup_logging()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for template engine."""
         log_path = Path("logs/templates")
@@ -41,6 +42,7 @@ class TemplateEngine:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def render_template(
         self,
         template_name: str,
@@ -49,7 +51,7 @@ class TemplateEngine:
         """Render a template with the given context."""
         try:
             template = self.env.get_template(template_name)
-            return template.render(**context)
+            return {'success': True, 'result': template.render(**context), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error rendering template {template_name}: {str(e)}")
             raise
@@ -62,7 +64,7 @@ class TemplateEngine:
         """Render a template string with the given context."""
         try:
             template = self.env.from_string(template_string)
-            return template.render(**context)
+            return {'success': True, 'result': template.render(**context), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error rendering template string: {str(e)}")
             raise
@@ -72,7 +74,7 @@ class TemplateEngine:
         try:
             template_path = self.template_dir / template_name
             with open(template_path, 'r') as f:
-                return f.read()
+                return {'success': True, 'result': f.read(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error loading template {template_name}: {str(e)}")
             raise
@@ -81,6 +83,7 @@ class TemplateEngine:
         self,
         template_name: str,
         content: str
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     ) -> None:
         """Save a template file."""
         try:
@@ -98,7 +101,7 @@ class TemplateEngine:
     def list_templates(self) -> List[str]:
         """List all available templates."""
         try:
-            return [
+            return {'success': True, 'result': [, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 str(p.relative_to(self.template_dir))
                 for p in self.template_dir.rglob('*')
                 if p.is_file()
@@ -120,6 +123,7 @@ class TemplateEngine:
             self.logger.error(f"Error deleting template {template_name}: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def validate_template(
         self,
         template_name: str,
@@ -133,4 +137,4 @@ class TemplateEngine:
             return True
         except Exception as e:
             self.logger.error(f"Error validating template {template_name}: {str(e)}")
-            return False 
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

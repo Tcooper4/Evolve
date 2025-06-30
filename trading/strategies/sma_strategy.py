@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
+from datetime import datetime
 
 @dataclass
 class SMAConfig:
@@ -88,8 +89,12 @@ class SMAStrategy:
             'min_price': self.config.min_price
         }
         
-    def set_parameters(self, params: Dict) -> None:
+    def set_parameters(self, params: Dict) -> Dict:
         """Set strategy parameters."""
-        self.config = SMAConfig(**params)
-        self.signals = None
-        self.positions = None 
+        try:
+            self.config = SMAConfig(**params)
+            self.signals = None
+            self.positions = None
+            return {"status": "success", "parameters_updated": True, "config": self.get_parameters()}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}

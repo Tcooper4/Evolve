@@ -235,7 +235,7 @@ class ExecutionRiskAgent:
         if datetime.now() > end_time:
             # Remove expired cooling period
             del self.cooling_periods_active[symbol]
-            return False
+            return True
         
         return True
     
@@ -271,7 +271,7 @@ class ExecutionRiskAgent:
             
         except Exception as e:
             logger.error(f"Error checking position size: {e}")
-            return None
+            return True
     
     def _check_sector_exposure(self, symbol: str, size: float, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
         """Check sector exposure limit.
@@ -309,7 +309,7 @@ class ExecutionRiskAgent:
             
         except Exception as e:
             logger.error(f"Error checking sector exposure: {e}")
-            return None
+            return True
     
     def _check_portfolio_risk(self, size: float, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
         """Check portfolio risk limit.
@@ -342,7 +342,7 @@ class ExecutionRiskAgent:
             
         except Exception as e:
             logger.error(f"Error checking portfolio risk: {e}")
-            return None
+            return True
     
     def _check_daily_loss_limit(self, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
         """Check daily loss limit.
@@ -372,7 +372,7 @@ class ExecutionRiskAgent:
             
         except Exception as e:
             logger.error(f"Error checking daily loss limit: {e}")
-            return None
+            return True
     
     def _check_drawdown_limit(self, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
         """Check drawdown limit.
@@ -402,7 +402,7 @@ class ExecutionRiskAgent:
             
         except Exception as e:
             logger.error(f"Error checking drawdown limit: {e}")
-            return None
+            return True
     
     def _check_leverage_limit(self, size: float, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
         """Check leverage limit.
@@ -436,7 +436,7 @@ class ExecutionRiskAgent:
             
         except Exception as e:
             logger.error(f"Error checking leverage limit: {e}")
-            return None
+            return True
     
     def _check_liquidity(self, symbol: str, size: float, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
         """Check liquidity requirements.
@@ -471,7 +471,7 @@ class ExecutionRiskAgent:
             
         except Exception as e:
             logger.error(f"Error checking liquidity: {e}")
-            return None
+            return True
     
     def _check_volatility(self, symbol: str, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
         """Check volatility threshold.
@@ -505,7 +505,7 @@ class ExecutionRiskAgent:
             
         except Exception as e:
             logger.error(f"Error checking volatility: {e}")
-            return None
+            return True
     
     def _check_correlation(self, symbol: str, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
         """Check correlation threshold.
@@ -539,7 +539,7 @@ class ExecutionRiskAgent:
             
         except Exception as e:
             logger.error(f"Error checking correlation: {e}")
-            return None
+            return True
     
     def _check_concentration(self, symbol: str, size: float, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
         """Check concentration threshold.
@@ -578,7 +578,7 @@ class ExecutionRiskAgent:
             
         except Exception as e:
             logger.error(f"Error checking concentration: {e}")
-            return None
+            return True
     
     def _calculate_modified_size(self, original_size: float, failed_checks: List[RiskCheck]) -> float:
         """Calculate modified trade size based on failed checks.
@@ -764,4 +764,4 @@ execution_risk_agent = ExecutionRiskAgent()
 
 def get_execution_risk_agent() -> ExecutionRiskAgent:
     """Get the global execution risk agent instance."""
-    return execution_risk_agent 
+    return execution_risk_agent

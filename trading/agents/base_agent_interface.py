@@ -69,14 +69,14 @@ class BaseAgent(ABC):
             is_running=False
         )
         self._setup()
-    
+
     def _setup(self) -> None:
         """Setup method called during initialization.
         
         Override this method to perform any agent-specific setup.
         """
         pass
-    
+
     @abstractmethod
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the agent's main logic.
@@ -94,13 +94,13 @@ class BaseAgent(ABC):
         self.config.enabled = True
         self.status.enabled = True
         self.logger.info(f"Agent {self.config.name} enabled")
-    
+
     def disable(self) -> None:
         """Disable the agent."""
         self.config.enabled = False
         self.status.enabled = False
         self.logger.info(f"Agent {self.config.name} disabled")
-    
+
     def is_enabled(self) -> bool:
         """Check if the agent is enabled."""
         return self.config.enabled and self.status.enabled
@@ -126,7 +126,7 @@ class BaseAgent(ABC):
                 self.config.custom_config[key] = value
         
         self.logger.info(f"Updated configuration for agent {self.config.name}")
-    
+
     def validate_input(self, **kwargs) -> bool:
         """Validate input parameters.
         
@@ -163,20 +163,20 @@ class BaseAgent(ABC):
         self.status.last_run = datetime.now()
         self.status.total_runs += 1
         self.status.current_error = None
-    
+
     def _update_status_on_success(self, execution_time: float) -> None:
         """Update status when execution succeeds."""
         self.status.is_running = False
         self.status.last_success = datetime.now()
         self.status.successful_runs += 1
         self.status.current_error = None
-    
+
     def _update_status_on_failure(self, error: str) -> None:
         """Update status when execution fails."""
         self.status.is_running = False
         self.status.failed_runs += 1
         self.status.current_error = error
-    
+
     async def run(self, **kwargs) -> AgentResult:
         """Run the agent with error handling and status updates.
         

@@ -107,5 +107,6 @@ def main():
         st.subheader("📈 Backtest Results")
         st.warning("Real backtest results will appear here after running a backtest with actual market data.")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

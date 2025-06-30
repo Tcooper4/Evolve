@@ -25,6 +25,7 @@ class SystemDiagnostics:
         self.health_status = {}
         self.last_check = None
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def check_data_loading(self) -> Tuple[bool, List[str]]:
         """Check data loading capabilities."""
         issues = []
@@ -51,7 +52,7 @@ class SystemDiagnostics:
         except Exception as e:
             issues.append(f"Pandas error: {str(e)}")
         
-        return len(issues) == 0, issues
+        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def check_forecasting_models(self) -> Tuple[bool, List[str]]:
         """Check forecasting model availability."""
@@ -71,7 +72,7 @@ class SystemDiagnostics:
         except Exception as e:
             issues.append(f"PyTorch error: {str(e)}")
         
-        return len(issues) == 0, issues
+        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def check_agent_communication(self) -> Tuple[bool, List[str]]:
         """Check agent communication channels."""
@@ -102,7 +103,7 @@ class SystemDiagnostics:
         except Exception as e:
             issues.append(f"Memory access error: {str(e)}")
         
-        return len(issues) == 0, issues
+        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def check_system_resources(self) -> Tuple[bool, List[str]]:
         """Check system resource availability."""
@@ -123,7 +124,7 @@ class SystemDiagnostics:
         if disk.percent > 90:
             issues.append(f"Low disk space: {disk.percent}% used")
         
-        return len(issues) == 0, issues
+        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def run_health_check(self) -> Dict[str, Any]:
         """Run all health checks."""
@@ -166,12 +167,12 @@ class SystemDiagnostics:
                 context=results
             )
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_health_status(self) -> Dict[str, Any]:
         """Get current health status."""
         if not self.last_check or (datetime.now() - self.last_check).seconds > 300:
-            return self.run_health_check()
+            return {'success': True, 'result': self.run_health_check(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return self.health_status
     
     def save_report(self, filepath: str = "health_report.json") -> None:
@@ -190,5 +191,6 @@ class SystemDiagnostics:
         with open(filepath, 'w') as f:
             json.dump(report, f, indent=2)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Create singleton instance
 diagnostics = SystemDiagnostics() 

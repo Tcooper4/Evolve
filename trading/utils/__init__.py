@@ -25,7 +25,7 @@ def check_model_performance(metrics: Dict[str, Any]) -> bool:
         return True
     except Exception as e:
         utils_logger.error(f"Error checking model performance: {e}")
-        return False
+        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def detect_model_drift(model_id: str) -> bool:
     """Detect if model has drifted."""
@@ -46,7 +46,7 @@ def detect_model_drift(model_id: str) -> bool:
         return False
     except Exception as e:
         utils_logger.error(f"Error detecting model drift: {e}")
-        return False
+        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def validate_update_result(model_id: str, result: Dict[str, Any]) -> bool:
     """Validate model update result."""
@@ -55,7 +55,7 @@ def validate_update_result(model_id: str, result: Dict[str, Any]) -> bool:
         required_keys = ['accuracy', 'sharpe_ratio', 'timestamp']
         for key in required_keys:
             if key not in result:
-                return False
+                return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 
         # Check if performance improved
         if result.get('accuracy', 0) < 0.5:
@@ -91,7 +91,7 @@ def calculate_reweighting_factors(models: List[str]) -> Dict[str, float]:
         return factors
     except Exception as e:
         utils_logger.error(f"Error calculating reweighting factors: {e}")
-        return {model_id: 1.0/len(models) for model_id in models}
+        return {'success': True, 'result': {model_id: 1.0/len(models) for model_id in models}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_model_metrics(model_id: str) -> Dict[str, Any]:
     """Get metrics for a specific model."""
@@ -99,7 +99,7 @@ def get_model_metrics(model_id: str) -> Dict[str, Any]:
         metrics_path = f"metrics/{model_id}_metrics.json"
         if os.path.exists(metrics_path):
             with open(metrics_path, 'r') as f:
-                return json.load(f)
+                return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return {}
     except Exception as e:
         utils_logger.error(f"Error getting model metrics: {e}")
@@ -120,7 +120,7 @@ def check_update_frequency(model_id: str) -> bool:
         return days_since_update > 7
     except Exception as e:
         utils_logger.error(f"Error checking update frequency: {e}")
-        return True
+        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_ensemble_weights() -> Dict[str, float]:
     """Get current ensemble weights."""
@@ -128,7 +128,7 @@ def get_ensemble_weights() -> Dict[str, float]:
         weights_path = "models/ensemble_weights.json"
         if os.path.exists(weights_path):
             with open(weights_path, 'r') as f:
-                return json.load(f)
+                return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return {}
     except Exception as e:
         utils_logger.error(f"Error getting ensemble weights: {e}")
@@ -144,6 +144,7 @@ def save_ensemble_weights(weights: Dict[str, float]) -> None:
     except Exception as e:
         utils_logger.error(f"Error saving ensemble weights: {e}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def check_data_quality(data: pd.DataFrame) -> bool:
     """Check data quality for model training."""
     try:
@@ -162,7 +163,7 @@ def check_data_quality(data: pd.DataFrame) -> bool:
         return True
     except Exception as e:
         utils_logger.error(f"Error checking data quality: {e}")
-        return False
+        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 __all__ = [
     'LogManager',

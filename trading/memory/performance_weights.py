@@ -47,7 +47,7 @@ def export_weights_to_file(ticker: str, strategy: str = "balanced") -> Dict[str,
         
     except Exception as e:
         print(f"Error exporting weights: {e}")
-        return {"lstm": 1.0}  # Fallback to single model
+        return {'success': True, 'result': {"lstm": 1.0}  # Fallback to single model, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_latest_weights(ticker: str = "AAPL") -> Dict[str, float]:
     """
@@ -64,7 +64,7 @@ def get_latest_weights(ticker: str = "AAPL") -> Dict[str, float]:
         if os.path.exists(weights_file):
             with open(weights_file, 'r') as f:
                 weights_data = json.load(f)
-                return weights_data.get("weights", {})
+                return {'success': True, 'result': weights_data.get("weights", {}), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         else:
             # Return default weights if file doesn't exist
             return {

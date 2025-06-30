@@ -23,10 +23,12 @@ def setup_signal_handlers(runner):
         asyncio.create_task(runner.stop())
         sys.exit(0)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 async def demo_live_market_runner():
     """Demonstrate LiveMarketRunner functionality."""
     print("🚀 Live Market Runner Demo")

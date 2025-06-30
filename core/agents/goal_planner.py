@@ -78,7 +78,7 @@ def load_goals() -> Dict[str, Any]:
             return json.load(f)
     except FileNotFoundError:
         logger.warning(f"Goals file not found at {goal_file}, using defaults")
-        return {"goals": []}
+        return {'success': True, 'result': {"goals": []}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON in goals file: {e}")
         raise
@@ -101,6 +101,7 @@ def save_goals(goals: Dict[str, Any]) -> None:
         logger.error(f"Failed to save goals: {e}")
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def calculate_rolling_metrics(df: pd.DataFrame, window: int = 7) -> GoalMetrics:
     """Calculate rolling averages for key metrics.
     
@@ -139,7 +140,7 @@ def calculate_rolling_metrics(df: pd.DataFrame, window: int = 7) -> GoalMetrics:
         
     except Exception as e:
         logger.error(f"Error calculating rolling metrics: {str(e)}")
-        return DEFAULT_METRICS
+        return {'success': True, 'result': DEFAULT_METRICS, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def evaluate_goals() -> Dict[str, Any]:
     """Evaluate current performance against goals.
@@ -160,7 +161,7 @@ def evaluate_goals() -> Dict[str, Any]:
         else:
             logger.info("All performance targets met")
             
-        return status_report
+        return {'success': True, 'result': status_report, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     except Exception as e:
         error_msg = f"Error evaluating goals: {str(e)}"
@@ -172,7 +173,7 @@ class Router:
     """Simple router stub for deprecated goal planner."""
     def route_task(self, task):
         """Route a task (stub implementation)."""
-        return {"status": "routed", "agent": "default"}
+        return {'success': True, 'result': {"status": "routed", "agent": "default"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class GoalPlanner(BaseAgent):
     """Agent responsible for planning and managing long-term objectives."""
@@ -192,10 +193,12 @@ class GoalPlanner(BaseAgent):
         self.load_goals()
         self.register_default_goals()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup(self):
         """Setup the goal planner."""
         self.objectives = self.config.get('objectives', {})
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def run(self, prompt: str, **kwargs) -> AgentResult:
         """
         Process a goal planning request.

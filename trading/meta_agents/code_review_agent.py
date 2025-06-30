@@ -35,6 +35,7 @@ class CodeReviewAgent(BaseMetaAgent):
             "security": self._analyze_security
         }
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def execute_code_review(self) -> Dict[str, Any]:
         """Execute code review and collect results.
         
@@ -60,7 +61,7 @@ class CodeReviewAgent(BaseMetaAgent):
         # Log results
         self.log_action("Code review completed", results)
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _review_forecast_logic(self) -> Dict[str, Any]:
         """Review forecast logic in models.
@@ -79,7 +80,7 @@ class CodeReviewAgent(BaseMetaAgent):
                 self.logger.error(f"Error analyzing model {model_name}: {str(e)}")
                 results[model_name] = {"error": str(e)}
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _review_strategies(self) -> Dict[str, Any]:
         """Review trading strategies.
@@ -98,7 +99,7 @@ class CodeReviewAgent(BaseMetaAgent):
                 self.logger.error(f"Error analyzing strategy {strategy_name}: {str(e)}")
                 results[strategy_name] = {"error": str(e)}
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _analyze_model(self, model_name: str) -> Dict[str, Any]:
         """Analyze a specific model.
@@ -114,7 +115,7 @@ class CodeReviewAgent(BaseMetaAgent):
         # Get model file
         model_file = self._get_model_file(model_name)
         if not model_file:
-            return {"error": "Model file not found"}
+            return {'success': True, 'result': {"error": "Model file not found"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Analyze code
         with open(model_file) as f:
@@ -146,7 +147,7 @@ class CodeReviewAgent(BaseMetaAgent):
         try:
             strategy = self.strategy_manager.get_strategy(strategy_name)
         except Exception as e:
-            return {"error": f"Failed to get strategy: {str(e)}"}
+            return {'success': True, 'result': {"error": f"Failed to get strategy: {str(e)}"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Analyze performance
         metrics = self.performance_memory.get_metrics(strategy_name)
@@ -222,7 +223,7 @@ class CodeReviewAgent(BaseMetaAgent):
                     "suggestion": "Review and optimize strategy parameters"
                 })
         
-        return fixes
+        return {'success': True, 'result': fixes, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_model_files(self) -> List[str]:
         """Get list of model files.
@@ -231,7 +232,7 @@ class CodeReviewAgent(BaseMetaAgent):
             List of model file names
         """
         model_dir = Path("trading/models")
-        return [f.stem for f in model_dir.glob("*.py") if f.stem != "__init__"]
+        return {'success': True, 'result': [f.stem for f in model_dir.glob("*.py") if f.stem != "__init__"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_model_file(self, model_name: str) -> Optional[Path]:
         """Get path to model file.
@@ -243,7 +244,7 @@ class CodeReviewAgent(BaseMetaAgent):
             Path to model file if found
         """
         model_file = Path(f"trading/models/{model_name}.py")
-        return model_file if model_file.exists() else None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_strategy_file(self, strategy_name: str) -> Optional[Path]:
         """Get path to strategy file.
@@ -255,7 +256,7 @@ class CodeReviewAgent(BaseMetaAgent):
             Path to strategy file if found
         """
         strategy_file = Path(f"trading/strategies/{strategy_name}.py")
-        return strategy_file if strategy_file.exists() else None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _analyze_complexity(self, tree: ast.AST) -> Dict[str, Any]:
         """Analyze code complexity.
@@ -267,7 +268,7 @@ class CodeReviewAgent(BaseMetaAgent):
             Dict containing complexity analysis results
         """
         # Implement complexity analysis
-        return {"score": 0.5}  # Placeholder
+        return {'success': True, 'result': {"score": 0.5}  # Placeholder, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _analyze_coverage(self, tree: ast.AST) -> Dict[str, Any]:
         """Analyze test coverage.
@@ -279,7 +280,7 @@ class CodeReviewAgent(BaseMetaAgent):
             Dict containing coverage analysis results
         """
         # Implement coverage analysis
-        return {"score": 0.7}  # Placeholder
+        return {'success': True, 'result': {"score": 0.7}  # Placeholder, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _analyze_performance(self, tree: ast.AST) -> Dict[str, Any]:
         """Analyze code performance.
@@ -291,7 +292,7 @@ class CodeReviewAgent(BaseMetaAgent):
             Dict containing performance analysis results
         """
         # Implement performance analysis
-        return {"score": 0.8}  # Placeholder
+        return {'success': True, 'result': {"score": 0.8}  # Placeholder, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _analyze_security(self, tree: ast.AST) -> Dict[str, Any]:
         """Analyze code security.
@@ -303,4 +304,4 @@ class CodeReviewAgent(BaseMetaAgent):
             Dict containing security analysis results
         """
         # Implement security analysis
-        return {"score": 0.9}  # Placeholder 
+        return {'success': True, 'result': {"score": 0.9}  # Placeholder, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

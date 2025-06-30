@@ -23,6 +23,7 @@ class NotificationService:
         self.setup_logging()
         self.initialize_handlers()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for notifications."""
         log_path = Path("logs/notifications")
@@ -38,6 +39,7 @@ class NotificationService:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def initialize_handlers(self):
         """Initialize notification handlers."""
         try:
@@ -58,6 +60,7 @@ class NotificationService:
             self.logger.error(f"Error initializing notification handlers: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def send_notification(
         self,
         message: Dict[str, Any],
@@ -140,7 +143,7 @@ class NotificationService:
             "info": "#36a64f",      # Green
             "debug": "#808080"      # Gray
         }
-        return colors.get(severity.lower(), colors["info"])
+        return {'success': True, 'result': colors.get(severity.lower(), colors["info"]), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     async def register_handler(
         self,

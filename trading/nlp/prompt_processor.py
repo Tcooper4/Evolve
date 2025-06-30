@@ -62,39 +62,26 @@ class PromptProcessor:
         self.context = {}
         
     def _load_entity_patterns(self) -> Dict[str, Any]:
-        """Load entity patterns from JSON file.
-        
-        Returns:
-            Dictionary of entity patterns
-        """
+        """Load entity patterns from configuration."""
         try:
-            patterns_path = os.path.join('trading', 'nlp', 'configs', 'entity_patterns.json')
-            if os.path.exists(patterns_path):
-                with open(patterns_path, 'r') as f:
-                    patterns = json.load(f)
-                logger.debug(f"Loaded {len(patterns)} entity patterns")
-                return patterns
-            else:
-                logger.warning(f"Entity patterns file not found at {patterns_path}")
-                return {}
+            config_path = os.path.join(os.path.dirname(__file__), 'config', 'entity_patterns.json')
+            with open(config_path, 'r') as f:
+                return json.load(f)
         except Exception as e:
-            logger.error(f"Error loading entity patterns: {str(e)}", exc_info=True)
+            self.logger.warning(f"Could not load entity patterns: {e}")
             return {}
-            
+    
     def process_prompt(self, text: str) -> ProcessedPrompt:
-        """Process a natural language prompt.
+        """Process a text prompt to extract entities and determine intent.
         
         Args:
             text: The input text to process
             
         Returns:
-            ProcessedPrompt object containing extracted entities and intent
+            ProcessedPrompt object with extracted information
         """
         try:
-            # Extract entities
             entities = self._extract_entities(text)
-            
-            # Determine intent
             intent, confidence = self._determine_intent(text, entities)
             
             return ProcessedPrompt(
@@ -464,7 +451,7 @@ Example response:
             
         except Exception as e:
             logger.error(f"Error expanding entities: {str(e)}", exc_info=True)
-            return entities 
+            return {}
 
     def route_to_agent(self, entities: dict, intent: str = None) -> dict:
         """
@@ -526,8 +513,7 @@ Example response:
             with open(MEMORY_LOG_PATH, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to write memory log: {e}")
+            logger.error(f"Failed to write memory log: {e}")
 
     def process_and_route(self, prompt: str) -> dict:
         """
@@ -542,7 +528,7 @@ Example response:
             "entities": entities,
             "intent": intent,
             "routed": routed
-        } 
+        }
 
     def classify_intent(self, prompt: str) -> str:
         """

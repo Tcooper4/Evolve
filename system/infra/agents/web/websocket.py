@@ -26,38 +26,24 @@ class WebSocketManager:
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
         self.user_sessions: Dict[str, Dict] = {}
-        
+
     async def connect(self, websocket: WebSocket, token: str) -> bool:
-        """Connect a new WebSocket client with authentication.
-        
-        Args:
-            websocket: WebSocket connection
-            token: JWT token for authentication
-            
-        Returns:
-            bool: True if connection successful, False otherwise
-        """
         try:
-            # Verify token
             data = jwt.decode(
                 token,
                 os.getenv('JWT_SECRET'),
                 algorithms=['HS256']
             )
             username = data['username']
-            
-            # Store connection
             self.active_connections[username] = websocket
             self.user_sessions[username] = {
                 'connected_at': datetime.utcnow(),
                 'last_activity': datetime.utcnow(),
                 'is_admin': data.get('is_admin', False)
             }
-            
             await websocket.accept()
             logger.info(f"User {username} connected")
             return True
-            
         except jwt.ExpiredSignatureError:
             logger.warning("Connection attempt with expired token")
             return False
@@ -67,24 +53,14 @@ class WebSocketManager:
         except Exception as e:
             logger.error(f"Error during WebSocket connection: {str(e)}")
             return False
-            
+
     def disconnect(self, username: str) -> None:
-        """Disconnect a WebSocket client.
-        
-        Args:
-            username: Username of the client to disconnect
-        """
         if username in self.active_connections:
             del self.active_connections[username]
             del self.user_sessions[username]
             logger.info(f"User {username} disconnected")
-            
+
     async def broadcast(self, message: str) -> None:
-        """Broadcast a message to all connected clients.
-        
-        Args:
-            message: Message to broadcast
-        """
         disconnected = []
         for username, connection in self.active_connections.items():
             try:
@@ -95,25 +71,13 @@ class WebSocketManager:
             except Exception as e:
                 logger.error(f"Error broadcasting to {username}: {str(e)}")
                 disconnected.append(username)
-                
-        # Clean up disconnected clients
         for username in disconnected:
             self.disconnect(username)
-            
+
     async def send_personal_message(self, username: str, message: str) -> bool:
-        """Send a message to a specific client.
-        
-        Args:
-            username: Username of the target client
-            message: Message to send
-            
-        Returns:
-            bool: True if message sent successfully, False otherwise
-        """
         if username not in self.active_connections:
             logger.warning(f"Attempt to send message to disconnected user {username}")
             return False
-            
         try:
             await self.active_connections[username].send_text(message)
             self.user_sessions[username]['last_activity'] = datetime.utcnow()
@@ -124,13 +88,8 @@ class WebSocketManager:
         except Exception as e:
             logger.error(f"Error sending message to {username}: {str(e)}")
             return False
-            
+
     def get_active_users(self) -> Dict[str, Dict]:
-        """Get information about active users.
-        
-        Returns:
-            Dict containing information about active users
-        """
         return {
             username: {
                 'connected_at': session['connected_at'].isoformat(),
@@ -139,19 +98,13 @@ class WebSocketManager:
             }
             for username, session in self.user_sessions.items()
         }
-        
+
     def cleanup_inactive_sessions(self, max_inactive_time: int = 3600) -> None:
-        """Clean up inactive sessions.
-        
-        Args:
-            max_inactive_time: Maximum time in seconds before session is considered inactive
-        """
         now = datetime.utcnow()
         inactive = [
             username for username, session in self.user_sessions.items()
             if (now - session['last_activity']).total_seconds() > max_inactive_time
         ]
-        
         for username in inactive:
             self.disconnect(username)
             logger.info(f"Cleaned up inactive session for user {username}")
@@ -159,18 +112,11 @@ class WebSocketManager:
 class WebSocketHandler:
     def __init__(self, manager: WebSocketManager):
         self.manager = manager
-        
+
     async def handle_connection(self, websocket: WebSocket, token: str) -> None:
-        """Handle a new WebSocket connection.
-        
-        Args:
-            websocket: WebSocket connection
-            token: JWT token for authentication
-        """
         if not await self.manager.connect(websocket, token):
             await websocket.close(code=1008)  # Policy Violation
             return
-            
         try:
             while True:
                 data = await websocket.receive_text()
@@ -182,13 +128,11 @@ class WebSocketHandler:
                         await self.manager.broadcast(json.dumps(message))
                 except json.JSONDecodeError:
                     logger.warning(f"Received invalid JSON: {data}")
-                    
         except WebSocketDisconnect:
             pass
         except Exception as e:
             logger.error(f"Error handling WebSocket connection: {str(e)}")
         finally:
-            # Get username from token
             try:
                 data = jwt.decode(
                     token,

@@ -43,6 +43,7 @@ class SystemMonitor:
         config: Optional[Dict] = None,
         log_dir: Optional[Union[str, Path]] = None,
         test_mode: bool = False
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize the system monitor.
         
@@ -146,6 +147,7 @@ class SystemMonitor:
         )
         self.logger.addHandler(alert_handler)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def start(self) -> None:
         """Start monitoring all enabled metrics."""
         if self.running:
@@ -290,7 +292,7 @@ class SystemMonitor:
             "network": 500.0,
             "api": 200.0
         }
-        return mock_values.get(metric_name, 0.0)
+        return {'success': True, 'result': mock_values.get(metric_name, 0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     async def _evaluate_alert(
         self,
@@ -357,7 +359,7 @@ class SystemMonitor:
         Returns:
             Dict containing monitor status
         """
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "agent_id": self.agent_id,
             "hostname": self.hostname,
             "platform": self.platform,

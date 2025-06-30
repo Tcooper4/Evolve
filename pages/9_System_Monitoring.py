@@ -59,5 +59,6 @@ def main():
     st.subheader("🚨 Alerts")
     st.info("Real alerts require connection to alerting system.")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

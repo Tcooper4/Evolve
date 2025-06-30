@@ -30,7 +30,7 @@ class DataVisualizer:
         plt.style.use(style)
         self.figsize = (12, 6)
         self.dpi = 100
-        
+
     def plot_data_overview(
         self,
         data: pd.DataFrame,
@@ -284,7 +284,7 @@ class MarketVisualizer:
         plt.style.use(style)
         self.figsize = (12, 6)
         self.dpi = 100
-        
+
     def plot_price_data(
         self,
         data: pd.DataFrame,

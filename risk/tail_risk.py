@@ -481,7 +481,7 @@ class TailRiskEngine:
             
         except Exception as e:
             logger.error(f"Error creating drawdown heatmap: {e}")
-            return None
+            return fig
     
     def generate_risk_report(self, returns: pd.Series, 
                            portfolio_name: str = "Portfolio") -> TailRiskReport:

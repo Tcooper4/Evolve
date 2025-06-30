@@ -45,6 +45,7 @@ class PerformanceMonitor:
         config: Optional[Dict] = None,
         log_file_path: Optional[Union[str, Path]] = None,
         debug: bool = False
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize the performance monitor.
         
@@ -115,7 +116,7 @@ class PerformanceMonitor:
         """Start the monitoring process."""
         if self.active:
             self.logger.warning("Monitor is already active")
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         self.active = True
         self.stop_event.clear()
@@ -127,7 +128,7 @@ class PerformanceMonitor:
     def stop_monitoring(self) -> None:
         """Stop the monitoring process."""
         if not self.active:
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         self.logger.info("Stopping performance monitoring...")
         self.active = False
@@ -143,6 +144,7 @@ class PerformanceMonitor:
         self.start_monitoring()
         self.logger.info("Performance monitoring restarted")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _monitor_loop(self) -> None:
         """Main monitoring loop."""
         while not self.stop_event.is_set():
@@ -156,6 +158,7 @@ class PerformanceMonitor:
                 self.logger.error(f"Error in monitor loop: {str(e)}")
                 time.sleep(5)  # Brief pause before retry
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def collect_metrics(self) -> List[Metric]:
         """Collect all system metrics.
         
@@ -238,7 +241,7 @@ class PerformanceMonitor:
                 threshold=self.config["alert_thresholds"]["net_io_percent"]
             ))
         
-        return metrics
+        return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _store_metric(self, metric: Metric) -> None:
         """Store a metric in memory and on disk.
@@ -266,6 +269,7 @@ class PerformanceMonitor:
         
         self.logger.debug(f"Stored metric: {metric.name}={metric.value}{metric.unit}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def evaluate_alerts(self, metric: Metric) -> None:
         """Evaluate a metric against thresholds and trigger alerts.
         
@@ -273,7 +277,7 @@ class PerformanceMonitor:
             metric: Metric to evaluate
         """
         if not metric.threshold:
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         # Calculate severity thresholds
         warning_threshold = metric.threshold * self.config["alert_severities"]["warning"]
@@ -322,6 +326,7 @@ class PerformanceMonitor:
         with open(alert_file, "a") as f:
             f.write(json.dumps(asdict(alert)) + "\n")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def resolve_alert(self, alert_id: str) -> None:
         """Resolve an alert.
         
@@ -335,6 +340,7 @@ class PerformanceMonitor:
             self._store_alert(alert)
             self.logger.info(f"Alert resolved: {alert_id}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_metric_history(self, metric_name: str) -> List[Metric]:
         """Get historical data for a metric.
         
@@ -344,7 +350,7 @@ class PerformanceMonitor:
         Returns:
             List of historical metrics
         """
-        return self.metrics.get(metric_name, [])
+        return {'success': True, 'result': self.metrics.get(metric_name, []), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def report_summary(self) -> Dict[str, Any]:
         """Generate a summary report of current metrics and alerts.
@@ -364,7 +370,7 @@ class PerformanceMonitor:
             if not alert.resolved:
                 alert_counts[alert.severity] += 1
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "timestamp": datetime.utcnow().isoformat(),
             "hostname": self.hostname,
             "platform": self.platform,
@@ -392,3 +398,4 @@ class PerformanceMonitor:
         except Exception as e:
             self.logger.error(f"Error loading synthetic data: {str(e)}")
             raise 
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

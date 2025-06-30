@@ -23,6 +23,7 @@ class ConfigManager:
         if env_config:
             self.config.update(env_config)
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _parse_config(self, name: str, data: Dict[str, Any]) -> Any:
         """Instantiate a config object based on file name."""
         lower = name.lower()
@@ -35,7 +36,7 @@ class ConfigManager:
         if "web" in lower:
             return WebConfig.from_dict(data)
         if "monitor" in lower:
-            return MonitoringConfig.from_dict(data)
+            return {'success': True, 'result': MonitoringConfig.from_dict(data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return data
 
     def load_config(self, config_type: str) -> Any:
@@ -57,7 +58,7 @@ class ConfigManager:
         if config_path.exists():
             with open(config_path, "r") as f:
                 data = json.load(f)
-            return self._parse_config(config_path.name, data)
+            return {'success': True, 'result': self._parse_config(config_path.name, data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return {}
         
     def save_config(self, config: Any, config_path: str) -> None:
@@ -81,6 +82,7 @@ class ConfigManager:
             else:
                 json.dump(config_data, f, indent=4)
                 
+                    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def delete_config(self, config_path: str) -> None:
         """Delete a configuration file.
         
@@ -91,6 +93,7 @@ class ConfigManager:
         if config_path.exists():
             config_path.unlink()
             
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def create_config_from_env(self) -> Dict[str, Any]:
         """Create configuration from environment variables.
         
@@ -113,7 +116,7 @@ class ConfigManager:
                         config[config_key] = value
                 except ValueError:
                     config[config_key] = value
-        return config
+        return {'success': True, 'result': config, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class ModelConfig:
     """Configuration class for model settings."""
@@ -146,6 +149,7 @@ class ModelConfig:
         self.version = version
         self.parameters = kwargs
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def validate(self) -> bool:
         """Validate the configuration.
         
@@ -176,11 +180,11 @@ class ModelConfig:
         if self.learning_rate <= 0:
             raise ValueError(f"Invalid learning_rate: {self.learning_rate}")
             
-        return True
+        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'model_type': self.model_type,
             'model_name': self.model_name,
             'd_model': self.d_model,
@@ -203,7 +207,7 @@ class ModelConfig:
         Returns:
             ModelConfig instance
         """
-        return cls(
+        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             model_type=config_dict.get('model_type', 'transformer'),
             model_name=config_dict.get('model_name'),
             d_model=config_dict.get('d_model', 512),
@@ -233,7 +237,7 @@ class ModelConfig:
         else:
             other_dict = other
             
-        return {**self.to_dict(), **other_dict}
+        return {'success': True, 'result': {**self.to_dict(), **other_dict}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class DataConfig:
     """Configuration class for data settings."""
@@ -262,6 +266,7 @@ class DataConfig:
         self.frequency = frequency
         self.version = version
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def validate(self) -> bool:
         """Validate the configuration.
         
@@ -292,11 +297,11 @@ class DataConfig:
         if self.frequency not in ['1m', '5m', '15m', '30m', '1h', '1d', '1w', '1M']:
             raise ValueError(f"Invalid frequency: {self.frequency}")
             
-        return True
+        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'data_source': self.data_source,
             'symbols': self.symbols,
             'start_date': self.start_date,
@@ -317,7 +322,7 @@ class DataConfig:
         Returns:
             DataConfig instance
         """
-        return cls(
+        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             data_source=config_dict.get('data_source', 'yfinance'),
             symbols=config_dict.get('symbols', []),
             start_date=config_dict.get('start_date'),
@@ -342,7 +347,7 @@ class DataConfig:
         else:
             other_dict = other
             
-        return {**self.to_dict(), **other_dict}
+        return {'success': True, 'result': {**self.to_dict(), **other_dict}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class TrainingConfig:
     """Configuration class for model training settings."""
@@ -384,6 +389,7 @@ class TrainingConfig:
         self.max_grad_norm = max_grad_norm
         self.version = version
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def validate(self) -> bool:
         """Validate the configuration.
         
@@ -420,11 +426,11 @@ class TrainingConfig:
         if self.max_grad_norm <= 0:
             raise ValueError(f"Invalid max_grad_norm: {self.max_grad_norm}")
             
-        return True
+        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'epochs': self.epochs,
             'batch_size': self.batch_size,
             'learning_rate': self.learning_rate,
@@ -450,7 +456,7 @@ class TrainingConfig:
         Returns:
             TrainingConfig instance
         """
-        return cls(
+        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             epochs=config_dict.get('epochs', 100),
             batch_size=config_dict.get('batch_size', 32),
             learning_rate=config_dict.get('learning_rate', 0.001),
@@ -480,7 +486,7 @@ class TrainingConfig:
         else:
             other_dict = other
             
-        return {**self.to_dict(), **other_dict}
+        return {'success': True, 'result': {**self.to_dict(), **other_dict}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class WebConfig:
     """Configuration class for web interface settings."""
@@ -511,6 +517,7 @@ class WebConfig:
         self.ssl_key = ssl_key
         self.version = version
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def validate(self) -> bool:
         """Validate the configuration.
         
@@ -535,11 +542,11 @@ class WebConfig:
         if self.ssl_key and not self.ssl_cert:
             raise ValueError("SSL certificate must be provided with SSL key")
             
-        return True
+        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'host': self.host,
             'port': self.port,
             'debug': self.debug,
@@ -561,7 +568,7 @@ class WebConfig:
         Returns:
             WebConfig instance
         """
-        return cls(
+        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             host=config_dict.get('host', 'localhost'),
             port=config_dict.get('port', 5000),
             debug=config_dict.get('debug', False),
@@ -587,7 +594,7 @@ class WebConfig:
         else:
             other_dict = other
             
-        return {**self.to_dict(), **other_dict}
+        return {'success': True, 'result': {**self.to_dict(), **other_dict}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class MonitoringConfig:
     """Configuration class for monitoring settings."""
@@ -619,6 +626,7 @@ class MonitoringConfig:
         self.alert_webhook = alert_webhook
         self.version = version
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def validate(self) -> bool:
         """Validate the configuration.
         
@@ -643,11 +651,11 @@ class MonitoringConfig:
         if self.alert_webhook and not self.alert_webhook.startswith(('http://', 'https://')):
             raise ValueError(f"Invalid alert webhook URL: {self.alert_webhook}")
             
-        return True
+        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'enabled': self.enabled,
             'log_level': self.log_level,
             'metrics_port': self.metrics_port,
@@ -669,7 +677,7 @@ class MonitoringConfig:
         Returns:
             MonitoringConfig instance
         """
-        return cls(
+        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             enabled=config_dict.get('enabled', True),
             log_level=config_dict.get('log_level', 'INFO'),
             metrics_port=config_dict.get('metrics_port', 9090),
@@ -695,4 +703,4 @@ class MonitoringConfig:
         else:
             other_dict = other
             
-        return {**self.to_dict(), **other_dict} 
+        return {'success': True, 'result': {**self.to_dict(), **other_dict}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

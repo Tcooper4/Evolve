@@ -99,4 +99,4 @@ class Task(BaseModel):
             if isinstance(data.get(field), str):
                 data[field] = datetime.fromisoformat(data[field])
         
-        return cls(**data) 
+        return cls(**data)

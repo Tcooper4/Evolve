@@ -70,5 +70,6 @@ def main():
         st.subheader("😊 Sentiment Analysis")
         st.info("Sentiment analysis requires real news and social media data.")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

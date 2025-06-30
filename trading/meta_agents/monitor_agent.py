@@ -26,6 +26,7 @@ class MonitorAgent(BaseAgent):
         self.alert_manager = AlertManager(config, self.metrics_collector)
         self.setup_logging()
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for monitoring."""
         log_path = Path("logs/monitoring")
@@ -41,6 +42,7 @@ class MonitorAgent(BaseAgent):
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize the monitor agent."""
         try:

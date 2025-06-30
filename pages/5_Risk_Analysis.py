@@ -58,5 +58,6 @@ def main():
     st.subheader("🧪 Stress Testing")
     st.info("Stress testing requires real portfolio data and market scenarios.")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

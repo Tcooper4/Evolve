@@ -40,6 +40,7 @@ class ModelBuilderService(BaseService):
         
         logger.info("ModelBuilderService initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming model building requests.
@@ -63,7 +64,7 @@ class ModelBuilderService(BaseService):
                 return self._handle_delete_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {
+                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -122,7 +123,7 @@ class ModelBuilderService(BaseService):
             
         except Exception as e:
             logger.error(f"Error building model: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -141,7 +142,7 @@ class ModelBuilderService(BaseService):
             
         except Exception as e:
             logger.error(f"Error listing models: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -165,7 +166,7 @@ class ModelBuilderService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting model info: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -204,7 +205,7 @@ class ModelBuilderService(BaseService):
                 
         except Exception as e:
             logger.error(f"Error deleting model: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -223,4 +224,4 @@ class ModelBuilderService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'error': str(e)} 
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

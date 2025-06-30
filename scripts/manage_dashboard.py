@@ -80,7 +80,7 @@ class DashboardManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self):
         """Initialize logging configuration."""

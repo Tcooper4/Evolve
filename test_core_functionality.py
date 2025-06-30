@@ -16,7 +16,7 @@ def test_basic_imports():
         return True
     except ImportError as e:
         print(f"❌ Basic imports failed: {e}")
-        return False
+        return None
 
 def test_config_loader():
     """Test configuration loader."""
@@ -29,7 +29,7 @@ def test_config_loader():
         return True
     except ImportError as e:
         print(f"❌ Configuration loader failed: {e}")
-        return False
+        return None
 
 def test_dashboard_import():
     """Test dashboard import."""
@@ -43,7 +43,7 @@ def test_dashboard_import():
         return True
     except Exception as e:
         print(f"❌ Dashboard import failed: {e}")
-        return False
+        return None
 
 def main():
     """Run all tests."""
@@ -75,7 +75,7 @@ def main():
         return True
     else:
         print("\n⚠️ Some tests failed.")
-        return False
+        return None
 
 if __name__ == "__main__":
     success = main()

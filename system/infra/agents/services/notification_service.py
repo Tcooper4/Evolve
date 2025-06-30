@@ -66,7 +66,7 @@ class TemplateVersion(BaseModel):
                 raise ValueError("Rate limit must contain max_requests and window_seconds")
             if v['max_requests'] < 1 or v['window_seconds'] < 1:
                 raise ValueError("Rate limit values must be positive")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     @validator('retry_config')
     def validate_retry_config(cls, v):
@@ -75,32 +75,32 @@ class TemplateVersion(BaseModel):
                 raise ValueError("Retry config must contain max_retries and delay_seconds")
             if v['max_retries'] < 0 or v['delay_seconds'] < 0:
                 raise ValueError("Retry config values must be non-negative")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     @validator('timeout')
     def validate_timeout(cls, v):
         if v is not None and v < 0:
             raise ValueError("Timeout must be non-negative")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     @validator('cache_ttl')
     def validate_cache_ttl(cls, v):
         if v is not None and v < 0:
             raise ValueError("Cache TTL must be non-negative")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     @validator('validation_rules')
     def validate_rules(cls, v):
         if v:
             if 'required_fields' not in v or 'field_types' not in v:
                 raise ValueError("Validation rules must contain required_fields and field_types")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     @validator('security_level', 'audit_level', 'metrics_level')
     def validate_levels(cls, v):
         if not 1 <= v <= 3:
             raise ValueError("Level must be between 1 and 3")
-        return v
+        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class NotificationTemplate(BaseModel):
     """Template for notification messages."""
@@ -115,12 +115,12 @@ class NotificationTemplate(BaseModel):
     def get_latest_version(self) -> Optional[TemplateVersion]:
         """Get the latest version of the template."""
         if not self.versions:
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return self.versions[max(self.versions.keys())]
     
     def get_version(self, version: int) -> Optional[TemplateVersion]:
         """Get a specific version of the template."""
-        return self.versions.get(version)
+        return {'success': True, 'result': self.versions.get(version), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def add_version(self, version: TemplateVersion) -> None:
         """Add a new version of the template."""
@@ -166,7 +166,7 @@ class RateLimit(BaseModel):
         if (now - self.window_start).total_seconds() >= self.window_seconds:
             self.current_requests = 0
             self.window_start = now
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return self.current_requests >= self.max_requests
     
     def increment(self) -> None:
@@ -184,12 +184,12 @@ class RateLimit(BaseModel):
         """Get remaining requests in current window."""
         now = datetime.utcnow()
         if (now - self.window_start).total_seconds() >= self.window_seconds:
-            return self.max_requests
+            return {'success': True, 'result': self.max_requests, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         return max(0, self.max_requests - self.current_requests)
     
     def get_window_end(self) -> datetime:
         """Get end of current window."""
-        return self.window_start + timedelta(seconds=self.window_seconds)
+        return {'success': True, 'result': self.window_start + timedelta(seconds=self.window_seconds), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class NotificationDeliveryStatus(str, Enum):
     """Status of notification delivery."""
@@ -290,7 +290,7 @@ class NotificationDelivery(BaseModel):
         if self.attempts >= self.max_attempts:
             self.update_status(NotificationDeliveryStatus.FAILED)
             self.add_error("Max attempts exceeded", self.attempts)
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         self.attempts += 1
         self.last_attempt = datetime.utcnow()
@@ -327,7 +327,7 @@ class NotificationDelivery(BaseModel):
     def is_expired(self) -> bool:
         """Check if delivery is expired with validation."""
         if not self.expires_at:
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         is_expired = datetime.utcnow() >= self.expires_at
         if is_expired:
@@ -411,7 +411,7 @@ class NotificationDelivery(BaseModel):
             for level in [self.security_level, self.validation_level, self.audit_level,
                          self.metrics_level, self.health_level, self.logging_level]:
                 if not 1 <= level <= 3:
-                    return False
+                    return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     
             return True
             
@@ -591,32 +591,26 @@ class NotificationService:
                 'counter',
                 'Number of logging failed notifications'
             )
-            
             # Record metrics
             self.metrics_service.record_metrics_init()
-            
             # Audit
             self.audit_service.record_audit(
                 'metrics_init',
                 'info',
                 "Metrics initialized"
             )
-            
         except Exception as e:
             logger.error(f"Error initializing metrics: {str(e)}")
-            
             # Record metrics
             self.metrics_service.record_metrics_init_error()
-            
             # Audit
             self.audit_service.record_audit(
                 'metrics_init',
                 'error',
                 str(e)
             )
-            
             raise
-    
+
     def _init_security(self):
         """Initialize security settings."""
         try:
@@ -658,32 +652,18 @@ class NotificationService:
                     }
                 }
             )
-            
             # Record metrics
             self.metrics_service.record_security_init()
-            
             # Audit
             self.audit_service.record_audit(
                 'security_init',
                 'info',
                 "Security initialized"
             )
-            
         except Exception as e:
             logger.error(f"Error initializing security: {str(e)}")
-            
-            # Record metrics
-            self.metrics_service.record_security_init_error()
-            
-            # Audit
-            self.audit_service.record_audit(
-                'security_init',
-                'error',
-                str(e)
-            )
-            
             raise
-    
+
     def _init_logging(self):
         """Initialize logging settings."""
         try:
@@ -696,32 +676,26 @@ class NotificationService:
                     logging.FileHandler('notification.log')
                 ]
             )
-            
             # Record metrics
             self.metrics_service.record_logging_init()
-            
             # Audit
             self.audit_service.record_audit(
                 'logging_init',
                 'info',
                 "Logging initialized"
             )
-            
         except Exception as e:
             logger.error(f"Error initializing logging: {str(e)}")
-            
             # Record metrics
             self.metrics_service.record_logging_init_error()
-            
             # Audit
             self.audit_service.record_audit(
                 'logging_init',
                 'error',
                 str(e)
             )
-            
             raise
-    
+
     def _load_templates(self):
         """Load notification templates from config."""
         templates_config = self.config_service.get('notification.templates', {})

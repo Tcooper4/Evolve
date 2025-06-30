@@ -55,6 +55,7 @@ def update_imports(file_path: str) -> None:
     except Exception as e:
         logger.error(f"Error updating {file_path}: {str(e)}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main() -> None:
     """Main function to update imports in all files."""
     for file_path in FILES_TO_UPDATE:
@@ -63,5 +64,6 @@ def main() -> None:
         else:
             logger.warning(f"File not found: {file_path}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

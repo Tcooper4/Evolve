@@ -52,7 +52,7 @@ class AgentRegistry:
         self.agents: Dict[str, AgentInfo] = {}
         self.capabilities: Dict[str, Set[str]] = {}  # capability -> agent names
         self._discover_agents()
-        
+
     def _discover_agents(self):
         """Discover available agents in the system."""
         # Get agent directories from config
@@ -75,7 +75,7 @@ class AgentRegistry:
                         
             except ImportError as e:
                 logger.error(f"Failed to import agent directory {dir_path}: {e}")
-                
+
     def _get_agent_info(self, agent_class: Type[BaseAgent]) -> AgentInfo:
         """Get information about an agent class.
         
@@ -140,7 +140,7 @@ class AgentRegistry:
             self.capabilities[capability.name].add(agent_info.name)
             
         logger.info(f"Registered agent: {agent_info.name}")
-        
+
     def get_agent(self, name: str) -> Optional[AgentInfo]:
         """Get information about an agent.
         
@@ -198,4 +198,4 @@ class AgentRegistry:
             return getattr(module, agent_info.class_name)
         except (ImportError, AttributeError) as e:
             logger.error(f"Failed to load agent class {name}: {e}")
-            return None 
+            return None

@@ -26,6 +26,7 @@ class NotificationManager:
         self.setup_logging()
         self.initialize_handlers()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for notification manager."""
         log_path = Path("logs/notifications")
@@ -41,6 +42,7 @@ class NotificationManager:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def initialize_handlers(self):
         """Initialize notification handlers."""
         try:
@@ -58,6 +60,7 @@ class NotificationManager:
             self.logger.error(f"Error initializing handlers: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def send_notification(
         self,
         message: Dict[str, Any],
@@ -98,12 +101,13 @@ class NotificationManager:
     
     def get_available_channels(self) -> List[str]:
         """Get list of available notification channels."""
-        return list(self.handlers.keys())
+        return {'success': True, 'result': list(self.handlers.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def add_handler(
         self,
         handler_type: str,
         handler_config: Dict[str, Any]
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     ) -> None:
         """Add a new notification handler."""
         try:
@@ -129,6 +133,7 @@ class NotificationManager:
             self.logger.error(f"Error removing handler: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_handler_status(self, handler_type: str) -> Dict[str, Any]:
         """Get status of a notification handler."""
         try:
@@ -136,7 +141,7 @@ class NotificationManager:
                 raise ValueError(f"Handler not found: {handler_type}")
             
             # TODO: Implement handler status check
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'status': 'active',
                 'last_used': None,
                 'success_rate': 1.0
@@ -147,3 +152,4 @@ class NotificationManager:
     
     def check_handler_status(self):
         raise NotImplementedError('Pending feature') 
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

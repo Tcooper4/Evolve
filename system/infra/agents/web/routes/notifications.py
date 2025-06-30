@@ -17,6 +17,7 @@ def init_routes(notification_manager: NotificationManager, ws_handler: WebSocket
     global websocket_handler
     websocket_handler = ws_handler
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     user_id = request.state.user.get("username") if hasattr(request.state, "user") else None
@@ -43,10 +44,7 @@ async def get_notifications(
             unread_only=unread_only
         )
         
-        return {
-            "notifications": notifications,
-            "has_more": len(notifications) == limit
-        }
+        return notifications
     except Exception as e:
         logger.error(f"Error getting notifications: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to get notifications")
@@ -61,7 +59,7 @@ async def mark_notification_as_read(request: Request, notification_id: str):
         if not success:
             raise HTTPException(status_code=404, detail="Notification not found")
         
-        return {"message": "Notification marked as read"}
+        return None
     except Exception as e:
         logger.error(f"Error marking notification as read: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to mark notification as read")
@@ -76,7 +74,7 @@ async def mark_all_notifications_as_read(request: Request):
         for notification in notifications:
             await notification_manager.mark_as_read(notification["id"], user_id)
         
-        return {"message": "All notifications marked as read"}
+        return None
     except Exception as e:
         logger.error(f"Error marking all notifications as read: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to mark all notifications as read")
@@ -91,7 +89,7 @@ async def delete_notification(request: Request, notification_id: str):
         if not success:
             raise HTTPException(status_code=404, detail="Notification not found")
         
-        return {"message": "Notification deleted"}
+        return None
     except Exception as e:
         logger.error(f"Error deleting notification: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to delete notification")
@@ -106,7 +104,7 @@ async def clear_all_notifications(request: Request):
         for notification in notifications:
             await notification_manager.delete_notification(notification["id"], user_id)
         
-        return {"message": "All notifications cleared"}
+        return None
     except Exception as e:
         logger.error(f"Error clearing notifications: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to clear notifications") 

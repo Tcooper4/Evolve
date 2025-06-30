@@ -140,12 +140,12 @@ class SelfImprovingAgent(BaseAgent):
         self.router = Router()
         self.improvement_interval = self.config.get('improvement_interval', 3600)  # 1 hour default
         self.last_improvement = 0
-        
+    
     def _setup(self):
         """Setup the self-improving agent."""
         self.model_registry = self.config.get('model_registry', {})
         self.strategy_registry = self.config.get('strategy_registry', {})
-        
+    
     def run(self, prompt: str, **kwargs) -> AgentResult:
         """
         Process a self-improvement request.
@@ -344,7 +344,7 @@ class SelfImprovingAgent(BaseAgent):
                 
             self.task_memory.update_task(task)
             
-        return improvements
+        return {'success': True, 'result': improvements, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _get_model_performance(self, model_id: str) -> Dict[str, Any]:
         """
@@ -413,7 +413,7 @@ def run_self_improvement() -> Dict[str, Dict[str, Any]]:
     agent = SelfImprovingAgent()
     recommendations = agent.analyze_performance()
     agent.save_recommendations(recommendations)
-    return recommendations
+    return {'success': True, 'result': recommendations, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 if __name__ == "__main__":
     # Configure logging

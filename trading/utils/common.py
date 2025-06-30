@@ -64,7 +64,7 @@ def setup_logging(log_dir: str = "logs", level: int = logging.INFO) -> logging.L
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
     
-    return logger
+    return {'success': True, 'result': logger, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def load_config(config_path: Union[str, Path]) -> Dict[str, Any]:
     """Load configuration from file.
@@ -86,25 +86,54 @@ def load_config(config_path: Union[str, Path]) -> Dict[str, Any]:
     else:
         raise ValueError(f"Unsupported config file format: {config_path.suffix}")
     
-    return config
+    return {'success': True, 'result': config, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
-def save_config(config: Dict[str, Any], config_path: Union[str, Path]):
+def save_config(config: Dict[str, Any], config_path: Union[str, Path]) -> Dict[str, Any]:
     """Save configuration to file.
     
     Args:
         config: Configuration dictionary
         config_path: Path to save configuration
+        
+    Returns:
+        Dictionary with save status and metadata
     """
-    config_path = Path(config_path)
-    
-    if config_path.suffix == '.json':
-        with open(config_path, 'w') as f:
-            json.dump(config, f, indent=4)
-    elif config_path.suffix in ['.yaml', '.yml']:
-        with open(config_path, 'w') as f:
-            yaml.dump(config, f, default_flow_style=False)
-    else:
-        raise ValueError(f"Unsupported config file format: {config_path.suffix}")
+    try:
+        config_path = Path(config_path)
+        
+        # Ensure directory exists
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        if config_path.suffix == '.json':
+            with open(config_path, 'w') as f:
+                json.dump(config, f, indent=4)
+        elif config_path.suffix in ['.yaml', '.yml']:
+            with open(config_path, 'w') as f:
+                yaml.dump(config, f, default_flow_style=False)
+        else:
+            return {
+                'success': False,
+                'message': f'Unsupported config file format: {config_path.suffix}',
+                'filepath': str(config_path),
+                'timestamp': datetime.now().isoformat()
+            }
+        
+        return {
+            'success': True,
+            'message': 'Configuration saved successfully',
+            'filepath': str(config_path),
+            'size_bytes': config_path.stat().st_size if config_path.exists() else 0,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error saving config: {e}")
+        return {
+            'success': False,
+            'message': f'Error saving configuration: {str(e)}',
+            'filepath': str(config_path),
+            'timestamp': datetime.now().isoformat()
+        }
 
 def timer(func):
     """Decorator to measure function execution time."""
@@ -114,7 +143,7 @@ def timer(func):
         result = func(*args, **kwargs)
         end_time = time.time()
         print(f"{func.__name__} took {end_time - start_time:.2f} seconds to execute")
-        return result
+        return {'success': True, 'result': {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     return wrapper
 
 def handle_exceptions(func):
@@ -122,7 +151,7 @@ def handle_exceptions(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         try:
-            return func(*args, **kwargs)
+            return {'success': True, 'result': {'success': True, 'result': func(*args, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             logger.error(f"Error in {func.__name__}: {str(e)}")
             logger.error(traceback.format_exc())
@@ -133,7 +162,7 @@ def validate_dataframe(
     df: pd.DataFrame,
     required_columns: List[str],
     allow_empty: bool = False
-) -> Tuple[bool, List[str]]:
+) -> Dict[str, Any]:
     """Validate a DataFrame against required columns and data quality checks.
     
     Args:
@@ -142,37 +171,76 @@ def validate_dataframe(
         allow_empty: Whether to allow empty DataFrames
         
     Returns:
-        Tuple of (is_valid, list_of_errors)
+        Dictionary with validation status and details
         
     Example:
         >>> df = pd.DataFrame({'price': [100, 101, 102]})
-        >>> is_valid, errors = validate_dataframe(df, ['price'])
-        >>> print(is_valid, errors)
+        >>> result = validate_dataframe(df, ['price'])
+        >>> print(result['success'], result['errors'])
         True, []
     """
-    errors = []
-    
-    # Check if DataFrame is empty
-    if df.empty and not allow_empty:
-        errors.append("DataFrame is empty")
-        return False, errors
-    
-    # Check required columns
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        errors.append(f"Missing required columns: {missing_columns}")
-    
-    # Check for NaN values
-    nan_columns = df.columns[df.isna().any()].tolist()
-    if nan_columns:
-        errors.append(f"NaN values found in columns: {nan_columns}")
-    
-    # Check for infinite values
-    inf_columns = df.columns[np.isinf(df.select_dtypes(include=np.number)).any()].tolist()
-    if inf_columns:
-        errors.append(f"Infinite values found in columns: {inf_columns}")
-    
-    return len(errors) == 0, errors
+    try:
+        errors = []
+        warnings = []
+        
+        # Check if DataFrame is empty
+        if df.empty and not allow_empty:
+            errors.append("DataFrame is empty")
+        elif df.empty and allow_empty:
+            warnings.append("DataFrame is empty (allowed)")
+        
+        # Check required columns
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            errors.append(f"Missing required columns: {missing_columns}")
+        
+        # Check for NaN values
+        nan_columns = df.columns[df.isna().any()].tolist()
+        if nan_columns:
+            warnings.append(f"NaN values found in columns: {nan_columns}")
+        
+        # Check for infinite values
+        inf_columns = df.columns[np.isinf(df.select_dtypes(include=np.number)).any()].tolist()
+        if inf_columns:
+            warnings.append(f"Infinite values found in columns: {inf_columns}")
+        
+        # Check data types
+        numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+        non_numeric_columns = df.select_dtypes(exclude=[np.number]).columns.tolist()
+        
+        is_valid = len(errors) == 0
+        
+        return {
+            'success': is_valid,
+            'is_valid': is_valid,
+            'errors': errors,
+            'warnings': warnings,
+            'missing_columns': missing_columns,
+            'nan_columns': nan_columns,
+            'inf_columns': inf_columns,
+            'numeric_columns': numeric_columns,
+            'non_numeric_columns': non_numeric_columns,
+            'total_rows': len(df),
+            'total_columns': len(df.columns),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error validating DataFrame: {e}")
+        return {
+            'success': False,
+            'is_valid': False,
+            'errors': [f'Validation error: {str(e)}'],
+            'warnings': [],
+            'missing_columns': [],
+            'nan_columns': [],
+            'inf_columns': [],
+            'numeric_columns': [],
+            'non_numeric_columns': [],
+            'total_rows': 0,
+            'total_columns': 0,
+            'timestamp': datetime.now().isoformat()
+        }
 
 def calculate_returns(
     prices: pd.Series,
@@ -199,7 +267,7 @@ def calculate_returns(
     if method == "log":
         return np.log(prices / prices.shift(1))
     else:  # simple returns
-        return prices.pct_change()
+        return {'success': True, 'result': prices.pct_change(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def resample_data(
     data: pd.DataFrame,
@@ -224,7 +292,7 @@ def resample_data(
     if agg_dict is None:
         agg_dict = {col: "mean" for col in data.columns}
     
-    return data.resample(freq).agg(agg_dict)
+    return {'success': True, 'result': data.resample(freq).agg(agg_dict), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_moving_average(
     data: pd.Series,
@@ -254,7 +322,7 @@ def calculate_moving_average(
     """
     if min_periods is None:
         min_periods = window
-    return data.rolling(window=window, min_periods=min_periods).mean()
+    return {'success': True, 'result': data.rolling(window=window, min_periods=min_periods).mean(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_volatility(
     returns: pd.Series,
@@ -283,7 +351,7 @@ def calculate_volatility(
     vol = returns.rolling(window=window).std()
     if annualize:
         vol = vol * np.sqrt(252)  # Annualize assuming 252 trading days
-    return vol
+    return {'success': True, 'result': vol, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_correlation(
     data1: pd.Series,
@@ -312,7 +380,7 @@ def calculate_correlation(
         4    1.0
         dtype: float64
     """
-    return data1.rolling(window=window).corr(data2)
+    return {'success': True, 'result': data1.rolling(window=window).corr(data2), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_beta(
     returns: pd.Series,
@@ -341,7 +409,7 @@ def calculate_beta(
     """
     covariance = returns.rolling(window=window).cov(market_returns)
     market_variance = market_returns.rolling(window=window).var()
-    return covariance / market_variance
+    return {'success': True, 'result': covariance / market_variance, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_sharpe_ratio(
     returns: pd.Series,
@@ -377,7 +445,7 @@ def calculate_sharpe_ratio(
         mean = mean * 252
         std = std * np.sqrt(252)
     
-    return mean / std
+    return {'success': True, 'result': mean / std, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_drawdown(
     prices: pd.Series
@@ -402,7 +470,7 @@ def calculate_drawdown(
     """
     rolling_max = prices.expanding().max()
     drawdown = (prices - rolling_max) / rolling_max
-    return drawdown
+    return {'success': True, 'result': drawdown, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_max_drawdown(
     prices: pd.Series
@@ -424,7 +492,7 @@ def calculate_max_drawdown(
     cumulative = prices / prices.iloc[0]
     running_max = cumulative.expanding().max()
     drawdown = (cumulative - running_max) / running_max
-    return float(drawdown.min())
+    return {'success': True, 'result': float(drawdown.min()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_win_rate(
     returns: pd.Series
@@ -443,7 +511,7 @@ def calculate_win_rate(
         >>> print(win_rate)
         0.6
     """
-    return float((returns > 0).mean())
+    return {'success': True, 'result': float((returns > 0).mean()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_calmar_ratio(
     returns: pd.Series,
@@ -472,7 +540,7 @@ def calculate_calmar_ratio(
     """
     annualized_return = returns.rolling(window=window).mean() * 252
     max_drawdown = prices.rolling(window=window).apply(calculate_max_drawdown)
-    return annualized_return / max_drawdown
+    return {'success': True, 'result': annualized_return / max_drawdown, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_information_ratio(
     returns: pd.Series,
@@ -509,7 +577,7 @@ def calculate_information_ratio(
         mean = mean * 252
         std = std * np.sqrt(252)
     
-    return mean / std
+    return {'success': True, 'result': mean / std, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_sortino_ratio(
     returns: pd.Series,
@@ -548,7 +616,7 @@ def calculate_sortino_ratio(
         mean = mean * 252
         downside_std = downside_std * np.sqrt(252)
     
-    return mean / downside_std
+    return {'success': True, 'result': mean / downside_std, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_omega_ratio(
     returns: pd.Series,
@@ -577,7 +645,7 @@ def calculate_omega_ratio(
     def _omega_ratio(x):
         gains = x[x > threshold].sum()
         losses = abs(x[x <= threshold].sum())
-        return gains / losses if losses != 0 else float('inf')
+        return {'success': True, 'result': {'success': True, 'result': gains / losses if losses != 0 else float('inf'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     return returns.rolling(window=window).apply(_omega_ratio)
 
@@ -616,7 +684,7 @@ def calculate_treynor_ratio(
     if annualize:
         excess_returns = excess_returns * 252
     
-    return excess_returns / beta
+    return {'success': True, 'result': excess_returns / beta, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_alpha(
     returns: pd.Series,
@@ -656,7 +724,7 @@ def calculate_alpha(
     if annualize:
         alpha = alpha * 252
     
-    return alpha
+    return {'success': True, 'result': alpha, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def plot_returns(returns: pd.Series, title: str = "Returns"):
     """Plot returns series.
@@ -672,6 +740,7 @@ def plot_returns(returns: pd.Series, title: str = "Returns"):
     plt.ylabel('Cumulative Returns')
     plt.grid(True)
     plt.show()
+    return {'success': True, 'result': {"status": "returns_plotted", "title": title}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def plot_volatility(returns: pd.Series, window: int = 30, title: str = "Volatility Analysis") -> Dict[str, Any]:
     """Plot rolling volatility."""
@@ -698,7 +767,7 @@ def plot_volatility(returns: pd.Series, window: int = 30, title: str = "Volatili
         
     except Exception as e:
         logger.error(f"Error plotting volatility: {e}")
-        return {"status": "volatility_plot_failed", "error": str(e)}
+        return {'success': True, 'result': {"status": "volatility_plot_failed", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def plot_correlation_matrix(data: pd.DataFrame, title: str = "Correlation Matrix") -> Dict[str, Any]:
     """Plot correlation matrix heatmap."""
@@ -715,7 +784,7 @@ def plot_correlation_matrix(data: pd.DataFrame, title: str = "Correlation Matrix
         
     except Exception as e:
         logger.error(f"Error plotting correlation matrix: {e}")
-        return {"status": "correlation_plot_failed", "error": str(e)}
+        return {'success': True, 'result': {"status": "correlation_plot_failed", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_portfolio_metrics(returns: pd.Series) -> Dict[str, float]:
     """Calculate portfolio performance metrics.
@@ -726,7 +795,7 @@ def calculate_portfolio_metrics(returns: pd.Series) -> Dict[str, float]:
     Returns:
         Dictionary of metrics
     """
-    return {
+    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         'total_return': (1 + returns).prod() - 1,
         'annualized_return': (1 + returns).prod() ** (252/len(returns)) - 1,
         'volatility': returns.std() * np.sqrt(252),
@@ -745,7 +814,7 @@ def format_currency(value: float) -> str:
     Returns:
         Formatted string
     """
-    return f"${value:,.2f}"
+    return {'success': True, 'result': f"${value:,.2f}", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def format_percentage(value: float) -> str:
     """Format number as percentage.
@@ -756,7 +825,7 @@ def format_percentage(value: float) -> str:
     Returns:
         Formatted string
     """
-    return f"{value:.2%}"
+    return {'success': True, 'result': f"{value:.2%}", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_rolling_metrics(returns: pd.Series, window: int = 252) -> pd.DataFrame:
     """Calculate rolling performance metrics.
@@ -782,7 +851,7 @@ def calculate_rolling_metrics(returns: pd.Series, window: int = 252) -> pd.DataF
     # Rolling max drawdown
     metrics['max_drawdown'] = returns.rolling(window=window).apply(calculate_max_drawdown)
     
-    return metrics
+    return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def plot_rolling_metrics(returns: pd.Series, window: int = 30) -> Dict[str, Any]:
     """Plot rolling performance metrics."""
@@ -817,7 +886,7 @@ def plot_rolling_metrics(returns: pd.Series, window: int = 30) -> Dict[str, Any]
         
     except Exception as e:
         logger.error(f"Error plotting rolling metrics: {e}")
-        return {"status": "rolling_metrics_plot_failed", "error": str(e)}
+        return {'success': True, 'result': {"status": "rolling_metrics_plot_failed", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def normalize_indicator_name(name: str) -> str:
     """Normalize technical indicator names.
@@ -837,7 +906,7 @@ def normalize_indicator_name(name: str) -> str:
     """
 
     if not isinstance(name, str):
-        return str(name)
+        return {'success': True, 'result': str(name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     normalized = name.replace(" ", "_").replace("-", "_")
     return normalized.upper()

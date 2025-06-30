@@ -5,6 +5,7 @@ import numpy as np
 import os
 import json
 from typing import Dict, Any
+from datetime import datetime
 
 # Try to import Prophet, but make it optional
 try:
@@ -22,6 +23,7 @@ if PROPHET_AVAILABLE:
             self.model = Prophet(**config.get('prophet_params', {}))
             self.fitted = False
             self.history = None
+            return {'success': True, 'message': 'ProphetModel initialized', 'timestamp': datetime.now().isoformat()}
 
         def fit(self, train_data: pd.DataFrame, val_data=None, **kwargs):
             df = train_data[[self.config['date_column'], self.config['target_column']]].rename(columns={
@@ -109,4 +111,4 @@ else:
                 "Prophet is not installed. Please install it with: pip install prophet\n"
                 "Note: Prophet requires compilation and may have installation issues on Windows.\n"
                 "Consider using an alternative model like ARIMA or LSTM."
-            ) 
+            )

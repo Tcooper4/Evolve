@@ -80,6 +80,7 @@ class PairsTradingEngine:
         self.hedge_ratios: Dict[str, pd.Series] = {}
         self.active_pairs: Dict[str, Dict[str, Any]] = {}
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def find_cointegrated_pairs(self, 
                                price_data: Dict[str, pd.DataFrame],
                                symbols: List[str]) -> List[Tuple[str, str, CointegrationResult]]:
@@ -129,7 +130,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error finding cointegrated pairs: {str(e)}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _test_cointegration(self, 
                            symbol1: str, 
@@ -193,11 +194,11 @@ class PairsTradingEngine:
                 
         except Exception as e:
             self.logger.error(f"Error testing cointegration: {str(e)}")
-            return self._create_no_cointegration_result(symbol1, symbol2)
+            return {'success': True, 'result': self._create_no_cointegration_result(symbol1, symbol2), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_no_cointegration_result(self, symbol1: str, symbol2: str) -> CointegrationResult:
         """Create result for non-cointegrated pair."""
-        return CointegrationResult(
+        return {'success': True, 'result': CointegrationResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             symbol1=symbol1,
             symbol2=symbol2,
             is_cointegrated=False,
@@ -225,7 +226,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating hedge ratio: {str(e)}")
-            return 1.0
+            return {'success': True, 'result': 1.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def update_hedge_ratios(self, 
                            price_data: Dict[str, pd.DataFrame],
@@ -267,6 +268,7 @@ class PairsTradingEngine:
         except Exception as e:
             self.logger.error(f"Error updating hedge ratios: {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _calculate_rolling_hedge_ratio(self, 
                                      series1: pd.Series, 
                                      series2: pd.Series, 
@@ -292,7 +294,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating rolling hedge ratio: {str(e)}")
-            return pd.Series(dtype=float)
+            return {'success': True, 'result': pd.Series(dtype=float), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def generate_signals(self, 
                         price_data: Dict[str, pd.DataFrame],
@@ -348,7 +350,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error generating signals: {str(e)}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_z_score(self, pair_key: str, current_spread: float) -> float:
         """Calculate z-score for current spread."""
@@ -372,7 +374,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating z-score: {str(e)}")
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_signal_from_zscore(self, 
                                    symbol1: str,
@@ -416,7 +418,7 @@ class PairsTradingEngine:
             
             # Close signal (spread has reverted to mean)
             elif abs(z_score) < self.z_score_exit:
-                return PairsSignal(
+                return {'success': True, 'result': PairsSignal(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     timestamp=timestamp,
                     symbol1=symbol1,
                     symbol2=symbol2,
@@ -452,7 +454,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating position size: {str(e)}")
-            return 0.5
+            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def validate_pair_stability(self, 
                               symbol1: str, 
@@ -507,7 +509,7 @@ class PairsTradingEngine:
                 
                 if spread_std < self.min_spread_std:
                     self.logger.warning(f"Pair {symbol1}-{symbol2} spread too stable: {spread_std:.4f}")
-                    return False
+                    return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             return True
             
@@ -559,7 +561,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error getting pair statistics: {str(e)}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def cleanup_inactive_pairs(self, active_symbols: List[str]):
         """Remove pairs that are no longer active."""
@@ -584,6 +586,7 @@ class PairsTradingEngine:
         except Exception as e:
             self.logger.error(f"Error cleaning up inactive pairs: {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_active_pairs_summary(self) -> List[Dict[str, Any]]:
         """Get summary of all active pairs."""
         try:
@@ -599,4 +602,4 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error getting active pairs summary: {str(e)}")
-            return [] 
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

@@ -32,7 +32,7 @@ def get_signals(strategy_name: str, data: pd.DataFrame, **kwargs) -> Dict[str, A
             return strategy.generate_signals(data, **kwargs)
         elif strategy_name.lower() == 'sma':
             strategy = SMAStrategy()
-            return strategy.generate_signals(data, **kwargs)
+            return {'success': True, 'result': strategy.generate_signals(data, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         else:
             raise ValueError(f"Unknown strategy: {strategy_name}")
     except Exception as e:

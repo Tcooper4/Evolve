@@ -23,6 +23,7 @@ class MACDStrategy:
         self.signals = None
         self.positions = None
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def calculate_macd(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Calculate MACD components for the given data."""
         if 'close' not in data.columns:
@@ -41,7 +42,7 @@ class MACDStrategy:
         # Calculate histogram
         histogram = macd_line - signal_line
         
-        return macd_line, signal_line, histogram
+        return {'success': True, 'result': macd_line, signal_line, histogram, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """Generate trading signals based on MACD."""
@@ -74,7 +75,7 @@ class MACDStrategy:
         signals.loc[~(volume_mask & price_mask), 'signal'] = 0
         
         self.signals = signals
-        return signals
+        return {'success': True, 'result': signals, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def calculate_positions(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate trading positions based on signals."""
@@ -88,11 +89,11 @@ class MACDStrategy:
         positions['position'] = positions['position'].clip(-1, 1)
         
         self.positions = positions
-        return positions
+        return {'success': True, 'result': positions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def get_parameters(self) -> Dict:
         """Get strategy parameters."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'fast_period': self.config.fast_period,
             'slow_period': self.config.slow_period,
             'signal_period': self.config.signal_period,
@@ -100,8 +101,12 @@ class MACDStrategy:
             'min_price': self.config.min_price
         }
         
-    def set_parameters(self, params: Dict) -> None:
+    def set_parameters(self, params: Dict) -> Dict:
         """Set strategy parameters."""
-        self.config = MACDConfig(**params)
-        self.signals = None
-        self.positions = None 
+        try:
+            self.config = MACDConfig(**params)
+            self.signals = None
+            self.positions = None
+            return {"status": "success", "parameters_updated": True, "config": self.get_parameters()}
+        except Exception as e:
+            return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

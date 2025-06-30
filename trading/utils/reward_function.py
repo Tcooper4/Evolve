@@ -22,6 +22,7 @@ class RewardFunction:
             'consistency': 0.2
         }
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def compute(self, metrics: Dict[str, Any]) -> float:
         """
         Compute the overall reward score from metrics.
@@ -31,7 +32,7 @@ class RewardFunction:
             Aggregated reward score (float)
         """
         objectives = self.compute_objectives(metrics)
-        return self.aggregate(objectives)
+        return {'success': True, 'result': self.aggregate(objectives), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def compute_objectives(self, metrics: Dict[str, Any]) -> Dict[str, float]:
         """
@@ -47,7 +48,7 @@ class RewardFunction:
         max_drawdown = abs(metrics.get('max_drawdown', 1e-6)) or 1e-6  # Avoid div by zero
         # Consistency: win rate over drawdown (higher is better)
         consistency = win_rate / max_drawdown if max_drawdown > 0 else 0.0
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'return': total_return,
             'sharpe': sharpe,
             'consistency': consistency
@@ -61,7 +62,7 @@ class RewardFunction:
         Returns:
             Weighted sum (float)
         """
-        return sum(self.weights.get(k, 0.0) * objectives.get(k, 0.0) for k in self.weights)
+        return {'success': True, 'result': sum(self.weights.get(k, 0.0) * objectives.get(k, 0.0) for k in self.weights), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def multi_objective_vector(self, metrics: Dict[str, Any]) -> List[float]:
         """
@@ -72,7 +73,7 @@ class RewardFunction:
             List of objective values [return, sharpe, consistency]
         """
         obj = self.compute_objectives(metrics)
-        return [obj['return'], obj['sharpe'], obj['consistency']]
+        return {'success': True, 'result': [obj['return'], obj['sharpe'], obj['consistency']], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def set_weights(self, weights: Dict[str, float]) -> None:
         """
@@ -81,3 +82,4 @@ class RewardFunction:
             weights: Dict of weights for each objective
         """
         self.weights = weights.copy() 
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

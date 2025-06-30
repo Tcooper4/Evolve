@@ -26,6 +26,7 @@ def setup_logging():
         ]
     )
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main launcher function."""
     # Setup logging
@@ -86,5 +87,6 @@ def main():
         logger.error(f"Error starting Report Service: {e}")
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

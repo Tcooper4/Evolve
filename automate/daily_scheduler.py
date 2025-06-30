@@ -57,7 +57,7 @@ def safe_get(data: Dict[str, Any], key: str, default: Any = None) -> Any:
     try:
         return data.get(key, default)
     except (AttributeError, TypeError):
-        return default
+        return {'success': True, 'result': default, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 async def load_tickers() -> List[str]:
     """Load tickers from configured source.
@@ -269,5 +269,6 @@ def main():
         logger.error(f"Fatal error: {str(e)}")
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main()

@@ -33,6 +33,7 @@ class MemoryManager:
         embedding_model: str = "all-MiniLM-L6-v2",
         max_memories: int = 1000,
         similarity_threshold: float = 0.8
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize the memory manager.
         
@@ -73,10 +74,11 @@ class MemoryManager:
         if self.memories:
             self._rebuild_index()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _rebuild_index(self) -> None:
         """Rebuild the FAISS index for memory search."""
         if not self.memories:
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         # Get embeddings for all memories
         texts = [m.prompt for m in self.memories]
@@ -196,6 +198,7 @@ class MemoryManager:
         # Rebuild index
         self._rebuild_index()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def _save_memories(self) -> None:
         """Save memories to disk."""
         memory_file = self.storage_path / "memories.json"
@@ -218,7 +221,7 @@ class MemoryManager:
     
     def get_memory_stats(self) -> Dict[str, Any]:
         """Get statistics about stored memories."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "total_memories": len(self.memories),
             "oldest_memory": min(m.timestamp for m in self.memories).isoformat() if self.memories else None,
             "newest_memory": max(m.timestamp for m in self.memories).isoformat() if self.memories else None,
@@ -232,3 +235,4 @@ class MemoryManager:
         memory_file = self.storage_path / "memories.json"
         if memory_file.exists():
             memory_file.unlink() 
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

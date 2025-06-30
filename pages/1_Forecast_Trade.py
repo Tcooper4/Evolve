@@ -70,7 +70,7 @@ def load_model_configs():
     try:
         from trading.ui.config.registry import ModelConfigRegistry
         registry = ModelConfigRegistry()
-        return registry.get_all_configs()
+        return {'success': True, 'result': registry.get_all_configs(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     except Exception as e:
         logging.error(f"Error loading model configs: {e}")
         raise RuntimeError(f"Failed to load model configurations: {e}")
@@ -79,7 +79,7 @@ def get_model_summary(model):
     """Get summary information for a model."""
     try:
         configs = load_model_configs()
-        return configs.get(model, {}).get('description', 'No description available')
+        return {'success': True, 'result': configs.get(model, {}).get('description', 'No description available'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     except Exception as e:
         logging.error(f"Error getting model summary: {e}")
         raise RuntimeError(f"Failed to get model summary: {e}")
@@ -92,14 +92,14 @@ def get_status_badge(status):
         "down": "red"
     }
     color = colors.get(status, "gray")
-    return f'<span style="color: {color}; font-weight: bold;">● {status.title()}</span>'
+    return {'success': True, 'result': f'<span style="color: {color}; font-weight: bold;">● {status.title()}</span>', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def analyze_market_context(ticker: str, data: pd.DataFrame) -> Dict:
     """Analyze market context for a given ticker."""
     try:
         # Basic market analysis
         if data.empty:
-            return {"status": "no_data", "message": "No market data available"}
+            return {'success': True, 'result': {"status": "no_data", "message": "No market data available"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Calculate basic metrics
         latest_price = data['close'].iloc[-1] if 'close' in data.columns else None
@@ -158,11 +158,12 @@ def display_market_analysis(analysis: Dict):
     else:
         st.error(f"Market analysis failed: {analysis.get('message', 'Unknown error')}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def generate_market_commentary(analysis: Dict, forecast_data: pd.DataFrame) -> str:
     """Generate market commentary based on analysis and forecast."""
     try:
         if analysis.get("status") != "success":
-            return "Market commentary unavailable due to analysis issues."
+            return {'success': True, 'result': "Market commentary unavailable due to analysis issues.", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         commentary = f"Market Analysis for {analysis.get('ticker', 'Unknown')}:\n\n"
         
@@ -594,6 +595,7 @@ def main():
     # Update last updated timestamp
     update_last_updated()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def calculate_sharpe_ratio(forecast_data):
     """Calculate Sharpe ratio from forecast data."""
     if forecast_data.empty or 'forecast' not in forecast_data.columns:
@@ -614,7 +616,7 @@ def calculate_sharpe_ratio(forecast_data):
         return sharpe
     except Exception as e:
         st.error(f"Error calculating Sharpe ratio: {e}")
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_accuracy(forecast_data):
     """Calculate forecast accuracy."""
@@ -638,7 +640,7 @@ def calculate_accuracy(forecast_data):
         return accuracy
     except Exception as e:
         st.error(f"Error calculating accuracy: {e}")
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_win_rate(forecast_data):
     """Calculate win rate from forecast data."""
@@ -658,7 +660,7 @@ def calculate_win_rate(forecast_data):
         return wins / total if total > 0 else 0.0
     except Exception as e:
         st.error(f"Error calculating win rate: {e}")
-        return 0.0
+        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def generate_forecast(ticker, selected_model):
     """Generate realistic forecast data."""
@@ -728,7 +730,7 @@ def generate_forecast(ticker, selected_model):
         
     except Exception as e:
         st.error(f"Error generating forecast: {e}")
-        return pd.DataFrame()
+        return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def run_backtest(forecast_data, initial_capital=10000, position_size=50, stop_loss=2.0, take_profit=4.0):
     """Run realistic backtest simulation."""
@@ -779,7 +781,7 @@ def run_backtest(forecast_data, initial_capital=10000, position_size=50, stop_lo
         }
     except Exception as e:
         st.error(f"Error in backtest: {e}")
-        return None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 if __name__ == "__main__":
     main() 

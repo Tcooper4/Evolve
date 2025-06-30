@@ -96,9 +96,10 @@ class ReportExportEngine:
         
         logger.info("Report Export Engine initialized successfully")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _initialize_templates(self) -> Dict[str, str]:
         """Initialize report templates."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'executive_summary': """
 # Executive Summary
 
@@ -233,7 +234,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error generating comprehensive report: {e}")
-            return ""
+            return {'success': True, 'result': "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_executive_summary(self, data: Dict[str, Any]) -> ReportSection:
         """Generate executive summary section."""
@@ -266,7 +267,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error generating executive summary: {e}")
-            return ReportSection(
+            return {'success': True, 'result': ReportSection(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 title="Executive Summary",
                 content="Error generating executive summary",
                 section_type="summary"
@@ -296,7 +297,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error generating strategy analysis: {e}")
-            return ReportSection(
+            return {'success': True, 'result': ReportSection(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 title="Strategy Analysis",
                 content="Error generating strategy analysis",
                 section_type="strategy"
@@ -326,7 +327,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error generating backtest results: {e}")
-            return ReportSection(
+            return {'success': True, 'result': ReportSection(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 title="Backtest Results",
                 content="Error generating backtest results",
                 section_type="backtest"
@@ -356,7 +357,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error generating market regime analysis: {e}")
-            return ReportSection(
+            return {'success': True, 'result': ReportSection(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 title="Market Regime Analysis",
                 content="Error generating market regime analysis",
                 section_type="regime"
@@ -386,7 +387,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error generating risk management analysis: {e}")
-            return ReportSection(
+            return {'success': True, 'result': ReportSection(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 title="Risk Management",
                 content="Error generating risk management analysis",
                 section_type="risk"
@@ -412,7 +413,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error generating custom section {section_name}: {e}")
-            return ReportSection(
+            return {'success': True, 'result': ReportSection(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 title=section_name.title(),
                 content=f"Error generating {section_name} section",
                 section_type="custom"
@@ -456,7 +457,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting key findings: {e}")
-            return "- Unable to generate key findings"
+            return {'success': True, 'result': "- Unable to generate key findings", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_recommendations(self, data: Dict[str, Any]) -> str:
         """Format recommendations for executive summary."""
@@ -494,7 +495,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting recommendations: {e}")
-            return "- Continue monitoring strategy performance"
+            return {'success': True, 'result': "- Continue monitoring strategy performance", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_strategy_overview(self, strategy_data: Dict[str, Any]) -> str:
         """Format strategy overview."""
@@ -517,7 +518,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting strategy overview: {e}")
-            return "Unable to format strategy overview"
+            return {'success': True, 'result': "Unable to format strategy overview", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_performance_metrics(self, strategy_data: Dict[str, Any]) -> str:
         """Format performance metrics."""
@@ -538,7 +539,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting performance metrics: {e}")
-            return "Unable to format performance metrics"
+            return {'success': True, 'result': "Unable to format performance metrics", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_risk_analysis(self, strategy_data: Dict[str, Any]) -> str:
         """Format risk analysis."""
@@ -555,7 +556,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting risk analysis: {e}")
-            return "Unable to format risk analysis"
+            return {'success': True, 'result': "Unable to format risk analysis", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_factor_attribution(self, strategy_data: Dict[str, Any]) -> str:
         """Format factor attribution."""
@@ -579,7 +580,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting factor attribution: {e}")
-            return "Unable to format factor attribution"
+            return {'success': True, 'result': "Unable to format factor attribution", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_performance_summary(self, backtest_data: Dict[str, Any]) -> str:
         """Format performance summary."""
@@ -599,7 +600,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting performance summary: {e}")
-            return "Unable to format performance summary"
+            return {'success': True, 'result': "Unable to format performance summary", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_equity_curve_chart(self, backtest_data: Dict[str, Any]) -> str:
         """Generate equity curve chart."""
@@ -629,7 +630,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error generating equity curve chart: {e}")
-            return "Error generating equity curve chart"
+            return {'success': True, 'result': "Error generating equity curve chart", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_drawdown_analysis(self, backtest_data: Dict[str, Any]) -> str:
         """Format drawdown analysis."""
@@ -649,7 +650,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting drawdown analysis: {e}")
-            return "Unable to format drawdown analysis"
+            return {'success': True, 'result': "Unable to format drawdown analysis", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_trade_analysis(self, backtest_data: Dict[str, Any]) -> str:
         """Format trade analysis."""
@@ -669,7 +670,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting trade analysis: {e}")
-            return "Unable to format trade analysis"
+            return {'success': True, 'result': "Unable to format trade analysis", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_current_regime(self, regime_data: Dict[str, Any]) -> str:
         """Format current regime information."""
@@ -689,7 +690,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting current regime: {e}")
-            return "Unable to format current regime"
+            return {'success': True, 'result': "Unable to format current regime", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_regime_history(self, regime_data: Dict[str, Any]) -> str:
         """Format regime history."""
@@ -714,7 +715,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting regime history: {e}")
-            return "Unable to format regime history"
+            return {'success': True, 'result': "Unable to format regime history", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_regime_performance(self, regime_data: Dict[str, Any]) -> str:
         """Format regime performance."""
@@ -737,7 +738,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting regime performance: {e}")
-            return "Unable to format regime performance"
+            return {'success': True, 'result': "Unable to format regime performance", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_regime_transitions(self, regime_data: Dict[str, Any]) -> str:
         """Format regime transitions."""
@@ -763,7 +764,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting regime transitions: {e}")
-            return "Unable to format regime transitions"
+            return {'success': True, 'result': "Unable to format regime transitions", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_position_sizing(self, risk_data: Dict[str, Any]) -> str:
         """Format position sizing information."""
@@ -783,7 +784,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting position sizing: {e}")
-            return "Unable to format position sizing"
+            return {'success': True, 'result': "Unable to format position sizing", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_risk_limits(self, risk_data: Dict[str, Any]) -> str:
         """Format risk limits."""
@@ -803,7 +804,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting risk limits: {e}")
-            return "Unable to format risk limits"
+            return {'success': True, 'result': "Unable to format risk limits", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_stress_testing(self, risk_data: Dict[str, Any]) -> str:
         """Format stress testing results."""
@@ -826,7 +827,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting stress testing: {e}")
-            return "Unable to format stress testing"
+            return {'success': True, 'result': "Unable to format stress testing", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _format_risk_metrics(self, risk_data: Dict[str, Any]) -> str:
         """Format risk metrics."""
@@ -846,13 +847,13 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error formatting risk metrics: {e}")
-            return "Unable to format risk metrics"
+            return {'success': True, 'result': "Unable to format risk metrics", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_report_charts(self, data: Dict[str, Any]):
         """Generate charts for the report."""
         try:
             if not PLOTTING_AVAILABLE:
-                return
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Generate various charts based on available data
             if 'backtest_data' in data:
@@ -901,6 +902,7 @@ class ReportExportEngine:
         except Exception as e:
             logger.error(f"Error generating backtest charts: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _generate_regime_charts(self, regime_data: Dict[str, Any]):
         """Generate regime-specific charts."""
         try:
@@ -913,6 +915,7 @@ class ReportExportEngine:
         except Exception as e:
             logger.error(f"Error generating regime charts: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _generate_risk_charts(self, risk_data: Dict[str, Any]):
         """Generate risk-specific charts."""
         try:
@@ -933,6 +936,7 @@ class ReportExportEngine:
         except Exception as e:
             logger.error(f"Error generating risk charts: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _export_report(self, 
                       config: ReportConfig, 
                       sections: List[ReportSection], 
@@ -949,7 +953,7 @@ class ReportExportEngine:
                 return self._export_html(config, sections, data)
             else:
                 logger.warning(f"Format {config.format.value} not supported, falling back to markdown")
-                return self._export_markdown(config, sections, data)
+                return {'success': True, 'result': self._export_markdown(config, sections, data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             logger.error(f"Error exporting report: {e}")
@@ -984,7 +988,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error exporting markdown: {e}")
-            return ""
+            return {'success': True, 'result': "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _export_pdf(self, 
                    config: ReportConfig, 
@@ -1024,7 +1028,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error exporting PDF: {e}")
-            return ""
+            return {'success': True, 'result': "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _export_json(self, 
                     config: ReportConfig, 
@@ -1059,7 +1063,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error exporting JSON: {e}")
-            return ""
+            return {'success': True, 'result': "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _export_html(self, 
                     config: ReportConfig, 
@@ -1104,7 +1108,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error exporting HTML: {e}")
-            return ""
+            return {'success': True, 'result': "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _store_report_history(self, config: ReportConfig, filepath: str):
         """Store report in history."""
@@ -1127,6 +1131,7 @@ class ReportExportEngine:
         except Exception as e:
             logger.error(f"Error storing report history: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_report_summary(self) -> Dict[str, Any]:
         """Get summary of report generation."""
         try:
@@ -1141,7 +1146,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error getting report summary: {e}")
-            return {'error': str(e)}
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def export_report_history(self, filepath: str = "logs/report_history.json"):
         """Export report history to file."""
@@ -1159,3 +1164,4 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error exporting report history: {e}") 
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

@@ -72,7 +72,7 @@ def calculate_rolling_metrics(
     # Rolling max drawdown
     metrics['max_drawdown'] = drawdown.rolling(window).min()
     
-    return metrics
+    return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_advanced_metrics(
     returns: pd.Series,
@@ -101,7 +101,7 @@ def calculate_advanced_metrics(
     skewness = returns.skew()
     kurtosis = returns.kurtosis()
     
-    return {
+    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         'var_95': var,
         'cvar_95': cvar,
         'tail_risk': tail_risk,
@@ -198,7 +198,7 @@ def plot_risk_metrics(
         template="plotly_white"
     )
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def plot_drawdown_heatmap(
     returns: pd.DataFrame,
@@ -286,7 +286,7 @@ def plot_drawdown_heatmap(
                 'font': {'size': 16}
             }]
         )
-        return fig
+        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def calculate_regime_metrics(
     returns: pd.Series,
@@ -317,7 +317,7 @@ def calculate_regime_metrics(
     else:
         regime = "neutral"
     
-    return {
+    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         'regime': regime,
         'sharpe_ratio': recent_sharpe,
         'volatility': recent_vol,

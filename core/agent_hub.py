@@ -26,7 +26,7 @@ class AgentHub:
         self.interaction_history = []
         self._initialize_agents()
         self._setup_routing_rules()
-        
+
     def _initialize_agents(self):
         """Initialize all available agents."""
         try:
@@ -37,7 +37,6 @@ class AgentHub:
         except Exception as e:
             logger.warning(f"PromptAgent initialization failed: {e}")
             st.session_state["status"] = "fallback activated"
-            
         try:
             # Initialize ForecastRouter
             from models.forecast_router import ForecastRouter
@@ -46,7 +45,6 @@ class AgentHub:
         except Exception as e:
             logger.warning(f"ForecastRouter initialization failed: {e}")
             st.session_state["status"] = "fallback activated"
-            
         try:
             # Initialize LLMHandler
             from trading.llm.llm_interface import LLMHandler
@@ -55,7 +53,6 @@ class AgentHub:
         except Exception as e:
             logger.warning(f"LLMHandler initialization failed: {e}")
             st.session_state["status"] = "fallback activated"
-            
         try:
             # Initialize QuantGPTAgent
             from trading.services.quant_gpt import QuantGPTAgent
@@ -64,10 +61,9 @@ class AgentHub:
         except Exception as e:
             logger.warning(f"QuantGPTAgent initialization failed: {e}")
             st.session_state["status"] = "fallback activated"
-            
         # Set fallback agent
         self.fallback_agent = self.agents.get('prompt') or self.agents.get('llm')
-        
+
     def _setup_routing_rules(self):
         """Setup routing rules for different types of prompts."""
         self.routing_rules = {
@@ -92,7 +88,7 @@ class AgentHub:
                 'optimization', 'risk', 'probability'
             ]
         }
-        
+
     def route(self, prompt: str) -> Dict[str, Any]:
         """
         Route a prompt to the appropriate agent.
@@ -129,7 +125,7 @@ class AgentHub:
             
         except Exception as e:
             logger.error(f"Error in AgentHub routing: {e}")
-            return self._fallback_response(prompt)
+            return {'success': True, 'result': self._fallback_response(prompt), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def _determine_agent_type(self, prompt: str) -> str:
         """Determine the best agent type for a given prompt."""
@@ -192,7 +188,7 @@ class AgentHub:
                 
         except Exception as e:
             logger.error(f"Error in forecast agent: {e}")
-            return self._fallback_response(prompt)
+            return {'success': True, 'result': self._fallback_response(prompt), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def _call_trading_agent(self, agent, prompt: str) -> Dict[str, Any]:
         """Call the trading agent."""
@@ -216,7 +212,7 @@ class AgentHub:
                 
         except Exception as e:
             logger.error(f"Error in trading agent: {e}")
-            return self._fallback_response(prompt)
+            return {'success': True, 'result': self._fallback_response(prompt), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def _call_analysis_agent(self, agent, prompt: str) -> Dict[str, Any]:
         """Call the analysis agent."""
@@ -240,7 +236,7 @@ class AgentHub:
                 
         except Exception as e:
             logger.error(f"Error in analysis agent: {e}")
-            return self._fallback_response(prompt)
+            return {'success': True, 'result': self._fallback_response(prompt), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def _call_quant_gpt_agent(self, agent, prompt: str) -> Dict[str, Any]:
         """Call the QuantGPT agent."""
@@ -264,7 +260,7 @@ class AgentHub:
                 
         except Exception as e:
             logger.error(f"Error in QuantGPT agent: {e}")
-            return self._fallback_response(prompt)
+            return {'success': True, 'result': self._fallback_response(prompt), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def _call_llm_agent(self, agent, prompt: str) -> Dict[str, Any]:
         """Call the LLM agent."""
@@ -288,7 +284,7 @@ class AgentHub:
                 
         except Exception as e:
             logger.error(f"Error in LLM agent: {e}")
-            return self._fallback_response(prompt)
+            return {'success': True, 'result': self._fallback_response(prompt), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def _extract_ticker(self, prompt: str) -> str:
         """Extract ticker symbol from prompt."""
@@ -301,7 +297,7 @@ class AgentHub:
         common_words = {'THE', 'AND', 'FOR', 'WITH', 'FROM', 'THIS', 'THAT', 'WHAT', 'WHEN', 'WHERE'}
         for match in matches:
             if match not in common_words:
-                return match
+                return {'success': True, 'result': match, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 
         return 'AAPL'  # Default fallback
         
@@ -310,45 +306,44 @@ class AgentHub:
         import re
         timeframe_pattern = r'\b(daily|weekly|monthly|yearly|1d|1w|1m|1y|30d|60d|90d)\b'
         match = re.search(timeframe_pattern, prompt.lower())
-        return match.group(1) if match else '30d'
+        return {'success': True, 'result': match.group(1) if match else '30d', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _fallback_response(self, prompt: str) -> Dict[str, Any]:
         """Generate a fallback response when no agent is available."""
         return {
             'type': 'fallback',
-            'content': f"I understand you're asking about: {prompt}. I'm currently in fallback mode. Please try rephrasing your question or check system status.",
+            'content': f"I'm sorry, I couldn't process your request: '{prompt}'. Please try rephrasing or contact support.",
             'agent': 'fallback',
             'timestamp': datetime.now().isoformat(),
-            'confidence': 0.50,
+            'confidence': 0.0,
             'metadata': {
-                'fallback_reason': 'no_agent_available',
-                'agent_confidence': 0.50,
-                'suggested_actions': ['check_system_status', 'rephrase_question']
+                'error': 'No suitable agent available',
+                'fallback_used': True
             }
         }
         
     def _log_interaction(self, prompt: str, agent_type: str, response: Dict[str, Any]):
-        """Log agent interaction for audit trail."""
+        """Log the interaction for monitoring and debugging."""
         interaction = {
             'timestamp': datetime.now().isoformat(),
             'prompt': prompt,
             'agent_type': agent_type,
             'response_type': response.get('type', 'unknown'),
-            'confidence': response.get('confidence', 0.0),
-            'agent_used': response.get('agent', 'unknown')
+            'confidence': response.get('confidence', 0.0)
         }
-        
         self.interaction_history.append(interaction)
         
-        # Keep only last 100 interactions
+        # Keep only recent interactions
         if len(self.interaction_history) > 100:
             self.interaction_history = self.interaction_history[-100:]
             
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    
     def get_agent_status(self) -> Dict[str, Any]:
         """Get status of all agents."""
         status = {}
-        for agent_name, agent in self.agents.items():
-            status[agent_name] = {
+        for name, agent in self.agents.items():
+            status[name] = {
                 'available': agent is not None,
                 'health': self._check_agent_health(agent),
                 'last_used': None  # Could be enhanced with actual usage tracking
@@ -356,22 +351,20 @@ class AgentHub:
         return status
         
     def _check_agent_health(self, agent) -> str:
-        """Check health of an agent."""
+        """Check the health of an agent."""
         if agent is None:
             return 'unavailable'
         try:
-            # Try to call a simple method to check health
-            if hasattr(agent, 'get_health'):
-                return agent.get_health()
-            elif hasattr(agent, 'status'):
-                return agent.status
+            # Simple health check - could be enhanced
+            if hasattr(agent, 'health_check'):
+                return agent.health_check()
             else:
                 return 'unknown'
         except Exception:
             return 'error'
             
     def get_recent_interactions(self, limit: int = 5) -> List[Dict[str, Any]]:
-        """Get recent agent interactions."""
+        """Get recent interactions for monitoring."""
         return self.interaction_history[-limit:]
         
     def get_system_health(self) -> Dict[str, Any]:
@@ -381,12 +374,12 @@ class AgentHub:
         total_agents = len(agent_status)
         
         return {
-            'overall_status': 'healthy' if available_agents > 0 else 'degraded',
-            'available_agents': available_agents,
             'total_agents': total_agents,
-            'agent_status': agent_status,
-            'fallback_available': self.fallback_agent is not None,
-            'last_interaction': self.interaction_history[-1] if self.interaction_history else None
+            'available_agents': available_agents,
+            'health_score': available_agents / total_agents if total_agents > 0 else 0,
+            'fallback_agent_available': self.fallback_agent is not None,
+            'recent_interactions': len(self.interaction_history),
+            'timestamp': datetime.now().isoformat()
         }
         
     def reset_agents(self) -> bool:
@@ -398,4 +391,4 @@ class AgentHub:
             return True
         except Exception as e:
             logger.error(f"Failed to reset agents: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

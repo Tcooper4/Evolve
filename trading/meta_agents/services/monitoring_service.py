@@ -50,6 +50,7 @@ class MonitoringService:
         self.metrics_queue = asyncio.Queue()
         self.running = False
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/monitoring")
@@ -65,6 +66,7 @@ class MonitoringService:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_config(self) -> None:
         """Load configuration."""
         try:
@@ -74,6 +76,7 @@ class MonitoringService:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def setup_database(self) -> None:
         """Set up metrics database."""
         try:
@@ -107,6 +110,7 @@ class MonitoringService:
             self.logger.error(f"Error setting up database: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def initialize_metrics(self) -> None:
         """Initialize system metrics."""
         self.metrics = {
@@ -181,6 +185,7 @@ class MonitoringService:
             )
         }
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def collect_system_metrics(self) -> None:
         """Collect system metrics."""
         try:
@@ -346,6 +351,7 @@ class MonitoringService:
         """Stop monitoring service."""
         self.running = False
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main entry point."""
     import argparse
@@ -363,5 +369,6 @@ def main():
         logging.error(f"Error in monitoring service: {str(e)}")
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

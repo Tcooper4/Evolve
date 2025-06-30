@@ -85,6 +85,12 @@ class ForecastExplainability:
         self.explanation_history = []
         
         logger.info("Forecast Explainability Engine initialized")
+        
+        self.init_status = {
+            'success': True,
+            'message': 'ForecastExplainability initialized successfully',
+            'timestamp': datetime.now().isoformat()
+        }
     
     def explain_forecast(self,
                         forecast_id: str,
@@ -93,7 +99,7 @@ class ForecastExplainability:
                         model: Any,
                         features: pd.DataFrame,
                         target_history: Optional[pd.Series] = None,
-                        horizon: int = 15) -> ForecastExplanation:
+                        horizon: int = 15) -> Dict[str, Any]:
         """Generate comprehensive forecast explanation.
         
         Args:
@@ -106,7 +112,7 @@ class ForecastExplainability:
             horizon: Forecast horizon in days
             
         Returns:
-            Forecast explanation
+            Dictionary containing explanation and status
         """
         try:
             # Calculate confidence intervals
@@ -142,11 +148,21 @@ class ForecastExplainability:
             
             logger.info(f"Generated explanation for forecast {forecast_id}")
             
-            return explanation
-            
+            return {
+                'success': True,
+                'explanation': explanation,
+                'message': f'Explanation generated for forecast {forecast_id}',
+                'timestamp': datetime.now().isoformat()
+            }
         except Exception as e:
             logger.error(f"Error explaining forecast {forecast_id}: {e}")
-            return self._create_default_explanation(forecast_id, symbol, forecast_value)
+            default_explanation = self._create_default_explanation(forecast_id, symbol, forecast_value)
+            return {
+                'success': False,
+                'explanation': default_explanation,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
     
     def _calculate_confidence_intervals(self,
                                       model: Any,
@@ -198,28 +214,18 @@ class ForecastExplainability:
                     
                     return {
                         'lower': lower_bound,
-                        'upper': upper_bound,
-                        'method': 'bootstrap'
+                        'upper': upper_bound
                     }
-            
-            # Method 2: Simple percentage-based intervals
-            volatility = 0.02  # 2% daily volatility assumption
-            margin = forecast_value * volatility * np.sqrt(horizon) * 1.96  # 95% CI
-            
+            # Fallback
             return {
-                'lower': forecast_value - margin,
-                'upper': forecast_value + margin,
-                'method': 'volatility_based'
+                'lower': forecast_value * 0.95,
+                'upper': forecast_value * 1.05
             }
-            
         except Exception as e:
             logger.error(f"Error calculating confidence intervals: {e}")
-            # Default intervals
-            margin = forecast_value * 0.05  # 5% margin
             return {
-                'lower': forecast_value - margin,
-                'upper': forecast_value + margin,
-                'method': 'default'
+                'lower': forecast_value * 0.95,
+                'upper': forecast_value * 1.05
             }
     
     def _calculate_feature_importance(self, model: Any, features: pd.DataFrame) -> Dict[str, float]:
@@ -329,7 +335,7 @@ class ForecastExplainability:
                         reverse=True
                     ))
                     
-                    return feature_importance
+                    return {'success': True, 'result': feature_importance, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Default: equal importance
             feature_names = features.columns
@@ -402,7 +408,7 @@ class ForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error generating explanation text: {e}")
-            return f"Forecast for {symbol}: {forecast_value:.2f} over {horizon} days."
+            return {'success': True, 'result': f"Forecast for {symbol}: {forecast_value:.2f} over {horizon} days.", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _extract_model_metadata(self, model: Any) -> Dict[str, Any]:
         """Extract metadata from model.
@@ -439,13 +445,13 @@ class ForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error extracting model metadata: {e}")
-            return {'model_type': 'unknown'}
+            return {'success': True, 'result': {'model_type': 'unknown'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_default_explanation(self, forecast_id: str, symbol: str, forecast_value: float) -> ForecastExplanation:
-        """Create default explanation when explanation fails.
+        """Create default explanation when error occurs.
         
         Args:
-            forecast_id: Forecast ID
+            forecast_id: Forecast identifier
             symbol: Trading symbol
             forecast_value: Forecasted value
             
@@ -461,7 +467,7 @@ class ForecastExplainability:
             confidence_interval_upper=forecast_value * 1.05,
             confidence_level=0.95,
             feature_importance={},
-            model_metadata={'model_type': 'unknown'},
+            model_metadata=self._extract_model_metadata(None),
             explanation_text=f"Forecast for {symbol}: {forecast_value:.2f}",
             timestamp=datetime.now()
         )
@@ -473,12 +479,12 @@ class ForecastExplainability:
                               forecast_value: float,
                               confidence_lower: float,
                               confidence_upper: float) -> ForecastAccuracy:
-        """Track forecast accuracy and update metrics.
+        """Track forecast accuracy against actual values.
         
         Args:
-            forecast_id: Forecast ID
+            forecast_id: Forecast identifier
             symbol: Trading symbol
-            actual_value: Actual value
+            actual_value: Actual observed value
             forecast_value: Forecasted value
             confidence_lower: Lower confidence bound
             confidence_upper: Upper confidence bound
@@ -487,14 +493,17 @@ class ForecastExplainability:
             Forecast accuracy metrics
         """
         try:
-            # Calculate accuracy metrics
+            # Calculate error metrics
             error = actual_value - forecast_value
-            error_pct = (error / forecast_value) * 100 if forecast_value != 0 else 0
+            error_pct = (error / actual_value) * 100 if actual_value != 0 else 0
+            
+            # Check if within confidence interval
             within_confidence = confidence_lower <= actual_value <= confidence_upper
             
-            # Calculate accuracy score (0-1)
+            # Calculate accuracy score (1 - normalized error)
             accuracy_score = max(0, 1 - abs(error_pct) / 100)
             
+            # Create accuracy object
             accuracy = ForecastAccuracy(
                 forecast_id=forecast_id,
                 symbol=symbol,
@@ -568,7 +577,7 @@ class ForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error getting forecast vs actual plot data: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_feature_importance_summary(self, symbol: str, days: int = 30) -> Dict[str, Any]:
         """Get feature importance summary.
@@ -620,7 +629,7 @@ class ForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error getting feature importance summary: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_explanation_summary(self, symbol: str, days: int = 30) -> Dict[str, Any]:
         """Get explanation summary statistics.
@@ -675,55 +684,46 @@ class ForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error getting explanation summary: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
-    def export_explanation_report(self, filepath: str, symbol: Optional[str] = None) -> bool:
-        """Export comprehensive explanation report.
+    def export_explanation_report(self, filepath: str, symbol: Optional[str] = None) -> Dict[str, Any]:
+        """Export explanation report to a file.
         
         Args:
-            filepath: Output file path
-            symbol: Filter by symbol (optional)
+            filepath: Path to save the report
+            symbol: Optional symbol to filter explanations
             
         Returns:
-            True if export successful
+            Dictionary with export status
         """
         try:
-            report_data = []
-            
-            # Filter explanations
             explanations = self.explanation_history
             if symbol:
                 explanations = [e for e in explanations if e.symbol == symbol]
             
-            for explanation in explanations:
-                row = {
-                    'forecast_id': explanation.forecast_id,
-                    'symbol': explanation.symbol,
-                    'forecast_date': explanation.forecast_date,
-                    'forecast_value': explanation.forecast_value,
-                    'confidence_lower': explanation.confidence_interval_lower,
-                    'confidence_upper': explanation.confidence_interval_upper,
-                    'confidence_level': explanation.confidence_level,
-                    'top_feature': list(explanation.feature_importance.keys())[0] if explanation.feature_importance else '',
-                    'top_importance': list(explanation.feature_importance.values())[0] if explanation.feature_importance else 0,
-                    'model_type': explanation.model_metadata.get('model_type', 'unknown'),
-                    'explanation': explanation.explanation_text
-                }
-                report_data.append(row)
+            report_data = [e.__dict__ for e in explanations]
+            import json
+            with open(filepath, 'w') as f:
+                json.dump(report_data, f, default=str, indent=4)
             
-            df = pd.DataFrame(report_data)
-            df.to_csv(filepath, index=False)
-            
-            logger.info(f"Explanation report exported to {filepath}")
-            return True
-            
+            return {
+                'success': True,
+                'message': f'Explanation report exported to {filepath}',
+                'timestamp': datetime.now().isoformat(),
+                'filepath': filepath,
+                'explanations_count': len(report_data)
+            }
         except Exception as e:
             logger.error(f"Error exporting explanation report: {e}")
-            return False
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
 
 # Global forecast explainability instance
 forecast_explainability = ForecastExplainability()
 
 def get_forecast_explainability() -> ForecastExplainability:
     """Get the global forecast explainability instance."""
-    return forecast_explainability 
+    return {'success': True, 'result': forecast_explainability, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

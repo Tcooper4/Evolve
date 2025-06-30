@@ -28,6 +28,7 @@ class StrategyOptimizer(ABC):
         self.optimizer = None
         self.history = []
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     @abstractmethod
     def train(self, state: torch.Tensor, action: torch.Tensor, reward: float, next_state: torch.Tensor, done: bool) -> float:
         """Train the model on a single step.
@@ -110,13 +111,14 @@ class DQNStrategyOptimizer(StrategyOptimizer):
         self.target_update = config.get('target_update', 10)
         self.steps_done = 0
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _build_network(self) -> nn.Module:
         """Build the neural network.
         
         Returns:
             nn.Module: Neural network model
         """
-        return nn.Sequential(
+        return {'success': True, 'result': nn.Sequential(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             nn.Linear(self.state_dim, 128),
             nn.ReLU(),
             nn.Linear(128, 64),
@@ -135,7 +137,7 @@ class DQNStrategyOptimizer(StrategyOptimizer):
         """
         if isinstance(state, np.ndarray):
             state = torch.FloatTensor(state)
-        return state.to(self.device)
+        return {'success': True, 'result': state.to(self.device), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def fit(self, state: np.ndarray, action: int, reward: float, next_state: np.ndarray, done: bool) -> float:
         """Train the model on a single step.
@@ -162,7 +164,7 @@ class DQNStrategyOptimizer(StrategyOptimizer):
                 self.target_net.load_state_dict(self.policy_net.state_dict())
             
             self.steps_done += 1
-            return loss
+            return {'success': True, 'result': loss, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return 0.0
     
@@ -199,7 +201,7 @@ class DQNStrategyOptimizer(StrategyOptimizer):
         # Update epsilon
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
         
-        return loss.item()
+        return {'success': True, 'result': loss.item(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def predict(self, state: np.ndarray) -> int:
         """Predict the best action for a given state.
@@ -218,7 +220,7 @@ class DQNStrategyOptimizer(StrategyOptimizer):
         
         with torch.no_grad():
             q_values = self.policy_net(state)
-            return q_values.argmax().item()
+            return {'success': True, 'result': q_values.argmax().item(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def save(self, path: str) -> None:
         """Save the model to disk.
@@ -239,6 +241,7 @@ class DQNStrategyOptimizer(StrategyOptimizer):
             'config': self.config
         }, save_path)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def load(self, path: str) -> None:
         """Load the model from disk.
         
@@ -254,6 +257,7 @@ class DQNStrategyOptimizer(StrategyOptimizer):
         self.epsilon = checkpoint['epsilon']
         self.config = checkpoint['config']
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def plot_results(self, *args, **kwargs):
         """Plot training results and performance metrics.
         
@@ -323,3 +327,4 @@ class DQNStrategyOptimizer(StrategyOptimizer):
         except Exception as e:
             logging.error(f"Error plotting DQN results: {e}")
             print(f"Could not plot results: {e}") 
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

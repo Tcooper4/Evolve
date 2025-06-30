@@ -33,6 +33,7 @@ class DataPreprocessor:
         self.is_fitted = False
         self._feature_stats = {}
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
         if 'scaling_method' in self.config:
@@ -53,6 +54,7 @@ class DataPreprocessor:
                 
         logger.debug("Configuration validation successful")
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _validate_input(self, data: pd.DataFrame) -> None:
         """Validate input data."""
         if data.empty:
@@ -69,6 +71,7 @@ class DataPreprocessor:
         if not data.index.is_monotonic_increasing:
             raise ValueError("Data index must be sorted in ascending order")
             
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _handle_missing_values(self, data: pd.DataFrame) -> pd.DataFrame:
         """Handle missing values in the data."""
         if data.empty:
@@ -99,7 +102,7 @@ class DataPreprocessor:
         if result.isna().any().any():
             raise ValueError("Unable to handle all missing values")
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _handle_outliers(self, data: pd.DataFrame) -> pd.DataFrame:
         """Handle outliers in the data."""
@@ -140,7 +143,7 @@ class DataPreprocessor:
                     result.loc[result[col] < lower_bound, col] = lower_bound
                     result.loc[result[col] > upper_bound, col] = upper_bound
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def _compute_feature_stats(self, data: pd.DataFrame) -> None:
         """Compute feature statistics."""
@@ -151,12 +154,13 @@ class DataPreprocessor:
             'max': data.max()
         }
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def clean_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """Clean the data by handling missing values and outliers."""
         self._validate_input(data)
         result = self._handle_missing_values(data)
         result = self._handle_outliers(result)
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def normalize_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """Normalize the data using the specified scaling method."""
@@ -165,7 +169,7 @@ class DataPreprocessor:
         if not self.is_fitted:
             self.fit(data)
         
-        return self.transform(data)
+        return {'success': True, 'result': self.transform(data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def fit(self, data: pd.DataFrame) -> 'DataPreprocessor':
         """Fit the preprocessor to the data."""
@@ -173,7 +177,7 @@ class DataPreprocessor:
         self.scaler = DataScaler(self.config)
         self.scaler.fit(data)
         self.is_fitted = True
-        return self
+        return {'success': True, 'result': self, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
         """Transform the data."""
@@ -182,11 +186,11 @@ class DataPreprocessor:
         if not self.is_fitted:
             raise ValueError("Preprocessor must be fitted before transform")
         
-        return self.scaler.transform(data)
+        return {'success': True, 'result': self.scaler.transform(data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def fit_transform(self, data: pd.DataFrame) -> pd.DataFrame:
         """Fit and transform the data."""
-        return self.fit(data).transform(data)
+        return {'success': True, 'result': self.fit(data).transform(data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def inverse_transform(self, data: pd.DataFrame) -> pd.DataFrame:
         """Inverse transform the data."""
@@ -195,17 +199,17 @@ class DataPreprocessor:
         if not self.is_fitted:
             raise ValueError("Preprocessor must be fitted before inverse transform")
         
-        return self.scaler.inverse_transform(data)
+        return {'success': True, 'result': self.scaler.inverse_transform(data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def get_params(self) -> Dict[str, Any]:
         """Get preprocessor parameters."""
-        return self.config.copy()
+        return {'success': True, 'result': self.config.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def set_params(self, **params) -> 'DataPreprocessor':
         """Set preprocessor parameters."""
         self.config.update(params)
         self._validate_config()
-        return self
+        return {'success': True, 'result': self, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class FeatureEngineering:
     """Feature engineering class."""
@@ -229,6 +233,7 @@ class FeatureEngineering:
         self.lag_periods = self.config.get('lag_periods', [1, 2, 3, 5, 10])
         self.volume_ma_windows = self.config.get('volume_ma_windows', [5, 10, 20])
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
         # Validate moving average windows
@@ -285,6 +290,7 @@ class FeatureEngineering:
             if not all(isinstance(x, int) and x > 0 for x in self.config['volume_ma_windows']):
                 raise ValueError("volume_ma_windows must contain positive integers")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _validate_input(self, data: pd.DataFrame) -> None:
         """Validate input data."""
         if data.empty:
@@ -314,6 +320,7 @@ class FeatureEngineering:
         if len(data) < min_required:
             raise ValueError(f"Need at least {min_required} data points for feature calculation")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def calculate_moving_averages(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate moving averages."""
         self._validate_input(data)
@@ -325,7 +332,7 @@ class FeatureEngineering:
             result[f'SMA_{window}'] = data['Close'].rolling(window=window).mean()
             result[f'EMA_{window}'] = data['Close'].ewm(span=window, adjust=False).mean()
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def calculate_rsi(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate RSI."""
@@ -341,7 +348,7 @@ class FeatureEngineering:
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         
-        return pd.DataFrame({'RSI': rsi}, index=data.index)
+        return {'success': True, 'result': pd.DataFrame({'RSI': rsi}, index=data.index), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def calculate_macd(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate MACD."""
@@ -357,7 +364,7 @@ class FeatureEngineering:
         signal = macd.ewm(span=self.macd_params['signal_period'], adjust=False).mean()
         histogram = macd - signal
         
-        return pd.DataFrame({
+        return {'success': True, 'result': pd.DataFrame({, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'MACD': macd,
             'MACD_Signal': signal,
             'MACD_Histogram': histogram
@@ -376,7 +383,7 @@ class FeatureEngineering:
         lower_band = middle_band - (std * self.bb_std)
         bandwidth = (upper_band - lower_band) / middle_band
         
-        return pd.DataFrame({
+        return {'success': True, 'result': pd.DataFrame({, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'BB_Middle': middle_band,
             'BB_Upper': upper_band,
             'BB_Lower': lower_band,
@@ -404,7 +411,7 @@ class FeatureEngineering:
         # On-Balance Volume (OBV)
         result['OBV'] = (np.sign(data['Close'].diff()) * data['Volume']).cumsum()
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def calculate_fourier_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate Fourier transform features."""
@@ -420,7 +427,7 @@ class FeatureEngineering:
             magnitude = np.abs(fft[period])
             result[f'Fourier_{period}'] = magnitude
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def calculate_lag_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate lag features."""
@@ -432,7 +439,7 @@ class FeatureEngineering:
                 continue
             result[f'Close_Lag_{period}'] = data['Close'].shift(period)
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def calculate_momentum_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate momentum indicators."""
@@ -449,7 +456,7 @@ class FeatureEngineering:
             result['Stoch_K'] = 100 * ((data['Close'] - low_14) / (high_14 - low_14))
             result['Stoch_D'] = result['Stoch_K'].rolling(window=3).mean()
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def engineer_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Engineer all features."""
@@ -473,7 +480,7 @@ class FeatureEngineering:
         # Fill NaN values with 0
         result = result.fillna(0)
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def get_feature_list(self) -> List[str]:
         """Get list of engineered features."""
@@ -508,11 +515,11 @@ class FeatureEngineering:
         # Momentum indicators
         features.extend(['ROC', 'Stoch_K', 'Stoch_D'])
         
-        return features
+        return {'success': True, 'result': features, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def get_params(self) -> Dict[str, Any]:
         """Get feature engineering parameters."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'ma_windows': self.ma_windows,
             'rsi_window': self.rsi_window,
             'macd_params': self.macd_params,
@@ -546,7 +553,7 @@ class FeatureEngineering:
         if 'volume_ma_windows' in params:
             self.volume_ma_windows = params['volume_ma_windows']
         
-        return self
+        return {'success': True, 'result': self, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class DataValidator:
     """Data validation class."""
@@ -559,6 +566,7 @@ class DataValidator:
         self.min_price = self.config.get('min_price', 0.0)
         self.max_price = self.config.get('max_price', float('inf'))
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
         if 'outlier_threshold' in self.config:
@@ -575,6 +583,7 @@ class DataValidator:
             if 'min_price' in self.config and self.config['max_price'] <= self.config['min_price']:
                 raise ValueError("max_price must be greater than min_price")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _validate_input(self, data: pd.DataFrame) -> None:
         """Validate input data."""
         if data.empty:
@@ -595,6 +604,7 @@ class DataValidator:
         if data.index.duplicated().any():
             raise ValueError("Duplicate timestamps found in data")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def validate_data(self, data: pd.DataFrame) -> bool:
         """Validate the data."""
         self._validate_input(data)
@@ -642,7 +652,7 @@ class DataValidator:
             if freq is None:
                 raise ValueError("Inconsistent data frequency")
         
-        return True
+        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def check_outliers(self, data: pd.DataFrame) -> pd.DataFrame:
         """Check for outliers in the data."""
@@ -661,7 +671,7 @@ class DataValidator:
             z_scores = np.abs((data[col] - mean) / std)
             result[f'{col}_outlier'] = z_scores > self.outlier_threshold
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def check_missing_values(self, data: pd.DataFrame) -> pd.DataFrame:
         """Check for missing values in the data."""
@@ -672,19 +682,19 @@ class DataValidator:
         for col in data.columns:
             result[f'{col}_missing'] = data[col].isna()
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def check_data_types(self, data: pd.DataFrame) -> Dict[str, str]:
         """Check data types of columns."""
         self._validate_input(data)
         
-        return {col: str(dtype) for col, dtype in data.dtypes.items()}
+        return {'success': True, 'result': {col: str(dtype) for col, dtype in data.dtypes.items()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def check_date_index(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Check date index properties."""
         self._validate_input(data)
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'is_datetime': isinstance(data.index, pd.DatetimeIndex),
             'is_sorted': data.index.is_monotonic_increasing,
             'has_duplicates': data.index.duplicated().any(),
@@ -696,7 +706,7 @@ class DataValidator:
 
     def get_params(self) -> Dict[str, Any]:
         """Get validator parameters."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'outlier_threshold': self.outlier_threshold,
             'min_price': self.min_price,
             'max_price': self.max_price
@@ -714,7 +724,7 @@ class DataValidator:
         if 'max_price' in params:
             self.max_price = params['max_price']
         
-        return self
+        return {'success': True, 'result': self, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class DataScaler:
     """Data scaling class."""
@@ -727,12 +737,14 @@ class DataScaler:
         self._feature_stats = {}
         self.is_fitted = False
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
         if 'scaling_method' in self.config:
             if self.config['scaling_method'] not in ['standard', 'minmax']:
                 raise ValueError("scaling_method must be 'standard' or 'minmax'")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _validate_input(self, data: pd.DataFrame) -> None:
         """Validate input data."""
         if data.empty:
@@ -749,6 +761,7 @@ class DataScaler:
         if inf_cols:
             raise ValueError(f"Infinite values found in columns: {inf_cols}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def fit(self, data: pd.DataFrame) -> 'DataScaler':
         """Fit the scaler to the data."""
         self._validate_input(data)
@@ -768,7 +781,7 @@ class DataScaler:
             }
         
         self.is_fitted = True
-        return self
+        return {'success': True, 'result': self, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def transform(self, data: pd.DataFrame) -> pd.DataFrame:
         """Transform the data."""
@@ -797,11 +810,11 @@ class DataScaler:
                     else:
                         result[col] = (data[col] - stats['min']) / (stats['max'] - stats['min'])
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def fit_transform(self, data: pd.DataFrame) -> pd.DataFrame:
         """Fit and transform the data."""
-        return self.fit(data).transform(data)
+        return {'success': True, 'result': self.fit(data).transform(data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def inverse_transform(self, data: pd.DataFrame) -> pd.DataFrame:
         """Inverse transform the data."""
@@ -830,11 +843,11 @@ class DataScaler:
                     else:
                         result[col] = data[col] * (stats['max'] - stats['min']) + stats['min']
         
-        return result
+        return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def get_params(self) -> Dict[str, Any]:
         """Get scaler parameters."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'scaling_method': self.scaling_method,
             'feature_stats': self._feature_stats.copy()
         }
@@ -847,7 +860,7 @@ class DataScaler:
         if 'scaling_method' in params:
             self.scaling_method = params['scaling_method']
         
-        return self 
+        return {'success': True, 'result': self, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def remove_outliers(df: pd.DataFrame, method: str = 'iqr', columns: Optional[list] = None) -> pd.DataFrame:
     """Remove outliers using IQR or Z-score method.
@@ -883,7 +896,7 @@ def remove_outliers(df: pd.DataFrame, method: str = 'iqr', columns: Optional[lis
             logger.info(f"Removed {outliers} outliers from {col}")
             df = df[mask]
     
-    return df
+    return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def apply_agent_transformations(df: pd.DataFrame, agent_config: Optional[Dict[str, Any]] = None) -> pd.DataFrame:
     """Apply custom transformations defined by agents.
@@ -899,7 +912,7 @@ def apply_agent_transformations(df: pd.DataFrame, agent_config: Optional[Dict[st
     logger.info("Applying agent transformations")
     
     if agent_config is None:
-        return df
+        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     # Example agent transformations (extend as needed)
     if 'custom_scaling' in agent_config:
@@ -1005,7 +1018,7 @@ def _parse_safe_condition(series: pd.Series, condition: str) -> pd.Series:
             elif operator_found == 'eq':
                 return series == value
             elif operator_found == 'ne':
-                return series != value
+                return {'success': True, 'result': series != value, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             else:
                 raise ValueError(f"Unsupported operator: {operator_found}")
                 
@@ -1054,4 +1067,4 @@ def preprocess_data(
     logger.info(f"Final shape: {df.shape}")
     logger.info(f"Final missing values:\n{df.isnull().sum()}")
     
-    return df 
+    return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

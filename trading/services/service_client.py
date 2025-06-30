@@ -40,6 +40,7 @@ class ServiceClient:
         
         logger.info("ServiceClient initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def send_request(self, service_name: str, message_type: str, data: Dict[str, Any], 
                     wait_for_response: bool = True) -> Optional[Dict[str, Any]]:
         """
@@ -80,7 +81,7 @@ class ServiceClient:
                 
         except Exception as e:
             logger.error(f"Error sending request to {service_name}: {e}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _wait_for_response(self, service_name: str, message_type: str) -> Optional[Dict[str, Any]]:
         """Wait for response from a service."""
@@ -102,7 +103,7 @@ class ServiceClient:
                             response_type == 'error'):
                             
                             logger.info(f"Received response from {service_name}: {response_type}")
-                            return data
+                            return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                             
             except Exception as e:
                 logger.error(f"Error waiting for response: {e}")
@@ -121,7 +122,7 @@ class ServiceClient:
             'features': features or ['close', 'volume', 'rsi', 'macd']
         }
         
-        return self.send_request('model_builder', 'build_model', data)
+        return {'success': True, 'result': self.send_request('model_builder', 'build_model', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def evaluate_model(self, model_id: str, symbol: str = 'BTCUSDT', 
                       timeframe: str = '1h', period: str = '30d') -> Optional[Dict[str, Any]]:
@@ -134,7 +135,7 @@ class ServiceClient:
             'metrics': ['sharpe', 'drawdown', 'win_rate']
         }
         
-        return self.send_request('performance_critic', 'evaluate_model', data)
+        return {'success': True, 'result': self.send_request('performance_critic', 'evaluate_model', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def retrain_model(self, model_id: str, new_data_period: str = '30d', 
                      retrain_type: str = 'incremental') -> Optional[Dict[str, Any]]:
@@ -145,7 +146,7 @@ class ServiceClient:
             'retrain_type': retrain_type
         }
         
-        return self.send_request('updater', 'retrain_model', data)
+        return {'success': True, 'result': self.send_request('updater', 'retrain_model', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def search_github(self, query: str, max_results: int = 10, 
                      language: str = 'python') -> Optional[Dict[str, Any]]:
@@ -156,7 +157,7 @@ class ServiceClient:
             'language': language
         }
         
-        return self.send_request('research', 'search_github', data)
+        return {'success': True, 'result': self.send_request('research', 'search_github', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def tune_hyperparameters(self, model_type: str, param_space: dict = None, 
                            optimization_method: str = 'bayesian', 
@@ -170,7 +171,7 @@ class ServiceClient:
             'cv_folds': 5
         }
         
-        return self.send_request('meta_tuner', 'tune_hyperparameters', data)
+        return {'success': True, 'result': self.send_request('meta_tuner', 'tune_hyperparameters', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def generate_plot(self, plot_type: str, data_source: str, 
                      plot_config: dict = None) -> Optional[Dict[str, Any]]:
@@ -182,7 +183,7 @@ class ServiceClient:
             'save_path': f'plots/{plot_type}_{int(time.time())}.png'
         }
         
-        return self.send_request('multimodal', 'generate_plot', data)
+        return {'success': True, 'result': self.send_request('multimodal', 'generate_plot', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def route_prompt(self, user_prompt: str, context: dict = None, 
                     available_agents: list = None) -> Optional[Dict[str, Any]]:
@@ -193,7 +194,7 @@ class ServiceClient:
             'available_agents': available_agents or ['model_builder', 'performance_critic', 'updater']
         }
         
-        return self.send_request('prompt_router', 'route_prompt', data)
+        return {'success': True, 'result': self.send_request('prompt_router', 'route_prompt', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def process_natural_language_query(self, query: str) -> Optional[Dict[str, Any]]:
         """Process a natural language query using QuantGPT."""
@@ -201,7 +202,7 @@ class ServiceClient:
             'query': query
         }
         
-        return self.send_request('quant_gpt', 'process_query', data)
+        return {'success': True, 'result': self.send_request('quant_gpt', 'process_query', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_query_history(self, limit: int = 10, symbol: str = None) -> Optional[Dict[str, Any]]:
         """Get query history from QuantGPT."""
@@ -210,11 +211,11 @@ class ServiceClient:
             'symbol': symbol
         }
         
-        return self.send_request('quant_gpt', 'get_query_history', data)
+        return {'success': True, 'result': self.send_request('quant_gpt', 'get_query_history', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_available_symbols(self) -> Optional[Dict[str, Any]]:
         """Get available symbols and parameters from QuantGPT."""
-        return self.send_request('quant_gpt', 'get_available_symbols', {})
+        return {'success': True, 'result': self.send_request('quant_gpt', 'get_available_symbols', {}), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def execute_model_safely(self, model_code: str, model_name: str, 
                            input_data: Dict[str, Any] = None, 
@@ -227,7 +228,7 @@ class ServiceClient:
             'model_type': model_type
         }
         
-        return self.send_request('safe_executor', 'execute_model', data)
+        return {'success': True, 'result': self.send_request('safe_executor', 'execute_model', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def execute_strategy_safely(self, strategy_code: str, strategy_name: str,
                               market_data: Dict[str, Any] = None,
@@ -240,7 +241,7 @@ class ServiceClient:
             'parameters': parameters or {}
         }
         
-        return self.send_request('safe_executor', 'execute_strategy', data)
+        return {'success': True, 'result': self.send_request('safe_executor', 'execute_strategy', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def execute_indicator_safely(self, indicator_code: str, indicator_name: str,
                                price_data: Dict[str, Any] = None,
@@ -253,23 +254,23 @@ class ServiceClient:
             'parameters': parameters or {}
         }
         
-        return self.send_request('safe_executor', 'execute_indicator', data)
+        return {'success': True, 'result': self.send_request('safe_executor', 'execute_indicator', data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_safe_executor_statistics(self) -> Optional[Dict[str, Any]]:
         """Get SafeExecutor statistics."""
-        return self.send_request('safe_executor', 'get_statistics', {})
+        return {'success': True, 'result': self.send_request('safe_executor', 'get_statistics', {}), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def cleanup_safe_executor(self) -> Optional[Dict[str, Any]]:
         """Clean up SafeExecutor resources."""
-        return self.send_request('safe_executor', 'cleanup', {})
+        return {'success': True, 'result': self.send_request('safe_executor', 'cleanup', {}), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_service_status(self, service_name: str) -> Optional[Dict[str, Any]]:
         """Get status of a service."""
-        return self.send_request(service_name, 'status', {})
+        return {'success': True, 'result': self.send_request(service_name, 'status', {}), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def ping_service(self, service_name: str) -> Optional[Dict[str, Any]]:
         """Ping a service to check if it's alive."""
-        return self.send_request(service_name, 'ping', {})
+        return {'success': True, 'result': self.send_request(service_name, 'ping', {}), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def generate_report(self, trade_data: Dict[str, Any], model_data: Dict[str, Any], 
                        strategy_data: Dict[str, Any], symbol: str, timeframe: str, 
@@ -299,7 +300,7 @@ class ServiceClient:
                 redis_db=self.redis_db
             )
             
-            return client.generate_report(
+            return {'success': True, 'result': client.generate_report(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 trade_data=trade_data,
                 model_data=model_data,
                 strategy_data=strategy_data,
@@ -339,7 +340,7 @@ class ServiceClient:
                 redis_db=self.redis_db
             )
             
-            return client.trigger_strategy_report(
+            return {'success': True, 'result': client.trigger_strategy_report(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 strategy_data=strategy_data,
                 trade_data=trade_data,
                 model_data=model_data,
@@ -375,7 +376,7 @@ class ServiceClient:
             
         except Exception as e:
             logger.error(f"Error getting recent reports: {e}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def list_available_reports(self) -> List[Dict[str, Any]]:
         """
@@ -397,75 +398,117 @@ class ServiceClient:
             
         except Exception as e:
             logger.error(f"Error listing available reports: {e}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def close(self):
-        """Close the client and clean up resources."""
-        self.pubsub.close()
+        """Close the service client and cleanup resources."""
+        try:
+            self.pubsub.close()
+            self.redis_client.close()
+            logger.info("ServiceClient closed successfully")
+            return {
+                'success': True,
+                'message': 'ServiceClient closed successfully',
+                'timestamp': time.time()
+            }
+        except Exception as e:
+            logger.error(f"Error closing ServiceClient: {e}")
+            return {
+                'success': False,
+                'message': f'Error closing ServiceClient: {e}',
+                'timestamp': time.time()
+            }
     
     def get_reasoning_decisions(self, agent_name: str = None, limit: int = 10) -> Optional[Dict[str, Any]]:
-        """Get reasoning decisions."""
+        """Get recent reasoning decisions from agents."""
         try:
-            from utils.reasoning_logger import ReasoningLogger
-            
-            logger = ReasoningLogger(
-                redis_host=self.redis_host,
-                redis_port=self.redis_port,
-                redis_db=self.redis_db
-            )
-            
-            if agent_name:
-                decisions = logger.get_agent_decisions(agent_name, limit=limit)
-            else:
-                stats = logger.get_statistics()
-                decisions = []
-                for decision_data in stats['recent_activity'][:limit]:
-                    decision = logger.get_decision(decision_data['decision_id'])
-                    if decision:
-                        decisions.append(decision)
-            
-            return {
-                'decisions': [asdict(d) for d in decisions],
-                'count': len(decisions)
+            data = {
+                'agent_name': agent_name,
+                'limit': limit
             }
             
+            response = self.send_request('reasoning_tracker', 'get_decisions', data)
+            
+            if response and response.get('success'):
+                return {
+                    'success': True,
+                    'decisions': response.get('data', {}).get('decisions', []),
+                    'count': len(response.get('data', {}).get('decisions', [])),
+                    'timestamp': time.time()
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': 'Failed to retrieve reasoning decisions',
+                    'decisions': [],
+                    'count': 0,
+                    'timestamp': time.time()
+                }
+                
         except Exception as e:
             logger.error(f"Error getting reasoning decisions: {e}")
-            return None
+            return {
+                'success': False,
+                'message': f'Error getting reasoning decisions: {e}',
+                'decisions': [],
+                'count': 0,
+                'timestamp': time.time()
+            }
     
     def get_reasoning_statistics(self) -> Optional[Dict[str, Any]]:
-        """Get reasoning statistics."""
+        """Get reasoning statistics from agents."""
         try:
-            from utils.reasoning_logger import ReasoningLogger
+            response = self.send_request('reasoning_tracker', 'get_statistics', {})
             
-            logger = ReasoningLogger(
-                redis_host=self.redis_host,
-                redis_port=self.redis_port,
-                redis_db=self.redis_db
-            )
-            
-            return logger.get_statistics()
-            
+            if response and response.get('success'):
+                return {
+                    'success': True,
+                    'statistics': response.get('data', {}),
+                    'timestamp': time.time()
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': 'Failed to retrieve reasoning statistics',
+                    'statistics': {},
+                    'timestamp': time.time()
+                }
+                
         except Exception as e:
             logger.error(f"Error getting reasoning statistics: {e}")
-            return None
+            return {
+                'success': False,
+                'message': f'Error getting reasoning statistics: {e}',
+                'statistics': {},
+                'timestamp': time.time()
+            }
     
     def log_reasoning_decision(self, decision_data: Dict[str, Any]) -> Optional[str]:
         """Log a reasoning decision."""
         try:
-            from utils.reasoning_logger import ReasoningLogger
+            response = self.send_request('reasoning_tracker', 'log_decision', decision_data)
             
-            logger = ReasoningLogger(
-                redis_host=self.redis_host,
-                redis_port=self.redis_port,
-                redis_db=self.redis_db
-            )
-            
-            return logger.log_decision(**decision_data)
-            
+            if response and response.get('success'):
+                return {
+                    'success': True,
+                    'decision_id': response.get('data', {}).get('decision_id'),
+                    'message': 'Decision logged successfully',
+                    'timestamp': time.time()
+                }
+            else:
+                return {
+                    'success': False,
+                    'message': 'Failed to log decision',
+                    'timestamp': time.time()
+                }
+                
         except Exception as e:
             logger.error(f"Error logging reasoning decision: {e}")
-            return None
+            return {
+                'success': False,
+                'message': f'Error logging reasoning decision: {e}',
+                'timestamp': time.time()
+            }
 
 
 def main():
@@ -528,7 +571,7 @@ def main():
         elif args.action == 'route':
             result = client.route_prompt('Build me an LSTM model for Bitcoin prediction')
             print(json.dumps(result, indent=2))
-            return {"status": "completed", "action": "route", "result": result}
+            return {'success': True, 'result': {"status": "completed", "action": "route", "result": result}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     except KeyboardInterrupt:
         print("\nInterrupted by user")

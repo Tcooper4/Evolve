@@ -27,6 +27,11 @@ class TaskDashboard:
         self.task_memory = task_memory
         self._setup_session_state()
         
+        return {
+            "success": True,
+            "message": "Task dashboard initialized",
+            "timestamp": datetime.now().isoformat()
+        }
     def _setup_session_state(self):
         """Setup Streamlit session state variables."""
         if 'last_refresh' not in st.session_state:
@@ -35,7 +40,6 @@ class TaskDashboard:
             st.session_state.auto_refresh = True
         if 'selected_task' not in st.session_state:
             st.session_state.selected_task = None
-            
     def render(self):
         """Render the task dashboard."""
         st.title("Task Dashboard")
@@ -77,11 +81,21 @@ class TaskDashboard:
         # Display task details
         self._show_task_details()
         
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat()
+        }
     def _refresh_data(self):
         """Refresh the dashboard data."""
         st.session_state.last_refresh = datetime.now()
         st.experimental_rerun()
         
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat()
+        }
     def _show_statistics(self):
         """Display task statistics."""
         st.subheader("Task Statistics")
@@ -105,6 +119,11 @@ class TaskDashboard:
             st.progress(completion_rate / 100)
             st.text(f"Completion Rate: {completion_rate:.1f}%")
             
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat()
+        }
     def _show_task_timeline(self):
         """Display task timeline."""
         st.subheader("Task Timeline")
@@ -143,6 +162,11 @@ class TaskDashboard:
         else:
             st.info("No tasks available for timeline")
             
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat()
+        }
     def _show_task_list(self):
         """Display the list of tasks."""
         st.subheader("Task List")
@@ -172,6 +196,11 @@ class TaskDashboard:
         else:
             st.info("No tasks found")
             
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat()
+        }
     def _on_task_select(self, selected_rows):
         """Handle task selection.
         
@@ -181,6 +210,11 @@ class TaskDashboard:
         if selected_rows:
             st.session_state.selected_task = selected_rows[0]['ID']
             
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat()
+        }
     def _show_task_details(self):
         """Display detailed information for selected tasks."""
         st.subheader("Task Details")
@@ -228,6 +262,11 @@ class TaskDashboard:
         else:
             st.info("Select a task to view details")
             
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat()
+        }
 def get_active_tasks() -> List[Dict[str, Any]]:
     """Get list of active tasks for frontend integration.
     
@@ -240,7 +279,7 @@ def get_active_tasks() -> List[Dict[str, Any]]:
         TaskStatus.IN_PROGRESS
     ])
     
-    return [task.to_dict() for task in active_tasks]
+    return {'success': True, 'result': [task.to_dict() for task in active_tasks], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
 def get_task_log(days: int = 7) -> List[Dict[str, Any]]:
     """Get task log for frontend integration.
@@ -259,7 +298,7 @@ def get_task_log(days: int = 7) -> List[Dict[str, Any]]:
         if task.updated_at >= cutoff
     ]
     
-    return [task.to_dict() for task in tasks]
+    return {'success': True, 'result': [task.to_dict() for task in tasks], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
 def run_dashboard():
     """Run the task dashboard."""
@@ -270,5 +309,6 @@ def run_dashboard():
     dashboard = TaskDashboard(task_memory)
     dashboard.render()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     run_dashboard() 

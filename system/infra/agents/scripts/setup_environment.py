@@ -27,6 +27,7 @@ def create_directory_structure():
         os.makedirs(directory, exist_ok=True)
         logger.info(f"Created directory: {directory}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def create_config_files():
     """Create default configuration files."""
     # Default config
@@ -81,6 +82,7 @@ def create_config_files():
         json.dump(default_config, f, indent=4)
     logger.info(f"Created config file: {config_path}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def create_requirements_file():
     """Create requirements.txt file."""
     requirements = [
@@ -101,9 +103,11 @@ def create_requirements_file():
         f.write("\n".join(requirements))
     logger.info("Created requirements.txt file")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def create_gitignore():
     """Create .gitignore file."""
     gitignore_content = """
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Python
 __pycache__/
 *.py[cod]
@@ -167,6 +171,7 @@ def create_readme():
     """Create README.md file."""
     readme_content = """# AI Development Automation
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 This project implements an automated development pipeline using AI agents to handle various development tasks.
 
 ## Setup
@@ -241,6 +246,7 @@ The system implements robust error handling:
 def create_env_example():
     """Create .env.example file."""
     env_content = """# OpenAI API Configuration
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 OPENAI_API_KEY=your_api_key_here
 
 # System Configuration
@@ -287,5 +293,6 @@ def main():
         logger.error(f"Error during setup: {str(e)}")
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

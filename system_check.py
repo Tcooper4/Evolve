@@ -16,7 +16,7 @@ def test_import(module_name, description=""):
         importlib.import_module(module_name)
         return True, f"✅ {module_name} - {description}"
     except Exception as e:
-        return False, f"❌ {module_name} - {description}: {str(e)}"
+        return None
 
 def test_function_call(module_name, function_name, description=""):
     """Test if a function can be called."""

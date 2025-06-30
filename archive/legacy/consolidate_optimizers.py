@@ -46,6 +46,7 @@ def consolidate_optimizers():
                     content = f.read()
                 
                 deprecation_notice = f'''"""
+                    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 DEPRECATED: This file has been consolidated into {trading_rsi_optimizer}
 Please use the consolidated version instead.
 Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}

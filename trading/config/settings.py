@@ -134,7 +134,7 @@ def get_config_value(key: str, default: Any = None) -> Any:
     elif isinstance(default, list):
         return value.split(',')
     elif isinstance(default, Path):
-        return Path(value)
+        return {'success': True, 'result': Path(value), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     return value
 
 def get_config_dict() -> Dict[str, Any]:
@@ -143,7 +143,7 @@ def get_config_dict() -> Dict[str, Any]:
     Returns:
         Dictionary of all configuration values
     """
-    return {
+    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         key: value for key, value in globals().items()
         if key.isupper() and not key.startswith('_')
     }
@@ -180,7 +180,7 @@ def validate_config() -> bool:
     if not 1024 <= GRAFANA_PORT <= 65535:
         raise ValueError(f"Invalid GRAFANA_PORT: {GRAFANA_PORT}")
         
-    return True
+    return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 # Validate configuration on import
 validate_config()
@@ -196,31 +196,34 @@ class Settings:
         for key, value in self.config.items():
             setattr(self, key, value)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def get(self, key: str, default: Any = None) -> Any:
         """Get a configuration value."""
-        return getattr(self, key, default)
+        return {'success': True, 'result': getattr(self, key, default), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def set(self, key: str, value: Any) -> None:
         """Set a configuration value."""
         setattr(self, key, value)
         self.config[key] = value
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def to_dict(self) -> Dict[str, Any]:
         """Convert settings to dictionary."""
-        return self.config.copy()
+        return {'success': True, 'result': self.config.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def update(self, config_dict: Dict[str, Any]) -> None:
         """Update settings from dictionary."""
         for key, value in config_dict.items():
             self.set(key, value)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def validate(self) -> bool:
         """Validate settings."""
-        return validate_config()
+        return {'success': True, 'result': validate_config(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def __repr__(self) -> str:
         """String representation."""
-        return f"Settings({len(self.config)} items)"
+        return {'success': True, 'result': f"Settings({len(self.config)} items)", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 # Global settings instance
 settings = Settings() 

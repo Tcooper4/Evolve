@@ -50,5 +50,6 @@ def main():
         print("  streamlit run app.py")
         print("  streamlit run unified_interface.py")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

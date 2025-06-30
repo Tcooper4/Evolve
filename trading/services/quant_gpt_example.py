@@ -102,6 +102,7 @@ def example_queries():
     quant_gpt.close()
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def example_service_client():
     """Demonstrate QuantGPT usage through ServiceClient."""
     
@@ -189,6 +190,7 @@ def example_service_client():
     client.close()
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function to run examples."""
     try:
@@ -202,7 +204,7 @@ def main():
             print(f"⚠️  Redis not available: {e}")
             print("Running direct QuantGPT examples only...")
             example_queries()
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Run both examples
         example_queries()

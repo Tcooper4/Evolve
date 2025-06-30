@@ -40,6 +40,7 @@ class EnsembleForecaster(BaseModel):
         if self.config.get('use_lr_scheduler', False):
             self._setup_scheduler()
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_model(self) -> None:
         """Setup the ensemble model architecture."""
         self.models = []
@@ -56,12 +57,14 @@ class EnsembleForecaster(BaseModel):
             self.model_weights = torch.tensor(self.config['model_weights'])
         self.model_weights = self.model_weights.to(self.device)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_optimizer(self) -> None:
         """Setup the optimizer."""
         if self.optimizer is None:
             lr = self.config.get('learning_rate', 0.001)
             self.optimizer = torch.optim.Adam([self.model_weights], lr=lr)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_scheduler(self) -> None:
         """Setup the learning rate scheduler."""
         if self.config.get('use_lr_scheduler', False):
@@ -74,6 +77,7 @@ class EnsembleForecaster(BaseModel):
                 min_lr=1e-6
             )
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the ensemble.
         
@@ -93,7 +97,7 @@ class EnsembleForecaster(BaseModel):
         weighted_preds = stacked_preds * self.model_weights.view(-1, 1, 1)
         ensemble_pred = weighted_preds.sum(dim=0)
         
-        return ensemble_pred
+        return {'success': True, 'result': ensemble_pred, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> tuple:
         """Prepare data for training or prediction.
@@ -138,7 +142,7 @@ class EnsembleForecaster(BaseModel):
         X = X.to(self.device)
         y = y.to(self.device)
         
-        return X, y
+        return {'success': True, 'result': X, y, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def save(self, path: str) -> None:
         """Save ensemble model state.
@@ -164,6 +168,7 @@ class EnsembleForecaster(BaseModel):
         }
         torch.save(state, path)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def load(self, path: str) -> None:
         """Load ensemble model state.
         
@@ -194,6 +199,7 @@ class EnsembleForecaster(BaseModel):
             self.y_mean = state['y_mean']
             self.y_std = state['y_std']
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def fit(self, train_data: torch.Tensor, val_data: Optional[torch.Tensor] = None,
             **kwargs) -> Dict[str, Any]:
         """Train all models in the ensemble.
@@ -215,7 +221,7 @@ class EnsembleForecaster(BaseModel):
             if isinstance(model_history, dict):
                 self.log_performance(self.config.get('ticker', 'default'), model_history, i)
 
-        return history
+        return {'success': True, 'result': history, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def predict(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Make predictions using the ensemble.
@@ -237,7 +243,7 @@ class EnsembleForecaster(BaseModel):
         ensemble_pred = self.forward(x)
         predictions['ensemble'] = ensemble_pred
 
-        return predictions
+        return {'success': True, 'result': predictions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def predict_with_confidence(self, x: torch.Tensor, alpha: float = 0.05) -> Dict[str, torch.Tensor]:
         """Return predictions with simple confidence intervals.
@@ -262,7 +268,7 @@ class EnsembleForecaster(BaseModel):
         upper = ensemble_pred + z * std
         preds['lower'] = lower
         preds['upper'] = upper
-        return preds
+        return {'success': True, 'result': preds, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
@@ -293,7 +299,7 @@ class EnsembleForecaster(BaseModel):
                 current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
                 current_data = current_data.iloc[1:]  # Remove oldest row
             
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'forecast': np.array(forecast_values),
                 'confidence': 0.9,  # High confidence for ensemble
                 'model': 'Ensemble',
@@ -311,7 +317,7 @@ class EnsembleForecaster(BaseModel):
         """Update model weights using stored performance metrics."""
         stats = self.memory.get_metrics(ticker)
         if not stats:
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
         values = []
         for i, _ in enumerate(self.models):
@@ -336,3 +342,5 @@ class EnsembleForecaster(BaseModel):
         model_name = f'model_{model_idx}'
         self.memory.update(ticker, model_name, metrics)
 
+
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 import streamlit as st
+from datetime import datetime
 
 from trading.utils.auto_repair import auto_repair
 from trading.utils.diagnostics import diagnostics
@@ -65,8 +66,9 @@ def initialize_components() -> Dict[str, Any]:
         results["errors"].append(error_msg)
     
     try:
-        results["router"] = AgentRouter()
-        st.session_state.router = results["router"]
+        # results["router"] = AgentRouter()  # Commented out as AgentRouter is moved to archive
+        # st.session_state.router = results["router"]
+        pass
     except Exception as e:
         error_msg = f"Failed to initialize AgentRouter: {str(e)}"
         error_logger.log_error(error_msg)
@@ -107,4 +109,4 @@ def get_system_status() -> Dict[str, Any]:
 def clear_session_state() -> None:
     """Clear all session state variables."""
     for key in list(st.session_state.keys()):
-        del st.session_state[key] 
+        del st.session_state[key]

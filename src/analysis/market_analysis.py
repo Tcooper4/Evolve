@@ -36,9 +36,10 @@ class MarketAnalyzer:
     def __init__(self, config: Optional[Dict] = None):
         self.analysis = MarketAnalysis(config)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def analyze_market_conditions(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Analyze market conditions using the underlying MarketAnalysis"""
-        return self.analysis.analyze_market(data)
+        return {'success': True, 'result': self.analysis.analyze_market(data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class MarketAnalysis:
     """Comprehensive market analysis system"""
@@ -49,6 +50,7 @@ class MarketAnalysis:
         self._setup_logging()
         self._initialize_indicators()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_logging(self):
         """Setup logging configuration"""
         self.logger = logging.getLogger(__name__)
@@ -59,6 +61,7 @@ class MarketAnalysis:
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _initialize_indicators(self):
         """Initialize technical indicators"""
         self.indicators = {
@@ -96,6 +99,7 @@ class MarketAnalysis:
             }
         }
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def analyze_market(self, data: pd.DataFrame) -> Dict:
         """Perform comprehensive market analysis"""
         try:
@@ -419,7 +423,7 @@ class MarketAnalysis:
         obv[close_diff > 0] = volume[close_diff > 0]
         obv[close_diff < 0] = -volume[close_diff < 0]
         
-        return obv.cumsum()
+        return {'success': True, 'result': obv.cumsum(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_vpt(self, data: pd.DataFrame) -> pd.Series:
         """Calculate Volume Price Trend"""
@@ -427,7 +431,7 @@ class MarketAnalysis:
         volume = data['volume']
         
         vpt = (close_diff / data['close'].shift(1)) * volume
-        return vpt.cumsum()
+        return {'success': True, 'result': vpt.cumsum(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_cmf(self, data: pd.DataFrame, window: int = 20) -> pd.Series:
         """Calculate Chaikin Money Flow"""
@@ -435,13 +439,13 @@ class MarketAnalysis:
         mfv = mfv.fillna(0)
         mfv *= data['volume']
         
-        return mfv.rolling(window=window).sum() / data['volume'].rolling(window=window).sum()
+        return {'success': True, 'result': mfv.rolling(window=window).sum() / data['volume'].rolling(window=window).sum(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_ad(self, data: pd.DataFrame) -> pd.Series:
         """Calculate Accumulation/Distribution Line"""
         clv = ((data['close'] - data['low']) - (data['high'] - data['close'])) / (data['high'] - data['low'])
         clv = clv.fillna(0)
-        return (clv * data['volume']).cumsum()
+        return {'success': True, 'result': (clv * data['volume']).cumsum(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_pivot_points(self, data: pd.DataFrame) -> Dict:
         """Calculate Pivot Points"""

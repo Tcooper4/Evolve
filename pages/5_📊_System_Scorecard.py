@@ -22,6 +22,7 @@ def render_system_scorecard():
         else:
             st.session_state["scorecard_refresh"] = datetime.datetime.now().isoformat()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     if st.button("🔄 Refresh Now"):
         refresh()
 
@@ -74,9 +75,11 @@ def render_system_scorecard():
     else:
         st.info("No recent runs to display.")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function for the system scorecard page."""
     render_system_scorecard()
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

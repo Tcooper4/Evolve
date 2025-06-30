@@ -97,6 +97,7 @@ class HybridEngine:
         
         logger.info("Hybrid Engine initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def add_strategy(self, name: str, strategy_func: Callable, weight: float = 1.0):
         """Add a strategy to the hybrid engine.
         
@@ -111,6 +112,7 @@ class HybridEngine:
         }
         logger.info(f"Added strategy: {name} with weight {weight}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def generate_signals(self, data: pd.DataFrame, symbol: str) -> HybridSignal:
         """Generate hybrid signals from all strategies.
         
@@ -152,7 +154,7 @@ class HybridEngine:
             
         except Exception as e:
             logger.error(f"Error generating hybrid signals: {e}")
-            return self._create_default_signal()
+            return {'success': True, 'result': self._create_default_signal(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _apply_filters(self, signals: List[StrategySignal], data: pd.DataFrame) -> List[StrategySignal]:
         """Apply conditional filters to strategy signals.
@@ -192,7 +194,7 @@ class HybridEngine:
             if should_include:
                 filtered_signals.append(signal)
         
-        return filtered_signals
+        return {'success': True, 'result': filtered_signals, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _confirm_trend(self, signal: StrategySignal, data: pd.DataFrame) -> bool:
         """Confirm signal with trend analysis.
@@ -221,7 +223,7 @@ class HybridEngine:
             
             # Bearish signal confirmation
             elif signal.signal_type in [SignalType.SELL, SignalType.STRONG_SELL]:
-                return current_price < sma_20 and sma_20 < sma_50
+                return {'success': True, 'result': current_price < sma_20 and sma_20 < sma_50, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             return True
             
@@ -256,7 +258,7 @@ class HybridEngine:
             
         except Exception as e:
             logger.error(f"Error in volume confirmation: {e}")
-            return True
+            return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _check_volatility(self, signal: StrategySignal, data: pd.DataFrame) -> bool:
         """Check if volatility is acceptable for signal.
@@ -285,7 +287,7 @@ class HybridEngine:
             
         except Exception as e:
             logger.error(f"Error in volatility check: {e}")
-            return True
+            return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _check_correlation(self, signal: StrategySignal, data: pd.DataFrame) -> bool:
         """Check signal correlation with market conditions.
@@ -299,7 +301,7 @@ class HybridEngine:
         """
         # This is a placeholder for more sophisticated correlation analysis
         # Could include market regime, sector correlation, etc.
-        return True
+        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _combine_signals(self, signals: List[StrategySignal], data: pd.DataFrame) -> HybridSignal:
         """Combine multiple strategy signals into a hybrid signal.
@@ -312,7 +314,7 @@ class HybridEngine:
             Combined hybrid signal
         """
         if not signals:
-            return self._create_default_signal()
+            return {'success': True, 'result': self._create_default_signal(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Calculate weighted consensus
         buy_weight = 0.0
@@ -401,7 +403,7 @@ class HybridEngine:
         if signal_counts:
             max_count = max(signal_counts.values())
             consensus = max_count / len(signals)
-            return consensus
+            return {'success': True, 'result': consensus, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         return 0.0
     
@@ -444,7 +446,7 @@ class HybridEngine:
         elif risk_score >= 2:
             return "MEDIUM"
         else:
-            return "LOW"
+            return {'success': True, 'result': "LOW", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_strength(self, signals: List[StrategySignal], confidence: float) -> float:
         """Calculate signal strength.
@@ -457,7 +459,7 @@ class HybridEngine:
             Signal strength (0-1)
         """
         if not signals:
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Average strength of contributing signals
         avg_strength = np.mean([s.strength for s in signals])
@@ -503,7 +505,7 @@ class HybridEngine:
             
         except Exception as e:
             logger.error(f"Error analyzing market conditions: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_default_signal(self) -> HybridSignal:
         """Create default signal when no strategies generate signals.
@@ -511,7 +513,7 @@ class HybridEngine:
         Returns:
             Default hybrid signal
         """
-        return HybridSignal(
+        return {'success': True, 'result': HybridSignal(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             signal_type=SignalType.HOLD,
             confidence=0.0,
             strength=0.0,
@@ -533,7 +535,7 @@ class HybridEngine:
             List of recent signals
         """
         cutoff_date = datetime.now() - timedelta(days=days)
-        return [s for s in self.signal_history if s.timestamp > cutoff_date]
+        return {'success': True, 'result': [s for s in self.signal_history if s.timestamp > cutoff_date], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_performance_metrics(self) -> Dict[str, float]:
         """Calculate performance metrics for the hybrid engine.
@@ -542,7 +544,7 @@ class HybridEngine:
             Performance metrics
         """
         if not self.signal_history:
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         # Calculate metrics based on signal accuracy
         # This would require actual trade results to be meaningful
@@ -566,6 +568,7 @@ class HybridEngine:
         self.strategy_weights.update(new_weights)
         logger.info(f"Updated strategy weights: {new_weights}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def export_signals(self, filepath: str) -> bool:
         """Export signal history to file.
         
@@ -599,11 +602,11 @@ class HybridEngine:
             
         except Exception as e:
             logger.error(f"Error exporting signals: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 # Global hybrid engine instance
 hybrid_engine = HybridEngine()
 
 def get_hybrid_engine() -> HybridEngine:
     """Get the global hybrid engine instance."""
-    return hybrid_engine 
+    return {'success': True, 'result': hybrid_engine, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

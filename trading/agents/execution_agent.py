@@ -1481,11 +1481,7 @@ class ExecutionAgent(BaseAgent):
             # Return conservative fallback
             portfolio_value = self.portfolio_manager.state.equity
             conservative_size = min(0.01, portfolio_value * 0.01 / execution_price)
-            return conservative_size, {
-                'strategy': 'conservative_fallback',
-                'error': str(e),
-                'size': conservative_size
-            }
+            return conservative_size, {'strategy': 'conservative_fallback', 'error': str(e), 'size': conservative_size}
     
     def _get_stop_loss_price(self, signal: TradeSignal, market_data: Dict[str, Any]) -> float:
         """Get stop loss price for position sizing.
@@ -1913,48 +1909,6 @@ class ExecutionAgent(BaseAgent):
             self.execution_history.clear()
         except Exception as e:
             self.logger.error(f"Error clearing trade log: {e}")
-    
-    def export_trade_log(self, format: str = 'json', 
-                        filepath: Optional[str] = None) -> str:
-        """Export trade log to different formats.
-        
-        Args:
-            format: Export format ('json', 'csv', 'excel')
-            filepath: Output file path
-            
-        Returns:
-            Path to exported file
-        """
-        try:
-            if not filepath:
-                timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-                filepath = f"trading/agents/logs/trade_log_export_{timestamp}.{format}"
-            
-            # Get trade log data
-            trade_data = self.get_trade_log()
-            
-            if format == 'json':
-                with open(filepath, 'w') as f:
-                    json.dump(trade_data, f, indent=2)
-            
-            elif format == 'csv':
-                import pandas as pd
-                df = pd.json_normalize(trade_data)
-                df.to_csv(filepath, index=False)
-            
-            elif format == 'excel':
-                import pandas as pd
-                df = pd.json_normalize(trade_data)
-                df.to_excel(filepath, index=False)
-            
-            else:
-                raise ValueError(f"Unsupported format: {format}")
-            
-            return filepath
-            
-        except Exception as e:
-            self.logger.error(f"Error exporting trade log: {e}")
-            return ""
 
 
 # Factory function for easy creation
@@ -1991,4 +1945,4 @@ def create_execution_agent(config: Optional[Dict[str, Any]] = None) -> Execution
         default_config.update(config)
     
     agent_config = AgentConfig(**default_config)
-    return ExecutionAgent(agent_config) 
+    return ExecutionAgent(agent_config)

@@ -412,4 +412,4 @@ def validate_data_for_forecasting(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any
             if recent_data.isna().any().any():
                 validation_summary["warnings"].append("Recent data contains missing values")
     
-    return is_valid, validation_summary 
+    return is_valid, validation_summary

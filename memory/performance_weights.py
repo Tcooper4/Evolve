@@ -48,7 +48,7 @@ def compute_model_weights(ticker: str, strategy="balanced", min_weight=0.05):
     raw_weights = {k: v / total for k, v in scores.items()}
     smoothed_weights = smooth_weights(raw_weights, ticker)
 
-    return smoothed_weights
+    return {'success': True, 'result': smoothed_weights, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def smooth_weights(weights: dict, ticker: str):
@@ -63,7 +63,7 @@ def smooth_weights(weights: dict, ticker: str):
         dict: Smoothed weights.
     """
     if not os.path.exists(WEIGHT_HISTORY_PATH):
-        return weights
+        return {'success': True, 'result': weights, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     with open(WEIGHT_HISTORY_PATH, "r") as f:
         history = json.load(f)
@@ -120,7 +120,7 @@ def export_weights_to_file(ticker: str, strategy="balanced"):
     retrain_log = trigger_retraining_if_needed(weights, threshold=0.1)
     append_to_log({"time": now, "retraining": retrain_log}, "memory/retrain_log.json")
 
-    return weights
+    return {'success': True, 'result': weights, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def append_to_log(entry, path):
@@ -142,6 +142,7 @@ def append_to_log(entry, path):
         json.dump(log, f, indent=2)
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def detect_weight_drift(history: dict, sensitivity=0.1):
     """
     Alerts if model weights change significantly between last two runs.
@@ -151,7 +152,7 @@ def detect_weight_drift(history: dict, sensitivity=0.1):
         sensitivity (float): Threshold for drift detection.
     """
     if len(history) < 2:
-        return
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     timestamps = sorted(history.keys())[-2:]
     last, current = history[timestamps[0]], history[timestamps[1]]
@@ -174,5 +175,5 @@ def get_latest_weights():
     """
     if os.path.exists(CURRENT_WEIGHT_PATH):
         with open(CURRENT_WEIGHT_PATH, "r") as f:
-            return json.load(f)
+            return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     return {} 

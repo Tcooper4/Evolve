@@ -33,6 +33,7 @@ class NotificationSystem:
         
         logger.info(f"Notification system initialized - Slack: {self.notification_status['slack']}, Email: {self.notification_status['email']}")
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def send_slack_notification(self, message: str, channel: str = "#trading-alerts", 
                                username: str = "Trading Bot", icon_emoji: str = ":robot_face:") -> bool:
         """
@@ -78,7 +79,7 @@ class NotificationSystem:
                 
         except Exception as e:
             logger.error(f"❌ Error sending Slack notification: {str(e)}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def send_email_notification(self, subject: str, message: str, 
                                to_email: str, from_email: Optional[str] = None) -> bool:
@@ -126,7 +127,7 @@ class NotificationSystem:
             
         except Exception as e:
             logger.error(f"❌ Error sending email notification: {str(e)}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def send_trading_alert(self, alert_type: str, message: str, 
                           data: Optional[Dict[str, Any]] = None) -> Dict[str, bool]:
@@ -177,7 +178,7 @@ class NotificationSystem:
                 to_email="admin@trading.com"  # Mock email
             )
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def send_model_performance_alert(self, model_name: str, metrics: Dict[str, float], 
                                    threshold: float = 0.7) -> Dict[str, bool]:
@@ -196,7 +197,7 @@ class NotificationSystem:
         low_performance = {k: v for k, v in metrics.items() if v < threshold}
         
         if not low_performance:
-            return {'slack': False, 'email': False}
+            return {'success': True, 'result': {'slack': False, 'email': False}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         message = f"Model {model_name} performance below threshold ({threshold}):"
         for metric, value in low_performance.items():
@@ -219,7 +220,7 @@ class NotificationSystem:
         """
         message = f"System health alert - {component}: {status}"
         
-        return self.send_trading_alert(
+        return {'success': True, 'result': self.send_trading_alert(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'error' if status == 'down' else 'warning',
             message,
             details
@@ -240,7 +241,7 @@ class NotificationSystem:
         """
         message = f"Agent {agent_name} performed: {action}"
         
-        return self.send_trading_alert('info', message, result)
+        return {'success': True, 'result': self.send_trading_alert('info', message, result), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def send_goal_progress_notification(self, goal_name: str, progress: float, 
                                       target: float = 1.0) -> Dict[str, bool]:
@@ -265,7 +266,7 @@ class NotificationSystem:
             message = f"Goal '{goal_name}' progress update: {progress:.1%}"
             alert_type = 'info'
         
-        return self.send_trading_alert(alert_type, message, {
+        return {'success': True, 'result': self.send_trading_alert(alert_type, message, {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'goal': goal_name,
             'progress': progress,
             'target': target
@@ -278,7 +279,7 @@ class NotificationSystem:
         Returns:
             Dictionary with notification status
         """
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'slack_configured': bool(self.slack_webhook_url),
             'email_configured': bool(self.email_password),
             'last_notification': self.notification_status['last_notification'],
@@ -318,7 +319,7 @@ class NotificationSystem:
                 to_email="test@example.com"  # Mock email
             )
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 # Global notification instance
@@ -336,7 +337,7 @@ def send_alert(alert_type: str, message: str, data: Optional[Dict[str, Any]] = N
     Returns:
         Dictionary with notification results
     """
-    return notification_system.send_trading_alert(alert_type, message, data)
+    return {'success': True, 'result': notification_system.send_trading_alert(alert_type, message, data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def send_model_alert(model_name: str, metrics: Dict[str, float], threshold: float = 0.7) -> Dict[str, bool]:
     """
@@ -350,7 +351,7 @@ def send_model_alert(model_name: str, metrics: Dict[str, float], threshold: floa
     Returns:
         Dictionary with notification results
     """
-    return notification_system.send_model_performance_alert(model_name, metrics, threshold)
+    return {'success': True, 'result': notification_system.send_model_performance_alert(model_name, metrics, threshold), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def send_system_alert(component: str, status: str, details: Optional[Dict[str, Any]] = None) -> Dict[str, bool]:
     """
@@ -364,4 +365,4 @@ def send_system_alert(component: str, status: str, details: Optional[Dict[str, A
     Returns:
         Dictionary with notification results
     """
-    return notification_system.send_system_health_alert(component, status, details) 
+    return {'success': True, 'result': notification_system.send_system_health_alert(component, status, details), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

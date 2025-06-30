@@ -413,4 +413,4 @@ class XGBoostModel(BaseModel):
         except Exception as e:
             import logging
             logging.error(f"Error plotting XGBoost results: {e}")
-            print(f"Could not plot results: {e}") 
+            print(f"Could not plot results: {e}")

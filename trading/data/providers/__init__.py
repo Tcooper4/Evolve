@@ -43,7 +43,7 @@ def load_data(
     elif source == 'alpha_vantage':
         return alpha_vantage.get_data(symbol, start_date, end_date, interval)
     elif source == 'yfinance':
-        return yfinance.get_data(symbol, start_date, end_date, interval)
+        return {'success': True, 'result': yfinance.get_data(symbol, start_date, end_date, interval), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     else:
         raise ValueError(f"Invalid source: {source}")
 
@@ -78,7 +78,7 @@ def load_multiple_data(
     elif source == 'alpha_vantage':
         return alpha_vantage.get_multiple_data(symbols, start_date, end_date, interval)
     elif source == 'yfinance':
-        return yfinance.get_multiple_data(symbols, start_date, end_date, interval)
+        return {'success': True, 'result': yfinance.get_multiple_data(symbols, start_date, end_date, interval), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     else:
         raise ValueError(f"Invalid source: {source}")
 

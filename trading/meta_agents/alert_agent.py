@@ -24,6 +24,7 @@ class AlertAgent(BaseAgent):
         self.alert_manager = AlertManager(config)
         self.setup_logging()
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for alert management."""
         log_path = Path("logs/alerts")
@@ -39,6 +40,7 @@ class AlertAgent(BaseAgent):
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize the alert agent."""
         try:

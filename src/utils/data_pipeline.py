@@ -34,7 +34,7 @@ class DataPipeline:
         
         # Initialize validation and preprocessing components
         self._initialize_components()
-        
+
     def _initialize_components(self):
         """Initialize pipeline components."""
         try:
@@ -44,7 +44,7 @@ class DataPipeline:
         except ImportError:
             logger.warning("DataValidator not available, using basic validation")
             self.validator = None
-    
+
     def load_data(self, file_path: Union[str, Path], **kwargs) -> bool:
         """
         Load data from a file with traceable logging.
@@ -86,7 +86,7 @@ class DataPipeline:
         except Exception as e:
             logger.error(f"❌ Error loading data: {str(e)}")
             return False
-    
+
     def validate_data(self) -> Tuple[bool, str]:
         """
         Validate the loaded data with detailed logging.
@@ -120,7 +120,7 @@ class DataPipeline:
             logger.error(f"❌ Data validation failed: {error_message}")
         
         return is_valid, error_message
-    
+
     def _basic_validation(self) -> Tuple[bool, str]:
         """Basic data validation when DataValidator is not available."""
         try:
@@ -148,7 +148,7 @@ class DataPipeline:
             
         except Exception as e:
             return False, f"Validation error: {str(e)}"
-    
+
     def preprocess_data(self) -> bool:
         """
         Preprocess the loaded data with traceable logging.
@@ -215,7 +215,7 @@ class DataPipeline:
         except Exception as e:
             logger.error(f"❌ Error preprocessing data: {str(e)}")
             return False
-    
+
     def _remove_outliers_basic(self, df: pd.DataFrame, columns: List[str], n_std: float) -> pd.DataFrame:
         """Basic outlier removal."""
         df_cleaned = df.copy()
@@ -417,4 +417,4 @@ def run_data_pipeline(file_path: Union[str, Path], config: Optional[Dict] = None
     processed_data = pipeline.get_processed_data() if success else None
     stats = pipeline.get_pipeline_stats()
     
-    return success, processed_data, stats 
+    return success, processed_data, stats

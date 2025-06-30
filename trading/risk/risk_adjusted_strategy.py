@@ -46,6 +46,7 @@ class RiskAdjustedStrategy:
         self,
         config: Optional[StrategyConfig] = None,
         risk_analyzer: Optional[RiskAnalyzer] = None
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize risk-adjusted strategy.
         
@@ -107,7 +108,7 @@ class RiskAdjustedStrategy:
         )
         
         self.last_adjustment = adjustment
-        return adjustment
+        return {'success': True, 'result': adjustment, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_adjustments(
         self,
@@ -154,7 +155,7 @@ class RiskAdjustedStrategy:
         # Adjust signal threshold based on risk
         signal_threshold = 0.5 * (1 + assessment.forecast_risk_score)
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'position_size': new_position_size,
             'signal_threshold': signal_threshold,
             'volatility_factor': vol_factor,
@@ -168,7 +169,7 @@ class RiskAdjustedStrategy:
         Returns:
             Dictionary of fallback rules
         """
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'position_size': self.config.min_position_size,
             'signal_threshold': 0.8,
             'max_drawdown': -0.1,
@@ -195,7 +196,7 @@ class RiskAdjustedStrategy:
                 adjustment.risk_score < self.config.fallback_threshold
             )
         else:
-            return abs(signal) > adjustment.signal_threshold
+            return {'success': True, 'result': abs(signal) > adjustment.signal_threshold, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_last_adjustment(self) -> Optional[PositionAdjustment]:
         """Get the last position adjustment.
@@ -203,4 +204,4 @@ class RiskAdjustedStrategy:
         Returns:
             Last PositionAdjustment object or None
         """
-        return self.last_adjustment 
+        return {'success': True, 'result': self.last_adjustment, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

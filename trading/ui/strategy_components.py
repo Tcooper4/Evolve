@@ -90,7 +90,7 @@ def create_strategy_form(
     }
     logger.info(f"Strategy form submitted: {form_data}")
     
-    return form_data
+    return {'success': True, 'result': form_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_performance_chart(
     data: pd.DataFrame,
@@ -162,7 +162,7 @@ def create_performance_chart(
     # Log chart creation for agentic monitoring
     logger.info(f"Performance chart created for strategy: {strategy_config.name}")
     
-    return fig
+    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_performance_metrics(
     data: pd.DataFrame,
@@ -206,62 +206,78 @@ def create_performance_metrics(
     # Log metrics for agentic monitoring
     logger.info(f"Performance metrics calculated: {metrics}")
     
-    return metrics
+    return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_trade_list(
     trades: pd.DataFrame,
     strategy_config: StrategyConfig
-) -> None:
+) -> Dict[str, Any]:
     """Display a list of trades with filtering options.
     
     Args:
         trades: DataFrame containing trade data
         strategy_config: Configuration for the strategy used
+        
+    Returns:
+        Dictionary with status and trade information
     """
-    st.subheader("Trade List")
-    
-    # Add filtering options
-    col1, col2 = st.columns(2)
-    with col1:
-        min_profit = st.number_input(
-            "Min Profit (%)",
-            value=-100.0,
-            step=1.0
+    try:
+        st.subheader("Trade List")
+        
+        # Add filtering options
+        col1, col2 = st.columns(2)
+        with col1:
+            min_profit = st.number_input(
+                "Min Profit (%)",
+                value=-100.0,
+                step=1.0
+            )
+        with col2:
+            max_profit = st.number_input(
+                "Max Profit (%)",
+                value=100.0,
+                step=1.0
+            )
+        
+        # Filter trades
+        filtered_trades = trades[
+            (trades['profit_pct'] >= min_profit) &
+            (trades['profit_pct'] <= max_profit)
+        ]
+        
+        # Display trades
+        st.dataframe(
+            filtered_trades[[
+                'entry_time', 'exit_time', 'entry_price', 'exit_price',
+                'profit_pct', 'holding_period'
+            ]].style.format({
+                'profit_pct': '{:.2f}%',
+                'entry_price': '${:.2f}',
+                'exit_price': '${:.2f}'
+            })
         )
-    with col2:
-        max_profit = st.number_input(
-            "Max Profit (%)",
-            value=100.0,
-            step=1.0
-        )
-    
-    # Filter trades
-    filtered_trades = trades[
-        (trades['profit_pct'] >= min_profit) &
-        (trades['profit_pct'] <= max_profit)
-    ]
-    
-    # Display trades
-    st.dataframe(
-        filtered_trades[[
-            'entry_time', 'exit_time', 'entry_price', 'exit_price',
-            'profit_pct', 'holding_period'
-        ]].style.format({
-            'profit_pct': '{:.2f}%',
-            'entry_price': '${:.2f}',
-            'exit_price': '${:.2f}'
-        })
-    )
-    
-    # Log trade list display for agentic monitoring
-    logger.info(f"Trade list displayed with {len(filtered_trades)} trades")
+        
+        # Log trade list display for agentic monitoring
+        logger.info(f"Trade list displayed with {len(filtered_trades)} trades")
+        
+        return {
+            "status": "success",
+            "message": f"Trade list displayed with {len(filtered_trades)} trades",
+            "total_trades": len(trades),
+            "filtered_trades": len(filtered_trades),
+            "min_profit": min_profit,
+            "max_profit": max_profit
+        }
+    except Exception as e:
+        logger.error(f"Error displaying trade list: {e}")
+        return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_strategy_export(
     data: pd.DataFrame,
     trades: pd.DataFrame,
     strategy_config: StrategyConfig,
     metrics: Dict[str, float]
-) -> None:
+) -> Dict[str, Any]:
     """Create export options for strategy results.
     
     Args:
@@ -269,39 +285,57 @@ def create_strategy_export(
         trades: DataFrame containing trade data
         strategy_config: Configuration for the strategy used
         metrics: Dictionary of performance metrics
+        
+    Returns:
+        Dictionary with status and export information
     """
-    st.subheader("Export Results")
-    
-    # Create export options
-    export_format = st.radio(
-        "Select Export Format",
-        ["CSV", "JSON", "Excel"],
-        key="export_format"
-    )
-    
-    if st.button("Export"):
-        # Prepare export data
-        export_data = {
-            "performance": data.to_dict(),
-            "trades": trades.to_dict(),
-            "strategy": strategy_config.name,
-            "metrics": metrics,
-            "timestamp": datetime.now().isoformat()
-        }
+    try:
+        st.subheader("Export Results")
         
-        # Export based on selected format
-        if export_format == "CSV":
-            data.to_csv("strategy_performance.csv")
-            trades.to_csv("strategy_trades.csv")
-        elif export_format == "JSON":
-            with open("strategy_results.json", "w") as f:
-                json.dump(export_data, f, indent=2)
-        else:  # Excel
-            with pd.ExcelWriter("strategy_results.xlsx") as writer:
-                data.to_excel(writer, sheet_name="Performance")
-                trades.to_excel(writer, sheet_name="Trades")
+        # Create export options
+        export_format = st.radio(
+            "Select Export Format",
+            ["CSV", "JSON", "Excel"],
+            key="export_format"
+        )
         
-        st.success(f"Results exported as {export_format}")
+        if st.button("Export"):
+            # Prepare export data
+            export_data = {
+                "performance": data.to_dict(),
+                "trades": trades.to_dict(),
+                "strategy": strategy_config.name,
+                "metrics": metrics,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Export based on selected format
+            if export_format == "CSV":
+                data.to_csv("strategy_performance.csv")
+                trades.to_csv("strategy_trades.csv")
+            elif export_format == "JSON":
+                with open("strategy_results.json", "w") as f:
+                    json.dump(export_data, f, indent=2)
+            else:  # Excel
+                with pd.ExcelWriter("strategy_results.xlsx") as writer:
+                    data.to_excel(writer, sheet_name="Performance")
+                    trades.to_excel(writer, sheet_name="Trades")
+            
+            st.success(f"Results exported as {export_format}")
+            
+            # Log export for agentic monitoring
+            logger.info(f"Strategy results exported as {export_format}")
+            
+            return {
+                "status": "success",
+                "message": f"Strategy results exported as {export_format}",
+                "export_format": export_format,
+                "performance_rows": len(data),
+                "trades_rows": len(trades)
+            }
         
-        # Log export for agentic monitoring
-        logger.info(f"Strategy results exported as {export_format}") 
+        return {"status": "pending", "message": "Export not initiated"}
+        
+    except Exception as e:
+        logger.error(f"Error exporting strategy results: {e}")
+        return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

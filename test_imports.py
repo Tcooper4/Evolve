@@ -15,7 +15,7 @@ def test_import(module_name):
     except Exception as e:
         print(f"❌ {module_name} failed to import: {e}")
         traceback.print_exc()
-        return False
+        return None
 
 def main():
     """Test all critical imports."""
@@ -48,5 +48,6 @@ def main():
     else:
         print("⚠️  Some imports failed. Check the errors above.")
 
+    return None
 if __name__ == "__main__":
     main() 

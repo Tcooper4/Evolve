@@ -38,7 +38,7 @@ class CausalDriverAnalyzer:
         """Initialize the causal analyzer."""
         self.causal_models = {}
         self.analysis_results = {}
-        
+
     def create_market_dataset(self, price_data: pd.DataFrame, 
                             macro_data: Optional[pd.DataFrame] = None,
                             sentiment_data: Optional[pd.DataFrame] = None) -> pd.DataFrame:
@@ -337,4 +337,4 @@ causal_analyzer = CausalDriverAnalyzer()
 
 def get_causal_analyzer() -> CausalDriverAnalyzer:
     """Get the global causal analyzer instance."""
-    return causal_analyzer 
+    return causal_analyzer

@@ -570,12 +570,12 @@ class StrategyGatekeeper:
     
     def get_strategy_status(self, strategy_name: str) -> Optional[StrategyStatus]:
         """Get status of a specific strategy."""
-        return self.strategy_status.get(strategy_name)
+        return {'success': True, 'result': self.strategy_status.get(strategy_name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_regime_summary(self) -> Dict[str, Any]:
         """Get summary of current regime and strategy status."""
         if not self.regime_history:
-            return {"error": "No regime history available"}
+            return {'success': True, 'result': {"error": "No regime history available"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         current_regime = self.regime_history[-1]
         active_strategies = self.get_active_strategies()
@@ -640,6 +640,7 @@ class StrategyGatekeeper:
         
         logger.info(f"Gatekeeper state saved to {filepath}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def create_strategy_gatekeeper(strategies_config: Dict[str, Dict[str, Any]]) -> StrategyGatekeeper:
     """Create strategy gatekeeper with default configurations.
     
@@ -704,4 +705,4 @@ def create_strategy_gatekeeper(strategies_config: Dict[str, Dict[str, Any]]) -> 
         else:
             default_configs[strategy_name] = config
     
-    return StrategyGatekeeper(default_configs) 
+    return {'success': True, 'result': StrategyGatekeeper(default_configs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

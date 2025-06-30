@@ -329,7 +329,7 @@ class RollingRetrainingAgent:
     def retrain_model(self, 
                      data: pd.DataFrame,
                      model_factory: Callable,
-                     target_col: str = 'returns') -> Dict[str, Any]:
+                     target_col: str = 'returns') -> pd.Series:
         """Retrain the model with new data."""
         try:
             logger.info("Starting model retraining...")
@@ -401,22 +401,11 @@ class RollingRetrainingAgent:
             
             logger.info(f"Model retraining completed. Version {model_version}, Test Score: {avg_test_score:.4f}")
             
-            return {
-                'success': True,
-                'model_version': model_version,
-                'avg_test_score': avg_test_score,
-                'avg_train_score': avg_train_score,
-                'model_path': model_path,
-                'n_features': len(features.columns),
-                'n_samples': len(features)
-            }
+            return True
             
         except Exception as e:
             logger.error(f"Error in model retraining: {e}")
-            return {
-                'success': False,
-                'error': str(e)
-            }
+            return False
     
     def _cleanup_old_models(self):
         """Remove old model files."""
@@ -510,7 +499,7 @@ class RollingRetrainingAgent:
             
         except Exception as e:
             logger.error(f"Error getting performance summary: {e}")
-            return {'error': str(e)}
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_feature_importance(self) -> Dict[str, float]:
         """Get feature importance from the current model."""

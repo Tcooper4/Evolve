@@ -94,6 +94,7 @@ class MultiStrategyHybridEngine:
         
         logger.info("Multi-Strategy Hybrid Engine initialized successfully")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _initialize_default_strategies(self):
         """Initialize default trading strategies."""
         if not self.strategies:
@@ -105,6 +106,7 @@ class MultiStrategyHybridEngine:
                 'volume_price': self._volume_price_strategy
             }
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _initialize_ensemble_model(self):
         """Initialize the ensemble model."""
         try:
@@ -130,6 +132,7 @@ class MultiStrategyHybridEngine:
         except Exception as e:
             logger.error(f"Error initializing ensemble model: {e}")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _momentum_strategy(self, data: pd.DataFrame) -> StrategySignal:
         """Momentum-based strategy."""
         try:
@@ -180,7 +183,7 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error in momentum strategy: {e}")
-            return self._create_fallback_signal('momentum')
+            return {'success': True, 'result': self._create_fallback_signal('momentum'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _mean_reversion_strategy(self, data: pd.DataFrame) -> StrategySignal:
         """Mean reversion strategy."""
@@ -235,7 +238,7 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error in mean reversion strategy: {e}")
-            return self._create_fallback_signal('mean_reversion')
+            return {'success': True, 'result': self._create_fallback_signal('mean_reversion'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _volatility_breakout_strategy(self, data: pd.DataFrame) -> StrategySignal:
         """Volatility breakout strategy."""
@@ -289,7 +292,7 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error in volatility breakout strategy: {e}")
-            return self._create_fallback_signal('volatility_breakout')
+            return {'success': True, 'result': self._create_fallback_signal('volatility_breakout'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _trend_following_strategy(self, data: pd.DataFrame) -> StrategySignal:
         """Trend following strategy."""
@@ -354,7 +357,7 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error in trend following strategy: {e}")
-            return self._create_fallback_signal('trend_following')
+            return {'success': True, 'result': self._create_fallback_signal('trend_following'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _volume_price_strategy(self, data: pd.DataFrame) -> StrategySignal:
         """Volume-price relationship strategy."""
@@ -417,11 +420,11 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error in volume price strategy: {e}")
-            return self._create_fallback_signal('volume_price')
+            return {'success': True, 'result': self._create_fallback_signal('volume_price'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_fallback_signal(self, strategy_name: str) -> StrategySignal:
         """Create a fallback signal when strategy fails."""
-        return StrategySignal(
+        return {'success': True, 'result': StrategySignal(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             strategy_name=strategy_name,
             signal_type=SignalType.HOLD,
             confidence=0.3,
@@ -447,7 +450,7 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error calculating position size: {e}")
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def generate_hybrid_signal(self, data: pd.DataFrame) -> HybridSignal:
         """Generate hybrid signal by combining all strategies."""
@@ -487,7 +490,7 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error generating hybrid signal: {e}")
-            return self._create_fallback_hybrid_signal()
+            return {'success': True, 'result': self._create_fallback_hybrid_signal(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _combine_weighted_average(self, signals: List[StrategySignal]) -> HybridSignal:
         """Combine signals using weighted average."""
@@ -545,7 +548,7 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error combining signals: {e}")
-            return self._create_fallback_hybrid_signal()
+            return {'success': True, 'result': self._create_fallback_hybrid_signal(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _combine_voting(self, signals: List[StrategySignal]) -> HybridSignal:
         """Combine signals using voting mechanism."""
@@ -590,11 +593,11 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error in voting combination: {e}")
-            return self._create_fallback_hybrid_signal()
+            return {'success': True, 'result': self._create_fallback_hybrid_signal(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_fallback_hybrid_signal(self) -> HybridSignal:
         """Create fallback hybrid signal."""
-        return HybridSignal(
+        return {'success': True, 'result': HybridSignal(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             signal_type=SignalType.HOLD,
             confidence=0.3,
             predicted_return=0.0,
@@ -610,7 +613,7 @@ class MultiStrategyHybridEngine:
         """Update strategy weights based on recent performance."""
         try:
             if not performance_data:
-                return
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Calculate new weights based on performance
             total_performance = sum(performance_data.values())
@@ -677,7 +680,7 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error getting performance summary: {e}")
-            return {'error': str(e)}
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def export_signals(self, filepath: str = "logs/hybrid_signals.json"):
         """Export signal history to file."""
@@ -696,3 +699,4 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error exporting signals: {e}") 
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

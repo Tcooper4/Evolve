@@ -56,7 +56,7 @@ class UpgraderAgent:
         )
         
         # Setup logging
-        self._setup_logging()
+        self.init_status = self._setup_logging()
         
         # Initialize state
         self.last_upgrade_check = None
@@ -69,46 +69,95 @@ class UpgraderAgent:
         self.log_retention_days = self.settings.get('log_retention_days', 30)
         self.memory_retention_days = self.settings.get('memory_retention_days', 7)
         
-    def _setup_logging(self):
+    def _setup_logging(self) -> dict:
         """Configure rotating file logging."""
-        log_dir = Path("logs")
-        log_dir.mkdir(exist_ok=True)
+        try:
+            log_dir = Path("logs")
+            log_dir.mkdir(exist_ok=True)
+            log_file = log_dir / "upgrader.log"
+            
+            # Configure logging
+            logging.basicConfig(
+                level=logging.INFO,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                handlers=[
+                    logging.handlers.RotatingFileHandler(
+                        log_file,
+                        maxBytes=10*1024*1024,  # 10MB
+                        backupCount=5
+                    ),
+                    logging.StreamHandler()
+                ]
+            )
+            
+            return {
+                'success': True,
+                'message': 'Logging setup completed',
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
         
-        log_file = log_dir / "upgrader.log"
-        
-        # Configure logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.handlers.RotatingFileHandler(
-                    log_file,
-                    maxBytes=10*1024*1024,  # 10MB
-                    backupCount=5
-                ),
-                logging.StreamHandler()
-            ]
-        )
-        
-    def start(self):
+    def start(self) -> dict:
         """Start the upgrader agent with scheduled checks."""
-        logger.info("Starting UpgraderAgent")
-        self.scheduler.start(self.check_for_upgrades)
+        try:
+            logger.info("Starting UpgraderAgent")
+            self.scheduler.start(self.check_for_upgrades)
+            return {
+                'success': True,
+                'message': 'UpgraderAgent started',
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
         
-    def stop(self):
+    def stop(self) -> dict:
         """Stop the upgrader agent."""
-        logger.info("Stopping UpgraderAgent")
-        self.scheduler.stop()
+        try:
+            logger.info("Stopping UpgraderAgent")
+            self.scheduler.stop()
+            return {
+                'success': True,
+                'message': 'UpgraderAgent stopped',
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
         
-    def run_once(self):
+    def run_once(self) -> dict:
         """
         Run a single upgrade check manually.
         
         Returns:
-            List[Task]: List of created upgrade tasks
+            Dictionary with upgrade check results
         """
-        logger.info("Running manual upgrade check")
-        return self.check_for_upgrades()
+        try:
+            logger.info("Running manual upgrade check")
+            result = self.check_for_upgrades()
+            return {
+                'success': True,
+                'result': result,
+                'message': 'Manual upgrade check completed',
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
         
     def check_for_upgrades(self) -> List[Task]:
         """
@@ -373,10 +422,16 @@ class UpgraderAgent:
             Dict: Status information
         """
         return {
-            'running': self.scheduler.running,
-            'last_check': self.last_upgrade_check.isoformat() if self.last_upgrade_check else None,
-            'failed_upgrades': len(self.failed_upgrades),
-            'upgrade_history': self.upgrade_history[-10:]  # Last 10 upgrades
+            'success': True,
+            'result': {
+                'last_upgrade_check': self.last_upgrade_check.isoformat() if self.last_upgrade_check else None,
+                'failed_upgrades': list(self.failed_upgrades),
+                'upgrade_history_count': len(self.upgrade_history),
+                'max_retries': self.max_retries,
+                'retry_delay': self.retry_delay
+            },
+            'message': 'Status retrieved',
+            'timestamp': datetime.now().isoformat()
         }
 
 if __name__ == "__main__":

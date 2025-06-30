@@ -35,6 +35,7 @@ class GeneticOptimizer(BaseOptimizer):
         generations: int = 50,
         mutation_prob: float = 0.2,
         crossover_prob: float = 0.7
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize genetic optimizer.
         
@@ -80,6 +81,7 @@ class GeneticOptimizer(BaseOptimizer):
         # Create individual class
         creator.create("Individual", list, fitness=creator.FitnessMax)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def optimize(
         self,
         param_space: Dict[str, Union[List, Tuple]],
@@ -167,7 +169,7 @@ class GeneticOptimizer(BaseOptimizer):
             verbose=self.verbose
         )
         
-        return self.get_all_results()
+        return {'success': True, 'result': self.get_all_results(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _evaluate_individual(
         self,
@@ -206,7 +208,7 @@ class GeneticOptimizer(BaseOptimizer):
         self.log_result(result)
         
         # Return fitness (Sharpe ratio)
-        return (metrics['sharpe_ratio'],)
+        return {'success': True, 'result': (metrics['sharpe_ratio'],), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _run_strategy(self, params: Dict[str, float]) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Run strategy with given parameters.
@@ -220,6 +222,7 @@ class GeneticOptimizer(BaseOptimizer):
         # This should be implemented by strategy-specific optimizers
         raise NotImplementedError
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def plot_results(
         self,
         plot_type: str = 'all',
@@ -278,7 +281,7 @@ class GeneticOptimizer(BaseOptimizer):
             
             plots.append(fig)
         
-        return plots[0] if len(plots) == 1 else plots
+        return {'success': True, 'result': plots[0] if len(plots) == 1 else plots, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_best_individuals(self, n: int = 1) -> List[Any]:
         """Get best individuals from hall of fame.
@@ -292,7 +295,7 @@ class GeneticOptimizer(BaseOptimizer):
         if not self.hof:
             raise ValueError("No hall of fame found")
         
-        return self.hof[:n]
+        return {'success': True, 'result': self.hof[:n], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_best_parameters(self) -> Dict[str, float]:
         """Get best parameters from hall of fame.
@@ -329,7 +332,7 @@ def create_genetic_optimizer(data: pd.DataFrame,
     crossover_prob = config.get('crossover_prob', 0.7)
     verbose = config.get('verbose', False)
     
-    return GeneticOptimizer(
+    return {'success': True, 'result': GeneticOptimizer(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         data=data,
         strategy_type=strategy_type,
         population_size=population_size,

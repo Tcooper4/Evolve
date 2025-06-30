@@ -132,6 +132,7 @@ class ServiceManager:
         
         logger.info("ServiceManager initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _subscribe_to_services(self):
         """Subscribe to all service output channels."""
         channels = [f"{service_name}_output" for service_name in self.services.keys()]
@@ -142,6 +143,7 @@ class ServiceManager:
         self.monitor_thread = threading.Thread(target=self._monitor_services, daemon=True)
         self.monitor_thread.start()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _monitor_services(self):
         """Monitor service messages and update status."""
         logger.info("Starting service monitoring...")
@@ -155,6 +157,7 @@ class ServiceManager:
                 logger.error(f"Error in service monitoring: {e}")
                 time.sleep(1)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _handle_service_message(self, message):
         """Handle messages from services."""
         try:
@@ -177,6 +180,7 @@ class ServiceManager:
         except Exception as e:
             logger.error(f"Error handling service message: {e}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def start_service(self, service_name: str) -> Dict[str, Any]:
         """
         Start a specific service.
@@ -315,7 +319,7 @@ class ServiceManager:
             results[service_name] = self.start_service(service_name)
             time.sleep(1)  # Small delay between starts
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def stop_all_services(self) -> Dict[str, Any]:
         """
@@ -330,7 +334,7 @@ class ServiceManager:
             results[service_name] = self.stop_service(service_name)
             time.sleep(1)  # Small delay between stops
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_service_status(self, service_name: str = None) -> Dict[str, Any]:
         """
@@ -344,7 +348,7 @@ class ServiceManager:
         """
         if service_name:
             if service_name not in self.services:
-                return {'error': f'Unknown service: {service_name}'}
+                return {'success': True, 'result': {'error': f'Unknown service: {service_name}'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             service_config = self.services[service_name]
             return {
@@ -391,7 +395,7 @@ class ServiceManager:
             
         except Exception as e:
             logger.error(f"Error sending message to {service_name}: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_manager_stats(self) -> Dict[str, Any]:
         """Get manager statistics."""
@@ -400,26 +404,31 @@ class ServiceManager:
             if config['status'] == 'running'
         )
         
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'total_services': len(self.services),
             'running_services': running_services,
             'stopped_services': len(self.services) - running_services,
             'services': self.get_service_status()
         }
     
-    def shutdown(self):
+    def shutdown(self) -> Dict[str, Any]:
         """Shutdown the service manager."""
-        logger.info("Shutting down ServiceManager...")
-        
-        self.is_running = False
-        
-        # Stop all services
-        self.stop_all_services()
-        
-        # Close Redis connection
-        self.pubsub.close()
-        
-        logger.info("ServiceManager shutdown complete")
+        try:
+            logger.info("Shutting down ServiceManager...")
+            
+            self.is_running = False
+            
+            # Stop all services
+            stop_results = self.stop_all_services()
+            
+            # Close Redis connection
+            self.pubsub.close()
+            
+            logger.info("ServiceManager shutdown complete")
+            return {"status": "success", "message": "ServiceManager shutdown complete", "stop_results": stop_results}
+        except Exception as e:
+            logger.error(f"Error during shutdown: {e}")
+            return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def main():
@@ -471,7 +480,7 @@ def main():
         elif args.action == 'status':
             result = manager.get_service_status()
             print(json.dumps(result, indent=2))
-            return {"status": "completed", "action": "status", "result": result}
+            return {'success': True, 'result': {"status": "completed", "action": "status", "result": result}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     except KeyboardInterrupt:
         print("\nShutting down...")

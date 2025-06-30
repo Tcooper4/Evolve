@@ -27,6 +27,7 @@ class MetricsCollector:
         self.redis_client = None
         self.running = False
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Setup logging for the metrics collector."""
         log_path = Path("logs/metrics")
@@ -42,6 +43,7 @@ class MetricsCollector:
         )
         self.logger = logging.getLogger(__name__)
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_metrics(self):
         """Setup Prometheus metrics."""
         # System metrics
@@ -86,6 +88,7 @@ class MetricsCollector:
             ['endpoint']
         )
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize Redis connection and start metrics server."""
         try:

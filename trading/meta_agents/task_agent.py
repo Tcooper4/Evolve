@@ -26,6 +26,7 @@ class TaskAgent(BaseAgent):
         self.task_manager = TaskManager(config)
         self.setup_logging()
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for task management."""
         log_path = Path("logs/tasks")
@@ -41,6 +42,7 @@ class TaskAgent(BaseAgent):
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize the task agent."""
         try:

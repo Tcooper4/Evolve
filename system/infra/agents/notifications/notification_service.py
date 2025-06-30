@@ -52,6 +52,7 @@ class NotificationService:
         self._worker_task: Optional[asyncio.Task] = None
         self._running: bool = False
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def start(self):
         """Start the notification service."""
         if self._running:
@@ -80,6 +81,7 @@ class NotificationService:
         self._handlers[channel] = handler
         logger.info(f"Registered handler for channel: {channel}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def send_notification(
         self,
         title: str,

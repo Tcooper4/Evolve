@@ -35,6 +35,7 @@ class FallbackDataProvider:
         
         logger.info(f"Fallback data provider initialized with {len(self.providers)} providers")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _initialize_providers(self):
         """Initialize data providers in fallback order."""
         try:
@@ -60,6 +61,7 @@ class FallbackDataProvider:
         self.providers.append(('mock', mock_provider))
         logger.info("Mock provider initialized as final fallback")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def get_historical_data(self, 
                            symbol: str,
                            start_date: datetime,
@@ -83,7 +85,7 @@ class FallbackDataProvider:
                 
                 if data is not None and not data.empty:
                     self._log_success(provider_name, symbol)
-                    return data
+                    return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 else:
                     logger.warning(f"{provider_name} returned empty data for {symbol}")
                     
@@ -111,7 +113,7 @@ class FallbackDataProvider:
                 price = provider.get_live_price(symbol)
                 if price is not None and price > 0:
                     self._log_success(provider_name, symbol, "live_price")
-                    return price
+                    return {'success': True, 'result': price, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             except Exception as e:
                 logger.warning(f"{provider_name} failed for live price of {symbol}: {e}")
                 self._log_failure(provider_name, symbol, str(e), "live_price")
@@ -156,7 +158,7 @@ class FallbackDataProvider:
                     'change_pct': np.random.normal(0, 0.02) * 100
                 }
         
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _log_success(self, provider_name: str, symbol: str, operation: str = "historical_data"):
         """Log successful data retrieval."""
@@ -170,6 +172,7 @@ class FallbackDataProvider:
         }
         self.fallback_log.append(log_entry)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _log_failure(self, provider_name: str, symbol: str, error: str, operation: str = "historical_data"):
         """Log failed data retrieval."""
         log_entry = {
@@ -182,6 +185,7 @@ class FallbackDataProvider:
         }
         self.fallback_log.append(log_entry)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_fallback_stats(self) -> Dict[str, Any]:
         """Get statistics about fallback usage.
         
@@ -189,7 +193,7 @@ class FallbackDataProvider:
             Dictionary with fallback statistics
         """
         if not self.fallback_log:
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'total_requests': 0,
                 'successful_requests': 0,
                 'failed_requests': 0,
@@ -242,6 +246,7 @@ class FallbackDataProvider:
         except Exception as e:
             logger.error(f"Failed to save fallback log: {e}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class MockDataProvider:
     """Mock data provider for fallback scenarios."""
     
@@ -253,6 +258,7 @@ class MockDataProvider:
         
         logger.info("Mock data provider initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def get_historical_data(self, 
                            symbol: str,
                            start_date: datetime,
@@ -301,7 +307,7 @@ class MockDataProvider:
         
         data.set_index('Date', inplace=True)
         
-        return data
+        return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_live_price(self, symbol: str) -> float:
         """Get mock live price.
@@ -317,11 +323,11 @@ class MockDataProvider:
         # Generate price based on symbol hash for consistency
         np.random.seed(hash(symbol) % 2**32)
         price = self.base_price * (1 + np.random.normal(0, self.volatility))
-        return max(price, 0.01)
+        return {'success': True, 'result': max(price, 0.01), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 # Global fallback provider instance
 fallback_provider = FallbackDataProvider()
 
 def get_fallback_provider() -> FallbackDataProvider:
     """Get the global fallback data provider instance."""
-    return fallback_provider 
+    return {'success': True, 'result': fallback_provider, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

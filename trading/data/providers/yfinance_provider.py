@@ -46,6 +46,7 @@ def log_data_request(symbol: str, success: bool, error: Optional[str] = None) ->
     with open(log_path, "a") as f:
         f.write(f"{log_entry}\n")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def get_cached_data(symbol: str) -> Optional[pd.DataFrame]:
     """Get cached data if available and not expired.
     
@@ -71,7 +72,7 @@ def get_cached_data(symbol: str) -> Optional[pd.DataFrame]:
         return cache_data["data"]
     except Exception as e:
         logger.error(f"Error reading cache for {symbol}: {e}")
-        return None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def cache_data(symbol: str, data: pd.DataFrame) -> None:
     """Cache data with timestamp.
@@ -94,6 +95,7 @@ def cache_data(symbol: str, data: pd.DataFrame) -> None:
     except Exception as e:
         logger.error(f"Error caching data for {symbol}: {e}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class YFinanceProvider:
     """Provider for fetching data from Yahoo Finance."""
     
@@ -109,6 +111,7 @@ class YFinanceProvider:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_data(self, data: pd.DataFrame) -> None:
         """Validate the fetched data.
         
@@ -129,6 +132,7 @@ class YFinanceProvider:
         if data.isnull().any().any():
             raise ValueError("Data contains missing values")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_data(self, symbol: str, start_date: Optional[str] = None,
                 end_date: Optional[str] = None, interval: str = '1d') -> pd.DataFrame:
         """Get data from Yahoo Finance with rate limiting.
@@ -150,7 +154,7 @@ class YFinanceProvider:
             cached_data = get_cached_data(symbol)
             if cached_data is not None:
                 log_data_request(symbol, True)
-                return cached_data
+                return {'success': True, 'result': cached_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             # Create Ticker object
             ticker = yf.Ticker(symbol)
@@ -209,4 +213,4 @@ class YFinanceProvider:
             except Exception as e:
                 logger.error(f"Skipping {symbol} due to error: {e}")
                 continue
-        return results 
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

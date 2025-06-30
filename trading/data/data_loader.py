@@ -13,7 +13,7 @@ def load_market_data(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     period: str = "1y"
-) -> pd.DataFrame:
+) -> Dict[str, Any]:
     """Load market data for a given ticker.
     
     Args:
@@ -23,7 +23,7 @@ def load_market_data(
         period: Time period if start_date/end_date not provided
         
     Returns:
-        DataFrame with OHLCV data
+        Dictionary with success status, data, and metadata
     """
     try:
         if start_date and end_date:
@@ -33,7 +33,14 @@ def load_market_data(
         
         if data.empty:
             logger.warning(f"No data found for ticker {ticker}")
-            return pd.DataFrame()
+            return {
+                'success': False,
+                'message': f'No data found for ticker {ticker}',
+                'data': pd.DataFrame(),
+                'ticker': ticker,
+                'rows': 0,
+                'timestamp': datetime.now().isoformat()
+            }
         
         # Reset index to make date a column
         data = data.reset_index()
@@ -42,18 +49,34 @@ def load_market_data(
         data.columns = [col.lower() for col in data.columns]
         
         logger.info(f"Loaded {len(data)} rows of data for {ticker}")
-        return data
+        return {
+            'success': True,
+            'message': f'Successfully loaded {len(data)} rows for {ticker}',
+            'data': data,
+            'ticker': ticker,
+            'rows': len(data),
+            'start_date': data['date'].min() if 'date' in data.columns else None,
+            'end_date': data['date'].max() if 'date' in data.columns else None,
+            'timestamp': datetime.now().isoformat()
+        }
         
     except Exception as e:
         logger.error(f"Error loading data for {ticker}: {str(e)}")
-        return pd.DataFrame()
+        return {
+            'success': False,
+            'message': f'Error loading data for {ticker}: {str(e)}',
+            'data': pd.DataFrame(),
+            'ticker': ticker,
+            'rows': 0,
+            'timestamp': datetime.now().isoformat()
+        }
 
 def load_multiple_tickers(
     tickers: list,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     period: str = "1y"
-) -> Dict[str, pd.DataFrame]:
+) -> Dict[str, Any]:
     """Load market data for multiple tickers.
     
     Args:
@@ -63,31 +86,65 @@ def load_multiple_tickers(
         period: Time period if start_date/end_date not provided
         
     Returns:
-        Dictionary mapping ticker to DataFrame
+        Dictionary with success status, data dictionary, and metadata
     """
     data_dict = {}
+    successful_loads = 0
+    failed_loads = 0
     
     for ticker in tickers:
-        data = load_market_data(ticker, start_date, end_date, period)
-        if not data.empty:
-            data_dict[ticker] = data
+        result = load_market_data(ticker, start_date, end_date, period)
+        if result['success']:
+            data_dict[ticker] = result['data']
+            successful_loads += 1
+        else:
+            failed_loads += 1
     
-    return data_dict
+    return {
+        'success': successful_loads > 0,
+        'message': f'Loaded {successful_loads} tickers successfully, {failed_loads} failed',
+        'data': data_dict,
+        'tickers': tickers,
+        'successful_count': successful_loads,
+        'failed_count': failed_loads,
+        'total_count': len(tickers),
+        'timestamp': datetime.now().isoformat()
+    }
 
-def get_latest_price(ticker: str) -> Optional[float]:
+def get_latest_price(ticker: str) -> Dict[str, Any]:
     """Get the latest price for a ticker.
     
     Args:
         ticker: Stock ticker symbol
         
     Returns:
-        Latest closing price or None if not available
+        Dictionary with success status, price, and metadata
     """
     try:
         data = yf.download(ticker, period="1d")
         if not data.empty:
-            return data['Close'].iloc[-1]
-        return None
+            price = data['Close'].iloc[-1]
+            return {
+                'success': True,
+                'message': f'Successfully retrieved latest price for {ticker}',
+                'price': price,
+                'ticker': ticker,
+                'timestamp': datetime.now().isoformat()
+            }
+        else:
+            return {
+                'success': False,
+                'message': f'No data available for {ticker}',
+                'price': None,
+                'ticker': ticker,
+                'timestamp': datetime.now().isoformat()
+            }
     except Exception as e:
         logger.error(f"Error getting latest price for {ticker}: {str(e)}")
-        return None 
+        return {
+            'success': False,
+            'message': f'Error getting latest price for {ticker}: {str(e)}',
+            'price': None,
+            'ticker': ticker,
+            'timestamp': datetime.now().isoformat()
+        } 

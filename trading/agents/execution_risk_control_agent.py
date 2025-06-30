@@ -116,7 +116,7 @@ class ExecutionRiskControlAgent:
     
     def _initialize_risk_limits(self) -> Dict[str, Any]:
         """Initialize risk limits and thresholds."""
-        return {
+        return {'success': True, 'result': {
             'position_limits': {
                 'max_single_position': 0.25,
                 'max_sector_exposure': 0.4,
@@ -137,7 +137,7 @@ class ExecutionRiskControlAgent:
                 'avoid_earnings': True,
                 'avoid_high_impact_news': True
             }
-        }
+        }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _load_history(self):
         """Load existing trade and risk history."""
@@ -346,10 +346,7 @@ class ExecutionRiskControlAgent:
                 minutes_since_last = time_since_last.total_seconds() / 60
                 
                 if minutes_since_last < self.cooling_period_minutes:
-                    return {
-                        'passed': False,
-                        'reason': f"Cooling period not met: {self.cooling_period_minutes - minutes_since_last:.0f} minutes remaining"
-                    }
+                    return {'passed': False, 'reason': f"Cooling period not met: {self.cooling_period_minutes - minutes_since_last:.0f} minutes remaining"}
             
             return {'passed': True}
             
@@ -415,9 +412,7 @@ class ExecutionRiskControlAgent:
                 correlation_risk = 0.3  # Simplified
                 
                 if correlation_risk > self.correlation_threshold:
-                    return {
-                        'warning': f"High correlation with existing positions: {correlation_risk:.2f}"
-                    }
+                    return {'passed': True, 'warning': f"High correlation with existing positions: {correlation_risk:.2f}"}
             
             return {}
             
@@ -791,4 +786,4 @@ class ExecutionRiskControlAgent:
             logger.info(f"Risk control data exported to {filepath}")
             
         except Exception as e:
-            logger.error(f"Error exporting risk data: {e}") 
+            logger.error(f"Error exporting risk data: {e}")

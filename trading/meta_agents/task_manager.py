@@ -66,6 +66,7 @@ class TaskManager:
         self.tasks = {}
         self.setup_logging()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for task manager."""
         log_path = Path("logs/tasks")
@@ -81,6 +82,7 @@ class TaskManager:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def register_task(
         self,
         task_id: str,
@@ -145,14 +147,14 @@ class TaskManager:
             if task_id not in self.tasks:
                 raise ValueError(f"Task {task_id} not found")
             
-            return self.tasks[task_id]
+            return {'success': True, 'result': self.tasks[task_id], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error getting task status: {str(e)}")
             raise
     
     def list_tasks(self) -> List[str]:
         """List all tasks."""
-        return list(self.tasks.keys())
+        return {'success': True, 'result': list(self.tasks.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def update_task(
         self,
@@ -160,6 +162,7 @@ class TaskManager:
         name: Optional[str] = None,
         args: Optional[List[Any]] = None,
         kwargs: Optional[Dict[str, Any]] = None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     ) -> None:
         """Update a task."""
         try:
@@ -196,9 +199,11 @@ class TaskManager:
             self.logger.error(f"Error deleting task: {str(e)}")
             raise
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def monitor_tasks(self):
         raise NotImplementedError('Pending feature')
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def start(self) -> None:
         """Start the task manager."""
         try:

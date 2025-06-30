@@ -40,6 +40,7 @@ class DemoAgent(BaseAgent):
         super().__init__(config)
         self.execution_count = 0
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the demo agent logic."""
         self.execution_count += 1
@@ -237,5 +238,6 @@ def main():
     logger.info("Demo completed successfully!")
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

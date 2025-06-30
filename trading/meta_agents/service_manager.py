@@ -25,6 +25,7 @@ class ServiceManager:
         self.services: Dict[str, Dict[str, Any]] = {}
         self.setup_logging()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for service management."""
         log_path = Path("logs/services")
@@ -40,6 +41,7 @@ class ServiceManager:
         )
         self.logger = logging.getLogger(__name__)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def register_service(
         self,
         name: str,
@@ -128,14 +130,14 @@ class ServiceManager:
             if service_name not in self.services:
                 raise ValueError(f"Service {service_name} not found")
             
-            return self.services[service_name]
+            return {'success': True, 'result': self.services[service_name], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Error getting service status: {str(e)}")
             raise
     
     def list_services(self) -> List[str]:
         """List all services."""
-        return list(self.services.keys())
+        return {'success': True, 'result': list(self.services.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     async def monitor_services(self, interval: int = 60):
         """Monitor services at regular intervals."""
@@ -154,6 +156,7 @@ class ServiceManager:
         self,
         service_name: str,
         config: Dict[str, Any]
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     ) -> None:
         """Update service configuration."""
         try:
@@ -214,3 +217,4 @@ class ServiceManager:
     
     def health_check(self):
         raise NotImplementedError('Pending feature') 
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

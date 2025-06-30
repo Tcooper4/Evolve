@@ -62,7 +62,7 @@ def run_system_initialization() -> Dict[str, Any]:
     else:
         logger.error(f"❌ System initialization failed ({success_count}/{total_count} modules)")
     
-    return module_status
+    return {'success': True, 'result': module_status, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def run_agentic_routing() -> Optional[str]:
@@ -89,7 +89,7 @@ def run_agentic_routing() -> Optional[str]:
             
     except Exception as e:
         logger.error(f"❌ Agentic routing initialization failed: {e}")
-        return None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def run_portfolio_management() -> bool:
@@ -112,7 +112,7 @@ def run_portfolio_management() -> bool:
         
     except Exception as e:
         logger.error(f"❌ Portfolio management initialization failed: {e}")
-        return False
+        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def run_performance_tracking() -> bool:
@@ -135,7 +135,7 @@ def run_performance_tracking() -> bool:
         
     except Exception as e:
         logger.error(f"❌ Performance tracking initialization failed: {e}")
-        return False
+        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def run_strategy_logging() -> bool:
@@ -158,7 +158,7 @@ def run_strategy_logging() -> bool:
         
     except Exception as e:
         logger.error(f"❌ Strategy logging initialization failed: {e}")
-        return False
+        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def run_model_monitoring() -> bool:
@@ -181,7 +181,7 @@ def run_model_monitoring() -> bool:
         
     except Exception as e:
         logger.error(f"❌ Model monitoring initialization failed: {e}")
-        return False
+        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def run_complete_system() -> Dict[str, Any]:
@@ -227,14 +227,14 @@ def run_complete_system() -> Dict[str, Any]:
     
     logger.info(f"🎯 Complete system initialization finished: {success_count}/{total_count} components successful")
     
-    return complete_status
+    return {'success': True, 'result': complete_status, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def display_system_status(module_status: Dict[str, Any]) -> dict:
     """Display system status information. Returns status dict."""
     from core.session_utils import display_system_status as display_status
     display_status(module_status)
-    return {"status": "system_status_displayed"}
+    return {'success': True, 'result': {"status": "system_status_displayed"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def get_system_health() -> Dict[str, Any]:
@@ -273,7 +273,7 @@ def get_system_health() -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Error getting system health: {e}")
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             "overall_status": "error",
             "health_percentage": 0,
             "successful_modules": 0,

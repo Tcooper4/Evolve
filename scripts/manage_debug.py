@@ -69,6 +69,7 @@ class DebugManager:
         self.reports_dir = Path("reports/debug")
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load application configuration.
         
@@ -86,7 +87,7 @@ class DebugManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self) -> None:
         """Initialize logging configuration.
@@ -104,6 +105,7 @@ class DebugManager:
         
         logging.config.dictConfig(log_config)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def debug_function(self, func: Callable, *args: Any, **kwargs: Any) -> Any:
         """Debug a function with interactive debugging.
         
@@ -127,7 +129,7 @@ class DebugManager:
             # Run function with debugger
             result = func(*args, **kwargs)
             
-            return result
+            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to debug function: {e}")
             raise
@@ -200,7 +202,7 @@ class DebugManager:
             
             self.logger.info(f"Error analysis saved to {analysis_file}")
             
-            return analysis
+            return {'success': True, 'result': analysis, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to analyze errors: {e}")
             raise
@@ -253,7 +255,7 @@ class DebugManager:
             # Print monitoring results
             self._print_monitoring_results(errors)
             
-            return errors
+            return {'success': True, 'result': errors, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to monitor errors: {e}")
             raise
@@ -325,7 +327,7 @@ class DebugManager:
             # Print suggestions
             self._print_fix_suggestions(suggestions)
             
-            return suggestions
+            return {'success': True, 'result': suggestions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except Exception as e:
             self.logger.error(f"Failed to suggest error fixes: {e}")
             raise
@@ -346,6 +348,7 @@ class DebugManager:
                 print(f"Message: {error['message']}")
                 print(f"File: {error['file']}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _print_fix_suggestions(self, suggestions: List[Dict[str, Any]]) -> None:
         """Print error fix suggestions.
         
@@ -360,6 +363,7 @@ class DebugManager:
             print(f"Example: {suggestion['example']}")
             print(f"Severity: {suggestion['severity']}")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _generate_error_plots(self, analysis: Dict[str, Any]) -> None:
         """Generate error visualization plots.
         
@@ -407,6 +411,7 @@ class DebugManager:
             self.logger.error(f"Failed to generate error plots: {e}")
             raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _safe_parse_function(self, function_name: str) -> Callable:
         """Safely parse function name to callable object.
         
@@ -429,7 +434,7 @@ class DebugManager:
         if function_name not in safe_functions:
             raise ValueError(f"Function '{function_name}' is not in the safe functions list")
         
-        return safe_functions[function_name]
+        return {'success': True, 'result': safe_functions[function_name], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _safe_parse_arguments(self, args_str: str) -> List[Any]:
         """Safely parse arguments string to list of values.
@@ -445,7 +450,7 @@ class DebugManager:
         """
         try:
             # Use ast.literal_eval for safe parsing of literals
-            return ast.literal_eval(args_str)
+            return {'success': True, 'result': ast.literal_eval(args_str), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except (ValueError, SyntaxError) as e:
             raise ValueError(f"Cannot safely parse arguments: {e}")
 
@@ -459,7 +464,7 @@ class DebugManager:
         Returns:
             Test results dictionary.
         """
-        return {"status": "success", "function": "test_strategy", "args": args, "kwargs": kwargs}
+        return {'success': True, 'result': {"status": "success", "function": "test_strategy", "args": args, "kwargs": kwargs}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _analyze_data_function(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
         """Analyze data function for debugging.
@@ -471,7 +476,7 @@ class DebugManager:
         Returns:
             Analysis results dictionary.
         """
-        return {"status": "success", "function": "analyze_data", "args": args, "kwargs": kwargs}
+        return {'success': True, 'result': {"status": "success", "function": "analyze_data", "args": args, "kwargs": kwargs}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _validate_model_function(self, *args: Any, **kwargs: Any) -> Dict[str, Any]:
         """Validate model function for debugging.
@@ -483,7 +488,7 @@ class DebugManager:
         Returns:
             Validation results dictionary.
         """
-        return {"status": "success", "function": "validate_model", "args": args, "kwargs": kwargs}
+        return {'success': True, 'result': {"status": "success", "function": "validate_model", "args": args, "kwargs": kwargs}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def main() -> None:
@@ -564,5 +569,6 @@ def main() -> None:
         sys.exit(1)
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

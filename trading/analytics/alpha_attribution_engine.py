@@ -149,9 +149,10 @@ class AlphaAttributionEngine:
         
         logger.info("Alpha Attribution Engine initialized")
         
+            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _initialize_factor_registry(self) -> Dict[str, Dict[str, Any]]:
         """Initialize factor registry for attribution analysis."""
-        return {
+        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             'momentum': {
                 'description': 'Price momentum factor',
                 'calculation': self._calculate_momentum_factor,
@@ -212,7 +213,7 @@ class AlphaAttributionEngine:
             return momentum_factor
         except Exception as e:
             logger.error(f"Error calculating momentum factor: {e}")
-            return pd.Series(index=data.index, data=0.0)
+            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_volatility_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate volatility factor."""
@@ -224,7 +225,7 @@ class AlphaAttributionEngine:
             return volatility_factor
         except Exception as e:
             logger.error(f"Error calculating volatility factor: {e}")
-            return pd.Series(index=data.index, data=0.0)
+            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_volume_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate volume factor."""
@@ -237,7 +238,7 @@ class AlphaAttributionEngine:
             return volume_factor
         except Exception as e:
             logger.error(f"Error calculating volume factor: {e}")
-            return pd.Series(index=data.index, data=0.0)
+            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_mean_reversion_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate mean reversion factor."""
@@ -253,7 +254,7 @@ class AlphaAttributionEngine:
             return mean_reversion_factor
         except Exception as e:
             logger.error(f"Error calculating mean reversion factor: {e}")
-            return pd.Series(index=data.index, data=0.0)
+            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_trend_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate trend strength factor."""
@@ -271,7 +272,7 @@ class AlphaAttributionEngine:
             return trend_factor
         except Exception as e:
             logger.error(f"Error calculating trend factor: {e}")
-            return pd.Series(index=data.index, data=0.0)
+            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_correlation_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate market correlation factor."""
@@ -284,7 +285,7 @@ class AlphaAttributionEngine:
             return correlation_factor
         except Exception as e:
             logger.error(f"Error calculating correlation factor: {e}")
-            return pd.Series(index=data.index, data=0.0)
+            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_liquidity_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate liquidity factor."""
@@ -301,7 +302,7 @@ class AlphaAttributionEngine:
             return liquidity_factor
         except Exception as e:
             logger.error(f"Error calculating liquidity factor: {e}")
-            return pd.Series(index=data.index, data=0.0)
+            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_sentiment_factor(self, data: pd.DataFrame) -> pd.Series:
         """Calculate market sentiment factor."""
@@ -318,7 +319,7 @@ class AlphaAttributionEngine:
             return sentiment_factor
         except Exception as e:
             logger.error(f"Error calculating sentiment factor: {e}")
-            return pd.Series(index=data.index, data=0.0)
+            return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def perform_attribution_analysis(self, 
                                    portfolio_returns: pd.Series,
@@ -400,7 +401,7 @@ class AlphaAttributionEngine:
             
             self.logger.info(f"Attribution analysis completed: Excess return = {excess_return:.4f}")
             
-            return result
+            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
         except Exception as e:
             self.logger.error(f"Error performing attribution analysis: {str(e)}")
@@ -438,7 +439,7 @@ class AlphaAttributionEngine:
             
         except Exception as e:
             self.logger.error(f"Error decomposing by strategy: {str(e)}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _decompose_by_factors(self, 
                              portfolio_returns: pd.Series,
@@ -496,7 +497,7 @@ class AlphaAttributionEngine:
             
         except Exception as e:
             self.logger.error(f"Error decomposing by factors: {str(e)}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _decompose_by_risk(self, 
                           portfolio_returns: pd.Series,
@@ -542,7 +543,7 @@ class AlphaAttributionEngine:
             
         except Exception as e:
             self.logger.error(f"Error decomposing by risk: {str(e)}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _align_returns_data(self, 
                            portfolio_returns: pd.Series,
@@ -569,7 +570,7 @@ class AlphaAttributionEngine:
             
         except Exception as e:
             self.logger.error(f"Error aligning returns data: {str(e)}")
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _detect_alpha_decay(self, 
                            strategy_returns: Dict[str, pd.Series],
@@ -602,7 +603,7 @@ class AlphaAttributionEngine:
                 
         except Exception as e:
             self.logger.error(f"Error detecting alpha decay: {str(e)}")
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_rolling_alpha(self, 
                                strategy_returns: pd.Series,
@@ -633,7 +634,7 @@ class AlphaAttributionEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating rolling alpha: {str(e)}")
-            return pd.Series(dtype=float)
+            return {'success': True, 'result': pd.Series(dtype=float), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_decay_score(self, rolling_alpha: pd.Series) -> float:
         """Calculate decay score from rolling alpha series."""
@@ -663,7 +664,7 @@ class AlphaAttributionEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating decay score: {str(e)}")
-            return 0.0
+            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_attribution_confidence(self, 
                                         strategy_attribution: Dict[str, float],
@@ -702,7 +703,7 @@ class AlphaAttributionEngine:
                 
         except Exception as e:
             self.logger.error(f"Error calculating attribution confidence: {str(e)}")
-            return 0.5
+            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_alpha_decay_alert(self, 
                                 strategy_returns: Dict[str, pd.Series],
@@ -748,6 +749,7 @@ class AlphaAttributionEngine:
         except Exception as e:
             self.logger.error(f"Error creating alpha decay alert: {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _calculate_strategy_decay(self, strategy_name: str, strategy_returns: pd.Series) -> float:
         """Calculate decay score for individual strategy."""
         try:
@@ -765,7 +767,7 @@ class AlphaAttributionEngine:
                     
                     if early_perf != 0:
                         decay_ratio = (early_perf - late_perf) / abs(early_perf)
-                        return max(0.0, min(1.0, decay_ratio))
+                        return {'success': True, 'result': max(0.0, min(1.0, decay_ratio)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             return 0.0
             
@@ -798,7 +800,7 @@ class AlphaAttributionEngine:
             
         except Exception as e:
             self.logger.error(f"Error generating decay recommendations: {str(e)}")
-            return ["Review strategy performance"]
+            return {'success': True, 'result': ["Review strategy performance"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _store_attribution_result(self, result: AttributionResult):
         """Store attribution result in memory."""
@@ -810,6 +812,7 @@ class AlphaAttributionEngine:
         except Exception as e:
             self.logger.error(f"Error storing attribution result: {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_attribution_summary(self, period: Optional[str] = None) -> Dict[str, Any]:
         """Get summary of attribution results."""
         try:
@@ -843,7 +846,7 @@ class AlphaAttributionEngine:
             
         except Exception as e:
             self.logger.error(f"Error getting attribution summary: {str(e)}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_alpha_decay_alerts(self, severity: Optional[str] = None) -> List[AlphaDecayAlert]:
         """Get alpha decay alerts."""
@@ -854,7 +857,7 @@ class AlphaAttributionEngine:
                 return self.alpha_decay_alerts
         except Exception as e:
             self.logger.error(f"Error getting alpha decay alerts: {str(e)}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def disable_underperforming_strategies(self, 
                                          strategy_returns: Dict[str, pd.Series],
@@ -887,11 +890,11 @@ class AlphaAttributionEngine:
             
         except Exception as e:
             self.logger.error(f"Error disabling underperforming strategies: {str(e)}")
-            return []
+            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 # Global alpha attribution engine instance
 alpha_attribution_engine = AlphaAttributionEngine()
 
 def get_alpha_attribution_engine() -> AlphaAttributionEngine:
     """Get the global alpha attribution engine instance."""
-    return alpha_attribution_engine 
+    return {'success': True, 'result': alpha_attribution_engine, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

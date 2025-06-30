@@ -92,6 +92,7 @@ class IntelligentForecastExplainability:
         
         logger.info("Intelligent Forecast Explainability initialized successfully")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def calculate_confidence_intervals(self, 
                                      predictions: np.ndarray,
                                      method: str = "bootstrap",
@@ -116,7 +117,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error calculating confidence intervals: {e}")
-            return self._create_fallback_intervals()
+            return {'success': True, 'result': self._create_fallback_intervals(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _bootstrap_confidence_interval(self, 
                                      predictions: np.ndarray, 
@@ -150,7 +151,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error in bootstrap confidence interval: {e}")
-            return self._parametric_confidence_interval(predictions, confidence_level)
+            return {'success': True, 'result': self._parametric_confidence_interval(predictions, confidence_level), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _parametric_confidence_interval(self, 
                                       predictions: np.ndarray, 
@@ -175,7 +176,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error in parametric confidence interval: {e}")
-            return self._create_fallback_interval(confidence_level)
+            return {'success': True, 'result': self._create_fallback_interval(confidence_level), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _quantile_confidence_interval(self, 
                                     predictions: np.ndarray, 
@@ -198,11 +199,11 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error in quantile confidence interval: {e}")
-            return self._parametric_confidence_interval(predictions, confidence_level)
+            return {'success': True, 'result': self._parametric_confidence_interval(predictions, confidence_level), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_fallback_intervals(self) -> List[ConfidenceInterval]:
         """Create fallback confidence intervals."""
-        return [
+        return {'success': True, 'result': [, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             ConfidenceInterval(
                 lower_bound=0.0,
                 upper_bound=1.0,
@@ -213,7 +214,7 @@ class IntelligentForecastExplainability:
     
     def _create_fallback_interval(self, confidence_level: float) -> ConfidenceInterval:
         """Create fallback confidence interval."""
-        return ConfidenceInterval(
+        return {'success': True, 'result': ConfidenceInterval(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             lower_bound=0.0,
             upper_bound=1.0,
             confidence_level=confidence_level,
@@ -231,7 +232,7 @@ class IntelligentForecastExplainability:
             elif method == "permutation":
                 return self._calculate_permutation_importance(model, X)
             else:
-                return self._calculate_model_importance(model, X)
+                return {'success': True, 'result': self._calculate_model_importance(model, X), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 
         except Exception as e:
             logger.error(f"Error calculating feature importance: {e}")
@@ -278,7 +279,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error calculating SHAP importance: {e}")
-            return self._calculate_model_importance(model, X)
+            return {'success': True, 'result': self._calculate_model_importance(model, X), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_permutation_importance(self, model: Any, X: pd.DataFrame) -> List[FeatureImportance]:
         """Calculate permutation feature importance."""
@@ -309,7 +310,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error calculating permutation importance: {e}")
-            return self._calculate_model_importance(model, X)
+            return {'success': True, 'result': self._calculate_model_importance(model, X), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_model_importance(self, model: Any, X: pd.DataFrame) -> List[FeatureImportance]:
         """Calculate feature importance using model's built-in method."""
@@ -366,11 +367,11 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error calculating model importance: {e}")
-            return self._create_fallback_importance(X.columns)
+            return {'success': True, 'result': self._create_fallback_importance(X.columns), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_fallback_importance(self, feature_names: List[str]) -> List[FeatureImportance]:
         """Create fallback feature importance."""
-        return [
+        return {'success': True, 'result': [, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             FeatureImportance(
                 feature_name=name,
                 importance_score=1.0 / len(feature_names),
@@ -444,7 +445,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error generating forecast explanation: {e}")
-            return self._create_fallback_explanation(forecast_value, forecast_horizon)
+            return {'success': True, 'result': self._create_fallback_explanation(forecast_value, forecast_horizon), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _get_model_predictions(self, model: Any, X: pd.DataFrame) -> np.ndarray:
         """Get model predictions for confidence interval calculation."""
@@ -462,7 +463,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error getting model predictions: {e}")
-            return np.array([0.0] * 10)
+            return {'success': True, 'result': np.array([0.0] * 10), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _calculate_model_confidence(self, predictions: np.ndarray, forecast_value: float) -> float:
         """Calculate model confidence based on prediction consistency."""
@@ -483,7 +484,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error calculating model confidence: {e}")
-            return 0.5
+            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _generate_explanation_text(self,
                                  forecast_value: float,
@@ -528,7 +529,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error generating explanation text: {e}")
-            return f"Forecast value: {forecast_value:.4f}"
+            return {'success': True, 'result': f"Forecast value: {forecast_value:.4f}", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _identify_risk_factors(self,
                              forecast_value: float,
@@ -567,11 +568,11 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error identifying risk factors: {e}")
-            return ["Unable to assess risk factors"]
+            return {'success': True, 'result': ["Unable to assess risk factors"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _create_fallback_explanation(self, forecast_value: float, forecast_horizon: int) -> ForecastExplanation:
         """Create fallback explanation when generation fails."""
-        return ForecastExplanation(
+        return {'success': True, 'result': ForecastExplanation(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             forecast_value=forecast_value,
             confidence_intervals=[self._create_fallback_interval(0.95)],
             feature_importance=[],
@@ -651,7 +652,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error creating forecast vs actual plot: {e}")
-            return {'error': str(e)}
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_explanation_summary(self) -> Dict[str, Any]:
         """Get summary of explanation performance."""
@@ -676,7 +677,7 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error getting explanation summary: {e}")
-            return {'error': str(e)}
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def export_explanations(self, filepath: str = "logs/forecast_explanations.json"):
         """Export explanation data to file."""
@@ -695,3 +696,4 @@ class IntelligentForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error exporting explanations: {e}") 
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

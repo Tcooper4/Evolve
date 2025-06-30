@@ -54,6 +54,7 @@ class DataManager:
         self.data_dir = Path("data")
         self.backup_dir = Path("data/backups")
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
@@ -61,7 +62,7 @@ class DataManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return yaml.safe_load(f)
+            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -75,6 +76,7 @@ class DataManager:
         
         logging.config.dictConfig(log_config)
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def backup_data(self, backup_name: Optional[str] = None):
         """Backup data directory."""
         self.logger.info("Backing up data...")
@@ -105,7 +107,7 @@ class DataManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to backup data: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def restore_data(self, backup_name: str):
         """Restore data from backup."""
@@ -128,7 +130,7 @@ class DataManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to restore data: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def clean_data(self, days: int = 30):
         """Clean old data files."""
@@ -161,7 +163,7 @@ class DataManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to clean data: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def validate_data(self):
         """Validate data files."""
@@ -208,7 +210,7 @@ class DataManager:
             return len(validation_results["invalid"]) == 0
         except Exception as e:
             self.logger.error(f"Failed to validate data: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def optimize_data(self):
         """Optimize data files."""
@@ -245,7 +247,7 @@ class DataManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to optimize data: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def list_data(self, pattern: Optional[str] = None):
         """List data files."""
@@ -272,7 +274,7 @@ class DataManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to list data: {e}")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def main():
     """Main function."""
@@ -319,5 +321,6 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

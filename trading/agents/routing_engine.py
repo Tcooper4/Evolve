@@ -124,7 +124,7 @@ class RoutingEngine:
         # Check for operational task indicators
         if any(key in task for key in ["schedule", "monitor", "trigger"]):
             return RouteType.OPERATIONAL
-            
+        
         # Default to cognitive routing
         return RouteType.COGNITIVE
         
@@ -144,7 +144,7 @@ class RoutingEngine:
         # Check task type match
         if metadata.get("task_type") == task.get("type"):
             return 1.0
-            
+        
         # Check keyword matches
         keywords = metadata.get("keywords", [])
         task_text = str(task).lower()

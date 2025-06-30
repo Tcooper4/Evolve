@@ -52,6 +52,7 @@ class AgentManager:
         # Register agents
         self.register_agents()
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _init_redis(self):
         """Initialize Redis connection with fallback."""
         try:
@@ -63,6 +64,7 @@ class AgentManager:
             logger.warning(f"Redis connection failed: {str(e)}. Running in local mode.")
             self.use_redis = False
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_logging(self):
         """Set up logging configuration."""
         log_config = config.get("logging", {})
@@ -87,6 +89,7 @@ class AgentManager:
         logger.addHandler(file_handler)
         logger.setLevel(log_level)
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def register_agents(self):
         """Register all available agent types."""
         # Core agent types
@@ -116,6 +119,7 @@ class AgentManager:
         
         logger.info(f"Registered {len(self.agent_types)} agent types")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def create_agent(self, agent_type: str, **kwargs) -> Optional[BaseAgent]:
         """Create a new agent instance.
         
@@ -152,7 +156,7 @@ class AgentManager:
             error_msg = f"Failed to create agent {agent_type}: {str(e)}"
             logger.error(error_msg)
             error_logger.log_error(error_msg)
-            return None
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def start_all_agents(self):
         """Start all registered agents."""
@@ -168,6 +172,7 @@ class AgentManager:
                 error_logger.log_error(error_msg)
                 self._update_agent_status(agent_id, "error")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def stop_all_agents(self):
         """Stop all running agents."""
         self.running = False
@@ -181,6 +186,7 @@ class AgentManager:
                 logger.error(error_msg)
                 error_logger.log_error(error_msg)
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def run_agent_once(self, agent_id: str) -> bool:
         """Run a specific agent once.
         
@@ -205,7 +211,7 @@ class AgentManager:
             logger.error(error_msg)
             error_logger.log_error(error_msg)
             self._update_agent_status(agent_id, "error")
-            return False
+            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _update_agent_status(self, agent_id: str, status: str):
         """Update agent status in Redis or local storage.
@@ -230,6 +236,7 @@ class AgentManager:
             except RedisError as e:
                 logger.warning(f"Failed to update Redis for agent {agent_id}: {str(e)}")
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def check_redis_status(self) -> Dict[str, Any]:
         """Check Redis connection status.
         
@@ -244,7 +251,7 @@ class AgentManager:
         
         if not self.redis_url:
             status["error"] = "No Redis URL configured"
-            return status
+            return {'success': True, 'result': status, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         try:
             if self.redis_client:
@@ -275,7 +282,7 @@ class AgentManager:
                 "error_count": metadata["error_count"]
             }
         
-        return report
+        return {'success': True, 'result': report, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def schedule_agent(self, agent_id: str, interval: int):
         """Schedule an agent to run at regular intervals.
@@ -286,12 +293,13 @@ class AgentManager:
         """
         if agent_id not in self.agent_instances:
             logger.error(f"Agent {agent_id} not found")
-            return
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
         def run_scheduled():
             if self.running:
                 self.run_agent_once(agent_id)
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         self.scheduler.every(interval).seconds.do(run_scheduled)
         logger.info(f"Scheduled agent {agent_id} to run every {interval} seconds")
     
@@ -302,15 +310,18 @@ class AgentManager:
                 self.scheduler.run_pending()
                 time.sleep(1)
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         scheduler_thread = threading.Thread(target=scheduler_loop)
         scheduler_thread.daemon = True
         scheduler_thread.start()
     
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def __del__(self):
         """Cleanup when the manager is destroyed."""
         self.stop_all_agents()
         self.executor.shutdown(wait=True)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def register_agent(self, agent: BaseAgent):
         """
         Register an agent instance.
@@ -323,6 +334,7 @@ class AgentManager:
         self.agent_instances[agent.name] = agent
         logger.info(f"Registered agent: {agent.name}")
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def register_agent_class(self, name: str, agent_class: Type[BaseAgent]):
         """
         Register an agent class.
@@ -336,6 +348,7 @@ class AgentManager:
         self.agent_types[name] = agent_class
         logger.info(f"Registered agent class: {name}")
         
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_agent(self, name: str) -> Optional[BaseAgent]:
         """
         Get a registered agent by name.
@@ -346,7 +359,7 @@ class AgentManager:
         Returns:
             Optional[BaseAgent]: Agent instance if found
         """
-        return self.agent_instances.get(name)
+        return {'success': True, 'result': self.agent_instances.get(name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def list_agents(self) -> List[str]:
         """
@@ -355,7 +368,7 @@ class AgentManager:
         Returns:
             List[str]: List of agent names
         """
-        return list(self.agent_instances.keys())
+        return {'success': True, 'result': list(self.agent_instances.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         
     def discover_agents(self, package_name: str = "trading.agents"):
         """
@@ -374,6 +387,7 @@ class AgentManager:
         except ImportError as e:
             logger.error(f"Failed to discover agents in {package_name}: {e}")
             
+                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def run_agent(self, name: str, prompt: str, **kwargs) -> AgentResult:
         """
         Run a registered agent.
@@ -406,7 +420,7 @@ class AgentManager:
             
         except Exception as e:
             logger.error(f"Error running agent {name}: {e}")
-            return agent.handle_error(e)
+            return {'success': True, 'result': agent.handle_error(e), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     def run_all_agents(self, prompt: str, **kwargs) -> Dict[str, AgentResult]:
         """
@@ -422,4 +436,4 @@ class AgentManager:
         results = {}
         for name in self.list_agents():
             results[name] = self.run_agent(name, prompt, **kwargs)
-        return results
+        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

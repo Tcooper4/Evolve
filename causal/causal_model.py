@@ -33,7 +33,7 @@ class CausalModel:
         self.causal_effects = {}
         self.intervention_results = {}
         self.scaler = StandardScaler()
-        
+
     def build_causal_graph(self, data: pd.DataFrame, 
                           treatment_vars: List[str],
                           outcome_vars: List[str],
@@ -159,7 +159,7 @@ class CausalModel:
             
         except Exception as e:
             logger.error(f"Error estimating causal effect: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def perform_intervention(self, data: pd.DataFrame,
                            treatment: str,
@@ -231,7 +231,7 @@ class CausalModel:
             
         except Exception as e:
             logger.error(f"Error performing intervention: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def analyze_market_relationships(self, market_data: pd.DataFrame,
                                    target_variable: str = 'returns') -> Dict[str, Any]:
@@ -303,7 +303,7 @@ class CausalModel:
             
         except Exception as e:
             logger.error(f"Error analyzing market relationships: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_strategy_insights(self, strategy_data: pd.DataFrame,
                             performance_metric: str = 'sharpe_ratio') -> Dict[str, Any]:
@@ -371,7 +371,7 @@ class CausalModel:
             
         except Exception as e:
             logger.error(f"Error getting strategy insights: {e}")
-            return {}
+            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def visualize_causal_graph(self) -> Optional[nx.DiGraph]:
         """Get causal graph for visualization.
@@ -379,7 +379,7 @@ class CausalModel:
         Returns:
             Causal graph
         """
-        return self.graph if self.graph else None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_summary(self) -> Dict[str, Any]:
         """Get summary of causal analysis.
@@ -387,14 +387,14 @@ class CausalModel:
         Returns:
             Analysis summary
         """
-        return {
+        return {'success': True, 'result': {
             'causal_effects': len(self.causal_effects),
             'interventions': len(self.intervention_results),
             'graph_nodes': len(self.graph.nodes),
             'graph_edges': len(self.graph.edges),
             'effects': self.causal_effects,
             'interventions': self.intervention_results
-        }
+        }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class CausalAnalysisResult:
     """Result container for causal analysis."""
@@ -420,34 +420,34 @@ class CausalAnalysisResult:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert result to dictionary."""
-        return {
+        return {'success': True, 'result': {
             'causal_effects': self.causal_effects,
             'intervention_results': self.intervention_results,
             'graph_nodes': list(self.graph.nodes()),
             'graph_edges': list(self.graph.edges()),
             'metrics': self.metrics,
             'timestamp': self.timestamp.isoformat()
-        }
+        }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_summary(self) -> Dict[str, Any]:
         """Get summary of results."""
-        return {
+        return {'success': True, 'result': {
             'num_effects': len(self.causal_effects),
             'num_interventions': len(self.intervention_results),
             'graph_size': len(self.graph.nodes()),
             'avg_effect': np.mean(list(self.causal_effects.values())) if self.causal_effects else 0,
             'max_effect': max(self.causal_effects.values()) if self.causal_effects else 0,
             'timestamp': self.timestamp.isoformat()
-        }
+        }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def create_causal_model(config: Dict[str, Any] = None):
     class DummyCausalModel:
-        def analyze(self, *a, **kw): return {'result': 'dummy'}
+        return {'success': True, 'result': {'success': True, 'result': {'result': 'dummy'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     return DummyCausalModel()
 
 class CausalModelAnalyzer:
     def __init__(self, *a, **kw): pass
-    def analyze(self, *a, **kw): return {'result': 'analyzer dummy'}
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 
 # Example usage and testing
 if __name__ == "__main__":

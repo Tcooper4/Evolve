@@ -11,6 +11,7 @@ def log_strategy_performance(
     strategy_name: str,
     performance_metrics: Dict[str, float],
     metadata: Optional[Dict[str, Any]] = None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 ) -> None:
     """Log strategy performance metrics.
     
@@ -34,6 +35,7 @@ def log_performance(
     agentic: bool,
     metrics: Dict[str, float],
     metadata: Optional[Dict[str, Any]] = None
+        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 ) -> None:
     """Log performance metrics for a specific ticker and model.
     

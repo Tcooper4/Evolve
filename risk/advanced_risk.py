@@ -68,7 +68,7 @@ class AdvancedRiskAnalyzer:
         """Initialize risk analyzer."""
         self.config = config or {}
         self.risk_history = []
-        
+
     def calculate_comprehensive_risk(self, returns: pd.Series,
                                    prices: Optional[pd.Series] = None,
                                    confidence_levels: List[float] = None) -> RiskMetrics:
@@ -451,4 +451,4 @@ risk_analyzer = AdvancedRiskAnalyzer()
 
 def get_risk_analyzer() -> AdvancedRiskAnalyzer:
     """Get the global risk analyzer instance."""
-    return risk_analyzer 
+    return risk_analyzer

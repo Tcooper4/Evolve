@@ -51,6 +51,7 @@ def setup_directories():
         Path(directory).mkdir(parents=True, exist_ok=True)
         print(f"Created directory: {directory}")
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 def setup_logging():
     """Initialize logging configuration."""
     log_config_path = Path("config/logging_config.yaml")
@@ -65,6 +66,7 @@ def setup_logging():
     logger = logging.getLogger("trading")
     logger.info("Logging initialized")
 
+    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 def validate_config():
     """Validate application configuration."""
     config_path = Path("config/app_config.yaml")
@@ -97,6 +99,7 @@ def validate_config():
     logger = logging.getLogger("trading")
     logger.info("Configuration validated")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def check_dependencies():
     """Check if all required dependencies are installed."""
     try:
@@ -116,6 +119,7 @@ def check_dependencies():
         print(f"Error: Missing dependency - {e}")
         sys.exit(1)
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main initialization function."""
     print("Initializing application...")
@@ -134,5 +138,6 @@ def main():
     
     print("Application initialization completed successfully")
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

@@ -144,4 +144,4 @@ def test_alert_with_custom_recipients(alert_manager):
         mock_send.assert_called_once()
         # Verify recipients in the email message
         msg = mock_send.call_args[1]['msg']
-        assert msg["To"] == ", ".join(custom_recipients) 
+        assert msg["To"] == ", ".join(custom_recipients)

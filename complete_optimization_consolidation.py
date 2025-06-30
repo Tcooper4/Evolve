@@ -10,6 +10,7 @@ import os
 import shutil
 from pathlib import Path
 import logging
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -45,7 +46,7 @@ def main():
     
     logger.info("Optimization consolidation completed!")
     
-    return {
+    return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat(),
         "status": "completed",
         "steps_executed": 4,
         "import_fixes": import_result,
@@ -103,7 +104,7 @@ def fix_optimization_imports():
             errors.append(error_msg)
             logger.error(error_msg)
     
-    return {
+    return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat(),
         "fixed_files": fixed_files,
         "errors": errors,
         "total_files_processed": len(fixed_files) + len(errors)
@@ -168,7 +169,7 @@ def update_codebase_imports(root_dir: Path):
     
     logger.info(f"Updated imports in {updated_count} files")
     
-    return {
+    return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat(),
         "updated_files": updated_files,
         "warnings": len(errors),
         "errors": errors,
@@ -198,7 +199,7 @@ def remove_duplicate_directories(source_dirs: dict):
                 errors.append(error_msg)
                 logger.error(error_msg)
     
-    return {
+    return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat(),
         "removed_directories": removed_dirs,
         "errors": errors,
         "deprecation_notices_added": len(removed_dirs)
@@ -232,7 +233,7 @@ Last updated: 2025-01-27
             errors.append(error_msg)
             logger.error(error_msg)
     
-    return {
+    return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat(),
         "files_updated": files_updated,
         "errors": errors,
         "total_files_processed": len(files_updated) + len(errors)
@@ -293,7 +294,7 @@ def validate_consolidation(target_dir: Path):
         import_error = str(e)
         logger.error(f"Unexpected error: {e}")
     
-    return {
+    return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat(),
         "validation_passed": len(missing_files) == 0 and import_success,
         "missing_files": missing_files,
         "present_files": present_files,

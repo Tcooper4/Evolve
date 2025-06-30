@@ -512,4 +512,4 @@ def get_data_feed() -> LiveDataFeed:
     """Get a singleton instance of the data feed."""
     if not hasattr(get_data_feed, '_instance'):
         get_data_feed._instance = LiveDataFeed()
-    return get_data_feed._instance 
+    return get_data_feed._instance

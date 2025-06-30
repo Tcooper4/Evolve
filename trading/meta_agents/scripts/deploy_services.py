@@ -96,5 +96,6 @@ def main():
         logging.error(f"Error deploying services: {str(e)}")
         raise
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

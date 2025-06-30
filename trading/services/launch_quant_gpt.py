@@ -37,6 +37,7 @@ def signal_handler(signum, frame):
     sys.exit(0)
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function to launch the QuantGPT service."""
     try:
@@ -154,5 +155,6 @@ def main():
         sys.exit(1)
 
 
+    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

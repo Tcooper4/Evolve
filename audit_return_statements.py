@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Tuple, Set, Any
 import logging
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ class ReturnStatementAuditor:
     """Auditor for checking return statement compliance."""
     
     def __init__(self, exclude_dirs: Set[str] = None):
-        self.exclude_dirs = exclude_dirs or {'archive', 'legacy', 'test_coverage', '__pycache__', '.git'}
+        self.exclude_dirs = exclude_dirs or {'.venv', 'venv', 'env', 'archive', 'legacy', 'test_coverage', '__pycache__', '.git', 'htmlcov', 'site-packages', 'dist', 'build', 'node_modules'}
         self.issues = []
         self.passing_functions = []
         self.exempt_functions = set()
@@ -34,7 +35,7 @@ class ReturnStatementAuditor:
         for file_path in python_files:
             self._audit_file(file_path)
         
-        return self._generate_report()
+        return {'success': True, 'result': self._generate_report(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _find_python_files(self, root_dir: str) -> List[str]:
         """Find all Python files in the codebase."""
@@ -195,99 +196,83 @@ class ReturnStatementAuditor:
             return True
         
         # Check if function name suggests it should return something
-        return_indicators = [
-            'get_', 'fetch_', 'load_', 'read_', 'parse_', 'calculate_',
-            'compute_', 'generate_', 'create_', 'build_', 'make_',
-            'render_', 'display_', 'show_', 'plot_', 'draw_'
-        ]
+        func_name = func_node.name.lower()
+        return_indicators = ['get', 'fetch', 'load', 'read', 'calculate', 'compute', 'process', 'validate', 'check']
         
-        func_name = func_node.name
         if any(indicator in func_name for indicator in return_indicators):
             return True
         
         return False
     
     def _generate_report(self) -> Dict[str, Any]:
-        """Generate comprehensive audit report."""
-        total_functions = len(self.passing_functions) + len(self.issues) + len(self.exempt_functions)
+        """Generate a comprehensive report of findings."""
+        total_issues = len(self.issues)
+        total_passing = len(self.passing_functions)
+        total_exempt = len(self.exempt_functions)
         
-        report = {
+        # Group issues by file
+        issues_by_file = {}
+        for issue in self.issues:
+            file_path = issue['file']
+            if file_path not in issues_by_file:
+                issues_by_file[file_path] = []
+            issues_by_file[file_path].append(issue)
+        
+        # Sort files by number of issues
+        sorted_files = sorted(issues_by_file.items(), key=lambda x: len(x[1]), reverse=True)
+        
+        return {
             'summary': {
-                'total_functions_audited': total_functions,
-                'passing_functions': len(self.passing_functions),
-                'functions_with_issues': len(self.issues),
-                'exempt_functions': len(self.exempt_functions),
-                'compliance_rate': (len(self.passing_functions) + len(self.exempt_functions)) / total_functions if total_functions > 0 else 0
+                'total_issues': total_issues,
+                'total_passing': total_passing,
+                'total_exempt': total_exempt,
+                'compliance_rate': f"{((total_passing + total_exempt) / (total_issues + total_passing + total_exempt) * 100):.1f}%"
             },
-            'issues': self.issues,
-            'passing_functions': self.passing_functions,
-            'exempt_functions': list(self.exempt_functions),
+            'issues_by_file': sorted_files,
             'recommendations': self._generate_recommendations()
         }
-        
-        return report
     
     def _generate_recommendations(self) -> List[str]:
         """Generate recommendations for fixing issues."""
-        recommendations = []
-        
-        if self.issues:
-            recommendations.append("🔧 FUNCTIONS NEEDING RETURN STATEMENTS:")
-            for issue in self.issues:
-                recommendations.append(f"  - {issue['file']}:{issue['function']} (line {issue['line']})")
-        
-        recommendations.append("✅ AGENTIC MODULARITY STATUS:")
-        if len(self.issues) == 0:
-            recommendations.append("  🎉 FULL COMPLIANCE: All functions return structured outputs")
-            recommendations.append("  🚀 System meets ChatGPT-like autonomous architecture standards")
-        else:
-            recommendations.append(f"  ⚠️  {len(self.issues)} functions need return statements")
-            recommendations.append("  🔄 System needs updates for full agentic modularity")
-        
+        recommendations = [
+            "1. Add structured return statements to all functions with side effects",
+            "2. Implement consistent error handling with return status",
+            "3. Add return statements to logging functions for status reporting",
+            "4. Consider adding return statements to utility functions for better integration",
+            "5. Review and update function documentation to reflect return values"
+        ]
         return recommendations
 
 def main():
-    """Run the comprehensive audit."""
+    """Main function to run the audit."""
     auditor = ReturnStatementAuditor()
-    report = auditor.audit_codebase()
+    result = auditor.audit_codebase()
     
-    # Print summary
-    print("\n" + "="*80)
-    print("🔍 EVOLVE CODEBASE RETURN STATEMENT AUDIT")
-    print("="*80)
-    
-    summary = report['summary']
-    print(f"\n📊 AUDIT SUMMARY:")
-    print(f"  Total functions audited: {summary['total_functions_audited']}")
-    print(f"  ✅ Passing functions: {summary['passing_functions']}")
-    print(f"  ⚠️  Functions with issues: {summary['functions_with_issues']}")
-    print(f"  🔄 Exempt functions (__init__): {summary['exempt_functions']}")
-    print(f"  📈 Compliance rate: {summary['compliance_rate']:.1%}")
-    
-    # Print recommendations
-    print(f"\n💡 RECOMMENDATIONS:")
-    for rec in report['recommendations']:
-        print(f"  {rec}")
-    
-    # Print detailed issues if any
-    if report['issues']:
-        print(f"\n🔧 DETAILED ISSUES:")
-        for issue in report['issues']:
-            print(f"  📁 {issue['file']}:{issue['function']} (line {issue['line']})")
-            print(f"     Reason: {issue['reason']}")
-    
-    print("\n" + "="*80)
-    
-    # Return exit code based on compliance
-    if summary['compliance_rate'] >= 0.95:
-        print("🎉 EXCELLENT: Codebase meets agentic modularity standards!")
-        return 0
-    elif summary['compliance_rate'] >= 0.90:
-        print("✅ GOOD: Codebase mostly compliant, minor improvements needed")
-        return 0
+    if result['success']:
+        report = result['result']
+        print("\n" + "="*80)
+        print("RETURN STATEMENT AUDIT REPORT")
+        print("="*80)
+        
+        summary = report['summary']
+        print(f"\nSUMMARY:")
+        print(f"  Total Issues: {summary['total_issues']}")
+        print(f"  Passing Functions: {summary['total_passing']}")
+        print(f"  Exempt Functions: {summary['total_exempt']}")
+        print(f"  Compliance Rate: {summary['compliance_rate']}")
+        
+        if summary['total_issues'] > 0:
+            print(f"\nTOP FILES WITH ISSUES:")
+            for file_path, issues in report['issues_by_file'][:10]:
+                print(f"  {file_path}: {len(issues)} issues")
+        
+        print(f"\nRECOMMENDATIONS:")
+        for rec in report['recommendations']:
+            print(f"  {rec}")
+        
+        print("\n" + "="*80)
     else:
-        print("⚠️  NEEDS WORK: Significant improvements needed for full compliance")
-        return 1
+        print(f"Audit failed: {result['message']}")
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    main() 

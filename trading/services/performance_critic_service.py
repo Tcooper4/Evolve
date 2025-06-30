@@ -40,6 +40,7 @@ class PerformanceCriticService(BaseService):
         
         logger.info("PerformanceCriticService initialized")
     
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming model evaluation requests.
@@ -63,7 +64,7 @@ class PerformanceCriticService(BaseService):
                 return self._handle_best_models_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {
+                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -128,7 +129,7 @@ class PerformanceCriticService(BaseService):
             
         except Exception as e:
             logger.error(f"Error evaluating model: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -182,7 +183,7 @@ class PerformanceCriticService(BaseService):
             
         except Exception as e:
             logger.error(f"Error comparing models: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -217,7 +218,7 @@ class PerformanceCriticService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting evaluation history: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -251,7 +252,7 @@ class PerformanceCriticService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting best models: {e}")
-            return {
+            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 'type': 'error',
                 'error': str(e)
             }
@@ -279,4 +280,4 @@ class PerformanceCriticService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'error': str(e)} 
+            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

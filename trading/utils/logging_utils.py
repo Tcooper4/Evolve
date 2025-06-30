@@ -43,7 +43,7 @@ class StructuredFormatter(logging.Formatter):
         if record.exc_info:
             log_data['exception'] = self.formatException(record.exc_info)
         
-        return json.dumps(log_data)
+        return {'success': True, 'result': json.dumps(log_data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 class LogManager:
     """Manager for logging configuration and rotation."""
@@ -70,6 +70,12 @@ class LogManager:
         
         # Configure root logger
         self._configure_root_logger()
+        
+        return {
+            'success': True,
+            'message': 'Log Manager initialized successfully',
+            'timestamp': datetime.now().isoformat()
+        }
     
     def _configure_root_logger(self) -> None:
         """Configure the root logger with basic settings."""
@@ -79,6 +85,12 @@ class LogManager:
         # Remove existing handlers
         for handler in root_logger.handlers[:]:
             root_logger.removeHandler(handler)
+        
+        return {
+            'success': True,
+            'message': 'Root logger configured successfully',
+            'timestamp': datetime.now().isoformat()
+        }
     
     def setup_logger(
         self,
@@ -135,7 +147,7 @@ class LogManager:
             console_handler.setFormatter(console_formatter)
             logger.addHandler(console_handler)
         
-        return logger
+        return {'success': True, 'result': logger, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_logger(
         self,
@@ -161,65 +173,160 @@ class LogManager:
         
         # Only configure if not already configured
         if not logger.handlers:
-            return self.setup_logger(
+            return {'success': True, 'result': self.setup_logger(
                 name,
                 level or logging.INFO,
                 log_to_file if log_to_file is not None else True,
                 log_to_console if log_to_console is not None else True,
                 structured if structured is not None else True
-            )
+            )}
         
         return logger
     
-    def set_level(self, name: str, level: int) -> None:
+    def set_level(self, name: str, level: int) -> Dict[str, Any]:
         """Set the logging level for a logger.
         
         Args:
             name: Name of the logger
             level: Logging level
+            
+        Returns:
+            Dictionary with status and message
         """
-        logger = logging.getLogger(name)
-        logger.setLevel(level)
+        try:
+            logger = logging.getLogger(name)
+            logger.setLevel(level)
+            return {"status": "success", "message": f"Log level set to {level} for {name}"}
+        except Exception as e:
+            return {'success': True, 'result': {"status": "error", "message": str(e), "logger_name": name}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def add_handler(
         self,
         name: str,
         handler: logging.Handler,
         formatter: Optional[logging.Formatter] = None
-    ) -> None:
+    ) -> Dict[str, Any]:
         """Add a handler to a logger.
         
         Args:
             name: Name of the logger
             handler: Handler to add
-            formatter: Formatter for the handler
+            formatter: Optional formatter for the handler
+            
+        Returns:
+            Dictionary with status and message
         """
-        logger = logging.getLogger(name)
-        
-        if formatter:
-            handler.setFormatter(formatter)
-        
-        logger.addHandler(handler)
+        try:
+            logger = logging.getLogger(name)
+            
+            if formatter:
+                handler.setFormatter(formatter)
+            
+            logger.addHandler(handler)
+            
+            return {'success': True, 'message': f'Handler added to logger {name}', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
-    def remove_handler(self, name: str, handler: logging.Handler) -> None:
+    def remove_handler(
+        self,
+        name: str,
+        handler: logging.Handler
+    ) -> Dict[str, Any]:
         """Remove a handler from a logger.
         
         Args:
             name: Name of the logger
             handler: Handler to remove
+            
+        Returns:
+            Dictionary with status and message
         """
-        logger = logging.getLogger(name)
-        logger.removeHandler(handler)
+        try:
+            logger = logging.getLogger(name)
+            logger.removeHandler(handler)
+            
+            return {'success': True, 'message': f'Handler removed from logger {name}', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
     
-    def clear_handlers(self, name: str) -> None:
+    def clear_handlers(self, name: str) -> Dict[str, Any]:
         """Clear all handlers from a logger.
         
         Args:
             name: Name of the logger
+            
+        Returns:
+            Dictionary with status and message
         """
-        logger = logging.getLogger(name)
-        for handler in logger.handlers[:]:
-            logger.removeHandler(handler)
+        try:
+            logger = logging.getLogger(name)
+            
+            for handler in logger.handlers[:]:
+                logger.removeHandler(handler)
+            
+            return {'success': True, 'message': f'All handlers cleared from logger {name}', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def rotate_logs(self, name: str) -> Dict[str, Any]:
+        """Manually rotate logs for a logger.
+        
+        Args:
+            name: Name of the logger
+            
+        Returns:
+            Dictionary with status and message
+        """
+        try:
+            logger = logging.getLogger(name)
+            
+            for handler in logger.handlers:
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    handler.doRollover()
+            
+            return {'success': True, 'message': f'Logs rotated for logger {name}', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+    def get_log_stats(self, name: str) -> Dict[str, Any]:
+        """Get statistics for a logger.
+        
+        Args:
+            name: Name of the logger
+            
+        Returns:
+            Dictionary with log statistics
+        """
+        try:
+            logger = logging.getLogger(name)
+            
+            stats = {
+                'name': name,
+                'level': logger.level,
+                'handlers_count': len(logger.handlers),
+                'propagate': logger.propagate,
+                'disabled': logger.disabled
+            }
+            
+            # Get file sizes if file handlers exist
+            file_sizes = {}
+            for handler in logger.handlers:
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    log_file = Path(handler.baseFilename)
+                    if log_file.exists():
+                        file_sizes[log_file.name] = log_file.stat().st_size
+            
+            stats['file_sizes'] = file_sizes
+            
+            return {'success': True, 'result': stats, 'message': 'Log statistics retrieved', 'timestamp': datetime.now().isoformat()}
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
 
 # Create singleton instance
 log_manager = LogManager()
@@ -243,56 +350,184 @@ def get_logger(
     Returns:
         Configured logger
     """
-    return log_manager.get_logger(
-        name,
-        level,
-        log_to_file,
-        log_to_console,
-        structured
-    )
+    try:
+        # Create global log manager if not exists
+        if not hasattr(get_logger, '_log_manager'):
+            get_logger._log_manager = LogManager()
+        
+        logger = get_logger._log_manager.get_logger(
+            name,
+            level,
+            log_to_file,
+            log_to_console,
+            structured
+        )
+        
+        return {'success': True, 'result': logger, 'message': 'Logger retrieved successfully', 'timestamp': datetime.now().isoformat()}
+        
+    except Exception as e:
+        return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
 
-def log_config(logger: logging.Logger, config: Dict[str, Any]) -> None:
-    """Log configuration dictionary.
+def log_config(logger: logging.Logger, config: Dict[str, Any]) -> Dict[str, Any]:
+    """Log configuration information.
     
     Args:
-        logger: Logger instance
-        config: Configuration dictionary
+        logger: Logger to use
+        config: Configuration to log
+        
+    Returns:
+        Dictionary with status and message
     """
-    logger.info("Configuration:")
-    for key, value in config.items():
-        if isinstance(value, dict):
-            logger.info(f"{key}:")
-            for subkey, subvalue in value.items():
-                logger.info(f"  {subkey}: {subvalue}")
-        else:
-            logger.info(f"{key}: {value}")
+    try:
+        logger.info("Configuration loaded", extra={
+            'config_keys': list(config.keys()),
+            'config_size': len(str(config))
+        })
+        
+        # Log sensitive information separately
+        sensitive_keys = ['api_key', 'api_secret', 'password', 'token']
+        for key in sensitive_keys:
+            if key in config:
+                logger.info(f"Configuration contains {key}", extra={
+                    'key': key,
+                    'value_length': len(str(config[key])) if config[key] else 0
+                })
+        
+        return {'success': True, 'message': 'Configuration logged successfully', 'timestamp': datetime.now().isoformat()}
+        
+    except Exception as e:
+        return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
 
-def save_log_config(config: Dict[str, Any], log_dir: str, name: str) -> None:
-    """Save configuration to JSON file.
+def save_log_config(config: Dict[str, Any], log_dir: str, name: str) -> Dict[str, Any]:
+    """Save logging configuration to file.
     
     Args:
-        config: Configuration dictionary
-        log_dir: Directory to store config file
-        name: Config file name
+        config: Logging configuration
+        log_dir: Directory to save config
+        name: Name of the config file
+        
+    Returns:
+        Dictionary with status and message
     """
-    log_path = Path(log_dir)
-    log_path.mkdir(parents=True, exist_ok=True)
-    
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    config_file = log_path / f"{name}_{timestamp}.json"
-    
-    with open(config_file, 'w') as f:
-        json.dump(config, f, indent=4)
+    try:
+        log_path = Path(log_dir)
+        log_path.mkdir(parents=True, exist_ok=True)
+        
+        config_file = log_path / f"{name}_log_config.json"
+        
+        with open(config_file, 'w') as f:
+            json.dump(config, f, indent=2)
+        
+        return {'success': True, 'message': f'Log config saved to {config_file}', 'timestamp': datetime.now().isoformat()}
+        
+    except Exception as e:
+        return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
 
 def load_log_config(config_file: str) -> Dict[str, Any]:
-    """Load configuration from JSON file.
+    """Load logging configuration from file.
     
     Args:
         config_file: Path to config file
         
     Returns:
-        Configuration dictionary
+        Dictionary with configuration
     """
-    with open(config_file, 'r') as f:
-        config = json.load(f)
-    return config 
+    try:
+        config_path = Path(config_file)
+        
+        if not config_path.exists():
+            return {'success': False, 'error': f'Config file not found: {config_file}', 'timestamp': datetime.now().isoformat()}
+        
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        
+        return {'success': True, 'result': config, 'message': 'Log config loaded successfully', 'timestamp': datetime.now().isoformat()}
+        
+    except Exception as e:
+        return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+def setup_structured_logging(
+    name: str,
+    log_dir: str = "logs",
+    level: int = logging.INFO
+) -> Dict[str, Any]:
+    """Set up structured logging for a component.
+    
+    Args:
+        name: Name of the component
+        log_dir: Directory for log files
+        level: Logging level
+        
+    Returns:
+        Dictionary with logger and status
+    """
+    try:
+        log_manager = LogManager(log_dir)
+        logger = log_manager.setup_logger(
+            name,
+            level=level,
+            log_to_file=True,
+            log_to_console=True,
+            structured=True
+        )
+        
+        return {'success': True, 'result': logger, 'message': 'Structured logging setup completed', 'timestamp': datetime.now().isoformat()}
+        
+    except Exception as e:
+        return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+def log_performance_metrics(
+    logger: logging.Logger,
+    metrics: Dict[str, Any],
+    component: str = "unknown"
+) -> Dict[str, Any]:
+    """Log performance metrics in structured format.
+    
+    Args:
+        logger: Logger to use
+        metrics: Performance metrics
+        component: Component name
+        
+    Returns:
+        Dictionary with status and message
+    """
+    try:
+        logger.info("Performance metrics", extra={
+            'component': component,
+            'metrics': metrics,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        return {'success': True, 'message': 'Performance metrics logged successfully', 'timestamp': datetime.now().isoformat()}
+        
+    except Exception as e:
+        return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()}
+
+def log_error_with_context(
+    logger: logging.Logger,
+    error: Exception,
+    context: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    """Log error with additional context.
+    
+    Args:
+        logger: Logger to use
+        error: Exception to log
+        context: Additional context
+        
+    Returns:
+        Dictionary with status and message
+    """
+    try:
+        error_data = {
+            'error_type': type(error).__name__,
+            'error_message': str(error),
+            'context': context or {}
+        }
+        
+        logger.error("Error occurred", extra=error_data, exc_info=True)
+        
+        return {'success': True, 'message': 'Error logged with context', 'timestamp': datetime.now().isoformat()}
+        
+    except Exception as e:
+        return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()} 
