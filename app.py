@@ -48,6 +48,9 @@ from pages.home import render_home_page
 
 def main():
     """Main application function."""
+    # Create required directories on startup
+    create_required_directories()
+    
     # Page configuration
     st.set_page_config(
         page_title="Evolve Clean Trading Dashboard",
@@ -125,7 +128,37 @@ def main():
     
     return {'status': 'unknown_page', 'page': page}
 
-
+def create_required_directories():
+    """Create required directories if they don't exist."""
+    required_dirs = [
+        "data",
+        "models", 
+        "logs",
+        "results",
+        "results/logs",
+        "results/reports",
+        "results/charts",
+        "results/models",
+        "results/backtests",
+        "results/forecasts",
+        "cache",
+        "backups",
+        "memory",
+        "memory/goals",
+        "memory/logs",
+        "trading/logs",
+        "trading/optimization/logs",
+        "trading/nlp/logs",
+        "trading/risk/logs"
+    ]
+    
+    for dir_path in required_dirs:
+        try:
+            Path(dir_path).mkdir(parents=True, exist_ok=True)
+            logger.debug(f"Ensured directory exists: {dir_path}")
+        except Exception as e:
+            logger.error(f"Failed to create directory {dir_path}: {e}")
+            # Continue with other directories even if one fails
 
 if __name__ == "__main__":
     main()

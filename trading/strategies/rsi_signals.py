@@ -51,6 +51,10 @@ def generate_rsi_signals(
         DataFrame with RSI signals and returns
     """
     try:
+        # Validate required columns
+        if 'Close' not in df.columns:
+            raise ValueError("Missing 'Close' column in DataFrame")
+        
         # Load optimized settings if available
         if ticker:
             optimized = load_optimized_settings(ticker)
