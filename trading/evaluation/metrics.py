@@ -59,7 +59,6 @@ class TimeSeriesMetrics:
         """Initialize the metrics calculator."""
         self.metrics = {}
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def mean_absolute_percentage_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         """Return MAPE."""
         actuals = np.asarray(actuals)
@@ -138,7 +137,6 @@ class RiskMetrics:
         """Initialize the risk metrics calculator."""
         self.metrics = {}
         
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def calculate_metrics(self, returns: np.ndarray, 
                          risk_free_rate: float = 0.0,
                          window: int = 252) -> Dict[str, float]:
@@ -196,8 +194,8 @@ class RiskMetrics:
 
     def value_at_risk(self, returns: np.ndarray, confidence: float = 0.95) -> float:
         """Calculate Value at Risk (historical)."""
-        return {'success': True, 'result': float(np.percentile(returns, (1 - confidence) * 100)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+        return float(np.percentile(returns, (1 - confidence) * 100))
+
     def get_metric(self, metric_name: str) -> float:
         """Get a specific risk metric value.
         

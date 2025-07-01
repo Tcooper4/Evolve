@@ -20,6 +20,7 @@ import hashlib
 from trading.models.model_registry import ModelRegistry
 from trading.agents.model_selector_agent import ModelSelectorAgent
 from trading.memory.agent_memory import AgentMemory
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 @dataclass
 class ResearchPaper:
@@ -47,7 +48,7 @@ class ModelEvaluation:
     overall_score: float
     recommendation: str
 
-class MetaResearchAgent:
+class MetaResearchAgent(BaseAgent):
     """
     Meta-Research Agent with:
     - Automated research paper discovery
@@ -56,27 +57,33 @@ class MetaResearchAgent:
     - Auto-addition to model registry
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the Meta-Research Agent.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config or {}
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="MetaResearchAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
+        self.config_dict = config.custom_config or {}
         self.logger = logging.getLogger(__name__)
         self.memory = AgentMemory()
         self.model_registry = ModelRegistry()
         self.model_selector = ModelSelectorAgent()
         
         # Configuration
-        self.research_sources = self.config.get('research_sources', [
+        self.research_sources = self.config_dict.get('research_sources', [
             'arxiv.org',
             'papers.ssrn.com',
             'scholar.google.com'
         ])
-        self.scraping_frequency = self.config.get('scraping_frequency', 'weekly')
-        self.evaluation_threshold = self.config.get('evaluation_threshold', 0.7)
-        self.max_papers_per_search = self.config.get('max_papers_per_search', 50)
+        self.scraping_frequency = self.config_dict.get('scraping_frequency', 'weekly')
+        self.evaluation_threshold = self.config_dict.get('evaluation_threshold', 0.7)
+        self.max_papers_per_search = self.config_dict.get('max_papers_per_search', 50)
         
         # Keywords for relevant papers
         self.relevant_keywords = [
@@ -101,7 +108,48 @@ class MetaResearchAgent:
         
         # Load existing data
         self._load_research_data()
-        
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the meta-research agent logic.
+        Args:
+            **kwargs: action, keywords, max_papers, threshold, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'discover_papers')
+            if action == 'discover_papers':
+                keywords = kwargs.get('keywords')
+                max_papers = kwargs.get('max_papers')
+                papers = await self.discover_research_papers(keywords, max_papers)
+                return AgentResult(success=True, data={
+                    "discovered_papers": len(papers),
+                    "papers": [paper.__dict__ for paper in papers]
+                })
+            elif action == 'evaluate_models':
+                papers = kwargs.get('papers', self.discovered_papers)
+                evaluations = await self.evaluate_models(papers)
+                return AgentResult(success=True, data={
+                    "evaluations": [eval.__dict__ for eval in evaluations]
+                })
+            elif action == 'auto_implement':
+                evaluations = kwargs.get('evaluations', self.evaluated_models)
+                threshold = kwargs.get('threshold')
+                implemented = await self.auto_implement_top_models(evaluations, threshold)
+                return AgentResult(success=True, data={
+                    "implemented_models": implemented
+                })
+            elif action == 'get_research_summary':
+                summary = self.get_research_summary()
+                return AgentResult(success=True, data={"research_summary": summary})
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+        except Exception as e:
+            return self.handle_error(e)
+
     async def discover_research_papers(self, 
                                      keywords: Optional[List[str]] = None,
                                      max_papers: Optional[int] = None) -> List[ResearchPaper]:

@@ -31,6 +31,7 @@ except ImportError:
 
 from trading.memory.agent_memory import AgentMemory
 from trading.utils.reward_function import RewardFunction
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 @dataclass
 class TuningResult:
@@ -48,16 +49,22 @@ class TuningResult:
     status: str = "success"
     error_message: Optional[str] = None
 
-class MetaTunerAgent:
+class MetaTunerAgent(BaseAgent):
     """Agent for autonomous hyperparameter tuning using multiple optimization strategies."""
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the MetaTunerAgent.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config or {}
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="MetaTunerAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
+        self.config_dict = config.custom_config or {}
         self.logger = logging.getLogger(__name__)
         self.agent_memory = AgentMemory("trading/agents/agent_memory.json")
         self.reward_function = RewardFunction()
@@ -112,8 +119,90 @@ class MetaTunerAgent:
         }
         
         self.logger.info("MetaTunerAgent initialized")
-    
-        return 'Initialization completed'
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the hyperparameter tuning logic.
+        Args:
+            **kwargs: model_type, objective_function, n_trials, method, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'tune_hyperparameters')
+            
+            if action == 'tune_hyperparameters':
+                model_type = kwargs.get('model_type')
+                objective_function = kwargs.get('objective_function')
+                n_trials = kwargs.get('n_trials')
+                method = kwargs.get('method', 'auto')
+                
+                if model_type is None or objective_function is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: model_type, objective_function"
+                    )
+                
+                result = self.tune_hyperparameters(model_type, objective_function, n_trials, method)
+                return AgentResult(success=True, data={
+                    "tuning_result": result.__dict__,
+                    "best_hyperparameters": result.hyperparameters,
+                    "reward_score": result.reward_score,
+                    "tuning_method": result.tuning_method
+                })
+                
+            elif action == 'get_tuning_history':
+                model_type = kwargs.get('model_type')
+                history = self.get_tuning_history(model_type)
+                return AgentResult(success=True, data={
+                    "tuning_history": {k: [r.__dict__ for r in v] for k, v in history.items()}
+                })
+                
+            elif action == 'get_best_hyperparameters':
+                model_type = kwargs.get('model_type')
+                
+                if model_type is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: model_type"
+                    )
+                
+                best_params = self.get_best_hyperparameters(model_type)
+                if best_params:
+                    return AgentResult(success=True, data={"best_hyperparameters": best_params})
+                else:
+                    return AgentResult(success=False, error_message="No hyperparameters found")
+                    
+            elif action == 'add_parameter_space':
+                model_type = kwargs.get('model_type')
+                param_space = kwargs.get('param_space')
+                
+                if model_type is None or param_space is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: model_type, param_space"
+                    )
+                
+                self.add_parameter_space(model_type, param_space)
+                return AgentResult(success=True, data={
+                    "message": f"Added parameter space for {model_type}"
+                })
+                
+            elif action == 'clear_history':
+                model_type = kwargs.get('model_type')
+                self.clear_history(model_type)
+                return AgentResult(success=True, data={
+                    "message": f"Cleared history for {model_type if model_type else 'all models'}"
+                })
+                
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e)
+
     def tune_hyperparameters(self, model_type: str, objective_function: Callable, 
                            n_trials: Optional[int] = None, method: str = 'auto') -> TuningResult:
         """Tune hyperparameters for a given model type.

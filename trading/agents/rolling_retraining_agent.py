@@ -17,6 +17,7 @@ import os
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import warnings
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 warnings.filterwarnings('ignore')
 
 logger = logging.getLogger(__name__)
@@ -45,21 +46,36 @@ class RetrainingConfig:
     performance_threshold: float = 0.1  # 10% degradation threshold
     max_models: int = 10  # maximum models to keep
 
-class RollingRetrainingAgent:
+class RollingRetrainingAgent(BaseAgent):
     """Advanced rolling retraining and walk-forward validation agent."""
     
     def __init__(self, 
-                 config: Optional[RetrainingConfig] = None,
+                 config: Optional[AgentConfig] = None,
                  model_dir: str = "models/rolling_retraining",
                  results_dir: str = "logs/retraining_results"):
-        """Initialize the rolling retraining agent.
+        if config is None:
+            config = AgentConfig(
+                name="RollingRetrainingAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
         
-        Args:
-            config: Retraining configuration
-            model_dir: Directory to save models
-            results_dir: Directory to save results
-        """
-        self.config = config or RetrainingConfig()
+        # Extract retraining config from custom_config or use defaults
+        custom_config = config.custom_config or {}
+        self.retraining_config = RetrainingConfig(
+            retrain_frequency=custom_config.get('retrain_frequency', 30),
+            lookback_window=custom_config.get('lookback_window', 252),
+            min_train_size=custom_config.get('min_train_size', 60),
+            test_size=custom_config.get('test_size', 20),
+            performance_threshold=custom_config.get('performance_threshold', 0.1),
+            max_models=custom_config.get('max_models', 10)
+        )
+        
         self.model_dir = model_dir
         self.results_dir = results_dir
         
@@ -307,7 +323,7 @@ class RollingRetrainingAgent:
             # Check if enough time has passed
             if self.last_retrain_date:
                 days_since_retrain = (datetime.now() - self.last_retrain_date).days
-                if days_since_retrain < self.config.retrain_frequency:
+                if days_since_retrain < self.retraining_config.retrain_frequency:
                     return False
             
             # Check performance degradation
@@ -315,7 +331,7 @@ class RollingRetrainingAgent:
                 recent_performance = self.performance_history[-1]['test_score']
                 degradation = (recent_performance - current_performance) / recent_performance
                 
-                if degradation > self.config.performance_threshold:
+                if degradation > self.retraining_config.performance_threshold:
                     logger.info(f"Performance degradation detected: {degradation:.2%}")
                     return True
             
@@ -410,9 +426,9 @@ class RollingRetrainingAgent:
     def _cleanup_old_models(self):
         """Remove old model files."""
         try:
-            if len(self.model_history) > self.config.max_models:
+            if len(self.model_history) > self.retraining_config.max_models:
                 # Remove oldest models
-                models_to_remove = self.model_history[:-self.config.max_models]
+                models_to_remove = self.model_history[:-self.retraining_config.max_models]
                 
                 for model_record in models_to_remove:
                     model_path = model_record['model_path']
@@ -421,7 +437,7 @@ class RollingRetrainingAgent:
                         logger.info(f"Removed old model: {model_path}")
                 
                 # Update history
-                self.model_history = self.model_history[-self.config.max_models:]
+                self.model_history = self.model_history[-self.retraining_config.max_models:]
                 
         except Exception as e:
             logger.error(f"Error cleaning up old models: {e}")
@@ -532,12 +548,12 @@ class RollingRetrainingAgent:
                 'model_history': self.model_history,
                 'performance_history': self.performance_history,
                 'config': {
-                    'retrain_frequency': self.config.retrain_frequency,
-                    'lookback_window': self.config.lookback_window,
-                    'min_train_size': self.config.min_train_size,
-                    'test_size': self.config.test_size,
-                    'performance_threshold': self.config.performance_threshold,
-                    'max_models': self.config.max_models
+                    'retrain_frequency': self.retraining_config.retrain_frequency,
+                    'lookback_window': self.retraining_config.lookback_window,
+                    'min_train_size': self.retraining_config.min_train_size,
+                    'test_size': self.retraining_config.test_size,
+                    'performance_threshold': self.retraining_config.performance_threshold,
+                    'max_models': self.retraining_config.max_models
                 },
                 'summary': self.get_performance_summary(),
                 'export_date': datetime.now().isoformat()
@@ -549,4 +565,96 @@ class RollingRetrainingAgent:
             logger.info(f"Retraining results exported to {filepath}")
             
         except Exception as e:
-            logger.error(f"Error exporting results: {e}") 
+            logger.error(f"Error exporting results: {e}")
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the rolling retraining logic.
+        Args:
+            **kwargs: data, model_factory, target_col, action, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'should_retrain')
+            
+            if action == 'should_retrain':
+                current_performance = kwargs.get('current_performance')
+                
+                if current_performance is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: current_performance"
+                    )
+                
+                should_retrain = self.should_retrain(current_performance)
+                return AgentResult(success=True, data={
+                    "should_retrain": should_retrain,
+                    "last_retrain_date": self.last_retrain_date.isoformat() if self.last_retrain_date else None
+                })
+                
+            elif action == 'retrain_model':
+                data = kwargs.get('data')
+                model_factory = kwargs.get('model_factory')
+                target_col = kwargs.get('target_col', 'returns')
+                
+                if data is None or model_factory is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: data, model_factory"
+                    )
+                
+                performance = self.retrain_model(data, model_factory, target_col)
+                return AgentResult(success=True, data={
+                    "performance_metrics": performance.to_dict() if hasattr(performance, 'to_dict') else dict(performance),
+                    "model_history_count": len(self.model_history)
+                })
+                
+            elif action == 'walk_forward_validation':
+                features = kwargs.get('features')
+                target = kwargs.get('target')
+                model_factory = kwargs.get('model_factory')
+                n_splits = kwargs.get('n_splits', 5)
+                
+                if features is None or target is None or model_factory is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: features, target, model_factory"
+                    )
+                
+                results = self.walk_forward_validation(features, target, model_factory, n_splits)
+                return AgentResult(success=True, data={
+                    "walk_forward_results": [result.__dict__ for result in results],
+                    "results_count": len(results)
+                })
+                
+            elif action == 'get_performance_summary':
+                summary = self.get_performance_summary()
+                return AgentResult(success=True, data={"performance_summary": summary})
+                
+            elif action == 'get_feature_importance':
+                importance = self.get_feature_importance()
+                return AgentResult(success=True, data={"feature_importance": importance})
+                
+            elif action == 'predict':
+                features = kwargs.get('features')
+                
+                if features is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: features"
+                    )
+                
+                predictions = self.predict(features)
+                return AgentResult(success=True, data={
+                    "predictions": predictions.tolist() if hasattr(predictions, 'tolist') else list(predictions),
+                    "prediction_count": len(predictions)
+                })
+                
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e) 

@@ -187,7 +187,7 @@ class StrategySelectionAgent:
         except Exception as e:
             logger.error(f"Error selecting strategy: {e}")
             # Fallback to first available strategy
-            return {'success': True, 'result': available_strategies[0], 0.5, f"Error: {str(e)}", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return available_strategies[0], 0.5, f"Error: {str(e)}"
     
     def update_performance(self, performance: StrategyPerformance) -> None:
         """Update strategy performance history.
@@ -205,7 +205,7 @@ class StrategySelectionAgent:
         try:
             log_path = "trading/optimization/logs/optimization_metrics.jsonl"
             if not os.path.exists(log_path):
-
+                pass
             with open(log_path, "r") as f:
                 for line in f:
                     data = json.loads(line)

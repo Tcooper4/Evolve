@@ -1,22 +1,21 @@
 """
 Execution Risk Control Agent
 
-Enforces trade constraints, cooling periods, and risk limits.
-Provides comprehensive risk management and trade execution controls.
+This module provides comprehensive risk control for trade execution,
+including position sizing, daily limits, cooling periods, and market condition checks.
 """
 
-import numpy as np
-import pandas as pd
-from typing import Dict, List, Tuple, Optional, Any
+import os
+import json
 import logging
 from datetime import datetime, timedelta
+from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
-import json
-import os
 from collections import defaultdict
-import warnings
-warnings.filterwarnings('ignore')
+import numpy as np
+import pandas as pd
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +72,7 @@ class ExecutionResult:
     risk_metrics: Dict[str, float]
     metadata: Dict[str, Any]
 
-class ExecutionRiskControlAgent:
+class ExecutionRiskControlAgent(BaseAgent):
     """Advanced execution risk control agent with comprehensive risk management."""
     
     def __init__(self, 
@@ -82,7 +81,8 @@ class ExecutionRiskControlAgent:
                  max_daily_loss: float = 0.05,
                  cooling_period_minutes: int = 30,
                  correlation_threshold: float = 0.7,
-                 volatility_threshold: float = 0.5):
+                 volatility_threshold: float = 0.5,
+                 config: Optional[AgentConfig] = None):
         """Initialize the execution risk control agent.
         
         Args:
@@ -92,13 +92,36 @@ class ExecutionRiskControlAgent:
             cooling_period_minutes: Minutes to wait between trades
             correlation_threshold: Threshold for high correlation warning
             volatility_threshold: Threshold for high volatility warning
+            config: Optional agent configuration
         """
-        self.max_position_size = max_position_size
-        self.max_daily_trades = max_daily_trades
-        self.max_daily_loss = max_daily_loss
-        self.cooling_period_minutes = cooling_period_minutes
-        self.correlation_threshold = correlation_threshold
-        self.volatility_threshold = volatility_threshold
+        if config is None:
+            config = AgentConfig(
+                name="ExecutionRiskControlAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={
+                    "max_position_size": max_position_size,
+                    "max_daily_trades": max_daily_trades,
+                    "max_daily_loss": max_daily_loss,
+                    "cooling_period_minutes": cooling_period_minutes,
+                    "correlation_threshold": correlation_threshold,
+                    "volatility_threshold": volatility_threshold
+                }
+            )
+        
+        super().__init__(config)
+        
+        # Load configuration from config or use defaults
+        custom_config = config.custom_config or {}
+        self.max_position_size = custom_config.get("max_position_size", max_position_size)
+        self.max_daily_trades = custom_config.get("max_daily_trades", max_daily_trades)
+        self.max_daily_loss = custom_config.get("max_daily_loss", max_daily_loss)
+        self.cooling_period_minutes = custom_config.get("cooling_period_minutes", cooling_period_minutes)
+        self.correlation_threshold = custom_config.get("correlation_threshold", correlation_threshold)
+        self.volatility_threshold = custom_config.get("volatility_threshold", volatility_threshold)
         
         # Initialize tracking
         self.trade_history = []
@@ -113,7 +136,70 @@ class ExecutionRiskControlAgent:
         self._load_history()
         
         logger.info("Execution Risk Control Agent initialized successfully")
-    
+
+    def _setup(self):
+        """Setup method called during initialization."""
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the risk control agent.
+        
+        Args:
+            **kwargs: Parameters including trade_request, action, etc.
+            
+        Returns:
+            AgentResult: Result of the execution
+        """
+        try:
+            action = kwargs.get('action', 'check_risk')
+            trade_request = kwargs.get('trade_request')
+            
+            if action == 'check_risk' and trade_request:
+                risk_check = self.check_trade_risk(trade_request)
+                return AgentResult(
+                    success=True,
+                    data={
+                        "risk_check": {
+                            "passed": risk_check.passed,
+                            "risk_level": risk_check.risk_level.value,
+                            "violations": risk_check.violations,
+                            "warnings": risk_check.warnings,
+                            "recommendations": risk_check.recommendations,
+                            "max_allowed_quantity": risk_check.max_allowed_quantity,
+                            "cooling_period_remaining": risk_check.cooling_period_remaining
+                        }
+                    }
+                )
+            elif action == 'execute_trade' and trade_request:
+                execution_result = self.execute_trade(trade_request)
+                return AgentResult(
+                    success=True,
+                    data={
+                        "execution_result": {
+                            "trade_id": execution_result.trade_id,
+                            "status": execution_result.status.value,
+                            "executed_quantity": execution_result.executed_quantity,
+                            "executed_price": execution_result.executed_price,
+                            "slippage": execution_result.slippage,
+                            "commission": execution_result.commission
+                        }
+                    }
+                )
+            elif action == 'get_risk_summary':
+                risk_summary = self.get_risk_summary()
+                return AgentResult(
+                    success=True,
+                    data={"risk_summary": risk_summary}
+                )
+            else:
+                return AgentResult(
+                    success=False,
+                    error_message=f"Unknown action: {action} or missing trade_request"
+                )
+                
+        except Exception as e:
+            return self.handle_error(e)
+
     def _initialize_risk_limits(self) -> Dict[str, Any]:
         """Initialize risk limits and thresholds."""
         return {'success': True, 'result': {

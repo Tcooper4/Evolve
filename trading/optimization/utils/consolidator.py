@@ -35,7 +35,9 @@ class OptimizerConsolidator:
         
         # Ensure directories exist
         self.trading_optimization_dir.mkdir(parents=True, exist_ok=True)
-        self.backup_dir.mkdir(parents=True, exist_ok=True)def run_optimizer_consolidation(self, create_backup: bool = True) -> Dict[str, Any]:
+        self.backup_dir.mkdir(parents=True, exist_ok=True)
+
+    def run_optimizer_consolidation(self, create_backup: bool = True) -> Dict[str, Any]:
         """
         Run the complete optimizer consolidation process.
         

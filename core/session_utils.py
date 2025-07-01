@@ -87,6 +87,22 @@ def initialize_session_state() -> Dict[str, Any]:
             'timestamp': datetime.now().isoformat()
         }
 
+def log_status(message: str, status: str = 'INFO'):
+    """Helper function to log status messages consistently.
+    
+    Args:
+        message: The message to log
+        status: Log level ('INFO', 'ERROR', 'WARNING', 'DEBUG')
+    """
+    if status == 'INFO':
+        logger.info(f"[SUCCESS] {message}")
+    elif status == 'ERROR':
+        logger.error(f"[FAILED] {message}")
+    elif status == 'WARNING':
+        logger.warning(f"[WARNING] {message}")
+    elif status == 'DEBUG':
+        logger.debug(f"[DEBUG] {message}")
+
 def initialize_system_modules() -> Dict[str, Any]:
     """Initialize system modules and return their status.
     
@@ -103,50 +119,50 @@ def initialize_system_modules() -> Dict[str, Any]:
         goal_tracker = GoalStatusTracker()
         goal_tracker.generate_summary()
         module_status['goal_status'] = 'SUCCESS'
-        logger.info("[SUCCESS] Goal status module initialized")
+        log_status("Goal status module initialized")
     except Exception as e:
         module_status['goal_status'] = f'FAILED: {str(e)}'
-        logger.error(f"[FAILED] Goal status module: {e}")
+        log_status(f"Goal status module: {e}", 'ERROR')
     
     try:
         # Initialize basic data validation (core)
         from src.utils.data_validation import DataValidator
         validator = DataValidator()
         module_status['data_validation'] = 'SUCCESS'
-        logger.info("[SUCCESS] Data validation module initialized")
+        log_status("Data validation module initialized")
     except Exception as e:
         module_status['data_validation'] = f'FAILED: {str(e)}'
-        logger.error(f"[FAILED] Data validation: {e}")
+        log_status(f"Data validation: {e}", 'ERROR')
     
     try:
         # Initialize optimizer consolidator
         from trading.optimization.utils.consolidator import OptimizerConsolidator
         consolidator = OptimizerConsolidator()
         module_status['optimizer_consolidator'] = 'SUCCESS'
-        logger.info("[SUCCESS] Optimizer consolidator module initialized")
+        log_status("Optimizer consolidator module initialized")
     except Exception as e:
         module_status['optimizer_consolidator'] = f'FAILED: {str(e)}'
-        logger.error(f"[FAILED] Optimizer consolidator: {e}")
+        log_status(f"Optimizer consolidator: {e}", 'ERROR')
     
     try:
         # Initialize market analysis
         from trading.market.market_analyzer import MarketAnalyzer
         market_analyzer = MarketAnalyzer()
         module_status['market_analysis'] = 'SUCCESS'
-        logger.info("[SUCCESS] Market analysis module initialized")
+        log_status("Market analysis module initialized")
     except Exception as e:
         module_status['market_analysis'] = f'FAILED: {str(e)}'
-        logger.error(f"[FAILED] Market analysis: {e}")
+        log_status(f"Market analysis: {e}", 'ERROR')
     
     try:
         # Initialize data pipeline
         from src.utils.data_pipeline import DataPipeline
         data_pipeline = DataPipeline()
         module_status['data_pipeline'] = 'SUCCESS'
-        logger.info("[SUCCESS] Data pipeline module initialized")
+        log_status("Data pipeline module initialized")
     except Exception as e:
         module_status['data_pipeline'] = f'FAILED: {str(e)}'
-        logger.error(f"[FAILED] Data pipeline: {e}")
+        log_status(f"Data pipeline: {e}", 'ERROR')
     
     return module_status
 

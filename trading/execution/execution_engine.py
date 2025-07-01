@@ -34,11 +34,14 @@ except ImportError:
         def __init__(self):
             self.execution_mode = "simulation"
             self.broker_api_key = None
-            self.broker_secret_key = Noneclass AgentMemory:
-        def __init__(self):
-            self.memory = []
-    def calculate_metrics(returns):
-        return {'success': True, 'result': {'sharpe_ratio': 0.0, 'total_return': 0.0}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            self.broker_secret_key = None
+
+class AgentMemory:
+    def __init__(self):
+        self.memory = []
+        
+def calculate_metrics(returns):
+    return {'sharpe_ratio': 0.0, 'total_return': 0.0}
 
 logger = get_logger(__name__)
 
@@ -55,7 +58,6 @@ class ExecutionEngine:
         # Initialize broker connections
         self._init_brokers()
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _init_brokers(self):
         """Initialize broker connections."""
         self.brokers = {}
@@ -84,7 +86,6 @@ class ExecutionEngine:
             except Exception as e:
                 logger.error(f"Failed to initialize Binance: {e}")
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def execute_order(self, order: dict) -> dict:
         """Execute a trading order."""
         try:
@@ -117,7 +118,7 @@ class ExecutionEngine:
             
         except Exception as e:
             logger.error(f"Error executing order: {e}")
-            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'status': 'error', 'message': str(e)}
     
     def _validate_order(self, order: dict) -> dict:
         """Validate order parameters."""
@@ -164,7 +165,7 @@ class ExecutionEngine:
                 
         except Exception as e:
             logger.error(f"Live execution error: {e}")
-            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'status': 'error', 'message': str(e)}
     
     def _execute_stock_order(self, order: dict) -> dict:
         """Execute stock order via Alpaca."""
@@ -204,7 +205,7 @@ class ExecutionEngine:
             
         except Exception as e:
             logger.error(f"Alpaca execution error: {e}")
-            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'status': 'error', 'message': str(e)}
     
     def _execute_crypto_order(self, order: dict) -> dict:
         """Execute crypto order via CCXT."""
@@ -240,7 +241,7 @@ class ExecutionEngine:
             
         except Exception as e:
             logger.error(f"CCXT execution error: {e}")
-            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'status': 'error', 'message': str(e)}
     
     def _execute_simulation_order(self, order: dict) -> dict:
         """Execute order in simulation mode."""
@@ -285,7 +286,7 @@ class ExecutionEngine:
             
         except Exception as e:
             logger.error(f"Simulation execution error: {e}")
-            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'status': 'error', 'message': str(e)}
     
     def _get_simulated_price(self, symbol: str) -> float:
         """Get simulated price for symbol."""
@@ -330,7 +331,7 @@ class ExecutionEngine:
                 
         except Exception as e:
             logger.error(f"Error cancelling order: {e}")
-            return {'success': True, 'result': {'status': 'error', 'message': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'status': 'error', 'message': str(e)}
     
     def get_order_status(self, order_id: str) -> dict:
         """Get order status."""

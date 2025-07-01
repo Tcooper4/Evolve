@@ -12,6 +12,7 @@ import logging
 from typing import Dict, Any, Optional, Tuple, List
 from dataclasses import dataclass
 from datetime import datetime
+import os
 
 try:
     import openai
@@ -25,6 +26,8 @@ try:
 except ImportError:
     HUGGINGFACE_AVAILABLE = False
 
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -37,21 +40,32 @@ class ParsedIntent:
     raw_response: str
     error: Optional[str] = None
 
-class PromptRouterAgent:
-    def __init__(self, openai_api_key: Optional[str] = None, 
-                 huggingface_model: str = "gpt2", 
-                 huggingface_api_key: Optional[str] = None):
+class PromptRouterAgent(BaseAgent):
+    def __init__(self, config: Optional[AgentConfig] = None):
         """
         Initialize the prompt router agent.
         
         Args:
-            openai_api_key: OpenAI API key
-            huggingface_model: HuggingFace model name
-            huggingface_api_key: HuggingFace API key
+            config: Agent configuration
         """
-        self.openai_api_key = openai_api_key
-        self.huggingface_model = huggingface_model
-        self.huggingface_api_key = huggingface_api_key
+        if config is None:
+            config = AgentConfig(
+                name="prompt_router",
+                enabled=True,
+                priority=1,
+                custom_config={
+                    'openai_api_key': os.getenv('OPENAI_API_KEY'),
+                    'huggingface_model': os.getenv('HUGGINGFACE_MODEL', 'gpt2'),
+                    'huggingface_api_key': os.getenv('HUGGINGFACE_API_KEY')
+                }
+            )
+        
+        super().__init__(config)
+        
+        # Get configuration
+        self.openai_api_key = self.config.custom_config.get('openai_api_key')
+        self.huggingface_model = self.config.custom_config.get('huggingface_model', 'gpt2')
+        self.huggingface_api_key = self.config.custom_config.get('huggingface_api_key')
         self.hf_pipeline = None
         self.parsing_history = []
         
@@ -90,7 +104,6 @@ class PromptRouterAgent:
             'strategy': r'\b(momentum|mean_reversion|bollinger|macd|rsi)\b'
         }
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _init_huggingface(self):
         """Initialize HuggingFace pipeline."""
         try:
@@ -111,7 +124,6 @@ class PromptRouterAgent:
             logger.error(f"Failed to initialize HuggingFace: {e}")
             self.hf_pipeline = None
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def parse_intent_openai(self, prompt: str) -> Optional[ParsedIntent]:
         """Parse intent using OpenAI GPT-4."""
         if not openai or not self.openai_api_key:
@@ -159,6 +171,7 @@ class PromptRouterAgent:
             
         except Exception as e:
             logger.warning(f"OpenAI parsing failed: {e}")
+            return None
 
     def parse_intent_huggingface(self, prompt: str) -> Optional[ParsedIntent]:
         """Parse intent using HuggingFace model."""
@@ -195,12 +208,13 @@ class PromptRouterAgent:
             
         except Exception as e:
             logger.warning(f"HuggingFace parsing failed: {e}")
+            return None
 
     def parse_intent_regex(self, prompt: str) -> ParsedIntent:
         """Parse intent using regex and keyword matching."""
         prompt_lower = prompt.lower()
         
-        # Find best matching intent
+        # Find the best matching intent
         best_intent = 'unknown'
         best_score = 0
         
@@ -213,15 +227,12 @@ class PromptRouterAgent:
         # Extract arguments using regex patterns
         args = self._extract_args_regex(prompt)
         
-        # Calculate confidence based on keyword matches
-        confidence = min(0.5 + (best_score * 0.1), 0.9)
-        
         return ParsedIntent(
             intent=best_intent,
-            confidence=confidence,
+            confidence=min(0.5 + (best_score * 0.1), 0.9),  # Scale confidence with keyword matches
             args=args,
             provider='regex',
-            raw_response=f"Regex matched intent: {best_intent} with {best_score} keyword matches"
+            raw_response=prompt
         )
 
     def _extract_intent_from_text(self, text: str) -> str:
@@ -246,150 +257,120 @@ class PromptRouterAgent:
                 else:
                     args[arg_name] = matches
         
-        # Extract additional context
-        if 'forecast' in prompt.lower() or 'predict' in prompt.lower():
-            if 'price' in prompt.lower():
-                args['target'] = 'price'
-            elif 'return' in prompt.lower():
-                args['target'] = 'return'
-        
-        if 'days' in prompt.lower() or 'period' in prompt.lower():
-            period_match = re.search(r'(\d+)\s*(days?|weeks?|months?|years?)', prompt.lower())
-            if period_match:
-                args['period'] = f"{period_match.group(1)} {period_match.group(2)}"
-        
         return args
 
     def parse_intent(self, prompt: str) -> ParsedIntent:
-        """Parse intent using the best available provider.
+        """Parse intent using available providers with fallback logic."""
+        self._update_status_on_request()
         
-        Args:
-            prompt: User input prompt
-            
-        Returns:
-            ParsedIntent with intent and arguments
-        """
         # Try OpenAI first
         if openai and self.openai_api_key:
             result = self.parse_intent_openai(prompt)
-            if result and result.confidence > 0.8:
-                logger.info(f"✅ OpenAI parsing successful: {result.intent} (confidence: {result.confidence:.1%})")
+            if result and result.confidence > 0.7:
                 self._log_parsing_result(prompt, result)
+                self._update_status_on_success()
                 return result
-            elif result:
-                logger.warning(f"⚠️ OpenAI parsing low confidence: {result.intent} (confidence: {result.confidence:.1%})")
         
-        # Try HuggingFace next
+        # Try HuggingFace second
         if self.hf_pipeline:
             result = self.parse_intent_huggingface(prompt)
-            if result and result.confidence > 0.7:
-                logger.info(f"✅ HuggingFace parsing successful: {result.intent} (confidence: {result.confidence:.1%})")
+            if result and result.confidence > 0.6:
                 self._log_parsing_result(prompt, result)
+                self._update_status_on_success()
                 return result
-            elif result:
-                logger.warning(f"⚠️ HuggingFace parsing low confidence: {result.intent} (confidence: {result.confidence:.1%})")
         
         # Fallback to regex
-        logger.warning("⚠️ Fallback model used due to unavailable capability - using regex parsing")
+        logger.info("Using regex fallback for intent parsing")
         result = self.parse_intent_regex(prompt)
-        logger.info(f"✅ Regex fallback parsing: {result.intent} (confidence: {result.confidence:.1%})")
         self._log_parsing_result(prompt, result)
+        self._update_status_on_success()
         return result
 
     def _log_parsing_result(self, prompt: str, result: ParsedIntent):
         """Log parsing result for monitoring."""
-        log_entry = {
+        self.parsing_history.append({
             'timestamp': datetime.now().isoformat(),
             'prompt': prompt,
             'intent': result.intent,
             'confidence': result.confidence,
             'provider': result.provider,
             'args': result.args
-        }
-        self.parsing_history.append(log_entry)
+        })
         
-        # Keep only last 100 parsing results
+        # Keep only last 100 entries
         if len(self.parsing_history) > 100:
             self.parsing_history = self.parsing_history[-100:]
 
-    def route_prompt(self, prompt: str, agents: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute(self, prompt: str, agents: Optional[Dict[str, Any]] = None) -> AgentResult:
+        """Execute the prompt router agent.
+        
+        Args:
+            prompt: User prompt to parse and route
+            agents: Optional dictionary of available agents
+            
+        Returns:
+            AgentResult: Result of the execution
         """
-        Route the prompt to the correct agent based on intent and arguments.
+        try:
+            # Parse the intent
+            parsed_intent = self.parse_intent(prompt)
+            
+            # Route to appropriate agent if available
+            if agents and parsed_intent.intent in agents:
+                agent = agents[parsed_intent.intent]
+                # Here you would call the appropriate agent
+                # For now, we'll just return the parsed intent
+                pass
+            
+            return AgentResult(
+                success=True,
+                data={
+                    'intent': parsed_intent.intent,
+                    'confidence': parsed_intent.confidence,
+                    'args': parsed_intent.args,
+                    'provider': parsed_intent.provider,
+                    'raw_response': parsed_intent.raw_response
+                }
+            )
+            
+        except Exception as e:
+            return self.handle_error(e)
+
+    def route_prompt(self, prompt: str, agents: Dict[str, Any]) -> Dict[str, Any]:
+        """Route a prompt to the appropriate agent.
         
         Args:
             prompt: User prompt
             agents: Dictionary of available agents
             
         Returns:
-            Dictionary with routing result and metadata
+            Dictionary with routing information
         """
         parsed_intent = self.parse_intent(prompt)
         
-        logger.info(f"Routing intent: {parsed_intent.intent}, args: {parsed_intent.args}")
+        # Find the best matching agent
+        target_agent = None
+        if parsed_intent.intent in agents:
+            target_agent = agents[parsed_intent.intent]
+        else:
+            # Try to find a fallback agent
+            for intent, agent in agents.items():
+                if intent in ['general', 'default', 'fallback']:
+                    target_agent = agent
+                    break
         
-        # Route to appropriate agent
-        result = {
+        return {
             'intent': parsed_intent.intent,
             'confidence': parsed_intent.confidence,
             'args': parsed_intent.args,
             'provider': parsed_intent.provider,
-            'raw_response': parsed_intent.raw_response,
-            'timestamp': str(datetime.now()),
-            'success': False,
-            'error': None,
-            'result': None,
-            'agent_used': None
+            'target_agent': target_agent,
+            'timestamp': datetime.now().isoformat()
         }
-        
-        try:
-            if parsed_intent.intent == 'forecasting' and 'forecasting' in agents:
-                agent_result = agents['forecasting'].run_forecast(**parsed_intent.args)
-                result['result'] = agent_result
-                result['success'] = True
-                result['agent_used'] = 'forecasting'
-            elif parsed_intent.intent == 'backtesting' and 'backtesting' in agents:
-                agent_result = agents['backtesting'].run_backtest(**parsed_intent.args)
-                result['result'] = agent_result
-                result['success'] = True
-                result['agent_used'] = 'backtesting'
-            elif parsed_intent.intent == 'tuning' and 'tuning' in agents:
-                agent_result = agents['tuning'].run_tuning(**parsed_intent.args)
-                result['result'] = agent_result
-                result['success'] = True
-                result['agent_used'] = 'tuning'
-            elif parsed_intent.intent == 'research' and 'research' in agents:
-                agent_result = agents['research'].research(**parsed_intent.args)
-                result['result'] = agent_result
-                result['success'] = True
-                result['agent_used'] = 'research'
-            elif parsed_intent.intent == 'portfolio' and 'portfolio' in agents:
-                agent_result = agents['portfolio'].analyze_portfolio(**parsed_intent.args)
-                result['result'] = agent_result
-                result['success'] = True
-                result['agent_used'] = 'portfolio'
-            elif parsed_intent.intent == 'risk' and 'risk' in agents:
-                agent_result = agents['risk'].analyze_risk(**parsed_intent.args)
-                result['result'] = agent_result
-                result['success'] = True
-                result['agent_used'] = 'risk'
-            elif parsed_intent.intent == 'sentiment' and 'sentiment' in agents:
-                agent_result = agents['sentiment'].analyze_sentiment(**parsed_intent.args)
-                result['result'] = agent_result
-                result['success'] = True
-                result['agent_used'] = 'sentiment'
-            else:
-                result['error'] = f'No agent found for intent: {parsed_intent.intent}'
-                logger.warning(f"No agent found for intent: {parsed_intent.intent}")
-                
-        except Exception as e:
-            result['error'] = str(e)
-            logger.error(f"Error routing to agent: {e}")
-        
-        return result
 
     def get_available_providers(self) -> List[str]:
-        """Get list of available LLM providers."""
-        providers = []
+        """Get list of available parsing providers."""
+        providers = ['regex']  # Always available
         
         if openai and self.openai_api_key:
             providers.append('openai')
@@ -397,18 +378,16 @@ class PromptRouterAgent:
         if self.hf_pipeline:
             providers.append('huggingface')
         
-        providers.append('regex')  # Always available as fallback
-        
         return providers
 
     def get_provider_status(self) -> Dict[str, bool]:
-        """Get status of all LLM providers."""
+        """Get status of each provider."""
         return {
             'openai': bool(openai and self.openai_api_key),
             'huggingface': bool(self.hf_pipeline),
             'regex': True  # Always available
         }
-    
+
     def get_parsing_history(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent parsing history.
         
@@ -418,23 +397,18 @@ class PromptRouterAgent:
         Returns:
             List of recent parsing results
         """
-        return self.parsing_history[-limit:] if self.parsing_history else []
-    
+        return self.parsing_history[-limit:]
+
     def get_system_health(self) -> Dict[str, Any]:
-        """Get overall system health status."""
-        provider_status = self.get_provider_status()
-        available_providers = sum(1 for available in provider_status.values() if available)
-        total_providers = len(provider_status)
-        
+        """Get system health information."""
         return {
-            'overall_status': 'healthy' if available_providers > 0 else 'degraded',
-            'available_providers': available_providers,
-            'total_providers': total_providers,
-            'provider_status': provider_status,
-            'recent_parsing_results': self.get_parsing_history(5)
+            'providers': self.get_provider_status(),
+            'parsing_history_count': len(self.parsing_history),
+            'last_parsing': self.parsing_history[-1] if self.parsing_history else None,
+            'status': self.get_status()
         }
-    
+
     def reset_parsing_history(self) -> None:
-        """Clear parsing history."""
-        self.parsing_history.clear()
-        logger.info("Parsing history cleared") 
+        """Reset parsing history."""
+        self.parsing_history = []
+        logger.info("Parsing history reset") 

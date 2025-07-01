@@ -31,7 +31,9 @@ class ResponseFormatter:
         
         # Load templates and visualization settings
         self.templates = self._load_templates()
-        self.viz_settings = self._load_viz_settings()def _load_templates(self) -> Dict[str, Dict[str, Any]]:
+        self.viz_settings = self._load_viz_settings()
+        
+    def _load_templates(self) -> Dict[str, Dict[str, Any]]:
         """Load response templates from JSON file."""
         try:
             with open(self.config_dir / "response_templates.json", "r") as f:

@@ -12,6 +12,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 # Optionally import OpenAI API
 try:
@@ -21,14 +22,130 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-class ResearchAgent:
-    def __init__(self, openai_api_key: Optional[str] = None, log_path: str = "research_log.json"):
-        self.openai_api_key = openai_api_key or (openai.api_key if openai else None)
-        self.log_path = Path(log_path)
+class ResearchAgent(BaseAgent):
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="ResearchAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
+        
+        # Extract config from custom_config or use defaults
+        custom_config = config.custom_config or {}
+        self.openai_api_key = custom_config.get('openai_api_key') or (openai.api_key if openai else None)
+        self.log_path = Path(custom_config.get('log_path', "research_log.json"))
+        
         if not self.log_path.exists():
             self.log_path.write_text(json.dumps([]))
         if openai and self.openai_api_key:
-            openai.api_key = self.openai_api_keydef search_github(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
+            openai.api_key = self.openai_api_key
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the research logic.
+        Args:
+            **kwargs: topic, max_results, action, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'research')
+            
+            if action == 'research':
+                topic = kwargs.get('topic')
+                max_results = kwargs.get('max_results', 3)
+                
+                if topic is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: topic"
+                    )
+                
+                findings = self.research(topic, max_results)
+                return AgentResult(success=True, data={
+                    "findings": findings,
+                    "findings_count": len(findings),
+                    "topic": topic
+                })
+                
+            elif action == 'search_github':
+                query = kwargs.get('query')
+                max_results = kwargs.get('max_results', 5)
+                
+                if query is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: query"
+                    )
+                
+                results = self.search_github(query, max_results)
+                return AgentResult(success=True, data={
+                    "github_results": results,
+                    "results_count": len(results)
+                })
+                
+            elif action == 'search_arxiv':
+                query = kwargs.get('query')
+                max_results = kwargs.get('max_results', 5)
+                
+                if query is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: query"
+                    )
+                
+                results = self.search_arxiv(query, max_results)
+                return AgentResult(success=True, data={
+                    "arxiv_results": results,
+                    "results_count": len(results)
+                })
+                
+            elif action == 'summarize':
+                text = kwargs.get('text')
+                prompt = kwargs.get('prompt', "Summarize this for a quant trading engineer:")
+                
+                if text is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: text"
+                    )
+                
+                summary = self.summarize_with_openai(text, prompt)
+                return AgentResult(success=True, data={
+                    "summary": summary,
+                    "text_length": len(text)
+                })
+                
+            elif action == 'code_suggestion':
+                description = kwargs.get('description')
+                
+                if description is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: description"
+                    )
+                
+                code = self.code_suggestion_with_openai(description)
+                return AgentResult(success=True, data={
+                    "code_suggestion": code,
+                    "description_length": len(description)
+                })
+                
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e)
+
+    def search_github(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
         """Search GitHub for repositories related to the query."""
         url = f"https://api.github.com/search/repositories?q={query}&sort=stars&order=desc&per_page={max_results}"
         resp = requests.get(url)

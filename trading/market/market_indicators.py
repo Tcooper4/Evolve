@@ -34,7 +34,7 @@ try:
     NUMBA_AVAILABLE = True
 except ImportError:
     NUMBA_AVAILABLE = False
-    print("⚠️ numba not installed – JIT optimization will be skipped.")
+    logger.warning("⚠️ numba not installed – JIT optimization will be skipped.")
     
     # Create a dummy jit decorator
     def jit(*args, **kwargs):

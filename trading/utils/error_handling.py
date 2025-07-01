@@ -176,7 +176,7 @@ def handle_keyboard_interrupt(func: Callable) -> Callable:
         try:
             return {'success': True, 'result': {'success': True, 'result': func(*args, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         except KeyboardInterrupt:
-            print("\nOperation cancelled by user")
+            logger.warning("Operation cancelled by user")
             sys.exit(0)
     return wrapper
 

@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 from enum import Enum
 import warnings
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 warnings.filterwarnings('ignore')
 
 logger = logging.getLogger(__name__)
@@ -54,44 +55,46 @@ class TradeApproval:
     timestamp: datetime
     metadata: Dict[str, Any]
 
-class ExecutionRiskAgent:
+class ExecutionRiskAgent(BaseAgent):
     """Execution risk control agent for trade approval and risk management."""
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize execution risk agent.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config or {}
-        
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="ExecutionRiskAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
+        self.config_dict = config.custom_config or {}
         # Risk limits
-        self.risk_limits = self.config.get('risk_limits', {
-            'max_position_size': 0.2,  # 20% max per position
-            'max_sector_exposure': 0.3,  # 30% max per sector
-            'max_portfolio_risk': 0.15,  # 15% max portfolio risk
-            'max_daily_loss': 0.05,  # 5% max daily loss
-            'max_drawdown': 0.10,  # 10% max drawdown
-            'max_leverage': 2.0,  # 2x max leverage
-            'min_liquidity': 1000000  # $1M min liquidity
+        self.risk_limits = self.config_dict.get('risk_limits', {
+            'max_position_size': 0.2,
+            'max_sector_exposure': 0.3,
+            'max_portfolio_risk': 0.15,
+            'max_daily_loss': 0.05,
+            'max_drawdown': 0.10,
+            'max_leverage': 2.0,
+            'min_liquidity': 1000000
         })
-        
         # Cooling periods
-        self.cooling_periods = self.config.get('cooling_periods', {
-            'major_loss_hours': 24,  # 24 hours after major loss
-            'high_volatility_hours': 4,  # 4 hours after high volatility
-            'consecutive_losses_hours': 12,  # 12 hours after consecutive losses
-            'market_close_hours': 2  # 2 hours before market close
+        self.cooling_periods = self.config_dict.get('cooling_periods', {
+            'major_loss_hours': 24,
+            'high_volatility_hours': 4,
+            'consecutive_losses_hours': 12,
+            'market_close_hours': 2
         })
-        
         # Risk thresholds
-        self.risk_thresholds = self.config.get('risk_thresholds', {
-            'volatility_threshold': 0.03,  # 3% daily volatility
-            'correlation_threshold': 0.7,  # 70% correlation limit
-            'concentration_threshold': 0.4,  # 40% concentration limit
-            'liquidity_threshold': 0.1  # 10% of daily volume
+        self.risk_thresholds = self.config_dict.get('risk_thresholds', {
+            'volatility_threshold': 0.03,
+            'correlation_threshold': 0.7,
+            'concentration_threshold': 0.4,
+            'liquidity_threshold': 0.1
         })
-        
         # State tracking
         self.trade_history = []
         self.risk_violations = []
@@ -103,9 +106,48 @@ class ExecutionRiskAgent:
             'daily_pnl': 0.0,
             'current_drawdown': 0.0
         }
-        
         logger.info("Execution Risk Agent initialized")
-    
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the risk agent logic.
+        Args:
+            **kwargs: action, trade_id, symbol, size, side, price, portfolio_context, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'approve_trade')
+            if action == 'approve_trade':
+                trade_id = kwargs.get('trade_id')
+                symbol = kwargs.get('symbol')
+                size = kwargs.get('size')
+                side = kwargs.get('side')
+                price = kwargs.get('price')
+                portfolio_context = kwargs.get('portfolio_context')
+                approval = self.approve_trade(trade_id, symbol, size, side, price, portfolio_context)
+                return AgentResult(success=True, data={
+                    'approval': {
+                        'trade_id': approval.trade_id,
+                        'symbol': approval.symbol,
+                        'status': approval.status.value,
+                        'original_size': approval.original_size,
+                        'approved_size': approval.approved_size,
+                        'warnings': approval.warnings,
+                        'timestamp': approval.timestamp.isoformat(),
+                        'metadata': approval.metadata
+                    }
+                })
+            elif action == 'get_risk_summary':
+                summary = self.get_risk_summary()
+                return AgentResult(success=True, data={'risk_summary': summary})
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+        except Exception as e:
+            return self.handle_error(e)
+
     def approve_trade(self,
                      trade_id: str,
                      symbol: str,
