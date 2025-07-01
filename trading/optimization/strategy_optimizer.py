@@ -1025,8 +1025,12 @@ class StrategyOptimizer(BaseOptimizer):
 
     def plot_results(self, **kwargs):
         """Plot optimization results."""
-        # TODO: Implement plotting functionality
-        raise NotImplementedError('Pending feature')
+        # TODO: Implement plotting functionality for optimization results
+        # - Add matplotlib/plotly visualizations for convergence curves
+        # - Show parameter evolution over iterations
+        # - Display objective function landscape
+        # - Create interactive dashboards for optimization progress
+        pass
 
     def get_available_optimizers(self) -> List[str]:
         """Get list of available optimizers.
@@ -1083,8 +1087,13 @@ class StrategyOptimizer(BaseOptimizer):
         Returns:
             Optimization results
         """
-        # TODO: Implement actual optimization
-        raise NotImplementedError('Pending feature')
+        # TODO: Implement actual optimization with cross-validation
+        # - Add k-fold cross-validation for robust parameter estimation
+        # - Implement time-series aware validation (walk-forward analysis)
+        # - Add early stopping based on validation performance
+        # - Include confidence intervals for parameter estimates
+        # - Add support for multiple objective functions (multi-objective optimization)
+        raise NotImplementedError('Pending feature - requires cross-validation implementation')
 
     def save_optimization_results(self, results: Dict[str, Any], save_path: str) -> None:
         """Save optimization results to file.

@@ -58,16 +58,62 @@ class XGBoostForecaster(BaseModel):
             raise ImportError("XGBoost is not installed. Please install it with: pip install xgboost")
     
     def fit(self, data: pd.DataFrame) -> None:
-        """Fit the model to the data.
+        """Fit the model to the data with robust error handling.
         
         Args:
             data: Training data
+            
+        Raises:
+            ValueError: If data is missing or malformed
+            RuntimeError: If fitting fails
         """
-        X, y = self._prepare_data(data, is_training=True)
-        self.model.fit(X, y)
+        try:
+            # Validate input data
+            if data is None or data.empty:
+                raise ValueError("Training data is empty or None")
+            
+            # Check for required columns
+            required_columns = self.config['feature_columns'] + [self.config['target_column']]
+            missing_columns = [col for col in required_columns if col not in data.columns]
+            if missing_columns:
+                raise ValueError(f"Missing required columns: {missing_columns}")
+            
+            # Check for NaN values
+            if data[required_columns].isnull().any().any():
+                import logging
+                logging.warning("NaN values found in training data, attempting to clean")
+                data = data.dropna(subset=required_columns)
+                if data.empty:
+                    raise ValueError("No valid data remaining after removing NaN values")
+            
+            # Validate data size
+            if len(data) < self.config['sequence_length'] + 1:
+                raise ValueError(f"Data length {len(data)} is insufficient for sequence length {self.config['sequence_length']}")
+            
+            # Prepare data
+            X, y = self._prepare_data(data, is_training=True)
+            
+            # Validate prepared data
+            if len(X) == 0 or len(y) == 0:
+                raise ValueError("No valid sequences could be created from the data")
+            
+            if len(X) != len(y):
+                raise ValueError(f"Length mismatch after preparation: X has {len(X)} samples, y has {len(y)} samples")
+            
+            # Fit the model
+            self.model.fit(X, y)
+            self.is_fitted = True
+            
+            import logging
+            logging.info(f"XGBoost model fitted successfully with {len(X)} samples")
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error fitting XGBoost model: {e}")
+            raise RuntimeError(f"XGBoost model fitting failed: {e}")
     
     def predict(self, data: pd.DataFrame) -> np.ndarray:
-        """Make predictions.
+        """Make predictions with fallback guards.
         
         Args:
             data: Input data
@@ -75,8 +121,46 @@ class XGBoostForecaster(BaseModel):
         Returns:
             Predictions
         """
-        X, _ = self._prepare_data(data, is_training=False)
-        return self.model.predict(X)
+        try:
+            # Check if input dataframe is empty or has NaNs
+            if data is None or data.empty:
+                import logging
+                logging.warning("XGBoost predict: Input dataframe is empty, returning empty result")
+                return np.array([])
+            
+            # Check for NaN values
+            if data.isnull().any().any():
+                import logging
+                logging.warning("XGBoost predict: NaN values found in input data, attempting to clean")
+                data = data.dropna()
+                if data.empty:
+                    logging.warning("XGBoost predict: No valid data after cleaning, returning empty result")
+                    return np.array([])
+            
+            # Validate data size
+            if len(data) < self.config['sequence_length'] + 1:
+                import logging
+                logging.warning(f"XGBoost predict: Data length {len(data)} is insufficient for sequence length {self.config['sequence_length']}, returning empty result")
+                return np.array([])
+            
+            # Prepare data
+            X, _ = self._prepare_data(data, is_training=False)
+            
+            # Check if prepared data is empty
+            if len(X) == 0:
+                import logging
+                logging.warning("XGBoost predict: No valid sequences could be created, returning empty result")
+                return np.array([])
+            
+            # Make predictions
+            predictions = self.model.predict(X)
+            
+            return predictions
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error in XGBoost predict: {e}")
+            return np.array([])
     
     def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[np.ndarray, np.ndarray]:
         """Prepare data for training or prediction.
