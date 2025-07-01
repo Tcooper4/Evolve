@@ -5,6 +5,10 @@ import pandas as pd
 from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
+import warnings
+
+# Import centralized technical indicators
+from core.utils.technical_indicators import calculate_sma
 
 @dataclass
 class SMAConfig:
@@ -28,9 +32,9 @@ class SMAStrategy:
         if 'close' not in data.columns:
             raise ValueError("Data must contain 'close' column")
             
-        # Calculate short and long SMAs
-        short_sma = data['close'].rolling(window=self.config.short_window).mean()
-        long_sma = data['close'].rolling(window=self.config.long_window).mean()
+        # Use centralized SMA calculation
+        short_sma = calculate_sma(data['close'], self.config.short_window)
+        long_sma = calculate_sma(data['close'], self.config.long_window)
         
         return short_sma, long_sma
         
