@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
+from datetime import datetime
 
 @dataclass
 class MACDConfig:
@@ -21,7 +22,9 @@ class MACDStrategy:
         """Initialize the strategy with configuration."""
         self.config = config or MACDConfig()
         self.signals = None
-        self.positions = Nonedef calculate_macd(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        self.positions = None
+        
+    def calculate_macd(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Calculate MACD components for the given data."""
         if 'close' not in data.columns:
             raise ValueError("Data must contain 'close' column")
@@ -39,7 +42,7 @@ class MACDStrategy:
         # Calculate histogram
         histogram = macd_line - signal_line
         
-        return {'success': True, 'result': macd_line, signal_line, histogram, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return macd_line, signal_line, histogram
         
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """Generate trading signals based on MACD."""

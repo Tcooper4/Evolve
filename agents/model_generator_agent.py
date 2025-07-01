@@ -19,6 +19,7 @@ import asyncio
 import aiohttp
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
+from core.agents.base_agent import BaseAgent, AgentResult
 
 # ML imports
 try:
@@ -846,14 +847,15 @@ class ModelBenchmarker:
         
         return max(0.0, score)  # Ensure non-negative
 
-class AutoEvolutionaryModelGenerator:
+class AutoEvolutionaryModelGenerator(BaseAgent):
     """Main agent for auto-evolutionary model generation."""
     
     def __init__(self, 
                  benchmark_data: pd.DataFrame,
                  target_column: str = "returns",
                  current_best_score: float = 1.0,
-                 max_candidates: int = 10):
+                 max_candidates: int = 10,
+                 config: Optional[Dict[str, Any]] = None):
         """Initialize auto-evolutionary model generator.
         
         Args:
@@ -861,7 +863,10 @@ class AutoEvolutionaryModelGenerator:
             target_column: Target variable
             current_best_score: Current best performance score
             max_candidates: Maximum number of candidates to generate
+            config: Optional configuration dictionary
         """
+        super().__init__(name="AutoEvolutionaryModelGenerator", config=config)
+        
         self.benchmark_data = benchmark_data
         self.target_column = target_column
         self.current_best_score = current_best_score
@@ -882,6 +887,43 @@ class AutoEvolutionaryModelGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         logger.info("Initialized Auto-Evolutionary Model Generator")
+
+    def _setup(self):
+        """Setup method called during initialization."""
+        pass
+
+    def run(self, prompt: str, **kwargs) -> AgentResult:
+        """Execute the model evolution cycle.
+        
+        Args:
+            prompt: Task description or evolution parameters
+            **kwargs: Additional parameters (improvement_threshold, etc.)
+            
+        Returns:
+            AgentResult: Result of the evolution cycle
+        """
+        try:
+            if not self.validate_input(prompt, **kwargs):
+                return AgentResult(
+                    success=False,
+                    message="Invalid input parameters",
+                    data={"error": "Invalid input"}
+                )
+            
+            # Parse parameters from prompt or kwargs
+            improvement_threshold = kwargs.get('improvement_threshold', 0.1)
+            
+            # Run the evolution cycle
+            result = asyncio.run(self.run_evolution_cycle(improvement_threshold))
+            
+            return AgentResult(
+                success=True,
+                message=f"Model evolution completed successfully. {len(result.get('deployed_models', []))} models deployed.",
+                data=result
+            )
+            
+        except Exception as e:
+            return self.handle_error(e)
     
     async def discover_and_implement_models(self) -> List[ModelCandidate]:
         """Discover and implement new models from research."""

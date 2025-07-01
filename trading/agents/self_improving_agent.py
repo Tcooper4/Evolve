@@ -3,17 +3,73 @@
 import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 logger = logging.getLogger(__name__)
 
-class SelfImprovingAgent:
+class SelfImprovingAgent(BaseAgent):
     """Agent that can learn and improve its performance over time."""
     
-    def __init__(self):
-        """Initialize the self-improving agent."""
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="SelfImprovingAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
+        
         self.performance_history = []
         self.improvement_metrics = {}
-        
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the self-improving agent logic.
+        Args:
+            **kwargs: task_data, action, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'process_task')
+            
+            if action == 'process_task':
+                task_data = kwargs.get('task_data')
+                
+                if task_data is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: task_data"
+                    )
+                
+                result = self.process_task(task_data)
+                if result['status'] == 'success':
+                    return AgentResult(success=True, data={
+                        "task_results": result['results'],
+                        "learning_outcomes": result['learning_outcomes'],
+                        "total_tasks": len(self.performance_history)
+                    })
+                else:
+                    return AgentResult(success=False, error_message=result.get('error', 'Task processing failed'))
+                    
+            elif action == 'get_metrics':
+                return AgentResult(success=True, data={
+                    "improvement_metrics": self.improvement_metrics,
+                    "performance_history_count": len(self.performance_history)
+                })
+                
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e)
+
     def process_task(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         """Process a task and learn from the results.
         

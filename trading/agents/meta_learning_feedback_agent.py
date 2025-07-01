@@ -21,6 +21,7 @@ from trading.optimization.genetic_optimizer import GeneticOptimizer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
 from trading.agents.model_selector_agent import ModelSelectorAgent
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 @dataclass
 class ModelFeedback:
@@ -49,7 +50,7 @@ class HyperparameterUpdate:
     confidence: float
     reason: str
 
-class MetaLearningFeedbackAgent:
+class MetaLearningFeedbackAgent(BaseAgent):
     """
     Agent responsible for:
     - Monitoring model performance after each trade
@@ -57,39 +58,73 @@ class MetaLearningFeedbackAgent:
     - Replacing underperforming models
     - Updating ensemble weights based on performance
     """
-    
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the Meta-Learning Feedback Agent.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config or {}
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="MetaLearningFeedbackAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
+        self.config_dict = config.custom_config or {}
         self.logger = logging.getLogger(__name__)
         self.memory = AgentMemory()
         self.model_registry = ModelRegistry()
         self.model_selector = ModelSelectorAgent()
-        
         # Performance tracking
         self.feedback_history: Dict[str, List[ModelFeedback]] = {}
         self.ensemble_weights: Dict[str, float] = {}
         self.hyperparameter_history: Dict[str, List[Dict[str, Any]]] = {}
-        
         # Configuration
-        self.performance_window = self.config.get('performance_window', 30)
-        self.retuning_frequency = self.config.get('retuning_frequency', 'weekly')
-        self.ensemble_update_frequency = self.config.get('ensemble_update_frequency', 'weekly')
-        self.min_performance_threshold = self.config.get('min_performance_threshold', 0.5)
-        self.max_hyperparameter_changes = self.config.get('max_hyperparameter_changes', 5)
-        
+        self.performance_window = self.config_dict.get('performance_window', 30)
+        self.retuning_frequency = self.config_dict.get('retuning_frequency', 'weekly')
+        self.ensemble_update_frequency = self.config_dict.get('ensemble_update_frequency', 'weekly')
+        self.min_performance_threshold = self.config_dict.get('min_performance_threshold', 0.5)
+        self.max_hyperparameter_changes = self.config_dict.get('max_hyperparameter_changes', 5)
         # Optimizers
         self.bayesian_optimizer = BayesianOptimizer()
         self.genetic_optimizer = GeneticOptimizer()
-        
         # Load existing data
         self._load_feedback_history()
         self._load_ensemble_weights()
-        
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the meta-learning feedback agent logic.
+        Args:
+            **kwargs: action, feedback, model_name, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'process_feedback')
+            if action == 'process_feedback':
+                feedback_data = kwargs.get('feedback')
+                if not feedback_data:
+                    return AgentResult(success=False, error_message="Missing feedback data")
+                feedback = ModelFeedback(**feedback_data)
+                await self.process_model_feedback(feedback)
+                return AgentResult(success=True, data={"message": f"Processed feedback for {feedback.model_name}"})
+            elif action == 'get_ensemble_weights':
+                weights = self.get_ensemble_weights()
+                return AgentResult(success=True, data={"ensemble_weights": weights})
+            elif action == 'get_model_performance_summary':
+                model_name = kwargs.get('model_name')
+                if not model_name:
+                    return AgentResult(success=False, error_message="Missing model_name")
+                summary = self.get_model_performance_summary(model_name)
+                return AgentResult(success=True, data={"performance_summary": summary})
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+        except Exception as e:
+            return self.handle_error(e)
+
     async def process_model_feedback(self, feedback: ModelFeedback):
         """Process feedback from a model prediction."""
         try:

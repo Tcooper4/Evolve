@@ -22,7 +22,6 @@ class RewardFunction:
             'consistency': 0.2
         }
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def compute(self, metrics: Dict[str, Any]) -> float:
         """
         Compute the overall reward score from metrics.
@@ -62,7 +61,7 @@ class RewardFunction:
         Returns:
             Weighted sum (float)
         """
-        return {'success': True, 'result': sum(self.weights.get(k, 0.0) * objectives.get(k, 0.0) for k in self.weights), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return sum(self.weights.get(k, 0.0) * objectives.get(k, 0.0) for k in self.weights)
 
     def multi_objective_vector(self, metrics: Dict[str, Any]) -> List[float]:
         """
@@ -73,7 +72,7 @@ class RewardFunction:
             List of objective values [return, sharpe, consistency]
         """
         obj = self.compute_objectives(metrics)
-        return {'success': True, 'result': [obj['return'], obj['sharpe'], obj['consistency']], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return [obj['return'], obj['sharpe'], obj['consistency']]
 
     def set_weights(self, weights: Dict[str, float]) -> None:
         """

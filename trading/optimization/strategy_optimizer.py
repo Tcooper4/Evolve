@@ -421,7 +421,9 @@ class RayOptimization(OptimizationMethod):
         """
         super().__init__(config)
         if not RAY_AVAILABLE:
-            self.logger.warning("Ray is not available. Falling back to ThreadPoolExecutor.")def _setup_ray(self):
+            self.logger.warning("Ray is not available. Falling back to ThreadPoolExecutor.")
+            
+    def _setup_ray(self):
         """Setup Ray for distributed computing."""
         if RAY_AVAILABLE and not ray.is_initialized():
             ray.init(ignore_reinit_error=True)
@@ -563,7 +565,7 @@ class OptunaOptimization(OptimizationMethod):
                             params[param] = trial.suggest_float(
                                 param, space['start'], space['end']
                             )
-            return {'success': True, 'result': {'success': True, 'result': objective(params, data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return objective(params, data)
             
         # Run optimization
         n_trials = kwargs.get('n_trials', 100)
@@ -853,7 +855,9 @@ class StrategyOptimizer(BaseOptimizer):
         self.performance_logger = PerformanceLogger()
         
         # Initialize optimization method
-        self.optimizer = self._create_optimizer()def optimize(self, strategy_class: Any, data: pd.DataFrame,
+        self.optimizer = self._create_optimizer()
+        
+    def optimize(self, strategy_class: Any, data: pd.DataFrame,
                 initial_params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Optimize strategy parameters.
         
@@ -1254,7 +1258,7 @@ class Optimizer:
                            f"Validation Loss: {val_loss.item():.4f}, "
                            f"Time: {optimization_time:.2f}s")
             
-            return {'success': True, 'result': train_output.detach().cpu().numpy(), train_loss.item(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return train_output.detach().cpu().numpy(), train_loss.item()
             
         except Exception as e:
             raise OptimizationError(f"Failed to optimize portfolio: {str(e)}")

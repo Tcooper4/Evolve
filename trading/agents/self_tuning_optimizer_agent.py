@@ -20,6 +20,7 @@ from trading.optimization.genetic_optimizer import GeneticOptimizer
 from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 class OptimizationTrigger(str, Enum):
     """Optimization trigger types."""
@@ -50,7 +51,7 @@ class ParameterConstraint:
     step_size: Optional[float] = None
     parameter_type: str = "continuous"  # continuous, discrete, categorical
 
-class SelfTuningOptimizerAgent:
+class SelfTuningOptimizerAgent(BaseAgent):
     """
     Self-Tuning Optimizer Agent with:
     - Dynamic parameter adjustment based on market conditions
@@ -60,13 +61,19 @@ class SelfTuningOptimizerAgent:
     - Optimization history tracking
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the Self-Tuning Optimizer Agent.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config or {}
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="SelfTuningOptimizerAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
+        self.config_dict = config.custom_config or {}
         self.logger = logging.getLogger(__name__)
         self.memory = AgentMemory()
         self.market_analyzer = MarketAnalyzer()
@@ -74,11 +81,11 @@ class SelfTuningOptimizerAgent:
         self.genetic_optimizer = GeneticOptimizer()
         
         # Configuration
-        self.optimization_frequency = self.config.get('optimization_frequency', 'weekly')
-        self.performance_threshold = self.config.get('performance_threshold', 0.1)
-        self.volatility_threshold = self.config.get('volatility_threshold', 0.03)
-        self.optimization_timeout = self.config.get('optimization_timeout', 300)  # 5 minutes
-        self.min_improvement = self.config.get('min_improvement', 0.05)
+        self.optimization_frequency = self.config_dict.get('optimization_frequency', 'weekly')
+        self.performance_threshold = self.config_dict.get('performance_threshold', 0.1)
+        self.volatility_threshold = self.config_dict.get('volatility_threshold', 0.03)
+        self.optimization_timeout = self.config_dict.get('optimization_timeout', 300)  # 5 minutes
+        self.min_improvement = self.config_dict.get('min_improvement', 0.05)
         
         # Storage
         self.optimization_history: List[OptimizationResult] = []
@@ -88,7 +95,90 @@ class SelfTuningOptimizerAgent:
         
         # Load existing data
         self._load_optimization_data()
-        
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the self-tuning optimization logic.
+        Args:
+            **kwargs: strategy_name, strategy_performance, market_data, action, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'check_triggers')
+            
+            if action == 'check_triggers':
+                strategy_name = kwargs.get('strategy_name')
+                strategy_performance = kwargs.get('strategy_performance')
+                market_data = kwargs.get('market_data')
+                
+                if strategy_name is None or strategy_performance is None or market_data is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: strategy_name, strategy_performance, market_data"
+                    )
+                
+                triggers = await self.check_optimization_triggers(strategy_name, strategy_performance, market_data)
+                return AgentResult(success=True, data={
+                    "triggers": [trigger.value for trigger in triggers],
+                    "trigger_count": len(triggers)
+                })
+                
+            elif action == 'optimize_parameters':
+                strategy_name = kwargs.get('strategy_name')
+                current_parameters = kwargs.get('current_parameters')
+                strategy_performance = kwargs.get('strategy_performance')
+                market_data = kwargs.get('market_data')
+                triggers = kwargs.get('triggers', [])
+                
+                if strategy_name is None or current_parameters is None or strategy_performance is None or market_data is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: strategy_name, current_parameters, strategy_performance, market_data"
+                    )
+                
+                # Convert trigger strings to enum if needed
+                if triggers and isinstance(triggers[0], str):
+                    triggers = [OptimizationTrigger(t) for t in triggers]
+                
+                result = await self.optimize_strategy_parameters(
+                    strategy_name, current_parameters, strategy_performance, market_data, triggers
+                )
+                return AgentResult(success=True, data={
+                    "optimization_result": result.__dict__,
+                    "performance_improvement": result.performance_improvement,
+                    "confidence": result.confidence
+                })
+                
+            elif action == 'get_optimization_summary':
+                strategy_name = kwargs.get('strategy_name')
+                summary = self.get_optimization_summary(strategy_name)
+                return AgentResult(success=True, data={"optimization_summary": summary})
+                
+            elif action == 'set_constraints':
+                strategy_name = kwargs.get('strategy_name')
+                constraints_data = kwargs.get('constraints', [])
+                
+                if strategy_name is None or not constraints_data:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: strategy_name, constraints"
+                    )
+                
+                constraints = [ParameterConstraint(**c) for c in constraints_data]
+                self.set_parameter_constraints(strategy_name, constraints)
+                return AgentResult(success=True, data={
+                    "message": f"Set {len(constraints)} constraints for {strategy_name}"
+                })
+                
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e)
+    
     async def check_optimization_triggers(self, 
                                         strategy_name: str,
                                         strategy_performance: pd.Series,

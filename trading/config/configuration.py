@@ -22,8 +22,7 @@ class ConfigManager:
         env_config = self.create_config_from_env()
         if env_config:
             self.config.update(env_config)
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def _parse_config(self, name: str, data: Dict[str, Any]) -> Any:
         """Instantiate a config object based on file name."""
         lower = name.lower()
@@ -58,7 +57,7 @@ class ConfigManager:
         if config_path.exists():
             with open(config_path, "r") as f:
                 data = json.load(f)
-            return {'success': True, 'result': self._parse_config(config_path.name, data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._parse_config(config_path.name, data)
         return {}
         
     def save_config(self, config: Any, config_path: str) -> None:
@@ -147,7 +146,6 @@ class ModelConfig:
         self.version = version
         self.parameters = kwargs
         
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def validate(self) -> bool:
         """Validate the configuration.
         
@@ -235,7 +233,7 @@ class ModelConfig:
         else:
             other_dict = other
             
-        return {'success': True, 'result': {**self.to_dict(), **other_dict}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {**self.to_dict(), **other_dict}
 
 class DataConfig:
     """Configuration class for data settings."""
@@ -262,7 +260,9 @@ class DataConfig:
         self.features = features or ['Close']
         self.target = target
         self.frequency = frequency
-        self.version = versiondef validate(self) -> bool:
+        self.version = version
+        
+    def validate(self) -> bool:
         """Validate the configuration.
         
         Returns:
@@ -382,7 +382,9 @@ class TrainingConfig:
         self.scheduler_patience = scheduler_patience
         self.gradient_clipping = gradient_clipping
         self.max_grad_norm = max_grad_norm
-        self.version = versiondef validate(self) -> bool:
+        self.version = version
+        
+    def validate(self) -> bool:
         """Validate the configuration.
         
         Returns:
@@ -507,7 +509,9 @@ class WebConfig:
         self.template_folder = template_folder
         self.ssl_cert = ssl_cert
         self.ssl_key = ssl_key
-        self.version = versiondef validate(self) -> bool:
+        self.version = version
+        
+    def validate(self) -> bool:
         """Validate the configuration.
         
         Returns:
@@ -613,7 +617,9 @@ class MonitoringConfig:
         self.alerting_enabled = alerting_enabled
         self.alert_email = alert_email
         self.alert_webhook = alert_webhook
-        self.version = versiondef validate(self) -> bool:
+        self.version = version
+        
+    def validate(self) -> bool:
         """Validate the configuration.
         
         Returns:
