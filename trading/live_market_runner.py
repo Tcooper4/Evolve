@@ -29,7 +29,6 @@ from trading.agents.base_agent_interface import AgentResult
 from trading.memory.agent_memory import AgentMemory
 from trading.portfolio.portfolio_manager import PortfolioManager
 
-
 class TriggerType(Enum):
     """Trigger types for agent execution."""
     TIME_BASED = "time_based"
@@ -37,7 +36,6 @@ class TriggerType(Enum):
     VOLUME_SPIKE = "volume_spike"
     VOLATILITY_SPIKE = "volatility_spike"
     MANUAL = "manual"
-
 
 @dataclass
 class TriggerConfig:
@@ -48,7 +46,6 @@ class TriggerConfig:
     volume_spike_threshold: float = 2.0  # 2x average for volume triggers
     volatility_threshold: float = 0.02  # 2% for volatility triggers
     enabled: bool = True
-
 
 @dataclass
 class ForecastResult:
@@ -70,15 +67,14 @@ class ForecastResult:
         """Convert to dictionary."""
         result_dict = asdict(self)
         result_dict['timestamp'] = self.timestamp.isoformat()
-        return {'success': True, 'result': result_dict, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return result_dict
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ForecastResult':
         """Create from dictionary."""
         if isinstance(data['timestamp'], str):
             data['timestamp'] = datetime.fromisoformat(data['timestamp'])
-        return {'success': True, 'result': cls(**data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return cls(**data)
 
 @dataclass
 class LiveMarketState:
@@ -93,8 +89,7 @@ class LiveMarketState:
         """Convert to dictionary."""
         state_dict = asdict(self)
         state_dict['timestamp'] = self.timestamp.isoformat()
-        return {'success': True, 'result': state_dict, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return state_dict
 
 class LiveMarketRunner:
     """Live market data streaming and agent triggering system."""
@@ -203,7 +198,7 @@ class LiveMarketRunner:
             if agent_name in default_configs:
                 default_configs[agent_name] = TriggerConfig(**trigger_config)
         
-        return {'success': True, 'result': default_configs, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return default_configs
     
     def _load_forecast_results(self) -> None:
         """Load existing forecast results from file."""
@@ -741,7 +736,7 @@ class LiveMarketRunner:
             
         except Exception as e:
             self.logger.error(f"Error calculating forecast accuracy: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _calculate_volatility(self, prices: pd.Series, window: int = 20) -> float:
         """Calculate price volatility."""
@@ -750,7 +745,7 @@ class LiveMarketRunner:
         
         returns = prices.pct_change().dropna()
         if len(returns) < window:
-            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.0
         
         return returns.tail(window).std()
     
@@ -761,7 +756,7 @@ class LiveMarketRunner:
         
         avg_volume = np.mean(list(self.volume_history[symbol]))
         if avg_volume == 0:
-            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.0
         
         return current_volume / avg_volume
     
@@ -802,8 +797,7 @@ class LiveMarketRunner:
             
         except Exception as e:
             self.logger.error(f"Error calculating correlation: {e}")
-            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+            return 0.0
 
 # Factory function
 def create_live_market_runner(config: Optional[Dict[str, Any]] = None) -> LiveMarketRunner:
@@ -848,4 +842,4 @@ def create_live_market_runner(config: Optional[Dict[str, Any]] = None) -> LiveMa
     if config:
         default_config.update(config)
     
-    return {'success': True, 'result': LiveMarketRunner(default_config), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return LiveMarketRunner(default_config)

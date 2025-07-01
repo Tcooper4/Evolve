@@ -101,13 +101,13 @@ class NotificationManager:
     
     def get_available_channels(self) -> List[str]:
         """Get list of available notification channels."""
-        return {'success': True, 'result': list(self.handlers.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.handlers.keys())
     
     def add_handler(
         self,
         handler_type: str,
         handler_config: Dict[str, Any]
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     ) -> None:
         """Add a new notification handler."""
         try:
@@ -132,8 +132,7 @@ class NotificationManager:
         except Exception as e:
             self.logger.error(f"Error removing handler: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_handler_status(self, handler_type: str) -> Dict[str, Any]:
         """Get status of a notification handler."""
         try:
@@ -141,7 +140,7 @@ class NotificationManager:
                 raise ValueError(f"Handler not found: {handler_type}")
             
             # TODO: Implement handler status check
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'status': 'active',
                 'last_used': None,
                 'success_rate': 1.0
@@ -152,4 +151,3 @@ class NotificationManager:
     
     def check_handler_status(self):
         raise NotImplementedError('Pending feature') 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

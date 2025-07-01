@@ -58,7 +58,6 @@ class ConfigManager:
         self.secrets_dir = Path("secrets")
         self.secrets_dir.mkdir(parents=True, exist_ok=True)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
@@ -66,7 +65,7 @@ class ConfigManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -80,7 +79,6 @@ class ConfigManager:
         
         logging.config.dictConfig(log_config)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def generate_config(self, template: str = "default"):
         """Generate configuration files from template."""
         self.logger.info(f"Generating configuration from template: {template}")
@@ -105,7 +103,7 @@ class ConfigManager:
                 
                 self.logger.info(f"Generated configuration for {env}: {config_file}")
             
-            return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return True
         except Exception as e:
             self.logger.error(f"Failed to generate configuration: {e}")
             raise
@@ -187,7 +185,7 @@ class ConfigManager:
             # Print validation results
             self._print_validation_results(validation_results)
             
-            return {'success': True, 'result': validation_results["valid"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return validation_results["valid"]
         except Exception as e:
             self.logger.error(f"Failed to validate configuration: {e}")
             raise
@@ -233,7 +231,7 @@ class ConfigManager:
             
             self.logger.info(f"Encrypted secrets saved to {secrets_file}")
             
-            return {'success': True, 'result': secrets_file, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return secrets_file
         except Exception as e:
             self.logger.error(f"Failed to encrypt secrets: {e}")
             raise
@@ -267,7 +265,7 @@ class ConfigManager:
             
             self.logger.info(f"Decrypted secrets saved to {output_file}")
             
-            return {'success': True, 'result': decrypted_secrets, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return decrypted_secrets
         except Exception as e:
             self.logger.error(f"Failed to decrypt secrets: {e}")
             raise
@@ -366,7 +364,7 @@ class ConfigManager:
                 raise ValueError(f"Unsupported target: {target}")
             
             self.logger.info(f"Configuration synced to {target}")
-            return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return True
         except Exception as e:
             self.logger.error(f"Failed to sync configuration: {e}")
             raise
@@ -388,7 +386,7 @@ class ConfigManager:
             config["server"]["port"] = 8002
             config["database"]["port"] = 6381
         
-        return {'success': True, 'result': config, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return config
 
     def _print_validation_results(self, results: Dict[str, Any]):
         """Print configuration validation results."""
@@ -402,7 +400,6 @@ class ConfigManager:
             for issue in results["issues"]:
                 print(f"  - {issue}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Configuration Manager")
@@ -453,6 +450,5 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

@@ -57,7 +57,7 @@ def parse_args():
         default="INFO",
         help="Logging level (default: INFO)"
     )
-    return {'success': True, 'result': parser.parse_args(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return parser.parse_args()
 
 def setup_logging(log_level):
     """Initialize logging configuration."""
@@ -90,7 +90,7 @@ def load_config(config_path):
     
     logger = logging.getLogger("trading")
     logger.info("Configuration loaded")
-    return {'success': True, 'result': config, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return config
 
 def run_application(args, config):
     """Run the application in the specified mode."""
@@ -130,7 +130,6 @@ def run_application(args, config):
         logger.error(f"Error starting application: {e}")
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function."""
     # Parse command line arguments
@@ -145,6 +144,5 @@ def main():
     # Run application
     run_application(args, config)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

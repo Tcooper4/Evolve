@@ -335,7 +335,7 @@ class ForecastExplainability:
                         reverse=True
                     ))
                     
-                    return {'success': True, 'result': feature_importance, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return feature_importance
             
             # Default: equal importance
             feature_names = features.columns
@@ -408,7 +408,7 @@ class ForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error generating explanation text: {e}")
-            return {'success': True, 'result': f"Forecast for {symbol}: {forecast_value:.2f} over {horizon} days.", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return f"Forecast for {symbol}: {forecast_value:.2f} over {horizon} days."
     
     def _extract_model_metadata(self, model: Any) -> Dict[str, Any]:
         """Extract metadata from model.
@@ -445,7 +445,7 @@ class ForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error extracting model metadata: {e}")
-            return {'success': True, 'result': {'model_type': 'unknown'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'model_type': 'unknown'}
     
     def _create_default_explanation(self, forecast_id: str, symbol: str, forecast_value: float) -> ForecastExplanation:
         """Create default explanation when error occurs.
@@ -577,7 +577,7 @@ class ForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error getting forecast vs actual plot data: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def get_feature_importance_summary(self, symbol: str, days: int = 30) -> Dict[str, Any]:
         """Get feature importance summary.
@@ -629,7 +629,7 @@ class ForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error getting feature importance summary: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def get_explanation_summary(self, symbol: str, days: int = 30) -> Dict[str, Any]:
         """Get explanation summary statistics.
@@ -684,7 +684,7 @@ class ForecastExplainability:
             
         except Exception as e:
             logger.error(f"Error getting explanation summary: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def export_explanation_report(self, filepath: str, symbol: Optional[str] = None) -> Dict[str, Any]:
         """Export explanation report to a file.
@@ -726,4 +726,4 @@ forecast_explainability = ForecastExplainability()
 
 def get_forecast_explainability() -> ForecastExplainability:
     """Get the global forecast explainability instance."""
-    return {'success': True, 'result': forecast_explainability, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return forecast_explainability

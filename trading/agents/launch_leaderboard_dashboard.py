@@ -34,7 +34,7 @@ def check_dependencies():
     if missing_packages:
         print(f"❌ Missing required packages: {', '.join(missing_packages)}")
         print("Install them with: pip install " + " ".join(missing_packages))
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
     
     return True
 
@@ -69,7 +69,7 @@ def launch_dashboard(port=8501, host="localhost", headless=False):
         return False
     except KeyboardInterrupt:
         print("\n👋 Dashboard stopped by user")
-        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return True
     
     return True
 
@@ -120,7 +120,7 @@ Examples:
             print("✅ All dependencies are installed")
             return 0
         else:
-            return {'success': True, 'result': 1, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 1
     
     # Check dependencies before launching
     if not check_dependencies():

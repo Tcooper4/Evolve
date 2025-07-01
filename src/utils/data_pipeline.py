@@ -399,7 +399,6 @@ class DataPipeline:
         
         return stats
 
-
 def run_data_pipeline(file_path: Union[str, Path], config: Optional[Dict] = None, **kwargs) -> Tuple[bool, Optional[pd.DataFrame], Dict[str, Any]]:
     """
     Convenience function to run the complete data pipeline.

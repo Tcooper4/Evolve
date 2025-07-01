@@ -77,7 +77,6 @@ except ImportError as e:
     logger.warning(f"Capability router import failed: {e}")
     CAPABILITY_ROUTER_AVAILABLE = False
 
-
 def main():
     """Main application function."""
     # Page configuration
@@ -156,7 +155,6 @@ def main():
         return {'success': True, 'result': {'status': 'redirected', 'page': 'system_scorecard'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     return {'status': 'unknown_page', 'page': page}
-
 
 def show_home_page(module_status: Dict[str, Any]):
     """Display the home page with system overview and quick actions."""
@@ -298,7 +296,6 @@ def show_home_page(module_status: Dict[str, Any]):
         'timestamp': datetime.now().isoformat()
     }
 
-
 def get_comprehensive_system_health() -> Dict[str, Any]:
     """Get comprehensive system health information."""
     health_data = {
@@ -357,8 +354,7 @@ def get_comprehensive_system_health() -> Dict[str, Any]:
         logger.error(f"System health check failed: {e}")
         health_data['overall_status'] = 'Error'
     
-    return {'success': True, 'result': health_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+    return health_data
 
 if __name__ == "__main__":
     main()

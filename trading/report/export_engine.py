@@ -100,7 +100,7 @@ class ReportExportEngine:
             
         except Exception as e:
             logger.error(f"Error generating strategy report: {e}")
-            return {'success': True, 'result': "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ""
     
     def _generate_executive_summary(self, strategy_name: str, backtest_results: Dict[str, Any], 
                                   performance_data: pd.DataFrame) -> ReportSection:
@@ -410,7 +410,7 @@ Based on the backtest results, the **{strategy_name}** strategy shows
             
         except Exception as e:
             logger.error(f"Error generating report: {e}")
-            return {'success': True, 'result': "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ""
     
     def _generate_markdown_content(self, strategy_name: str, sections: List[ReportSection]) -> str:
         """Generate markdown content for report."""
@@ -437,7 +437,7 @@ Based on the backtest results, the **{strategy_name}** strategy shows
             
         except Exception as e:
             logger.error(f"Error generating markdown content: {e}")
-            return {'success': True, 'result': f"# {strategy_name} Strategy Report\n\nError generating report content.", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return f"# {strategy_name} Strategy Report\n\nError generating report content."
     
     # Helper methods for text generation
     def _get_risk_level(self, max_drawdown: float) -> str:
@@ -447,7 +447,7 @@ Based on the backtest results, the **{strategy_name}** strategy shows
         elif max_drawdown < 0.10:
             return "moderate"
         else:
-            return {'success': True, 'result': "high", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "high"
     
     def _get_volatility_level(self, volatility: float) -> str:
         """Get volatility level description."""
@@ -456,7 +456,7 @@ Based on the backtest results, the **{strategy_name}** strategy shows
         elif volatility < 0.25:
             return "moderate"
         else:
-            return {'success': True, 'result': "high", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "high"
     
     def _get_strategy_description(self, strategy_name: str) -> str:
         """Get strategy description."""
@@ -500,7 +500,7 @@ Based on the backtest results, the **{strategy_name}** strategy shows
         elif max_dd < 0.10 and var_95 < 0.03:
             return "The strategy shows moderate risk levels with acceptable drawdowns for the expected returns."
         else:
-            return {'success': True, 'result': "The strategy carries higher risk levels and should be used with appropriate risk management.", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "The strategy carries higher risk levels and should be used with appropriate risk management."
     
     def _get_strategy_assessment(self, backtest_results: Dict[str, Any]) -> str:
         """Get strategy assessment text."""
@@ -512,7 +512,7 @@ Based on the backtest results, the **{strategy_name}** strategy shows
         elif sharpe > 0.5:
             return "moderate"
         else:
-            return {'success': True, 'result': "poor", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "poor"
     
     def _get_sharpe_assessment(self, sharpe_ratio: float) -> str:
         """Get Sharpe ratio assessment."""
@@ -523,7 +523,7 @@ Based on the backtest results, the **{strategy_name}** strategy shows
         elif sharpe_ratio > 0.5:
             return "Moderate"
         else:
-            return {'success': True, 'result': "Poor", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "Poor"
     
     def _get_risk_assessment_level(self, max_drawdown: float) -> str:
         """Get risk assessment level."""
@@ -532,7 +532,7 @@ Based on the backtest results, the **{strategy_name}** strategy shows
         elif max_drawdown < 0.10:
             return "Moderate"
         else:
-            return {'success': True, 'result': "High", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "High"
     
     def _get_win_rate_assessment(self, win_rate: float) -> str:
         """Get win rate assessment."""
@@ -541,11 +541,11 @@ Based on the backtest results, the **{strategy_name}** strategy shows
         elif win_rate > 0.5:
             return "Moderate"
         else:
-            return {'success': True, 'result': "Low", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "Low"
 
 # Global report export engine instance
 report_export_engine = ReportExportEngine()
 
 def get_report_export_engine() -> ReportExportEngine:
     """Get the global report export engine instance."""
-    return {'success': True, 'result': report_export_engine, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return report_export_engine

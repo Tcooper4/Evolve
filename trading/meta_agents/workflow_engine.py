@@ -94,14 +94,14 @@ class WorkflowEngine:
             if workflow_id not in self.workflows:
                 raise ValueError(f"Workflow {workflow_id} not found")
             
-            return {'success': True, 'result': self.workflows[workflow_id], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self.workflows[workflow_id]
         except Exception as e:
             self.logger.error(f"Error getting workflow status: {str(e)}")
             raise
     
     def list_workflows(self) -> List[str]:
         """List all workflows."""
-        return {'success': True, 'result': list(self.workflows.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.workflows.keys())
     
     def update_workflow(
         self,
@@ -109,7 +109,7 @@ class WorkflowEngine:
         name: Optional[str] = None,
         description: Optional[str] = None,
         steps: Optional[List[Dict[str, Any]]] = None
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     ) -> None:
         """Update a workflow."""
         try:
@@ -145,8 +145,7 @@ class WorkflowEngine:
         except Exception as e:
             self.logger.error(f"Error deleting workflow: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     async def monitor_workflows(self, interval: int = 60):
         """Monitor workflows at regular intervals."""
         try:
@@ -165,7 +164,5 @@ class WorkflowEngine:
     def execute_step(self):
         raise NotImplementedError('Pending feature')
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def monitor_workflow(self):
         raise NotImplementedError('Pending feature') 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

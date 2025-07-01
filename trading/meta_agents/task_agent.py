@@ -24,10 +24,7 @@ class TaskAgent(BaseAgent):
         """Initialize the task agent."""
         super().__init__(config)
         self.task_manager = TaskManager(config)
-        self.setup_logging()
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self):
+        self.setup_logging()def setup_logging(self):
         """Configure logging for task management."""
         log_path = Path("logs/tasks")
         log_path.mkdir(parents=True, exist_ok=True)

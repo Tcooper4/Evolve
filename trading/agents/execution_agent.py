@@ -26,7 +26,6 @@ from trading.portfolio.position_sizer import (
 )
 from trading.memory.agent_memory import AgentMemory
 
-
 class ExecutionMode(Enum):
     """Execution mode enum."""
     SIMULATION = "simulation"
@@ -34,13 +33,11 @@ class ExecutionMode(Enum):
     INTERACTIVE_BROKERS = "interactive_brokers"
     ROBINHOOD = "robinhood"
 
-
 class RiskThresholdType(Enum):
     """Risk threshold type enum."""
     PERCENTAGE = "percentage"
     ATR_BASED = "atr_based"
     FIXED = "fixed"
-
 
 class ExitReason(Enum):
     """Exit reason enum."""
@@ -51,7 +48,6 @@ class ExitReason(Enum):
     RISK_LIMIT = "risk_limit"
     VOLATILITY_LIMIT = "volatility_limit"
     CORRELATION_LIMIT = "correlation_limit"
-
 
 @dataclass
 class RiskThreshold:
@@ -75,7 +71,6 @@ class RiskThreshold:
         """Create from dictionary."""
         data['threshold_type'] = RiskThresholdType(data['threshold_type'])
         return cls(**data)
-
 
 @dataclass
 class RiskControls:
@@ -111,7 +106,6 @@ class RiskControls:
         data['take_profit'] = RiskThreshold.from_dict(data['take_profit'])
         return cls(**data)
 
-
 @dataclass
 class ExitEvent:
     """Exit event data class."""
@@ -142,7 +136,6 @@ class ExitEvent:
         if isinstance(data['holding_period'], (int, float)):
             data['holding_period'] = timedelta(seconds=data['holding_period'])
         return cls(**data)
-
 
 @dataclass
 class TradeSignal:
@@ -190,7 +183,6 @@ class TradeSignal:
         
         return cls(**data)
 
-
 @dataclass
 class ExecutionResult:
     """Execution result data class."""
@@ -213,7 +205,6 @@ class ExecutionResult:
         if self.position:
             result_dict['position'] = self.position.to_dict()
         return result_dict
-
 
 class ExecutionAgent(BaseAgent):
     """Agent responsible for trade execution and position tracking."""
@@ -1909,7 +1900,6 @@ class ExecutionAgent(BaseAgent):
             self.execution_history.clear()
         except Exception as e:
             self.logger.error(f"Error clearing trade log: {e}")
-
 
 # Factory function for easy creation
 def create_execution_agent(config: Optional[Dict[str, Any]] = None) -> ExecutionAgent:

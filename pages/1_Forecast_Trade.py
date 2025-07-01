@@ -70,7 +70,7 @@ def load_model_configs():
     try:
         from trading.ui.config.registry import ModelConfigRegistry
         registry = ModelConfigRegistry()
-        return {'success': True, 'result': registry.get_all_configs(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return registry.get_all_configs()
     except Exception as e:
         logging.error(f"Error loading model configs: {e}")
         raise RuntimeError(f"Failed to load model configurations: {e}")
@@ -92,7 +92,7 @@ def get_status_badge(status):
         "down": "red"
     }
     color = colors.get(status, "gray")
-    return {'success': True, 'result': f'<span style="color: {color}; font-weight: bold;">● {status.title()}</span>', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return f'<span style="color: {color}; font-weight: bold;">● {status.title()}</span>'
 
 def analyze_market_context(ticker: str, data: pd.DataFrame) -> Dict:
     """Analyze market context for a given ticker."""
@@ -158,12 +158,11 @@ def display_market_analysis(analysis: Dict):
     else:
         st.error(f"Market analysis failed: {analysis.get('message', 'Unknown error')}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def generate_market_commentary(analysis: Dict, forecast_data: pd.DataFrame) -> str:
     """Generate market commentary based on analysis and forecast."""
     try:
         if analysis.get("status") != "success":
-            return {'success': True, 'result': "Market commentary unavailable due to analysis issues.", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "Market commentary unavailable due to analysis issues."
         
         commentary = f"Market Analysis for {analysis.get('ticker', 'Unknown')}:\n\n"
         
@@ -595,7 +594,6 @@ def main():
     # Update last updated timestamp
     update_last_updated()
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def calculate_sharpe_ratio(forecast_data):
     """Calculate Sharpe ratio from forecast data."""
     if forecast_data.empty or 'forecast' not in forecast_data.columns:
@@ -616,7 +614,7 @@ def calculate_sharpe_ratio(forecast_data):
         return sharpe
     except Exception as e:
         st.error(f"Error calculating Sharpe ratio: {e}")
-        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 0.0
 
 def calculate_accuracy(forecast_data):
     """Calculate forecast accuracy."""
@@ -640,7 +638,7 @@ def calculate_accuracy(forecast_data):
         return accuracy
     except Exception as e:
         st.error(f"Error calculating accuracy: {e}")
-        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 0.0
 
 def calculate_win_rate(forecast_data):
     """Calculate win rate from forecast data."""
@@ -660,7 +658,7 @@ def calculate_win_rate(forecast_data):
         return wins / total if total > 0 else 0.0
     except Exception as e:
         st.error(f"Error calculating win rate: {e}")
-        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 0.0
 
 def generate_forecast(ticker, selected_model):
     """Generate realistic forecast data."""
@@ -730,7 +728,7 @@ def generate_forecast(ticker, selected_model):
         
     except Exception as e:
         st.error(f"Error generating forecast: {e}")
-        return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return pd.DataFrame()
 
 def run_backtest(forecast_data, initial_capital=10000, position_size=50, stop_loss=2.0, take_profit=4.0):
     """Run realistic backtest simulation."""
@@ -781,7 +779,6 @@ def run_backtest(forecast_data, initial_capital=10000, position_size=50, stop_lo
         }
     except Exception as e:
         st.error(f"Error in backtest: {e}")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 if __name__ == "__main__":
     main() 

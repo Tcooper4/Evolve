@@ -21,7 +21,6 @@ from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
 
-
 class OptimizationTrigger(str, Enum):
     """Optimization trigger types."""
     PERFORMANCE_DECLINE = "performance_decline"
@@ -29,7 +28,6 @@ class OptimizationTrigger(str, Enum):
     SCHEDULED = "scheduled"
     VOLATILITY_SPIKE = "volatility_spike"
     MANUAL = "manual"
-
 
 @dataclass
 class OptimizationResult:
@@ -43,7 +41,6 @@ class OptimizationResult:
     optimization_time: float
     confidence: float
 
-
 @dataclass
 class ParameterConstraint:
     """Parameter constraint for optimization."""
@@ -52,7 +49,6 @@ class ParameterConstraint:
     max_value: float
     step_size: Optional[float] = None
     parameter_type: str = "continuous"  # continuous, discrete, categorical
-
 
 class SelfTuningOptimizerAgent:
     """

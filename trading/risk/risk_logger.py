@@ -25,9 +25,7 @@ class RiskLogger:
     def __init__(
         self,
         log_path: str = 'trading/risk/logs/risk_metrics.jsonl',
-        update_interval: int = 900  # 15 minutes in seconds
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        update_interval: int = 900  # 15 minutes in seconds):
         """Initialize risk logger.
         
         Args:
@@ -125,7 +123,7 @@ class RiskLogger:
             
         except Exception as e:
             logger.error(f"Error reading risk metrics: {e}")
-            return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return pd.DataFrame()
     
     def should_update(self) -> bool:
         """Check if metrics should be updated.
@@ -134,7 +132,7 @@ class RiskLogger:
             True if update is needed
         """
         if self.last_update is None:
-            return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return True
         
         time_since_update = (
             datetime.now() - self.last_update
@@ -181,7 +179,7 @@ class RiskLogger:
         model_name: Optional[str] = None,
         start_date: Optional[datetime] = None,
         end_date: Optional[datetime] = None
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     ):
         """Export risk metrics.
         

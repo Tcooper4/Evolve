@@ -48,7 +48,6 @@ def cleanup_agents():
                     content = f.read()
                 
                 deprecation_notice = f'''"""
-                    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 DEPRECATED: This agent is currently unused in production.
 It is only used in tests and documentation.
 Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}

@@ -499,7 +499,7 @@ class RollingRetrainingAgent:
             
         except Exception as e:
             logger.error(f"Error getting performance summary: {e}")
-            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'error': str(e)}
     
     def get_feature_importance(self) -> Dict[str, float]:
         """Get feature importance from the current model."""

@@ -39,10 +39,7 @@ class MultimodalAgent:
         self.use_blip = use_blip and BlipProcessor and BlipForConditionalGeneration and Image
         if self.use_blip:
             self.blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-            self.blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def plot_equity_curve(self, equity: List[float], title: str = "Equity Curve") -> bytes:
+            self.blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")def plot_equity_curve(self, equity: List[float], title: str = "Equity Curve") -> bytes:
         plt.figure(figsize=(8, 4))
         plt.plot(equity, label="Equity")
         plt.title(title)
@@ -53,7 +50,7 @@ class MultimodalAgent:
         plt.savefig(buf, format='png')
         plt.close()
         buf.seek(0)
-        return {'success': True, 'result': buf.read(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return buf.read()
 
     def plot_drawdown(self, equity: List[float], title: str = "Drawdown") -> bytes:
         equity = np.array(equity)
@@ -69,7 +66,7 @@ class MultimodalAgent:
         plt.savefig(buf, format='png')
         plt.close()
         buf.seek(0)
-        return {'success': True, 'result': buf.read(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return buf.read()
 
     def plot_performance(self, returns: List[float], title: str = "Strategy Performance") -> bytes:
         plt.figure(figsize=(8, 4))
@@ -82,7 +79,7 @@ class MultimodalAgent:
         plt.savefig(buf, format='png')
         plt.close()
         buf.seek(0)
-        return {'success': True, 'result': buf.read(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return buf.read()
 
     def vision_insight(self, image_bytes: bytes, prompt: str = "Describe the trading chart and its key features.") -> str:
         """Pass image to a vision model and get a natural language insight."""
@@ -106,7 +103,7 @@ class MultimodalAgent:
             out = self.blip_model.generate(**inputs)
             return self.blip_processor.decode(out[0], skip_special_tokens=True)
         else:
-            return {'success': True, 'result': "[Vision model not available]", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "[Vision model not available]"
 
     def analyze_equity_curve(self, equity: List[float]) -> str:
         img = self.plot_equity_curve(equity)

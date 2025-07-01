@@ -16,7 +16,6 @@ from typing import Dict, Any
 from trading.agents.execution_agent import ExecutionAgent, create_execution_agent
 from trading.agents.base_agent_interface import AgentConfig
 
-
 def setup_logging() -> None:
     """Setup logging configuration."""
     logging.basicConfig(
@@ -28,14 +27,13 @@ def setup_logging() -> None:
         ]
     )
 
-
     return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 def load_config(config_path: str = "trading/agents/execution_config.json") -> Dict[str, Any]:
     """Load configuration from file."""
     config_file = Path(config_path)
     if config_file.exists():
         with open(config_file, 'r') as f:
-            return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return json.load(f)
     else:
         # Default configuration
         default_config = {
@@ -73,7 +71,6 @@ def load_config(config_path: str = "trading/agents/execution_config.json") -> Di
         
         return default_config
 
-
 async def main():
     """Main function."""
     print("🚀 Launching Execution Agent")
@@ -109,8 +106,7 @@ async def main():
     def signal_handler(signum, frame):
         print(f"\n🛑 Received signal {signum}, shutting down...")
         sys.exit(0)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
@@ -130,7 +126,6 @@ async def main():
         raise
     finally:
         print(f"✅ Execution Agent stopped")
-
 
 if __name__ == "__main__":
     asyncio.run(main()) 

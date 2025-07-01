@@ -36,7 +36,6 @@ sys.path.append(str(Path(__file__).parent / "trading"))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 class EnhancedUnifiedInterface:
     """Enhanced unified interface for all Evolve trading system features."""
     
@@ -155,14 +154,13 @@ class EnhancedUnifiedInterface:
             self.components['performance_tracker'] = LongTermPerformanceTracker()
         except ImportError:
             logger.warning("LongTermPerformanceTracker not available")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_llm_provider_status(self) -> Dict[str, Any]:
         """Get status of all LLM providers."""
         if 'prompt_router' in self.components:
             return self.components['prompt_router'].get_provider_status()
         else:
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'openai': bool(self.openai_api_key),
                 'huggingface': bool(self.huggingface_api_key),
                 'regex': True
@@ -177,14 +175,14 @@ class EnhancedUnifiedInterface:
             return True
         else:
             logger.error(f"Invalid LLM provider: {provider}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def get_notification_status(self) -> Dict[str, Any]:
         """Get notification system status."""
         if 'notifications' in self.components:
             return self.components['notifications'].get_notification_status()
         else:
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'slack_configured': bool(self.slack_webhook_url),
                 'email_configured': bool(self.email_password),
                 'last_notification': None
@@ -192,7 +190,7 @@ class EnhancedUnifiedInterface:
     
     def get_help(self) -> Dict[str, Any]:
         """Get comprehensive help information."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'overview': {
                 'title': 'Evolve Trading System - Enhanced Unified Interface',
                 'description': 'Access all trading system features through natural language, commands, or UI',
@@ -355,8 +353,6 @@ class EnhancedUnifiedInterface:
         class MockAgent:
             def __init__(self, agent_type):
                 self.agent_type = agent_type
-            
-                return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
             def run_forecast(self, **kwargs):
                 return {'success': True, 'result': {'type': 'forecast', 'agent': self.agent_type, 'args': kwargs}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
@@ -401,7 +397,7 @@ class EnhancedUnifiedInterface:
             return self._handle_status(command.split())
         else:
             # Try natural language processing
-            return {'success': True, 'result': self._process_natural_language(command), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._process_natural_language(command)
     
     def _process_natural_language(self, query: str) -> Dict[str, Any]:
         """Process natural language queries."""
@@ -637,7 +633,6 @@ class EnhancedUnifiedInterface:
         except Exception as e:
             return {'success': True, 'result': {'error': f'Status error: {e}', 'status': 'error'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
-
 def enhanced_streamlit_ui():
     """Enhanced Streamlit web interface with LLM controls and transparency."""
     st.set_page_config(
@@ -713,8 +708,6 @@ def enhanced_streamlit_ui():
     elif page == "System Status":
         render_system_status_interface(interface)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_enhanced_main_interface(interface: EnhancedUnifiedInterface):
     """Render enhanced main interface page."""
     st.title("🔮 Evolve Enhanced Unified Interface")
@@ -793,8 +786,6 @@ def render_enhanced_main_interface(interface: EnhancedUnifiedInterface):
             result = interface.process_command("status")
             display_enhanced_result(result)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_enhanced_quantgpt_interface(interface: EnhancedUnifiedInterface):
     """Render enhanced QuantGPT interface."""
     st.title("🤖 QuantGPT Natural Language Interface")
@@ -832,8 +823,6 @@ def render_enhanced_quantgpt_interface(interface: EnhancedUnifiedInterface):
             result = interface.process_command(query, query_provider.lower())
             display_enhanced_result(result)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def display_enhanced_result(result: Dict[str, Any]):
     """Display enhanced result with full transparency."""
     st.subheader("📊 Result")
@@ -880,8 +869,6 @@ def display_enhanced_result(result: Dict[str, Any]):
     if 'timestamp' in result:
         st.caption(f"Executed at: {result['timestamp']}")
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_enhanced_forecasting_interface(interface: EnhancedUnifiedInterface):
     """Render enhanced forecasting interface."""
     st.title("📈 Enhanced Forecasting Interface")
@@ -908,8 +895,6 @@ def render_enhanced_forecasting_interface(interface: EnhancedUnifiedInterface):
         result = interface.process_command(command, provider)
         display_enhanced_result(result)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_enhanced_tuning_interface(interface: EnhancedUnifiedInterface):
     """Render enhanced tuning interface."""
     st.title("⚙️ Enhanced Tuning Interface")
@@ -936,8 +921,6 @@ def render_enhanced_tuning_interface(interface: EnhancedUnifiedInterface):
         result = interface.process_command(command, provider)
         display_enhanced_result(result)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_enhanced_strategy_interface(interface: EnhancedUnifiedInterface):
     """Render enhanced strategy interface."""
     st.title("📊 Enhanced Strategy Interface")
@@ -969,8 +952,6 @@ def render_enhanced_strategy_interface(interface: EnhancedUnifiedInterface):
         result = interface.process_command(command, provider)
         display_enhanced_result(result)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_enhanced_portfolio_interface(interface: EnhancedUnifiedInterface):
     """Render enhanced portfolio interface."""
     st.title("💼 Enhanced Portfolio Interface")
@@ -991,8 +972,6 @@ def render_enhanced_portfolio_interface(interface: EnhancedUnifiedInterface):
         result = interface.process_command(command, provider)
         display_enhanced_result(result)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_enhanced_agents_interface(interface: EnhancedUnifiedInterface):
     """Render enhanced agents interface."""
     st.title("🤖 Enhanced Agents Interface")
@@ -1017,8 +996,6 @@ def render_enhanced_agents_interface(interface: EnhancedUnifiedInterface):
         result = interface.process_command(command, provider)
         display_enhanced_result(result)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_enhanced_reports_interface(interface: EnhancedUnifiedInterface):
     """Render enhanced reports interface."""
     st.title("📋 Enhanced Reports Interface")
@@ -1049,8 +1026,6 @@ def render_enhanced_reports_interface(interface: EnhancedUnifiedInterface):
         result = interface.process_command(command, provider)
         display_enhanced_result(result)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_enhanced_help_interface(interface: EnhancedUnifiedInterface):
     """Render enhanced help interface."""
     st.title("❓ Enhanced Help Interface")
@@ -1091,8 +1066,6 @@ def render_enhanced_help_interface(interface: EnhancedUnifiedInterface):
         for example in help_info['examples']['advanced']:
             st.code(example)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def render_system_status_interface(interface: EnhancedUnifiedInterface):
     """Render system status interface."""
     st.title("⚙️ System Status")
@@ -1144,8 +1117,6 @@ def render_system_status_interface(interface: EnhancedUnifiedInterface):
         else:
             st.markdown(f"**{key.replace('_', ' ').title()}:** {value}")
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(description="Evolve Trading System - Enhanced Unified Interface")
@@ -1160,7 +1131,5 @@ def main():
     else:
         terminal_ui()
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

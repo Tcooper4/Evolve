@@ -21,7 +21,6 @@ from trading.services.base_service import BaseService
 
 logger = logging.getLogger(__name__)
 
-
 class PromptRouterService(BaseService):
     """
     Service wrapper for PromptRouterAgent.
@@ -38,10 +37,7 @@ class PromptRouterService(BaseService):
         self.agent = PromptRouterAgent()
         self.memory = AgentMemory()
         
-        logger.info("PromptRouterService initialized")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        logger.info("PromptRouterService initialized")def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming prompt routing requests.
         
@@ -64,7 +60,7 @@ class PromptRouterService(BaseService):
                 return self._handle_history_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return {
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -122,7 +118,7 @@ class PromptRouterService(BaseService):
             
         except Exception as e:
             logger.error(f"Error routing prompt: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -169,7 +165,7 @@ class PromptRouterService(BaseService):
             
         except Exception as e:
             logger.error(f"Error detecting intent: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -218,7 +214,7 @@ class PromptRouterService(BaseService):
             
         except Exception as e:
             logger.error(f"Error parsing arguments: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -247,7 +243,7 @@ class PromptRouterService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting routing history: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -284,4 +280,4 @@ class PromptRouterService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'error': str(e)}

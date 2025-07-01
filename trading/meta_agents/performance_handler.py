@@ -70,7 +70,7 @@ class PerformanceHandler:
             }
             
             self.metrics = metrics
-            return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return metrics
         except Exception as e:
             self.logger.error(f"Error collecting metrics: {str(e)}")
             raise
@@ -95,7 +95,7 @@ class PerformanceHandler:
                     f"High disk usage: {self.metrics['disk']['percent']}%"
                 )
             
-            return {'success': True, 'result': alerts, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return alerts
         except Exception as e:
             self.logger.error(f"Error checking thresholds: {str(e)}")
             raise
@@ -118,13 +118,13 @@ class PerformanceHandler:
     
     def get_metrics(self) -> Dict[str, Any]:
         """Get current performance metrics."""
-        return {'success': True, 'result': self.metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.metrics
     
     def get_metrics_history(
         self,
         start_time: Optional[datetime] = None,
         end_time: Optional[datetime] = None
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     ) -> List[Dict[str, Any]]:
         """Get historical performance metrics."""
         raise NotImplementedError('Pending feature')
@@ -132,4 +132,3 @@ class PerformanceHandler:
     def optimize_performance(self) -> Dict[str, Any]:
         """Optimize system performance."""
         raise NotImplementedError('Pending feature') 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

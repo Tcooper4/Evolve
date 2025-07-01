@@ -17,7 +17,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 from services.service_client import ServiceClient
 from utils.safe_executor import SafeExecutor, ExecutionStatus
 
-
 def test_direct_safe_executor():
     """Test direct SafeExecutor usage."""
     print("🧪 Testing Direct SafeExecutor Usage")
@@ -224,8 +223,7 @@ def main(input_data):
         
     except Exception as e:
         print(f"❌ Direct SafeExecutor test failed: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return False
 
 def test_service_client():
     """Test SafeExecutor via ServiceClient."""
@@ -341,8 +339,7 @@ def main(input_data):
         
     except Exception as e:
         print(f"❌ ServiceClient test failed: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return False
 
 def test_security_features():
     """Test security features of SafeExecutor."""
@@ -407,8 +404,7 @@ def test_security_features():
         
     except Exception as e:
         print(f"❌ Security features test failed: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return False
 
 def main():
     """Run all SafeExecutor tests."""
@@ -426,8 +422,7 @@ def main():
         print("Running direct SafeExecutor tests only...")
         test_direct_safe_executor()
         test_security_features()
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     # Run all tests
     tests = [
         ("Direct SafeExecutor", test_direct_safe_executor),
@@ -465,7 +460,6 @@ def main():
         print("🎉 All tests passed! SafeExecutor is working correctly.")
     else:
         print("⚠️  Some tests failed. Check the output above for details.")
-
 
 if __name__ == "__main__":
     main() 

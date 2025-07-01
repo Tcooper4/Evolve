@@ -21,7 +21,6 @@ from trading.services.base_service import BaseService
 
 logger = logging.getLogger(__name__)
 
-
 class ResearchService(BaseService):
     """
     Service wrapper for ResearchAgent.
@@ -70,7 +69,7 @@ class ResearchService(BaseService):
                 return self._handle_get_log(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return {
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -130,7 +129,7 @@ class ResearchService(BaseService):
             
         except Exception as e:
             logger.error(f"Error searching GitHub: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -181,7 +180,7 @@ class ResearchService(BaseService):
             
         except Exception as e:
             logger.error(f"Error searching arXiv: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -229,7 +228,7 @@ class ResearchService(BaseService):
             
         except Exception as e:
             logger.error(f"Error summarizing paper: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -277,7 +276,7 @@ class ResearchService(BaseService):
             
         except Exception as e:
             logger.error(f"Error generating code: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -303,7 +302,7 @@ class ResearchService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting research log: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -333,4 +332,4 @@ class ResearchService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'error': str(e)}

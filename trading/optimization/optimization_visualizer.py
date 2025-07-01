@@ -20,10 +20,7 @@ class OptimizationVisualizer:
         Args:
             results: List of optimization results
         """
-        self.results = results
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def plot_convergence(
+        self.results = resultsdef plot_convergence(
         self,
         metric: str = 'sharpe_ratio',
         title: str = "Optimization Convergence"
@@ -73,7 +70,7 @@ class OptimizationVisualizer:
             template="plotly_white"
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def plot_metric_tradeoffs(
         self,
@@ -120,7 +117,7 @@ class OptimizationVisualizer:
             template="plotly_white"
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def plot_parameter_importance(
         self,
@@ -153,7 +150,7 @@ class OptimizationVisualizer:
             template="plotly_white"
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def plot_parameter_distributions(
         self,
@@ -198,7 +195,7 @@ class OptimizationVisualizer:
             template="plotly_white"
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def plot_equity_curves(
         self,
@@ -238,7 +235,7 @@ class OptimizationVisualizer:
             template="plotly_white"
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def plot_drawdowns(
         self,
@@ -279,7 +276,7 @@ class OptimizationVisualizer:
             template="plotly_white"
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def create_dashboard(
         self,
@@ -314,7 +311,7 @@ class OptimizationVisualizer:
         # Add drawdowns
         plots.append(self.plot_drawdowns())
         
-        return {'success': True, 'result': plots, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return plots
     
     @staticmethod
     def display_optimization_summary(results: Dict[str, Any]) -> None:
@@ -344,4 +341,3 @@ class OptimizationVisualizer:
         # Display number of iterations
         if "n_iterations" in results:
             st.write(f"**Number of Iterations:** {results['n_iterations']}") 
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

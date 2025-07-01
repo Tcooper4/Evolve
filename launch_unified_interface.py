@@ -18,14 +18,13 @@ sys.path.append(str(Path(__file__).parent))
 
 from unified_interface import UnifiedInterface, streamlit_ui, terminal_ui
 
-
 def main():
     """Main launcher function."""
     parser = argparse.ArgumentParser(
         description='Evolve Unified Interface Launcher',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
 Examples:
   # Launch Streamlit web interface
   python launch_unified_interface.py --streamlit
@@ -82,7 +81,6 @@ Examples:
     elif args.terminal:
         terminal_ui()
 
-
 def run_demo(interface: UnifiedInterface):
     """Run demonstration commands."""
     print("🔮 Evolve Unified Interface - Demo Mode")
@@ -114,8 +112,6 @@ def run_demo(interface: UnifiedInterface):
     
     print("\n✅ Demo completed!")
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def execute_command(interface: UnifiedInterface, command: str):
     """Execute a single command."""
     print(f"🔮 Executing: {command}")
@@ -129,8 +125,6 @@ def execute_command(interface: UnifiedInterface, command: str):
     else:
         print_result_simple(result)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def print_result_simple(result: dict):
     """Print result in a simple format."""
     result_type = result.get('type', 'unknown')
@@ -169,8 +163,6 @@ def print_result_simple(result: dict):
         if 'result' in result:
             print("Result:", result['result'])
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def launch_streamlit():
     """Launch Streamlit interface."""
     try:
@@ -198,7 +190,5 @@ def launch_streamlit():
         print(f"❌ Error launching Streamlit: {e}")
         sys.exit(1)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

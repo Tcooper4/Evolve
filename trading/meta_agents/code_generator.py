@@ -17,9 +17,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         self,
         name: str = "code_generator",
         config: Optional[Dict] = None,
-        log_file_path: Optional[Union[str, Path]] = None
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        log_file_path: Optional[Union[str, Path]] = None):
         """Initialize the code generator agent.
         
         Args:
@@ -77,8 +75,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         required_fields = ["description", "requirements"]
         if not any(field in task.data for field in required_fields):
             raise ValueError(f"Task must include at least one of: {required_fields}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _build_prompt(self, task: Task) -> List[Dict[str, str]]:
         """Build the prompt for code generation.
         
@@ -114,7 +111,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
             "content": "\n".join(prompt)
         })
         
-        return {'success': True, 'result': messages, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return messages
     
     @retry(
         stop=stop_after_attempt(3),
@@ -141,7 +138,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
                 max_tokens=self.config["max_tokens"],
                 stream=stream
             )
-            return {'success': True, 'result': response, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return response
         except openai.RateLimitError:
             self.logger.warning("Rate limit hit, retrying...")
             raise
@@ -183,7 +180,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         # Calculate confidence score
         confidence = self._calculate_confidence(response)
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "code": code,
             "tests": tests,
             "metadata": {
@@ -225,7 +222,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         """
         # Use logprobs if available
         if hasattr(response.choices[0], "logprobs"):
-            return {'success': True, 'result': float(response.choices[0].logprobs.token_logprobs[0]), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return float(response.choices[0].logprobs.token_logprobs[0])
             
         # Fallback to content length heuristic
         content_length = len(response.choices[0].message.content)
@@ -277,7 +274,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
             diff_response = self._call_openai(diff_messages)
             diff = diff_response.choices[0].message.content
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "original_code": code,
             "refactored_code": refactored_code,
             "review": review.choices[0].message.content,
@@ -297,7 +294,7 @@ class CodeGeneratorAgent(BaseMetaAgent):
         Returns:
             Dict containing mock generation results
         """
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "code": "# Simulated code\ndef hello():\n    return 'Hello, World!'",
             "tests": "# Simulated tests\ndef test_hello():\n    assert hello() == 'Hello, World!'",
             "metadata": {

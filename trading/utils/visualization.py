@@ -66,7 +66,7 @@ def plot_forecast(data: pd.DataFrame,
         hovermode='x unified'
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def plot_attention_heatmap(model: Any, data: pd.DataFrame) -> go.Figure:
     """Generate attention heatmap for transformer-based models.
@@ -96,7 +96,7 @@ def plot_attention_heatmap(model: Any, data: pd.DataFrame) -> go.Figure:
         yaxis_title='Attention Heads'
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def plot_shap_values(model: Any, data: pd.DataFrame) -> go.Figure:
     """Visualize SHAP values for model interpretability.
@@ -152,7 +152,7 @@ def plot_shap_values(model: Any, data: pd.DataFrame) -> go.Figure:
         showlegend=False
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def plot_backtest_results(results: pd.DataFrame) -> go.Figure:
     """Plot backtest results including cumulative returns and drawdown.
@@ -207,7 +207,7 @@ def plot_backtest_results(results: pd.DataFrame) -> go.Figure:
         showlegend=True
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def plot_model_components(model: Any, data: pd.DataFrame) -> go.Figure:
     """Plot model components for interpretable models.
@@ -237,7 +237,7 @@ def plot_model_components(model: Any, data: pd.DataFrame) -> go.Figure:
         template='plotly_white'
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def plot_performance_over_time(performance_data: pd.DataFrame) -> go.Figure:
     """Plot performance metrics over time.
@@ -274,7 +274,7 @@ def plot_performance_over_time(performance_data: pd.DataFrame) -> go.Figure:
         template='plotly_white'
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def plot_model_comparison(metrics: pd.DataFrame) -> go.Figure:
     """Compare different models' performance metrics.
@@ -335,4 +335,4 @@ def plot_model_comparison(metrics: pd.DataFrame) -> go.Figure:
         showlegend=False
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig

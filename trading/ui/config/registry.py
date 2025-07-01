@@ -85,43 +85,42 @@ class Registry:
         except Exception as e:
             logger.error(f"Failed to load strategy configurations: {e}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_available_models(self, category: Optional[str] = None) -> List[ModelConfig]:
         """Get list of available models, optionally filtered by category."""
         if category:
-            return {'success': True, 'result': [model for model in self._models.values(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return [model for model in self._models.values()
                    if model.category == category]
         return list(self._models.values())
     
     def get_available_strategies(self, category: Optional[str] = None) -> List[StrategyConfig]:
         """Get list of available strategies, optionally filtered by category."""
         if category:
-            return {'success': True, 'result': [strategy for strategy in self._strategies.values(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return [strategy for strategy in self._strategies.values()
                    if strategy.category == category]
         return list(self._strategies.values())
     
     def get_model_config(self, model_name: str) -> Optional[ModelConfig]:
         """Get configuration for a specific model."""
-        return {'success': True, 'result': self._models.get(model_name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self._models.get(model_name)
     
     def get_strategy_config(self, strategy_name: str) -> Optional[StrategyConfig]:
         """Get configuration for a specific strategy."""
-        return {'success': True, 'result': self._strategies.get(strategy_name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self._strategies.get(strategy_name)
     
     def get_model_parameters(self, model_name: str) -> Dict[str, Union[str, float, int, bool]]:
         """Get parameters for a specific model."""
         model = self.get_model_config(model_name)
         if not model:
             raise ValueError(f"Model not found: {model_name}")
-        return {'success': True, 'result': model.parameters, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return model.parameters
     
     def get_strategy_parameters(self, strategy_name: str) -> Dict[str, Union[str, float, int, bool]]:
         """Get parameters for a specific strategy."""
         strategy = self.get_strategy_config(strategy_name)
         if not strategy:
             raise ValueError(f"Strategy not found: {strategy_name}")
-        return {'success': True, 'result': strategy.parameters, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return strategy.parameters
 
 # Create singleton instance
 registry = Registry() 

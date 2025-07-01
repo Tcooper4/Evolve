@@ -871,7 +871,6 @@ class AgentMemoryManager:
                 'timestamp': datetime.now().isoformat()
             }
 
-
 # Global instance
 agent_memory_manager = AgentMemoryManager()
 

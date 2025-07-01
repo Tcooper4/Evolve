@@ -58,7 +58,6 @@ class OptimizerFactory:
         cls._optimizers[name.lower()] = optimizer_class
         logger.info(f"Registered optimizer: {name}")
     
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     @classmethod
     def create_optimizer(cls, name: str, **kwargs) -> BaseOptimizer:
         """Create an optimizer instance.
@@ -78,7 +77,7 @@ class OptimizerFactory:
             raise ValueError(f"Unknown optimizer type: {name}")
         
         optimizer_class = cls._optimizers[name]
-        return {'success': True, 'result': optimizer_class(**kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return optimizer_class(**kwargs)
     
     @classmethod
     def get_available_optimizers(cls) -> Dict[str, Type[BaseOptimizer]]:
@@ -87,7 +86,7 @@ class OptimizerFactory:
         Returns:
             Dictionary mapping optimizer names to their classes
         """
-        return {'success': True, 'result': cls._optimizers.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return cls._optimizers.copy()
     
     @classmethod
     def load_optimizers(cls, directory: Optional[str] = None) -> None:
@@ -120,7 +119,6 @@ class OptimizerFactory:
             except Exception as e:
                 logger.error(f"Failed to load optimizer from {path}: {e}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Initialize factory with built-in optimizers
 factory = OptimizerFactory()
 factory.load_optimizers() 

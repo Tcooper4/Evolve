@@ -19,7 +19,7 @@ def load_weight_history():
         return None
     
     with open("memory/weight_history.json", "r") as f:
-        return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return json.load(f)
 
 def load_audit_log():
     """Load weight audit log data."""
@@ -27,7 +27,7 @@ def load_audit_log():
         return []
     
     with open("memory/weight_audit_log.json", "r") as f:
-        return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return json.load(f)
 
 def main():
     st.title("📈 Model Weight History Dashboard")
@@ -36,8 +36,7 @@ def main():
     data = load_weight_history()
     if not data:
         st.warning("No weight history found.")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     # Get unique tickers
     tickers = sorted({t for v in data.values() for t in v})
     ticker = st.selectbox("Select Ticker", tickers)

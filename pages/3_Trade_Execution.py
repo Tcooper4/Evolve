@@ -65,6 +65,5 @@ def main():
         st.subheader("📊 Market Data")
         st.info("Real-time market data requires connection to a market data provider.")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

@@ -25,10 +25,7 @@ class AutomationTasks:
         self.config = config
         self.task_manager = TaskManager(config)
         self.notification_service = NotificationService(config)
-        self.setup_logging()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self):
+        self.setup_logging()def setup_logging(self):
         """Configure logging for automation tasks."""
         log_path = Path("logs/automation")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -184,13 +181,12 @@ class AutomationTasks:
 
     def backup(self):
         raise NotImplementedError('Pending feature')
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def cleanup(self):
         raise NotImplementedError('Pending feature')
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def validate(self):
         raise NotImplementedError('Pending feature')
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def process(self):
         raise NotImplementedError('Pending feature') 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

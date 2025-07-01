@@ -39,7 +39,7 @@ except ImportError:
     # Create a dummy jit decorator
     def jit(*args, **kwargs):
         def decorator(func):
-            return {'success': True, 'result': {'success': True, 'result': func, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return func
         return decorator
 
 class MarketIndicators:
@@ -78,7 +78,6 @@ class MarketIndicators:
         else:
             self.logger.info("Using CPU for calculations")
             
-                return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
         required_fields = ['rsi_window', 'macd_fast', 'macd_slow', 'macd_signal']
@@ -98,7 +97,6 @@ class MarketIndicators:
         if not isinstance(self.config['macd_signal'], int) or self.config['macd_signal'] <= 0:
             raise ValueError("macd_signal must be a positive integer")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _validate_data(self, data: pd.DataFrame) -> None:
         """Validate input data.
         
@@ -130,7 +128,6 @@ class MarketIndicators:
         if np.isinf(data.select_dtypes(include=np.number)).any().any():
             raise ValueError("Data contains infinite values")
             
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     @staticmethod
     @jit(nopython=True)
     def _calculate_rsi_fast(prices: np.ndarray, period: int) -> np.ndarray:
@@ -165,7 +162,7 @@ class MarketIndicators:
             rs = up/down
             rsi[i] = 100. - 100./(1.+rs)
             
-        return {'success': True, 'result': rsi, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return rsi
             
     def calculate_rsi(self, data: pd.DataFrame, window: Optional[int] = None) -> pd.Series:
         """Calculate Relative Strength Index (RSI).
@@ -198,7 +195,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return {'success': True, 'result': rsi, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return rsi
             
         except Exception as e:
             self.performance_metrics['errors'] += 1
@@ -238,7 +235,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'macd': macd[f'MACD_{self.config["macd_fast"]}_{self.config["macd_slow"]}_{self.config["macd_signal"]}'],
                 'signal': macd[f'MACDs_{self.config["macd_fast"]}_{self.config["macd_slow"]}_{self.config["macd_signal"]}'],
                 'histogram': macd[f'MACDh_{self.config["macd_fast"]}_{self.config["macd_slow"]}_{self.config["macd_signal"]}']
@@ -279,7 +276,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return {'success': True, 'result': sma, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return sma
             
         except Exception as e:
             self.performance_metrics['errors'] += 1
@@ -316,7 +313,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return {'success': True, 'result': ema, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ema
             
         except Exception as e:
             self.performance_metrics['errors'] += 1
@@ -355,7 +352,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'upper': bb[f'BBU_{window}_{num_std}'],
                 'middle': bb[f'BBM_{window}_{num_std}'],
                 'lower': bb[f'BBL_{window}_{num_std}']
@@ -402,7 +399,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return {'success': True, 'result': indicators, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return indicators
             
         except Exception as e:
             self.performance_metrics['errors'] += 1
@@ -411,7 +408,7 @@ class MarketIndicators:
 
     def get_performance_metrics(self) -> Dict[str, int]:
         """Get performance metrics for indicator calculations."""
-        return {'success': True, 'result': self.performance_metrics.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.performance_metrics.copy()
 
     def calculate_stochastic(self, data: pd.DataFrame, k_period: int = 14,
                            d_period: int = 3) -> pd.DataFrame:
@@ -445,7 +442,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return {'success': True, 'result': stoch, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return stoch
             
         except Exception as e:
             self.logger.error(f"Error calculating Stochastic Oscillator: {str(e)}")
@@ -480,7 +477,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return {'success': True, 'result': atr, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return atr
             
         except Exception as e:
             self.logger.error(f"Error calculating ATR: {str(e)}")
@@ -532,7 +529,7 @@ class MarketIndicators:
                     'timestamp': datetime.utcnow().isoformat()
                 })
             
-            return {'success': True, 'result': ichimoku, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ichimoku
             
         except Exception as e:
             self.logger.error(f"Error calculating Ichimoku Cloud: {str(e)}")

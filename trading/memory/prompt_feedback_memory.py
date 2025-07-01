@@ -92,8 +92,7 @@ class PromptFeedbackMemory:
             self.feedback_stats[prompt_type].append(user_feedback)
         
         logger.info(f"Stored interaction: {prompt[:50]}... with feedback {user_feedback}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _categorize_prompt(self, prompt: str) -> str:
         """Categorize prompt by type."""
         prompt_lower = prompt.lower()
@@ -109,7 +108,7 @@ class PromptFeedbackMemory:
         elif any(word in prompt_lower for word in ['risk', 'volatility', 'drawdown']):
             return 'risk'
         else:
-            return {'success': True, 'result': 'general', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 'general'
     
     def learn_patterns(self) -> Dict[str, Any]:
         """
@@ -119,7 +118,7 @@ class PromptFeedbackMemory:
             Dictionary with learning insights
         """
         if not self.interactions:
-            return {'success': True, 'result': {'message': 'No interactions to learn from'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'message': 'No interactions to learn from'}
         
         # Analyze successful patterns
         successful_interactions = [
@@ -154,7 +153,7 @@ class PromptFeedbackMemory:
     def _extract_patterns(self, interactions: List[PromptInteraction]) -> Dict[str, Any]:
         """Extract patterns from interactions."""
         if not interactions:
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
         
         patterns = {
             'common_keywords': defaultdict(int),
@@ -193,7 +192,7 @@ class PromptFeedbackMemory:
         elif 'portfolio' in response.get('type', ''):
             return 'portfolio'
         else:
-            return {'success': True, 'result': 'general', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 'general'
     
     def _update_patterns(self, successful_patterns: Dict[str, Any], 
                         unsuccessful_patterns: Dict[str, Any]) -> None:
@@ -218,8 +217,7 @@ class PromptFeedbackMemory:
                     last_used=datetime.now(),
                     context={'type': 'keyword'}
                 )
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _get_feedback_by_category(self) -> Dict[str, float]:
         """Get average feedback by category."""
         feedback_by_category = {}
@@ -228,7 +226,7 @@ class PromptFeedbackMemory:
             if feedbacks:
                 feedback_by_category[category] = np.mean(feedbacks)
         
-        return {'success': True, 'result': feedback_by_category, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return feedback_by_category
     
     def get_prompt_suggestions(self, partial_prompt: str) -> List[Dict[str, Any]]:
         """
@@ -257,7 +255,7 @@ class PromptFeedbackMemory:
         # Sort by confidence
         suggestions.sort(key=lambda x: x['confidence'], reverse=True)
         
-        return {'success': True, 'result': suggestions[:5]  # Return top 5 suggestions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return suggestions[:5]  # Return top 5 suggestions
     
     def _is_pattern_relevant(self, pattern: str, partial_prompt: str) -> bool:
         """Check if pattern is relevant to partial prompt."""
@@ -266,7 +264,7 @@ class PromptFeedbackMemory:
         
         # Check for semantic similarity
         if pattern_lower in partial_lower or partial_lower in pattern_lower:
-            return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return True
         
         # Check for category similarity
         partial_category = self._categorize_prompt(partial_prompt)
@@ -276,7 +274,7 @@ class PromptFeedbackMemory:
     
     def get_memory_summary(self) -> Dict[str, Any]:
         """Get summary of memory system."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'total_interactions': len(self.interactions),
             'total_patterns': len(self.patterns),
             'average_feedback': np.mean(self.feedback_stats['overall']) if self.feedback_stats['overall'] else 0,
@@ -301,7 +299,7 @@ class PromptFeedbackMemory:
         # Sort by success rate
         top_patterns.sort(key=lambda x: x['success_rate'], reverse=True)
         
-        return {'success': True, 'result': top_patterns[:10]  # Return top 10 patterns, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return top_patterns[:10]  # Return top 10 patterns
     
     def run_memory_loop(self) -> Dict[str, Any]:
         """

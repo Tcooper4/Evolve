@@ -205,8 +205,7 @@ class WalkForwardAgent:
             
         except Exception as e:
             logger.error(f"Error training model: {e}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def _make_predictions(self, model: Any, test_data: pd.DataFrame, feature_columns: List[str]) -> pd.Series:
         """Make predictions using trained model.
         
@@ -286,7 +285,7 @@ class WalkForwardAgent:
             
         except Exception as e:
             logger.error(f"Error calculating performance: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _calculate_max_drawdown(self, returns: pd.Series) -> float:
         """Calculate maximum drawdown.
@@ -303,7 +302,7 @@ class WalkForwardAgent:
             drawdown = (cumulative - running_max) / running_max
             return drawdown.min()
         except:
-            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.0
     
     def _update_performance_tracker(self, performance: Dict[str, float], test_start: datetime):
         """Update performance tracking.
@@ -319,8 +318,7 @@ class WalkForwardAgent:
                 'date': test_start,
                 'value': value
             })
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_performance_summary(self) -> Dict[str, Any]:
         """Get summary of walk-forward performance.
         
@@ -328,7 +326,7 @@ class WalkForwardAgent:
             Performance summary
         """
         if not self.results_history:
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
         
         summary = {}
         
@@ -371,7 +369,7 @@ class WalkForwardAgent:
                 data.set_index('date', inplace=True)
                 trends[metric] = data['value']
         
-        return {'success': True, 'result': trends, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return trends
     
     def should_retrain(self, current_performance: Dict[str, float], threshold: float = 0.1) -> bool:
         """Determine if model should be retrained based on performance degradation.
@@ -400,7 +398,7 @@ class WalkForwardAgent:
         if avg_recent_sharpe > 0 and current_sharpe < avg_recent_sharpe * (1 - threshold):
             logger.info(f"Performance degradation detected. Recent avg: {avg_recent_sharpe:.3f}, "
                        f"Current: {current_sharpe:.3f}. Retraining recommended.")
-            return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return True
         
         return False
     
@@ -436,11 +434,11 @@ class WalkForwardAgent:
             
         except Exception as e:
             logger.error(f"Error exporting results: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
 # Global walk-forward agent instance
 walk_forward_agent = WalkForwardAgent()
 
 def get_walk_forward_agent() -> WalkForwardAgent:
     """Get the global walk-forward agent instance."""
-    return {'success': True, 'result': walk_forward_agent, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return walk_forward_agent

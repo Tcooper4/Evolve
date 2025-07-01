@@ -31,7 +31,6 @@ from trading.memory.performance_memory import PerformanceMemory
 from trading.utils.common import timer, handle_exceptions
 from trading.data.data_listener import DataListener
 
-
 @dataclass
 class AgentLoopState:
     """State of the agent loop."""
@@ -46,7 +45,6 @@ class AgentLoopState:
     last_cycle_timestamp: str
     status: str = "running"
 
-
 @dataclass
 class AgentCommunication:
     """Communication between agents."""
@@ -56,7 +54,6 @@ class AgentCommunication:
     data: Dict[str, Any]
     timestamp: str
     priority: str = "normal"
-
 
 class AgentLoopManager:
     """Manages the autonomous 3-agent loop for model management."""
@@ -365,7 +362,7 @@ class AgentLoopManager:
                 'voting_method': 'weighted_average'
             }
         else:
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _get_models_for_evaluation(self) -> List[str]:
         """Get list of models that need evaluation.
@@ -382,7 +379,7 @@ class AgentLoopManager:
             if last_evaluation is None or self._should_evaluate_model(model_id, last_evaluation):
                 models_to_evaluate.append(model_id)
         
-        return {'success': True, 'result': models_to_evaluate, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return models_to_evaluate
     
     def _get_last_evaluation_time(self, model_id: str) -> Optional[datetime]:
         """Get last evaluation time for a model.
@@ -395,7 +392,7 @@ class AgentLoopManager:
         """
         evaluation_history = self.performance_critic.get_evaluation_history(model_id)
         if evaluation_history:
-            return {'success': True, 'result': datetime.fromisoformat(evaluation_history[-1].evaluation_timestamp), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return datetime.fromisoformat(evaluation_history[-1].evaluation_timestamp)
         return None
     
     def _should_evaluate_model(self, model_id: str, last_evaluation: datetime) -> bool:
@@ -410,7 +407,7 @@ class AgentLoopManager:
         """
         # Evaluate if more than 24 hours have passed
         time_since_evaluation = datetime.now() - last_evaluation
-        return {'success': True, 'result': time_since_evaluation > timedelta(hours=24), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return time_since_evaluation > timedelta(hours=24)
     
     def _get_latest_data_path(self) -> str:
         """Get path to latest data.
@@ -419,7 +416,7 @@ class AgentLoopManager:
             Path to latest data file
         """
         # This should be configurable and dynamic
-        return {'success': True, 'result': "data/latest_market_data.csv", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return "data/latest_market_data.csv"
     
     def _send_communication(self, from_agent: str, to_agent: str, 
                           message_type: str, data: Dict[str, Any]) -> None:
@@ -641,7 +638,6 @@ async def main():
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     asyncio.run(main()) 

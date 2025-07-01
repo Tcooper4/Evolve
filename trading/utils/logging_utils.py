@@ -43,7 +43,7 @@ class StructuredFormatter(logging.Formatter):
         if record.exc_info:
             log_data['exception'] = self.formatException(record.exc_info)
         
-        return {'success': True, 'result': json.dumps(log_data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return json.dumps(log_data)
 
 class LogManager:
     """Manager for logging configuration and rotation."""
@@ -147,7 +147,7 @@ class LogManager:
             console_handler.setFormatter(console_formatter)
             logger.addHandler(console_handler)
         
-        return {'success': True, 'result': logger, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return logger
     
     def get_logger(
         self,

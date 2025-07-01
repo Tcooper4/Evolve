@@ -59,7 +59,7 @@ class PnLAttributor:
                 model_pnl[model] = 0
             model_pnl[model] += pnl
         
-        return {'success': True, 'result': model_pnl, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return model_pnl
     
     def calculate_strategy_attribution(self, trades: List[Dict]) -> Dict[str, float]:
         """Calculate PnL attribution by strategy."""
@@ -73,7 +73,7 @@ class PnLAttributor:
                 strategy_pnl[strategy] = 0
             strategy_pnl[strategy] += pnl
         
-        return {'success': True, 'result': strategy_pnl, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return strategy_pnl
     
     def calculate_time_attribution(self, trades: List[Dict]) -> Dict[str, float]:
         """Calculate PnL attribution by time period."""
@@ -112,7 +112,7 @@ class PnLAttributor:
                 time_pnl['hourly'][hour_key] = 0
             time_pnl['hourly'][hour_key] += pnl
         
-        return {'success': True, 'result': time_pnl, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return time_pnl
     
     def calculate_regime_attribution(self, trades: List[Dict]) -> Dict[str, float]:
         """Calculate PnL attribution by market regime."""
@@ -126,7 +126,7 @@ class PnLAttributor:
                 regime_pnl[regime] = 0
             regime_pnl[regime] += pnl
         
-        return {'success': True, 'result': regime_pnl, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return regime_pnl
     
     def calculate_factor_attribution(self, trades: List[Dict]) -> Dict[str, float]:
         """Calculate PnL attribution by market factors."""
@@ -149,7 +149,7 @@ class PnLAttributor:
                     if factor in factor_pnl:
                         factor_pnl[factor] += (pnl * weight / total_weight)
         
-        return {'success': True, 'result': factor_pnl, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return factor_pnl
     
     def run_attribution_analysis(self, 
                                start_date: Optional[str] = None,
@@ -234,7 +234,7 @@ class PnLAttributor:
         ]
         
         if not recent_attributions:
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
         
         # Aggregate recent attributions
         total_pnl = sum(a.total_pnl for a in recent_attributions)
@@ -299,4 +299,4 @@ attributor = PnLAttributor()
 
 def get_attributor() -> PnLAttributor:
     """Get the global PnL attributor instance."""
-    return {'success': True, 'result': attributor, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return attributor

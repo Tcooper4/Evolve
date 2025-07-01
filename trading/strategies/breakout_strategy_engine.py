@@ -15,13 +15,11 @@ import talib
 from trading.strategies.rsi_signals import calculate_rsi
 from trading.utils.performance_metrics import calculate_volatility
 
-
 class BreakoutType(str, Enum):
     """Types of breakouts."""
     BULLISH = "bullish"
     BEARISH = "bearish"
     FALSE = "false"
-
 
 @dataclass
 class ConsolidationRange:
@@ -35,7 +33,6 @@ class ConsolidationRange:
     volume_profile: Dict[str, float]
     duration_days: int
     confidence: float
-
 
 @dataclass
 class BreakoutSignal:
@@ -51,7 +48,6 @@ class BreakoutSignal:
     stop_loss: float
     take_profit: float
     position_size: float
-
 
 class BreakoutStrategyEngine:
     """
@@ -178,7 +174,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error detecting consolidation ranges: {str(e)}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def _group_consecutive_periods(self, boolean_series: pd.Series) -> List[Tuple[int, int]]:
         """Group consecutive True periods in a boolean series."""
@@ -201,7 +197,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error grouping consecutive periods: {str(e)}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def _calculate_volume_profile(self, data: pd.DataFrame) -> Dict[str, float]:
         """Calculate volume profile for consolidation period."""
@@ -221,7 +217,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating volume profile: {str(e)}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _calculate_volume_trend(self, volume: pd.Series) -> float:
         """Calculate volume trend (positive = increasing, negative = decreasing)."""
@@ -242,7 +238,7 @@ class BreakoutStrategyEngine:
                 
         except Exception as e:
             self.logger.error(f"Error calculating volume trend: {str(e)}")
-            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.0
     
     def _calculate_consolidation_confidence(self, 
                                           data: pd.DataFrame,
@@ -282,7 +278,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating consolidation confidence: {str(e)}")
-            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.5
     
     def detect_breakouts(self, 
                         data: pd.DataFrame,
@@ -335,7 +331,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error detecting breakouts: {str(e)}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def _check_breakout_type(self, 
                            current_price: float,
@@ -351,7 +347,7 @@ class BreakoutStrategyEngine:
                 return BreakoutType.BEARISH
             
             else:
-                return {'success': True, 'result': BreakoutType.FALSE, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return BreakoutType.FALSE
                 
         except Exception as e:
             self.logger.error(f"Error checking breakout type: {str(e)}")
@@ -379,7 +375,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error confirming breakout: {str(e)}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _check_volume_spike(self, 
                            data: pd.DataFrame,
@@ -403,7 +399,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error checking volume spike: {str(e)}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _check_rsi_divergence(self, 
                              data: pd.DataFrame,
@@ -429,7 +425,7 @@ class BreakoutStrategyEngine:
             
             elif breakout_type == BreakoutType.BEARISH:
                 # For bearish breakout, RSI should be weak (not oversold)
-                return {'success': True, 'result': recent_rsi.mean() < 50 and recent_rsi.iloc[-1] > self.rsi_oversold, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return recent_rsi.mean() < 50 and recent_rsi.iloc[-1] > self.rsi_oversold
             
             return False
             
@@ -454,7 +450,7 @@ class BreakoutStrategyEngine:
             
             elif breakout_type == BreakoutType.BEARISH:
                 # Check if prices stay below lower bound
-                return {'success': True, 'result': all(price < consolidation_range.lower_bound for price in recent_prices), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return all(price < consolidation_range.lower_bound for price in recent_prices)
             
             return False
             
@@ -513,8 +509,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error creating breakout signal: {str(e)}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def _calculate_breakout_confidence(self, 
                                      consolidation_range: ConsolidationRange,
                                      volume_spike: float,
@@ -545,7 +540,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating breakout confidence: {str(e)}")
-            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.5
     
     def _calculate_risk_levels(self, 
                              current_price: float,
@@ -595,7 +590,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating position size: {str(e)}")
-            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.5
     
     def filter_false_breakouts(self, 
                               data: pd.DataFrame,
@@ -627,7 +622,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error filtering false breakouts: {str(e)}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def _check_breakout_success(self, 
                                data: pd.DataFrame,
@@ -640,7 +635,7 @@ class BreakoutStrategyEngine:
             
             elif signal.breakout_type == BreakoutType.BEARISH:
                 # Check if price reached take profit level
-                return {'success': True, 'result': data['close'].min() <= signal.take_profit, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return data['close'].min() <= signal.take_profit
             
             return False
             
@@ -680,8 +675,7 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error getting consolidation summary: {str(e)}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def get_breakout_summary(self, symbol: str) -> Optional[Dict[str, Any]]:
         """Get summary of breakout signals for a symbol."""
         try:
@@ -716,4 +710,3 @@ class BreakoutStrategyEngine:
             
         except Exception as e:
             self.logger.error(f"Error getting breakout summary: {str(e)}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

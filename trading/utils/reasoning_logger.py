@@ -19,7 +19,6 @@ import openai
 
 logger = logging.getLogger(__name__)
 
-
 class DecisionType(Enum):
     """Types of decisions agents can make."""
     FORECAST = "forecast"
@@ -35,7 +34,6 @@ class DecisionType(Enum):
     OPTIMIZATION = "optimization"
     ALERT = "alert"
 
-
 class ConfidenceLevel(Enum):
     """Confidence levels for decisions."""
     VERY_LOW = "very_low"
@@ -43,7 +41,6 @@ class ConfidenceLevel(Enum):
     MEDIUM = "medium"
     HIGH = "high"
     VERY_HIGH = "very_high"
-
 
 @dataclass
 class DecisionContext:
@@ -56,7 +53,6 @@ class DecisionContext:
     constraints: Dict[str, Any]
     user_preferences: Dict[str, Any]
 
-
 @dataclass
 class DecisionReasoning:
     """Detailed reasoning for a decision."""
@@ -66,7 +62,6 @@ class DecisionReasoning:
     risks_assessed: List[str]
     confidence_explanation: str
     expected_outcome: str
-
 
 @dataclass
 class AgentDecision:
@@ -80,7 +75,6 @@ class AgentDecision:
     confidence_level: ConfidenceLevel
     timestamp: str
     metadata: Dict[str, Any]
-
 
 class ReasoningLogger:
     """
@@ -133,10 +127,7 @@ class ReasoningLogger:
         # Decision counter
         self.decision_counter = 0
         
-        logger.info("ReasoningLogger initialized")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def log_decision(self,
+        logger.info("ReasoningLogger initialized")def log_decision(self,
                     agent_name: str,
                     decision_type: DecisionType,
                     action_taken: str,
@@ -207,7 +198,7 @@ class ReasoningLogger:
             self._publish_decision(decision)
             
             logger.info(f"Logged decision: {decision_id}")
-            return {'success': True, 'result': decision_id, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return decision_id
             
         except Exception as e:
             logger.error(f"Error logging decision: {e}")
@@ -236,8 +227,7 @@ class ReasoningLogger:
             
         except Exception as e:
             logger.error(f"Error storing decision: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _generate_explanations(self, decision: AgentDecision):
         """Generate plain language explanations."""
         try:
@@ -271,8 +261,7 @@ class ReasoningLogger:
             
         except Exception as e:
             logger.error(f"Error generating explanations: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _generate_summary(self, decision: AgentDecision) -> str:
         """Generate a plain language summary of the decision."""
         template = Template("""
@@ -307,14 +296,14 @@ class ReasoningLogger:
 {% endfor %}
 """)
         
-        return {'success': True, 'result': template.render(decision=decision), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return template.render(decision=decision)
     
     def _generate_chat_explanation(self, decision: AgentDecision) -> str:
         """Generate a chat-style explanation of the decision."""
         if self.enable_gpt_explanations and self.openai_api_key:
             return self._generate_gpt_explanation(decision)
         else:
-            return {'success': True, 'result': self._generate_fallback_explanation(decision), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._generate_fallback_explanation(decision)
     
     def _generate_gpt_explanation(self, decision: AgentDecision) -> str:
         """Generate GPT-enhanced explanation."""
@@ -359,7 +348,7 @@ class ReasoningLogger:
             
         except Exception as e:
             logger.error(f"Error generating GPT explanation: {e}")
-            return {'success': True, 'result': self._generate_fallback_explanation(decision), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._generate_fallback_explanation(decision)
     
     def _generate_fallback_explanation(self, decision: AgentDecision) -> str:
         """Generate fallback explanation without GPT."""
@@ -401,7 +390,7 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
 {% endif %}
 """)
         
-        return {'success': True, 'result': template.render(decision=decision), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return template.render(decision=decision)
     
     def _publish_decision(self, decision: AgentDecision):
         """Publish decision to Redis for real-time updates."""
@@ -420,8 +409,7 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
             
         except Exception as e:
             logger.error(f"Error publishing decision: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_decision(self, decision_id: str) -> Optional[AgentDecision]:
         """Retrieve a specific decision."""
         try:
@@ -442,8 +430,7 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
             
         except Exception as e:
             logger.error(f"Error retrieving decision: {e}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def get_agent_decisions(self, agent_name: str, limit: int = 50) -> List[AgentDecision]:
         """Get recent decisions for a specific agent."""
         try:
@@ -459,7 +446,7 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
             
         except Exception as e:
             logger.error(f"Error retrieving agent decisions: {e}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def get_decisions_by_type(self, decision_type: DecisionType, limit: int = 50) -> List[AgentDecision]:
         """Get recent decisions of a specific type."""
@@ -487,7 +474,7 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
             
         except Exception as e:
             logger.error(f"Error retrieving decisions by type: {e}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def get_summary(self, decision_id: str) -> Optional[str]:
         """Get the plain language summary for a decision."""
@@ -506,8 +493,7 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
             
         except Exception as e:
             logger.error(f"Error retrieving summary: {e}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def get_explanation(self, decision_id: str) -> Optional[str]:
         """Get the chat-style explanation for a decision."""
         try:
@@ -525,8 +511,7 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
             
         except Exception as e:
             logger.error(f"Error retrieving explanation: {e}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def _dict_to_decision(self, data: Dict[str, Any]) -> AgentDecision:
         """Convert dictionary to AgentDecision object."""
         try:
@@ -538,7 +523,7 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
             data['context'] = DecisionContext(**data['context'])
             data['reasoning'] = DecisionReasoning(**data['reasoning'])
             
-            return {'success': True, 'result': AgentDecision(**data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return AgentDecision(**data)
             
         except Exception as e:
             logger.error(f"Error converting dict to decision: {e}")
@@ -592,7 +577,7 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
             
         except Exception as e:
             logger.error(f"Error getting statistics: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def clear_old_decisions(self, days: int = 30):
         """Clear decisions older than specified days."""
@@ -630,8 +615,6 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
         except Exception as e:
             logger.error(f"Error clearing old decisions: {e}")
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Convenience functions
 def log_forecast_decision(agent_name: str, symbol: str, timeframe: str, 
                          forecast_value: float, confidence: float, 
@@ -639,7 +622,7 @@ def log_forecast_decision(agent_name: str, symbol: str, timeframe: str,
     """Log a forecast decision."""
     logger = ReasoningLogger(**kwargs)
     
-    return {'success': True, 'result': logger.log_decision(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return logger.log_decision(
         agent_name=agent_name,
         decision_type=DecisionType.FORECAST,
         action_taken=f"Predicted {symbol} will be {forecast_value:.2f}",
@@ -656,13 +639,12 @@ def log_forecast_decision(agent_name: str, symbol: str, timeframe: str,
         metadata={'forecast_value': forecast_value, 'confidence_score': confidence}
     )
 
-
 def log_strategy_decision(agent_name: str, symbol: str, action: str, 
                          strategy_name: str, reasoning: Dict[str, Any], **kwargs) -> str:
     """Log a strategy decision."""
     logger = ReasoningLogger(**kwargs)
     
-    return {'success': True, 'result': logger.log_decision(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return logger.log_decision(
         agent_name=agent_name,
         decision_type=DecisionType.STRATEGY,
         action_taken=f"Executed {strategy_name} strategy: {action}",

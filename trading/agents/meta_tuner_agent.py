@@ -32,7 +32,6 @@ except ImportError:
 from trading.memory.agent_memory import AgentMemory
 from trading.utils.reward_function import RewardFunction
 
-
 @dataclass
 class TuningResult:
     """Result of a hyperparameter tuning run."""
@@ -48,7 +47,6 @@ class TuningResult:
     timestamp: str
     status: str = "success"
     error_message: Optional[str] = None
-
 
 class MetaTunerAgent:
     """Agent for autonomous hyperparameter tuning using multiple optimization strategies."""

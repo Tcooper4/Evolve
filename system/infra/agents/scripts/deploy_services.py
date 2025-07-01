@@ -25,7 +25,7 @@ def load_deployment_config(config_path: str) -> Dict:
     """Load the deployment configuration."""
     try:
         with open(config_path, 'r') as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
     except Exception as e:
         logger.error(f"Failed to load deployment config: {e}")
         sys.exit(1)
@@ -51,7 +51,7 @@ def deploy_services(config: Dict) -> bool:
             logger.info(f"Successfully deployed service: {service_name}")
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to deploy service {service_name}: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     return True
 
@@ -71,6 +71,5 @@ def main():
     
     logger.info("All services deployed successfully.")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

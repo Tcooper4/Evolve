@@ -25,7 +25,6 @@ from trading.agents.updater_agent import UpdaterAgent
 from trading.agents.execution_agent import ExecutionAgent
 from trading.agents.agent_leaderboard import AgentLeaderboard
 
-
 @dataclass
 class AgentRegistryEntry:
     """Entry in the agent registry."""
@@ -33,7 +32,6 @@ class AgentRegistryEntry:
     config: AgentConfig
     instance: Optional[BaseAgent] = None
     metadata: Optional[Dict[str, Any]] = None
-
 
 @dataclass
 class AgentManagerConfig:
@@ -44,7 +42,6 @@ class AgentManagerConfig:
     execution_timeout: int = 300
     enable_logging: bool = True
     enable_metrics: bool = True
-
 
 class AgentManager:
     """Manages all pluggable agents in the system."""
@@ -534,10 +531,8 @@ class AgentManager:
     def get_leaderboard_dataframe(self):
         return self.leaderboard.as_dataframe()
 
-
 # Global agent manager instance
 _agent_manager: Optional[AgentManager] = None
-
 
 def get_agent_manager() -> AgentManager:
     """Get the global agent manager instance.
@@ -550,7 +545,6 @@ def get_agent_manager() -> AgentManager:
         _agent_manager = AgentManager()
     return _agent_manager
 
-
 def register_agent(name: str, agent_class: Type[BaseAgent], 
                   config: Optional[AgentConfig] = None) -> None:
     """Register an agent with the global agent manager.
@@ -562,7 +556,6 @@ def register_agent(name: str, agent_class: Type[BaseAgent],
     """
     manager = get_agent_manager()
     manager.register_agent(name, agent_class, config)
-
 
 async def execute_agent(name: str, **kwargs) -> AgentResult:
     """Execute an agent using the global agent manager.

@@ -62,7 +62,7 @@ class ReturnStatementFixer:
         # Check if file is in a project directory
         for part in filepath.parts:
             if part in project_dirs:
-                return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return True
         
         # Also scan root level Python files
         if len(filepath.parts) <= 2:  # Root level files
@@ -79,7 +79,7 @@ class ReturnStatementFixer:
             if self.should_scan_file(filepath):
                 python_files.append(filepath)
         
-        return {'success': True, 'result': python_files, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return python_files
     
     def analyze_function(self, node: ast.FunctionDef) -> Dict[str, Any]:
         """Analyze a function to determine what fixes are needed."""
@@ -100,7 +100,7 @@ class ReturnStatementFixer:
         
         if any(decorator.attr == 'property' for decorator in node.decorator_list 
                if isinstance(decorator, ast.Attribute)):
-            return {'success': True, 'result': analysis, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return analysis
         
         # Check for return statements
         for child in ast.walk(node):
@@ -190,7 +190,7 @@ class ReturnStatementFixer:
                 
                 # Update content
                 lines[function_start:function_end] = function_body
-                return {'success': True, 'result': '\n'.join(lines), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return '\n'.join(lines)
         
         elif function_analysis['fix_type'] == 'structure_return':
             # Find and replace existing return statements
@@ -299,7 +299,7 @@ class ReturnStatementFixer:
                 logger.error(f"Error processing {filepath}: {e}")
                 results['files_with_errors'].append(str(filepath))
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
     
     def print_summary(self, results: Dict[str, Any]):
         """Print fix summary."""
@@ -319,7 +319,6 @@ class ReturnStatementFixer:
         
         print("="*60)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     fixer = ReturnStatementFixer()
     results = fixer.fix_project()
@@ -331,6 +330,5 @@ def main():
     
     logger.info("Comprehensive fix complete. Results saved to return_fix_results.json")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

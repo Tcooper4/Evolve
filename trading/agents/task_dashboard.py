@@ -279,7 +279,7 @@ def get_active_tasks() -> List[Dict[str, Any]]:
         TaskStatus.IN_PROGRESS
     ])
     
-    return {'success': True, 'result': [task.to_dict() for task in active_tasks], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return [task.to_dict() for task in active_tasks]
     
 def get_task_log(days: int = 7) -> List[Dict[str, Any]]:
     """Get task log for frontend integration.
@@ -298,7 +298,7 @@ def get_task_log(days: int = 7) -> List[Dict[str, Any]]:
         if task.updated_at >= cutoff
     ]
     
-    return {'success': True, 'result': [task.to_dict() for task in tasks], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return [task.to_dict() for task in tasks]
     
 def run_dashboard():
     """Run the task dashboard."""
@@ -309,6 +309,5 @@ def run_dashboard():
     dashboard = TaskDashboard(task_memory)
     dashboard.render()
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     run_dashboard() 

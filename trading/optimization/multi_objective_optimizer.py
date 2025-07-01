@@ -20,9 +20,7 @@ class MultiObjectiveOptimizer(BaseOptimizer):
         verbose: bool = False,
         n_jobs: int = -1,
         study_name: Optional[str] = None,
-        storage: Optional[str] = None
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        storage: Optional[str] = None):
         """Initialize multi-objective optimizer.
         
         Args:
@@ -129,8 +127,7 @@ class MultiObjectiveOptimizer(BaseOptimizer):
         """
         # This should be implemented by strategy-specific optimizers
         raise NotImplementedError
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def plot_results(
         self,
         plot_type: str = 'all',
@@ -159,7 +156,7 @@ class MultiObjectiveOptimizer(BaseOptimizer):
         if plot_type in ['all', 'slice']:
             plots.append(plot_slice(self.study))
         
-        return {'success': True, 'result': plots[0] if len(plots) == 1 else plots, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return plots[0] if len(plots) == 1 else plots
     
     def get_pareto_front(self) -> List[optuna.trial.FrozenTrial]:
         """Get Pareto front from study.
@@ -170,7 +167,7 @@ class MultiObjectiveOptimizer(BaseOptimizer):
         if not self.study:
             raise ValueError("No optimization study found")
         
-        return {'success': True, 'result': self.study.best_trials, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.study.best_trials
     
     def get_parameter_importance(self) -> Dict[str, float]:
         """Get parameter importance scores.
@@ -214,6 +211,6 @@ class MultiObjectiveOptimizer(BaseOptimizer):
             
             # Get trial with best weighted score
             best_trial = max(scores, key=lambda x: x[0])[1]
-            return {'success': True, 'result': best_trial.params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return best_trial.params
         
         return self.study.best_trials[0].params 

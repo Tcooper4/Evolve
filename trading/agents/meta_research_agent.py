@@ -21,7 +21,6 @@ from trading.models.model_registry import ModelRegistry
 from trading.agents.model_selector_agent import ModelSelectorAgent
 from trading.memory.agent_memory import AgentMemory
 
-
 @dataclass
 class ResearchPaper:
     """Research paper information."""
@@ -36,7 +35,6 @@ class ResearchPaper:
     performance_metrics: Optional[Dict[str, float]] = None
     implementation_status: str = "discovered"
 
-
 @dataclass
 class ModelEvaluation:
     """Model evaluation result."""
@@ -48,7 +46,6 @@ class ModelEvaluation:
     market_applicability: float
     overall_score: float
     recommendation: str
-
 
 class MetaResearchAgent:
     """

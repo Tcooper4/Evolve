@@ -100,7 +100,7 @@ class InstitutionalUpgradeTester:
         # Display summary
         self._display_summary(report)
         
-        return {'success': True, 'result': report, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return report
     
     def test_enhanced_ui_integration(self) -> Dict[str, Any]:
         """Test enhanced UI integration with tabs."""
@@ -842,7 +842,7 @@ def main():
     tester = InstitutionalUpgradeTester()
     report = tester.run_all_tests()
     
-    return {'success': True, 'result': report, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return report
 
 if __name__ == "__main__":
     main() 

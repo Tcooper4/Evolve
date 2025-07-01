@@ -27,7 +27,6 @@ from trading.memory.performance_memory import PerformanceMemory
 from trading.memory.agent_memory import AgentMemory
 from trading.utils.reward_function import RewardFunction
 
-
 @dataclass
 class UpdateRequest:
     """Request for model update."""
@@ -36,7 +35,6 @@ class UpdateRequest:
     update_type: str  # 'retrain', 'tune', 'replace', 'ensemble_adjust'
     priority: str = 'normal'  # 'low', 'normal', 'high', 'critical'
     request_id: Optional[str] = None
-
 
 @dataclass
 class UpdateResult:
@@ -51,7 +49,6 @@ class UpdateResult:
     improvement_metrics: Dict[str, float]
     update_status: str = "success"
     error_message: Optional[str] = None
-
 
 class UpdaterAgent(BaseAgent):
     """Agent responsible for updating models based on performance feedback."""
@@ -176,7 +173,7 @@ class UpdaterAgent(BaseAgent):
             return False
         
         if request and not isinstance(request, UpdateRequest):
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
         
         return True
     
@@ -213,8 +210,7 @@ class UpdaterAgent(BaseAgent):
             return request
         else:
             self.logger.info(f"No update needed for model {evaluation_result.model_id}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     @handle_exceptions
     def execute_update(self, request: UpdateRequest) -> UpdateResult:
         """Execute model update.
@@ -623,7 +619,7 @@ class UpdaterAgent(BaseAgent):
                 'colsample_bytree': {'type': 'float', 'min': 0.6, 'max': 1.0}
             }
         else:
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _optimization_objective(self, params: Dict[str, Any], data_path: str) -> float:
         """Objective function for optimization.
@@ -651,7 +647,7 @@ class UpdaterAgent(BaseAgent):
             
         except Exception as e:
             self.logger.error(f"Optimization objective failed: {e}")
-            return {'success': True, 'result': 1000.0  # High penalty for failures, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 1000.0  # High penalty for failures
     
     def _select_alternative_model_type(self, current_type: str) -> str:
         """Select alternative model type for replacement.
@@ -682,7 +678,7 @@ class UpdaterAgent(BaseAgent):
         # This is a simplified implementation
         # In practice, you'd use optimization to find optimal weights
         num_models = len(ensemble_config['models'])
-        return {'success': True, 'result': [1.0 / num_models] * num_models, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return [1.0 / num_models] * num_models
     
     def _calculate_improvement(self, old_evaluation: ModelEvaluationResult, 
                              new_build_result: Any) -> Dict[str, float]:
@@ -710,7 +706,7 @@ class UpdaterAgent(BaseAgent):
             Path to latest data file
         """
         # This should be configurable
-        return {'success': True, 'result': "data/latest_market_data.csv", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return "data/latest_market_data.csv"
     
     def _store_update_result(self, result: UpdateResult) -> None:
         """Store update result in memory.
@@ -774,7 +770,7 @@ class UpdaterAgent(BaseAgent):
         Returns:
             Dictionary of active models
         """
-        return {'success': True, 'result': self.active_models.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.active_models.copy()
     
     def cleanup_old_models(self, max_age_days: int = 30) -> int:
         """Clean up old model files.
@@ -801,4 +797,4 @@ class UpdaterAgent(BaseAgent):
                 cleaned_count += 1
         
         self.logger.info(f"Cleaned up {cleaned_count} old models")
-        return {'success': True, 'result': cleaned_count, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return cleaned_count

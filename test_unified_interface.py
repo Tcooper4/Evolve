@@ -74,7 +74,6 @@ def test_unified_interface():
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def test_streamlit_import():
     """Test Streamlit import."""
     print("\n🌐 Testing Streamlit import...")
@@ -91,7 +90,6 @@ def test_streamlit_import():
     except Exception as e:
         print(f"❌ Streamlit test error: {e}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main test function."""
     test_unified_interface()
@@ -103,6 +101,5 @@ def main():
     print("2. Use Streamlit: streamlit run app.py")
     print("3. Execute commands: python unified_interface.py --command 'help'")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

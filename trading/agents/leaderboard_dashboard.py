@@ -18,7 +18,6 @@ import json
 from trading.agents.agent_leaderboard import AgentLeaderboard
 from trading.agents.agent_manager import AgentManager, AgentManagerConfig
 
-
 class LeaderboardDashboard:
     """Streamlit dashboard for agent leaderboard visualization and management."""
     
@@ -33,10 +32,7 @@ class LeaderboardDashboard:
             page_icon="🏆",
             layout="wide",
             initial_sidebar_state="expanded"
-        )
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def run(self):
+        )def run(self):
         """Run the dashboard."""
         st.title("🏆 Agent Performance Leaderboard")
         st.markdown("Track, analyze, and manage agent performance across the trading system.")
@@ -59,8 +55,7 @@ class LeaderboardDashboard:
         # Bottom section
         self._render_performance_history()
         self._render_export_options()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _render_sidebar(self):
         """Render sidebar controls."""
         st.sidebar.header("📊 Dashboard Controls")
@@ -104,8 +99,7 @@ class LeaderboardDashboard:
         # Add sample data button
         if st.sidebar.button("📈 Add Sample Data"):
             self._add_sample_data()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _render_leaderboard_table(self):
         """Render the main leaderboard table."""
         st.subheader("📋 Agent Leaderboard")
@@ -145,8 +139,7 @@ class LeaderboardDashboard:
         
         df = self._get_filtered_dataframe()
         if df.empty:
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         # Create subplots
         fig = make_subplots(
             rows=2, cols=2,
@@ -218,8 +211,7 @@ class LeaderboardDashboard:
         
         df = self._get_filtered_dataframe()
         if df.empty:
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         # Calculate summary metrics
         total_agents = len(df)
         active_agents = len(df[df['status'] == 'active'])
@@ -251,8 +243,7 @@ class LeaderboardDashboard:
         
         df = self._get_filtered_dataframe()
         if df.empty:
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         # Status breakdown
         status_counts = df['status'].value_counts()
         
@@ -309,8 +300,7 @@ class LeaderboardDashboard:
                     st.rerun()
         else:
             st.info("No active agents to manage.")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _render_performance_history(self):
         """Render performance history chart."""
         st.subheader("📅 Performance History")
@@ -318,8 +308,7 @@ class LeaderboardDashboard:
         history = self.leaderboard.get_history(limit=50)
         if not history:
             st.info("No performance history available.")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         # Convert to DataFrame
         history_df = pd.DataFrame(history)
         history_df['last_updated'] = pd.to_datetime(history_df['last_updated'])
@@ -354,8 +343,7 @@ class LeaderboardDashboard:
         
         df = self._get_filtered_dataframe()
         if df.empty:
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -388,7 +376,7 @@ class LeaderboardDashboard:
         df = self.leaderboard.as_dataframe()
         
         if df.empty:
-            return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return df
         
         # Apply status filter
         status_filter = st.session_state.get('status_filter', 'All')
@@ -438,24 +426,21 @@ class LeaderboardDashboard:
             )
         
         st.success("Sample data added successfully!")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _manually_deprecate_agent(self, agent_name: str):
         """Manually deprecate an agent."""
         if agent_name in self.leaderboard.leaderboard:
             self.leaderboard.leaderboard[agent_name].status = "deprecated"
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _reactivate_agent(self, agent_name: str):
         """Reactivate a deprecated agent."""
         if agent_name in self.leaderboard.leaderboard:
             self.leaderboard.leaderboard[agent_name].status = "active"
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _generate_summary_report(self, df: pd.DataFrame):
         """Generate a summary report."""
         report = f"""
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
 # Agent Performance Summary Report
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
@@ -481,13 +466,10 @@ Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         
         st.text_area("📊 Summary Report", report, height=400)
 
-
 def main():
     """Main function to run the dashboard."""
     dashboard = LeaderboardDashboard()
     dashboard.run()
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

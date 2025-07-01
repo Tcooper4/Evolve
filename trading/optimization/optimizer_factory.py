@@ -52,15 +52,14 @@ class OptimizerFactory:
                             
                 except Exception as e:
                     logger.error(f"Error importing {module_name}: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_available_optimizers(self) -> List[str]:
         """Get list of available optimizers.
         
         Returns:
             List of optimizer names
         """
-        return {'success': True, 'result': list(self.optimizers.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.optimizers.keys())
     
     def create_optimizer(
         self,
@@ -103,7 +102,7 @@ class OptimizerFactory:
         
         optimizer_class = self.optimizers[optimizer_type]
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'name': optimizer_type,
             'docstring': optimizer_class.__doc__,
             'parameters': inspect.signature(optimizer_class.__init__).parameters,
@@ -146,4 +145,4 @@ class OptimizerFactory:
             if not name.startswith('_'):
                 help_text += f"- {name}: {method.__doc__}\n"
         
-        return {'success': True, 'result': help_text, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return help_text
