@@ -560,4 +560,106 @@ def flatten_list(nested_list: List[Any]) -> List[Any]:
         return flattened
     except Exception as e:
         logger.error(f"Error flattening list: {e}")
-        return nested_list 
+        return nested_list
+
+# ============================================================================
+# ADDITIONAL UTILITY FUNCTIONS
+# ============================================================================
+
+def safe_mkdir(path: Union[str, Path]) -> bool:
+    """Safely create directory with error handling.
+    
+    Args:
+        path: Directory path to create
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        Path(path).mkdir(parents=True, exist_ok=True)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to create directory {path}: {e}")
+        return False
+
+def log_to_file(message: str, log_file: str, level: str = "INFO") -> None:
+    """Log message to a specific file.
+    
+    Args:
+        message: Message to log
+        log_file: Path to log file
+        level: Log level (DEBUG, INFO, WARNING, ERROR)
+    """
+    try:
+        safe_mkdir(os.path.dirname(log_file))
+        with open(log_file, 'a', encoding='utf-8') as f:
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            f.write(f"[{timestamp}] {level}: {message}\n")
+    except Exception as e:
+        logger.error(f"Failed to log to file {log_file}: {e}")
+
+def slugify(text: str) -> str:
+    """Convert text to URL-friendly slug.
+    
+    Args:
+        text: Text to convert
+        
+    Returns:
+        URL-friendly slug
+    """
+    try:
+        # Remove special characters and convert to lowercase
+        slug = re.sub(r'[^\w\s-]', '', text.lower())
+        # Replace spaces and hyphens with single hyphens
+        slug = re.sub(r'[-\s]+', '-', slug)
+        # Remove leading/trailing hyphens
+        return slug.strip('-')
+    except Exception as e:
+        logger.error(f"Error creating slug: {e}")
+        return str(uuid.uuid4())[:8]
+
+def timestamp() -> str:
+    """Get current timestamp in ISO format.
+    
+    Returns:
+        ISO formatted timestamp string
+    """
+    return datetime.now().isoformat()
+
+def format_bytes(bytes_value: int) -> str:
+    """Format bytes into human readable format.
+    
+    Args:
+        bytes_value: Number of bytes
+        
+    Returns:
+        Formatted string (e.g., "1.5 MB")
+    """
+    try:
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if bytes_value < 1024.0:
+                return f"{bytes_value:.1f} {unit}"
+            bytes_value /= 1024.0
+        return f"{bytes_value:.1f} PB"
+    except Exception as e:
+        logger.error(f"Error formatting bytes: {e}")
+        return "0 B"
+
+def hash_file(file_path: Union[str, Path]) -> str:
+    """Calculate SHA-256 hash of a file.
+    
+    Args:
+        file_path: Path to file
+        
+    Returns:
+        SHA-256 hash string
+    """
+    try:
+        hash_sha256 = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_sha256.update(chunk)
+        return hash_sha256.hexdigest()
+    except Exception as e:
+        logger.error(f"Error calculating file hash: {e}")
+        return "" 
