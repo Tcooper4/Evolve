@@ -55,7 +55,10 @@ class RiskAnalyzer:
         self.last_assessment = None
         
         # Create memory directory if needed
-        os.makedirs(os.path.dirname(memory_path), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(memory_path), exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create directory for memory_path: {e}")
         
         # Initialize OpenAI if key is available
         if self.openai_api_key:

@@ -646,20 +646,394 @@ def format_bytes(bytes_value: int) -> str:
         return "0 B"
 
 def hash_file(file_path: Union[str, Path]) -> str:
-    """Calculate SHA-256 hash of a file.
+    """Generate SHA-256 hash of a file.
     
     Args:
-        file_path: Path to file
+        file_path: Path to the file
         
     Returns:
         SHA-256 hash string
     """
     try:
+        file_path = Path(file_path)
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+        
         hash_sha256 = hashlib.sha256()
         with open(file_path, "rb") as f:
             for chunk in iter(lambda: f.read(4096), b""):
                 hash_sha256.update(chunk)
+        
         return hash_sha256.hexdigest()
+        
     except Exception as e:
-        logger.error(f"Error calculating file hash: {e}")
-        return "" 
+        logger.error(f"Error generating file hash: {e}")
+        return ""
+
+# ============================================================================
+# FINANCIAL CALCULATION HELPERS
+# ============================================================================
+
+def calculate_sharpe_ratio(
+    returns: pd.Series,
+    risk_free_rate: float = 0.0,
+    window: int = 20,
+    annualize: bool = True
+) -> pd.Series:
+    """Calculate Sharpe ratio.
+    
+    Args:
+        returns: Return series
+        risk_free_rate: Risk-free rate
+        window: Rolling window size
+        annualize: Whether to annualize the ratio
+        
+    Returns:
+        Sharpe ratio series
+    """
+    try:
+        excess_returns = returns - risk_free_rate
+        rolling_mean = excess_returns.rolling(window=window).mean()
+        rolling_std = returns.rolling(window=window).std()
+        
+        sharpe = rolling_mean / rolling_std
+        
+        if annualize:
+            sharpe = sharpe * np.sqrt(252)  # Annualize assuming daily data
+        
+        return sharpe
+        
+    except Exception as e:
+        logger.error(f"Error calculating Sharpe ratio: {e}")
+        return pd.Series(index=returns.index)
+
+def calculate_drawdown(prices: pd.Series) -> pd.Series:
+    """Calculate drawdown series.
+    
+    Args:
+        prices: Price series
+        
+    Returns:
+        Drawdown series
+    """
+    try:
+        rolling_max = prices.expanding().max()
+        drawdown = (prices - rolling_max) / rolling_max
+        return drawdown
+        
+    except Exception as e:
+        logger.error(f"Error calculating drawdown: {e}")
+        return pd.Series(index=prices.index)
+
+def calculate_max_drawdown(prices: pd.Series) -> float:
+    """Calculate maximum drawdown.
+    
+    Args:
+        prices: Price series
+        
+    Returns:
+        Maximum drawdown as percentage
+    """
+    try:
+        drawdown = calculate_drawdown(prices)
+        return drawdown.min()
+        
+    except Exception as e:
+        logger.error(f"Error calculating max drawdown: {e}")
+        return 0.0
+
+def calculate_win_rate(returns: pd.Series) -> float:
+    """Calculate win rate.
+    
+    Args:
+        returns: Return series
+        
+    Returns:
+        Win rate as percentage
+    """
+    try:
+        positive_returns = returns[returns > 0]
+        return len(positive_returns) / len(returns) if len(returns) > 0 else 0.0
+        
+    except Exception as e:
+        logger.error(f"Error calculating win rate: {e}")
+        return 0.0
+
+def calculate_calmar_ratio(
+    returns: pd.Series,
+    prices: pd.Series,
+    window: int = 252
+) -> pd.Series:
+    """Calculate Calmar ratio.
+    
+    Args:
+        returns: Return series
+        prices: Price series
+        window: Rolling window size
+        
+    Returns:
+        Calmar ratio series
+    """
+    try:
+        rolling_return = returns.rolling(window=window).mean() * 252  # Annualized
+        rolling_max_dd = prices.rolling(window=window).apply(
+            lambda x: calculate_max_drawdown(x), raw=True
+        )
+        
+        calmar = rolling_return / abs(rolling_max_dd)
+        return calmar
+        
+    except Exception as e:
+        logger.error(f"Error calculating Calmar ratio: {e}")
+        return pd.Series(index=returns.index)
+
+def calculate_information_ratio(
+    returns: pd.Series,
+    benchmark_returns: pd.Series,
+    window: int = 20,
+    annualize: bool = True
+) -> pd.Series:
+    """Calculate information ratio.
+    
+    Args:
+        returns: Portfolio returns
+        benchmark_returns: Benchmark returns
+        window: Rolling window size
+        annualize: Whether to annualize
+        
+    Returns:
+        Information ratio series
+    """
+    try:
+        active_returns = returns - benchmark_returns
+        rolling_mean = active_returns.rolling(window=window).mean()
+        rolling_std = active_returns.rolling(window=window).std()
+        
+        info_ratio = rolling_mean / rolling_std
+        
+        if annualize:
+            info_ratio = info_ratio * np.sqrt(252)
+        
+        return info_ratio
+        
+    except Exception as e:
+        logger.error(f"Error calculating information ratio: {e}")
+        return pd.Series(index=returns.index)
+
+def calculate_sortino_ratio(
+    returns: pd.Series,
+    risk_free_rate: float = 0.0,
+    window: int = 20,
+    annualize: bool = True
+) -> pd.Series:
+    """Calculate Sortino ratio.
+    
+    Args:
+        returns: Return series
+        risk_free_rate: Risk-free rate
+        window: Rolling window size
+        annualize: Whether to annualize
+        
+    Returns:
+        Sortino ratio series
+    """
+    try:
+        excess_returns = returns - risk_free_rate
+        rolling_mean = excess_returns.rolling(window=window).mean()
+        
+        # Calculate downside deviation
+        downside_returns = returns[returns < 0]
+        rolling_downside_std = downside_returns.rolling(window=window).std()
+        
+        sortino = rolling_mean / rolling_downside_std
+        
+        if annualize:
+            sortino = sortino * np.sqrt(252)
+        
+        return sortino
+        
+    except Exception as e:
+        logger.error(f"Error calculating Sortino ratio: {e}")
+        return pd.Series(index=returns.index)
+
+def calculate_omega_ratio(
+    returns: pd.Series,
+    threshold: float = 0.0,
+    window: int = 20
+) -> pd.Series:
+    """Calculate Omega ratio.
+    
+    Args:
+        returns: Return series
+        threshold: Threshold return
+        window: Rolling window size
+        
+    Returns:
+        Omega ratio series
+    """
+    try:
+        def _omega_ratio(x):
+            gains = x[x > threshold].sum()
+            losses = abs(x[x < threshold].sum())
+            return gains / losses if losses != 0 else np.inf
+        
+        omega = returns.rolling(window=window).apply(_omega_ratio, raw=True)
+        return omega
+        
+    except Exception as e:
+        logger.error(f"Error calculating Omega ratio: {e}")
+        return pd.Series(index=returns.index)
+
+def calculate_treynor_ratio(
+    returns: pd.Series,
+    market_returns: pd.Series,
+    risk_free_rate: float = 0.0,
+    window: int = 20,
+    annualize: bool = True
+) -> pd.Series:
+    """Calculate Treynor ratio.
+    
+    Args:
+        returns: Portfolio returns
+        market_returns: Market returns
+        risk_free_rate: Risk-free rate
+        window: Rolling window size
+        annualize: Whether to annualize
+        
+    Returns:
+        Treynor ratio series
+    """
+    try:
+        excess_returns = returns - risk_free_rate
+        
+        # Calculate rolling beta
+        def rolling_beta(x):
+            if len(x) < 2:
+                return np.nan
+            portfolio_returns = x.iloc[:, 0]
+            market_returns = x.iloc[:, 1]
+            covariance = np.cov(portfolio_returns, market_returns)[0, 1]
+            market_variance = np.var(market_returns)
+            return covariance / market_variance if market_variance != 0 else np.nan
+        
+        combined_data = pd.concat([returns, market_returns], axis=1)
+        rolling_betas = combined_data.rolling(window=window).apply(rolling_beta, raw=True)
+        
+        rolling_mean = excess_returns.rolling(window=window).mean()
+        treynor = rolling_mean / rolling_betas
+        
+        if annualize:
+            treynor = treynor * 252
+        
+        return treynor
+        
+    except Exception as e:
+        logger.error(f"Error calculating Treynor ratio: {e}")
+        return pd.Series(index=returns.index)
+
+def calculate_alpha(
+    returns: pd.Series,
+    market_returns: pd.Series,
+    risk_free_rate: float = 0.0,
+    window: int = 20,
+    annualize: bool = True
+) -> pd.Series:
+    """Calculate Jensen's alpha.
+    
+    Args:
+        returns: Portfolio returns
+        market_returns: Market returns
+        risk_free_rate: Risk-free rate
+        window: Rolling window size
+        annualize: Whether to annualize
+        
+    Returns:
+        Alpha series
+    """
+    try:
+        excess_returns = returns - risk_free_rate
+        excess_market_returns = market_returns - risk_free_rate
+        
+        # Calculate rolling beta
+        def rolling_beta(x):
+            if len(x) < 2:
+                return np.nan
+            portfolio_returns = x.iloc[:, 0]
+            market_returns = x.iloc[:, 1]
+            covariance = np.cov(portfolio_returns, market_returns)[0, 1]
+            market_variance = np.var(market_returns)
+            return covariance / market_variance if market_variance != 0 else np.nan
+        
+        combined_data = pd.concat([excess_returns, excess_market_returns], axis=1)
+        rolling_betas = combined_data.rolling(window=window).apply(rolling_beta, raw=True)
+        
+        # Calculate alpha
+        portfolio_mean = excess_returns.rolling(window=window).mean()
+        market_mean = excess_market_returns.rolling(window=window).mean()
+        alpha = portfolio_mean - (rolling_betas * market_mean)
+        
+        if annualize:
+            alpha = alpha * 252
+        
+        return alpha
+        
+    except Exception as e:
+        logger.error(f"Error calculating alpha: {e}")
+        return pd.Series(index=returns.index)
+
+def calculate_portfolio_metrics(returns: pd.Series) -> Dict[str, float]:
+    """Calculate comprehensive portfolio metrics.
+    
+    Args:
+        returns: Return series
+        
+    Returns:
+        Dictionary of portfolio metrics
+    """
+    try:
+        metrics = {
+            'total_return': (1 + returns).prod() - 1,
+            'annualized_return': returns.mean() * 252,
+            'volatility': returns.std() * np.sqrt(252),
+            'sharpe_ratio': calculate_sharpe_ratio(returns).iloc[-1] if len(returns) > 0 else 0.0,
+            'max_drawdown': calculate_max_drawdown((1 + returns).cumprod()),
+            'win_rate': calculate_win_rate(returns),
+            'skewness': returns.skew(),
+            'kurtosis': returns.kurtosis()
+        }
+        
+        return metrics
+        
+    except Exception as e:
+        logger.error(f"Error calculating portfolio metrics: {e}")
+        return {}
+
+def format_currency(value: float) -> str:
+    """Format value as currency.
+    
+    Args:
+        value: Value to format
+        
+    Returns:
+        Formatted currency string
+    """
+    try:
+        return f"${value:,.2f}"
+    except Exception as e:
+        logger.error(f"Error formatting currency: {e}")
+        return str(value)
+
+def format_percentage(value: float) -> str:
+    """Format value as percentage.
+    
+    Args:
+        value: Value to format
+        
+    Returns:
+        Formatted percentage string
+    """
+    try:
+        return f"{value:.2%}"
+    except Exception as e:
+        logger.error(f"Error formatting percentage: {e}")
+        return str(value) 

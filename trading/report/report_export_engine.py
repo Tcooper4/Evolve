@@ -85,10 +85,21 @@ class ReportExportEngine:
         self.template_dir = template_dir
         self.chart_dir = chart_dir
         
-        # Create directories
-        os.makedirs(self.output_dir, exist_ok=True)
-        os.makedirs(self.template_dir, exist_ok=True)
-        os.makedirs(self.chart_dir, exist_ok=True)
+        # Create directories with safety guards
+        try:
+            os.makedirs(self.output_dir, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create output directory {self.output_dir}: {e}")
+        
+        try:
+            os.makedirs(self.template_dir, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create template directory {self.template_dir}: {e}")
+        
+        try:
+            os.makedirs(self.chart_dir, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create chart directory {self.chart_dir}: {e}")
         
         # Initialize components
         self.report_history = []

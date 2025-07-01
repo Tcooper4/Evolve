@@ -231,7 +231,10 @@ class StrategySelectionAgent:
         """Save performance history to file."""
         try:
             log_path = "trading/optimization/logs/optimization_metrics.jsonl"
-            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            try:
+                os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            except Exception as e:
+                logger.error(f"Failed to create directory for log_path: {e}")
             
             with open(log_path, "a") as f:
                 for performance in self.performance_history[-1:]:  # Save only latest
@@ -339,7 +342,10 @@ class StrategySelectionAgent:
         }
         
         log_path = "trading/optimization/logs/optimization_agent_decisions.jsonl"
-        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create directory for log_path: {e}")
         
         with open(log_path, "a") as f:
             f.write(json.dumps(log_entry) + "\n")

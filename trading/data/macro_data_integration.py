@@ -83,7 +83,10 @@ class MacroDataIntegration:
         self.cache_dir = cache_dir
         
         # Create cache directory
-        os.makedirs(self.cache_dir, exist_ok=True)
+        try:
+            os.makedirs(self.cache_dir, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create cache_dir: {e}")
         
         # Initialize data sources
         self.fred_series = self._initialize_fred_series()
