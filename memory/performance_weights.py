@@ -147,6 +147,7 @@ def detect_weight_drift(history: dict, sensitivity=0.1):
         sensitivity (float): Threshold for drift detection.
     """
     if len(history) < 2:
+        return
 
     timestamps = sorted(history.keys())[-2:]
     last, current = history[timestamps[0]], history[timestamps[1]]

@@ -75,7 +75,9 @@ class ForecastingPipelineLauncher:
         if mode == "development":
             os.environ["STREAMLIT_DEBUG"] = "true"
         else:
-            os.environ["STREAMLIT_DEBUG"] = "false"def validate_environment(self) -> bool:
+            os.environ["STREAMLIT_DEBUG"] = "false"
+
+    def validate_environment(self) -> bool:
         """Validate environment setup.
         
         Returns:

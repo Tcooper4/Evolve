@@ -186,6 +186,7 @@ class ModelDiscoveryAgent:
         architectures = analysis.get('detected_architectures', [])
         
         if not architectures:
+            return None
 
         # Generate implementation template
         implementation = {

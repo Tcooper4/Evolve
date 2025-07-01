@@ -71,7 +71,9 @@ class IncidentManager:
         self.incidents_dir = Path("incidents")
         self.incidents_dir.mkdir(parents=True, exist_ok=True)
         self.responses_dir = Path("responses")
-        self.responses_dir.mkdir(parents=True, exist_ok=True)def _load_config(self, config_path: str) -> dict:
+        self.responses_dir.mkdir(parents=True, exist_ok=True)
+
+    def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
@@ -92,7 +94,6 @@ class IncidentManager:
         
         logging.config.dictConfig(log_config)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def monitor_incidents(self, duration: int = 300):
         """Monitor for incidents."""
         self.logger.info(f"Monitoring for incidents for {duration} seconds")
