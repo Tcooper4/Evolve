@@ -5,6 +5,10 @@ import pandas as pd
 from typing import Dict, Tuple, Optional
 from dataclasses import dataclass
 from datetime import datetime
+import warnings
+
+# Import centralized technical indicators
+from core.utils.technical_indicators import calculate_bollinger_bands
 
 @dataclass
 class BollingerConfig:
@@ -28,15 +32,12 @@ class BollingerStrategy:
         if 'close' not in data.columns:
             raise ValueError("Data must contain 'close' column")
             
-        # Calculate middle band (SMA)
-        middle_band = data['close'].rolling(window=self.config.window).mean()
-        
-        # Calculate standard deviation
-        std = data['close'].rolling(window=self.config.window).std()
-        
-        # Calculate upper and lower bands
-        upper_band = middle_band + (std * self.config.num_std)
-        lower_band = middle_band - (std * self.config.num_std)
+        # Use centralized Bollinger Bands calculation
+        upper_band, middle_band, lower_band = calculate_bollinger_bands(
+            data['close'], 
+            self.config.window, 
+            self.config.num_std
+        )
         
         return upper_band, middle_band, lower_band
         
