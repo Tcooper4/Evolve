@@ -19,7 +19,7 @@ def test_imports():
         return True
     except Exception as e:
         print(f"❌ Import error: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
 
 def test_basic_report():
     """Test basic report generation."""
@@ -69,7 +69,7 @@ def test_basic_report():
         
     except Exception as e:
         print(f"❌ Report generation error: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
 
 def test_client():
     """Test report client."""
@@ -86,7 +86,7 @@ def test_client():
         
     except Exception as e:
         print(f"❌ Client error: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
 
 def main():
     """Run all tests."""
@@ -117,7 +117,7 @@ def main():
     else:
         print("⚠️  Some tests failed. Check the errors above.")
     
-    return {'success': True, 'result': passed == total, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return passed == total
 
 if __name__ == '__main__':
     success = main()

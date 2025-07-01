@@ -1,8 +1,7 @@
 """
-System runner utilities for initializing and managing the trading system.
+System Runner Module
 
-This module provides functions for initializing system modules and managing
-the overall system state.
+This module provides system initialization and management functions.
 """
 
 import logging
@@ -11,6 +10,8 @@ import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 import importlib
+from datetime import datetime
+from core.session_utils import safe_session_set, update_last_updated
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -27,70 +28,101 @@ from core.session_utils import (
 )
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
-
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
 def run_system_initialization() -> Dict[str, Any]:
-    """Initialize the entire trading system.
+    """Initialize core system components.
     
     Returns:
-        Dictionary containing initialization status for all modules
+        Dictionary containing initialization status for each module
     """
-    logger.info("🚀 Starting system initialization...")
+    logger.info("🔧 Starting system initialization...")
     
-    # Initialize session state
-    initialize_session_state()
+    module_status = {}
     
-    # Initialize system modules
-    module_status = initialize_system_modules()
+    # Initialize data management
+    try:
+        from trading.data.data_loader import DataLoader
+        logger.info("📊 Initializing data management...")
+        data_loader = DataLoader()
+        safe_session_set('data_loader', data_loader)
+        module_status['data_management'] = 'SUCCESS'
+        logger.info("✅ Data management initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Data management initialization failed: {e}")
+        module_status['data_management'] = 'FAILED'
     
-    # Update last updated timestamp
-    update_last_updated()
+    # Initialize market analysis
+    try:
+        from trading.market.market_analyzer import MarketAnalyzer
+        logger.info("📈 Initializing market analysis...")
+        market_analyzer = MarketAnalyzer()
+        safe_session_set('market_analyzer', market_analyzer)
+        module_status['market_analysis'] = 'SUCCESS'
+        logger.info("✅ Market analysis initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Market analysis initialization failed: {e}")
+        module_status['market_analysis'] = 'FAILED'
     
-    # Log initialization results
+    # Initialize strategy engine
+    try:
+        from trading.strategies.strategy_engine import StrategyEngine
+        logger.info("🎯 Initializing strategy engine...")
+        strategy_engine = StrategyEngine()
+        safe_session_set('strategy_engine', strategy_engine)
+        module_status['strategy_engine'] = 'SUCCESS'
+        logger.info("✅ Strategy engine initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Strategy engine initialization failed: {e}")
+        module_status['strategy_engine'] = 'FAILED'
+    
+    # Initialize optimization
+    try:
+        from trading.optimization.optimizer_factory import OptimizerFactory
+        logger.info("⚡ Initializing optimization...")
+        optimizer_factory = OptimizerFactory()
+        safe_session_set('optimizer_factory', optimizer_factory)
+        module_status['optimization'] = 'SUCCESS'
+        logger.info("✅ Optimization initialized successfully")
+    except Exception as e:
+        logger.error(f"❌ Optimization initialization failed: {e}")
+        module_status['optimization'] = 'FAILED'
+    
+    # Log final status
     success_count = sum(1 for status in module_status.values() if status == 'SUCCESS')
     total_count = len(module_status)
     
-    if success_count == total_count:
-        logger.info(f"✅ System initialization completed successfully ({success_count}/{total_count} modules)")
-    elif success_count > 0:
-        logger.warning(f"⚠️ Partial system initialization ({success_count}/{total_count} modules)")
-    else:
-        logger.error(f"❌ System initialization failed ({success_count}/{total_count} modules)")
+    logger.info(f"🎯 System initialization finished: {success_count}/{total_count} modules successful")
     
-    return {'success': True, 'result': module_status, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+    return module_status
 
 def run_agentic_routing() -> Optional[str]:
-    """Initialize and run agentic prompt routing.
+    """Initialize agentic routing system.
     
     Returns:
-        Response from agentic routing or None if failed
+        String indicating success or None if failed
     """
     try:
-        from trading.agents.prompt_router_agent import PromptRouterAgent
+        from core.capability_router import CapabilityRouter
         
-        logger.info("🤖 Initializing agentic prompt routing...")
-        prompt_router = PromptRouterAgent()
+        logger.info("🤖 Initializing agentic routing...")
+        capability_router = CapabilityRouter()
         
-        # Test the router with a simple query
-        test_response = prompt_router.route_prompt("What is the system status?")
+        # Store in session state
+        safe_session_set('capability_router', capability_router)
         
-        if test_response:
-            logger.info("✅ Agentic routing initialized successfully")
-            return test_response
-        else:
-            logger.warning("⚠️ Agentic routing returned no response")
-            return None
-            
+        logger.info("✅ Agentic routing initialized successfully")
+        return "SUCCESS"
+        
     except Exception as e:
         logger.error(f"❌ Agentic routing initialization failed: {e}")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return None
 
 def run_portfolio_management() -> bool:
     """Initialize portfolio management system.
@@ -112,8 +144,7 @@ def run_portfolio_management() -> bool:
         
     except Exception as e:
         logger.error(f"❌ Portfolio management initialization failed: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return False
 
 def run_performance_tracking() -> bool:
     """Initialize performance tracking system.
@@ -135,8 +166,7 @@ def run_performance_tracking() -> bool:
         
     except Exception as e:
         logger.error(f"❌ Performance tracking initialization failed: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return False
 
 def run_strategy_logging() -> bool:
     """Initialize strategy logging system.
@@ -158,8 +188,7 @@ def run_strategy_logging() -> bool:
         
     except Exception as e:
         logger.error(f"❌ Strategy logging initialization failed: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return False
 
 def run_model_monitoring() -> bool:
     """Initialize model monitoring system.
@@ -181,8 +210,7 @@ def run_model_monitoring() -> bool:
         
     except Exception as e:
         logger.error(f"❌ Model monitoring initialization failed: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return False
 
 def run_complete_system() -> Dict[str, Any]:
     """Run the complete system initialization and return status.
@@ -227,15 +255,13 @@ def run_complete_system() -> Dict[str, Any]:
     
     logger.info(f"🎯 Complete system initialization finished: {success_count}/{total_count} components successful")
     
-    return {'success': True, 'result': complete_status, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+    return complete_status
 
 def display_system_status(module_status: Dict[str, Any]) -> dict:
     """Display system status information. Returns status dict."""
     from core.session_utils import display_system_status as display_status
     display_status(module_status)
-    return {'success': True, 'result': {"status": "system_status_displayed"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+    return {"status": "system_status_displayed"}
 
 def get_system_health() -> Dict[str, Any]:
     """Get overall system health status.
@@ -273,7 +299,7 @@ def get_system_health() -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Error getting system health: {e}")
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "overall_status": "error",
             "health_percentage": 0,
             "successful_modules": 0,
@@ -281,7 +307,6 @@ def get_system_health() -> Dict[str, Any]:
             "module_status": {},
             "error": str(e)
         }
-
 
 if __name__ == "__main__":
     # Run complete system initialization when executed directly

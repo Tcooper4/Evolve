@@ -48,10 +48,7 @@ class MonitoringService:
         self.setup_database()
         self.initialize_metrics()
         self.metrics_queue = asyncio.Queue()
-        self.running = False
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self) -> None:
+        self.running = Falsedef setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/monitoring")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -75,8 +72,7 @@ class MonitoringService:
         except Exception as e:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def setup_database(self) -> None:
         """Set up metrics database."""
         try:
@@ -351,7 +347,6 @@ class MonitoringService:
         """Stop monitoring service."""
         self.running = False
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main entry point."""
     import argparse
@@ -369,6 +364,5 @@ def main():
         logging.error(f"Error in monitoring service: {str(e)}")
         raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

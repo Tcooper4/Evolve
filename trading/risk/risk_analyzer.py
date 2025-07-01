@@ -43,9 +43,7 @@ class RiskAnalyzer:
     def __init__(
         self,
         openai_api_key: Optional[str] = None,
-        memory_path: str = 'trading/risk/memory/risk_assessments.json'
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        memory_path: str = 'trading/risk/memory/risk_assessments.json'):
         """Initialize risk analyzer.
         
         Args:
@@ -125,7 +123,7 @@ class RiskAnalyzer:
         self._store_assessment(assessment)
         self.last_assessment = assessment
         
-        return {'success': True, 'result': assessment, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return assessment
     
     def _calculate_forecast_risk(
         self,
@@ -183,7 +181,7 @@ class RiskAnalyzer:
         elif forecast_risk_score > 0.4 or regime_metrics['volatility'] > 0.25:
             return "moderate"
         else:
-            return {'success': True, 'result': "low", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "low"
     
     def _generate_risk_explanation(
         self,
@@ -236,7 +234,7 @@ class RiskAnalyzer:
             
         except Exception as e:
             logger.error(f"Error generating LLM explanation: {e}")
-            return {'success': True, 'result': self._generate_basic_explanation(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._generate_basic_explanation(
                 risk_level,
                 regime_metrics,
                 forecast_risk_score
@@ -258,7 +256,7 @@ class RiskAnalyzer:
         Returns:
             Basic risk explanation string
         """
-        return {'success': True, 'result': (, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return (
             f"Current risk level is {risk_level} based on {regime_metrics['regime']} "
             f"market regime. Sharpe ratio is {regime_metrics['sharpe_ratio']:.2f} "
             f"with volatility of {regime_metrics['volatility']:.2f}. "
@@ -303,7 +301,7 @@ class RiskAnalyzer:
                 "Monitor for regime changes"
             ])
         
-        return {'success': True, 'result': recommendations, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return recommendations
     
     def _store_assessment(self, assessment: RiskAssessment):
         """Store risk assessment in memory.
@@ -343,12 +341,11 @@ class RiskAnalyzer:
                 
         except Exception as e:
             logger.error(f"Error storing risk assessment: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_last_assessment(self) -> Optional[RiskAssessment]:
         """Get the last risk assessment.
         
         Returns:
             Last RiskAssessment object or None
         """
-        return {'success': True, 'result': self.last_assessment, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.last_assessment

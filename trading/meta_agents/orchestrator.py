@@ -27,10 +27,7 @@ class Orchestrator:
         self.task_manager = TaskManager(config)
         self.workflow_engine = WorkflowEngine(config)
         self.notification_service = NotificationService(config)
-        self.setup_logging()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self):
+        self.setup_logging()def setup_logging(self):
         """Configure logging for orchestrator."""
         log_path = Path("logs/orchestrator")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -178,4 +175,3 @@ class Orchestrator:
 
     def cleanup(self):
         raise NotImplementedError('Pending feature') 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

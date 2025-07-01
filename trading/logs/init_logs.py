@@ -110,7 +110,7 @@ def main() -> dict:
             'timestamp': datetime.utcnow().isoformat()
         }
         print(f"Error: {e}")
-        return {'success': True, 'result': error_result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return error_result
 
 if __name__ == "__main__":
     main() 

@@ -21,9 +21,7 @@ class TimeSeriesPlotter:
         self,
         style: str = 'seaborn',
         backend: str = 'matplotlib',
-        figsize: tuple = (12, 6)
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        figsize: tuple = (12, 6)):
         """Initialize the plotter.
         
         Args:
@@ -86,7 +84,7 @@ class TimeSeriesPlotter:
             )
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig
     
     def plot_performance(
         self,
@@ -176,7 +174,7 @@ class TimeSeriesPlotter:
             
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig
     
     def plot_multiple_series(
         self,
@@ -239,7 +237,7 @@ class TimeSeriesPlotter:
             
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig
     
     def plot_with_confidence(
         self,
@@ -323,7 +321,7 @@ class TimeSeriesPlotter:
             
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig
     
     def plot_seasonal_decomposition(
         self,
@@ -421,7 +419,7 @@ class TimeSeriesPlotter:
             
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig
 
     def plot_data(self, data: Union[pd.Series, np.ndarray, List[float]]) -> None:
         """Plot the given data.
@@ -432,7 +430,6 @@ class TimeSeriesPlotter:
         plt.plot(data)
         plt.show()
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def plot_histogram(self, data: Union[pd.Series, np.ndarray, List[float]]) -> None:
         """Plot a histogram of the given data.
         
@@ -442,16 +439,13 @@ class TimeSeriesPlotter:
         plt.hist(data)
         plt.show()
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class PerformancePlotter:
     """Class for plotting performance metrics and analysis."""
     
     def __init__(
         self,
         backend: str = 'matplotlib',
-        figsize: tuple = (12, 8)
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        figsize: tuple = (12, 8)):
         """Initialize the performance plotter.
         
         Args:
@@ -519,7 +513,7 @@ class PerformancePlotter:
             
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig
     
     def plot_rolling_performance(
         self,
@@ -595,7 +589,7 @@ class PerformancePlotter:
             
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig
 
 class FeatureImportancePlotter:
     """Class for plotting feature importance."""
@@ -603,9 +597,7 @@ class FeatureImportancePlotter:
     def __init__(
         self,
         backend: str = 'matplotlib',
-        figsize: tuple = (10, 6)
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        figsize: tuple = (10, 6)):
         """Initialize the plotter.
         
         Args:
@@ -667,7 +659,7 @@ class FeatureImportancePlotter:
             
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig
     
     def plot_feature_importance_comparison(
         self,
@@ -743,7 +735,7 @@ class FeatureImportancePlotter:
             
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig
 
 class PredictionPlotter:
     """Class for plotting model predictions."""
@@ -751,9 +743,7 @@ class PredictionPlotter:
     def __init__(
         self,
         backend: str = 'matplotlib',
-        figsize: tuple = (12, 6)
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        figsize: tuple = (12, 6)):
         """Initialize the plotter.
         
         Args:
@@ -831,7 +821,7 @@ class PredictionPlotter:
             
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig
     
     def plot_predictions_with_intervals(
         self,
@@ -932,4 +922,4 @@ class PredictionPlotter:
             
             if show:
                 fig.show()
-            return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return fig

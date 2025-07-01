@@ -18,7 +18,7 @@ def check_encoding(file_path: str) -> dict:
     Returns:
         dict: Dictionary containing encoding information
     """
-    return {'success': True, 'result': detect_encoding(file_path), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return detect_encoding(file_path)
 
 def is_utf8(file_path: str) -> bool:
     """Check if a file is UTF-8 encoded.
@@ -34,7 +34,7 @@ def is_utf8(file_path: str) -> bool:
             f.read()
         return True
     except UnicodeDecodeError:
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
 
 def detect_encoding(file_path: str) -> dict:
     """Detect the encoding of a file using chardet.
@@ -51,7 +51,6 @@ def detect_encoding(file_path: str) -> dict:
         return chardet.detect(raw_data)
     except Exception as e:
         logger.error(f"Error detecting encoding for {file_path}: {e}")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def convert_to_utf8(file_path: str, original_encoding: str) -> bool:
     """Convert a file to UTF-8 encoding.
@@ -76,7 +75,7 @@ def convert_to_utf8(file_path: str, original_encoding: str) -> bool:
         return True
     except Exception as e:
         logger.error(f"Failed to convert {file_path}: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
 
 def scan_project_for_utf8(
     root_dir: str = ".",
@@ -136,7 +135,7 @@ def scan_project_for_utf8(
         if not convert:
             logger.info("Run with convert=True to automatically convert files to UTF-8.")
             
-    return {'success': True, 'result': non_utf8_files, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return non_utf8_files
 
 def main():
     """Main function to run the UTF-8 scanner."""
@@ -170,6 +169,5 @@ def main():
         for file_path, encoding in non_utf8_files:
             print(f"- {file_path} ({encoding})")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

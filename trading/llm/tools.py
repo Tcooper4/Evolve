@@ -121,8 +121,7 @@ class ToolRegistry:
         """Load tools from the tools directory."""
         if not self.tools_dir.exists():
             logger.warning(f"Tools directory {self.tools_dir} does not exist")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
         for file in self.tools_dir.glob("*.py"):
             try:
                 # Import the module
@@ -152,8 +151,7 @@ class ToolRegistry:
         self.tools[metadata.name] = tool_func
         self.metadata[metadata.name] = metadata
         logger.info(f"Registered tool: {metadata.name}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     async def execute_tool(
         self,
         tool_name: str,
@@ -204,7 +202,7 @@ class ToolRegistry:
         Returns:
             ToolMetadata if the tool exists, None otherwise
         """
-        return {'success': True, 'result': self.metadata.get(tool_name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.metadata.get(tool_name)
     
     def list_tools(self, category: Optional[str] = None) -> List[Dict[str, Any]]:
         """List all registered tools.
@@ -229,7 +227,7 @@ class ToolRegistry:
                 "category": metadata.category,
                 "version": metadata.version
             })
-        return {'success': True, 'result': tools, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return tools
     
     def export_tools(self, path: Union[str, Path]) -> None:
         """Export tool definitions to a file.
@@ -252,8 +250,7 @@ class ToolRegistry:
         
         with open(path, 'w') as f:
             json.dump(tools_data, f, indent=2)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def import_tools(self, path: Union[str, Path]) -> None:
         """Import tool definitions from a file.
         
@@ -275,4 +272,3 @@ class ToolRegistry:
                 version=data["version"]
             )
             self.metadata[name] = metadata 
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

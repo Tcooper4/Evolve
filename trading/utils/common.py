@@ -64,7 +64,7 @@ def setup_logging(log_dir: str = "logs", level: int = logging.INFO) -> logging.L
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
     
-    return {'success': True, 'result': logger, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return logger
 
 def load_config(config_path: Union[str, Path]) -> Dict[str, Any]:
     """Load configuration from file.
@@ -86,7 +86,7 @@ def load_config(config_path: Union[str, Path]) -> Dict[str, Any]:
     else:
         raise ValueError(f"Unsupported config file format: {config_path.suffix}")
     
-    return {'success': True, 'result': config, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return config
 
 def save_config(config: Dict[str, Any], config_path: Union[str, Path]) -> Dict[str, Any]:
     """Save configuration to file.
@@ -267,7 +267,7 @@ def calculate_returns(
     if method == "log":
         return np.log(prices / prices.shift(1))
     else:  # simple returns
-        return {'success': True, 'result': prices.pct_change(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return prices.pct_change()
 
 def resample_data(
     data: pd.DataFrame,
@@ -292,7 +292,7 @@ def resample_data(
     if agg_dict is None:
         agg_dict = {col: "mean" for col in data.columns}
     
-    return {'success': True, 'result': data.resample(freq).agg(agg_dict), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return data.resample(freq).agg(agg_dict)
 
 def calculate_moving_average(
     data: pd.Series,
@@ -351,7 +351,7 @@ def calculate_volatility(
     vol = returns.rolling(window=window).std()
     if annualize:
         vol = vol * np.sqrt(252)  # Annualize assuming 252 trading days
-    return {'success': True, 'result': vol, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return vol
 
 def calculate_correlation(
     data1: pd.Series,
@@ -380,7 +380,7 @@ def calculate_correlation(
         4    1.0
         dtype: float64
     """
-    return {'success': True, 'result': data1.rolling(window=window).corr(data2), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return data1.rolling(window=window).corr(data2)
 
 def calculate_beta(
     returns: pd.Series,
@@ -409,7 +409,7 @@ def calculate_beta(
     """
     covariance = returns.rolling(window=window).cov(market_returns)
     market_variance = market_returns.rolling(window=window).var()
-    return {'success': True, 'result': covariance / market_variance, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return covariance / market_variance
 
 def calculate_sharpe_ratio(
     returns: pd.Series,
@@ -445,7 +445,7 @@ def calculate_sharpe_ratio(
         mean = mean * 252
         std = std * np.sqrt(252)
     
-    return {'success': True, 'result': mean / std, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return mean / std
 
 def calculate_drawdown(
     prices: pd.Series
@@ -470,7 +470,7 @@ def calculate_drawdown(
     """
     rolling_max = prices.expanding().max()
     drawdown = (prices - rolling_max) / rolling_max
-    return {'success': True, 'result': drawdown, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return drawdown
 
 def calculate_max_drawdown(
     prices: pd.Series
@@ -492,7 +492,7 @@ def calculate_max_drawdown(
     cumulative = prices / prices.iloc[0]
     running_max = cumulative.expanding().max()
     drawdown = (cumulative - running_max) / running_max
-    return {'success': True, 'result': float(drawdown.min()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return float(drawdown.min())
 
 def calculate_win_rate(
     returns: pd.Series
@@ -511,7 +511,7 @@ def calculate_win_rate(
         >>> print(win_rate)
         0.6
     """
-    return {'success': True, 'result': float((returns > 0).mean()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return float((returns > 0).mean())
 
 def calculate_calmar_ratio(
     returns: pd.Series,
@@ -540,7 +540,7 @@ def calculate_calmar_ratio(
     """
     annualized_return = returns.rolling(window=window).mean() * 252
     max_drawdown = prices.rolling(window=window).apply(calculate_max_drawdown)
-    return {'success': True, 'result': annualized_return / max_drawdown, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return annualized_return / max_drawdown
 
 def calculate_information_ratio(
     returns: pd.Series,
@@ -577,7 +577,7 @@ def calculate_information_ratio(
         mean = mean * 252
         std = std * np.sqrt(252)
     
-    return {'success': True, 'result': mean / std, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return mean / std
 
 def calculate_sortino_ratio(
     returns: pd.Series,
@@ -616,7 +616,7 @@ def calculate_sortino_ratio(
         mean = mean * 252
         downside_std = downside_std * np.sqrt(252)
     
-    return {'success': True, 'result': mean / downside_std, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return mean / downside_std
 
 def calculate_omega_ratio(
     returns: pd.Series,
@@ -684,7 +684,7 @@ def calculate_treynor_ratio(
     if annualize:
         excess_returns = excess_returns * 252
     
-    return {'success': True, 'result': excess_returns / beta, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return excess_returns / beta
 
 def calculate_alpha(
     returns: pd.Series,
@@ -724,7 +724,7 @@ def calculate_alpha(
     if annualize:
         alpha = alpha * 252
     
-    return {'success': True, 'result': alpha, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return alpha
 
 def plot_returns(returns: pd.Series, title: str = "Returns"):
     """Plot returns series.
@@ -795,7 +795,7 @@ def calculate_portfolio_metrics(returns: pd.Series) -> Dict[str, float]:
     Returns:
         Dictionary of metrics
     """
-    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return {
         'total_return': (1 + returns).prod() - 1,
         'annualized_return': (1 + returns).prod() ** (252/len(returns)) - 1,
         'volatility': returns.std() * np.sqrt(252),
@@ -825,7 +825,7 @@ def format_percentage(value: float) -> str:
     Returns:
         Formatted string
     """
-    return {'success': True, 'result': f"{value:.2%}", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return f"{value:.2%}"
 
 def calculate_rolling_metrics(returns: pd.Series, window: int = 252) -> pd.DataFrame:
     """Calculate rolling performance metrics.
@@ -851,7 +851,7 @@ def calculate_rolling_metrics(returns: pd.Series, window: int = 252) -> pd.DataF
     # Rolling max drawdown
     metrics['max_drawdown'] = returns.rolling(window=window).apply(calculate_max_drawdown)
     
-    return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return metrics
 
 def plot_rolling_metrics(returns: pd.Series, window: int = 30) -> Dict[str, Any]:
     """Plot rolling performance metrics."""
@@ -906,7 +906,7 @@ def normalize_indicator_name(name: str) -> str:
     """
 
     if not isinstance(name, str):
-        return {'success': True, 'result': str(name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return str(name)
 
     normalized = name.replace(" ", "_").replace("-", "_")
     return normalized.upper()

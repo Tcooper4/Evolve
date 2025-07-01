@@ -16,7 +16,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 from services.quant_gpt import QuantGPT
 from services.service_client import ServiceClient
 
-
 def test_direct_quant_gpt():
     """Test direct QuantGPT usage."""
     print("🧪 Testing Direct QuantGPT Usage")
@@ -69,8 +68,7 @@ def test_direct_quant_gpt():
         
     except Exception as e:
         print(f"❌ Direct QuantGPT test failed: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return False
 
 def test_service_client():
     """Test QuantGPT via ServiceClient."""
@@ -135,8 +133,7 @@ def test_service_client():
         
     except Exception as e:
         print(f"❌ ServiceClient test failed: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return False
 
 def test_query_parsing():
     """Test query parsing functionality."""
@@ -215,8 +212,7 @@ def test_query_parsing():
         
     except Exception as e:
         print(f"❌ Query parsing test failed: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return False
 
 def main():
     """Run all QuantGPT tests."""
@@ -234,8 +230,7 @@ def main():
         print("Running direct QuantGPT tests only...")
         test_direct_quant_gpt()
         test_query_parsing()
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     # Run all tests
     tests = [
         ("Direct QuantGPT", test_direct_quant_gpt),
@@ -273,7 +268,6 @@ def main():
         print("🎉 All tests passed! QuantGPT is working correctly.")
     else:
         print("⚠️  Some tests failed. Check the output above for details.")
-
 
 if __name__ == "__main__":
     main() 

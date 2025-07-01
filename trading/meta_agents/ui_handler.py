@@ -75,7 +75,7 @@ class UIHandler:
             theme_path = Path("config/theme.yaml")
             if theme_path.exists():
                 with open(theme_path, 'r') as f:
-                    return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return yaml.safe_load(f)
             return self._get_default_theme()
         except Exception as e:
             self.logger.error(f"Error loading theme: {str(e)}")
@@ -83,7 +83,7 @@ class UIHandler:
     
     def _get_default_theme(self) -> Dict:
         """Get default theme configuration."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'colors': {
                 'primary': '#007bff',
                 'secondary': '#6c757d',
@@ -120,7 +120,7 @@ class UIHandler:
             layouts_path = Path("config/layouts.yaml")
             if layouts_path.exists():
                 with open(layouts_path, 'r') as f:
-                    return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return yaml.safe_load(f)
             return self._get_default_layouts()
         except Exception as e:
             self.logger.error(f"Error loading layouts: {str(e)}")
@@ -128,7 +128,7 @@ class UIHandler:
     
     def _get_default_layouts(self) -> Dict:
         """Get default layout configurations."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'dashboard': {
                 'type': 'grid',
                 'columns': 12,
@@ -291,20 +291,20 @@ class UIHandler:
         """Get all components for a page."""
         if page_id not in self.pages:
             raise ValueError(f"Page {page_id} not found")
-        return {'success': True, 'result': self.pages[page_id].components, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.pages[page_id].components
     
     def get_component(self, component_id: str) -> Optional[UIComponent]:
         """Get a component by ID."""
-        return {'success': True, 'result': self.components.get(component_id), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.components.get(component_id)
     
     def get_all_pages(self) -> List[UIPage]:
         """Get all pages."""
-        return {'success': True, 'result': list(self.pages.values()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.pages.values())
     
     def get_theme(self) -> Dict:
         """Get the current theme configuration."""
-        return {'success': True, 'result': self.theme, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.theme
     
     def get_layouts(self) -> Dict:
         """Get all layout configurations."""
-        return {'success': True, 'result': self.layouts, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.layouts

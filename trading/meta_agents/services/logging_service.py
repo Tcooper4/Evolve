@@ -68,8 +68,7 @@ class LoggingService:
         except Exception as e:
             print(f"Error loading config: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def setup_database(self) -> None:
         """Set up logging database."""
         try:
@@ -203,7 +202,7 @@ class LoggingService:
             
             else:
                 print(f"Unknown handler type: {handler_type}")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         except Exception as e:
             print(f"Error creating handler: {str(e)}")
             return None
@@ -221,7 +220,7 @@ class LoggingService:
             
             else:
                 print(f"Unknown filter type: {filter_type}")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         except Exception as e:
             print(f"Error creating filter: {str(e)}")
             return None
@@ -231,7 +230,7 @@ class LoggingService:
         try:
             if name not in self.loggers:
                 raise ValueError(f"Logger {name} not found")
-            return {'success': True, 'result': self.loggers[name], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self.loggers[name]
         except Exception as e:
             print(f"Error getting logger: {str(e)}")
             raise
@@ -269,8 +268,7 @@ class LoggingService:
         except Exception as e:
             print(f"Error logging message: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_logs(self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None,
                  logger_name: Optional[str] = None, level: Optional[LogLevel] = None,
                  limit: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -318,7 +316,7 @@ class LoggingService:
                     'extra': json.loads(row[10]) if row[10] else {}
                 })
             
-            return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return results
         except Exception as e:
             print(f"Error getting logs: {str(e)}")
             raise
@@ -338,8 +336,7 @@ class LoggingService:
         except Exception as e:
             print(f"Error cleaning up old logs: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def rotate_logs(self) -> None:
         """Rotate log files."""
         try:
@@ -366,8 +363,7 @@ class LoggingService:
         except Exception as e:
             print(f"Error rotating logs: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def process_log_queue(self) -> None:
         """Process logs from the queue."""
         try:
@@ -385,8 +381,7 @@ class LoggingService:
         except Exception as e:
             print(f"Error processing log queue: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     async def start(self) -> None:
         """Start logging service."""
         try:
@@ -415,19 +410,15 @@ class LoggingService:
         """Stop logging service."""
         self.running = False
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class RegexFilter(logging.Filter):
     """Filter log records based on regex pattern."""
     
     def __init__(self, pattern: str):
         """Initialize filter with pattern."""
         super().__init__()
-        self.pattern = re.compile(pattern)
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def filter(self, record: logging.LogRecord) -> bool:
+        self.pattern = re.compile(pattern)def filter(self, record: logging.LogRecord) -> bool:
         """Filter log record."""
-        return {'success': True, 'result': bool(self.pattern.search(record.getMessage())), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return bool(self.pattern.search(record.getMessage()))
 
 def main():
     """Main entry point."""
@@ -451,6 +442,5 @@ def main():
         print(f"Error in logging service: {str(e)}")
         raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

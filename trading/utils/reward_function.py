@@ -32,7 +32,7 @@ class RewardFunction:
             Aggregated reward score (float)
         """
         objectives = self.compute_objectives(metrics)
-        return {'success': True, 'result': self.aggregate(objectives), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.aggregate(objectives)
 
     def compute_objectives(self, metrics: Dict[str, Any]) -> Dict[str, float]:
         """
@@ -48,7 +48,7 @@ class RewardFunction:
         max_drawdown = abs(metrics.get('max_drawdown', 1e-6)) or 1e-6  # Avoid div by zero
         # Consistency: win rate over drawdown (higher is better)
         consistency = win_rate / max_drawdown if max_drawdown > 0 else 0.0
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'return': total_return,
             'sharpe': sharpe,
             'consistency': consistency
@@ -82,4 +82,3 @@ class RewardFunction:
             weights: Dict of weights for each objective
         """
         self.weights = weights.copy() 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

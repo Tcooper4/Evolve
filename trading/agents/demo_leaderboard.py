@@ -19,7 +19,6 @@ from trading.agents.agent_manager import AgentManager, AgentManagerConfig
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 def generate_realistic_performance_data(agent_name: str) -> Dict[str, float]:
     """Generate realistic trading performance data for demonstration."""
     
@@ -84,7 +83,6 @@ def generate_realistic_performance_data(agent_name: str) -> Dict[str, float]:
         "extra_metrics": extra_metrics
     }
 
-
 def demo_basic_leaderboard_usage():
     """Demonstrate basic leaderboard functionality."""
     print("\n" + "="*60)
@@ -124,7 +122,6 @@ def demo_basic_leaderboard_usage():
     df = leaderboard.as_dataframe()
     print(df[['agent_name', 'sharpe_ratio', 'max_drawdown', 'win_rate', 'total_return', 'status']].to_string(index=False))
 
-
 def demo_deprecation_scenarios():
     """Demonstrate deprecation functionality with poor performers."""
     print("\n" + "="*60)
@@ -146,7 +143,6 @@ def demo_deprecation_scenarios():
     
     print(f"\nDeprecated Agents: {leaderboard.get_deprecated_agents()}")
     print(f"Active Agents: {leaderboard.get_active_agents()}")
-
 
 def demo_agent_manager_integration():
     """Demonstrate integration with AgentManager."""
@@ -191,7 +187,6 @@ def demo_agent_manager_integration():
     active = manager.get_active_agents()
     print(f"Active Agents: {active}")
 
-
 def demo_leaderboard_analytics():
     """Demonstrate advanced leaderboard analytics."""
     print("\n" + "="*60)
@@ -235,7 +230,6 @@ def demo_leaderboard_analytics():
     print(f"Best Sharpe: {best_sharpe['agent_name']} ({best_sharpe['sharpe_ratio']:.2f})")
     print(f"Best Return: {best_return['agent_name']} ({best_return['total_return']:.2%})")
     print(f"Best Win Rate: {best_return['agent_name']} ({best_win_rate['win_rate']:.2%})")
-
 
 def demo_reporting_integration():
     """Demonstrate how leaderboard data can be used in reports."""
@@ -286,7 +280,6 @@ def demo_reporting_integration():
         else:
             print(f"  {data}")
 
-
 async def main():
     """Run all demo scenarios."""
     print("AGENT LEADERBOARD DEMO")
@@ -310,7 +303,6 @@ async def main():
     print("✓ Analytics and reporting capabilities")
     print("✓ DataFrame export for dashboards")
     print("✓ Performance history tracking")
-
 
 if __name__ == "__main__":
     asyncio.run(main()) 

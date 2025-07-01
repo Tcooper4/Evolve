@@ -28,7 +28,6 @@ class MarketAnalyzer:
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
         if 'trend_threshold' in self.config and not isinstance(self.config['trend_threshold'], (int, float)):
@@ -38,7 +37,6 @@ class MarketAnalyzer:
         if 'correlation_threshold' in self.config and (not isinstance(self.config['correlation_threshold'], (int, float)) or not -1 <= self.config['correlation_threshold'] <= 1):
             raise ValueError("correlation_threshold must be between -1 and 1")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def analyze_trend(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Analyze price trend using moving averages."""
         try:
@@ -71,7 +69,7 @@ class MarketAnalyzer:
             
             # Log metrics using our centralized system
             log_metrics("trend", result)
-            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return result
             
         except Exception as e:
             self.logger.error(f"Error analyzing trend: {e}")
@@ -108,7 +106,7 @@ class MarketAnalyzer:
             }
             
             log_metrics("volatility", result)
-            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return result
             
         except Exception as e:
             self.logger.error(f"Error analyzing volatility: {e}")
@@ -141,7 +139,7 @@ class MarketAnalyzer:
             }
             
             log_metrics("correlation", result)
-            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return result
             
         except Exception as e:
             self.logger.error(f"Error analyzing correlation: {e}")
@@ -162,7 +160,7 @@ class MarketAnalyzer:
             }
             
             log_metrics("market_conditions", combined)
-            return {'success': True, 'result': combined, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return combined
             
         except Exception as e:
             self.logger.error(f"Error analyzing market conditions: {e}")

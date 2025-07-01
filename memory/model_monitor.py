@@ -34,7 +34,7 @@ def detect_drift(ticker: str, threshold=0.2) -> dict:
 
     records = [entry[ticker] for ts, entry in sorted(history.items()) if ticker in entry]
     if len(records) < 2:
-        return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {}
 
     df = pd.DataFrame(records)
     drift_alerts = []
@@ -57,7 +57,6 @@ def detect_drift(ticker: str, threshold=0.2) -> dict:
         _append_json_log(DRIFT_LOG_PATH, {"ticker": ticker, "drift": drift_alerts})
     return drift_alerts
 
-
 def generate_strategy_priority(ticker: str) -> dict:
     """
     Converts latest smoothed weights into strategy priorities for each model.
@@ -69,7 +68,7 @@ def generate_strategy_priority(ticker: str) -> dict:
         dict: Dictionary containing prioritized models and their weights.
     """
     if not os.path.exists(WEIGHT_HISTORY_PATH):
-        return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {}
 
     with open(WEIGHT_HISTORY_PATH, "r") as f:
         history = json.load(f)
@@ -88,7 +87,6 @@ def generate_strategy_priority(ticker: str) -> dict:
     _append_json_log(STRATEGY_PRIORITY_PATH, result)
     return result
 
-
 def _append_json_log(path: str, entry: dict):
     """
     Appends an entry to a JSON log file.
@@ -106,5 +104,3 @@ def _append_json_log(path: str, entry: dict):
     log.append(entry)
     with open(path, "w") as f:
         json.dump(log, f, indent=2)
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

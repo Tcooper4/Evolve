@@ -17,7 +17,6 @@ from trading.agents.execution_agent import (
 )
 from trading.agents.base_agent_interface import AgentConfig
 
-
 def create_risk_aware_signals() -> List[TradeSignal]:
     """Create trade signals with risk controls for demonstration."""
     
@@ -90,8 +89,7 @@ def create_risk_aware_signals() -> List[TradeSignal]:
             }
         )
     ]
-    return {'success': True, 'result': signals, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+    return signals
 
 def create_market_scenarios() -> List[Dict[str, Any]]:
     """Create different market scenarios to test risk controls."""
@@ -147,8 +145,7 @@ def create_market_scenarios() -> List[Dict[str, Any]]:
             }
         }
     ]
-    return {'success': True, 'result': scenarios, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+    return scenarios
 
 async def demo_risk_controls():
     """Demonstrate comprehensive risk controls functionality."""
@@ -305,7 +302,6 @@ async def demo_risk_controls():
     
     print(f"\n✅ Risk controls demo completed!")
 
-
 async def demo_risk_threshold_types():
     """Demonstrate different risk threshold types."""
     print("\n🎯 Risk Threshold Types Demo")
@@ -377,7 +373,6 @@ async def demo_risk_threshold_types():
         print(f"  Stop loss distance: ${abs(stop_loss_price - signal.entry_price):.2f}")
     
     print(f"\n✅ Threshold types demo completed!")
-
 
 async def demo_emergency_exits():
     """Demonstrate emergency exit scenarios."""
@@ -454,7 +449,6 @@ async def demo_emergency_exits():
     
     print(f"\n✅ Emergency exits demo completed!")
 
-
 async def main():
     """Run all risk controls demos."""
     print("🛡️ Comprehensive Risk Controls Demo")
@@ -476,7 +470,6 @@ async def main():
         print(f"❌ Demo failed: {e}")
         import traceback
         traceback.print_exc()
-
 
 if __name__ == "__main__":
     asyncio.run(main()) 

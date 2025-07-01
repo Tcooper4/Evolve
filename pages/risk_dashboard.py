@@ -123,7 +123,7 @@ def load_metrics():
         
     except Exception as e:
         st.error(f"Error loading metrics: {e}")
-        return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return pd.DataFrame()
 
 # Load metrics
 metrics_df = load_metrics()

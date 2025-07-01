@@ -17,7 +17,6 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-
 @dataclass
 class CointegrationResult:
     """Cointegration test result."""
@@ -32,7 +31,6 @@ class CointegrationResult:
     spread_std: float
     confidence_level: float
 
-
 @dataclass
 class PairsSignal:
     """Pairs trading signal."""
@@ -45,7 +43,6 @@ class PairsSignal:
     spread_value: float
     confidence: float
     position_size: float
-
 
 class PairsTradingEngine:
     """
@@ -130,7 +127,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error finding cointegrated pairs: {str(e)}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def _test_cointegration(self, 
                            symbol1: str, 
@@ -198,7 +195,7 @@ class PairsTradingEngine:
     
     def _create_no_cointegration_result(self, symbol1: str, symbol2: str) -> CointegrationResult:
         """Create result for non-cointegrated pair."""
-        return {'success': True, 'result': CointegrationResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return CointegrationResult(
             symbol1=symbol1,
             symbol2=symbol2,
             is_cointegrated=False,
@@ -226,7 +223,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating hedge ratio: {str(e)}")
-            return {'success': True, 'result': 1.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 1.0
     
     def update_hedge_ratios(self, 
                            price_data: Dict[str, pd.DataFrame],
@@ -267,8 +264,7 @@ class PairsTradingEngine:
                         
         except Exception as e:
             self.logger.error(f"Error updating hedge ratios: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _calculate_rolling_hedge_ratio(self, 
                                      series1: pd.Series, 
                                      series2: pd.Series, 
@@ -294,7 +290,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating rolling hedge ratio: {str(e)}")
-            return {'success': True, 'result': pd.Series(dtype=float), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return pd.Series(dtype=float)
     
     def generate_signals(self, 
                         price_data: Dict[str, pd.DataFrame],
@@ -350,7 +346,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error generating signals: {str(e)}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def _calculate_z_score(self, pair_key: str, current_spread: float) -> float:
         """Calculate z-score for current spread."""
@@ -374,7 +370,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating z-score: {str(e)}")
-            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.0
     
     def _generate_signal_from_zscore(self, 
                                    symbol1: str,
@@ -418,7 +414,7 @@ class PairsTradingEngine:
             
             # Close signal (spread has reverted to mean)
             elif abs(z_score) < self.z_score_exit:
-                return {'success': True, 'result': PairsSignal(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return PairsSignal(
                     timestamp=timestamp,
                     symbol1=symbol1,
                     symbol2=symbol2,
@@ -454,7 +450,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error calculating position size: {str(e)}")
-            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.5
     
     def validate_pair_stability(self, 
                               symbol1: str, 
@@ -509,7 +505,7 @@ class PairsTradingEngine:
                 
                 if spread_std < self.min_spread_std:
                     self.logger.warning(f"Pair {symbol1}-{symbol2} spread too stable: {spread_std:.4f}")
-                    return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return False
             
             return True
             
@@ -561,8 +557,7 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error getting pair statistics: {str(e)}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def cleanup_inactive_pairs(self, active_symbols: List[str]):
         """Remove pairs that are no longer active."""
         try:
@@ -585,8 +580,7 @@ class PairsTradingEngine:
                 
         except Exception as e:
             self.logger.error(f"Error cleaning up inactive pairs: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_active_pairs_summary(self) -> List[Dict[str, Any]]:
         """Get summary of all active pairs."""
         try:
@@ -602,4 +596,4 @@ class PairsTradingEngine:
             
         except Exception as e:
             self.logger.error(f"Error getting active pairs summary: {str(e)}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []

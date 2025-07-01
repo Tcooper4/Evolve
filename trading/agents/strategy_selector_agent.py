@@ -23,7 +23,6 @@ from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
 
-
 class StrategyType(str, Enum):
     """Strategy type classifications."""
     RSI = "rsi"
@@ -35,7 +34,6 @@ class StrategyType(str, Enum):
     PAIRS = "pairs"
     MEAN_REVERSION = "mean_reversion"
     TREND_FOLLOWING = "trend_following"
-
 
 @dataclass
 class StrategyPerformance:
@@ -52,7 +50,6 @@ class StrategyPerformance:
     market_regime: str
     confidence_score: float
 
-
 @dataclass
 class StrategyRecommendation:
     """Strategy recommendation with parameters."""
@@ -64,7 +61,6 @@ class StrategyRecommendation:
     expected_drawdown: float
     market_regime: str
     reasoning: str
-
 
 class StrategySelectorAgent:
     """
@@ -226,7 +222,7 @@ class StrategySelectorAgent:
             
         except Exception as e:
             self.logger.error(f"Error in strategy selection: {str(e)}")
-            return {'success': True, 'result': self._get_default_strategy('sideways'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._get_default_strategy('sideways')
     
     def _detect_market_regime(self, market_data: pd.DataFrame) -> str:
         """Detect market regime from price data."""
@@ -415,8 +411,7 @@ class StrategySelectorAgent:
             
         except Exception as e:
             self.logger.error(f"Error evaluating strategy: {str(e)}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def _generate_signals(self, 
                          strategy_type: StrategyType,
                          parameters: Dict[str, Any],
@@ -464,7 +459,7 @@ class StrategySelectorAgent:
             
             else:
                 # Default to RSI
-                return {'success': True, 'result': generate_rsi_signals(market_data['close']), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return generate_rsi_signals(market_data['close'])
                 
         except Exception as e:
             self.logger.error(f"Error generating signals: {str(e)}")
@@ -558,7 +553,7 @@ class StrategySelectorAgent:
             
         except Exception as e:
             self.logger.error(f"Error calculating confidence score: {str(e)}")
-            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.5
     
     def _generate_reasoning(self, 
                           strategy_type: StrategyType,
@@ -582,7 +577,7 @@ class StrategySelectorAgent:
             
         except Exception as e:
             self.logger.error(f"Error generating reasoning: {str(e)}")
-            return {'success': True, 'result': f"Selected {strategy_type.value} strategy based on market conditions.", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return f"Selected {strategy_type.value} strategy based on market conditions."
     
     def _get_default_strategy(self, market_regime: str) -> StrategyRecommendation:
         """Get default strategy when selection fails."""
@@ -616,7 +611,7 @@ class StrategySelectorAgent:
             elif strategy_type == StrategyType.VOLATILITY:
                 return {'period': 20, 'threshold': 0.02}
             else:
-                return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return {}
                 
         except Exception as e:
             self.logger.error(f"Error getting default parameters: {str(e)}")
@@ -640,8 +635,6 @@ class StrategySelectorAgent:
             
         except Exception as e:
             self.logger.error(f"Error storing strategy selection: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def update_strategy_performance(self, performance: StrategyPerformance):
         """Update strategy performance after execution."""
@@ -671,8 +664,6 @@ class StrategySelectorAgent:
             
         except Exception as e:
             self.logger.error(f"Error updating strategy performance: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def get_strategy_recommendations(self, 
                                    market_data: pd.DataFrame,
@@ -727,7 +718,7 @@ class StrategySelectorAgent:
             
         except Exception as e:
             self.logger.error(f"Error getting strategy recommendations: {str(e)}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def _load_strategy_performance(self):
         """Load strategy performance from memory."""
@@ -743,8 +734,6 @@ class StrategySelectorAgent:
                         
         except Exception as e:
             self.logger.error(f"Error loading strategy performance: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def save_strategy_performance(self):
         """Save strategy performance to file."""
@@ -761,4 +750,3 @@ class StrategySelectorAgent:
                 
         except Exception as e:
             self.logger.error(f"Error saving strategy performance: {str(e)}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

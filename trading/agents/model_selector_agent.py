@@ -29,13 +29,11 @@ from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
 
-
 class ForecastingHorizon(Enum):
     """Forecasting horizon categories."""
     SHORT_TERM = "short_term"  # 1-7 days
     MEDIUM_TERM = "medium_term"  # 1-4 weeks
     LONG_TERM = "long_term"  # 1-12 months
-
 
 class MarketRegime(Enum):
     """Market regime categories."""
@@ -44,7 +42,6 @@ class MarketRegime(Enum):
     MEAN_REVERTING = "mean_reverting"
     VOLATILE = "volatile"
     SIDEWAYS = "sideways"
-
 
 class ModelType(Enum):
     """Available model types."""
@@ -57,7 +54,6 @@ class ModelType(Enum):
     CATBOOST = "catboost"
     ENSEMBLE = "ensemble"
     DEEP_ENSEMBLE = "deep_ensemble"
-
 
 @dataclass
 class ModelPerformance:
@@ -75,7 +71,6 @@ class ModelPerformance:
     training_samples: int
     inference_latency: float  # milliseconds
 
-
 @dataclass
 class ModelCapability:
     """Model capability profile."""
@@ -87,7 +82,6 @@ class ModelCapability:
     feature_requirements: List[str]
     computational_complexity: str  # "low", "medium", "high"
     memory_requirements: str  # "low", "medium", "high"
-
 
 class ModelSelectorAgent:
     """Agent for dynamic model selection based on market conditions and requirements."""

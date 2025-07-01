@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-
 class ModelMonitor:
     """Model monitoring class for tracking model performance and detecting issues."""
     
@@ -36,7 +35,7 @@ class ModelMonitor:
             return self.trust_levels
         except Exception as e:
             self.logger.error(f"Error getting model trust levels: {str(e)}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 "lstm": 0.5,
                 "xgboost": 0.5,
                 "prophet": 0.5,
@@ -57,8 +56,7 @@ class ModelMonitor:
             self.logger.info(f"Updated trust level for {model_name}: {new_trust:.3f}")
         except Exception as e:
             self.logger.error(f"Error updating trust level: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def detect_drift(self, current_data: pd.DataFrame, historical_data: pd.DataFrame, 
                     threshold: float = 0.1, method: str = "ks_test") -> Dict[str, Any]:
         """Detect data drift between current and historical data."""
@@ -103,7 +101,7 @@ class ModelMonitor:
             
         except Exception as e:
             logger.error(f"Error getting model performance for {model_name}: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'mse': 0.1,
                 'mae': 0.2,
                 'r2': 0.5,
@@ -117,7 +115,6 @@ class ModelMonitor:
                 'trust_level': 0.0,
                 'error': str(e)
             }
-
 
 def detect_drift(
     current_data: pd.DataFrame,
@@ -171,7 +168,7 @@ def detect_drift(
         
     except Exception as e:
         logger.error(f"Error in drift detection: {str(e)}")
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "drift_detected": False,
             "drift_score": 0.0,
             "method": method,
@@ -192,7 +189,7 @@ def _calculate_ks_drift(current_data: pd.DataFrame, historical_data: pd.DataFram
         
     except Exception as e:
         logger.error(f"Error in KS drift calculation: {str(e)}")
-        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 0.0
 
 def _calculate_chi_square_drift(current_data: pd.DataFrame, historical_data: pd.DataFrame) -> float:
     """Calculate drift using Chi-square test."""
@@ -206,7 +203,7 @@ def _calculate_chi_square_drift(current_data: pd.DataFrame, historical_data: pd.
         
     except Exception as e:
         logger.error(f"Error in Chi-square drift calculation: {str(e)}")
-        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 0.0
 
 def _calculate_wasserstein_drift(current_data: pd.DataFrame, historical_data: pd.DataFrame) -> float:
     """Calculate drift using Wasserstein distance."""
@@ -220,7 +217,7 @@ def _calculate_wasserstein_drift(current_data: pd.DataFrame, historical_data: pd
         
     except Exception as e:
         logger.error(f"Error in Wasserstein drift calculation: {str(e)}")
-        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 0.0
 
 def generate_strategy_priority(
     performance_metrics: Dict[str, float],
@@ -281,7 +278,7 @@ def generate_strategy_priority(
         
     except Exception as e:
         logger.error(f"Error in strategy priority generation: {str(e)}")
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "priority_score": 0.5,
             "recommended_action": "hold",
             "confidence": 0.0,
@@ -312,7 +309,7 @@ def get_model_trust_levels() -> Dict[str, float]:
         
     except Exception as e:
         logger.error(f"Error getting model trust levels: {str(e)}")
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "lstm": 0.5,
             "xgboost": 0.5,
             "prophet": 0.5,

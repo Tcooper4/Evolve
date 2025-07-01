@@ -60,8 +60,7 @@ def create_date_range_selector(
     # Validate date range
     if (end_date - start_date).days < min_days:
         st.warning(f"Date range must be at least {min_days} days")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     return start_date, end_date
 
 def create_model_selector(
@@ -82,8 +81,7 @@ def create_model_selector(
     models = registry.get_available_models(category)
     if not models:
         st.warning("No models available for the selected category")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     model_names = [model.name for model in models]
     selected_model = st.selectbox(
         "Select Model",
@@ -115,8 +113,7 @@ def create_strategy_selector(
     strategies = registry.get_available_strategies(category)
     if not strategies:
         st.warning("No strategies available for the selected category")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     strategy_names = [strategy.name for strategy in strategies]
     selected_strategy = st.selectbox(
         "Select Strategy",
@@ -169,7 +166,7 @@ def create_parameter_inputs(
     # Log parameter changes for agentic monitoring
     logger.info(f"Parameters updated: {values}")
     
-    return {'success': True, 'result': values, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return values
 
 def create_asset_selector(
     assets: List[str],
@@ -188,8 +185,7 @@ def create_asset_selector(
     """
     if not assets:
         st.warning("No assets available")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     selected_asset = st.selectbox(
         "Select Asset",
         options=assets,
@@ -219,8 +215,7 @@ def create_timeframe_selector(
     """
     if not timeframes:
         st.warning("No timeframes available")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     selected_timeframe = st.selectbox(
         "Select Timeframe",
         options=timeframes,
@@ -311,7 +306,7 @@ def create_benchmark_overlay(
         hovermode='x unified'
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def create_prompt_input() -> Dict[str, Any]:
     """Create a prompt input component.
@@ -498,7 +493,7 @@ def create_forecast_chart(
         height=600
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def create_strategy_chart(
     data: pd.DataFrame,
@@ -547,7 +542,7 @@ def create_strategy_chart(
         height=600
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def create_performance_report(
     results: Dict[str, Any],

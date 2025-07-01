@@ -64,7 +64,7 @@ class OptimizerConfig(BaseModel):
         valid_types = ["cosine", "step", "performance"]
         if v not in valid_types:
             raise ValueError(f"scheduler_type must be one of {valid_types}")
-        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return v
     
     @validator('objectives', allow_reuse=True)
     def validate_objectives(cls, v):
@@ -73,7 +73,7 @@ class OptimizerConfig(BaseModel):
         for obj in v:
             if obj not in valid_objectives:
                 raise ValueError(f"Invalid objective: {obj}. Must be one of {valid_objectives}")
-        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return v
 
 @dataclass
 class OptimizationResult:
@@ -97,7 +97,6 @@ class BaseOptimizer(ABC):
         strategy_type: str,
         verbose: bool = False,
         n_jobs: int = -1
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize base optimizer.
         
@@ -184,7 +183,7 @@ class BaseOptimizer(ABC):
         calmar_ratio = annual_return / abs(max_drawdown) if max_drawdown != 0 else 0
         sortino_ratio = annual_return / (returns[returns < 0].std() * np.sqrt(252)) if len(returns[returns < 0]) > 0 else 0
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'total_return': total_return,
             'annual_return': annual_return,
             'volatility': volatility,
@@ -199,7 +198,6 @@ class BaseOptimizer(ABC):
         self,
         result: OptimizationResult,
         trial_id: Optional[int] = None
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     ):
         """Log optimization result.
         
@@ -229,7 +227,7 @@ class BaseOptimizer(ABC):
         Returns:
             Best optimization result or None
         """
-        return {'success': True, 'result': self.best_result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.best_result
     
     def get_all_results(self) -> List[OptimizationResult]:
         """Get all optimization results.
@@ -237,7 +235,7 @@ class BaseOptimizer(ABC):
         Returns:
             List of all optimization results
         """
-        return {'success': True, 'result': self.results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.results
     
     def export_results(
         self,
@@ -252,7 +250,7 @@ class BaseOptimizer(ABC):
         """
         if not self.results:
             logger.warning("No results to export")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return
         
         try:
             if format == 'json':
@@ -330,7 +328,6 @@ class BaseOptimizer(ABC):
             
         logger.debug(f"Logged metrics for iteration {iteration}: {metrics}")
     
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def save_checkpoint(self, params: Dict[str, Any], metrics: Dict[str, float]) -> None:
         """Save optimization checkpoint.
         
@@ -339,7 +336,7 @@ class BaseOptimizer(ABC):
             metrics: Current metrics
         """
         if not self.config.save_checkpoints:
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return
             
         checkpoint = {
             "iteration": self.current_iteration,
@@ -374,7 +371,7 @@ class BaseOptimizer(ABC):
         
         if not os.path.exists(checkpoint_path):
             logger.warning(f"No checkpoint found for iteration {iteration}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return
             
         with open(checkpoint_path, "r") as f:
             checkpoint = json.load(f)
@@ -394,7 +391,7 @@ class BaseOptimizer(ABC):
         if current_metric > self.best_metric:
             self.best_metric = current_metric
             self.early_stopping_counter = 0
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
             
         self.early_stopping_counter += 1
         return self.early_stopping_counter >= self.config.early_stopping_patience

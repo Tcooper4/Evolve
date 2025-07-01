@@ -37,8 +37,7 @@ class PositionalEncoding(nn.Module):
         
         # Register buffer (not parameter)
         self.register_buffer('pe', pe)
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Add positional encoding to input.
         
@@ -48,7 +47,7 @@ class PositionalEncoding(nn.Module):
         Returns:
             Input with positional encoding added
         """
-        return {'success': True, 'result': x + self.pe[:, :x.size(1)], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return x + self.pe[:, :x.size(1)]
 
 # @ModelRegistry.register('Transformer')
 class TransformerForecaster(BaseModel):
@@ -93,8 +92,7 @@ class TransformerForecaster(BaseModel):
         super().__init__(default_config)
         self._validate_config()
         self._setup_model()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def _validate_config(self) -> None:
         """Validate model configuration.
         
@@ -129,8 +127,7 @@ class TransformerForecaster(BaseModel):
         if len(self.config['feature_columns']) != self.config['input_size']:
             raise ValidationError(f"Number of feature columns ({len(self.config['feature_columns'])}) "
                                 f"must match input_size ({self.config['input_size']})")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def build_model(self) -> nn.Module:
         """Build the transformer model architecture.
         
@@ -166,9 +163,8 @@ class TransformerForecaster(BaseModel):
             elif 'bias' in name:
                 nn.init.zeros_(param)
         
-        return {'success': True, 'result': nn.ModuleList([self.input_proj, self.pos_encoder,, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-                            self.transformer_encoder, self.output_proj])
-    
+        return nn.ModuleList([self.input_proj, self.pos_encoder, self.transformer_encoder, self.output_proj])
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model.
         
@@ -195,8 +191,8 @@ class TransformerForecaster(BaseModel):
         
         # Output projection
         out = self.output_proj(x)
-        return {'success': True, 'result': out, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+        return out
+
     def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare data for training or prediction.
         
@@ -247,7 +243,7 @@ class TransformerForecaster(BaseModel):
         X = X.to(self.device)
         y = y.to(self.device)
         
-        return {'success': True, 'result': X, y, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return X, y
 
     def predict(self, data: pd.DataFrame) -> np.ndarray:
         """Make predictions using the transformer model.
@@ -273,7 +269,7 @@ class TransformerForecaster(BaseModel):
             predictions = predictions.cpu().numpy()
             predictions = predictions * self.y_std + self.y_mean
             
-            return {'success': True, 'result': predictions.flatten(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return predictions.flatten()
             
         except Exception as e:
             import logging
@@ -309,7 +305,7 @@ class TransformerForecaster(BaseModel):
                 current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
                 current_data = current_data.iloc[1:]  # Remove oldest row
             
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'forecast': np.array(forecast_values),
                 'confidence': 0.85,  # Transformer confidence
                 'model': 'Transformer',
@@ -326,11 +322,9 @@ class TransformerForecaster(BaseModel):
     def summary(self):
         super().summary()
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def infer(self):
         super().infer()
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def attention_heatmap(self, X_sample):
         """Visualize attention weights for a sample batch."""
         self.model.eval()
@@ -343,7 +337,6 @@ class TransformerForecaster(BaseModel):
             plt.colorbar()
             plt.show()
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def test_synthetic(self):
         """Test model on synthetic data."""
         import numpy as np, pandas as pd
@@ -354,5 +347,4 @@ class TransformerForecaster(BaseModel):
         })
         self.fit(df.iloc[:80], df.iloc[80:])
         y_pred = self.predict(df.iloc[80:])
-        print('Synthetic test MSE:', ((y_pred.flatten() - df['close'].iloc[80:].values) ** 2).mean()) 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        print('Synthetic test MSE:', ((y_pred - df['close'].iloc[80:].values) ** 2).mean())

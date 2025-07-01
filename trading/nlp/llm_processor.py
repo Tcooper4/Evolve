@@ -79,7 +79,7 @@ class LLMProcessor:
                 logger.warning("Unsafe content detected in response")
                 raise ValueError("Response contains unsafe content")
             
-            return {'success': True, 'result': content, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return content
             
         except Exception as e:
             logger.error(f"Error processing prompt: {str(e)}", exc_info=True)
@@ -126,8 +126,7 @@ class LLMProcessor:
         except Exception as e:
             logger.error(f"Error processing stream: {str(e)}", exc_info=True)
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def is_unsafe_content(self, content: str) -> bool:
         """Check if content contains unsafe material.
         
@@ -146,7 +145,7 @@ class LLMProcessor:
             for category, enabled in self.moderation_categories.items():
                 if enabled and getattr(results.categories, category):
                     logger.warning(f"Unsafe content detected in category: {category}")
-                    return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return True
             
             return False
             
@@ -181,7 +180,7 @@ class LLMProcessor:
             if not isinstance(data['confidence'], (int, float)) or not 0 <= data['confidence'] <= 1:
                 raise ValueError("Confidence must be a float between 0 and 1")
             
-            return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return data
             
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON response: {str(e)}")

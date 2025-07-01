@@ -1084,4 +1084,4 @@ def run_model_evolution_sync(benchmark_data: pd.DataFrame,
         return asyncio.run(run_model_evolution(benchmark_data, target_column, current_best_score))
     except Exception as e:
         logger.error(f"Error in model evolution: {e}")
-        return {'success': True, 'result': {"error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {"error": str(e)}

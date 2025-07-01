@@ -293,7 +293,7 @@ class TCNModel(BaseModel):
                 if (epoch + 1) % 10 == 0:
                     print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
             
-            return {'success': True, 'result': history, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return history
             
         except Exception as e:
             logging.error(f"Error in TCN model fit: {e}")
@@ -321,7 +321,7 @@ class TCNModel(BaseModel):
             predictions = predictions.cpu().numpy()
             predictions = predictions * self.y_std + self.y_mean
             
-            return {'success': True, 'result': predictions.flatten(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return predictions.flatten()
             
         except Exception as e:
             logging.error(f"Error in TCN model predict: {e}")

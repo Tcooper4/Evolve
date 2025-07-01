@@ -18,7 +18,6 @@ class ConfigLoader:
         self.config = self._load_config()
         self.status = {"status": "loaded"}
         
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from file with fallbacks."""
         try:
@@ -33,11 +32,11 @@ class ConfigLoader:
                 return self._get_default_config()
         except Exception as e:
             logger.error(f"Error loading config: {e}")
-            return {'success': True, 'result': self._get_default_config(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._get_default_config()
     
     def _get_default_config(self) -> Dict[str, Any]:
         """Get default configuration with no hardcoded values."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "data": {
                 "default_source": "auto",
                 "available_sources": ["auto", "yfinance", "alpha_vantage"],
@@ -94,18 +93,18 @@ class ConfigLoader:
                 value = value[k]
             return value
         except (KeyError, TypeError):
-            return {'success': True, 'result': default, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return default
     
     def get_date_range(self) -> tuple:
         """Get dynamic date range based on configuration."""
         lookback_days = self.get('data.default_lookback_days', 365)
         end_date = datetime.now()
         start_date = end_date - timedelta(days=lookback_days)
-        return {'success': True, 'result': start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')
     
     def get_display_settings(self) -> Dict[str, Any]:
         """Get display settings from configuration."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'chart_days': self.get('display.chart_days', 100),
             'table_rows': self.get('display.table_rows', 20),
             'show_volatility': self.get('display.show_volatility', True),
@@ -115,7 +114,7 @@ class ConfigLoader:
     
     def get_optimization_settings(self) -> Dict[str, Any]:
         """Get optimization settings from configuration."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'default_optimizer': self.get('optimization.default_optimizer', 'bayesian'),
             'max_iterations': self.get('optimization.max_iterations', 100),
             'initial_points': self.get('optimization.initial_points', 10),
@@ -127,7 +126,7 @@ class ConfigLoader:
     
     def get_trading_settings(self) -> Dict[str, Any]:
         """Get trading settings from configuration."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'trading_days_per_year': self.get('trading.trading_days_per_year', 252),
             'position_sizing': self.get('trading.position_sizing', 'kelly_criterion'),
             'max_position_size': self.get('trading.max_position_size', 0.1),

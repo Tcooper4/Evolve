@@ -43,14 +43,14 @@ class LogConfig(BaseModel):
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in valid_levels:
             raise ValueError(f"Invalid log level. Must be one of: {valid_levels}")
-        return {'success': True, 'result': v.upper(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return v.upper()
         
     @validator('rotation')
     def validate_rotation(cls, v):
         valid_rotations = ["size", "time"]
         if v not in valid_rotations:
             raise ValueError(f"Invalid rotation type. Must be one of: {valid_rotations}")
-        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return v
 
 class LogEntry(BaseModel):
     """Log entry model."""

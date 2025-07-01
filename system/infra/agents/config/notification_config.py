@@ -67,7 +67,7 @@ class EmailConfig(BaseModel):
     def validate_port(cls, v):
         if not 1 <= v <= 65535:
             raise ValueError('Port must be between 1 and 65535')
-        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return v
 
 class SlackConfig(BaseModel):
     """Slack notification configuration."""
@@ -156,7 +156,7 @@ class NotificationConfig(BaseModel):
             if priority not in values.get('priorities', {}):
                 raise ValueError(f"Missing configuration for {priority} priority")
         
-        return {'success': True, 'result': values, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return values
 
 def load_notification_config(config_path: str = "config/notification_config.yaml") -> NotificationConfig:
     """Load notification configuration from YAML file."""
@@ -167,7 +167,7 @@ def load_notification_config(config_path: str = "config/notification_config.yaml
         return NotificationConfig(**config_data)
     except Exception as e:
         logger.error(f"Error loading notification config: {e}")
-        return {'success': True, 'result': NotificationConfig(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return NotificationConfig()
 
 def save_notification_config(config: NotificationConfig, config_path: str = "config/notification_config.yaml") -> None:
     """Save notification configuration to YAML file."""
@@ -187,7 +187,6 @@ def save_notification_config(config: NotificationConfig, config_path: str = "con
         logger.error(f"Error saving notification config: {e}")
         raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Default configuration
 DEFAULT_CONFIG = NotificationConfig(
     channels={

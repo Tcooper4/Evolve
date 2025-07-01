@@ -67,10 +67,7 @@ class EnvironmentManager:
         self.logger = logging.getLogger("EnvironmentManager")
         self.env_file = env_file
         self.settings = None
-        self._load_environment()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def _load_environment(self):
+        self._load_environment()def _load_environment(self):
         """Load environment variables from file and system."""
         try:
             # Load from .env file if specified
@@ -84,8 +81,7 @@ class EnvironmentManager:
         except Exception as e:
             self.logger.error(f"Error loading environment: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get(self, key: str, default: Any = None) -> Any:
         """Get environment variable value.
         
@@ -101,7 +97,7 @@ class EnvironmentManager:
             
         value = getattr(self.settings, key, default)
         if isinstance(value, SecretStr):
-            return {'success': True, 'result': value.get_secret_value(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return value.get_secret_value()
         return value
     
     def get_all(self) -> Dict[str, Any]:
@@ -113,7 +109,7 @@ class EnvironmentManager:
         if not self.settings:
             raise RuntimeError("Environment not loaded")
             
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             key: value.get_secret_value() if isinstance(value, SecretStr) else value
             for key, value in self.settings.dict().items()
         }
@@ -130,7 +126,7 @@ class EnvironmentManager:
             return True
         except Exception as e:
             self.logger.error(f"Environment validation failed: {str(e)}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def create_template(self, output_path: str = ".env.template"):
         """Create template .env file.
@@ -152,8 +148,7 @@ class EnvironmentManager:
             f.write("\n".join(template))
         
         self.logger.info(f"Template created at {output_path}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def rotate_secret(self, key: str, new_value: str):
         """Rotate a secret value.
         
@@ -183,5 +178,3 @@ class EnvironmentManager:
                         f.write(line)
         
         self.logger.info(f"Rotated secret: {key}")
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

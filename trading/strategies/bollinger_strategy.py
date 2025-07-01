@@ -20,10 +20,7 @@ class BollingerStrategy:
         """Initialize the strategy with configuration."""
         self.config = config or BollingerConfig()
         self.signals = None
-        self.positions = None
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def calculate_bands(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        self.positions = Nonedef calculate_bands(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Calculate Bollinger Bands for the given data."""
         if 'close' not in data.columns:
             raise ValueError("Data must contain 'close' column")
@@ -71,7 +68,7 @@ class BollingerStrategy:
         signals.loc[~(volume_mask & price_mask), 'signal'] = 0
         
         self.signals = signals
-        return {'success': True, 'result': signals, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return signals
         
     def calculate_positions(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate trading positions based on signals."""
@@ -85,11 +82,11 @@ class BollingerStrategy:
         positions['position'] = positions['position'].clip(-1, 1)
         
         self.positions = positions
-        return {'success': True, 'result': positions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return positions
         
     def get_parameters(self) -> Dict:
         """Get strategy parameters."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'window': self.config.window,
             'num_std': self.config.num_std,
             'min_volume': self.config.min_volume,

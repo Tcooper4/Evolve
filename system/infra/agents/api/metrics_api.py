@@ -12,10 +12,7 @@ class MetricsAPI:
     def __init__(self, orchestrator: Orchestrator):
         self.orchestrator = orchestrator
         self._metrics_history: List[Dict] = []
-        self._max_history_size = 1000
-
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    async def get_system_metrics(self) -> Dict:
+        self._max_history_size = 1000async def get_system_metrics(self) -> Dict:
         """Get current system metrics"""
         try:
             cpu_percent = psutil.cpu_percent(interval=1)
@@ -129,7 +126,7 @@ class MetricsAPI:
         elif cpu_percent > 70 or memory_percent > 70:
             return 'warning'
         else:
-            return {'success': True, 'result': 'active', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 'active'
 
     async def get_all_metrics(self) -> Dict:
         """Get all metrics in one call"""

@@ -31,8 +31,6 @@ def ensure_goals_directory():
     """Ensure the goals directory exists."""
     GOALS_DIR.mkdir(parents=True, exist_ok=True)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
 def load_goals() -> Dict[str, Any]:
     """
     Load current goal status from JSON file.
@@ -84,15 +82,11 @@ def save_goals(status: Dict[str, Any]) -> None:
         logger.error(error_msg)
         raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
 def clear_goals() -> None:
     """Clear the goal status file."""
     if STATUS_FILE.exists():
         STATUS_FILE.unlink()
         logger.info("Goal status cleared")
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def get_status_summary() -> Dict[str, Any]:
     """
@@ -227,8 +221,6 @@ def update_goal_progress(progress: float, metrics: Optional[Dict[str, Any]] = No
     except Exception as e:
         logger.error(f"Error updating goal progress: {str(e)}")
         raise
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def log_agent_contribution(agent_name: str, contribution: str, impact: str = "medium") -> None:
     """

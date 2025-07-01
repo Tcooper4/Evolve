@@ -366,7 +366,6 @@ class DataValidator:
         logger.info("✅ Data normalization completed")
         return df_normalized
 
-
 def validate_data_for_training(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any]]:
     """
     Comprehensive validation for training data.
@@ -382,7 +381,6 @@ def validate_data_for_training(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any]]:
     validation_summary = validator.get_validation_summary()
     
     return is_valid, validation_summary
-
 
 def validate_data_for_forecasting(df: pd.DataFrame) -> Tuple[bool, Dict[str, Any]]:
     """

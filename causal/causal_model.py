@@ -159,7 +159,7 @@ class CausalModel:
             
         except Exception as e:
             logger.error(f"Error estimating causal effect: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def perform_intervention(self, data: pd.DataFrame,
                            treatment: str,
@@ -231,7 +231,7 @@ class CausalModel:
             
         except Exception as e:
             logger.error(f"Error performing intervention: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def analyze_market_relationships(self, market_data: pd.DataFrame,
                                    target_variable: str = 'returns') -> Dict[str, Any]:
@@ -303,7 +303,7 @@ class CausalModel:
             
         except Exception as e:
             logger.error(f"Error analyzing market relationships: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def get_strategy_insights(self, strategy_data: pd.DataFrame,
                             performance_metric: str = 'sharpe_ratio') -> Dict[str, Any]:
@@ -371,7 +371,7 @@ class CausalModel:
             
         except Exception as e:
             logger.error(f"Error getting strategy insights: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def visualize_causal_graph(self) -> Optional[nx.DiGraph]:
         """Get causal graph for visualization.
@@ -379,8 +379,7 @@ class CausalModel:
         Returns:
             Causal graph
         """
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def get_summary(self) -> Dict[str, Any]:
         """Get summary of causal analysis.
         
@@ -442,12 +441,12 @@ class CausalAnalysisResult:
 
 def create_causal_model(config: Dict[str, Any] = None):
     class DummyCausalModel:
-        return {'success': True, 'result': {'success': True, 'result': {'result': 'dummy'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        pass
     return DummyCausalModel()
 
 class CausalModelAnalyzer:
-    def __init__(self, *a, **kw): pass
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+    def __init__(self, *a, **kw): 
+        pass
 
 # Example usage and testing
 if __name__ == "__main__":

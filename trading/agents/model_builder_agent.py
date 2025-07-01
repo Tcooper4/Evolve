@@ -28,7 +28,6 @@ from trading.memory.performance_memory import PerformanceMemory
 from trading.memory.agent_memory import AgentMemory
 from trading.utils.reward_function import RewardFunction
 
-
 @dataclass
 class ModelBuildRequest:
     """Request for model building."""
@@ -40,7 +39,6 @@ class ModelBuildRequest:
     validation_split: float = 0.2
     random_state: int = 42
     request_id: Optional[str] = None
-
 
 @dataclass
 class ModelBuildResult:
@@ -55,7 +53,6 @@ class ModelBuildResult:
     feature_importance: Optional[Dict[str, float]] = None
     build_status: str = "success"
     error_message: Optional[str] = None
-
 
 class ModelBuilderAgent(BaseAgent):
     """Agent responsible for building ML models from scratch."""
@@ -163,7 +160,7 @@ class ModelBuilderAgent(BaseAgent):
         
         # Validate data path exists
         if not Path(request.data_path).exists():
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
         
         return True
     
@@ -502,8 +499,7 @@ class ModelBuilderAgent(BaseAgent):
         }
         
         self.memory.store_model_metadata(result.model_id, metadata)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_model_status(self, model_id: str) -> Optional[ModelBuildResult]:
         """Get status of a specific model.
         

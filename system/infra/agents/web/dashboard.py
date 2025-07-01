@@ -61,7 +61,7 @@ def get_metrics_history(hours=24):
     cutoff = datetime.now() - timedelta(hours=hours)
     df = df[df["timestamp"] >= cutoff]
     
-    return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return df
 
 def get_alerts(hours=24):
     """Get alerts from Redis."""
@@ -80,7 +80,7 @@ def get_alerts(hours=24):
     cutoff = datetime.now() - timedelta(hours=hours)
     alerts = [alert for alert in alerts if alert["timestamp"] >= cutoff]
     
-    return {'success': True, 'result': alerts, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return alerts
 
 def create_system_metrics_plot(df):
     """Create system metrics plot."""
@@ -97,7 +97,7 @@ def create_system_metrics_plot(df):
     )
     
     fig.update_layout(height=600, title_text="System Metrics")
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def create_task_metrics_plot(df):
     """Create task metrics plot."""
@@ -114,7 +114,7 @@ def create_task_metrics_plot(df):
     )
     
     fig.update_layout(height=600, title_text="Task Metrics")
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def create_agent_metrics_plot(df):
     """Create agent metrics plot."""
@@ -131,7 +131,7 @@ def create_agent_metrics_plot(df):
     )
     
     fig.update_layout(height=600, title_text="Agent Metrics")
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def create_model_metrics_plot(df):
     """Create model metrics plot."""
@@ -148,12 +148,12 @@ def create_model_metrics_plot(df):
     )
     
     fig.update_layout(height=600, title_text="Model Metrics")
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 @app.route("/")
 def index():
     """Render dashboard index page."""
-    return {'success': True, 'result': render_template("dashboard.html"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return render_template("dashboard.html")
 
 @app.route("/api/metrics")
 def get_metrics():

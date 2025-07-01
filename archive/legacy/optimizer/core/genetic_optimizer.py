@@ -38,7 +38,6 @@ class GeneticOptimizer(BaseOptimizer):
         # Initialize DEAP tools
         self._setup_deap()
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_deap(self):
         """Set up DEAP genetic algorithm tools."""
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
@@ -56,7 +55,6 @@ class GeneticOptimizer(BaseOptimizer):
         self.toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=0.2, indpb=0.2)
         self.toolbox.register("select", tools.selTournament, tournsize=3)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def optimize(self, strategy: str, params: Dict[str, Tuple[float, float]], data: Dict) -> Dict:
         """Perform genetic algorithm optimization.
         
@@ -117,11 +115,11 @@ class GeneticOptimizer(BaseOptimizer):
             })
         
         logger.info(f"Genetic optimization completed. Best score: {self.best_score}")
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {'success': True, 'result': {
             'best_params': self.best_params,
             'best_score': self.best_score,
             'all_results': self.results
-        }
+        }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_best_params(self) -> Dict:
         """Get the best parameters found during optimization.
@@ -129,12 +127,11 @@ class GeneticOptimizer(BaseOptimizer):
         Returns:
             Dictionary of best parameters
         """
-        return {'success': True, 'result': self.best_params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.best_params
     
     def plot_results(self, *args, **kwargs):
         print("Plotting not implemented yet.")
     
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _evaluate_individual(self, individual: List[float], strategy: str, data: Dict) -> Tuple[float]:
         """Evaluate an individual's fitness.
         
@@ -167,7 +164,7 @@ class GeneticOptimizer(BaseOptimizer):
         for i, (name, (min_val, max_val)) in enumerate(zip(self.param_names, self.param_bounds)):
             # Scale from [0,1] to [min_val, max_val]
             params[name] = min_val + individual[i] * (max_val - min_val)
-        return {'success': True, 'result': params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return params
     
     def _evaluate_params(self, strategy: str, params: Dict, data: Dict) -> float:
         """Evaluate a set of parameters.
@@ -183,4 +180,4 @@ class GeneticOptimizer(BaseOptimizer):
         # TODO: Implement strategy evaluation
         # This should use the strategy_switcher to evaluate the strategy
         # with the given parameters on the provided data
-        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 0.0

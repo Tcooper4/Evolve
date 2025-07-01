@@ -99,7 +99,7 @@ class MacroDataIntegration:
         return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _initialize_fred_series(self) -> Dict[str, Dict[str, Any]]:
         """Initialize FRED data series."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'GDP': {
                 'series_id': 'GDP',
                 'name': 'Gross Domestic Product',
@@ -243,7 +243,7 @@ class MacroDataIntegration:
             
         except Exception as e:
             logger.error(f"Error getting FRED data for {series_id}: {e}")
-            return {'success': True, 'result': self._get_fallback_fred_data(series_id), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._get_fallback_fred_data(series_id)
     
     def _get_fallback_fred_data(self, series_id: str) -> pd.DataFrame:
         """Generate fallback FRED data when API is unavailable."""
@@ -286,7 +286,7 @@ class MacroDataIntegration:
             
         except Exception as e:
             logger.error(f"Error generating fallback data: {e}")
-            return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return pd.DataFrame()
     
     def get_yield_curve_data(self, date: Optional[datetime] = None) -> YieldCurveData:
         """Get current yield curve data."""
@@ -342,7 +342,7 @@ class MacroDataIntegration:
             
         except Exception as e:
             logger.error(f"Error getting yield curve data: {e}")
-            return {'success': True, 'result': self._create_fallback_yield_curve(date), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._create_fallback_yield_curve(date)
     
     def _create_fallback_yield_curve(self, date: datetime) -> YieldCurveData:
         """Create fallback yield curve data."""
@@ -351,7 +351,7 @@ class MacroDataIntegration:
             '3Y': 4.3, '5Y': 4.2, '7Y': 4.1, '10Y': 4.0, '20Y': 4.1, '30Y': 4.2
         }
         
-        return {'success': True, 'result': YieldCurveData(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return YieldCurveData(
             date=date,
             rates=rates,
             spread_10y_2y=-0.5,
@@ -416,7 +416,7 @@ class MacroDataIntegration:
             
         except Exception as e:
             logger.error(f"Error getting earnings data for {symbol}: {e}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def get_macro_indicators(self) -> List[MacroIndicator]:
         """Get current macro indicators."""
@@ -456,7 +456,7 @@ class MacroDataIntegration:
             
         except Exception as e:
             logger.error(f"Error getting macro indicators: {e}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def analyze_macro_environment(self) -> Dict[str, Any]:
         """Analyze current macro environment."""
@@ -491,7 +491,7 @@ class MacroDataIntegration:
             
         except Exception as e:
             logger.error(f"Error analyzing macro environment: {e}")
-            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'error': str(e)}
     
     def _classify_economic_regime(self, analysis: Dict[str, Any]) -> str:
         """Classify current economic regime."""
@@ -513,7 +513,7 @@ class MacroDataIntegration:
             elif unemployment < 4.0:
                 return 'strong_growth'
             else:
-                return {'success': True, 'result': 'moderate_growth', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return 'moderate_growth'
                 
         except Exception as e:
             logger.error(f"Error classifying economic regime: {e}")
@@ -545,7 +545,7 @@ class MacroDataIntegration:
             
         except Exception as e:
             logger.error(f"Error calculating stress indicators: {e}")
-            return {'success': True, 'result': {'overall_stress': 0.5}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'overall_stress': 0.5}
     
     def _generate_investment_implications(self, analysis: Dict[str, Any]) -> List[str]:
         """Generate investment implications from macro analysis."""
@@ -590,7 +590,7 @@ class MacroDataIntegration:
             
         except Exception as e:
             logger.error(f"Error generating implications: {e}")
-            return {'success': True, 'result': ["Monitor macro conditions closely"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ["Monitor macro conditions closely"]
     
     def _is_cache_valid(self, cache_key: str) -> bool:
         """Check if cached data is still valid."""
@@ -605,7 +605,7 @@ class MacroDataIntegration:
             
         except Exception as e:
             logger.error(f"Error checking cache validity: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _cache_data(self, cache_key: str, data: Any, expiry_hours: int = 24):
         """Cache data with expiration."""
@@ -615,8 +615,7 @@ class MacroDataIntegration:
             
         except Exception as e:
             logger.error(f"Error caching data: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def export_macro_data(self, filepath: str = "logs/macro_data_export.json"):
         """Export macro data analysis to file."""
         try:
@@ -659,10 +658,9 @@ class MacroDataIntegration:
         except Exception as e:
             logger.error(f"Error exporting macro data: {e}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Global macro data integration instance
 macro_data_integration = MacroDataIntegration()
 
 def get_macro_data_integration() -> MacroDataIntegration:
     """Get the global macro data integration instance."""
-    return {'success': True, 'result': macro_data_integration, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return macro_data_integration

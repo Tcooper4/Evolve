@@ -89,7 +89,7 @@ class ReturnStatementAuditor:
         
         if any(decorator.attr == 'property' for decorator in node.decorator_list 
                if isinstance(decorator, ast.Attribute)):
-            return {'success': True, 'result': violations, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return violations
         
         # Check if function has any return statements
         has_return = False
@@ -189,7 +189,7 @@ class ReturnStatementAuditor:
                     violation_type = violation['type']
                     results['violations_by_type'][violation_type] = results['violations_by_type'].get(violation_type, 0) + 1
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
     
     def print_summary(self, results: Dict[str, Any]):
         """Print audit summary."""

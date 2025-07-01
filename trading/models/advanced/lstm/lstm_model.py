@@ -86,8 +86,7 @@ class LSTMForecaster(BaseModel):
         if len(self.config['feature_columns']) != self.config['input_size']:
             raise ValidationError(f"Number of feature columns ({len(self.config['feature_columns'])}) "
                                 f"must match input_size ({self.config['input_size']})")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def build_model(self) -> nn.Module:
         """Build the LSTM model architecture.
         
@@ -136,7 +135,7 @@ class LSTMForecaster(BaseModel):
         
         # Output layer
         out = self.fc(last_hidden)
-        return {'success': True, 'result': out, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return out
     
     def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare data for training or prediction.
@@ -214,7 +213,7 @@ class LSTMForecaster(BaseModel):
             predictions = predictions.cpu().numpy()
             predictions = predictions * self.y_std + self.y_mean
             
-            return {'success': True, 'result': predictions.flatten(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return predictions.flatten()
             
         except Exception as e:
             import logging
@@ -250,7 +249,7 @@ class LSTMForecaster(BaseModel):
                 current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
                 current_data = current_data.iloc[1:]  # Remove oldest row
             
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'forecast': np.array(forecast_values),
                 'confidence': 0.85,  # LSTM confidence
                 'model': 'LSTM',
@@ -270,7 +269,7 @@ class LSTMForecaster(BaseModel):
         Returns:
             Dictionary containing model summary
         """
-        return {'success': True, 'result': super().summary(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return super().summary()
 
     def infer(self) -> Dict[str, Any]:
         """Run model inference.
@@ -278,7 +277,7 @@ class LSTMForecaster(BaseModel):
         Returns:
             Dictionary containing inference results
         """
-        return {'success': True, 'result': super().infer(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return super().infer()
 
     def shap_interpret(self, X_sample) -> Dict[str, Any]:
         """Run SHAP interpretability on a sample batch.

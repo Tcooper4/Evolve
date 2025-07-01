@@ -73,7 +73,7 @@ class LogVisualizationHandler:
             templates_path = Path("config/visualization_templates.yaml")
             if templates_path.exists():
                 with open(templates_path, 'r') as f:
-                    return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return yaml.safe_load(f)
             return self._get_default_templates()
         except Exception as e:
             self.logger.error(f"Error loading visualization templates: {str(e)}")
@@ -81,7 +81,7 @@ class LogVisualizationHandler:
     
     def _get_default_templates(self) -> Dict:
         """Get default visualization templates."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'time_series': {
                 'type': 'line',
                 'layout': {
@@ -184,7 +184,7 @@ class LogVisualizationHandler:
         # Group by time intervals and count entries
         time_series = df.groupby([pd.Grouper(freq='1H'), 'level']).size().unstack(fill_value=0)
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'x': time_series.index.tolist(),
             'y': {level: time_series[level].tolist() for level in time_series.columns},
             'type': 'line'
@@ -199,7 +199,7 @@ class LogVisualizationHandler:
         
         level_counts = df['level'].value_counts()
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'labels': level_counts.index.tolist(),
             'values': level_counts.values.tolist(),
             'type': 'pie'
@@ -214,7 +214,7 @@ class LogVisualizationHandler:
         
         source_counts = df['source'].value_counts()
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'x': source_counts.index.tolist(),
             'y': source_counts.values.tolist(),
             'type': 'bar'
@@ -233,7 +233,7 @@ class LogVisualizationHandler:
         # Group by time intervals and count errors
         error_trend = df.groupby(pd.Grouper(freq='1H'))['is_error'].sum()
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'x': error_trend.index.tolist(),
             'y': error_trend.values.tolist(),
             'type': 'line'
@@ -295,7 +295,7 @@ class LogVisualizationHandler:
             ))
         
         fig.update_layout(**visualization.layout)
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def _render_level_distribution(self, visualization: LogVisualization) -> go.Figure:
         """Render a level distribution visualization."""
@@ -305,7 +305,7 @@ class LogVisualizationHandler:
         )])
         
         fig.update_layout(**visualization.layout)
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def _render_source_distribution(self, visualization: LogVisualization) -> go.Figure:
         """Render a source distribution visualization."""
@@ -315,7 +315,7 @@ class LogVisualizationHandler:
         )])
         
         fig.update_layout(**visualization.layout)
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def _render_error_trend(self, visualization: LogVisualization) -> go.Figure:
         """Render an error trend visualization."""
@@ -327,16 +327,16 @@ class LogVisualizationHandler:
         )])
         
         fig.update_layout(**visualization.layout)
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def get_visualization(self, viz_id: str) -> Optional[LogVisualization]:
         """Get a visualization by ID."""
-        return {'success': True, 'result': self.visualizations.get(viz_id), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.visualizations.get(viz_id)
     
     def get_all_visualizations(self) -> List[LogVisualization]:
         """Get all visualizations."""
-        return {'success': True, 'result': list(self.visualizations.values()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.visualizations.values())
     
     def get_visualization_templates(self) -> Dict:
         """Get the current visualization templates."""
-        return {'success': True, 'result': self.visualization_templates, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.visualization_templates

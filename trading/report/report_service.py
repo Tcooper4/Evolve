@@ -21,7 +21,6 @@ from report.report_generator import ReportGenerator, generate_trade_report
 
 logger = logging.getLogger(__name__)
 
-
 class ReportService:
     """
     Redis pub/sub service for automated report generation.
@@ -93,14 +92,12 @@ class ReportService:
             logger.error(f"Error starting {self.service_name}: {e}")
             self.running = False
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def stop(self):
         """Stop the report service."""
         self.running = False
         logger.info(f"Stopping {self.service_name}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _start_heartbeat(self):
         """Start heartbeat monitoring."""
         import threading
@@ -118,12 +115,10 @@ class ReportService:
                 except Exception as e:
                     logger.error(f"Heartbeat error: {e}")
                     time.sleep(30)
-        
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
         heartbeat_thread.start()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _listen_for_events(self):
         """Listen for Redis events and generate reports."""
         pubsub = self.redis_client.pubsub()
@@ -149,8 +144,7 @@ class ReportService:
             logger.error(f"Error in event listener: {e}")
         finally:
             pubsub.close()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_event(self, channel: str, data: str):
         """Handle incoming events."""
         try:
@@ -170,8 +164,7 @@ class ReportService:
             logger.error(f"Error decoding event data: {e}")
         except Exception as e:
             logger.error(f"Error handling event on {channel}: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_forecast_completed(self, event_data: Dict[str, Any]):
         """Handle forecast completion event."""
         try:
@@ -220,8 +213,7 @@ class ReportService:
             
         except Exception as e:
             logger.error(f"Error handling forecast completed: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_strategy_completed(self, event_data: Dict[str, Any]):
         """Handle strategy completion event."""
         try:
@@ -252,8 +244,7 @@ class ReportService:
             
         except Exception as e:
             logger.error(f"Error handling strategy completed: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_backtest_completed(self, event_data: Dict[str, Any]):
         """Handle backtest completion event."""
         try:
@@ -304,8 +295,7 @@ class ReportService:
             
         except Exception as e:
             logger.error(f"Error handling backtest completed: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_model_evaluation_completed(self, event_data: Dict[str, Any]):
         """Handle model evaluation completion event."""
         try:
@@ -355,8 +345,7 @@ class ReportService:
             
         except Exception as e:
             logger.error(f"Error handling model evaluation completed: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _publish_report_completed(self, report_data: Dict[str, Any], report_type: str):
         """Publish report completion event."""
         try:
@@ -380,18 +369,16 @@ class ReportService:
             
         except Exception as e:
             logger.error(f"Error publishing report completion: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_status(self) -> Dict[str, Any]:
         """Get service status."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'service_name': self.service_name,
             'running': self.running,
             'last_heartbeat': self.last_heartbeat,
             'channels': self.channels,
             'redis_connected': self.redis_client.ping()
         }
-
 
 def main():
     """Main function to run the report service."""
@@ -449,7 +436,5 @@ def main():
         logger.error(f"Service error: {e}")
         service.stop()
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

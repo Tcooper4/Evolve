@@ -100,7 +100,7 @@ def main():
         return False
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
     
     # Check for any remaining old imports in the codebase
     print("\n🔍 Checking for remaining old imports...")

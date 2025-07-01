@@ -22,7 +22,6 @@ from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_
 from trading.memory.agent_memory import AgentMemory
 from trading.agents.model_selector_agent import ModelSelectorAgent
 
-
 @dataclass
 class ModelFeedback:
     """Model performance feedback data."""
@@ -39,7 +38,6 @@ class ModelFeedback:
     hyperparameters: Dict[str, Any]
     confidence_score: float
 
-
 @dataclass
 class HyperparameterUpdate:
     """Hyperparameter update recommendation."""
@@ -50,7 +48,6 @@ class HyperparameterUpdate:
     improvement_expected: float
     confidence: float
     reason: str
-
 
 class MetaLearningFeedbackAgent:
     """

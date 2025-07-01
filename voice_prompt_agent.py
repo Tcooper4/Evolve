@@ -109,7 +109,7 @@ class VoicePromptAgent:
             return None
         except Exception as e:
             logger.error(f"Error listening for command: {e}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return None
     
     def _convert_speech_to_text(self, audio) -> Optional[str]:
         """Convert speech audio to text using multiple methods."""
@@ -142,7 +142,7 @@ class VoicePromptAgent:
                 # Clean up temporary file
                 os.unlink(tmp_file_path)
                 
-                return {'success': True, 'result': result["text"].lower(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return result["text"].lower()
                 
             except Exception as e:
                 logger.error(f"Whisper transcription error: {e}")
@@ -221,7 +221,7 @@ class VoicePromptAgent:
         # Extract additional parameters
         self._extract_additional_parameters(text, command)
         
-        return {'success': True, 'result': command, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return command
     
     def _extract_additional_parameters(self, text: str, command: Dict[str, Any]):
         """Extract additional parameters from text."""

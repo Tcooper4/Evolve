@@ -28,20 +28,15 @@ try:
 except ImportError:
     # Fallback imports
     def get_logger(name):
-        return {'success': True, 'result': logging.getLogger(name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return logging.getLogger(name)
     
     class TradingConfig:
         def __init__(self):
             self.execution_mode = "simulation"
             self.broker_api_key = None
-            self.broker_secret_key = None
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    class AgentMemory:
+            self.broker_secret_key = Noneclass AgentMemory:
         def __init__(self):
             self.memory = []
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def calculate_metrics(returns):
         return {'success': True, 'result': {'sharpe_ratio': 0.0, 'total_return': 0.0}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
@@ -131,8 +126,7 @@ class ExecutionEngine:
         for field in required_fields:
             if field not in order:
                 logger.error(f"Missing required field: {field}")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         # Validate symbol
         if not isinstance(order['symbol'], str) or len(order['symbol']) == 0:
             logger.error("Invalid symbol")
@@ -309,7 +303,7 @@ class ExecutionEngine:
         base_price = base_prices.get(symbol, 100.0)
         variation = random.uniform(-0.02, 0.02)  # ±2% variation
         
-        return {'success': True, 'result': base_price * (1 + variation), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return base_price * (1 + variation)
     
     def cancel_order(self, order_id: str) -> dict:
         """Cancel an active order."""
@@ -348,7 +342,7 @@ class ExecutionEngine:
             # Check execution history
             for execution in self.execution_history:
                 if execution['result'].get('order_id') == order_id:
-                    return {'success': True, 'result': execution['result'], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return execution['result']
             
             return {'status': 'error', 'message': 'Order not found'}
             
@@ -359,7 +353,7 @@ class ExecutionEngine:
     def get_execution_summary(self) -> dict:
         """Get execution summary."""
         if not self.execution_history:
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'total_orders': 0,
                 'successful_orders': 0,
                 'failed_orders': 0,
@@ -388,7 +382,7 @@ class ExecutionEngine:
     
     def get_active_orders(self) -> list:
         """Get list of active orders."""
-        return {'success': True, 'result': list(self.active_orders.values()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.active_orders.values())
     
     def clear_history(self) -> dict:
         """Clear execution history.

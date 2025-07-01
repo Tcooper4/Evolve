@@ -388,4 +388,4 @@ class PerformanceMemory:
         Returns:
             List of ticker symbols
         """
-        return {'success': True, 'result': list(self.load().keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.load().keys())

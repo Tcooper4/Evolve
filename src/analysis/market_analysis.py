@@ -35,11 +35,9 @@ class MarketAnalyzer:
     
     def __init__(self, config: Optional[Dict] = None):
         self.analysis = MarketAnalysis(config)
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def analyze_market_conditions(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Analyze market conditions using the underlying MarketAnalysis"""
-        return {'success': True, 'result': self.analysis.analyze_market(data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.analysis.analyze_market(data)
 
 class MarketAnalysis:
     """Comprehensive market analysis system"""
@@ -423,7 +421,7 @@ class MarketAnalysis:
         obv[close_diff > 0] = volume[close_diff > 0]
         obv[close_diff < 0] = -volume[close_diff < 0]
         
-        return {'success': True, 'result': obv.cumsum(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return obv.cumsum()
     
     def _calculate_vpt(self, data: pd.DataFrame) -> pd.Series:
         """Calculate Volume Price Trend"""
@@ -431,7 +429,7 @@ class MarketAnalysis:
         volume = data['volume']
         
         vpt = (close_diff / data['close'].shift(1)) * volume
-        return {'success': True, 'result': vpt.cumsum(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return vpt.cumsum()
     
     def _calculate_cmf(self, data: pd.DataFrame, window: int = 20) -> pd.Series:
         """Calculate Chaikin Money Flow"""
@@ -439,13 +437,13 @@ class MarketAnalysis:
         mfv = mfv.fillna(0)
         mfv *= data['volume']
         
-        return {'success': True, 'result': mfv.rolling(window=window).sum() / data['volume'].rolling(window=window).sum(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return mfv.rolling(window=window).sum() / data['volume'].rolling(window=window).sum()
     
     def _calculate_ad(self, data: pd.DataFrame) -> pd.Series:
         """Calculate Accumulation/Distribution Line"""
         clv = ((data['close'] - data['low']) - (data['high'] - data['close'])) / (data['high'] - data['low'])
         clv = clv.fillna(0)
-        return {'success': True, 'result': (clv * data['volume']).cumsum(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return (clv * data['volume']).cumsum()
     
     def _calculate_pivot_points(self, data: pd.DataFrame) -> Dict:
         """Calculate Pivot Points"""

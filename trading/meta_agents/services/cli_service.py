@@ -55,10 +55,7 @@ class CLIService(cmd.Cmd):
         self.load_config()
         self.setup_completion()
         colorama.init()
-        self._add_commands()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self) -> None:
+        self._add_commands()def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/cli")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -87,8 +84,7 @@ class CLIService(cmd.Cmd):
         except Exception as e:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def setup_completion(self) -> None:
         """Set up command completion."""
         try:
@@ -109,23 +105,19 @@ class CLIService(cmd.Cmd):
     def print_error(self, message: str) -> None:
         """Print error message."""
         print(f"{Fore.RED}Error: {message}{Style.RESET_ALL}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def print_success(self, message: str) -> None:
         """Print success message."""
         print(f"{Fore.GREEN}Success: {message}{Style.RESET_ALL}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def print_info(self, message: str) -> None:
         """Print info message."""
         print(f"{Fore.BLUE}Info: {message}{Style.RESET_ALL}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def print_warning(self, message: str) -> None:
         """Print warning message."""
         print(f"{Fore.YELLOW}Warning: {message}{Style.RESET_ALL}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_help(self, arg: str) -> None:
         """Show help message."""
         if arg:
@@ -144,25 +136,22 @@ class CLIService(cmd.Cmd):
                     func = getattr(self, name)
                     doc = func.__doc__ or 'No help available'
                     print(f"\n{command}: {doc}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_exit(self, arg: str) -> bool:
         """Exit the CLI."""
         self.print_info("Goodbye!")
-        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return True
     
     def do_clear(self, arg: str) -> None:
         """Clear the screen."""
         os.system('cls' if os.name == 'nt' else 'clear')
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_cd(self, arg: str) -> None:
         """Change directory."""
         try:
             if not arg:
                 self.print_error("Directory path required")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             os.chdir(arg)
             self.print_success(f"Changed directory to: {os.getcwd()}")
         except Exception as e:
@@ -171,8 +160,7 @@ class CLIService(cmd.Cmd):
     def do_pwd(self, arg: str) -> None:
         """Print working directory."""
         print(os.getcwd())
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_ls(self, arg: str) -> None:
         """List directory contents."""
         try:
@@ -191,15 +179,13 @@ class CLIService(cmd.Cmd):
                     print(item)
         except Exception as e:
             self.print_error(f"Error listing directory: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_cat(self, arg: str) -> None:
         """Display file contents."""
         try:
             if not arg:
                 self.print_error("File path required")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             with open(arg, 'r') as f:
                 print(f.read())
         except Exception as e:
@@ -210,8 +196,7 @@ class CLIService(cmd.Cmd):
         try:
             if not arg:
                 self.print_error("Directory path required")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             os.makedirs(arg, exist_ok=True)
             self.print_success(f"Created directory: {arg}")
         except Exception as e:
@@ -222,8 +207,7 @@ class CLIService(cmd.Cmd):
         try:
             if not arg:
                 self.print_error("Path required")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             if os.path.isdir(arg):
                 shutil.rmtree(arg)
                 self.print_success(f"Removed directory: {arg}")
@@ -243,8 +227,7 @@ class CLIService(cmd.Cmd):
             args = arg.split()
             if len(args) != 2:
                 self.print_error("Source and destination paths required")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             source, dest = args
             if os.path.isdir(source):
                 shutil.copytree(source, dest)
@@ -265,8 +248,7 @@ class CLIService(cmd.Cmd):
             args = arg.split()
             if len(args) != 2:
                 self.print_error("Source and destination paths required")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             source, dest = args
             shutil.move(source, dest)
             self.print_success(f"Moved: {source} -> {dest}")
@@ -278,8 +260,7 @@ class CLIService(cmd.Cmd):
         try:
             if not arg:
                 self.print_error("Command required")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             result = subprocess.run(arg, shell=True, capture_output=True, text=True)
             
             if result.stdout:
@@ -300,8 +281,7 @@ class CLIService(cmd.Cmd):
             if not arg:
                 # Show all config
                 print(json.dumps(self.config, indent=2))
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             args = arg.split()
             if len(args) == 1:
                 # Show specific config value
@@ -341,8 +321,7 @@ class CLIService(cmd.Cmd):
                 print(f"{i + 1}: {readline.get_history_item(i + 1)}")
         except Exception as e:
             self.print_error(f"Error showing history: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_clear_history(self, arg: str) -> None:
         """Clear command history."""
         try:
@@ -350,23 +329,19 @@ class CLIService(cmd.Cmd):
             self.print_success("Command history cleared")
         except Exception as e:
             self.print_error(f"Error clearing history: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_echo(self, arg: str) -> None:
         """Echo text."""
         print(arg)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_date(self, arg: str) -> None:
         """Show current date and time."""
         print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_whoami(self, arg: str) -> None:
         """Show current user."""
         print(getpass.getuser())
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_env(self, arg: str) -> None:
         """Show environment variables."""
         try:
@@ -383,8 +358,7 @@ class CLIService(cmd.Cmd):
                     self.print_error(f"Environment variable not found: {arg}")
         except Exception as e:
             self.print_error(f"Error showing environment variables: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def do_setenv(self, arg: str) -> None:
         """Set environment variable."""
         try:
@@ -395,8 +369,7 @@ class CLIService(cmd.Cmd):
             args = arg.split('=', 1)
             if len(args) != 2:
                 self.print_error("Variable name and value required")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             name, value = args
             os.environ[name] = value
             self.print_success(f"Set environment variable: {name}={value}")
@@ -408,8 +381,7 @@ class CLIService(cmd.Cmd):
         try:
             if not arg:
                 self.print_error("Variable name required")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             if arg in os.environ:
                 del os.environ[arg]
                 self.print_success(f"Unset environment variable: {arg}")
@@ -426,7 +398,7 @@ class CLIService(cmd.Cmd):
             status: Optional[str] = Option(None, help="Filter by task status"),
             task_type: Optional[str] = Option(None, help="Filter by task type"),
             limit: int = Option(50, help="Maximum number of tasks to show")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         ):
             """List tasks."""
             try:
@@ -440,7 +412,7 @@ class CLIService(cmd.Cmd):
             description: str = Option(..., help="Task description"),
             task_type: str = Option(..., help="Task type"),
             priority: str = Option("normal", help="Task priority")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         ):
             """Create a new task."""
             try:
@@ -452,7 +424,7 @@ class CLIService(cmd.Cmd):
         def workflows(
             status: Optional[str] = Option(None, help="Filter by workflow status"),
             limit: int = Option(50, help="Maximum number of workflows to show")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         ):
             """List workflows."""
             try:
@@ -464,7 +436,7 @@ class CLIService(cmd.Cmd):
         def create_workflow(
             name: str = Option(..., help="Workflow name"),
             description: str = Option(..., help="Workflow description")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         ):
             """Create a new workflow."""
             try:
@@ -494,8 +466,6 @@ class CLIService(cmd.Cmd):
             except Exception as e:
                 self.console.print(f"[red]Error: {str(e)}[/red]")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
         @self.app.command()
         def help():
             """Show help information."""
@@ -519,7 +489,6 @@ class CLIService(cmd.Cmd):
                 )
             )
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def execute_cli(self) -> None:
         """Execute the command-line interface.
         
@@ -527,7 +496,6 @@ class CLIService(cmd.Cmd):
         """
         self.app()
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main() -> None:
     """Main entry point for the CLI service."""
     parser = argparse.ArgumentParser(description='Command-line interface')
@@ -543,6 +511,5 @@ def main() -> None:
         logging.error(f"Error running CLI: {str(e)}")
         raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

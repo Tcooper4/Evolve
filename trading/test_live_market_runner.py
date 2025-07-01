@@ -12,7 +12,6 @@ from pathlib import Path
 
 from trading.live_market_runner import create_live_market_runner, ForecastResult
 
-
 async def test_live_market_runner():
     """Test the live market runner."""
     print("🧪 Testing Live Market Runner")
@@ -79,7 +78,6 @@ async def test_live_market_runner():
     
     print("\n✅ All tests completed!")
 
-
 async def test_forecast_tracking():
     """Test forecast tracking functionality."""
     print("\n📈 Testing Forecast Tracking")
@@ -132,7 +130,6 @@ async def test_forecast_tracking():
     print(f"🤖 Model builder forecasts: {len(model_forecasts)}")
     
     print("✅ Forecast tracking tests completed!")
-
 
 async def test_agent_triggering():
     """Test agent triggering functionality."""
@@ -201,7 +198,6 @@ async def test_agent_triggering():
     
     print("✅ Agent triggering tests completed!")
 
-
 async def main():
     """Main test function."""
     await test_live_market_runner()
@@ -209,7 +205,6 @@ async def main():
     await test_agent_triggering()
     
     print(f"\n🎉 All tests completed successfully!")
-
 
 if __name__ == "__main__":
     asyncio.run(main()) 
