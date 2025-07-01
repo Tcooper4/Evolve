@@ -13,7 +13,6 @@ from . import indicators
 
 logger = logging.getLogger(__name__)
 
-
 class FeatureEngineer(FeatureEngineering):
     def __init__(self, config: Optional[Dict] = None):
         """Initialize feature engineer with configuration.
@@ -43,7 +42,7 @@ class FeatureEngineer(FeatureEngineering):
     return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def register_custom_indicator(
         self, name: str, func: Callable[[pd.DataFrame], Union[pd.Series, pd.DataFrame]]
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     ) -> None:
         """Register a custom indicator calculation.
 
@@ -79,7 +78,7 @@ class FeatureEngineer(FeatureEngineering):
             # Log success
             logger.info(f"Successfully applied indicator: {name}")
             
-            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return result
             
         except Exception as e:
             logger.error(f"Error applying indicator {name}: {str(e)}")
@@ -99,7 +98,7 @@ class FeatureEngineer(FeatureEngineering):
             if name not in descriptions:
                 descriptions[name] = func.__doc__ or f"Custom indicator: {name}"
                 
-        return {'success': True, 'result': descriptions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return descriptions
 
     def engineer_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Engineer all features from the input data.
@@ -150,7 +149,7 @@ class FeatureEngineer(FeatureEngineering):
         # Verify indicators
         self._verify_indicators(features)
 
-        return {'success': True, 'result': features, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return features
 
     def _verify_indicators(self, features: pd.DataFrame) -> None:
         """Verify that all indicators are being calculated correctly.
@@ -248,7 +247,6 @@ class FeatureEngineer(FeatureEngineering):
         logger.info(f"Columns with NaN values: {len(nan_columns)}")
         logger.info(f"Columns with infinite values: {len(inf_columns)}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _calculate_technical_indicators(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate technical indicators using pandas_ta."""
         required_cols = {"open", "high", "low", "close", "volume"}
@@ -342,7 +340,7 @@ class FeatureEngineer(FeatureEngineering):
         features["log_returns"] = np.log(data["close"] / data["close"].shift(1))
         features["volatility"] = features["returns"].rolling(window=20).std()
 
-        return {'success': True, 'result': features, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return features
 
     def _calculate_statistical_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate statistical features."""
@@ -355,7 +353,7 @@ class FeatureEngineer(FeatureEngineering):
             features[f"rolling_skew_{window}"] = data["close"].rolling(window=window).skew()
             features[f"rolling_kurt_{window}"] = data["close"].rolling(window=window).kurt()
 
-        return {'success': True, 'result': features, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return features
 
     def _calculate_microstructure_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate market microstructure features."""
@@ -373,7 +371,7 @@ class FeatureEngineer(FeatureEngineering):
         # Order flow imbalance
         features["flow_imbalance"] = (data["close"] - data["open"]) / (data["high"] - data["low"])
 
-        return {'success': True, 'result': features, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return features
 
     def _calculate_time_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate time-based features."""
@@ -390,7 +388,7 @@ class FeatureEngineer(FeatureEngineering):
         features["day_sin"] = np.sin(2 * np.pi * features["day_of_week"] / 7)
         features["day_cos"] = np.cos(2 * np.pi * features["day_of_week"] / 7)
 
-        return {'success': True, 'result': features, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return features
 
     def _scale_features(self, features: pd.DataFrame) -> pd.DataFrame:
         """Scale features using StandardScaler."""
@@ -403,7 +401,7 @@ class FeatureEngineer(FeatureEngineering):
             self.scaler.transform(features), index=features.index, columns=features.columns
         )
 
-        return {'success': True, 'result': scaled_features, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return scaled_features
 
     def reduce_dimensions(self, features: pd.DataFrame) -> pd.DataFrame:
         """Reduce feature dimensions using PCA."""
@@ -418,7 +416,7 @@ class FeatureEngineer(FeatureEngineering):
             columns=[f"pc_{i+1}" for i in range(self.pca.n_components_)],
         )
 
-        return {'success': True, 'result': reduced_features, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return reduced_features
 
     def create_technical_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Create technical analysis features."""
@@ -469,7 +467,7 @@ class FeatureEngineer(FeatureEngineering):
             col for col in df.columns if col not in ["open", "high", "low", "close", "volume"]
         ]
 
-        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return df
 
     def create_fundamental_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Create fundamental analysis features."""
@@ -478,7 +476,7 @@ class FeatureEngineer(FeatureEngineering):
         # Add fundamental features here
         # This is a placeholder for actual fundamental data
 
-        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return df
 
     def create_sentiment_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Create sentiment analysis features."""
@@ -487,12 +485,12 @@ class FeatureEngineer(FeatureEngineering):
         # Add sentiment features here
         # This is a placeholder for actual sentiment data
 
-        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return df
 
     def scale_features(self, data: pd.DataFrame) -> pd.DataFrame:
         """Scale features using StandardScaler."""
         if not self.feature_columns:
-            return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return data
 
         df = data.copy()
         df[self.feature_columns] = self.scaler.fit_transform(df[self.feature_columns])
@@ -502,7 +500,7 @@ class FeatureEngineer(FeatureEngineering):
         """Create target variable for prediction."""
         df = data.copy()
         df["target"] = df["close"].shift(-horizon) / df["close"] - 1
-        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return df
 
     def prepare_training_data(self, data: pd.DataFrame, target_col: str = "target") -> tuple:
         """Prepare data for training."""
@@ -524,7 +522,7 @@ class FeatureEngineer(FeatureEngineering):
         elif hasattr(model, "coef_"):
             importance = model.coef_
         else:
-            return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return pd.DataFrame()
 
         return pd.DataFrame(
             {"feature": self.feature_columns, "importance": importance}
@@ -532,7 +530,7 @@ class FeatureEngineer(FeatureEngineering):
 
     def get_feature_metrics(self) -> Dict[str, int]:
         """Get feature engineering metrics."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "num_features": len(self.feature_columns),
             "feature_types": {
                 "technical": len(

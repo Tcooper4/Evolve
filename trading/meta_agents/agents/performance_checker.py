@@ -85,7 +85,7 @@ class PerformanceChecker:
             
         except Exception as e:
             logger.error(f"Error checking strategy performance: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'should_retire': False,
                 'should_tune': False,
                 'confidence': 0.0,
@@ -142,7 +142,7 @@ class PerformanceChecker:
             
         except Exception as e:
             logger.error(f"Error checking model performance: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'should_retire': False,
                 'should_tune': False,
                 'confidence': 0.0,
@@ -194,7 +194,7 @@ class PerformanceChecker:
             
         except Exception as e:
             logger.error(f"Error generating improvement suggestions: {e}")
-            return {'success': True, 'result': ["Monitor performance and consider parameter adjustments"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ["Monitor performance and consider parameter adjustments"]
     
     def _check_retirement_conditions(self, strategy_name: str, 
                                    performance: Dict[str, float]) -> bool:
@@ -223,7 +223,7 @@ class PerformanceChecker:
                     older_sharpe = np.mean([p['performance'].get('sharpe_ratio', 0) for p in older_performance])
                     
                     if recent_sharpe < older_sharpe * 0.5:  # 50% decay
-                        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                        return True
             
             return False
             
@@ -255,7 +255,7 @@ class PerformanceChecker:
                     older_accuracy = np.mean([p['performance'].get('accuracy', 0) for p in older_performance])
                     
                     if recent_accuracy < older_accuracy * 0.7:  # 30% decay
-                        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                        return True
             
             return False
             
@@ -284,7 +284,7 @@ class PerformanceChecker:
                     older_sharpe = np.mean([p['performance'].get('sharpe_ratio', 0) for p in older_performance])
                     
                     if recent_sharpe < older_sharpe * (1 + self.tuning_thresholds['sharpe_decay']):
-                        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                        return True
             
             return False
             
@@ -313,7 +313,7 @@ class PerformanceChecker:
                     older_accuracy = np.mean([p['performance'].get('accuracy', 0) for p in older_performance])
                     
                     if recent_accuracy < older_accuracy * (1 + self.tuning_thresholds['accuracy_drop']):
-                        return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                        return True
             
             return False
             
@@ -338,7 +338,7 @@ class PerformanceChecker:
                 
         except Exception as e:
             logger.error(f"Error calculating confidence: {e}")
-            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.5
     
     def _calculate_model_confidence(self, model_name: str, 
                                   performance: Dict[str, float]) -> float:
@@ -357,7 +357,7 @@ class PerformanceChecker:
                 
         except Exception as e:
             logger.error(f"Error calculating model confidence: {e}")
-            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.5
     
     def _calculate_performance_trend(self, name: str) -> float:
         """Calculate performance trend over time."""
@@ -385,7 +385,7 @@ class PerformanceChecker:
                 
         except Exception as e:
             logger.error(f"Error calculating performance trend: {e}")
-            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.0
     
     def _generate_recommendations(self, strategy_name: str, 
                                 performance: Dict[str, float],
@@ -404,7 +404,7 @@ class PerformanceChecker:
             recommendations.append(f"Continue monitoring {strategy_name} performance")
             recommendations.append("Consider incremental improvements based on market analysis")
         
-        return {'success': True, 'result': recommendations, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return recommendations
     
     def _generate_model_recommendations(self, model_name: str, 
                                       performance: Dict[str, float],
@@ -423,7 +423,7 @@ class PerformanceChecker:
             recommendations.append(f"Continue monitoring {model_name} performance")
             recommendations.append("Consider ensemble methods to improve robustness")
         
-        return {'success': True, 'result': recommendations, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return recommendations
     
     def _should_tune_parameters(self, strategy_name: str, 
                               performance: Dict[str, float]) -> bool:
@@ -435,10 +435,9 @@ class PerformanceChecker:
         """Check if strategy should adapt to market regime."""
         return {'success': True, 'result': performance.get('volatility', 0) > 0.2 or performance.get('max_drawdown', 0) > 0.1, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
-
 # Global performance checker instance
 performance_checker = PerformanceChecker()
 
 def get_performance_checker() -> PerformanceChecker:
     """Get the global performance checker instance."""
-    return {'success': True, 'result': performance_checker, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return performance_checker

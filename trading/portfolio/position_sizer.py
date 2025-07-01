@@ -16,7 +16,6 @@ import pandas as pd
 
 from trading.portfolio.portfolio_manager import Position, TradeDirection
 
-
 class SizingStrategy(Enum):
     """Position sizing strategy enum."""
     FIXED_PERCENTAGE = "fixed_percentage"
@@ -28,7 +27,6 @@ class SizingStrategy(Enum):
     OPTIMAL_F = "optimal_f"
     MARTINGALE = "martingale"
     ANTI_MARTINGALE = "anti_martingale"
-
 
 @dataclass
 class SizingParameters:
@@ -44,7 +42,7 @@ class SizingParameters:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'strategy': self.strategy.value,
             'risk_per_trade': self.risk_per_trade,
             'max_position_size': self.max_position_size,
@@ -59,8 +57,7 @@ class SizingParameters:
     def from_dict(cls, data: Dict[str, Any]) -> 'SizingParameters':
         """Create from dictionary."""
         data['strategy'] = SizingStrategy(data['strategy'])
-        return {'success': True, 'result': cls(**data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return cls(**data)
 
 @dataclass
 class MarketContext:
@@ -77,7 +74,7 @@ class MarketContext:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'symbol': self.symbol,
             'current_price': self.current_price,
             'volatility': self.volatility,
@@ -87,7 +84,6 @@ class MarketContext:
             'liquidity_score': self.liquidity_score,
             'bid_ask_spread': self.bid_ask_spread
         }
-
 
 @dataclass
 class SignalContext:
@@ -104,7 +100,7 @@ class SignalContext:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'confidence': self.confidence,
             'forecast_certainty': self.forecast_certainty,
             'strategy_performance': self.strategy_performance,
@@ -115,7 +111,6 @@ class SignalContext:
             'max_drawdown': self.max_drawdown,
             'signal_strength': self.signal_strength
         }
-
 
 @dataclass
 class PortfolioContext:
@@ -130,7 +125,7 @@ class PortfolioContext:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'total_capital': self.total_capital,
             'available_capital': self.available_capital,
             'current_exposure': self.current_exposure,
@@ -138,7 +133,6 @@ class PortfolioContext:
             'daily_pnl': self.daily_pnl,
             'portfolio_volatility': self.portfolio_volatility
         }
-
 
 class PositionSizer:
     """Dynamic position sizer with multiple strategies."""
@@ -330,7 +324,7 @@ class PositionSizer:
         Returns:
             Position size as percentage of capital
         """
-        return {'success': True, 'result': params.risk_per_trade, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return params.risk_per_trade
     
     def _kelly_criterion_size(
         self,
@@ -358,7 +352,7 @@ class PositionSizer:
         avg_loss = abs(signal_context.avg_loss)
         
         if avg_loss == 0 or win_rate <= 0 or win_rate >= 1:
-            return {'success': True, 'result': params.base_position_size, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return params.base_position_size
         
         # Calculate Kelly fraction
         b = avg_win / avg_loss  # odds received
@@ -511,7 +505,7 @@ class PositionSizer:
         # where W = winning trades, L = losing trades
         
         if signal_context.avg_loss == 0:
-            return {'success': True, 'result': params.base_position_size, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return params.base_position_size
         
         # Calculate Optimal F
         win_ratio = signal_context.avg_win / abs(signal_context.avg_loss)
@@ -608,7 +602,7 @@ class PositionSizer:
             adjusted_size, market_context
         )
         
-        return {'success': True, 'result': adjusted_size, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return adjusted_size
     
     def _apply_risk_adjustment(
         self,
@@ -639,7 +633,7 @@ class PositionSizer:
         if signal_context.max_drawdown > 0.2:  # 20% drawdown
             size *= 0.7  # Reduce by 30%
         
-        return {'success': True, 'result': size, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return size
     
     def _apply_correlation_adjustment(
         self,
@@ -662,7 +656,7 @@ class PositionSizer:
             correlation_factor = 1.0 - (market_context.correlation - 0.7) * 2.0
             size *= max(0.3, correlation_factor)  # Minimum 30% of original size
         
-        return {'success': True, 'result': size, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return size
     
     def _apply_volatility_adjustment(
         self, size: float, market_context: MarketContext
@@ -681,7 +675,7 @@ class PositionSizer:
             volatility_factor = 1.0 - (market_context.volatility - 0.3) * 2.0
             size *= max(0.5, volatility_factor)  # Minimum 50% of original size
         
-        return {'success': True, 'result': size, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return size
     
     def _apply_liquidity_adjustment(
         self, size: float, market_context: MarketContext
@@ -704,7 +698,7 @@ class PositionSizer:
             spread_factor = 1.0 - (market_context.bid_ask_spread - 0.005) * 100
             size *= max(0.3, spread_factor)  # Minimum 30% of original size
         
-        return {'success': True, 'result': size, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return size
     
     def _apply_constraints(
         self,
@@ -733,7 +727,7 @@ class PositionSizer:
         min_size = 0.001  # 0.1% minimum
         size = max(size, min_size)
         
-        return {'success': True, 'result': size, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return size
     
     def _calculate_conservative_size(
         self, portfolio_context: PortfolioContext
@@ -768,8 +762,7 @@ class PositionSizer:
             f"{sizing_details['final_size']:.4f} "
             f"(risk: {sizing_details['risk_percentage']:.2%})"
         )
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_sizing_history(self, limit: int = 100) -> List[Dict[str, Any]]:
         """Get position sizing history.
         
@@ -779,7 +772,7 @@ class PositionSizer:
         Returns:
             List of sizing history entries
         """
-        return {'success': True, 'result': self.sizing_history[-limit:], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.sizing_history[-limit:]
     
     def get_sizing_summary(self) -> Dict[str, Any]:
         """Get position sizing summary statistics.
@@ -788,7 +781,7 @@ class PositionSizer:
             Sizing summary dictionary
         """
         if not self.sizing_history:
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
         
         df = pd.DataFrame(self.sizing_history)
         
@@ -811,7 +804,6 @@ class PositionSizer:
         
         return summary
 
-
 def create_position_sizer(config: Optional[Dict[str, Any]] = None) -> PositionSizer:
     """Create a position sizer with default configuration.
     
@@ -821,4 +813,4 @@ def create_position_sizer(config: Optional[Dict[str, Any]] = None) -> PositionSi
     Returns:
         PositionSizer instance
     """
-    return {'success': True, 'result': PositionSizer(config), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return PositionSizer(config)

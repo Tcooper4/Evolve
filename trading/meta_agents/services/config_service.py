@@ -88,8 +88,7 @@ class ConfigService:
         except Exception as e:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def setup_database(self) -> None:
         """Set up config database."""
         try:
@@ -160,8 +159,7 @@ class ConfigService:
             file_path = Path(config.path)
             if not file_path.exists():
                 self.logger.warning(f"Config file not found: {file_path}")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             with open(file_path, 'r') as f:
                 if config.type == ConfigType.JSON:
                     content = json.load(f)
@@ -273,14 +271,13 @@ class ConfigService:
         except Exception as e:
             self.logger.error(f"Error saving config file: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_config(self, name: str) -> Optional[Dict[str, Any]]:
         """Get a config by name."""
         try:
             if name not in self.configs:
                 raise ValueError(f"Config {name} not found")
-            return {'success': True, 'result': self.config_cache.get(name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self.config_cache.get(name)
         except Exception as e:
             self.logger.error(f"Error getting config: {str(e)}")
             raise
@@ -301,8 +298,7 @@ class ConfigService:
         except Exception as e:
             self.logger.error(f"Error setting config: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def validate_config(self, content: Dict[str, Any], schema: Dict[str, Any]) -> None:
         """Validate config against schema."""
         try:
@@ -311,13 +307,12 @@ class ConfigService:
         except Exception as e:
             self.logger.error(f"Error validating config: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def calculate_hash(self, content: Dict[str, Any]) -> str:
         """Calculate hash of config content."""
         try:
             content_str = json.dumps(content, sort_keys=True)
-            return {'success': True, 'result': hashlib.sha256(content_str.encode()).hexdigest(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return hashlib.sha256(content_str.encode()).hexdigest()
         except Exception as e:
             self.logger.error(f"Error calculating hash: {str(e)}")
             raise
@@ -332,7 +327,7 @@ class ConfigService:
             content_str = json.dumps(content)
             encrypted = base64.b64encode(key + content_str.encode()).decode()
             
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'encrypted': True,
                 'data': encrypted
             }
@@ -344,7 +339,7 @@ class ConfigService:
         """Decrypt config content."""
         try:
             if not content.get('encrypted'):
-                return {'success': True, 'result': content, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return content
             
             # Decrypt content
             encrypted = base64.b64decode(content['data'])
@@ -383,7 +378,7 @@ class ConfigService:
                     'modified_at': row[6]
                 })
             
-            return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return results
         except Exception as e:
             self.logger.error(f"Error getting config history: {str(e)}")
             raise
@@ -414,8 +409,7 @@ class ConfigService:
         except Exception as e:
             self.logger.error(f"Error restoring config: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def watch_config_file(self, name: str, callback: callable) -> None:
         """Watch a config file for changes."""
         try:
@@ -444,8 +438,7 @@ class ConfigService:
         except Exception as e:
             self.logger.error(f"Error watching config file: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     async def start(self) -> None:
         """Start config service."""
         try:
@@ -474,7 +467,6 @@ class ConfigService:
         """Stop config service."""
         self.running = False
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main entry point."""
     import argparse
@@ -508,6 +500,5 @@ def main():
         logging.error(f"Error in config service: {str(e)}")
         raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

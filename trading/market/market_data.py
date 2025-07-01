@@ -63,7 +63,6 @@ class MarketData:
             'other': 0
         }
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
         required_fields = ['cache_size', 'update_threshold', 'max_retries']
@@ -80,7 +79,6 @@ class MarketData:
         if not isinstance(self.config['max_retries'], int) or self.config['max_retries'] <= 0:
             raise ValueError("max_retries must be a positive integer")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _classify_error(self, error: Exception) -> str:
         """Classify error into categories."""
         error_str = str(error).lower()
@@ -89,7 +87,7 @@ class MarketData:
         elif any(validation_term in error_str for validation_term in ['validation', 'invalid', 'missing']):
             return 'validation'
         elif any(format_term in error_str for format_term in ['format', 'parse', 'json']):
-            return {'success': True, 'result': 'format', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 'format'
         return 'other'
 
     def _log_error(self, error: Exception, symbol: str) -> None:
@@ -106,16 +104,14 @@ class MarketData:
                 'timestamp': datetime.utcnow().isoformat()
             })
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _manage_cache_size(self) -> None:
         """Manage cache size using FIFO strategy."""
         while len(self.cache) > self.config['cache_size']:
             self.cache.popitem(last=False)  # Remove oldest item
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _exponential_backoff(self, attempt: int) -> float:
         """Calculate exponential backoff delay."""
-        return {'success': True, 'result': min(300, (2 ** attempt) + np.random.uniform(0, 1)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return min(300, (2 ** attempt) + np.random.uniform(0, 1))
 
     def fetch_data(self, symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
         """Fetch market data with fallback mechanisms."""
@@ -168,7 +164,7 @@ class MarketData:
                             data, _ = self.alpha_vantage.get_daily(symbol=symbol, outputsize='full')
                             data = pd.DataFrame(data).astype(float)
                             data.index = pd.to_datetime(data.index)
-                            return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                            return data
                         except Exception as av_error:
                             self._log_error(av_error, symbol)
                     
@@ -212,23 +208,23 @@ class MarketData:
                 'timestamp': datetime.utcnow().isoformat()
             })
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
 
     def get_cached_symbols(self) -> List[str]:
         """Get list of currently cached symbols."""
-        return {'success': True, 'result': list(self.cache.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.cache.keys())
 
     def remove_symbol(self, symbol: str) -> bool:
         """Remove symbol from cache."""
         if symbol in self.cache:
             del self.cache[symbol]
             del self.last_update[symbol]
-            return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return True
         return False
 
     def get_error_stats(self) -> Dict[str, int]:
         """Get error statistics."""
-        return {'success': True, 'result': self.error_counts.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.error_counts.copy()
 
     def _validate_data(self, data: pd.DataFrame) -> None:
         """Validate market data.
@@ -252,8 +248,7 @@ class MarketData:
             
         if not data.index.is_monotonic_increasing:
             raise ValueError("Data index must be sorted in ascending order")
-            
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def add_data(self, symbol: str, data: pd.DataFrame, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Add market data for a symbol.
         
@@ -271,8 +266,7 @@ class MarketData:
         except Exception as e:
             self.logger.error(f"Error adding data for {symbol}: {str(e)}")
             raise
-            
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_data(self, symbol: str, start_date: Optional[str] = None,
                 end_date: Optional[str] = None) -> pd.DataFrame:
         """Get market data for a symbol.
@@ -299,12 +293,12 @@ class MarketData:
             if end_date:
                 data = data[data.index <= pd.to_datetime(end_date)]
                 
-            return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return data
             
         except Exception as e:
             self.logger.error(f"Error getting data for {symbol}: {str(e)}")
             raise
-            
+
     def update_data(self, symbol: str, new_data: pd.DataFrame) -> None:
         """Update market data for a symbol.
         
@@ -329,8 +323,7 @@ class MarketData:
         except Exception as e:
             self.logger.error(f"Error updating data for {symbol}: {str(e)}")
             raise
-            
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def remove_data(self, symbol: str) -> None:
         """Remove market data for a symbol.
         
@@ -348,8 +341,7 @@ class MarketData:
         except Exception as e:
             self.logger.error(f"Error removing data for {symbol}: {str(e)}")
             raise
-            
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_metadata(self, symbol: str) -> Dict[str, Any]:
         """Get metadata for a symbol.
         
@@ -366,19 +358,19 @@ class MarketData:
             if symbol not in self.cache:
                 raise KeyError(f"Symbol {symbol} not found")
                 
-            return {'success': True, 'result': self.cache[symbol].copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self.cache[symbol].copy()
             
         except Exception as e:
             self.logger.error(f"Error getting metadata for {symbol}: {str(e)}")
             raise
-            
+
     def get_all_symbols(self) -> List[str]:
         """Get list of all symbols.
         
         Returns:
             List of symbols
         """
-        return {'success': True, 'result': list(self.cache.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.cache.keys())
         
     def get_data_info(self) -> Dict[str, Any]:
         """Get information about stored data.
@@ -400,7 +392,7 @@ class MarketData:
             }
             info['last_updated'][symbol] = self.last_update.get(symbol)
             
-        return {'success': True, 'result': info, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return info
 
     def process_data(self, symbol: str) -> pd.DataFrame:
         """Process the fetched market data.
@@ -413,4 +405,4 @@ class MarketData:
         """
         data = self.get_data(symbol)
         data['Daily_Return'] = data['Close'].pct_change()
-        return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return data

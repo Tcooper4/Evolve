@@ -195,5 +195,5 @@ def handle_file_errors(func: Callable) -> Callable:
             return func(*args, **kwargs)
         except Exception as e:
             logging.error(f"Error in {func.__name__}: {e}")
-            return {'success': True, 'result': {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     return wrapper 

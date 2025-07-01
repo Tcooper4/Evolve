@@ -55,7 +55,7 @@ class InputValidator:
         value = re.sub(r'[<>]', '', value)
         # Remove control characters
         value = ''.join(char for char in value if ord(char) >= 32)
-        return {'success': True, 'result': value.strip(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return value.strip()
     
     @staticmethod
     def validate_email(email: str) -> bool:
@@ -75,7 +75,7 @@ class InputValidator:
         if not re.search(r'\d', password):
             return False
         if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
         return True
 
 class SecurityManager:
@@ -95,10 +95,7 @@ class SecurityManager:
             ssl=os.getenv("REDIS_SSL", "true").lower() == "true"
         )
         self.security = HTTPBearer()
-        self.validator = InputValidator()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self):
+        self.validator = InputValidator()def setup_logging(self):
         """Configure logging for security manager."""
         log_path = Path("logs/security")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -121,7 +118,7 @@ class SecurityManager:
             hashed = hashlib.sha256(
                 (password + salt).encode()
             ).hexdigest()
-            return {'success': True, 'result': f"{salt}${hashed}", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return f"{salt}${hashed}"
         except Exception as e:
             self.logger.error(f"Error hashing password: {str(e)}")
             raise
@@ -136,7 +133,7 @@ class SecurityManager:
             return computed_hash == stored_hash
         except Exception as e:
             self.logger.error(f"Error verifying password: {str(e)}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def generate_token(self, user_id: str, role: str) -> str:
         """Generate a JWT token."""
@@ -164,17 +161,15 @@ class SecurityManager:
     
     def encrypt(self):
         raise NotImplementedError('Pending feature')
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def decrypt(self):
         raise NotImplementedError('Pending feature')
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def encrypt_data(self, data: str) -> str:
         """Encrypt sensitive data."""
         try:
             # TODO: Implement encryption logic
-            return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return data
         except Exception as e:
             self.logger.error(f"Error encrypting data: {str(e)}")
             raise
@@ -183,7 +178,7 @@ class SecurityManager:
         """Decrypt sensitive data."""
         try:
             # TODO: Implement decryption logic
-            return {'success': True, 'result': encrypted_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return encrypted_data
         except Exception as e:
             self.logger.error(f"Error decrypting data: {str(e)}")
             raise
@@ -210,18 +205,18 @@ class SecurityManager:
         
         current = int(current)
         if current >= SecurityConfig.RATE_LIMIT_MAX_REQUESTS:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
         
         self.redis_client.incr(key)
         return True
     
     def check_permission(self, required_permission: str, user_permissions: List[str]) -> bool:
         """Check if a user has the required permission."""
-        return {'success': True, 'result': required_permission in user_permissions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return required_permission in user_permissions
     
     def generate_csrf_token(self) -> str:
         """Generate a new CSRF token."""
-        return {'success': True, 'result': secrets.token_urlsafe(32), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return secrets.token_urlsafe(32)
     
     def validate_csrf_token(self, request: Request, response: Response) -> bool:
         """Validate CSRF token from request."""
@@ -232,7 +227,7 @@ class SecurityManager:
             return False
         
         if token != cookie_token:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
         
         # Refresh token
         new_token = self.generate_csrf_token()
@@ -257,8 +252,7 @@ class SecurityManager:
             secure=True,
             samesite='strict'
         )
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     async def get_current_user(self, credentials: HTTPAuthorizationCredentials = Security(HTTPBearer())) -> TokenData:
         """Get the current user from the JWT token."""
         return self.verify_token(credentials.credentials)

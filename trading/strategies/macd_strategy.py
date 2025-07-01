@@ -21,10 +21,7 @@ class MACDStrategy:
         """Initialize the strategy with configuration."""
         self.config = config or MACDConfig()
         self.signals = None
-        self.positions = None
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def calculate_macd(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        self.positions = Nonedef calculate_macd(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Calculate MACD components for the given data."""
         if 'close' not in data.columns:
             raise ValueError("Data must contain 'close' column")
@@ -75,7 +72,7 @@ class MACDStrategy:
         signals.loc[~(volume_mask & price_mask), 'signal'] = 0
         
         self.signals = signals
-        return {'success': True, 'result': signals, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return signals
         
     def calculate_positions(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate trading positions based on signals."""
@@ -89,11 +86,11 @@ class MACDStrategy:
         positions['position'] = positions['position'].clip(-1, 1)
         
         self.positions = positions
-        return {'success': True, 'result': positions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return positions
         
     def get_parameters(self) -> Dict:
         """Get strategy parameters."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'fast_period': self.config.fast_period,
             'slow_period': self.config.slow_period,
             'signal_period': self.config.signal_period,

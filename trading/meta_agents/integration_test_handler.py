@@ -79,7 +79,7 @@ class IntegrationTestHandler:
             config_path = Path("config/test_config.yaml")
             if config_path.exists():
                 with open(config_path, 'r') as f:
-                    return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return yaml.safe_load(f)
             return self._get_default_config()
         except Exception as e:
             self.logger.error(f"Error loading test configuration: {str(e)}")
@@ -87,7 +87,7 @@ class IntegrationTestHandler:
     
     def _get_default_config(self) -> Dict:
         """Get default test configuration."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'timeout': 30,  # seconds
             'retry_count': 3,
             'retry_delay': 1,  # seconds
@@ -348,7 +348,7 @@ class IntegrationTestHandler:
                 if key not in response:
                     return False
                 if response[key] != value:
-                    return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return False
             return True
         except Exception:
             return False
@@ -372,31 +372,30 @@ class IntegrationTestHandler:
             elif operator == 'less_than':
                 return data[field] < value
             else:
-                return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return False
                 
         except Exception:
             return False
     
     def get_test_suite(self, suite_id: str) -> Optional[TestSuite]:
         """Get a test suite by ID."""
-        return {'success': True, 'result': self.test_suites.get(suite_id), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.test_suites.get(suite_id)
     
     def get_test_case(self, case_id: str) -> Optional[TestCase]:
         """Get a test case by ID."""
-        return {'success': True, 'result': self.test_cases.get(case_id), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.test_cases.get(case_id)
     
     def get_test_results(self, case_id: str) -> Optional[Dict[str, Any]]:
         """Get test results for a test case."""
-        return {'success': True, 'result': self.test_results.get(case_id), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.test_results.get(case_id)
     
     def get_all_test_suites(self) -> List[TestSuite]:
         """Get all test suites."""
-        return {'success': True, 'result': list(self.test_suites.values()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.test_suites.values())
     
     def get_test_config(self) -> Dict:
         """Get the current test configuration."""
-        return {'success': True, 'result': self.test_config, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.test_config
     
     def run_component_tests(self):
         raise NotImplementedError('Pending feature') 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

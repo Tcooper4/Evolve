@@ -109,14 +109,14 @@ class TradingRules:
 
         self._log_rule_change(rule_id, "created")
         logger.info(f"Added new rule: {rule_name} (ID: {rule_id})")
-        return {'success': True, 'result': rule_id, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return rule_id
 
     def update_rule(
         self,
         rule_id: str,
         updates: Dict[str, Any],
         modified_by: str
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     ) -> None:
         """Update an existing rule.
 
@@ -152,7 +152,7 @@ class TradingRules:
         Returns:
             Dict[str, Dict[str, Any]]: Dictionary of rules with the specified tag.
         """
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             rule_id: rule
             for rule_id, rule in self.rules.items()
             if tag in rule.get("tags", [])
@@ -174,7 +174,6 @@ class TradingRules:
         self._log_rule_change(rule_id, "snoozed")
         logger.info(f"Snoozed rule: {rule['name']} (ID: {rule_id}) for {duration_minutes} minutes")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def archive_rule(self, rule_id: str) -> None:
         """Archive a rule.
 
@@ -189,7 +188,6 @@ class TradingRules:
         self._log_rule_change(rule_id, "archived")
         logger.info(f"Archived rule: {rule['name']} (ID: {rule_id})")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def is_rule_active(self, rule_id: str) -> bool:
         """Check if a rule is currently active.
 
@@ -209,7 +207,7 @@ class TradingRules:
             if rule["status"] == RuleStatus.SNOOZED.value:
                 if rule["snooze_until"] and datetime.now() > rule["snooze_until"]:
                     rule["status"] = RuleStatus.ACTIVE.value
-                    return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return True
             return False
 
         # Check dependencies if any
@@ -240,7 +238,7 @@ class TradingRules:
                     "rule_name": rule["name"],
                     "action": rule["action"]
                 })
-        return {'success': True, 'result': triggered_actions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return triggered_actions
 
     def test_rule(self, rule_id: str, df: pd.DataFrame) -> Dict[str, Any]:
         """Test a rule against historical data.
@@ -271,7 +269,7 @@ class TradingRules:
         }
 
         logger.info(f"Tested rule: {self.rules[rule_id]['name']} (ID: {rule_id})")
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
 
     def export_rule_audit_log(self, path: str) -> None:
         """Export the rule audit log to a file.
@@ -283,7 +281,6 @@ class TradingRules:
             json.dump(self.rule_audit_log, f, default=str)
         logger.info(f"Exported rule audit log to {path}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _log_rule_change(self, rule_id: str, action: str) -> None:
         """Log a change to a rule.
 
@@ -298,14 +295,13 @@ class TradingRules:
             "rule_state": self.rules[rule_id]
         })
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def __str__(self) -> str:
         """Return a string representation of the trading rules."""
-        return {'success': True, 'result': f"TradingRules with {len(self.rules)} rules", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return f"TradingRules with {len(self.rules)} rules"
 
     def __repr__(self) -> str:
         """Return a detailed string representation of the trading rules."""
-        return {'success': True, 'result': f"TradingRules(rules={self.rules})", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return f"TradingRules(rules={self.rules})"
 
     def get_rule(self, rule_id: str) -> Optional[Dict[str, Any]]:
         """Get a trading rule by ID.
@@ -316,7 +312,7 @@ class TradingRules:
         Returns:
             Optional[Dict[str, Any]]: The rule details, or None if not found.
         """
-        return {'success': True, 'result': self.rules.get(rule_id), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.rules.get(rule_id)
 
     def list_rules(self) -> Dict[str, Dict[str, Any]]:
         """List all trading rules.
@@ -324,7 +320,7 @@ class TradingRules:
         Returns:
             Dict[str, Dict[str, Any]]: A dictionary of all trading rules.
         """
-        return {'success': True, 'result': self.rules, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.rules
 
     def activate_rule(self, rule_id: str) -> None:
         """Activate a trading rule.
@@ -337,7 +333,6 @@ class TradingRules:
             self._log_rule_change(rule_id, "activated")
             logger.info(f"Activated rule: {self.rules[rule_id]['name']} (ID: {rule_id})")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def deactivate_rule(self, rule_id: str) -> None:
         """Deactivate a trading rule.
 
@@ -349,7 +344,6 @@ class TradingRules:
             self._log_rule_change(rule_id, "deactivated")
             logger.info(f"Deactivated rule: {self.rules[rule_id]['name']} (ID: {rule_id})")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def export_rules(self, filename: str) -> None:
         """Export rules to a file.
 
@@ -360,7 +354,6 @@ class TradingRules:
             json.dump(self.rules, f, default=str)
         logger.info(f"Exported rules to {filename}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def import_rules(self, filename: str) -> None:
         """Import rules from a file.
 
@@ -390,7 +383,6 @@ class TradingRules:
         self.rules = imported_rules
         logger.info(f"Imported rules from {filename}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def load_rules_from_json(self, json_file: str) -> None:
         """Load trading rules from a JSON file.
 
@@ -433,8 +425,6 @@ class TradingRules:
                             priority=0,
                             created_by='system'
                         )
-        
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         process_rules(rules_data)
         logger.info(f"Loaded rules from {json_file}") 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

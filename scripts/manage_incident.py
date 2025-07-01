@@ -71,17 +71,14 @@ class IncidentManager:
         self.incidents_dir = Path("incidents")
         self.incidents_dir.mkdir(parents=True, exist_ok=True)
         self.responses_dir = Path("responses")
-        self.responses_dir.mkdir(parents=True, exist_ok=True)
-
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def _load_config(self, config_path: str) -> dict:
+        self.responses_dir.mkdir(parents=True, exist_ok=True)def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
         
         with open(config_path) as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -562,7 +559,7 @@ class IncidentManager:
                 json.dump(analysis, f, indent=2)
             
             self.logger.info(f"Analysis saved to {analysis_file}")
-            return {'success': True, 'result': analysis, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return analysis
         except Exception as e:
             self.logger.error(f"Failed to analyze incidents: {e}")
             raise
@@ -603,6 +600,5 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

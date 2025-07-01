@@ -13,7 +13,6 @@ import redis
 
 logger = logging.getLogger(__name__)
 
-
 class ServiceClient:
     """
     Client for interacting with agent services via Redis pub/sub.
@@ -81,8 +80,7 @@ class ServiceClient:
                 
         except Exception as e:
             logger.error(f"Error sending request to {service_name}: {e}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def _wait_for_response(self, service_name: str, message_type: str) -> Optional[Dict[str, Any]]:
         """Wait for response from a service."""
         start_time = time.time()
@@ -103,7 +101,7 @@ class ServiceClient:
                             response_type == 'error'):
                             
                             logger.info(f"Received response from {service_name}: {response_type}")
-                            return {'success': True, 'result': data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                            return data
                             
             except Exception as e:
                 logger.error(f"Error waiting for response: {e}")
@@ -300,7 +298,7 @@ class ServiceClient:
                 redis_db=self.redis_db
             )
             
-            return {'success': True, 'result': client.generate_report(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return client.generate_report(
                 trade_data=trade_data,
                 model_data=model_data,
                 strategy_data=strategy_data,
@@ -340,7 +338,7 @@ class ServiceClient:
                 redis_db=self.redis_db
             )
             
-            return {'success': True, 'result': client.trigger_strategy_report(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return client.trigger_strategy_report(
                 strategy_data=strategy_data,
                 trade_data=trade_data,
                 model_data=model_data,
@@ -376,7 +374,7 @@ class ServiceClient:
             
         except Exception as e:
             logger.error(f"Error getting recent reports: {e}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def list_available_reports(self) -> List[Dict[str, Any]]:
         """
@@ -398,7 +396,7 @@ class ServiceClient:
             
         except Exception as e:
             logger.error(f"Error listing available reports: {e}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def close(self):
         """Close the service client and cleanup resources."""
@@ -510,7 +508,6 @@ class ServiceClient:
                 'timestamp': time.time()
             }
 
-
 def main():
     """Example usage of the ServiceClient."""
     import argparse
@@ -581,7 +578,6 @@ def main():
         return {"status": "failed", "action": args.action, "error": str(e)}
     finally:
         client.close()
-
 
 if __name__ == "__main__":
     main() 

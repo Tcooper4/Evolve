@@ -35,10 +35,7 @@ class OptimizerConsolidator:
         
         # Ensure directories exist
         self.trading_optimization_dir.mkdir(parents=True, exist_ok=True)
-        self.backup_dir.mkdir(parents=True, exist_ok=True)
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def run_optimizer_consolidation(self, create_backup: bool = True) -> Dict[str, Any]:
+        self.backup_dir.mkdir(parents=True, exist_ok=True)def run_optimizer_consolidation(self, create_backup: bool = True) -> Dict[str, Any]:
         """
         Run the complete optimizer consolidation process.
         
@@ -90,7 +87,7 @@ class OptimizerConsolidator:
             if results["backup_created"]:
                 self._restore_from_backup(Path(results["backup_created"]))
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
     
     def _create_backup(self) -> Path:
         """Create a backup of all optimizer directories."""
@@ -110,7 +107,7 @@ class OptimizerConsolidator:
                 shutil.copytree(dir_path, backup_subdir)
                 logger.info(f"Backed up {dir_name} to {backup_subdir}")
         
-        return {'success': True, 'result': backup_path, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return backup_path
     
     def _consolidate_all_directories(self, results: Dict[str, Any]) -> None:
         """Consolidate files from all optimizer directories."""
@@ -125,8 +122,7 @@ class OptimizerConsolidator:
         # Consolidate optimizers/ directory (keep consolidator in utils)
         if self.optimizers_dir.exists():
             self._consolidate_optimizers_directory(results)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _consolidate_directory(self, source_dir: Path, results: Dict[str, Any], dir_name: str) -> None:
         """Consolidate files from a directory."""
         logger.info(f"Consolidating {dir_name}/ directory...")
@@ -159,8 +155,7 @@ class OptimizerConsolidator:
                 self._merge_files(file_path, target_path, results)
             else:
                 self._move_file(file_path, target_path, results)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _consolidate_optimizers_directory(self, results: Dict[str, Any]) -> None:
         """Consolidate optimizers/ directory."""
         logger.info("Consolidating optimizers/ directory...")
@@ -178,8 +173,7 @@ class OptimizerConsolidator:
                 # Move other files to main directory
                 target_path = self.trading_optimization_dir / file_path.name
                 self._move_file(file_path, target_path, results)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _move_file(self, source_path: Path, target_path: Path, results: Dict[str, Any]) -> None:
         """Move a file to target location."""
         try:
@@ -190,8 +184,7 @@ class OptimizerConsolidator:
             error_msg = f"Error moving {source_path}: {str(e)}"
             logger.error(error_msg)
             results["errors"].append(error_msg)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _merge_files(self, source_path: Path, target_path: Path, results: Dict[str, Any]) -> None:
         """Merge two files, keeping the best parts of each."""
         try:
@@ -203,7 +196,7 @@ class OptimizerConsolidator:
             
             # Simple merge strategy: append source content with a separator
             merged_content = f"""# Merged from {source_path}
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
 # Original target: {target_path}
 # Merge timestamp: {datetime.now().isoformat()}
 
@@ -270,7 +263,7 @@ class OptimizerConsolidator:
             except Exception as e:
                 logger.error(f"Error updating imports in {py_file}: {str(e)}")
         
-        return {'success': True, 'result': updated_count, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return updated_count
     
     def _cleanup_empty_directories(self) -> None:
         """Remove empty directories after consolidation."""
@@ -281,8 +274,7 @@ class OptimizerConsolidator:
                     logger.info(f"Removed empty directory: {dir_path}")
                 except Exception as e:
                     logger.error(f"Error removing {dir_path}: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _restore_from_backup(self, backup_path: Path) -> None:
         """Restore from backup in case of error."""
         try:
@@ -299,8 +291,7 @@ class OptimizerConsolidator:
             
         except Exception as e:
             logger.error(f"Error during restoration: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_optimizer_status(self) -> Dict[str, Any]:
         """Get status of optimizer consolidation."""
         status = {
@@ -324,7 +315,7 @@ class OptimizerConsolidator:
             self.optimizers_dir.exists()):
             status["consolidation_needed"] = True
         
-        return {'success': True, 'result': status, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return status
     
     def validate_consolidation(self) -> Dict[str, Any]:
         """Validate the consolidation results."""
@@ -353,7 +344,7 @@ class OptimizerConsolidator:
             validation["errors"].extend(import_errors)
             validation["success"] = False
         
-        return {'success': True, 'result': validation, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return validation
     
     def _validate_imports(self) -> List[str]:
         """Check for import errors in the consolidated module."""
@@ -372,8 +363,7 @@ class OptimizerConsolidator:
         except Exception as e:
             errors.append(f"Unexpected error importing trading.optimization: {str(e)}")
         
-        return {'success': True, 'result': errors, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return errors
 
 def run_optimizer_consolidation(create_backup: bool = True, root_dir: Optional[str] = None) -> Dict[str, Any]:
     """
@@ -387,8 +377,7 @@ def run_optimizer_consolidation(create_backup: bool = True, root_dir: Optional[s
         Dictionary with consolidation results
     """
     consolidator = OptimizerConsolidator(root_dir)
-    return {'success': True, 'result': consolidator.run_optimizer_consolidation(create_backup), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+    return consolidator.run_optimizer_consolidation(create_backup)
 
 def get_optimizer_status(root_dir: Optional[str] = None) -> Dict[str, Any]:
     """
@@ -401,4 +390,4 @@ def get_optimizer_status(root_dir: Optional[str] = None) -> Dict[str, Any]:
         Dictionary with optimizer status
     """
     consolidator = OptimizerConsolidator(root_dir)
-    return {'success': True, 'result': consolidator.get_optimizer_status(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return consolidator.get_optimizer_status()

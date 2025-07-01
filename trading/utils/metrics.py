@@ -29,7 +29,7 @@ def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float
     ss_residual = np.sum((y_true - y_pred) ** 2)
     r2 = 1 - (ss_residual / ss_total)
     
-    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return {
         'mse': mse,
         'mae': mae,
         'rmse': rmse,
@@ -84,7 +84,7 @@ def calculate_trading_metrics(returns: np.ndarray,
         metrics['alpha'] = alpha
         metrics['beta'] = beta
     
-    return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return metrics
 
 def calculate_regime_metrics(returns: np.ndarray, 
                            regime_labels: np.ndarray) -> Dict[str, Dict[str, float]]:
@@ -103,7 +103,7 @@ def calculate_regime_metrics(returns: np.ndarray,
         regime_returns = returns[regime_labels == regime]
         regime_metrics[regime] = calculate_trading_metrics(regime_returns)
     
-    return {'success': True, 'result': regime_metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return regime_metrics
 
 def calculate_model_confidence(predictions: np.ndarray, 
                              confidence_intervals: Optional[Tuple[np.ndarray, np.ndarray]] = None) -> float:

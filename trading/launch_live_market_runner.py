@@ -15,7 +15,6 @@ from typing import Dict, Any
 
 from trading.live_market_runner import create_live_market_runner
 
-
 def setup_logging() -> None:
     """Setup logging configuration."""
     logging.basicConfig(
@@ -27,14 +26,13 @@ def setup_logging() -> None:
         ]
     )
 
-
     return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 def load_config(config_path: str = "trading/live/config.json") -> Dict[str, Any]:
     """Load configuration from file."""
     config_file = Path(config_path)
     if config_file.exists():
         with open(config_file, 'r') as f:
-            return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return json.load(f)
     else:
         # Default configuration
         default_config = {
@@ -70,7 +68,6 @@ def load_config(config_path: str = "trading/live/config.json") -> Dict[str, Any]
         
         return default_config
 
-
 async def main():
     """Main function."""
     print("🚀 Launching Live Market Runner")
@@ -95,8 +92,7 @@ async def main():
         print(f"\n🛑 Received signal {signum}, shutting down...")
         asyncio.create_task(runner.stop())
         sys.exit(0)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
@@ -118,7 +114,6 @@ async def main():
     finally:
         await runner.stop()
         print(f"✅ Live Market Runner stopped")
-
 
 if __name__ == "__main__":
     asyncio.run(main()) 

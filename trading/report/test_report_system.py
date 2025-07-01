@@ -19,7 +19,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 from report.report_generator import ReportGenerator, TradeMetrics, ModelMetrics, StrategyReasoning
 from report.report_client import ReportClient, generate_quick_report
 
-
 class TestReportGenerator(unittest.TestCase):
     """Test the ReportGenerator class."""
     
@@ -58,8 +57,7 @@ class TestReportGenerator(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         shutil.rmtree(self.temp_dir)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_calculate_trade_metrics(self):
         """Test trade metrics calculation."""
         metrics = self.generator._calculate_trade_metrics(self.sample_trade_data)
@@ -71,8 +69,7 @@ class TestReportGenerator(unittest.TestCase):
         self.assertEqual(metrics.total_pnl, 300)
         self.assertAlmostEqual(metrics.avg_gain, 125.0)
         self.assertAlmostEqual(metrics.avg_loss, 37.5)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_calculate_model_metrics(self):
         """Test model metrics calculation."""
         metrics = self.generator._calculate_model_metrics(self.sample_model_data)
@@ -83,8 +80,7 @@ class TestReportGenerator(unittest.TestCase):
         self.assertIsInstance(metrics.sharpe_ratio, float)
         self.assertIsInstance(metrics.volatility, float)
         self.assertIsInstance(metrics.accuracy, float)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_generate_fallback_reasoning(self):
         """Test fallback reasoning generation."""
         reasoning = self.generator._generate_fallback_reasoning(self.sample_strategy_data)
@@ -94,8 +90,7 @@ class TestReportGenerator(unittest.TestCase):
         self.assertIsInstance(reasoning.key_factors, list)
         self.assertIsInstance(reasoning.confidence_level, float)
         self.assertIsInstance(reasoning.recommendations, list)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_generate_charts(self):
         """Test chart generation."""
         charts = self.generator._generate_charts(
@@ -108,8 +103,7 @@ class TestReportGenerator(unittest.TestCase):
         # Charts should be base64 encoded strings
         for chart_data in charts.values():
             self.assertIsInstance(chart_data, str)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_generate_markdown_report(self):
         """Test Markdown report generation."""
         report_data = {
@@ -134,8 +128,7 @@ class TestReportGenerator(unittest.TestCase):
         self.assertIn('AAPL', content)
         self.assertIn('Trade Performance', content)
         self.assertIn('Model Performance', content)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_generate_html_report(self):
         """Test HTML report generation."""
         report_data = {
@@ -160,8 +153,7 @@ class TestReportGenerator(unittest.TestCase):
         self.assertIn('<html', content)
         self.assertIn('AAPL', content)
         self.assertIn('Trading Report', content)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_generate_comprehensive_report(self):
         """Test comprehensive report generation."""
         report_data = self.generator.generate_comprehensive_report(
@@ -191,8 +183,6 @@ class TestReportGenerator(unittest.TestCase):
         for file_path in files.values():
             self.assertTrue(Path(file_path).exists())
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class TestReportClient(unittest.TestCase):
     """Test the ReportClient class."""
     
@@ -229,8 +219,7 @@ class TestReportClient(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         shutil.rmtree(self.temp_dir)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_generate_report(self):
         """Test report generation."""
         report_data = self.client.generate_report(
@@ -247,8 +236,7 @@ class TestReportClient(unittest.TestCase):
         self.assertIn('trade_metrics', report_data)
         self.assertIn('model_metrics', report_data)
         self.assertIn('strategy_reasoning', report_data)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_list_available_reports(self):
         """Test listing available reports."""
         # Generate a report first
@@ -274,8 +262,7 @@ class TestReportClient(unittest.TestCase):
             self.assertIn('format', report)
             self.assertIn('file_path', report)
             self.assertIn('created', report)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_get_service_status(self):
         """Test service status retrieval."""
         status = self.client.get_service_status()
@@ -285,8 +272,6 @@ class TestReportClient(unittest.TestCase):
         self.assertIn('running', status)
         self.assertIn('redis_connected', status)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class TestConvenienceFunctions(unittest.TestCase):
     """Test convenience functions."""
     
@@ -322,8 +307,7 @@ class TestConvenienceFunctions(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         shutil.rmtree(self.temp_dir)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_generate_quick_report(self):
         """Test quick report generation."""
         report_data = generate_quick_report(
@@ -341,8 +325,6 @@ class TestConvenienceFunctions(unittest.TestCase):
         self.assertIn('model_metrics', report_data)
         self.assertIn('strategy_reasoning', report_data)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class TestDataStructures(unittest.TestCase):
     """Test data structures."""
     
@@ -367,8 +349,7 @@ class TestDataStructures(unittest.TestCase):
         self.assertEqual(metrics.win_rate, 0.6)
         self.assertEqual(metrics.total_pnl, 500.0)
         self.assertEqual(metrics.sharpe_ratio, 1.5)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_model_metrics(self):
         """Test ModelMetrics dataclass."""
         metrics = ModelMetrics(
@@ -388,8 +369,7 @@ class TestDataStructures(unittest.TestCase):
         self.assertEqual(metrics.accuracy, 0.85)
         self.assertEqual(metrics.sharpe_ratio, 1.2)
         self.assertEqual(metrics.f1_score, 0.85)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_strategy_reasoning(self):
         """Test StrategyReasoning dataclass."""
         reasoning = StrategyReasoning(
@@ -406,8 +386,6 @@ class TestDataStructures(unittest.TestCase):
         self.assertEqual(reasoning.confidence_level, 0.8)
         self.assertEqual(len(reasoning.recommendations), 2)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def run_tests():
     """Run all tests."""
     # Create test suite
@@ -429,8 +407,7 @@ def run_tests():
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(test_suite)
     
-    return {'success': True, 'result': result.wasSuccessful(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+    return result.wasSuccessful()
 
 if __name__ == '__main__':
     success = run_tests()

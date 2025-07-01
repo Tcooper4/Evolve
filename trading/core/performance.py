@@ -65,7 +65,6 @@ def update_targets(new_targets: Dict[str, float]) -> None:
     except Exception as e:
         logger.error(f"Error updating targets.json: {e}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # --- Default Metrics ---
 DEFAULT_METRICS = {
     "sharpe": 0.0,
@@ -89,7 +88,7 @@ def log_performance(
     precision: Optional[float] = None,
     recall: Optional[float] = None,
     notes: Optional[str] = None
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
 ) -> None:
     """Log performance metrics to CSV file.
     
@@ -169,7 +168,7 @@ def calculate_rolling_metrics(df: pd.DataFrame, window: int = 7) -> Dict[str, fl
         
     except Exception as e:
         logger.error(f"Error calculating rolling metrics: {str(e)}")
-        return {'success': True, 'result': DEFAULT_METRICS.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return DEFAULT_METRICS.copy()
 
 def evaluate_performance(classification: Optional[bool] = None) -> Dict[str, Any]:
     """Evaluate current performance against goals.
@@ -198,7 +197,7 @@ def evaluate_performance(classification: Optional[bool] = None) -> Dict[str, Any
             df = pd.read_csv(log_path)
         except Exception as e:
             logger.error(f"Error reading performance log: {str(e)}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 "status": "Error",
                 "message": f"Error reading performance log: {str(e)}",
                 "timestamp": datetime.now().isoformat(),
@@ -302,7 +301,7 @@ def plot_performance_trends(log_path: str = "memory/logs/performance_log.csv") -
         df = pd.read_csv(log_path)
         if df.empty:
             logger.warning("Performance log is empty")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         fig = go.Figure()
         for metric in ["sharpe", "drawdown", "mse"]:

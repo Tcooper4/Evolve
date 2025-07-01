@@ -20,7 +20,6 @@ from trading.data.providers.yfinance_provider import YFinanceProvider
 from trading.data.data_loader import DataLoader
 from trading.memory.agent_memory import AgentMemory
 
-
 class AnomalyType(str, Enum):
     """Types of data anomalies."""
     MISSING_DATA = "missing_data"
@@ -32,7 +31,6 @@ class AnomalyType(str, Enum):
     ZERO_VOLUME = "zero_volume"
     DUPLICATE_DATA = "duplicate_data"
 
-
 class DataQualityLevel(str, Enum):
     """Data quality levels."""
     EXCELLENT = "excellent"
@@ -40,7 +38,6 @@ class DataQualityLevel(str, Enum):
     FAIR = "fair"
     POOR = "poor"
     CRITICAL = "critical"
-
 
 @dataclass
 class DataAnomaly:
@@ -53,7 +50,6 @@ class DataAnomaly:
     affected_columns: List[str]
     confidence: float
     suggested_action: str
-
 
 @dataclass
 class DataQualityReport:
@@ -68,7 +64,6 @@ class DataQualityReport:
     anomalies: List[DataAnomaly]
     recommendations: List[str]
     overall_score: float
-
 
 class DataQualityAgent:
     """
@@ -850,8 +845,7 @@ class DataQualityAgent:
             
         except Exception as e:
             self.logger.error(f"Error getting quality summary: {str(e)}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def _load_quality_history(self):
         """Load quality history from memory."""
         try:

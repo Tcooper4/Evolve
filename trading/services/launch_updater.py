@@ -28,7 +28,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
 def signal_handler(signum, frame):
     """Handle shutdown signals."""
     logger.info(f"Received signal {signum}, shutting down...")
@@ -36,8 +35,6 @@ def signal_handler(signum, frame):
         signal_handler.service.stop()
     sys.exit(0)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function to launch the UpdaterService."""
     try:
@@ -79,7 +76,5 @@ def main():
         logger.error(f"Error starting UpdaterService: {e}")
         sys.exit(1)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

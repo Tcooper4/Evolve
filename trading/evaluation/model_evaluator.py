@@ -33,7 +33,7 @@ class ModelEvaluator:
         self.predictions[model_name] = y_pred
         self.actuals[model_name] = y_true
         
-        return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return metrics
     
     def plot_predictions(self, model_name: str, save_path: Optional[str] = None) -> Dict[str, Any]:
         """Plot actual vs predicted values.
@@ -192,7 +192,7 @@ class ModelEvaluator:
     def generate_report(self, model_name: str) -> Dict:
         """Generate evaluation report."""
         if model_name not in self.metrics:
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
         
         report = {
             'model_name': model_name,
@@ -206,7 +206,7 @@ class ModelEvaluator:
     def _generate_summary(self, model_name: str) -> str:
         """Generate summary of model performance."""
         if model_name not in self.metrics:
-            return {'success': True, 'result': "No metrics available", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "No metrics available"
         
         metrics = self.metrics[model_name]
         summary = f"""
@@ -229,7 +229,7 @@ class ModelEvaluator:
                 metrics = self.metrics[name]
                 comparison[name] = pd.Series(metrics)
         
-        return {'success': True, 'result': comparison, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return comparison
     
     def get_evaluation_metrics(self) -> Dict[str, Any]:
         """Get evaluation metrics.

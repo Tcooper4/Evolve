@@ -305,8 +305,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error checking signal alerts: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _check_alert_conditions(self):
         """Check for general alert conditions."""
         try:
@@ -333,16 +332,14 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error checking alert conditions: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _queue_alert(self, alert: Dict[str, Any]):
         """Queue alert for processing."""
         try:
             self.alert_queue.put(alert)
         except Exception as e:
             logger.error(f"Error queuing alert: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _send_webhook_alert(self, alert: Dict[str, Any]):
         """Send webhook alert."""
         try:
@@ -367,8 +364,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error sending webhook alert: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _send_email_alert(self, alert: Dict[str, Any]):
         """Send email alert."""
         try:
@@ -378,8 +374,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error sending email alert: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _send_slack_alert(self, alert: Dict[str, Any]):
         """Send Slack alert."""
         try:
@@ -402,8 +397,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error sending Slack alert: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _notify_subscribers(self, signal: TradingSignal):
         """Notify signal subscribers."""
         try:
@@ -415,8 +409,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error notifying subscribers: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _cleanup_expired_signals(self):
         """Remove expired signals."""
         try:
@@ -426,8 +419,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error cleaning up expired signals: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def add_signal(self, 
                   symbol: str,
                   signal_type: SignalType,
@@ -461,7 +453,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error adding signal: {e}")
-            return {'success': True, 'result': "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ""
     
     def update_active_trade(self, 
                           trade_id: str,
@@ -500,8 +492,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error updating active trade: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def close_trade(self, trade_id: str):
         """Close active trade."""
         try:
@@ -517,8 +508,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error closing trade: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def subscribe_to_signals(self, callback: Callable[[TradingSignal], None]):
         """Subscribe to real-time signals."""
         try:
@@ -528,8 +518,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error adding signal subscriber: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def unsubscribe_from_signals(self, callback: Callable[[TradingSignal], None]):
         """Unsubscribe from real-time signals."""
         try:
@@ -539,8 +528,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error removing signal subscriber: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_recent_signals(self, 
                           symbol: Optional[str] = None,
                           signal_type: Optional[SignalType] = None,
@@ -562,7 +550,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error getting recent signals: {e}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def get_active_trades(self, symbol: Optional[str] = None) -> List[ActiveTrade]:
         """Get active trades with optional filtering."""
@@ -577,7 +565,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error getting active trades: {e}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def get_signal_summary(self) -> Dict[str, Any]:
         """Get summary of signal activity."""
@@ -601,7 +589,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error getting signal summary: {e}")
-            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'error': str(e)}
     
     def _start_websocket_server(self):
         """Start WebSocket server for real-time data streaming."""
@@ -612,8 +600,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error starting WebSocket server: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def add_alert_config(self, config: AlertConfig):
         """Add new alert configuration."""
         try:
@@ -622,8 +609,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error adding alert config: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def remove_alert_config(self, alert_type: str):
         """Remove alert configuration."""
         try:
@@ -632,8 +618,7 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error removing alert config: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def export_signal_data(self, filepath: str = "logs/real_time_signals.json"):
         """Export signal data to file."""
         try:
@@ -682,4 +667,3 @@ class RealTimeSignalCenter:
             
         except Exception as e:
             logger.error(f"Error exporting signal data: {e}") 
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

@@ -72,8 +72,7 @@ class FeatureGenerator:
         """Register a new feature configuration"""
         self.feature_configs[config.name] = config
         self.logger.info(f"Registered feature: {config.name}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     @verify_feature
     def generate_feature(self, data: pd.DataFrame, feature_name: str, **kwargs) -> pd.Series:
         """Generate a feature with verification"""
@@ -98,7 +97,7 @@ class FeatureGenerator:
             
             # Cache result
             self.feature_cache[feature_name] = feature
-            return {'success': True, 'result': feature, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return feature
             
         except Exception as e:
             self.logger.error(f"Error generating feature {feature_name}: {str(e)}")
@@ -155,28 +154,27 @@ class FeatureGenerator:
         for rule_name, rule_func in rules.items():
             if not rule_func(feature):
                 raise FeatureVerificationError(f"Feature failed validation rule: {rule_name}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _generate_custom_feature(self, data: pd.DataFrame, feature_name: str, **kwargs) -> pd.Series:
         """Generate custom feature"""
         if 'custom_func' not in kwargs:
             raise ValueError("Custom function not provided")
-        return {'success': True, 'result': kwargs['custom_func'](data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return kwargs['custom_func'](data)
     
     # Feature generation implementations
     def _calculate_returns(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate returns"""
-        return {'success': True, 'result': data['close'].pct_change(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return data['close'].pct_change()
     
     def _calculate_volatility(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate volatility"""
         window = kwargs.get('window', 20)
-        return {'success': True, 'result': data['returns'].rolling(window=window).std(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return data['returns'].rolling(window=window).std()
     
     def _calculate_momentum(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate momentum"""
         window = kwargs.get('window', 20)
-        return {'success': True, 'result': data['close'].pct_change(periods=window), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return data['close'].pct_change(periods=window)
     
     def _calculate_rsi(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate RSI"""
@@ -185,7 +183,7 @@ class FeatureGenerator:
         gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
         rs = gain / loss
-        return {'success': True, 'result': 100 - (100 / (1 + rs)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 100 - (100 / (1 + rs))
     
     def _calculate_macd(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate MACD"""
@@ -197,7 +195,7 @@ class FeatureGenerator:
         exp2 = data['close'].ewm(span=slow, adjust=False).mean()
         macd = exp1 - exp2
         signal_line = macd.ewm(span=signal, adjust=False).mean()
-        return {'success': True, 'result': macd - signal_line, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return macd - signal_line
     
     def _calculate_bollinger_bands(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate Bollinger Bands"""
@@ -209,30 +207,30 @@ class FeatureGenerator:
         upper_band = middle_band + (std * num_std)
         lower_band = middle_band - (std * num_std)
         
-        return {'success': True, 'result': (data['close'] - lower_band) / (upper_band - lower_band), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return (data['close'] - lower_band) / (upper_band - lower_band)
     
     def _calculate_volume_profile(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate volume profile"""
         window = kwargs.get('window', 20)
-        return {'success': True, 'result': data['volume'].rolling(window=window).mean() / data['volume'].rolling(window=window).std(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return data['volume'].rolling(window=window).mean() / data['volume'].rolling(window=window).std()
     
     def _calculate_price_channels(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate price channels"""
         window = kwargs.get('window', 20)
         high_channel = data['high'].rolling(window=window).max()
         low_channel = data['low'].rolling(window=window).min()
-        return {'success': True, 'result': (data['close'] - low_channel) / (high_channel - low_channel), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return (data['close'] - low_channel) / (high_channel - low_channel)
     
     def _calculate_support_resistance(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate support/resistance levels"""
         window = kwargs.get('window', 20)
-        return {'success': True, 'result': (data['close'] - data['low'].rolling(window=window).min()) / (data['high'].rolling(window=window).max() - data['low'].rolling(window=window).min()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return (data['close'] - data['low'].rolling(window=window).min()) / (data['high'].rolling(window=window).max() - data['low'].rolling(window=window).min())
     
     def _calculate_trend_strength(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate trend strength"""
         window = kwargs.get('window', 20)
         returns = data['close'].pct_change()
-        return {'success': True, 'result': returns.rolling(window=window).mean() / returns.rolling(window=window).std(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return returns.rolling(window=window).mean() / returns.rolling(window=window).std()
     
     def _calculate_market_regime(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate market regime"""
@@ -246,7 +244,7 @@ class FeatureGenerator:
         regime[trend > 0.001] = 1  # Bullish
         regime[trend < -0.001] = -1  # Bearish
         regime[volatility > volatility.quantile(0.8)] = 0  # High volatility
-        return {'success': True, 'result': regime, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return regime
     
     def _calculate_volatility_regime(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate volatility regime"""
@@ -258,14 +256,14 @@ class FeatureGenerator:
         regime = pd.Series(index=data.index, dtype=float)
         regime[volatility > volatility.quantile(0.8)] = 1  # High volatility
         regime[volatility < volatility.quantile(0.2)] = -1  # Low volatility
-        return {'success': True, 'result': regime, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return regime
     
     def _calculate_correlation(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate correlation with market"""
         window = kwargs.get('window', 20)
         market_returns = kwargs.get('market_returns', data['close'].pct_change())
         returns = data['close'].pct_change()
-        return {'success': True, 'result': returns.rolling(window=window).corr(market_returns), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return returns.rolling(window=window).corr(market_returns)
     
     def _calculate_beta(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate beta"""
@@ -277,7 +275,7 @@ class FeatureGenerator:
         covar = returns.rolling(window=window).cov(market_returns)
         market_var = market_returns.rolling(window=window).var()
         
-        return {'success': True, 'result': covar / market_var, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return covar / market_var
     
     def _calculate_alpha(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate alpha"""
@@ -287,7 +285,7 @@ class FeatureGenerator:
         risk_free_rate = kwargs.get('risk_free_rate', 0.0)
         
         beta = self._calculate_beta(data, market_returns=market_returns, window=window)
-        return {'success': True, 'result': returns.rolling(window=window).mean() - (risk_free_rate + beta * (market_returns.rolling(window=window).mean() - risk_free_rate)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return returns.rolling(window=window).mean() - (risk_free_rate + beta * (market_returns.rolling(window=window).mean() - risk_free_rate))
     
     def _calculate_sharpe_ratio(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate Sharpe ratio"""
@@ -296,7 +294,7 @@ class FeatureGenerator:
         risk_free_rate = kwargs.get('risk_free_rate', 0.0)
         
         excess_returns = returns - risk_free_rate
-        return {'success': True, 'result': excess_returns.rolling(window=window).mean() / returns.rolling(window=window).std(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return excess_returns.rolling(window=window).mean() / returns.rolling(window=window).std()
     
     def _calculate_sortino_ratio(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate Sortino ratio"""
@@ -308,7 +306,7 @@ class FeatureGenerator:
         downside_returns = returns[returns < 0]
         downside_std = downside_returns.rolling(window=window).std()
         
-        return {'success': True, 'result': excess_returns.rolling(window=window).mean() / downside_std, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return excess_returns.rolling(window=window).mean() / downside_std
     
     def _calculate_max_drawdown(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate maximum drawdown"""
@@ -317,7 +315,7 @@ class FeatureGenerator:
         cumulative_returns = (1 + returns).cumprod()
         rolling_max = cumulative_returns.rolling(window=window).max()
         drawdown = (cumulative_returns - rolling_max) / rolling_max
-        return {'success': True, 'result': drawdown.rolling(window=window).min(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return drawdown.rolling(window=window).min()
     
     def _calculate_var(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate Value at Risk"""
@@ -325,7 +323,7 @@ class FeatureGenerator:
         confidence_level = kwargs.get('confidence_level', 0.95)
         returns = data['close'].pct_change()
         
-        return {'success': True, 'result': returns.rolling(window=window).quantile(1 - confidence_level), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return returns.rolling(window=window).quantile(1 - confidence_level)
     
     def _calculate_cvar(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate Conditional Value at Risk"""
@@ -334,7 +332,7 @@ class FeatureGenerator:
         returns = data['close'].pct_change()
         
         var = self._calculate_var(data, window=window, confidence_level=confidence_level)
-        return {'success': True, 'result': returns[returns <= var].rolling(window=window).mean(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return returns[returns <= var].rolling(window=window).mean()
     
     def _calculate_position_size(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate position size based on risk"""
@@ -344,14 +342,14 @@ class FeatureGenerator:
         
         volatility = self._calculate_volatility(data, window=window)
         position_size = (account_size * risk_per_trade) / (volatility * data['close'])
-        return {'success': True, 'result': position_size, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return position_size
     
     def _calculate_risk_parity(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate risk parity weights"""
         window = kwargs.get('window', 20)
         returns = data['close'].pct_change()
         volatility = returns.rolling(window=window).std()
-        return {'success': True, 'result': 1 / volatility, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 1 / volatility
     
     def _calculate_mean_variance(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate mean-variance optimal weights"""
@@ -359,7 +357,7 @@ class FeatureGenerator:
         returns = data['close'].pct_change()
         mean_returns = returns.rolling(window=window).mean()
         volatility = returns.rolling(window=window).std()
-        return {'success': True, 'result': mean_returns / (volatility ** 2), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return mean_returns / (volatility ** 2)
     
     def _calculate_black_litterman(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate Black-Litterman model weights"""
@@ -401,7 +399,7 @@ class FeatureGenerator:
         
         # Combine metrics
         risk_score = (volatility + abs(var) + abs(cvar) + abs(max_dd)) / 4
-        return {'success': True, 'result': risk_score, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return risk_score
     
     def _calculate_performance_metrics(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate comprehensive performance metrics"""
@@ -415,7 +413,7 @@ class FeatureGenerator:
         
         # Combine metrics
         performance_score = (sharpe + sortino + alpha) / 3
-        return {'success': True, 'result': performance_score, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return performance_score
     
     def _calculate_execution_metrics(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate execution metrics"""
@@ -428,7 +426,7 @@ class FeatureGenerator:
         
         # Combine metrics
         execution_score = (spread + volume_impact + price_impact) / 3
-        return {'success': True, 'result': execution_score, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return execution_score
     
     def _calculate_signal_metrics(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate signal quality metrics"""
@@ -442,7 +440,7 @@ class FeatureGenerator:
         
         # Combine metrics
         signal_score = (rsi + macd + momentum) / 3
-        return {'success': True, 'result': signal_score, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return signal_score
     
     def _calculate_portfolio_metrics(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate portfolio metrics"""
@@ -456,7 +454,7 @@ class FeatureGenerator:
         
         # Combine metrics
         portfolio_score = (sharpe + sortino + (1 + max_dd)) / 3
-        return {'success': True, 'result': portfolio_score, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return portfolio_score
     
     def _calculate_regime_metrics(self, data: pd.DataFrame, **kwargs) -> pd.Series:
         """Calculate regime-specific metrics"""
@@ -469,4 +467,4 @@ class FeatureGenerator:
         
         # Combine metrics
         regime_score = (market_regime + volatility_regime + trend_strength) / 3
-        return {'success': True, 'result': regime_score, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return regime_score

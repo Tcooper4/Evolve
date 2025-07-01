@@ -19,10 +19,7 @@ class AuditLogger:
             log_file: Path to audit log file
         """
         self.log_file = log_file
-        self._ensure_log_dir()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def _ensure_log_dir(self) -> Dict[str, Any]:
+        self._ensure_log_dir()def _ensure_log_dir(self) -> Dict[str, Any]:
         """Ensure log directory exists.
         
         Returns:
@@ -71,7 +68,7 @@ class AuditLogger:
         if module:
             entry["module"] = module
             
-        return {'success': True, 'result': json.dumps(entry), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return json.dumps(entry)
     
     def log_prompt(
         self,

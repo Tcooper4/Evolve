@@ -20,10 +20,7 @@ class NotificationHandler:
     def __init__(self, config: Dict[str, Any]):
         """Initialize notification handler."""
         self.config = config
-        self.setup_logging()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self):
+        self.setup_logging()def setup_logging(self):
         """Configure logging for notification handler."""
         log_path = Path("logs/notifications")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -51,10 +48,7 @@ class SlackHandler(NotificationHandler):
         super().__init__(config)
         self.webhook_url = config.get('slack_webhook_url')
         if not self.webhook_url:
-            raise ValueError("Slack webhook URL not configured")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    async def send(self, message: Dict[str, Any]) -> bool:
+            raise ValueError("Slack webhook URL not configured")async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification to Slack."""
         try:
             async with aiohttp.ClientSession() as session:
@@ -82,10 +76,7 @@ class WebhookHandler(NotificationHandler):
         super().__init__(config)
         self.webhook_url = config.get('webhook_url')
         if not self.webhook_url:
-            raise ValueError("Webhook URL not configured")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    async def send(self, message: Dict[str, Any]) -> bool:
+            raise ValueError("Webhook URL not configured")async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification via webhook."""
         try:
             async with aiohttp.ClientSession() as session:
@@ -117,8 +108,6 @@ class EmailHandler(NotificationHandler):
         self.smtp_password = config.get('smtp_password')
         if not all([self.smtp_host, self.smtp_port, self.smtp_user, self.smtp_password]):
             raise ValueError("SMTP configuration incomplete")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification via email."""
         try:
@@ -132,7 +121,6 @@ class EmailHandler(NotificationHandler):
     def send_email(self, *args, **kwargs):
         raise NotImplementedError('Pending feature')
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class NotificationHandlerFactory:
     """Factory for creating notification handlers."""
     
@@ -149,4 +137,4 @@ class NotificationHandlerFactory:
         if not handler_class:
             raise ValueError(f"Unsupported handler type: {handler_type}")
         
-        return {'success': True, 'result': handler_class(config), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return handler_class(config)

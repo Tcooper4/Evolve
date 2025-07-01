@@ -53,10 +53,7 @@ class NotificationService:
         self.setup_database()
         self.setup_templates()
         self.notification_queue = asyncio.Queue()
-        self.running = False
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self) -> None:
+        self.running = Falsedef setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/notification")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -80,8 +77,7 @@ class NotificationService:
         except Exception as e:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def setup_database(self) -> None:
         """Set up notification database."""
         try:
@@ -276,7 +272,6 @@ class NotificationService:
         """Stop notification service."""
         self.running = False
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main entry point."""
     import argparse
@@ -294,6 +289,5 @@ def main():
         logging.error(f"Error in notification service: {str(e)}")
         raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

@@ -17,7 +17,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 from services.quant_gpt import QuantGPT
 from services.service_client import ServiceClient
 
-
 def example_queries():
     """Run example queries through QuantGPT."""
     
@@ -101,8 +100,6 @@ def example_queries():
     # Clean up
     quant_gpt.close()
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def example_service_client():
     """Demonstrate QuantGPT usage through ServiceClient."""
     
@@ -189,8 +186,6 @@ def example_service_client():
     # Clean up
     client.close()
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function to run examples."""
     try:
@@ -204,8 +199,7 @@ def main():
             print(f"⚠️  Redis not available: {e}")
             print("Running direct QuantGPT examples only...")
             example_queries()
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         # Run both examples
         example_queries()
         example_service_client()
@@ -216,7 +210,6 @@ def main():
         print("\n\n⏹️  Examples interrupted by user")
     except Exception as e:
         print(f"\n❌ Error running examples: {e}")
-
 
 if __name__ == "__main__":
     main() 

@@ -34,7 +34,6 @@ class BayesianOptimizer(BaseOptimizer):
         kernel = Matern(nu=2.5)
         self.gp = GaussianProcessRegressor(kernel=kernel)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def optimize(self, strategy: str, params: Dict[str, Tuple[float, float]], data: Dict) -> Dict:
         """Perform Bayesian optimization.
         
@@ -92,11 +91,11 @@ class BayesianOptimizer(BaseOptimizer):
             
             logger.info(f"Iteration {i+1}/{self.n_iterations}, Best score: {self.best_score}")
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {'success': True, 'result': {
             'best_params': self.best_params,
             'best_score': self.best_score,
             'all_results': self.results
-        }
+        }, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def get_best_params(self) -> Dict:
         """Get the best parameters found during optimization.
@@ -104,12 +103,11 @@ class BayesianOptimizer(BaseOptimizer):
         Returns:
             Dictionary of best parameters
         """
-        return {'success': True, 'result': self.best_params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.best_params
     
     def plot_results(self, *args, **kwargs):
         print("Plotting not implemented yet.")
     
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _evaluate_params(self, strategy: str, params: Dict, data: Dict) -> float:
         """Evaluate a set of parameters.
         
@@ -124,7 +122,7 @@ class BayesianOptimizer(BaseOptimizer):
         # TODO: Implement strategy evaluation
         # This should use the strategy_switcher to evaluate the strategy
         # with the given parameters on the provided data
-        return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 0.0
     
     def _acquisition_function(self, X: np.ndarray, y: np.ndarray, 
                             bounds: List[Tuple[float, float]]) -> np.ndarray:
@@ -156,4 +154,4 @@ class BayesianOptimizer(BaseOptimizer):
         ei = improvement * norm.cdf(z) + y_std * norm.pdf(z)
         
         # Return point with highest EI
-        return {'success': True, 'result': X_samples[np.argmax(ei)], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return X_samples[np.argmax(ei)]

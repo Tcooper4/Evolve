@@ -678,6 +678,5 @@ def create_tft_forecaster(data: pd.DataFrame,
 
 def create_tft_model(config: Dict[str, Any] = None):
     class DummyTFT:
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        return {'success': True, 'result': {'success': True, 'result': [0], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        pass
     return DummyTFT() 

@@ -26,10 +26,7 @@ class SecretManager:
         self.config_path = config_path
         self.setup_logging()
         self.load_config()
-        self.setup_encryption()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self) -> None:
+        self.setup_encryption()def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/secrets")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -58,8 +55,7 @@ class SecretManager:
         except Exception as e:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def setup_encryption(self) -> None:
         """Set up encryption."""
         try:
@@ -85,7 +81,7 @@ class SecretManager:
     def encrypt_secret(self, secret: str) -> str:
         """Encrypt a secret."""
         try:
-            return {'success': True, 'result': self.fernet.encrypt(secret.encode()).decode(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self.fernet.encrypt(secret.encode()).decode()
         except Exception as e:
             self.logger.error(f"Error encrypting secret: {str(e)}")
             raise
@@ -93,7 +89,7 @@ class SecretManager:
     def decrypt_secret(self, encrypted_secret: str) -> str:
         """Decrypt a secret."""
         try:
-            return {'success': True, 'result': self.fernet.decrypt(encrypted_secret.encode()).decode(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self.fernet.decrypt(encrypted_secret.encode()).decode()
         except Exception as e:
             self.logger.error(f"Error decrypting secret: {str(e)}")
             raise
@@ -122,8 +118,7 @@ class SecretManager:
         except Exception as e:
             self.logger.error(f"Error saving secret: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_secret(self, name: str) -> str:
         """Get a secret."""
         try:
@@ -138,7 +133,7 @@ class SecretManager:
             if name not in secrets:
                 raise KeyError(f"Secret not found: {name}")
             
-            return {'success': True, 'result': self.decrypt_secret(secrets[name]), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self.decrypt_secret(secrets[name])
         except Exception as e:
             self.logger.error(f"Error getting secret: {str(e)}")
             raise
@@ -167,7 +162,6 @@ class SecretManager:
             self.logger.error(f"Error deleting secret: {str(e)}")
             raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main entry point."""
     import argparse
@@ -198,6 +192,5 @@ def main():
         logging.error(f"Error managing secrets: {str(e)}")
         raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

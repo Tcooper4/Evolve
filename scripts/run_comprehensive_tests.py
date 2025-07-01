@@ -291,7 +291,7 @@ class ComprehensiveTestRunner:
         with open(report_file, 'w') as f:
             json.dump(report, f, indent=2)
         
-        return {'success': True, 'result': report, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return report
     
     def run_all_tests(self) -> bool:
         """Run all tests and return overall success."""
@@ -331,7 +331,7 @@ class ComprehensiveTestRunner:
             
         except Exception as e:
             logger.error(f"Test run failed with error: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
 def main():
     """Main function."""
@@ -353,6 +353,5 @@ def main():
         print("📋 Check test_run.log for detailed logs")
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

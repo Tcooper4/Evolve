@@ -24,7 +24,6 @@ class BayesianOptimizer(BaseOptimizer):
         n_jobs: int = -1,
         study_name: Optional[str] = None,
         storage: Optional[str] = None
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     ):
         """Initialize Bayesian optimizer.
         
@@ -40,7 +39,7 @@ class BayesianOptimizer(BaseOptimizer):
         self.study_name = study_name or f"{strategy_type}_optimization"
         self.storage = storage
         self.study = None
-    
+
     def optimize(
         self,
         param_space: Dict[str, Union[List, Tuple]],
@@ -108,7 +107,7 @@ class BayesianOptimizer(BaseOptimizer):
             if isinstance(objective, str):
                 return metrics[objective]
             else:
-                return {'success': True, 'result': {'success': True, 'result': [metrics[obj] for obj in objective], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return [metrics[obj] for obj in objective]
         
         # Run optimization
         self.study.optimize(
@@ -124,7 +123,7 @@ class BayesianOptimizer(BaseOptimizer):
         )
         
         return self.get_all_results()
-    
+
     def _run_strategy(self, params: Dict[str, float]) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Run strategy with given parameters.
         
@@ -136,8 +135,7 @@ class BayesianOptimizer(BaseOptimizer):
         """
         # This should be implemented by strategy-specific optimizers
         raise NotImplementedError
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def plot_results(
         self,
         plot_type: str = 'all',
@@ -166,8 +164,8 @@ class BayesianOptimizer(BaseOptimizer):
         if plot_type in ['all', 'slice']:
             plots.append(plot_slice(self.study))
         
-        return {'success': True, 'result': plots[0] if len(plots) == 1 else plots, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+        return plots[0] if len(plots) == 1 else plots
+
     def get_best_trials(self, n_trials: int = 1) -> List[optuna.trial.FrozenTrial]:
         """Get best trials from study.
         
@@ -180,8 +178,8 @@ class BayesianOptimizer(BaseOptimizer):
         if not self.study:
             raise ValueError("No optimization study found")
         
-        return {'success': True, 'result': self.study.best_trials[:n_trials], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+        return self.study.best_trials[:n_trials]
+
     def get_parameter_importance(self) -> Dict[str, float]:
         """Get parameter importance scores.
         
@@ -193,7 +191,7 @@ class BayesianOptimizer(BaseOptimizer):
         
         importance = optuna.importance.get_param_importances(self.study)
         return dict(sorted(importance.items(), key=lambda x: x[1], reverse=True))
-    
+
     def suggest_parameters(self) -> Dict[str, float]:
         """Get suggested parameters from study.
         
@@ -203,4 +201,4 @@ class BayesianOptimizer(BaseOptimizer):
         if not self.study:
             raise ValueError("No optimization study found")
         
-        return {'success': True, 'result': self.study.best_params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.study.best_params

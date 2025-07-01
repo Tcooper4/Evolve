@@ -24,10 +24,7 @@ class DataValidator:
         Args:
             min_data_points: Minimum number of data points required
         """
-        self.min_data_points = min_data_points
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def validate_dataframe(
+        self.min_data_points = min_data_pointsdef validate_dataframe(
         self,
         df: pd.DataFrame,
         required_columns: List[str],
@@ -148,7 +145,7 @@ class DataPreprocessor:
         if self.scale_features:
             df = self._scale_features(df, target_column, feature_columns)
         
-        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return df
     
     def _handle_missing_values(self, df: pd.DataFrame) -> pd.DataFrame:
         """Handle missing values in the data.
@@ -170,7 +167,7 @@ class DataPreprocessor:
         for col in categorical_cols:
             df[col] = df[col].fillna(df[col].mode()[0])
         
-        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return df
     
     def _remove_outliers(self, df: pd.DataFrame) -> pd.DataFrame:
         """Remove outliers from the data.
@@ -187,7 +184,7 @@ class DataPreprocessor:
             z_scores = np.abs((df[col] - df[col].mean()) / df[col].std())
             df = df[z_scores <= 3]
         
-        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return df
     
     def _scale_features(
         self,
@@ -211,7 +208,7 @@ class DataPreprocessor:
                 feature_columns.remove(target_column)
         
         df[feature_columns] = self.scaler.fit_transform(df[feature_columns])
-        return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return df
 
 def resample_data(
     df: pd.DataFrame,
@@ -237,7 +234,7 @@ def resample_data(
             'volume': 'sum'
         }
     
-    return {'success': True, 'result': df.resample(freq).agg(agg_dict), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return df.resample(freq).agg(agg_dict)
 
 def calculate_technical_indicators(
     df: pd.DataFrame,
@@ -292,7 +289,7 @@ def calculate_technical_indicators(
             df['macd_signal'] = df['macd'].ewm(span=signal).mean()
             df['macd_hist'] = df['macd'] - df['macd_signal']
     
-    return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return df
 
 def split_data(
     df: pd.DataFrame,
@@ -361,4 +358,4 @@ def prepare_forecast_data(data: pd.DataFrame) -> pd.DataFrame:
     # Sort by index
     df = df.sort_index()
     
-    return {'success': True, 'result': df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return df

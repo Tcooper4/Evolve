@@ -38,7 +38,6 @@ class DocumentationGenerator:
         self.setup_logging()
         self.logger = logging.getLogger("trading")
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
@@ -46,7 +45,7 @@ class DocumentationGenerator:
             sys.exit(1)
         
         with open(config_path) as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -60,7 +59,6 @@ class DocumentationGenerator:
         
         logging.config.dictConfig(log_config)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def run_command(self, command: List[str], cwd: Optional[str] = None) -> int:
         """Run a shell command and return its exit code."""
         try:
@@ -75,7 +73,7 @@ class DocumentationGenerator:
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Command failed: {e}")
             self.logger.error(f"Output: {e.output}")
-            return {'success': True, 'result': e.returncode, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return e.returncode
 
     def generate_api_docs(self):
         """Generate API documentation using pdoc."""
@@ -88,7 +86,7 @@ class DocumentationGenerator:
             "trading"
         ]) != 0:
             self.logger.error("Failed to generate API documentation")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
         
         self.logger.info("API documentation generated successfully")
         return True
@@ -100,7 +98,7 @@ class DocumentationGenerator:
         # Build MkDocs site
         if self.run_command(["mkdocs", "build"]) != 0:
             self.logger.error("Failed to build MkDocs site")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
         
         self.logger.info("User guide generated successfully")
         return True
@@ -130,7 +128,7 @@ class DocumentationGenerator:
                 f"docs/examples/{example}"
             ]) != 0:
                 self.logger.error(f"Failed to generate example: {example}")
-                return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return False
         
         self.logger.info("Example notebooks generated successfully")
         return True
@@ -157,7 +155,7 @@ class DocumentationGenerator:
                 "-o", f"docs/diagrams/{diagram.replace('.dot', '.png')}"
             ]) != 0:
                 self.logger.error(f"Failed to generate diagram: {diagram}")
-                return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return False
         
         self.logger.info("System diagrams generated successfully")
         return True
@@ -177,7 +175,7 @@ class DocumentationGenerator:
             self.generate_diagrams()
         ]):
             self.logger.error("Documentation generation failed")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
         
         self.logger.info("All documentation generated successfully")
         return True
@@ -209,6 +207,5 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

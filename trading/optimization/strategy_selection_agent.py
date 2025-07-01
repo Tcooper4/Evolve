@@ -57,7 +57,7 @@ class MarketRegime(BaseModel):
             regime = "ranging"
             confidence = 0.7
             
-        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return cls(
             regime=regime,
             confidence=confidence,
             features={
@@ -81,7 +81,7 @@ class StrategyPerformance(BaseModel):
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "strategy": self.strategy,
             "sharpe_ratio": self.sharpe_ratio,
             "win_rate": self.win_rate,
@@ -102,7 +102,7 @@ class StrategyPerformance(BaseModel):
         Returns:
             StrategyPerformance instance
         """
-        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return cls(
             strategy=data["strategy"],
             sharpe_ratio=data["sharpe_ratio"],
             win_rate=data["win_rate"],
@@ -199,15 +199,13 @@ class StrategySelectionAgent:
         self._save_performance_history()
         
         logger.info(f"Updated performance for {performance.strategy}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _load_performance_history(self) -> None:
         """Load performance history from file."""
         try:
             log_path = "trading/optimization/logs/optimization_metrics.jsonl"
             if not os.path.exists(log_path):
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-                
+
             with open(log_path, "r") as f:
                 for line in f:
                     data = json.loads(line)
@@ -241,8 +239,7 @@ class StrategySelectionAgent:
                     
         except Exception as e:
             logger.error(f"Error saving performance history: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _get_recent_performance(self, strategies: List[str],
                               regime: str) -> Dict[str, List[StrategyPerformance]]:
         """Get recent performance for strategies.
@@ -267,7 +264,7 @@ class StrategySelectionAgent:
             if strategy_performance:
                 recent_performance[strategy] = strategy_performance
                 
-        return {'success': True, 'result': recent_performance, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return recent_performance
     
     def _score_strategies(self, recent_performance: Dict[str, List[StrategyPerformance]]) -> Dict[str, float]:
         """Score strategies based on recent performance.
@@ -297,7 +294,7 @@ class StrategySelectionAgent:
             
             scores[strategy] = score
             
-        return {'success': True, 'result': scores, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return scores
     
     def _generate_explanation(self, strategy: str, regime: MarketRegime,
                             performance: List[StrategyPerformance]) -> str:
@@ -315,7 +312,7 @@ class StrategySelectionAgent:
         avg_sharpe = np.mean([p.sharpe_ratio for p in performance])
         avg_win_rate = np.mean([p.win_rate for p in performance])
         
-        return {'success': True, 'result': (, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return (
             f"Selected {strategy} for {regime.regime} market "
             f"(confidence: {regime.confidence:.2f}). "
             f"Recent performance: Sharpe={avg_sharpe:.2f}, "
@@ -348,4 +345,3 @@ class StrategySelectionAgent:
             f.write(json.dumps(log_entry) + "\n")
             
         logger.info(f"Logged decision: {explanation}") 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

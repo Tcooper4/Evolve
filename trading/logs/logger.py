@@ -1,22 +1,34 @@
-"""Centralized logging configuration for the trading system."""
+"""
+Centralized Logging System
 
-import os
+This module provides a comprehensive logging system with support for:
+- Structured logging with JSON Lines format
+- Rotating file handlers
+- Metrics logging
+- LLM-specific metrics
+- Backtest performance metrics
+- Agent decision metrics
+"""
+
 import logging
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
-from typing import Optional, Dict, Any
-import yaml
 import json
+import os
+import yaml
 from datetime import datetime
+from pathlib import Path
+from logging.handlers import RotatingFileHandler
+from typing import Dict, Any, Optional
 
-from trading.config.settings import METRIC_LOGGING_ENABLED, METRICS_PATH
-
-# Default configuration
+# Configuration constants
 DEFAULT_LOG_LEVEL = "INFO"
 DEFAULT_LOG_FORMAT = "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s"
 DEFAULT_LOG_FILE = "logs/app.log"
 DEFAULT_MAX_BYTES = 5 * 1024 * 1024  # 5MB
 DEFAULT_BACKUP_COUNT = 3
+
+# Metrics logging configuration
+METRIC_LOGGING_ENABLED = os.getenv("METRIC_LOGGING_ENABLED", "true").lower() == "true"
+METRICS_PATH = os.getenv("METRICS_PATH", "logs/metrics.jsonl")
 
 def _load_config() -> dict:
     """Load logging configuration from YAML file if it exists."""
@@ -24,7 +36,7 @@ def _load_config() -> dict:
     if config_path.exists():
         try:
             with open(config_path, "r") as f:
-                return {'success': True, 'result': yaml.safe_load(f).get("logging", {}), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return yaml.safe_load(f).get("logging", {})
         except Exception as e:
             print(f"Error loading log config: {e}")
     return {}
@@ -33,27 +45,27 @@ def _get_log_level() -> int:
     """Get log level from environment or config."""
     config = _load_config()
     level = os.getenv("LOG_LEVEL") or config.get("level", DEFAULT_LOG_LEVEL)
-    return {'success': True, 'result': getattr(logging, level.upper()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return getattr(logging, level.upper())
 
 def _get_log_format() -> str:
     """Get log format from config."""
     config = _load_config()
-    return {'success': True, 'result': config.get("format", DEFAULT_LOG_FORMAT), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return config.get("format", DEFAULT_LOG_FORMAT)
 
 def _get_log_file() -> str:
     """Get log file path from config."""
     config = _load_config()
-    return {'success': True, 'result': config.get("file", DEFAULT_LOG_FILE), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return config.get("file", DEFAULT_LOG_FILE)
 
 def _get_max_bytes() -> int:
     """Get max bytes for rotating file handler from config."""
     config = _load_config()
-    return {'success': True, 'result': config.get("max_bytes", DEFAULT_MAX_BYTES), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return config.get("max_bytes", DEFAULT_MAX_BYTES)
 
 def _get_backup_count() -> int:
     """Get backup count for rotating file handler from config."""
     config = _load_config()
-    return {'success': True, 'result': config.get("backup_count", DEFAULT_BACKUP_COUNT), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return config.get("backup_count", DEFAULT_BACKUP_COUNT)
 
 def get_logger(name: str) -> logging.Logger:
     """Get a configured logger instance.
@@ -69,7 +81,7 @@ def get_logger(name: str) -> logging.Logger:
     
     # Return existing logger if already configured
     if logger.handlers:
-        return {'success': True, 'result': logger, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return logger
     
     # Set log level
     logger.setLevel(_get_log_level())
@@ -105,7 +117,7 @@ def log_metrics(data: Dict[str, Any], path: Optional[str] = None) -> None:
         path: Optional path to metrics file (defaults to METRICS_PATH)
     """
     if not METRIC_LOGGING_ENABLED:
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return
         
     path = path or METRICS_PATH
     
@@ -131,7 +143,6 @@ def log_llm_metrics(
     completion_tokens: int,
     total_tokens: int,
     metadata: Optional[Dict[str, Any]] = None
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 ) -> None:
     """Log LLM-specific metrics.
     
@@ -163,7 +174,6 @@ def log_backtest_metrics(
     win_rate: float,
     mse: float,
     metadata: Optional[Dict[str, Any]] = None
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 ) -> None:
     """Log backtest performance metrics.
     
@@ -192,7 +202,6 @@ def log_agent_metrics(
     action: str,
     confidence: float,
     metadata: Optional[Dict[str, Any]] = None
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 ) -> None:
     """Log agent decision metrics.
     

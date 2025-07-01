@@ -18,7 +18,7 @@ from utils.reasoning_display import ReasoningDisplay
 
 def create_sample_forecast_decision():
     """Create a sample forecast decision."""
-    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return {
         'agent_name': 'LSTMForecaster',
         'decision_type': DecisionType.FORECAST,
         'action_taken': 'Predicted AAPL will reach $185.50 in 7 days',
@@ -70,7 +70,7 @@ def create_sample_forecast_decision():
 
 def create_sample_strategy_decision():
     """Create a sample strategy decision."""
-    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return {
         'agent_name': 'RSIStrategy',
         'decision_type': DecisionType.STRATEGY,
         'action_taken': 'Executed BUY signal for AAPL with 100 shares at $182.30',
@@ -124,7 +124,7 @@ def create_sample_strategy_decision():
 
 def create_sample_model_selection_decision():
     """Create a sample model selection decision."""
-    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return {
         'agent_name': 'ModelSelector',
         'decision_type': DecisionType.MODEL_SELECTION,
         'action_taken': 'Selected LSTM model over XGBoost for AAPL forecasting',
@@ -218,7 +218,6 @@ def demo_display_components():
         if decision:
             display.display_decision_terminal(decision)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def demo_real_time_updates():
     """Demonstrate real-time updates."""
     print("\n=== Real-time Updates Demo ===")
@@ -267,7 +266,6 @@ def demo_real_time_updates():
     print(f"Total decisions: {stats['total_decisions']}")
     print(f"Active agents: {len(stats['decisions_by_agent'])}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def demo_streamlit_components():
     """Demonstrate Streamlit components (simulated)."""
     print("\n=== Streamlit Components Demo ===")
@@ -295,7 +293,6 @@ def demo_streamlit_components():
     print("\nTo run Streamlit dashboard:")
     print("streamlit run trading/utils/reasoning_display.py")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def demo_search_and_filter():
     """Demonstrate search and filtering capabilities."""
     print("\n=== Search and Filter Demo ===")
@@ -348,7 +345,6 @@ def demo_search_and_filter():
         if explanation:
             print(f"Explanation preview: {explanation[:100]}...")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main demo function."""
     print("🤖 Reasoning Logger and Display Demo")
@@ -369,6 +365,5 @@ def main():
     print("3. Run Streamlit dashboard: streamlit run trading/utils/reasoning_display.py")
     print("4. Monitor decisions in real-time")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

@@ -90,7 +90,7 @@ def create_strategy_form(
     }
     logger.info(f"Strategy form submitted: {form_data}")
     
-    return {'success': True, 'result': form_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return form_data
 
 def create_performance_chart(
     data: pd.DataFrame,
@@ -162,7 +162,7 @@ def create_performance_chart(
     # Log chart creation for agentic monitoring
     logger.info(f"Performance chart created for strategy: {strategy_config.name}")
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def create_performance_metrics(
     data: pd.DataFrame,
@@ -206,7 +206,7 @@ def create_performance_metrics(
     # Log metrics for agentic monitoring
     logger.info(f"Performance metrics calculated: {metrics}")
     
-    return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return metrics
 
 def create_trade_list(
     trades: pd.DataFrame,

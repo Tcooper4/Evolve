@@ -55,7 +55,7 @@ class DataQualityAgent(BaseMetaAgent):
         # Log results
         self.log_action("Data quality monitoring completed", results)
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
     
     def _analyze_data_sources(self) -> Dict[str, Any]:
         """Analyze data sources.
@@ -77,7 +77,7 @@ class DataQualityAgent(BaseMetaAgent):
                     "outlier_ratio": self._calculate_outlier_ratio(data)
                 }
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
     
     def _analyze_data_quality(self) -> Dict[str, Any]:
         """Analyze data quality.
@@ -91,7 +91,7 @@ class DataQualityAgent(BaseMetaAgent):
             "consistency": self._check_data_consistency()
         }
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
     
     def _generate_actions(self, results: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Generate actions based on data quality analysis.
@@ -132,7 +132,7 @@ class DataQualityAgent(BaseMetaAgent):
                     "suggestion": f"Fill gap from {gap['start']} to {gap['end']}"
                 })
         
-        return {'success': True, 'result': actions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return actions
     
     def _calculate_missing_ratio(self, data: pd.DataFrame) -> float:
         """Calculate ratio of missing values.
@@ -143,7 +143,7 @@ class DataQualityAgent(BaseMetaAgent):
         Returns:
             Ratio of missing values
         """
-        return {'success': True, 'result': data.isnull().sum().sum() / (data.shape[0] * data.shape[1]), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return data.isnull().sum().sum() / (data.shape[0] * data.shape[1])
     
     def _calculate_outlier_ratio(self, data: pd.DataFrame) -> float:
         """Calculate ratio of outliers.
@@ -164,7 +164,7 @@ class DataQualityAgent(BaseMetaAgent):
             outliers += ((data[col] < (q1 - 1.5 * iqr)) | (data[col] > (q3 + 1.5 * iqr))).sum()
             total += len(data)
         
-        return {'success': True, 'result': outliers / total if total > 0 else 0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return outliers / total if total > 0 else 0
     
     def _find_data_gaps(self) -> List[Dict[str, Any]]:
         """Find gaps in data.
@@ -204,7 +204,7 @@ class DataQualityAgent(BaseMetaAgent):
                             "days": len(group)
                         })
         
-        return {'success': True, 'result': gaps, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return gaps
     
     def _detect_anomalies(self) -> List[Dict[str, Any]]:
         """Detect anomalies in data.
@@ -233,7 +233,7 @@ class DataQualityAgent(BaseMetaAgent):
                             "z_score": z_scores[idx]
                         })
         
-        return {'success': True, 'result': anomalies, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return anomalies
     
     def _check_data_consistency(self) -> Dict[str, Any]:
         """Check data consistency across sources.
@@ -249,7 +249,7 @@ class DataQualityAgent(BaseMetaAgent):
         
         sources = self.data_loader.get_available_sources()
         if len(sources) < 2:
-            return {'success': True, 'result': consistency, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return consistency
         
         # Compare columns
         all_columns = set()

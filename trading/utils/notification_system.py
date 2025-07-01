@@ -79,7 +79,7 @@ class NotificationSystem:
                 
         except Exception as e:
             logger.error(f"❌ Error sending Slack notification: {str(e)}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def send_email_notification(self, subject: str, message: str, 
                                to_email: str, from_email: Optional[str] = None) -> bool:
@@ -127,7 +127,7 @@ class NotificationSystem:
             
         except Exception as e:
             logger.error(f"❌ Error sending email notification: {str(e)}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def send_trading_alert(self, alert_type: str, message: str, 
                           data: Optional[Dict[str, Any]] = None) -> Dict[str, bool]:
@@ -178,7 +178,7 @@ class NotificationSystem:
                 to_email="admin@trading.com"  # Mock email
             )
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
 
     def send_model_performance_alert(self, model_name: str, metrics: Dict[str, float], 
                                    threshold: float = 0.7) -> Dict[str, bool]:
@@ -220,7 +220,7 @@ class NotificationSystem:
         """
         message = f"System health alert - {component}: {status}"
         
-        return {'success': True, 'result': self.send_trading_alert(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.send_trading_alert(
             'error' if status == 'down' else 'warning',
             message,
             details
@@ -279,7 +279,7 @@ class NotificationSystem:
         Returns:
             Dictionary with notification status
         """
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'slack_configured': bool(self.slack_webhook_url),
             'email_configured': bool(self.email_password),
             'last_notification': self.notification_status['last_notification'],
@@ -319,8 +319,7 @@ class NotificationSystem:
                 to_email="test@example.com"  # Mock email
             )
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return results
 
 # Global notification instance
 notification_system = NotificationSystem()

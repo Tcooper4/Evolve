@@ -28,7 +28,7 @@ class ClassificationMetrics:
         """Classification accuracy."""
         actuals = np.asarray(actuals)
         predictions = np.asarray(predictions)
-        return {'success': True, 'result': float(np.mean(actuals == predictions)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return float(np.mean(actuals == predictions))
 
     def precision(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         """Precision score for binary labels."""
@@ -36,7 +36,7 @@ class ClassificationMetrics:
         predictions = np.asarray(predictions)
         tp = np.sum((predictions == 1) & (actuals == 1))
         fp = np.sum((predictions == 1) & (actuals == 0))
-        return {'success': True, 'result': float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
 
     def recall(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         """Recall score for binary labels."""
@@ -44,13 +44,13 @@ class ClassificationMetrics:
         predictions = np.asarray(predictions)
         tp = np.sum((predictions == 1) & (actuals == 1))
         fn = np.sum((predictions == 0) & (actuals == 1))
-        return {'success': True, 'result': float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0
 
     def f1_score(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         """F1 score for binary labels."""
         prec = self.precision(actuals, predictions)
         rec = self.recall(actuals, predictions)
-        return {'success': True, 'result': 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
 
 class TimeSeriesMetrics:
     """Class for calculating time series specific metrics."""
@@ -65,7 +65,7 @@ class TimeSeriesMetrics:
         actuals = np.asarray(actuals)
         predictions = np.asarray(predictions)
         mask = actuals != 0
-        return {'success': True, 'result': float(np.mean(np.abs((actuals[mask] - predictions[mask]) / actuals[mask])) * 100), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return float(np.mean(np.abs((actuals[mask] - predictions[mask]) / actuals[mask])) * 100)
 
     def symmetric_mean_absolute_percentage_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         """Return SMAPE."""
@@ -73,7 +73,7 @@ class TimeSeriesMetrics:
         predictions = np.asarray(predictions)
         denominator = (np.abs(actuals) + np.abs(predictions)) / 2
         mask = denominator != 0
-        return {'success': True, 'result': float(np.mean(np.abs(actuals[mask] - predictions[mask]) / denominator[mask]) * 100), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return float(np.mean(np.abs(actuals[mask] - predictions[mask]) / denominator[mask]) * 100)
 
     def mean_absolute_scaled_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         """Return MASE using naive forecast for scaling."""
@@ -82,7 +82,7 @@ class TimeSeriesMetrics:
         naive_forecast = actuals[:-1]
         denom = np.mean(np.abs(actuals[1:] - naive_forecast))
         if denom == 0:
-            return {'success': True, 'result': float('inf'), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return float('inf')
         return float(np.mean(np.abs(actuals - predictions)) / denom)
         
     def calculate_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
@@ -104,9 +104,8 @@ class TimeSeriesMetrics:
             'smape': self.symmetric_mean_absolute_percentage_error(y_true, y_pred),
             'mase': self.mean_absolute_scaled_error(y_true, y_pred)
         }
-        return {'success': True, 'result': self.metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
-        
+        return self.metrics
+
     def get_metric(self, metric_name: str) -> float:
         """Get a specific metric value.
         
@@ -120,7 +119,7 @@ class TimeSeriesMetrics:
             raise ValueError("No metrics have been calculated yet")
         if metric_name not in self.metrics:
             raise ValueError(f"Metric {metric_name} not found")
-        return {'success': True, 'result': self.metrics[metric_name], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.metrics[metric_name]
         
     def get_all_metrics(self) -> Dict[str, float]:
         """Get all calculated metrics.
@@ -130,7 +129,7 @@ class TimeSeriesMetrics:
         """
         if not self.metrics:
             raise ValueError("No metrics have been calculated yet")
-        return {'success': True, 'result': self.metrics.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.metrics.copy()
 
 class RiskMetrics:
     """Class for calculating risk metrics."""
@@ -172,19 +171,19 @@ class RiskMetrics:
             'expected_shortfall_95': es_95
         }
         
-        return {'success': True, 'result': self.metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.metrics
 
     def sharpe_ratio(self, returns: np.ndarray, risk_free_rate: float = 0.0) -> float:
         """Calculate the Sharpe ratio."""
         excess = returns - risk_free_rate / len(returns)
-        return {'success': True, 'result': float(np.sqrt(252) * excess.mean() / excess.std()) if excess.std() != 0 else 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return float(np.sqrt(252) * excess.mean() / excess.std()) if excess.std() != 0 else 0.0
 
     def sortino_ratio(self, returns: np.ndarray, risk_free_rate: float = 0.0) -> float:
         """Calculate the Sortino ratio."""
         downside = returns[returns < 0]
         downside_std = downside.std()
         if downside_std == 0:
-            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.0
         excess = returns.mean() - risk_free_rate / len(returns)
         return float(np.sqrt(252) * excess / downside_std)
 
@@ -193,7 +192,7 @@ class RiskMetrics:
         cumulative = (1 + returns).cumprod()
         running_max = np.maximum.accumulate(cumulative)
         drawdowns = cumulative / running_max - 1
-        return {'success': True, 'result': float(drawdowns.min()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return float(drawdowns.min())
 
     def value_at_risk(self, returns: np.ndarray, confidence: float = 0.95) -> float:
         """Calculate Value at Risk (historical)."""
@@ -212,7 +211,7 @@ class RiskMetrics:
             raise ValueError("No metrics have been calculated yet")
         if metric_name not in self.metrics:
             raise ValueError(f"Metric {metric_name} not found")
-        return {'success': True, 'result': self.metrics[metric_name], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.metrics[metric_name]
         
     def get_all_metrics(self) -> Dict[str, float]:
         """Get all calculated risk metrics.
@@ -222,4 +221,4 @@ class RiskMetrics:
         """
         if not self.metrics:
             raise ValueError("No metrics have been calculated yet")
-        return {'success': True, 'result': self.metrics.copy(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.metrics.copy()

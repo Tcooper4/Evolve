@@ -21,7 +21,6 @@ from trading.services.base_service import BaseService
 
 logger = logging.getLogger(__name__)
 
-
 class MetaTunerService(BaseService):
     """
     Service wrapper for MetaTunerAgent.
@@ -38,10 +37,7 @@ class MetaTunerService(BaseService):
         self.agent = MetaTunerAgent()
         self.memory = AgentMemory()
         
-        logger.info("MetaTunerService initialized")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        logger.info("MetaTunerService initialized")def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming tuning requests.
         
@@ -64,7 +60,7 @@ class MetaTunerService(BaseService):
                 return self._handle_auto_tune_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return {
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -129,7 +125,7 @@ class MetaTunerService(BaseService):
             
         except Exception as e:
             logger.error(f"Error tuning hyperparameters: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -164,7 +160,7 @@ class MetaTunerService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting tuning history: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -199,7 +195,7 @@ class MetaTunerService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting best parameters: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -244,7 +240,7 @@ class MetaTunerService(BaseService):
             
         except Exception as e:
             logger.error(f"Error in auto-tune: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -284,4 +280,4 @@ class MetaTunerService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'error': str(e)}

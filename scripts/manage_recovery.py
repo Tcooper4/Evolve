@@ -63,17 +63,14 @@ class RecoveryManager:
         self.backup_dir = Path("backups")
         self.backup_dir.mkdir(parents=True, exist_ok=True)
         self.recovery_dir = Path("recovery")
-        self.recovery_dir.mkdir(parents=True, exist_ok=True)
-
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def _load_config(self, config_path: str) -> dict:
+        self.recovery_dir.mkdir(parents=True, exist_ok=True)def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
         
         with open(config_path) as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -378,7 +375,7 @@ class RecoveryManager:
             metrics = ["cpu", "memory", "disk", "network"]
             for metric in metrics:
                 if abs(current[metric] - original[metric]) > 10:  # 10% threshold
-                    return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return False
             
             return True
         except Exception as e:
@@ -532,7 +529,6 @@ class RecoveryManager:
                 print(f"  Issue: {rec['issue']}")
                 print(f"  Recommendation: {rec['recommendation']}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Recovery Manager")
@@ -573,6 +569,5 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

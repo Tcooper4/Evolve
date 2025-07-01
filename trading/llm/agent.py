@@ -218,7 +218,7 @@ class PromptAgent:
         elif symbol in ['SPY', 'QQQ', 'IWM']:
             return 'Bollinger Bands'  # Good for ETFs
         else:
-            return {'success': True, 'result': 'Ensemble Strategy'  # Default to ensemble, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 'Ensemble Strategy'  # Default to ensemble
     
     def _select_best_model(self, symbol: str, timeframe: str) -> str:
         """Select best model based on symbol and timeframe.
@@ -238,7 +238,7 @@ class PromptAgent:
         elif days <= 30:
             return 'LSTM'  # Good for medium-term
         else:
-            return {'success': True, 'result': 'Transformer'  # Good for long-term, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 'Transformer'  # Good for long-term
     
     def _handle_forecast_request(self, params: Dict[str, Any]) -> AgentResponse:
         """Handle forecast request.
@@ -307,7 +307,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in forecast request: {e}")
-            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return AgentResponse(
                 success=False,
                 message=f"Forecast failed: {str(e)}",
                 recommendations=["Try a different model or timeframe"]
@@ -353,7 +353,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in strategy request: {e}")
-            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return AgentResponse(
                 success=False,
                 message=f"Strategy analysis failed: {str(e)}",
                 recommendations=["Try a different strategy or check symbol availability"]
@@ -435,7 +435,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in backtest request: {e}")
-            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return AgentResponse(
                 success=False,
                 message=f"Backtest failed: {str(e)}",
                 recommendations=["Check data availability and strategy parameters"]
@@ -512,7 +512,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in trade request: {e}")
-            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return AgentResponse(
                 success=False,
                 message=f"Trade execution failed: {str(e)}",
                 recommendations=["Check market hours and symbol validity"]
@@ -571,7 +571,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in optimization request: {e}")
-            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return AgentResponse(
                 success=False,
                 message=f"Optimization failed: {str(e)}",
                 recommendations=["Check strategy configuration and historical data"]
@@ -628,7 +628,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in analysis request: {e}")
-            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return AgentResponse(
                 success=False,
                 message=f"Analysis failed: {str(e)}",
                 recommendations=["Check data availability and symbol validity"]
@@ -720,7 +720,7 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error in general request: {e}")
-            return {'success': True, 'result': AgentResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return AgentResponse(
                 success=False,
                 message=f"Analysis failed: {str(e)}",
                 recommendations=["Try breaking down the request into smaller parts"]
@@ -731,4 +731,4 @@ prompt_agent = PromptAgent()
 
 def get_prompt_agent() -> PromptAgent:
     """Get the global prompt agent instance."""
-    return {'success': True, 'result': prompt_agent, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return prompt_agent

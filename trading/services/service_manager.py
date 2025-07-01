@@ -21,7 +21,6 @@ from report.report_service import ReportService
 
 logger = logging.getLogger(__name__)
 
-
 class ServiceManager:
     """
     Manages all agent services with Redis pub/sub communication.
@@ -142,8 +141,7 @@ class ServiceManager:
         self.is_running = True
         self.monitor_thread = threading.Thread(target=self._monitor_services, daemon=True)
         self.monitor_thread.start()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _monitor_services(self):
         """Monitor service messages and update status."""
         logger.info("Starting service monitoring...")
@@ -156,8 +154,7 @@ class ServiceManager:
             except Exception as e:
                 logger.error(f"Error in service monitoring: {e}")
                 time.sleep(1)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_service_message(self, message):
         """Handle messages from services."""
         try:
@@ -179,8 +176,7 @@ class ServiceManager:
             logger.error(f"Failed to decode service message: {e}")
         except Exception as e:
             logger.error(f"Error handling service message: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def start_service(self, service_name: str) -> Dict[str, Any]:
         """
         Start a specific service.
@@ -319,7 +315,7 @@ class ServiceManager:
             results[service_name] = self.start_service(service_name)
             time.sleep(1)  # Small delay between starts
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
     
     def stop_all_services(self) -> Dict[str, Any]:
         """
@@ -334,7 +330,7 @@ class ServiceManager:
             results[service_name] = self.stop_service(service_name)
             time.sleep(1)  # Small delay between stops
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
     
     def get_service_status(self, service_name: str = None) -> Dict[str, Any]:
         """
@@ -348,7 +344,7 @@ class ServiceManager:
         """
         if service_name:
             if service_name not in self.services:
-                return {'success': True, 'result': {'error': f'Unknown service: {service_name}'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return {'error': f'Unknown service: {service_name}'}
             
             service_config = self.services[service_name]
             return {
@@ -395,7 +391,7 @@ class ServiceManager:
             
         except Exception as e:
             logger.error(f"Error sending message to {service_name}: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def get_manager_stats(self) -> Dict[str, Any]:
         """Get manager statistics."""
@@ -404,7 +400,7 @@ class ServiceManager:
             if config['status'] == 'running'
         )
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'total_services': len(self.services),
             'running_services': running_services,
             'stopped_services': len(self.services) - running_services,
@@ -429,7 +425,6 @@ class ServiceManager:
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
             return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
 
 def main():
     """Main function for running the ServiceManager."""
@@ -490,7 +485,6 @@ def main():
         return {"status": "failed", "action": args.action, "error": str(e)}
     finally:
         manager.shutdown()
-
 
 if __name__ == "__main__":
     main() 

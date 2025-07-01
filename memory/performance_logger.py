@@ -58,7 +58,6 @@ def log_strategy_performance(
     # Update performance analysis
     _update_performance_analysis(ticker, entry)
 
-
 def get_performance_history(
     ticker: Optional[str] = None,
     model: Optional[str] = None,
@@ -91,7 +90,6 @@ def get_performance_history(
     data.sort(key=lambda x: x["timestamp"], reverse=True)
     return data[:limit]
 
-
 def get_performance_analysis(ticker: str) -> Dict:
     """
     Get performance analysis for a ticker.
@@ -109,7 +107,6 @@ def get_performance_analysis(ticker: str) -> Dict:
         analysis = json.load(f)
 
     return analysis.get(ticker, {})
-
 
 def _update_performance_analysis(ticker: str, entry: Dict) -> None:
     """

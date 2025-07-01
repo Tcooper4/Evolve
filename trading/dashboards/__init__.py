@@ -23,8 +23,7 @@ class TradingDashboard:
         try:
             if portfolio_data.empty:
                 st.warning("No portfolio data available")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             fig = go.Figure()
             
             # Portfolio value over time
@@ -54,8 +53,7 @@ class TradingDashboard:
         try:
             if returns.empty:
                 st.warning("No returns data available")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             fig = px.histogram(
                 returns,
                 title='Returns Distribution',
@@ -75,8 +73,7 @@ class TradingDashboard:
         try:
             if portfolio_data.empty:
                 st.warning("No portfolio data available")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             # Calculate drawdown
             peak = portfolio_data['total_value'].expanding().max()
             drawdown = (portfolio_data['total_value'] - peak) / peak * 100
@@ -109,8 +106,7 @@ class TradingDashboard:
         try:
             if not allocation_data:
                 st.warning("No allocation data available")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             fig = go.Figure(data=[go.Pie(
                 labels=list(allocation_data.keys()),
                 values=list(allocation_data.values()),
@@ -133,8 +129,7 @@ class TradingDashboard:
         try:
             if not metrics:
                 st.warning("No metrics available")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             # Create metrics dataframe
             metrics_df = pd.DataFrame([
                 {'Metric': k, 'Value': f"{v:.4f}" if isinstance(v, float) else str(v)}
@@ -161,8 +156,7 @@ class StrategyDashboard:
         try:
             if strategy_data.empty:
                 st.warning("No strategy data available")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             fig = go.Figure()
             
             # Strategy returns
@@ -202,8 +196,7 @@ class StrategyDashboard:
         try:
             if trades_data.empty:
                 st.warning("No trades data available")
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
             # Trade P&L distribution
             fig = px.histogram(
                 trades_data,
@@ -239,8 +232,8 @@ strategy_dashboard = StrategyDashboard()
 
 def get_trading_dashboard() -> TradingDashboard:
     """Get the global trading dashboard instance."""
-    return {'success': True, 'result': trading_dashboard, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return trading_dashboard
 
 def get_strategy_dashboard() -> StrategyDashboard:
     """Get the global strategy dashboard instance."""
-    return {'success': True, 'result': strategy_dashboard, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return strategy_dashboard

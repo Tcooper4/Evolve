@@ -72,21 +72,18 @@ class AgentRouter:
         # Load task patterns
         self.task_patterns = self._load_task_patterns()
         
-        logger.info("Initialized AgentRouter")
-
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def _load_config(self, config_path: str) -> Dict:
+        logger.info("Initialized AgentRouter")def _load_config(self, config_path: str) -> Dict:
         """Load configuration from JSON file"""
         try:
             with open(config_path, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
             logger.warning(f"Config file {config_path} not found, using defaults")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
 
     def _load_task_patterns(self) -> Dict[str, Dict]:
         """Load patterns for task detection"""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "new_data": {
                 "patterns": [
                     r"new data available",

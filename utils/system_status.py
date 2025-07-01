@@ -20,19 +20,23 @@ logger.setLevel(logging.INFO)
 class SystemStatus:
     def __init__(self) -> None:
         """Initialize system status monitor."""
-        self.start_time = time.time()
-        self.logger = logging.getLogger(__name__)
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+        self.logger = logging.getLogger(self.__class__.__name__)
+        if not self.logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+            self.logger.setLevel(logging.INFO)
+
     def get_uptime(self) -> str:
         """Get system uptime."""
         try:
-            uptime_seconds = time.time() - self.start_time
+            uptime_seconds = time.time() - psutil.boot_time()
             return str(timedelta(seconds=int(uptime_seconds)))
         except Exception as e:
             self.logger.error(f"Error getting uptime: {str(e)}")
-            return {'success': True, 'result': "Unknown", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+            return "Unknown"
+
     def get_cpu_info(self) -> Dict[str, Any]:
         """Get CPU information."""
         try:
@@ -44,7 +48,7 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting CPU info: {str(e)}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 "usage_percent": None,
                 "count": None,
                 "frequency": None,
@@ -63,7 +67,7 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting memory info: {str(e)}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 "total": None,
                 "available": None,
                 "used": None,
@@ -82,7 +86,7 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting disk info: {str(e)}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 "total": None,
                 "used": None,
                 "free": None,
@@ -101,7 +105,7 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting network info: {str(e)}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 "bytes_sent": None,
                 "bytes_recv": None,
                 "packets_sent": None,
@@ -122,7 +126,7 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting process info: {str(e)}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 "pid": None,
                 "name": None,
                 "status": None,
@@ -157,7 +161,7 @@ class SystemStatus:
                 }
         except Exception as e:
             self.logger.error(f"Error getting agent liveness: {str(e)}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 "status": "unknown",
                 "pid": None,
                 "uptime": None,
@@ -171,7 +175,7 @@ class SystemStatus:
             if os.path.exists(heartbeat_file):
                 with open(heartbeat_file, 'r') as f:
                     last_line = f.readlines()[-1]
-                    return {'success': True, 'result': last_line.strip(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return last_line.strip()
             return None
         except Exception as e:
             self.logger.error(f"Error getting last heartbeat: {str(e)}")
@@ -179,7 +183,7 @@ class SystemStatus:
             
     def get_system_info(self) -> Dict[str, Any]:
         """Get complete system information."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "timestamp": datetime.now().isoformat(),
             "uptime": self.get_uptime(),
             "platform": {
@@ -206,7 +210,7 @@ class SystemStatus:
             return {"status": "report_saved", "filepath": filepath}
         except Exception as e:
             self.logger.error(f"Error saving status report: {str(e)}")
-            return {'success': True, 'result': {"status": "report_error", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {"status": "report_error", "error": str(e)}
             
     def print_status(self) -> dict:
         """Print system status. Returns status dict."""
@@ -240,82 +244,60 @@ class SystemStatus:
             return {"status": "status_printed"}
         except Exception as e:
             self.logger.error(f"Error printing status: {str(e)}")
-            return {'success': True, 'result': {"status": "status_error", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+            return {"status": "status_error", "error": str(e)}
+
 def get_system_scorecard() -> Dict[str, Any]:
-    """Calculate system performance metrics from logs and goals.
-    
-    Returns:
-        Dictionary containing:
-        - sharpe_7d: Average Sharpe ratio over last 7 days
-        - sharpe_30d: Average Sharpe ratio over last 30 days
-        - win_rate: Percentage of profitable trades
-        - mse_avg: Average Mean Squared Error
-        - goal_status: Dictionary of goal achievement status
-        - last_10_entries: DataFrame of last 10 performance entries
-        - trades_per_day: Series of trades per day
-    """
+    """Get system scorecard with health metrics."""
     try:
-        # Load performance log
-        log_file = Path("memory/logs/performance_log.csv")
-        if not log_file.exists():
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-                "sharpe_7d": 0.0,
-                "sharpe_30d": 0.0,
-                "win_rate": 0.0,
-                "mse_avg": 0.0,
-                "goal_status": {},
-                "last_10_entries": pd.DataFrame(),
-                "trades_per_day": pd.Series()
+        status = SystemStatus()
+        system_info = status.get_system_info()
+        
+        # Calculate health scores
+        cpu_score = 100 - (system_info['cpu']['usage_percent'] or 0)
+        memory_score = 100 - (system_info['memory']['percent'] or 0)
+        disk_score = 100 - (system_info['disk']['percent'] or 0)
+        
+        # Overall health score
+        overall_score = (cpu_score + memory_score + disk_score) / 3
+        
+        scorecard = {
+            "timestamp": datetime.now().isoformat(),
+            "overall_health": round(overall_score, 2),
+            "components": {
+                "cpu": {
+                    "score": round(cpu_score, 2),
+                    "usage": system_info['cpu']['usage_percent'],
+                    "status": "healthy" if cpu_score > 70 else "warning" if cpu_score > 50 else "critical"
+                },
+                "memory": {
+                    "score": round(memory_score, 2),
+                    "usage": system_info['memory']['percent'],
+                    "status": "healthy" if memory_score > 70 else "warning" if memory_score > 50 else "critical"
+                },
+                "disk": {
+                    "score": round(disk_score, 2),
+                    "usage": system_info['disk']['percent'],
+                    "status": "healthy" if disk_score > 70 else "warning" if disk_score > 50 else "critical"
+                }
+            },
+            "system_info": {
+                "uptime": system_info['uptime'],
+                "platform": system_info['platform']['system'],
+                "agent_status": system_info['agent']['status']
             }
-            
-        df = pd.read_csv(log_file)
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
-        
-        # Calculate date ranges
-        now = datetime.now()
-        date_7d = now - timedelta(days=7)
-        date_30d = now - timedelta(days=30)
-        
-        # Calculate metrics
-        sharpe_7d = df[df['timestamp'] >= date_7d]['sharpe'].mean()
-        sharpe_30d = df[df['timestamp'] >= date_30d]['sharpe'].mean()
-        
-        # Calculate win rate
-        profitable_trades = df[df['sharpe'] > 0].shape[0]
-        total_trades = df.shape[0]
-        win_rate = profitable_trades / total_trades if total_trades > 0 else 0
-        
-        # Calculate MSE average
-        mse_avg = df['mse'].mean()
-        
-        # Get last 10 entries
-        last_10_entries = df.sort_values('timestamp', ascending=False).head(10)
-        
-        # Calculate trades per day
-        trades_per_day = df.groupby(df['timestamp'].dt.date).size()
-        
-        # Load goal status
-        goal_file = Path("memory/goals/status.json")
-        goal_status = {}
-        if goal_file.exists():
-            with open(goal_file, 'r') as f:
-                goal_status = json.load(f)
-        
-        return {
-            "sharpe_7d": round(sharpe_7d, 2),
-            "sharpe_30d": round(sharpe_30d, 2),
-            "win_rate": round(win_rate * 100, 1),  # Convert to percentage
-            "mse_avg": round(mse_avg, 4),
-            "goal_status": goal_status,
-            "last_10_entries": last_10_entries,
-            "trades_per_day": trades_per_day
         }
         
+        return scorecard
+        
     except Exception as e:
-        error_msg = f"Error calculating system metrics: {str(e)}"
-        logger.error(error_msg)
-        raise RuntimeError(error_msg)
+        logging.error(f"Error generating system scorecard: {str(e)}")
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "overall_health": 0,
+            "error": str(e),
+            "components": {},
+            "system_info": {}
+        }
 
 if __name__ == "__main__":
     # Set up logging

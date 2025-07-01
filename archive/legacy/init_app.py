@@ -99,7 +99,6 @@ def validate_config():
     logger = logging.getLogger("trading")
     logger.info("Configuration validated")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def check_dependencies():
     """Check if all required dependencies are installed."""
     try:
@@ -119,7 +118,6 @@ def check_dependencies():
         print(f"Error: Missing dependency - {e}")
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main initialization function."""
     print("Initializing application...")
@@ -138,6 +136,5 @@ def main():
     
     print("Application initialization completed successfully")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

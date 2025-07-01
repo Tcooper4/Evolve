@@ -44,7 +44,7 @@ class APIConfig(BaseModel):
     def validate_jwt_secret(cls, v):
         if not v:
             raise ValueError("JWT secret is required")
-        return {'success': True, 'result': v, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return v
 
 class User(BaseModel):
     """User model."""
@@ -102,7 +102,7 @@ class AutomationAPI:
         try:
             with open(config_path, 'r') as f:
                 config_data = json.load(f)
-            return {'success': True, 'result': APIConfig(**config_data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return APIConfig(**config_data)
         except Exception as e:
             logger.error(f"Failed to load API config: {str(e)}")
             raise

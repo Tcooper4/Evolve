@@ -27,14 +27,12 @@ from trading.strategies.rsi_strategy import RSIStrategy
 from trading.backtesting.backtester import Backtester
 from trading.evaluation.metrics import calculate_sharpe_ratio, calculate_max_drawdown, calculate_win_rate
 
-
 class OptimizationType(Enum):
     """Optimization type enum."""
     STRATEGY_COMBINATION = "strategy_combination"
     THRESHOLD_OPTIMIZATION = "threshold_optimization"
     INDICATOR_OPTIMIZATION = "indicator_optimization"
     HYBRID_OPTIMIZATION = "hybrid_optimization"
-
 
 class OptimizationMetric(Enum):
     """Optimization metric enum."""
@@ -45,7 +43,6 @@ class OptimizationMetric(Enum):
     PROFIT_FACTOR = "profit_factor"
     CALMAR_RATIO = "calmar_ratio"
     COMPOSITE_SCORE = "composite_score"
-
 
 @dataclass
 class OptimizationParameter:
@@ -73,7 +70,6 @@ class OptimizationParameter:
         """Create from dictionary."""
         return cls(**data)
 
-
 @dataclass
 class StrategyConfig:
     """Strategy configuration for optimization."""
@@ -100,7 +96,6 @@ class StrategyConfig:
         """Create from dictionary."""
         return cls(**data)
 
-
 @dataclass
 class OptimizationResult:
     """Optimization result data class."""
@@ -122,7 +117,6 @@ class OptimizationResult:
         if isinstance(data['timestamp'], str):
             data['timestamp'] = datetime.fromisoformat(data['timestamp'])
         return cls(**data)
-
 
 @dataclass
 class OptimizationConfig:
@@ -161,7 +155,6 @@ class OptimizationConfig:
         data['strategy_configs'] = [StrategyConfig.from_dict(config) for config in data['strategy_configs']]
         data['parameters_to_optimize'] = [OptimizationParameter.from_dict(param) for param in data['parameters_to_optimize']]
         return cls(**data)
-
 
 class OptimizerAgent(BaseAgent):
     """Agent for optimizing strategy combinations, thresholds, and indicators."""
@@ -1087,7 +1080,6 @@ class OptimizerAgent(BaseAgent):
             Optimization statistics
         """
         return self.optimization_stats
-
 
 def create_optimizer_agent(config: Optional[Dict[str, Any]] = None) -> OptimizerAgent:
     """Create an optimizer agent with default configuration.

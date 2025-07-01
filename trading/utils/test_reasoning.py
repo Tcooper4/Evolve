@@ -21,7 +21,6 @@ from utils.reasoning_logger import (
 )
 from utils.reasoning_display import ReasoningDisplay
 
-
 class TestReasoningLogger(unittest.TestCase):
     """Test the ReasoningLogger class."""
     
@@ -65,8 +64,7 @@ class TestReasoningLogger(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         shutil.rmtree(self.temp_dir)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_log_decision(self):
         """Test decision logging."""
         decision_id = self.logger.log_decision(**self.sample_decision_data)
@@ -79,8 +77,7 @@ class TestReasoningLogger(unittest.TestCase):
         self.assertIsNotNone(decision)
         self.assertEqual(decision.agent_name, 'TestAgent')
         self.assertEqual(decision.decision_type, DecisionType.FORECAST)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_get_decision(self):
         """Test retrieving a decision."""
         decision_id = self.logger.log_decision(**self.sample_decision_data)
@@ -90,8 +87,7 @@ class TestReasoningLogger(unittest.TestCase):
         self.assertEqual(decision.decision_id, decision_id)
         self.assertEqual(decision.agent_name, 'TestAgent')
         self.assertEqual(decision.context.symbol, 'AAPL')
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_get_agent_decisions(self):
         """Test retrieving decisions by agent."""
         # Log multiple decisions
@@ -105,8 +101,7 @@ class TestReasoningLogger(unittest.TestCase):
         
         for decision in decisions:
             self.assertEqual(decision.agent_name, 'TestAgent')
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_get_decisions_by_type(self):
         """Test retrieving decisions by type."""
         # Log decisions of different types
@@ -124,8 +119,7 @@ class TestReasoningLogger(unittest.TestCase):
         
         for decision in forecast_decisions:
             self.assertEqual(decision.decision_type, DecisionType.FORECAST)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_get_summary(self):
         """Test retrieving decision summary."""
         decision_id = self.logger.log_decision(**self.sample_decision_data)
@@ -135,8 +129,7 @@ class TestReasoningLogger(unittest.TestCase):
         self.assertIn('TestAgent', summary)
         self.assertIn('AAPL', summary)
         self.assertIn('Strong technical indicators', summary)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_get_explanation(self):
         """Test retrieving decision explanation."""
         decision_id = self.logger.log_decision(**self.sample_decision_data)
@@ -145,8 +138,7 @@ class TestReasoningLogger(unittest.TestCase):
         self.assertIsInstance(explanation, str)
         self.assertIn('TestAgent', explanation)
         self.assertIn('AAPL', explanation)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_get_statistics(self):
         """Test getting statistics."""
         # Log some decisions
@@ -164,8 +156,7 @@ class TestReasoningLogger(unittest.TestCase):
         
         self.assertGreaterEqual(stats['total_decisions'], 2)
         self.assertIn('TestAgent', stats['decisions_by_agent'])
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_clear_old_decisions(self):
         """Test clearing old decisions."""
         decision_id = self.logger.log_decision(**self.sample_decision_data)
@@ -181,8 +172,6 @@ class TestReasoningLogger(unittest.TestCase):
         decision = self.logger.get_decision(decision_id)
         self.assertIsNone(decision)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class TestReasoningDisplay(unittest.TestCase):
     """Test the ReasoningDisplay class."""
     
@@ -227,8 +216,7 @@ class TestReasoningDisplay(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         shutil.rmtree(self.temp_dir)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_display_decision_terminal(self):
         """Test terminal decision display."""
         decision_id = self.logger.log_decision(**self.sample_decision_data)
@@ -236,8 +224,7 @@ class TestReasoningDisplay(unittest.TestCase):
         
         # This should not raise an exception
         self.display.display_decision_terminal(decision)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_display_recent_decisions_terminal(self):
         """Test terminal recent decisions display."""
         # Log some decisions
@@ -246,8 +233,7 @@ class TestReasoningDisplay(unittest.TestCase):
         
         # This should not raise an exception
         self.display.display_recent_decisions_terminal(limit=5)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_display_statistics_terminal(self):
         """Test terminal statistics display."""
         # Log some decisions
@@ -255,8 +241,7 @@ class TestReasoningDisplay(unittest.TestCase):
         
         # This should not raise an exception
         self.display.display_statistics_terminal()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_display_decision_streamlit(self):
         """Test Streamlit decision display."""
         decision_id = self.logger.log_decision(**self.sample_decision_data)
@@ -264,8 +249,7 @@ class TestReasoningDisplay(unittest.TestCase):
         
         # This should not raise an exception
         self.display.display_decision_streamlit(decision)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_display_recent_decisions_streamlit(self):
         """Test Streamlit recent decisions display."""
         # Log some decisions
@@ -274,8 +258,7 @@ class TestReasoningDisplay(unittest.TestCase):
         
         # This should not raise an exception
         self.display.display_recent_decisions_streamlit(limit=5)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_display_statistics_streamlit(self):
         """Test Streamlit statistics display."""
         # Log some decisions
@@ -283,8 +266,7 @@ class TestReasoningDisplay(unittest.TestCase):
         
         # This should not raise an exception
         self.display.display_statistics_streamlit()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_create_streamlit_sidebar(self):
         """Test Streamlit sidebar creation."""
         # Log some decisions first
@@ -299,8 +281,6 @@ class TestReasoningDisplay(unittest.TestCase):
         self.assertIn('confidence', filters)
         self.assertIn('limit', filters)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class TestConvenienceFunctions(unittest.TestCase):
     """Test convenience functions."""
     
@@ -319,8 +299,7 @@ class TestConvenienceFunctions(unittest.TestCase):
     def tearDown(self):
         """Clean up test fixtures."""
         shutil.rmtree(self.temp_dir)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_log_forecast_decision(self):
         """Test forecast decision logging convenience function."""
         decision_id = log_forecast_decision(
@@ -341,8 +320,7 @@ class TestConvenienceFunctions(unittest.TestCase):
         
         self.assertIsInstance(decision_id, str)
         self.assertTrue(decision_id.startswith('TestForecaster_forecast_'))
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_log_strategy_decision(self):
         """Test strategy decision logging convenience function."""
         decision_id = log_strategy_decision(
@@ -363,8 +341,6 @@ class TestConvenienceFunctions(unittest.TestCase):
         self.assertIsInstance(decision_id, str)
         self.assertTrue(decision_id.startswith('TestStrategy_strategy_'))
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 class TestDataStructures(unittest.TestCase):
     """Test data structures."""
     
@@ -383,8 +359,7 @@ class TestDataStructures(unittest.TestCase):
         self.assertEqual(context.symbol, 'AAPL')
         self.assertEqual(context.timeframe, '1h')
         self.assertEqual(context.market_conditions['trend'], 'bullish')
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_decision_reasoning(self):
         """Test DecisionReasoning dataclass."""
         reasoning = DecisionReasoning(
@@ -399,8 +374,7 @@ class TestDataStructures(unittest.TestCase):
         self.assertEqual(reasoning.primary_reason, 'Technical analysis')
         self.assertEqual(len(reasoning.supporting_factors), 2)
         self.assertEqual(reasoning.confidence_explanation, 'High confidence')
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def test_agent_decision(self):
         """Test AgentDecision dataclass."""
         context = DecisionContext(
@@ -439,8 +413,6 @@ class TestDataStructures(unittest.TestCase):
         self.assertEqual(decision.decision_type, DecisionType.FORECAST)
         self.assertEqual(decision.confidence_level, ConfidenceLevel.HIGH)
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def run_tests():
     """Run all tests."""
     # Create test suite
@@ -462,8 +434,7 @@ def run_tests():
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(test_suite)
     
-    return {'success': True, 'result': result.wasSuccessful(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+    return result.wasSuccessful()
 
 if __name__ == '__main__':
     success = run_tests()

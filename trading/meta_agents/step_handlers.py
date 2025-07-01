@@ -26,8 +26,6 @@ class StepHandler(ABC):
     """Base class for step handlers."""
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     @abstractmethod
     async def execute(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the step with the given parameters."""
@@ -232,7 +230,7 @@ class DataProcessingStepHandler(StepHandler):
         """Filter the data based on conditions."""
         conditions = options.get("conditions", [])
         if not conditions:
-            return {'success': True, 'result': df.to_dict(orient="records"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return df.to_dict(orient="records")
         
         mask = pd.Series(True, index=df.index)
         for condition in conditions:
@@ -274,7 +272,7 @@ class DataProcessingStepHandler(StepHandler):
         aggregations = options.get("aggregations", {})
         
         if not group_by or not aggregations:
-            return {'success': True, 'result': df.to_dict(orient="records"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return df.to_dict(orient="records")
         
         result = df.groupby(group_by).agg(aggregations).reset_index()
         return result.to_dict(orient="records")
@@ -284,7 +282,7 @@ class DataProcessingStepHandler(StepHandler):
         transformations = options.get("transformations", [])
         
         if not transformations:
-            return {'success': True, 'result': df.to_dict(orient="records"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return df.to_dict(orient="records")
         
         for transform in transformations:
             column = transform.get("column")
@@ -325,7 +323,7 @@ class DataProcessingStepHandler(StepHandler):
         right_on = options.get("right_on")
         
         if not other_data or not left_on or not right_on:
-            return {'success': True, 'result': df.to_dict(orient="records"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return df.to_dict(orient="records")
         
         other_df = pd.DataFrame(other_data)
         result = pd.merge(df, other_df, left_on=left_on, right_on=right_on, how=join_type)
@@ -481,11 +479,10 @@ class StepHandlerFactory:
         """Get a handler for the specified action type."""
         handler_class = cls._handlers.get(action_type)
         if handler_class:
-            return {'success': True, 'result': handler_class(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return handler_class()
         return None
 
     @classmethod
     def register_handler(cls, action_type: str, handler_class: type) -> None:
         """Register a new handler class."""
         cls._handlers[action_type] = handler_class 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

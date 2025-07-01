@@ -25,18 +25,13 @@ class BaseNotifier:
     def __init__(self):
         """Initialize the base notifier."""
         self.enabled = False
-        self.last_notification = None
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def send(self, message: str, **kwargs) -> bool:
+        self.last_notification = Nonedef send(self, message: str, **kwargs) -> bool:
         """Send a notification (to be implemented by subclasses)."""
         raise NotImplementedError
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def is_enabled(self) -> bool:
         """Check if the notifier is enabled."""
-        return {'success': True, 'result': self.enabled, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return self.enabled
 
 class SlackNotifier(BaseNotifier):
     """Slack notification system."""
@@ -54,10 +49,7 @@ class SlackNotifier(BaseNotifier):
         if self.enabled:
             logger.info("✅ Slack notifications enabled")
         else:
-            logger.warning("⚠️ Slack webhook URL not provided")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def send(self, message: str, channel: str = "#trading-alerts", 
+            logger.warning("⚠️ Slack webhook URL not provided")def send(self, message: str, channel: str = "#trading-alerts", 
              username: str = "Trading Bot", icon_emoji: str = ":chart_with_upwards_trend:") -> bool:
         """Send a Slack notification.
         
@@ -93,8 +85,7 @@ class SlackNotifier(BaseNotifier):
             
         except Exception as e:
             logger.error(f"❌ Slack notification failed: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+            return False
 
 class EmailNotifier(BaseNotifier):
     """Email notification system."""
@@ -118,10 +109,7 @@ class EmailNotifier(BaseNotifier):
         if self.enabled:
             logger.info("✅ Email notifications enabled")
         else:
-            logger.warning("⚠️ Email password not configured")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def send(self, subject: str, message: str, to_email: str, 
+            logger.warning("⚠️ Email password not configured")def send(self, subject: str, message: str, to_email: str, 
              from_email: Optional[str] = None) -> bool:
         """Send an email notification.
         
@@ -161,8 +149,7 @@ class EmailNotifier(BaseNotifier):
             
         except Exception as e:
             logger.error(f"❌ Email notification failed: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+            return False
 
 class TradeLogger:
     """Centralized trade logging with notification capabilities."""
@@ -176,10 +163,7 @@ class TradeLogger:
         # Ensure log directory exists
         os.makedirs("logs", exist_ok=True)
         
-        logger.info("✅ Trade logger initialized")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def add_notifier(self, notifier: BaseNotifier) -> None:
+        logger.info("✅ Trade logger initialized")def add_notifier(self, notifier: BaseNotifier) -> None:
         """Add a notification system.
         
         Args:
@@ -251,7 +235,7 @@ class TradeLogger:
         Returns:
             List of recent trades
         """
-        return {'success': True, 'result': self.trade_log[-limit:] if self.trade_log else [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.trade_log[-limit:] if self.trade_log else []
     
     def get_trade_summary(self) -> Dict[str, Any]:
         """Get trade summary statistics.
@@ -260,8 +244,7 @@ class TradeLogger:
             Trade summary
         """
         if not self.trade_log:
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         total_trades = len(self.trade_log)
         total_volume = sum(trade.get('quantity', 0) for trade in self.trade_log)
         last_trade = self.trade_log[-1] if self.trade_log else None
@@ -271,7 +254,6 @@ class TradeLogger:
             "total_volume": total_volume,
             "last_trade": last_trade
         }
-
 
 # Global trade logger instance
 _trade_logger = None
@@ -285,4 +267,4 @@ def get_trade_logger() -> TradeLogger:
     global _trade_logger
     if _trade_logger is None:
         _trade_logger = TradeLogger()
-    return {'success': True, 'result': _trade_logger, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return _trade_logger

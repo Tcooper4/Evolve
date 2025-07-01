@@ -50,9 +50,7 @@ class RSIOptimizer:
         data: pd.DataFrame,
         slippage: float = 0.0001,
         transaction_cost: float = 0.0002,
-        verbose: bool = False
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        verbose: bool = False):
         """Initialize RSI optimizer.
         
         Args:
@@ -75,8 +73,7 @@ class RSIOptimizer:
         
         if self.verbose:
             logger.info(f"Detected regime: {self.regime_data['regime']}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def calculate_rsi(
         self,
         data: pd.Series,
@@ -98,7 +95,7 @@ class RSIOptimizer:
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         
-        return {'success': True, 'result': rsi, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return rsi
     
     def calculate_returns(
         self,
@@ -140,7 +137,14 @@ class RSIOptimizer:
         # Calculate equity curve
         equity_curve = (1 + strategy_returns).cumprod()
         
-        return {'success': True, 'result': strategy_returns, signals, equity_curve, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            'success': True, 
+            'result': strategy_returns, 
+            'signals': signals, 
+            'equity_curve': equity_curve, 
+            'message': 'Operation completed successfully', 
+            'timestamp': datetime.now().isoformat()
+        }
     
     def calculate_metrics(
         self,
@@ -179,7 +183,7 @@ class RSIOptimizer:
         recent_signals = signal_changes.rolling(20).sum()
         signal_confidence = 1 - (recent_signals / 20)
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'total_return': total_return,
             'annual_return': annual_return,
             'volatility': volatility,
@@ -270,7 +274,7 @@ class RSIOptimizer:
         elif objective == 'drawdown':
             results.sort(key=lambda x: x.metrics['max_drawdown'])
         
-        return {'success': True, 'result': results[:n_top], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results[:n_top]
     
     def plot_equity_curve(
         self,
@@ -301,7 +305,7 @@ class RSIOptimizer:
             template="plotly_white"
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def plot_drawdown(
         self,
@@ -333,7 +337,7 @@ class RSIOptimizer:
             template="plotly_white"
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     def plot_signals(
         self,
@@ -411,4 +415,4 @@ class RSIOptimizer:
             template="plotly_white"
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig

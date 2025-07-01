@@ -67,7 +67,7 @@ class MonitoringManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
 
     def setup_logging(self):
         """Initialize logging configuration."""

@@ -13,7 +13,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 def initialize_session_state() -> Dict[str, Any]:
     """Initialize Streamlit session state with core components.
     
@@ -88,7 +87,6 @@ def initialize_session_state() -> Dict[str, Any]:
             'timestamp': datetime.now().isoformat()
         }
 
-
 def initialize_system_modules() -> Dict[str, Any]:
     """Initialize system modules and return their status.
     
@@ -152,7 +150,6 @@ def initialize_system_modules() -> Dict[str, Any]:
     
     return module_status
 
-
 def display_system_status(module_status: Dict[str, Any]) -> Dict[str, Any]:
     """Display system status information in the Streamlit interface.
     
@@ -205,7 +202,6 @@ def display_system_status(module_status: Dict[str, Any]) -> Dict[str, Any]:
             'timestamp': datetime.now().isoformat()
         }
 
-
 def safe_session_get(key: str, default: Any = None) -> Any:
     """Safely get a value from session state with logging.
     
@@ -220,7 +216,6 @@ def safe_session_get(key: str, default: Any = None) -> Any:
         logger.debug(f"Session state key '{key}' not found, using default: {default}")
         return default
     return st.session_state[key]
-
 
 def safe_session_set(key: str, value: Any) -> Dict[str, Any]:
     """Safely set a value in session state with logging.
@@ -251,7 +246,6 @@ def safe_session_set(key: str, value: Any) -> Dict[str, Any]:
             'timestamp': datetime.now().isoformat(),
             'key': key
         }
-
 
 def update_last_updated() -> Dict[str, Any]:
     """Update the last_updated timestamp in session state.

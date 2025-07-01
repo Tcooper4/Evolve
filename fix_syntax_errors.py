@@ -36,10 +36,10 @@ def fix_file(file_path):
             content = re.sub(pattern, replacement, content, flags=re.MULTILINE | re.DOTALL)
         
         # Fix specific syntax errors
-        content = content.replace("return {'success': True, 'result': UpdateResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}", 
+        content = content.replace("return UpdateResult(", 
                                  "return UpdateResult(")
         
-        content = content.replace("return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}", 
+        content = content.replace("return {", 
                                  "return {")
         
         # Fix unexpected indents by removing inappropriate return statements

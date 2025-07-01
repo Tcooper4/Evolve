@@ -147,14 +147,14 @@ class TaskManager:
             if task_id not in self.tasks:
                 raise ValueError(f"Task {task_id} not found")
             
-            return {'success': True, 'result': self.tasks[task_id], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self.tasks[task_id]
         except Exception as e:
             self.logger.error(f"Error getting task status: {str(e)}")
             raise
     
     def list_tasks(self) -> List[str]:
         """List all tasks."""
-        return {'success': True, 'result': list(self.tasks.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.tasks.keys())
     
     def update_task(
         self,
@@ -162,7 +162,7 @@ class TaskManager:
         name: Optional[str] = None,
         args: Optional[List[Any]] = None,
         kwargs: Optional[Dict[str, Any]] = None
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     ) -> None:
         """Update a task."""
         try:
@@ -198,12 +198,10 @@ class TaskManager:
         except Exception as e:
             self.logger.error(f"Error deleting task: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def monitor_tasks(self):
         raise NotImplementedError('Pending feature')
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     async def start(self) -> None:
         """Start the task manager."""
         try:

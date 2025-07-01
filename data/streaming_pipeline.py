@@ -125,8 +125,7 @@ class InMemoryCache:
         
         # Update last update time
         self.last_update[symbol][timeframe] = datetime.now()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_data(self, 
                  symbol: str, 
                  timeframe: str, 
@@ -149,7 +148,7 @@ class InMemoryCache:
         
         if symbol not in self.cache or timeframe not in self.cache[symbol]:
             self.miss_count += 1
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
         
         data_list = list(self.cache[symbol][timeframe])
         
@@ -170,8 +169,7 @@ class InMemoryCache:
     def get_latest_data(self, symbol: str, timeframe: str) -> Optional[MarketData]:
         """Get latest data point for symbol/timeframe."""
         data_list = self.get_data(symbol, timeframe, limit=1)
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def get_dataframe(self, 
                      symbol: str, 
                      timeframe: str,
@@ -180,7 +178,7 @@ class InMemoryCache:
         data_list = self.get_data(symbol, timeframe, limit=limit)
         
         if not data_list:
-            return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return pd.DataFrame()
         
         # Convert to DataFrame
         df_data = []
@@ -223,8 +221,7 @@ class InMemoryCache:
                 del self.metadata[cache_key]
             if symbol in self.last_update and timeframe in self.last_update[symbol]:
                 del self.last_update[symbol][timeframe]
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         total_data_points = sum(
@@ -253,10 +250,7 @@ class DataProvider:
             api_key: API key for the provider
         """
         self.api_key = api_key
-        self.session = None
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    async def connect(self):
+        self.session = Noneasync def connect(self):
         """Connect to data provider."""
         raise NotImplementedError
     
@@ -289,10 +283,7 @@ class PolygonDataProvider(DataProvider):
         super().__init__(api_key)
         self.base_url = "wss://delayed.polygon.io"
         self.rest_url = "https://api.polygon.io"
-        self.websocket = None
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    async def connect(self):
+        self.websocket = Noneasync def connect(self):
         """Connect to Polygon websocket."""
         try:
             self.websocket = await websockets.connect(
@@ -371,10 +362,7 @@ class YFinanceDataProvider(DataProvider):
     
     def __init__(self):
         """Initialize YFinance provider."""
-        super().__init__()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    async def connect(self):
+        super().__init__()async def connect(self):
         """Connect to YFinance (no connection needed)."""
         pass
     
@@ -477,8 +465,7 @@ class StreamingPipeline:
         """
         self.providers[name] = provider
         logger.info(f"Added data provider: {name}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def add_data_callback(self, callback: Callable[[MarketData], None]):
         """Add data callback.
         
@@ -486,8 +473,7 @@ class StreamingPipeline:
             callback: Function to call when new data arrives
         """
         self.data_callbacks.append(callback)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def add_error_callback(self, callback: Callable[[Exception], None]):
         """Add error callback.
         
@@ -495,8 +481,7 @@ class StreamingPipeline:
             callback: Function to call when error occurs
         """
         self.error_callbacks.append(callback)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def add_trigger(self, trigger: DataTrigger):
         """Add data trigger.
         
@@ -506,8 +491,7 @@ class StreamingPipeline:
         with self.trigger_lock:
             self.triggers.append(trigger)
         logger.info(f"Added trigger: {trigger.symbol} {trigger.condition} {trigger.threshold}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def remove_trigger(self, symbol: str, condition: str):
         """Remove data trigger.
         
@@ -518,8 +502,7 @@ class StreamingPipeline:
         with self.trigger_lock:
             self.triggers = [t for t in self.triggers 
                            if not (t.symbol == symbol and t.condition == condition)]
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     async def start_streaming(self):
         """Start streaming data."""
         if self.is_running:
@@ -745,4 +728,4 @@ def create_streaming_pipeline(symbols: List[str],
         yfinance_provider = YFinanceDataProvider()
         pipeline.add_provider("yfinance", yfinance_provider)
     
-    return {'success': True, 'result': pipeline, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return pipeline

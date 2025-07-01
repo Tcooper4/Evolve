@@ -487,7 +487,7 @@ class ModelBuilder:
                            test_data: pd.DataFrame,
                            target_column: str) -> Dict[str, float]:
         """Evaluate LSTM model performance."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'mse': np.random.uniform(0.01, 0.05),
             'mae': np.random.uniform(0.05, 0.15),
             'r2': np.random.uniform(0.6, 0.9),
@@ -501,7 +501,7 @@ class ModelBuilder:
                                   test_data: pd.DataFrame,
                                   target_column: str) -> Dict[str, float]:
         """Evaluate Transformer model performance."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'mse': np.random.uniform(0.01, 0.04),
             'mae': np.random.uniform(0.03, 0.12),
             'r2': np.random.uniform(0.7, 0.95),
@@ -515,7 +515,7 @@ class ModelBuilder:
                                test_data: pd.DataFrame,
                                target_column: str) -> Dict[str, float]:
         """Evaluate Ensemble model performance."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'mse': np.random.uniform(0.008, 0.03),
             'mae': np.random.uniform(0.02, 0.10),
             'r2': np.random.uniform(0.75, 0.98),
@@ -529,10 +529,9 @@ class ModelBuilder:
         """Get default parameters for a model type."""
         return {'success': True, 'result': self.default_params.get(model_type, {}), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
-
 # Global model builder instance
 model_builder = ModelBuilder()
 
 def get_model_builder() -> ModelBuilder:
     """Get the global model builder instance."""
-    return {'success': True, 'result': model_builder, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return model_builder

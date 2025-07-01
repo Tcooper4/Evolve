@@ -1,3 +1,9 @@
+"""
+Flask Web API for Trading System
+
+This module provides a RESTful API for portfolio management, risk analysis, and backtesting.
+"""
+
 from typing import Dict, Any, Optional, Callable, List
 from datetime import datetime
 import asyncio
@@ -26,7 +32,7 @@ class AssetRequest(BaseModel):
     def validate_asset(cls, v: str) -> str:
         if not v.isalnum():
             raise ValueError('Asset symbol must be alphanumeric')
-        return {'success': True, 'result': v.upper(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return v.upper()
 
 class BacktestRequest(BaseModel):
     strategy: str = Field(..., description="Strategy name")
@@ -48,7 +54,7 @@ def token_required(f: Callable) -> Callable:
         except jwt.ExpiredSignatureError:
             return jsonify({'error': 'Token has expired'}), 401
         except jwt.InvalidTokenError:
-            return {'success': True, 'result': {'success': True, 'result': jsonify({'error': 'Invalid token'}), 401, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return jsonify({'error': 'Invalid token'}), 401
         return f(current_user, *args, **kwargs)
     return decorated
 
@@ -59,25 +65,24 @@ class APIError(Exception):
         self.status_code = status_code
         super().__init__(self.message)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 @app.errorhandler(APIError)
 def handle_api_error(error: APIError) -> Any:
     response = jsonify({'error': error.message})
     response.status_code = error.status_code
-    return {'success': True, 'result': response, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return response
 
 # Service initialization
 def get_risk_manager() -> RiskManager:
     """Initialize and return risk manager instance."""
     if not hasattr(app, 'risk_manager'):
         app.risk_manager = RiskManager()
-    return {'success': True, 'result': app.risk_manager, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return app.risk_manager
 
 def get_backtester() -> Backtester:
     """Initialize and return backtester instance."""
     if not hasattr(app, 'backtester'):
         app.backtester = Backtester()
-    return {'success': True, 'result': app.backtester, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return app.backtester
 
 # Routes
 @app.route('/portfolio', methods=['GET'])
@@ -87,7 +92,7 @@ def get_portfolio(current_user: str) -> Any:
     try:
         portfolio_value = portfolio_manager.get_portfolio_value()
         composition = portfolio_manager.get_portfolio_composition()
-        return {'success': True, 'result': jsonify({, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return jsonify({
             'portfolio_value': portfolio_value,
             'composition': composition,
             'timestamp': datetime.now().isoformat()
@@ -103,7 +108,7 @@ def add_asset(current_user: str) -> Any:
     try:
         data = AssetRequest(**request.json)
         portfolio_manager.add_asset(data.asset, data.quantity, data.price)
-        return {'success': True, 'result': jsonify({, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return jsonify({
             'message': 'Asset added successfully',
             'asset': data.asset,
             'quantity': data.quantity,
@@ -127,7 +132,7 @@ def get_risk_metrics(current_user: str) -> Any:
         max_drawdown = risk_manager.calculate_max_drawdown()
         volatility = risk_manager.calculate_volatility()
         
-        return {'success': True, 'result': jsonify({, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return jsonify({
             'var': var,
             'cvar': cvar,
             'max_drawdown': max_drawdown,
@@ -155,7 +160,7 @@ def run_backtest(current_user: str) -> Any:
             
         results = backtester.run_backtest(data.strategy, df)
         
-        return {'success': True, 'result': jsonify({, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return jsonify({
             'message': 'Backtest completed successfully',
             'results': {
                 'sharpe_ratio': results.get('sharpe_ratio'),

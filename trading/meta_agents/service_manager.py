@@ -130,14 +130,14 @@ class ServiceManager:
             if service_name not in self.services:
                 raise ValueError(f"Service {service_name} not found")
             
-            return {'success': True, 'result': self.services[service_name], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self.services[service_name]
         except Exception as e:
             self.logger.error(f"Error getting service status: {str(e)}")
             raise
     
     def list_services(self) -> List[str]:
         """List all services."""
-        return {'success': True, 'result': list(self.services.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.services.keys())
     
     async def monitor_services(self, interval: int = 60):
         """Monitor services at regular intervals."""
@@ -156,7 +156,7 @@ class ServiceManager:
         self,
         service_name: str,
         config: Dict[str, Any]
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     ) -> None:
         """Update service configuration."""
         try:
@@ -217,4 +217,3 @@ class ServiceManager:
     
     def health_check(self):
         raise NotImplementedError('Pending feature') 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

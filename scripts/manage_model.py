@@ -71,7 +71,7 @@ class ModelManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -115,7 +115,7 @@ class ModelManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to train model: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def evaluate_model(self, model_type: str, data_path: str):
         """Evaluate a trained model."""
@@ -142,7 +142,7 @@ class ModelManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to evaluate model: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def optimize_model(self, model_type: str, data_path: str):
         """Optimize model hyperparameters."""
@@ -198,7 +198,7 @@ class ModelManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to optimize model: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def _load_data(self, data_path: str) -> pd.DataFrame:
         """Load data from file."""
@@ -206,7 +206,7 @@ class ModelManager:
             if data_path.endswith(".csv"):
                 return pd.read_csv(data_path)
             elif data_path.endswith(".json"):
-                return {'success': True, 'result': pd.read_json(data_path), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return pd.read_json(data_path)
             else:
                 raise ValueError(f"Unsupported file format: {data_path}")
         except Exception as e:

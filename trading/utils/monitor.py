@@ -42,9 +42,7 @@ class SystemMonitor:
         agent_id: str,
         config: Optional[Dict] = None,
         log_dir: Optional[Union[str, Path]] = None,
-        test_mode: bool = False
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        test_mode: bool = False):
         """Initialize the system monitor.
         
         Args:
@@ -359,7 +357,7 @@ class SystemMonitor:
         Returns:
             Dict containing monitor status
         """
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "agent_id": self.agent_id,
             "hostname": self.hostname,
             "platform": self.platform,

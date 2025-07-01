@@ -73,13 +73,9 @@ def render_forecast_page():
             st.error(f"Error generating forecast: {str(e)}")
             st.session_state.forecast_results = None
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     render_forecast_page()
 
 def main():
     """Main function for the forecast page."""
     render_forecast_page()
-
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

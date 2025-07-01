@@ -344,7 +344,7 @@ class SelfImprovingAgent(BaseAgent):
                 
             self.task_memory.update_task(task)
             
-        return {'success': True, 'result': improvements, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return improvements
         
     def _get_model_performance(self, model_id: str) -> Dict[str, Any]:
         """
@@ -413,7 +413,7 @@ def run_self_improvement() -> Dict[str, Dict[str, Any]]:
     agent = SelfImprovingAgent()
     recommendations = agent.analyze_performance()
     agent.save_recommendations(recommendations)
-    return {'success': True, 'result': recommendations, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return recommendations
 
 if __name__ == "__main__":
     # Configure logging

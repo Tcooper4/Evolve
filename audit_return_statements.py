@@ -35,7 +35,7 @@ class ReturnStatementAuditor:
         for file_path in python_files:
             self._audit_file(file_path)
         
-        return {'success': True, 'result': self._generate_report(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self._generate_report()
     
     def _find_python_files(self, root_dir: str) -> List[str]:
         """Find all Python files in the codebase."""
