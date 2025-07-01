@@ -48,8 +48,7 @@ class Registry:
         self._models: Dict[str, ModelConfig] = {}
         self._strategies: Dict[str, StrategyConfig] = {}
         self._load_configurations()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def _load_configurations(self) -> None:
         """Load model and strategy configurations from JSON files."""
         config_dir = Path(__file__).parent / "configs"

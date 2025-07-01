@@ -6,8 +6,25 @@ from pathlib import Path
 from typing import Dict, Any
 import pandas as pd
 import numpy as np
-import pandas_ta as ta
-from datetime import datetime
+from typing import Dict, List, Optional, Tuple, Union
+from datetime import datetime, timedelta
+import warnings
+warnings.filterwarnings('ignore')
+
+# Try to import pandas_ta, with fallback
+try:
+    import pandas_ta as ta
+    PANDAS_TA_AVAILABLE = True
+except ImportError as e:
+    PANDAS_TA_AVAILABLE = False
+    ta = None
+    logging.warning(f"pandas_ta not available: {e}")
+except Exception as e:
+    PANDAS_TA_AVAILABLE = False
+    ta = None
+    logging.warning(f"pandas_ta import error: {e}")
+
+from core.utils.common_helpers import normalize_indicator_name
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -65,7 +82,11 @@ def generate_rsi_signals(
                 logger.info(f"Using optimized RSI settings for {ticker}")
         
         # Calculate RSI
-        df['rsi'] = ta.rsi(df['Close'], length=period)
+        if PANDAS_TA_AVAILABLE and ta is not None:
+            df['rsi'] = ta.rsi(df['Close'], length=period)
+        else:
+            df['rsi'] = calculate_rsi_fallback(df['Close'], period)
+            logger.info("Using fallback RSI calculation")
         
         # Generate signals
         df['signal'] = 0
@@ -151,4 +172,36 @@ def generate_signals(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
     except Exception as e:
         error_msg = f"Error generating RSI signals: {str(e)}"
         logger.error(error_msg)
-        raise RuntimeError(error_msg) 
+        raise RuntimeError(error_msg)
+
+def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
+    """Calculate RSI using a fallback implementation when pandas_ta is not available.
+    
+    Args:
+        prices: Price series
+        period: RSI period
+        
+    Returns:
+        RSI values
+    """
+    try:
+        # Calculate price changes
+        delta = prices.diff()
+        
+        # Separate gains and losses
+        gains = delta.where(delta > 0, 0)
+        losses = -delta.where(delta < 0, 0)
+        
+        # Calculate average gains and losses
+        avg_gains = gains.rolling(window=period).mean()
+        avg_losses = losses.rolling(window=period).mean()
+        
+        # Calculate RS and RSI
+        rs = avg_gains / avg_losses
+        rsi = 100 - (100 / (1 + rs))
+        
+        return rsi
+        
+    except Exception as e:
+        logger.error(f"Error calculating RSI fallback: {e}")
+        return pd.Series([np.nan] * len(prices), index=prices.index) 

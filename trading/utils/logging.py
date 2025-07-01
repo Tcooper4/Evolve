@@ -16,7 +16,8 @@ class LogManager:
             log_dir (str): Directory to store log files
         """
         self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(parents=True, exist_ok=True)
+        _ = self.log_dir.mkdir(parents=True, exist_ok=True)
+        return None
     
     def setup_logger(self, name: str, level: int = logging.INFO) -> logging.Logger:
         """Set up a logger with file and console handlers.

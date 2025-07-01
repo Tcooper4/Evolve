@@ -282,8 +282,9 @@ class PairsTradingEngine:
                     y = window_series1
                     model = OLS(y, X).fit()
                     ratios.iloc[i] = model.params[1]
-                except:
+                except (ValueError, TypeError, np.linalg.LinAlgError) as e:
                     # Use previous ratio if regression fails
+                    self.logger.debug(f"Regression failed for window {i}: {e}")
                     ratios.iloc[i] = ratios.iloc[i-1] if i > window else 1.0
             
             return ratios

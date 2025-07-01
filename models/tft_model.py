@@ -25,6 +25,17 @@ try:
 except ImportError as e:
     logging.warning(f"PyTorch Lightning not available: {e}")
     LIGHTNING_AVAILABLE = False
+    # Create dummy base class for when Lightning is not available
+    class DummyLightningModule:
+        def __init__(self):
+            pass
+        def save_hyperparameters(self):
+            pass
+        def log(self, *args, **kwargs):
+            pass
+        def configure_optimizers(self):
+            return {}
+    pl = type('pl', (), {'LightningModule': DummyLightningModule})()
 
 # Data handling
 try:

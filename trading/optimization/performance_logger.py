@@ -13,11 +13,15 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Add file handler for debug logs
-debug_handler = logging.FileHandler('trading/optimization/logs/optimization_debug.log')
-debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-debug_handler.setFormatter(debug_formatter)
-logger.addHandler(debug_handler)
+try:
+    debug_handler = logging.FileHandler('trading/optimization/logs/optimization_debug.log')
+    debug_handler.setLevel(logging.DEBUG)
+    debug_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    debug_handler.setFormatter(debug_formatter)
+    logger.addHandler(debug_handler)
+except Exception as e:
+    # Fallback to basic logging if file handler fails
+    pass
 
 class PerformanceMetrics(BaseModel):
     """Performance metrics for a strategy run."""
@@ -34,7 +38,11 @@ class PerformanceMetrics(BaseModel):
     reason: str = Field("", description="Reason for the run")
     
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary."""
+        """Convert to dictionary.
+        
+        Returns:
+            Dictionary representation
+        """
         return {
             "timestamp": self.timestamp.isoformat(),
             "strategy": self.strategy,
@@ -84,7 +92,7 @@ class PerformanceLogger:
         self.metrics_file = os.path.join(log_dir, "optimization_metrics.jsonl")
         
         try:
-            os.makedirs(log_dir, exist_ok=True)
+            _ = os.makedirs(log_dir, exist_ok=True)
         except Exception as e:
             logger.error(f"Failed to create log_dir: {e}")
         
@@ -214,6 +222,7 @@ class PerformanceLogger:
             
         except Exception as e:
             logger.error(f"Error getting best config: {e}")
+            return None
 
     def analyze_performance(self, strategy: str,
                           window_days: int = 30) -> Dict[str, Any]:

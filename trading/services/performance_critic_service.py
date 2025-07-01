@@ -37,7 +37,9 @@ class PerformanceCriticService(BaseService):
         self.agent = PerformanceCriticAgent()
         self.memory = AgentMemory()
         
-        logger.info("PerformanceCriticService initialized")def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        logger.info("PerformanceCriticService initialized")
+
+    def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming model evaluation requests.
         

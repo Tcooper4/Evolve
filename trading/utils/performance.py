@@ -125,6 +125,7 @@ class PerformanceMonitor:
     def stop_monitoring(self) -> None:
         """Stop the monitoring process."""
         if not self.active:
+            return
 
         self.logger.info("Stopping performance monitoring...")
         self.active = False
@@ -270,6 +271,7 @@ class PerformanceMonitor:
             metric: Metric to evaluate
         """
         if not metric.threshold:
+            return
 
         # Calculate severity thresholds
         warning_threshold = metric.threshold * self.config["alert_severities"]["warning"]

@@ -67,7 +67,9 @@ class EnvironmentManager:
         self.logger = logging.getLogger("EnvironmentManager")
         self.env_file = env_file
         self.settings = None
-        self._load_environment()def _load_environment(self):
+        self._load_environment()
+
+    def _load_environment(self):
         """Load environment variables from file and system."""
         try:
             # Load from .env file if specified

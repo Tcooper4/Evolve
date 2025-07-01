@@ -44,7 +44,9 @@ class InstitutionalDashboard:
         )
         
         # Custom CSS
-        self.setup_custom_css()def initialize_system(self):
+        self.setup_custom_css()
+
+    def initialize_system(self):
         """Initialize the institutional trading system."""
         if SYSTEM_AVAILABLE:
             try:

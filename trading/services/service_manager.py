@@ -137,8 +137,7 @@ class ServiceManager:
         self._subscribe_to_services()
         
         logger.info("ServiceManager initialized")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def _subscribe_to_services(self):
         """Subscribe to all service output channels."""
         channels = [f"{service_name}_output" for service_name in self.services.keys()]

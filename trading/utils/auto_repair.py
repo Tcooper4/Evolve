@@ -45,12 +45,6 @@ class AutoRepair:
             'transformers': False,
             'environment': False
         }
-        
-        return {
-            'success': True,
-            'message': 'AutoRepair system initialized successfully',
-            'timestamp': datetime.now().isoformat()
-        }
 
     def _get_system_info(self) -> Dict[str, str]:
         """Get system information for diagnostics."""

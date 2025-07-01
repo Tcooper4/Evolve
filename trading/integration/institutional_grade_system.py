@@ -243,7 +243,8 @@ class InstitutionalGradeSystem:
             class FallbackModule:
                 def __init__(self, name):
                     self.name = name
-                return def get_status(self):
+                
+                def get_status(self):
                     return {'success': True, 'result': {'status': 'fallback', 'module': self.name}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
             module_names = [

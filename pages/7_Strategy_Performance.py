@@ -24,6 +24,7 @@ PERF_ANALYSIS = "memory/performance_analysis.json"
 def load_performance_data():
     """Load and process performance data from log file."""
     if not os.path.exists(PERF_LOG):
+        return pd.DataFrame()
 
     with open(PERF_LOG, "r") as f:
         data = json.load(f)
@@ -48,7 +49,7 @@ def plot_metric_timeseries(df, metric, ticker=None, model=None):
     """Create interactive time series plot for a specific metric."""
     # Filter data
     plot_df = df.copy()
-    if ticker:
+    if ticker and ticker != "All" and "ticker" in plot_df.columns:
         plot_df = plot_df[plot_df["ticker"] == ticker]
     if model:
         plot_df = plot_df[plot_df["model"] == model]
@@ -94,7 +95,7 @@ def plot_metric_distribution(df, metric, ticker=None):
     """Create distribution plot for a specific metric."""
     # Filter data
     plot_df = df.copy()
-    if ticker:
+    if ticker and ticker != "All" and "ticker" in plot_df.columns:
         plot_df = plot_df[plot_df["ticker"] == ticker]
     
     # Create figure
@@ -129,7 +130,7 @@ def plot_metric_heatmap(df, metric, ticker=None):
     """Create heatmap of metric values by model and agentic status."""
     # Filter data
     plot_df = df.copy()
-    if ticker:
+    if ticker and ticker != "All" and "ticker" in plot_df.columns:
         plot_df = plot_df[plot_df["ticker"] == ticker]
     
     # Calculate average metric by model and agentic status
@@ -169,7 +170,7 @@ def create_snapshot_chart(df, metric, ticker=None):
     """Create a static snapshot chart for export."""
     # Filter data
     plot_df = df.copy()
-    if ticker:
+    if ticker and ticker != "All" and "ticker" in plot_df.columns:
         plot_df = plot_df[plot_df["ticker"] == ticker]
     
     # Create figure
@@ -261,27 +262,38 @@ def main():
     with st.sidebar:
         st.header("Filters")
         
-        # Ticker selection
-        tickers = sorted(df["ticker"].unique())
-        selected_ticker = st.selectbox("Select Ticker", ["All"] + list(tickers))
+        # Ticker selection - check if ticker column exists
+        if "ticker" in df.columns and not df.empty:
+            tickers = sorted(df["ticker"].unique())
+            selected_ticker = st.selectbox("Select Ticker", ["All"] + list(tickers))
+        else:
+            selected_ticker = "All"
+            st.info("No ticker data available")
         
         # Date range selection
-        min_date = df["date"].min()
-        max_date = df["date"].max()
-        date_range = st.date_input(
-            "Date Range",
-            value=(min_date, max_date),
-            min_value=min_date,
-            max_value=max_date
-        )
+        if not df.empty:
+            min_date = df["date"].min()
+            max_date = df["date"].max()
+            date_range = st.date_input(
+                "Date Range",
+                value=(min_date, max_date),
+                min_value=min_date,
+                max_value=max_date
+            )
+        else:
+            date_range = (datetime.now().date(), datetime.now().date())
         
         # Model selection
-        models = sorted(df["model"].unique())
-        selected_models = st.multiselect(
-            "Select Models",
-            options=models,
-            default=models
-        )
+        if "model" in df.columns and not df.empty:
+            models = sorted(df["model"].unique())
+            selected_models = st.multiselect(
+                "Select Models",
+                options=models,
+                default=models
+            )
+        else:
+            selected_models = []
+            st.info("No model data available")
         
         # Metric selection
         metrics = ["sharpe", "accuracy", "win_rate"]
@@ -289,14 +301,14 @@ def main():
     
     # Apply filters
     filtered_df = df.copy()
-    if selected_ticker != "All":
+    if selected_ticker != "All" and "ticker" in filtered_df.columns:
         filtered_df = filtered_df[filtered_df["ticker"] == selected_ticker]
-    if len(date_range) == 2:
+    if len(date_range) == 2 and not filtered_df.empty:
         filtered_df = filtered_df[
             (filtered_df["date"] >= date_range[0]) &
             (filtered_df["date"] <= date_range[1])
         ]
-    if selected_models:
+    if selected_models and "model" in filtered_df.columns:
         filtered_df = filtered_df[filtered_df["model"].isin(selected_models)]
     
     # Main content
