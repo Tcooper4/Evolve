@@ -508,12 +508,12 @@ def log_error_with_context(
     error: Exception,
     context: Dict[str, Any] = None
 ) -> Dict[str, Any]:
-    """Log error with additional context.
+    """Log an error with additional context.
     
     Args:
-        logger: Logger to use
+        logger: Logger instance
         error: Exception to log
-        context: Additional context
+        context: Additional context dictionary
         
     Returns:
         Dictionary with status and message
@@ -525,9 +525,76 @@ def log_error_with_context(
             'context': context or {}
         }
         
-        logger.error("Error occurred", extra=error_data, exc_info=True)
-        
-        return {'success': True, 'message': 'Error logged with context', 'timestamp': datetime.now().isoformat()}
-        
+        logger.error(f"Error occurred: {error_data}")
+        return {"status": "success", "message": "Error logged with context"}
     except Exception as e:
-        return {'success': False, 'error': str(e), 'timestamp': datetime.now().isoformat()} 
+        return {"status": "error", "message": f"Failed to log error: {str(e)}"}
+
+def close_loggers(logger_names: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Close log handlers to prevent file locks and memory leaks.
+    
+    Args:
+        logger_names: List of logger names to close. If None, closes all loggers.
+        
+    Returns:
+        Dictionary with status and closed logger count
+    """
+    try:
+        closed_count = 0
+        
+        if logger_names is None:
+            # Close all loggers
+            loggers = [logging.getLogger(name) for name in logging.root.manager.loggerDict]
+            loggers.append(logging.getLogger())  # Include root logger
+        else:
+            # Close specific loggers
+            loggers = [logging.getLogger(name) for name in logger_names]
+        
+        for logger in loggers:
+            # Close all handlers for this logger
+            for handler in logger.handlers[:]:
+                try:
+                    handler.close()
+                    logger.removeHandler(handler)
+                    closed_count += 1
+                except Exception as e:
+                    # Log the error but continue with other handlers
+                    print(f"Warning: Failed to close handler for logger {logger.name}: {e}")
+        
+        return {
+            "status": "success",
+            "message": f"Closed {closed_count} log handlers",
+            "closed_count": closed_count
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to close loggers: {str(e)}",
+            "closed_count": 0
+        }
+
+def cleanup_logging_resources() -> Dict[str, Any]:
+    """Clean up all logging resources and reset logging configuration.
+    
+    Returns:
+        Dictionary with cleanup status
+    """
+    try:
+        # Close all loggers
+        close_result = close_loggers()
+        
+        # Reset root logger configuration
+        root_logger = logging.getLogger()
+        root_logger.handlers.clear()
+        root_logger.setLevel(logging.WARNING)
+        
+        return {
+            "status": "success",
+            "message": "Logging resources cleaned up successfully",
+            "closed_handlers": close_result.get("closed_count", 0)
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to cleanup logging resources: {str(e)}"
+        } 
