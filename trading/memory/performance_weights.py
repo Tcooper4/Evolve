@@ -47,7 +47,7 @@ def export_weights_to_file(ticker: str, strategy: str = "balanced") -> Dict[str,
         
     except Exception as e:
         print(f"Error exporting weights: {e}")
-        return {'success': True, 'result': {"lstm": 1.0}  # Fallback to single model, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {"lstm": 1.0}  # Fallback to single model
 
 def get_latest_weights(ticker: str = "AAPL") -> Dict[str, float]:
     """

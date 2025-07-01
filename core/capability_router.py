@@ -13,7 +13,6 @@ import streamlit as st
 
 logger = logging.getLogger(__name__)
 
-
 class CapabilityRouter:
     """Centralized router for managing system capabilities and fallbacks."""
     
@@ -88,8 +87,7 @@ class CapabilityRouter:
             self._check_plotly,
             fallback=self._fallback_no_plotly
         )
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def register_capability(
         self, 
         name: str, 
@@ -291,7 +289,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _check_redis(self) -> bool:
         """Check if Redis connection is available."""
@@ -301,7 +299,7 @@ class CapabilityRouter:
             r.ping()
             return True
         except Exception:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _check_postgres(self) -> bool:
         """Check if PostgreSQL connection is available."""
@@ -311,7 +309,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _check_alpha_vantage(self) -> bool:
         """Check if Alpha Vantage API is available."""
@@ -319,7 +317,7 @@ class CapabilityRouter:
             import os
             return os.getenv('ALPHA_VANTAGE_API_KEY') is not None
         except Exception:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _check_yfinance(self) -> bool:
         """Check if yfinance is available."""
@@ -329,7 +327,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _check_torch(self) -> bool:
         """Check if PyTorch is available."""
@@ -339,7 +337,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _check_streamlit(self) -> bool:
         """Check if Streamlit is available."""
@@ -349,7 +347,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _check_plotly(self) -> bool:
         """Check if Plotly is available."""
@@ -359,7 +357,7 @@ class CapabilityRouter:
         except ImportError:
             return False
         except Exception:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     # Fallback methods
     def _fallback_no_llm(self):
@@ -407,7 +405,6 @@ class CapabilityRouter:
         logger.warning("Plotly not available, using matplotlib fallback")
         return {'success': True, 'result': {"status": "fallback", "method": "matplotlib"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
-
 # Global instance
 _capability_router = CapabilityRouter()
 
@@ -421,7 +418,7 @@ def check_capability(name: str) -> bool:
     Returns:
         True if capability is available, False otherwise
     """
-    return {'success': True, 'result': _capability_router.check_capability(name), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return _capability_router.check_capability(name)
 
 def safe_call(capability_name: str, func: Callable, *args, fallback_value: Any = None, **kwargs):
     """Safely call a function that requires a capability.
@@ -456,7 +453,7 @@ def get_capability_status() -> Dict[str, bool]:
     Returns:
         Dictionary mapping capability names to their availability status
     """
-    return {'success': True, 'result': _capability_router.get_capability_status(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return _capability_router.get_capability_status()
 
 def register_capability(name: str, check_func: Callable[[], bool], fallback: Optional[Callable] = None):
     """Register a capability with its check function and optional fallback.
@@ -468,14 +465,13 @@ def register_capability(name: str, check_func: Callable[[], bool], fallback: Opt
     """
     _capability_router.register_capability(name, check_func, fallback)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def get_system_health() -> Dict[str, Any]:
     """Get overall system health based on capabilities.
     
     Returns:
         Dictionary containing system health information
     """
-    return {'success': True, 'result': _capability_router.get_system_health(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return _capability_router.get_system_health()
 
 def get_fallback_log(limit: int = 10) -> list:
     """Get recent fallback logs.
@@ -486,4 +482,4 @@ def get_fallback_log(limit: int = 10) -> list:
     Returns:
         List of recent fallback logs
     """
-    return {'success': True, 'result': _capability_router.get_fallback_log(limit), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return _capability_router.get_fallback_log(limit)

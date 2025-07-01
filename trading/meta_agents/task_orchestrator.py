@@ -51,7 +51,7 @@ class TaskOrchestrator:
             return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _register_task_handlers(self) -> Dict[str, Any]:
         """Register task handlers for different task types."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "data_collection": self._handle_data_collection,
             "model_training": self._handle_model_training,
             "backtesting": self._handle_backtesting,

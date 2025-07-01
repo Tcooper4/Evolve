@@ -44,10 +44,7 @@ class APIService:
         self.load_config()
         self.setup_app()
         self.setup_routes()
-        self.setup_middleware()
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self) -> None:
+        self.setup_middleware()def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/api")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -71,8 +68,7 @@ class APIService:
         except Exception as e:
             self.logger.error(f"Error loading config: {str(e)}")
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def setup_app(self) -> None:
         """Set up FastAPI application."""
         self.app = FastAPI(
@@ -123,7 +119,7 @@ class APIService:
                 user = await self.get_user(token)
                 if not user:
                     raise HTTPException(status_code=401, detail="Invalid token")
-                return {'success': True, 'result': user, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return user
             except Exception as e:
                 self.logger.error(f"Get user error: {str(e)}")
                 raise HTTPException(status_code=500, detail=str(e))
@@ -136,8 +132,7 @@ class APIService:
     def verify_credentials(self, username: str, password: str) -> Optional[User]:
         """Verify user credentials."""
         raise NotImplementedError('Pending feature')
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def generate_token(self, user: User) -> str:
         """Generate JWT token."""
         try:
@@ -154,8 +149,7 @@ class APIService:
     def get_user(self, token: str) -> Optional[User]:
         """Get user from token."""
         raise NotImplementedError('Pending feature')
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     async def start(self) -> None:
         """Start API service."""
         try:
@@ -188,6 +182,5 @@ def main():
         logging.error(f"Error in API service: {str(e)}")
         raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

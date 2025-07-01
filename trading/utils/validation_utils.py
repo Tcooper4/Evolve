@@ -31,9 +31,7 @@ class DataValidator:
         min_rows: int = 1,
         max_rows: Optional[int] = None,
         allow_missing: bool = False,
-        allow_duplicates: bool = False
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        allow_duplicates: bool = False):
         """Initialize data validator.
         
         Args:
@@ -116,10 +114,7 @@ class ParameterValidator:
         Args:
             param_schema: Parameter schema dictionary
         """
-        self.param_schema = param_schema
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def validate_parameters(
+        self.param_schema = param_schemadef validate_parameters(
         self,
         params: Dict[str, Any]
     ) -> Tuple[bool, List[str]]:
@@ -183,9 +178,7 @@ class ConfigValidator:
         self,
         required_sections: Optional[List[str]] = None,
         required_keys: Optional[Dict[str, List[str]]] = None,
-        value_validators: Optional[Dict[str, Callable[[Any], bool]]] = None
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        value_validators: Optional[Dict[str, Callable[[Any], bool]]] = None):
         """Initialize config validator.
         
         Args:
@@ -285,7 +278,7 @@ def validate_numeric_range(
     if min_value is not None and value < min_value:
         return False
     if max_value is not None and value > max_value:
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
     return True
 
 def validate_string_length(
@@ -306,7 +299,7 @@ def validate_string_length(
     if min_length is not None and len(value) < min_length:
         return False
     if max_length is not None and len(value) > max_length:
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
     return True
 
 def validate_datetime_range(
@@ -327,7 +320,7 @@ def validate_datetime_range(
     if min_date is not None and value < min_date:
         return False
     if max_date is not None and value > max_date:
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
     return True
 
 def validate_file_exists(file_path: Union[str, Path]) -> bool:
@@ -339,7 +332,7 @@ def validate_file_exists(file_path: Union[str, Path]) -> bool:
     Returns:
         Whether file exists
     """
-    return {'success': True, 'result': Path(file_path).exists(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return Path(file_path).exists()
 
 def validate_directory_exists(dir_path: Union[str, Path]) -> bool:
     """Validate directory exists.
@@ -350,4 +343,4 @@ def validate_directory_exists(dir_path: Union[str, Path]) -> bool:
     Returns:
         Whether directory exists
     """
-    return {'success': True, 'result': Path(dir_path).is_dir(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return Path(dir_path).is_dir()

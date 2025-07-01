@@ -22,7 +22,7 @@ def find_python_files(root_dir=".", exclude_dirs=None):
             if file.endswith('.py'):
                 python_files.append(os.path.join(root, file))
     
-    return {'success': True, 'result': python_files, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return python_files
 
 def check_function_returns(file_path):
     """Check if functions in a file have proper return statements."""
@@ -148,7 +148,7 @@ def main():
         return 0
     else:
         print("⚠️  NEEDS WORK: Significant improvements needed for full compliance")
-        return {'success': True, 'result': 1, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return 1
 
 if __name__ == "__main__":
     sys.exit(main()) 

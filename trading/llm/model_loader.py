@@ -64,8 +64,7 @@ class ModelLoader:
                     model_type="causal"
                 )
             }
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     async def load_model(self, model_name: str, api_key: Optional[str] = None) -> None:
         """Load a model asynchronously.
         
@@ -184,7 +183,7 @@ class ModelLoader:
         model_name = model_name or self.active_model
         if not model_name or model_name not in self.models:
             raise ValueError(f"Model {model_name} not loaded")
-        return {'success': True, 'result': self.models[model_name], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.models[model_name]
     
     def unload_model(self, model_name: str) -> None:
         """Unload a model to free memory.
@@ -201,12 +200,11 @@ class ModelLoader:
             if self.active_model == model_name:
                 self.active_model = None
             logger.info(f"Unloaded model: {model_name}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def list_available_models(self) -> List[str]:
         """List all available model configurations."""
-        return {'success': True, 'result': list(self.configs.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.configs.keys())
     
     def list_loaded_models(self) -> List[str]:
         """List all currently loaded models."""
-        return {'success': True, 'result': list(self.models.keys()), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return list(self.models.keys())

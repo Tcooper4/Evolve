@@ -98,7 +98,7 @@ def detect_drift(model_id: str) -> bool:
         
     except Exception as e:
         logger.error(f"Error detecting drift: {str(e)}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
 
 def check_deprecated_logic(component: str) -> bool:
     """
@@ -117,7 +117,7 @@ def check_deprecated_logic(component: str) -> bool:
         
     except Exception as e:
         logger.error(f"Error checking deprecated logic: {str(e)}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
 
 def check_missing_parameters(component: str) -> bool:
     """
@@ -136,7 +136,7 @@ def check_missing_parameters(component: str) -> bool:
         
     except Exception as e:
         logger.error(f"Error checking parameters: {str(e)}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False
 
 def _get_model_version(model_id: str) -> str:
     """
@@ -156,7 +156,7 @@ def _get_model_version(model_id: str) -> str:
         
     except Exception as e:
         logger.error(f"Error getting model version: {str(e)}")
-        return {'success': True, 'result': "1.0.0", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return "1.0.0"
 
 def get_pipeline_components() -> List[str]:
     """
@@ -177,7 +177,7 @@ def get_pipeline_components() -> List[str]:
         
     except Exception as e:
         logger.error(f"Error getting pipeline components: {str(e)}")
-        return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return []
 
 def validate_upgrade_result(result: Dict) -> bool:
     """
@@ -195,4 +195,4 @@ def validate_upgrade_result(result: Dict) -> bool:
         
     except Exception as e:
         logger.error(f"Error validating upgrade result: {str(e)}")
-        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False

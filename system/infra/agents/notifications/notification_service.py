@@ -81,7 +81,6 @@ class NotificationService:
         self._handlers[channel] = handler
         logger.info(f"Registered handler for channel: {channel}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def send_notification(
         self,
         title: str,

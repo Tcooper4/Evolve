@@ -61,6 +61,5 @@ def main():
     st.subheader("💱 Recent Transactions")
     st.info("Real transaction history requires connection to a portfolio management system.")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

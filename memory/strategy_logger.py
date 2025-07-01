@@ -59,9 +59,6 @@ def log_strategy_decision(
     # Update analysis
     _update_strategy_analysis(ticker, entry)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
-
 def get_strategy_history(
     ticker: Optional[str] = None,
     model: Optional[str] = None,
@@ -79,7 +76,7 @@ def get_strategy_history(
         List[Dict]: List of strategy decision entries.
     """
     if not os.path.exists(LOG_PATH):
-        return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return []
 
     with open(LOG_PATH, "r") as f:
         data = json.load(f)
@@ -94,7 +91,6 @@ def get_strategy_history(
     data.sort(key=lambda x: x["timestamp"], reverse=True)
     return data[:limit]
 
-
 def get_strategy_analysis(ticker: str) -> Dict:
     """
     Retrieves analysis of strategy decisions for a ticker.
@@ -106,13 +102,12 @@ def get_strategy_analysis(ticker: str) -> Dict:
         Dict: Analysis of strategy decisions.
     """
     if not os.path.exists(ANALYSIS_PATH):
-        return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {}
 
     with open(ANALYSIS_PATH, "r") as f:
         analysis = json.load(f)
 
     return analysis.get(ticker, {})
-
 
 def _update_strategy_analysis(ticker: str, entry: Dict) -> None:
     """

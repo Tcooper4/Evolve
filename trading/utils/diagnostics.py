@@ -167,12 +167,12 @@ class SystemDiagnostics:
                 context=results
             )
         
-        return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return results
     
     def get_health_status(self) -> Dict[str, Any]:
         """Get current health status."""
         if not self.last_check or (datetime.now() - self.last_check).seconds > 300:
-            return {'success': True, 'result': self.run_health_check(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self.run_health_check()
         return self.health_status
     
     def save_report(self, filepath: str = "health_report.json") -> None:
@@ -191,6 +191,5 @@ class SystemDiagnostics:
         with open(filepath, 'w') as f:
             json.dump(report, f, indent=2)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Create singleton instance
 diagnostics = SystemDiagnostics() 

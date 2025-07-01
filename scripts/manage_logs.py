@@ -47,17 +47,14 @@ class LogManager:
         self.setup_logging()
         self.logger = logging.getLogger("trading")
         self.logs_dir = Path("logs")
-        self.archive_dir = Path("logs/archive")
-
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def _load_config(self, config_path: str) -> dict:
+        self.archive_dir = Path("logs/archive")def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
         
         with open(config_path) as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -109,7 +106,7 @@ class LogManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to rotate logs: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def clean_logs(self, days: int = 30):
         """Clean old log files."""
@@ -143,7 +140,7 @@ class LogManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to clean logs: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def analyze_logs(self, pattern: Optional[str] = None, days: int = 7):
         """Analyze log files."""
@@ -195,7 +192,7 @@ class LogManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to analyze logs: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def _analyze_log_file(self, log_file: Path, pattern: Optional[str], results: Dict[str, Any]):
         """Analyze a single log file."""
@@ -205,7 +202,6 @@ class LogManager:
         except Exception as e:
             self.logger.error(f"Failed to analyze {log_file}: {e}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _analyze_log_content(self, file_obj, pattern: Optional[str], results: Dict[str, Any]):
         """Analyze log content."""
         for line in file_obj:
@@ -219,7 +215,6 @@ class LogManager:
                 results["warning_count"] += 1
                 self._update_pattern_count(results["warning_patterns"], line)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def _update_pattern_count(self, patterns: Dict[str, int], line: str):
         """Update pattern count in analysis results."""
         # Extract the main message part
@@ -230,7 +225,6 @@ class LogManager:
             self.logger.warning(f"Failed to update pattern count: {e}")
             pass
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def export_logs(self, output_dir: str, days: int = 7):
         """Export logs to a directory."""
         self.logger.info(f"Exporting logs from the last {days} days...")
@@ -266,7 +260,7 @@ class LogManager:
             return True
         except Exception as e:
             self.logger.error(f"Failed to export logs: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
 def main():
     """Main function."""
@@ -311,6 +305,5 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

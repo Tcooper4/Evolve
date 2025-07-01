@@ -32,12 +32,12 @@ class IntentType(str, Enum):
         obj = str.__new__(cls, value)
         obj._value_ = value
         obj.config = config
-        return {'success': True, 'result': obj, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return obj
 
     @classmethod
     def _missing_(cls, value: str) -> Optional['IntentType']:
         """Handle missing intent types gracefully."""
-        return {'success': True, 'result': cls.UNCERTAIN, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return cls.UNCERTAIN
 
     @classmethod
     def load_from_config(cls) -> None:
@@ -46,7 +46,6 @@ class IntentType(str, Enum):
             if not hasattr(cls, intent_name.upper()):
                 setattr(cls, intent_name.upper(), (intent_name, intent_config))
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 # Initialize intents from config
 IntentType.load_from_config()
 
@@ -173,7 +172,6 @@ class AgentRouter(IntentRouter):
             return overrides.get(ticker)
         except Exception as e:
             self.logger.error(f"Error reading overrides: {e}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _handle_forecast(self, prompt: str, parsed_prompt: Dict, **kwargs) -> AgentResult:
         """Handle forecasting requests."""

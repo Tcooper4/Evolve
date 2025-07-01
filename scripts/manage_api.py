@@ -88,7 +88,7 @@ class APIManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -121,7 +121,7 @@ class APIManager:
                 json.dump(openapi_schema, f, indent=2)
             
             self.logger.info(f"OpenAPI specification saved to {schema_file}")
-            return {'success': True, 'result': openapi_schema, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return openapi_schema
         except Exception as e:
             self.logger.error(f"Failed to generate OpenAPI specification: {e}")
             raise

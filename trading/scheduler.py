@@ -32,8 +32,7 @@ class UpdateScheduler:
         """
         if self.running:
             logger.warning("Scheduler is already running")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         self.callback = callback
         self.running = True
         self.thread = threading.Thread(target=self._run, daemon=True)

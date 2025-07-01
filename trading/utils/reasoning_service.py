@@ -21,7 +21,6 @@ from utils.reasoning_logger import ReasoningLogger, AgentDecision, DecisionType,
 
 logger = logging.getLogger(__name__)
 
-
 class ReasoningService:
     """
     Redis pub/sub service for real-time reasoning updates.
@@ -98,14 +97,12 @@ class ReasoningService:
             logger.error(f"Error starting {self.service_name}: {e}")
             self.running = False
             raise
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def stop(self):
         """Stop the reasoning service."""
         self.running = False
         logger.info(f"Stopping {self.service_name}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _start_heartbeat(self):
         """Start heartbeat monitoring."""
         def heartbeat():
@@ -121,12 +118,10 @@ class ReasoningService:
                 except Exception as e:
                     logger.error(f"Heartbeat error: {e}")
                     time.sleep(30)
-        
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
         heartbeat_thread.start()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _listen_for_events(self):
         """Listen for Redis events and process decisions."""
         pubsub = self.redis_client.pubsub()
@@ -152,8 +147,7 @@ class ReasoningService:
             logger.error(f"Error in event listener: {e}")
         finally:
             pubsub.close()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_event(self, channel: str, data: str):
         """Handle incoming events."""
         try:
@@ -173,8 +167,7 @@ class ReasoningService:
             logger.error(f"Error decoding event data: {e}")
         except Exception as e:
             logger.error(f"Error handling event on {channel}: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_agent_decision(self, event_data: Dict[str, Any]):
         """Handle agent decision event."""
         try:
@@ -193,8 +186,7 @@ class ReasoningService:
                     
         except Exception as e:
             logger.error(f"Error handling agent decision: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_forecast_completed(self, event_data: Dict[str, Any]):
         """Handle forecast completion event."""
         try:
@@ -248,8 +240,7 @@ class ReasoningService:
             
         except Exception as e:
             logger.error(f"Error handling forecast completed: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_strategy_completed(self, event_data: Dict[str, Any]):
         """Handle strategy completion event."""
         try:
@@ -304,8 +295,7 @@ class ReasoningService:
             
         except Exception as e:
             logger.error(f"Error handling strategy completed: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _handle_model_evaluation_completed(self, event_data: Dict[str, Any]):
         """Handle model evaluation completion event."""
         try:
@@ -359,8 +349,7 @@ class ReasoningService:
             
         except Exception as e:
             logger.error(f"Error handling model evaluation completed: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _add_to_cache(self, decision: AgentDecision):
         """Add decision to cache."""
         self.recent_decisions.append(decision)
@@ -368,8 +357,7 @@ class ReasoningService:
         # Maintain cache size
         if len(self.recent_decisions) > self.max_cache_size:
             self.recent_decisions.pop(0)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _publish_reasoning_update(self, decision: AgentDecision):
         """Publish reasoning update to clients."""
         try:
@@ -390,19 +378,18 @@ class ReasoningService:
             
         except Exception as e:
             logger.error(f"Error publishing reasoning update: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_recent_decisions(self, limit: int = 20) -> List[AgentDecision]:
         """Get recent decisions from cache."""
-        return {'success': True, 'result': self.recent_decisions[-limit:] if self.recent_decisions else [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.recent_decisions[-limit:] if self.recent_decisions else []
     
     def get_statistics(self) -> Dict[str, Any]:
         """Get reasoning statistics."""
-        return {'success': True, 'result': self.reasoning_logger.get_statistics(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.reasoning_logger.get_statistics()
     
     def get_status(self) -> Dict[str, Any]:
         """Get service status."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'service_name': self.service_name,
             'running': self.running,
             'last_heartbeat': self.last_heartbeat,
@@ -410,7 +397,6 @@ class ReasoningService:
             'redis_connected': self.redis_client.ping(),
             'cache_size': len(self.recent_decisions)
         }
-
 
 def main():
     """Main function to run the reasoning service."""
@@ -447,7 +433,5 @@ def main():
         logger.error(f"Service error: {e}")
         service.stop()
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

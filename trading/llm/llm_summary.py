@@ -52,7 +52,7 @@ def generate_market_summary(data: pd.DataFrame, config: SummaryConfig) -> str:
     # Call LLM API (placeholder)
     summary = _call_llm_api(prompt, config)
     
-    return {'success': True, 'result': summary, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return summary
 
 def generate_strategy_summary(
     performance_data: Dict[str, Any],
@@ -89,7 +89,7 @@ def generate_strategy_summary(
     # Call LLM API (placeholder)
     summary = _call_llm_api(prompt, config)
     
-    return {'success': True, 'result': summary, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return summary
 
 def generate_forecast_summary(
     forecast_data: Dict[str, Any],
@@ -125,7 +125,7 @@ def generate_forecast_summary(
     # Call LLM API (placeholder)
     summary = _call_llm_api(prompt, config)
     
-    return {'success': True, 'result': summary, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return summary
 
 def generate_risk_summary(
     risk_data: Dict[str, Any],
@@ -162,7 +162,7 @@ def generate_risk_summary(
     # Call LLM API (placeholder)
     summary = _call_llm_api(prompt, config)
     
-    return {'success': True, 'result': summary, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return summary
 
 def _call_llm_api(prompt: str, config: SummaryConfig) -> str:
     """Call LLM API to generate summary (placeholder).
@@ -178,7 +178,6 @@ def _call_llm_api(prompt: str, config: SummaryConfig) -> str:
     # This is a placeholder that returns a mock response
     raise NotImplementedError('Pending feature')
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def format_summary(summary: str, max_length: int = 500) -> str:
     """Format summary text for display.
     
@@ -206,7 +205,7 @@ def format_summary(summary: str, max_length: int = 500) -> str:
     # Join sentences
     formatted_summary = ". ".join(formatted_sentences) + "."
     
-    return {'success': True, 'result': formatted_summary, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return formatted_summary
 
 def generate_comprehensive_summary(
     market_data: pd.DataFrame,
@@ -241,4 +240,4 @@ def generate_comprehensive_summary(
         "risk": format_summary(risk_summary)
     }
     
-    return {'success': True, 'result': summaries, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return summaries

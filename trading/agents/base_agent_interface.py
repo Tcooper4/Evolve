@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from datetime import datetime
 import logging
 
-
 @dataclass
 class AgentConfig:
     """Configuration for an agent."""
@@ -22,7 +21,6 @@ class AgentConfig:
     timeout_seconds: int = 300
     retry_attempts: int = 3
     custom_config: Optional[Dict[str, Any]] = None
-
 
 @dataclass
 class AgentStatus:
@@ -37,7 +35,6 @@ class AgentStatus:
     failed_runs: int = 0
     current_error: Optional[str] = None
 
-
 @dataclass
 class AgentResult:
     """Result from agent execution."""
@@ -50,7 +47,6 @@ class AgentResult:
     def __post_init__(self):
         if self.timestamp is None:
             self.timestamp = datetime.now()
-
 
 class BaseAgent(ABC):
     """Base interface for all pluggable agents."""

@@ -54,7 +54,7 @@ class TaskUpdate(BaseModel):
 def get_orchestrator():
     config = load_config()
     orchestrator = Orchestrator(config)
-    return {'success': True, 'result': orchestrator, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return orchestrator
 
 # Task creation endpoint
 @app.post("/tasks", response_model=TaskResponse)

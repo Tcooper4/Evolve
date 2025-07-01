@@ -66,7 +66,7 @@ class TradingConfig:
         Returns:
             Configuration dictionary
         """
-        return {'success': True, 'result': asdict(self), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return asdict(self)
     
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> 'TradingConfig':
@@ -78,7 +78,7 @@ class TradingConfig:
         Returns:
             TradingConfig instance
         """
-        return {'success': True, 'result': cls(**config_dict), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return cls(**config_dict)
 
 class ConfigFileHandler(FileSystemEventHandler):
     """Handler for config file changes."""
@@ -157,7 +157,7 @@ class ConfigManager:
         if hot_reload:
             self._setup_hot_reload(file_path, callback)
         
-        return {'success': True, 'result': config, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return config
     
     def _load_file(self, file_path: Path) -> Dict[str, Any]:
         """Load a configuration file based on its extension.
@@ -177,7 +177,7 @@ class ConfigManager:
                 elif suffix in ['.yaml', '.yml']:
                     return yaml.safe_load(f)
                 elif suffix == '.toml':
-                    return {'success': True, 'result': toml.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return toml.load(f)
                 else:
                     raise ValueError(f"Unsupported config file format: {suffix}")
         except Exception as e:

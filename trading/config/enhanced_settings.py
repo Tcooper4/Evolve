@@ -119,7 +119,7 @@ def get_config_value(key: str, default: Any = None) -> Any:
     elif isinstance(default, list):
         return value.split(',')
     elif isinstance(default, Path):
-        return {'success': True, 'result': Path(value), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return Path(value)
     return value
 
 def get_config_dict() -> Dict[str, Any]:
@@ -128,7 +128,7 @@ def get_config_dict() -> Dict[str, Any]:
     Returns:
         Dictionary of all configuration values
     """
-    return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return {
         key: value for key, value in globals().items()
         if key.isupper() and not key.startswith('_')
     }
@@ -165,7 +165,7 @@ def validate_config() -> bool:
     if not 1024 <= GRAFANA_PORT <= 65535:
         raise ValueError(f"Invalid GRAFANA_PORT: {GRAFANA_PORT}")
         
-    return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return True
 
 # Validate configuration on import
 validate_config() 

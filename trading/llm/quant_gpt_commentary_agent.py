@@ -18,7 +18,6 @@ from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
 
-
 class CommentaryType(str, Enum):
     """Types of commentary."""
     TRADE_EXPLANATION = "trade_explanation"
@@ -28,7 +27,6 @@ class CommentaryType(str, Enum):
     RISK_ASSESSMENT = "risk_assessment"
     COUNTERFACTUAL_ANALYSIS = "counterfactual_analysis"
     STRATEGY_RECOMMENDATION = "strategy_recommendation"
-
 
 @dataclass
 class CommentaryRequest:
@@ -42,7 +40,6 @@ class CommentaryRequest:
     model_data: Optional[Dict[str, Any]] = None
     strategy_data: Optional[Dict[str, Any]] = None
     context: Optional[Dict[str, Any]] = None
-
 
 @dataclass
 class CommentaryResponse:
@@ -58,7 +55,6 @@ class CommentaryResponse:
     risk_warnings: List[str]
     confidence_score: float
     metadata: Dict[str, Any]
-
 
 class QuantGPTCommentaryAgent:
     """
@@ -224,7 +220,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error analyzing trade context: {str(e)}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _detect_market_regime(self, market_data: pd.DataFrame) -> str:
         """Detect current market regime."""
@@ -245,7 +241,7 @@ class QuantGPTCommentaryAgent:
             elif trend < -0.02:
                 return 'trending_down'
             else:
-                return {'success': True, 'result': 'sideways', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return 'sideways'
                 
         except Exception as e:
             self.logger.error(f"Error detecting market regime: {str(e)}")
@@ -268,7 +264,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error calculating support/resistance: {str(e)}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _create_trade_explanation_prompt(self, trade_data: Dict[str, Any], context: Dict[str, Any]) -> str:
         """Create prompt for trade explanation."""
@@ -302,7 +298,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error creating trade explanation prompt: {str(e)}")
-            return {'success': True, 'result': "Please explain this trade.", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "Please explain this trade."
     
     async def _analyze_performance(self, request: CommentaryRequest, request_id: str) -> CommentaryResponse:
         """Analyze trading performance."""
@@ -374,7 +370,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error analyzing performance metrics: {str(e)}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _identify_performance_trend(self, returns: List[float]) -> str:
         """Identify performance trend."""
@@ -395,7 +391,7 @@ class QuantGPTCommentaryAgent:
             elif recent_avg < older_avg * 0.9:
                 return 'declining'
             else:
-                return {'success': True, 'result': 'stable', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return 'stable'
                 
         except Exception as e:
             self.logger.error(f"Error identifying performance trend: {str(e)}")
@@ -414,7 +410,7 @@ class QuantGPTCommentaryAgent:
             elif sharpe > 0.0 and max_dd < 0.3:
                 return 'fair'
             else:
-                return {'success': True, 'result': 'poor', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return 'poor'
                 
         except Exception as e:
             self.logger.error(f"Error assessing risk-adjusted performance: {str(e)}")
@@ -442,7 +438,7 @@ class QuantGPTCommentaryAgent:
             elif cv < 2.0:
                 return 'moderate'
             else:
-                return {'success': True, 'result': 'inconsistent', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return 'inconsistent'
                 
         except Exception as e:
             self.logger.error(f"Error assessing performance consistency: {str(e)}")
@@ -542,7 +538,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error analyzing overfitting patterns: {str(e)}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _calculate_oos_degradation(self, train_perf: Dict[str, Any], oos_perf: Dict[str, Any]) -> float:
         """Calculate out-of-sample performance degradation."""
@@ -558,7 +554,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error calculating OOS degradation: {str(e)}")
-            return {'success': True, 'result': 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.0
     
     async def _analyze_market_regime(self, request: CommentaryRequest, request_id: str) -> CommentaryResponse:
         """Analyze current market regime and implications."""
@@ -650,7 +646,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error performing regime analysis: {str(e)}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _assess_regime_stability(self, market_data: pd.DataFrame) -> str:
         """Assess the stability of the current market regime."""
@@ -686,7 +682,7 @@ class QuantGPTCommentaryAgent:
             elif unique_regimes == 3:
                 return 'moderate'
             else:
-                return {'success': True, 'result': 'unstable', 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return 'unstable'
                 
         except Exception as e:
             self.logger.error(f"Error assessing regime stability: {str(e)}")
@@ -724,7 +720,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error analyzing regime implications: {str(e)}")
-            return {'success': True, 'result': ["Unable to analyze regime implications"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ["Unable to analyze regime implications"]
     
     async def _perform_counterfactual_analysis(self, request: CommentaryRequest, request_id: str) -> CommentaryResponse:
         """Perform counterfactual analysis of trading decisions."""
@@ -790,7 +786,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error analyzing counterfactual scenarios: {str(e)}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _parse_llm_response(self, response: str) -> Dict[str, str]:
         """Parse LLM response into structured format."""
@@ -829,7 +825,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error extracting trade insights: {str(e)}")
-            return {'success': True, 'result': ["Unable to extract insights"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ["Unable to extract insights"]
     
     def _generate_trade_recommendations(self, trade_data: Dict[str, Any], context: Dict[str, Any]) -> List[str]:
         """Generate recommendations based on trade analysis."""
@@ -851,7 +847,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error generating trade recommendations: {str(e)}")
-            return {'success': True, 'result': ["Review trade parameters carefully"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ["Review trade parameters carefully"]
     
     def _extract_risk_warnings(self, trade_data: Dict[str, Any]) -> List[str]:
         """Extract risk warnings from trade data."""
@@ -872,7 +868,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error extracting risk warnings: {str(e)}")
-            return {'success': True, 'result': ["Review trade for potential risks"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return ["Review trade for potential risks"]
     
     def _calculate_trade_confidence(self, trade_data: Dict[str, Any], context: Dict[str, Any]) -> float:
         """Calculate confidence score for trade explanation."""
@@ -898,7 +894,7 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error calculating trade confidence: {str(e)}")
-            return {'success': True, 'result': 0.5, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return 0.5
     
     def _store_commentary(self, response: CommentaryResponse):
         """Store commentary in memory."""
@@ -909,8 +905,7 @@ class QuantGPTCommentaryAgent:
             })
         except Exception as e:
             self.logger.error(f"Error storing commentary: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _store_overfitting_alert(self, symbol: str, analysis: Dict[str, Any], score: float):
         """Store overfitting alert."""
         try:
@@ -923,8 +918,7 @@ class QuantGPTCommentaryAgent:
             self.overfitting_alerts.append(alert)
         except Exception as e:
             self.logger.error(f"Error storing overfitting alert: {str(e)}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _load_commentary_templates(self):
         """Load commentary templates."""
         try:
@@ -938,11 +932,10 @@ class QuantGPTCommentaryAgent:
         except Exception as e:
             self.logger.error(f"Error loading commentary templates: {str(e)}")
             self.templates = {}
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _create_error_response(self, request: CommentaryRequest, error_message: str) -> CommentaryResponse:
         """Create error response when commentary generation fails."""
-        return {'success': True, 'result': CommentaryResponse(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return CommentaryResponse(
             request_id=f"error_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             commentary_type=request.request_type,
             timestamp=datetime.now(),
@@ -984,4 +977,4 @@ class QuantGPTCommentaryAgent:
             
         except Exception as e:
             self.logger.error(f"Error getting commentary summary: {str(e)}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}

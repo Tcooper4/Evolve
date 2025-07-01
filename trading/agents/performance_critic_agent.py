@@ -25,7 +25,6 @@ from trading.memory.performance_memory import PerformanceMemory
 from trading.memory.agent_memory import AgentMemory
 from trading.utils.reward_function import RewardFunction
 
-
 @dataclass
 class ModelEvaluationRequest:
     """Request for model evaluation."""
@@ -37,7 +36,6 @@ class ModelEvaluationRequest:
     benchmark_symbol: Optional[str] = None
     risk_free_rate: float = 0.02
     request_id: Optional[str] = None
-
 
 @dataclass
 class ModelEvaluationResult:
@@ -52,7 +50,6 @@ class ModelEvaluationResult:
     recommendations: List[str] = field(default_factory=list)
     evaluation_status: str = "success"
     error_message: Optional[str] = None
-
 
 class PerformanceCriticAgent(BaseAgent):
     """Agent responsible for evaluating model performance."""
@@ -167,7 +164,7 @@ class PerformanceCriticAgent(BaseAgent):
         
         # Validate evaluation period
         if request.evaluation_period <= 0:
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
         
         return True
     

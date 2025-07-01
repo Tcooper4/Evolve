@@ -34,9 +34,7 @@ class GeneticOptimizer(BaseOptimizer):
         population_size: int = 100,
         generations: int = 50,
         mutation_prob: float = 0.2,
-        crossover_prob: float = 0.7
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        crossover_prob: float = 0.7):
         """Initialize genetic optimizer.
         
         Args:
@@ -169,7 +167,7 @@ class GeneticOptimizer(BaseOptimizer):
             verbose=self.verbose
         )
         
-        return {'success': True, 'result': self.get_all_results(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.get_all_results()
     
     def _evaluate_individual(
         self,
@@ -221,8 +219,7 @@ class GeneticOptimizer(BaseOptimizer):
         """
         # This should be implemented by strategy-specific optimizers
         raise NotImplementedError
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def plot_results(
         self,
         plot_type: str = 'all',
@@ -281,7 +278,7 @@ class GeneticOptimizer(BaseOptimizer):
             
             plots.append(fig)
         
-        return {'success': True, 'result': plots[0] if len(plots) == 1 else plots, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return plots[0] if len(plots) == 1 else plots
     
     def get_best_individuals(self, n: int = 1) -> List[Any]:
         """Get best individuals from hall of fame.
@@ -295,7 +292,7 @@ class GeneticOptimizer(BaseOptimizer):
         if not self.hof:
             raise ValueError("No hall of fame found")
         
-        return {'success': True, 'result': self.hof[:n], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.hof[:n]
     
     def get_best_parameters(self) -> Dict[str, float]:
         """Get best parameters from hall of fame.
@@ -332,7 +329,7 @@ def create_genetic_optimizer(data: pd.DataFrame,
     crossover_prob = config.get('crossover_prob', 0.7)
     verbose = config.get('verbose', False)
     
-    return {'success': True, 'result': GeneticOptimizer(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return GeneticOptimizer(
         data=data,
         strategy_type=strategy_type,
         population_size=population_size,

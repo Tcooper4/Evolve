@@ -20,10 +20,7 @@ class NotificationCleanup:
         """Initialize notification cleanup."""
         self.config = config
         self.retention_days = config.get('notification_retention_days', 30)
-        self.setup_logging()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self):
+        self.setup_logging()def setup_logging(self):
         """Configure logging for notification cleanup."""
         log_path = Path("logs/notifications")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -84,4 +81,3 @@ class NotificationCleanup:
         except Exception as e:
             self.logger.error(f"Error getting cleanup stats: {str(e)}")
             raise NotImplementedError('Pending feature') 
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

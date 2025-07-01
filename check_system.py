@@ -22,7 +22,7 @@ def check_imports() -> Dict[str, bool]:
         except ImportError:
             results[module] = False
     
-    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return results
 
 def check_core_modules() -> Dict[str, bool]:
     """Check core Evolve modules."""
@@ -48,7 +48,7 @@ def check_core_modules() -> Dict[str, bool]:
         except ImportError:
             results[module] = False
     
-    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return results
 
 def check_advanced_modules() -> Dict[str, bool]:
     """Check advanced modules."""
@@ -73,7 +73,7 @@ def check_advanced_modules() -> Dict[str, bool]:
         except ImportError:
             results[module] = False
     
-    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return results
 
 def check_ui_modules() -> Dict[str, bool]:
     """Check UI modules."""
@@ -99,7 +99,7 @@ def check_ui_modules() -> Dict[str, bool]:
         except ImportError:
             results[module] = False
     
-    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return results
 
 def main():
     """Run system check."""
@@ -158,7 +158,7 @@ def main():
     print(f"❌ Failures: {total_checks - total_success}")
     print("=" * 60)
     
-    return {'success': True, 'result': success_rate, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return success_rate
 
 if __name__ == "__main__":
     main() 

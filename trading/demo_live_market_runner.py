@@ -15,18 +15,15 @@ from typing import Dict, Any
 
 from trading.live_market_runner import create_live_market_runner
 
-
 def setup_signal_handlers(runner):
     """Setup signal handlers for graceful shutdown."""
     def signal_handler(signum, frame):
         print(f"\n🛑 Received signal {signum}, shutting down...")
         asyncio.create_task(runner.stop())
         sys.exit(0)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-
 
     return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 async def demo_live_market_runner():
@@ -96,7 +93,6 @@ async def demo_live_market_runner():
         await runner.stop()
         print(f"✅ LiveMarketRunner stopped")
 
-
 async def demo_forecast_tracking():
     """Demonstrate forecast tracking functionality."""
     print(f"\n📊 Forecast Tracking Demo")
@@ -145,7 +141,6 @@ async def demo_forecast_tracking():
     print(f"   Total: {aapl_accuracy['total_forecasts']}")
     print(f"   Completed: {aapl_accuracy['completed_forecasts']}")
     print(f"   Average accuracy: {aapl_accuracy['avg_accuracy']:.2%}")
-
 
 async def demo_agent_triggering():
     """Demonstrate agent triggering functionality."""
@@ -206,7 +201,6 @@ async def demo_agent_triggering():
     )
     print(f"   Price move trigger: {should_trigger}")
 
-
 async def main():
     """Main demo function."""
     print("🎯 Live Market Runner Demo Suite")
@@ -225,7 +219,6 @@ async def main():
     print(f"   ✅ Agent triggering logic tested")
     print(f"   ✅ Live data streaming ready for use")
     print(f"   🔮 Ready for live market execution")
-
 
 if __name__ == "__main__":
     asyncio.run(main()) 

@@ -54,6 +54,5 @@ def run_cleanup():
         logging.error(f"Error during cleanup: {e}")
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     run_cleanup() 

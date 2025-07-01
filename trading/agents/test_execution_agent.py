@@ -13,7 +13,6 @@ from pathlib import Path
 from trading.agents.execution_agent import ExecutionAgent, TradeSignal, TradeDirection
 from trading.agents.base_agent_interface import AgentConfig
 
-
 async def test_execution_agent():
     """Test the execution agent."""
     print("🧪 Testing Execution Agent")
@@ -107,7 +106,6 @@ async def test_execution_agent():
     print(f"  Trade log entries: {len(trade_log)}")
     
     print("\n✅ All tests completed!")
-
 
 if __name__ == "__main__":
     asyncio.run(test_execution_agent()) 

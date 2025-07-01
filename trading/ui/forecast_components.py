@@ -91,7 +91,7 @@ def create_forecast_form(
     }
     logger.info(f"Forecast form submitted: {form_data}")
     
-    return {'success': True, 'result': form_data, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return form_data
 
 def create_forecast_chart(
     data: pd.DataFrame,
@@ -178,7 +178,7 @@ def create_forecast_chart(
     # Log chart creation for agentic monitoring
     logger.info(f"Forecast chart created with model: {model_config.name}")
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def create_forecast_metrics(
     data: pd.DataFrame,
@@ -218,7 +218,7 @@ def create_forecast_metrics(
     # Log metrics for agentic monitoring
     logger.info(f"Forecast metrics calculated: {metrics}")
     
-    return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return metrics
 
 def create_forecast_export(
     data: pd.DataFrame,

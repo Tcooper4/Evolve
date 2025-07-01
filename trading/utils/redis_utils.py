@@ -33,9 +33,7 @@ class RedisManager:
         socket_timeout: int = 5,
         socket_connect_timeout: int = 5,
         retry_on_timeout: bool = True,
-        health_check_interval: int = 30
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        health_check_interval: int = 30):
         """Initialize the Redis manager.
         
         Args:
@@ -90,7 +88,7 @@ class RedisManager:
             return True
         except (ConnectionError, TimeoutError) as e:
             logger.error(f"Redis health check failed: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def _handle_error(self, error: RedisError) -> None:
         """Handle Redis errors.
@@ -106,8 +104,7 @@ class RedisManager:
             logger.error(f"Redis response error: {error}")
         else:
             logger.error(f"Redis error: {error}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get(self, key: str) -> Optional[Any]:
         """Get a value from Redis.
         
@@ -125,8 +122,7 @@ class RedisManager:
             return json.loads(value) if value else None
         except RedisError as e:
             self._handle_error(e)
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def set(
         self,
         key: str,
@@ -153,7 +149,7 @@ class RedisManager:
             return self.client.set(key, value)
         except RedisError as e:
             self._handle_error(e)
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def delete(self, key: str) -> bool:
         """Delete a key from Redis.
@@ -171,7 +167,7 @@ class RedisManager:
             return bool(self.client.delete(key))
         except RedisError as e:
             self._handle_error(e)
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def exists(self, key: str) -> bool:
         """Check if a key exists in Redis.
@@ -189,7 +185,7 @@ class RedisManager:
             return bool(self.client.exists(key))
         except RedisError as e:
             self._handle_error(e)
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def keys(self, pattern: str = '*') -> List[str]:
         """Get keys matching a pattern.
@@ -207,7 +203,7 @@ class RedisManager:
             return [k.decode('utf-8') for k in self.client.keys(pattern)]
         except RedisError as e:
             self._handle_error(e)
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def hget(self, name: str, key: str) -> Optional[Any]:
         """Get a field from a hash.
@@ -227,8 +223,7 @@ class RedisManager:
             return json.loads(value) if value else None
         except RedisError as e:
             self._handle_error(e)
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def hset(
         self,
         name: str,
@@ -253,7 +248,7 @@ class RedisManager:
             return bool(self.client.hset(name, key, value))
         except RedisError as e:
             self._handle_error(e)
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def hgetall(self, name: str) -> Dict[str, Any]:
         """Get all fields from a hash.
@@ -275,7 +270,7 @@ class RedisManager:
             }
         except RedisError as e:
             self._handle_error(e)
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def publish(self, channel: str, message: Any) -> bool:
         """Publish a message to a channel.
@@ -295,7 +290,7 @@ class RedisManager:
             return bool(self.client.publish(channel, message))
         except RedisError as e:
             self._handle_error(e)
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
     
     def subscribe(self, channel: str) -> Optional[redis.client.PubSub]:
         """Subscribe to a channel.
@@ -315,8 +310,7 @@ class RedisManager:
             return pubsub
         except RedisError as e:
             self._handle_error(e)
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def close(self) -> None:
         """Close the Redis connection."""
         try:
@@ -324,7 +318,6 @@ class RedisManager:
         except RedisError as e:
             self._handle_error(e)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def with_redis_retry(max_retries: int = 3, delay: float = 1.0) -> Callable:
     """Decorator for retrying Redis operations.
     

@@ -58,8 +58,6 @@ class StrategyMetrics:
             self.total_trades, self.winning_trades, self.losing_trades
         ]):
             raise StrategyValidationError("trade counts must be integers")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def to_dict(self) -> Dict[str, Any]:
         """Convert metrics to dictionary."""
         metrics_dict = asdict(self)

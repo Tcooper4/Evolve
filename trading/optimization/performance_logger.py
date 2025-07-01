@@ -35,7 +35,7 @@ class PerformanceMetrics(BaseModel):
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "timestamp": self.timestamp.isoformat(),
             "strategy": self.strategy,
             "config": self.config,
@@ -58,7 +58,7 @@ class PerformanceMetrics(BaseModel):
         Returns:
             PerformanceMetrics instance
         """
-        return {'success': True, 'result': cls(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return cls(
             timestamp=datetime.fromisoformat(data["timestamp"]),
             strategy=data["strategy"],
             config=data["config"],
@@ -107,8 +107,7 @@ class PerformanceLogger:
             
         except Exception as e:
             logger.error(f"Error logging metrics: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def load_metrics(self, strategy: Optional[str] = None,
                     start_date: Optional[datetime] = None,
                     end_date: Optional[datetime] = None) -> List[PerformanceMetrics]:
@@ -147,7 +146,7 @@ class PerformanceLogger:
             
         except Exception as e:
             logger.error(f"Error loading metrics: {e}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
     
     def get_strategy_performance(self, strategy: str,
                                window_days: int = 30) -> pd.DataFrame:
@@ -184,7 +183,7 @@ class PerformanceLogger:
             
         except Exception as e:
             logger.error(f"Error getting strategy performance: {e}")
-            return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return pd.DataFrame()
     
     def get_best_config(self, strategy: str,
                        metric: str = "sharpe_ratio",
@@ -214,8 +213,7 @@ class PerformanceLogger:
             
         except Exception as e:
             logger.error(f"Error getting best config: {e}")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def analyze_performance(self, strategy: str,
                           window_days: int = 30) -> Dict[str, Any]:
         """Analyze strategy performance.
@@ -252,4 +250,4 @@ class PerformanceLogger:
             
         except Exception as e:
             logger.error(f"Error analyzing performance: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}

@@ -21,7 +21,6 @@ from trading.services.base_service import BaseService
 
 logger = logging.getLogger(__name__)
 
-
 class SafeExecutorService(BaseService):
     """
     Service wrapper for SafeExecutor.
@@ -76,7 +75,7 @@ class SafeExecutorService(BaseService):
                 return self._handle_cleanup_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return {
                     'type': 'error',
                     'error': f"Unknown message type: {message_type}",
                     'original_message': data
@@ -146,7 +145,7 @@ class SafeExecutorService(BaseService):
             
         except Exception as e:
             logger.error(f"Error executing model: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -207,7 +206,7 @@ class SafeExecutorService(BaseService):
             
         except Exception as e:
             logger.error(f"Error executing strategy: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -268,7 +267,7 @@ class SafeExecutorService(BaseService):
             
         except Exception as e:
             logger.error(f"Error executing indicator: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e),
                 'status': 'failed'
@@ -287,7 +286,7 @@ class SafeExecutorService(BaseService):
             
         except Exception as e:
             logger.error(f"Error getting statistics: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -304,7 +303,7 @@ class SafeExecutorService(BaseService):
             
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'type': 'error',
                 'error': str(e)
             }
@@ -328,7 +327,7 @@ class SafeExecutorService(BaseService):
             }
         except Exception as e:
             logger.error(f"Error getting service stats: {e}")
-            return {'success': True, 'result': {'error': str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'error': str(e)}
     
     def stop(self) -> Dict[str, Any]:
         """Stop the service and clean up resources."""

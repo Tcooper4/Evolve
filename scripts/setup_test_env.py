@@ -13,7 +13,6 @@ def install_requirements():
     else:
         print("Warning: requirements-test.txt not found")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def create_test_directories():
     """Create necessary test directories."""
     test_dirs = [
@@ -26,7 +25,6 @@ def create_test_directories():
     for dir_path in test_dirs:
         Path(dir_path).mkdir(parents=True, exist_ok=True)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function to set up test environment."""
     print("Setting up test environment...")
@@ -39,6 +37,5 @@ def main():
     
     print("Test environment setup complete!")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == '__main__':
     main() 

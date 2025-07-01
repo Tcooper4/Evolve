@@ -44,10 +44,7 @@ class InstitutionalDashboard:
         )
         
         # Custom CSS
-        self.setup_custom_css()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def initialize_system(self):
+        self.setup_custom_css()def initialize_system(self):
         """Initialize the institutional trading system."""
         if SYSTEM_AVAILABLE:
             try:
@@ -123,8 +120,7 @@ class InstitutionalDashboard:
             self.render_system_unavailable()
         else:
             self.render_main_dashboard()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_sidebar(self):
         """Render the sidebar with controls and navigation."""
         with st.sidebar:
@@ -189,8 +185,7 @@ class InstitutionalDashboard:
                     with st.spinner("Exporting data..."):
                         self.system.export_system_data()
                         st.success("Data exported successfully")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_system_unavailable(self):
         """Render message when system is unavailable."""
         st.error("🚨 Institutional Trading System is not available")
@@ -224,8 +219,7 @@ class InstitutionalDashboard:
             streamlit run trading/ui/institutional_dashboard.py
             ```
             """)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_main_dashboard(self):
         """Render the main dashboard."""
         # System overview
@@ -242,8 +236,7 @@ class InstitutionalDashboard:
         
         # Charts and visualizations
         self.render_charts()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_system_overview(self):
         """Render system overview section."""
         st.header("📊 System Overview")
@@ -283,8 +276,7 @@ class InstitutionalDashboard:
                     f"{health:.1%}",
                     delta=None
                 )
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_key_metrics(self):
         """Render key performance metrics."""
         st.header("📈 Key Metrics")
@@ -322,8 +314,7 @@ class InstitutionalDashboard:
                         f"{metrics.risk_score:.2f}",
                         delta=None
                     )
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_module_status(self):
         """Render module status overview."""
         st.header("🔧 Module Status")
@@ -336,8 +327,7 @@ class InstitutionalDashboard:
             for i, (module_name, status) in enumerate(module_status.items()):
                 with cols[i % 3]:
                     self.render_module_card(module_name, status)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_module_card(self, module_name: str, status: Dict[str, Any]):
         """Render individual module status card."""
         status_value = status.get('status', 'unknown')
@@ -359,8 +349,7 @@ class InstitutionalDashboard:
             <p><strong>Status:</strong> {status_value.title()}</p>
         </div>
         """, unsafe_allow_html=True)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_recent_activity(self):
         """Render recent system activity."""
         st.header("📋 Recent Activity")
@@ -414,8 +403,7 @@ class InstitutionalDashboard:
                         st.dataframe(df, use_container_width=True)
                 else:
                     st.info("No active trades")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_charts(self):
         """Render charts and visualizations."""
         st.header("📊 Charts & Analytics")
@@ -435,8 +423,7 @@ class InstitutionalDashboard:
             
             with tab4:
                 self.render_signal_charts()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_performance_charts(self):
         """Render performance-related charts."""
         st.subheader("Performance Analytics")
@@ -469,8 +456,7 @@ class InstitutionalDashboard:
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("No performance data available")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_risk_charts(self):
         """Render risk-related charts."""
         st.subheader("Risk Analytics")
@@ -498,8 +484,7 @@ class InstitutionalDashboard:
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("No risk data available")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_regime_charts(self):
         """Render regime-related charts."""
         st.subheader("Market Regime Analysis")
@@ -530,8 +515,7 @@ class InstitutionalDashboard:
                     st.info(f"Current Regime: {regime_info['current_regime']}")
             else:
                 st.info("No regime data available")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_signal_charts(self):
         """Render signal-related charts."""
         st.subheader("Signal Analytics")
@@ -560,8 +544,7 @@ class InstitutionalDashboard:
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("No signal data available")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_natural_language_interface(self):
         """Render natural language query interface."""
         st.header("🤖 Natural Language Interface")
@@ -586,8 +569,7 @@ class InstitutionalDashboard:
                                 st.json(result['data'])
                         else:
                             st.error(f"Query failed: {result.get('error', 'Unknown error')}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_settings(self):
         """Render system settings."""
         st.header("⚙️ System Settings")
@@ -613,8 +595,7 @@ class InstitutionalDashboard:
             # Data sources
             with st.expander("Data Sources"):
                 st.json(config.get('data_sources', {}))
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def render_help(self):
         """Render help and documentation."""
         st.header("❓ Help & Documentation")
@@ -642,12 +623,10 @@ class InstitutionalDashboard:
             for example in examples:
                 st.write(f"• {example}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function to run the dashboard."""
     dashboard = InstitutionalDashboard()
     dashboard.run()
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

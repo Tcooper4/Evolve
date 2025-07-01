@@ -34,7 +34,7 @@ class ModelRegistry:
                 with open(self.registry_path, 'r') as f:
                     return json.load(f)
             except (json.JSONDecodeError, IOError):
-                return {'success': True, 'result': self._get_default_registry(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return self._get_default_registry()
         else:
             return self._get_default_registry()
     

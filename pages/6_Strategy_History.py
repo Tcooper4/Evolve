@@ -46,8 +46,7 @@ PERF_LOG = "memory/performance_log.json"
 def load_strategy_log():
     """Load and process strategy log data."""
     if not os.path.exists(LOG_PATH):
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     with open(LOG_PATH, "r") as f:
         data = json.load(f)
     
@@ -83,7 +82,7 @@ def get_top_models(df):
         top = metrics_df.sort_values(metric, ascending=False).iloc[0]
         top_models[metric] = f"{top.name} ({top[metric]:.3f})"
     
-    return {'success': True, 'result': top_models, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return top_models
 
 def plot_metric_timeseries(df, metric, timeframe):
     """Create interactive time series plot for a specific metric."""
@@ -122,7 +121,7 @@ def plot_metric_timeseries(df, metric, timeframe):
         )
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def plot_metric_distribution(df, metric, timeframe):
     """Create distribution plot for a specific metric."""
@@ -152,14 +151,13 @@ def plot_metric_distribution(df, metric, timeframe):
         boxmode="group"
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def generate_pdf_report(df, timeframe, selected_metric, top_models, leaderboard_df):
     """Generate a PDF report with strategy analysis."""
     if not FPDF_AVAILABLE:
         st.error("FPDF not available - cannot generate PDF report")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     # Create PDF
     pdf = FPDF()
     pdf.add_page()
@@ -249,14 +247,13 @@ def plot_regime_comparison(df, regime):
         title=f"Performance Comparison in {regime} Regime"
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def plot_sector_performance(df, group_by):
     """Create sector/asset class performance plots."""
     if group_by not in df.columns:
         st.warning(f"Column '{group_by}' not found in data")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     # Group by sector/asset class and calculate mean metrics
     sector_metrics = df.groupby(group_by).agg({
         "sharpe": "mean",
@@ -329,7 +326,6 @@ def main():
     # Main content
     if df.empty:
         st.warning("No data available for the selected filters.")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     # Top models summary
     st.subheader("🏆 Top Performing Models")
@@ -429,7 +425,6 @@ def main():
     with col4:
         avg_accuracy = df["accuracy"].mean()
         st.metric("Avg Accuracy", f"{avg_accuracy:.3f}")
-
 
 if __name__ == "__main__":
     main() 

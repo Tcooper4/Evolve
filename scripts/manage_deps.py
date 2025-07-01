@@ -46,7 +46,6 @@ class DependencyManager:
         self.requirements_file = Path("requirements.txt")
         self.dev_requirements_file = Path("requirements-dev.txt")
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
@@ -54,7 +53,7 @@ class DependencyManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
 
     def setup_logging(self):
         """Initialize logging configuration."""
@@ -68,7 +67,6 @@ class DependencyManager:
         
         logging.config.dictConfig(log_config)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def install_dependencies(self, dev: bool = False):
         """Install dependencies from requirements file."""
         self.logger.info("Installing dependencies...")
@@ -87,7 +85,7 @@ class DependencyManager:
             return True
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Failed to install dependencies: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def update_dependencies(self, dev: bool = False):
         """Update dependencies to their latest versions."""
@@ -115,7 +113,7 @@ class DependencyManager:
             return True
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Failed to update dependencies: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def freeze_dependencies(self, dev: bool = False):
         """Freeze current dependencies to requirements file."""
@@ -137,7 +135,7 @@ class DependencyManager:
             return True
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Failed to freeze dependencies: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def check_dependencies(self):
         """Check for outdated dependencies."""
@@ -160,7 +158,7 @@ class DependencyManager:
             return True
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Failed to check dependencies: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def clean_dependencies(self):
         """Clean up unused dependencies."""
@@ -183,7 +181,7 @@ class DependencyManager:
             return True
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Failed to clean dependencies: {e}")
-            return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False
 
     def verify_dependencies(self):
         """Verify all dependencies are installed correctly."""
@@ -202,7 +200,7 @@ class DependencyManager:
                     if result.returncode != 0:
                         self.logger.error(f"Dependency conflicts found in {requirements_file}:")
                         print(result.stdout)
-                        return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                        return False
             
             self.logger.info("All dependencies verified successfully")
             return True
@@ -243,6 +241,5 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

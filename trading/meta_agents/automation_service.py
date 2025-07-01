@@ -25,10 +25,7 @@ class AutomationService:
         self.task_manager = TaskManager(config)
         self.workflow_engine = WorkflowEngine(config)
         self.service_manager = ServiceManager(config)
-        self.setup_logging()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self):
+        self.setup_logging()def setup_logging(self):
         """Configure logging for automation."""
         log_path = Path("logs/automation")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -152,7 +149,7 @@ class AutomationService:
         handler = factory.get_handler(task_type)
         if not handler:
             raise ValueError(f"Unknown task type: {task_type}")
-        return {'success': True, 'result': handler.handle, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return handler.handle
     
     async def start(self) -> None:
         """Start the automation service."""
@@ -176,4 +173,3 @@ class AutomationService:
 
     def schedule(self):
         raise NotImplementedError('Pending feature') 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

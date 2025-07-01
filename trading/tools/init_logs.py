@@ -36,7 +36,7 @@ def load_log_config() -> list:
     config_path = Path(__file__).parent / "config" / "log_files.json"
     try:
         with open(config_path) as f:
-            return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return json.load(f)
     except FileNotFoundError:
         logger.error(f"Config file not found: {config_path}")
         raise
@@ -99,7 +99,7 @@ def init_log_files(log_dir: str = "logs", verbose: bool = True) -> Dict[str, Lit
             if verbose:
                 logger.info(f"Verified log file exists: {filename}")
     
-    return {'success': True, 'result': results, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return results
 
 def main() -> None:
     """Main entry point."""
@@ -117,6 +117,5 @@ def main() -> None:
         logger.error(f"Failed to initialize log files: {e}")
         raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

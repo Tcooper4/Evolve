@@ -17,7 +17,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 from services.service_client import ServiceClient
 from utils.safe_executor import SafeExecutor, ExecutionStatus
 
-
 def demo_safe_executor():
     """Demonstrate SafeExecutor functionality."""
     
@@ -40,7 +39,7 @@ def demo_safe_executor():
     print("-" * 40)
     
     model_code = '''
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
 import numpy as np
 import pandas as pd
 
@@ -332,7 +331,6 @@ def main(input_data):
     print("- Resource monitoring and statistics")
     print("\n🚀 Ready to safely execute custom trading code!")
 
-
 def main():
     """Main function."""
     try:
@@ -352,13 +350,12 @@ def main():
     except Exception as e:
         print(f"\n❌ Demo failed: {e}")
         print("💡 Make sure Redis is running and the SafeExecutor service is available")
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "status": "failed",
             "demo_type": "safe_executor",
             "error": str(e),
             "result": "error"
         }
-
 
 if __name__ == "__main__":
     main() 

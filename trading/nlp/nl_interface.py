@@ -120,7 +120,7 @@ class NLInterface:
             
         except Exception as e:
             logger.error(f"Error processing query: {str(e)}", exc_info=True)
-            return {'success': True, 'result': self._handle_error(str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._handle_error(str(e))
     
     def _detect_intent(self, query: str) -> Tuple[str, float]:
         """Detect intent from query.
@@ -165,7 +165,7 @@ class NLInterface:
             
         except Exception as e:
             logger.error(f"Error extracting entities: {str(e)}", exc_info=True)
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
     
     def _validate_entities(self, entities: Dict[str, Any]) -> bool:
         """Validate extracted entities.
@@ -182,7 +182,7 @@ class NLInterface:
         # Check confidence for each entity
         for entity, data in entities.items():
             if 'confidence' in data and data['confidence'] < self.confidence_thresholds['entity_extraction']:
-                return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return False
                 
         return True
     
@@ -216,7 +216,7 @@ class NLInterface:
                 # Check for unsafe content
                 if self.llm_processor.is_unsafe_content(chunk):
                     logger.warning("Detected unsafe content in response")
-                    return {'success': True, 'result': self._handle_unsafe_content(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return self._handle_unsafe_content()
             
             # Parse response
             response_data = json.loads(response)
@@ -261,7 +261,7 @@ class NLInterface:
             
         except Exception as e:
             logger.error(f"Error formatting response: {str(e)}", exc_info=True)
-            return {'success': True, 'result': self._handle_error(str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._handle_error(str(e))
     
     def _handle_low_confidence(self, component: str, data: Any) -> Dict[str, Any]:
         """Handle low confidence in any component.
@@ -288,7 +288,7 @@ class NLInterface:
                 'confidence': data.get('confidence', 0)
             }
         else:
-            return {'success': True, 'result': self._handle_error(f"Unknown component: {component}"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._handle_error(f"Unknown component: {component}")
     
     def _handle_missing_entities(self, entities: Dict[str, Any], query: str) -> Dict[str, Any]:
         """Handle missing or low confidence entities.
@@ -315,7 +315,7 @@ class NLInterface:
                 'original_query': query
             }
         else:
-            return {'success': True, 'result': self._handle_error("No entities found"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._handle_error("No entities found")
     
     def _handle_unsafe_content(self) -> Dict[str, Any]:
         """Handle unsafe content in response.
@@ -323,7 +323,7 @@ class NLInterface:
         Returns:
             Error response
         """
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'type': 'error',
             'message': "I cannot process this request as it may contain unsafe content.",
             'timestamp': datetime.now().isoformat()
@@ -338,7 +338,7 @@ class NLInterface:
         Returns:
             Error response
         """
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'type': 'error',
             'message': f"An error occurred: {error}",
             'timestamp': datetime.now().isoformat()
@@ -389,7 +389,7 @@ class NLInterface:
             )
         except Exception as e:
             self.logger.error(f"Error generating forecast: {e}")
-            return {'success': True, 'result': self._create_error_response(str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._create_error_response(str(e))
             
     def _generate_analysis(self, prompt: ProcessedPrompt) -> ResponseData:
         """Generate analysis response."""
@@ -433,7 +433,7 @@ class NLInterface:
             )
         except Exception as e:
             self.logger.error(f"Error generating analysis: {e}")
-            return {'success': True, 'result': self._create_error_response(str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._create_error_response(str(e))
             
     def _generate_recommendation(self, prompt: ProcessedPrompt) -> ResponseData:
         """Generate recommendation response."""
@@ -487,7 +487,7 @@ class NLInterface:
             )
         except Exception as e:
             self.logger.error(f"Error generating recommendation: {e}")
-            return {'success': True, 'result': self._create_error_response(str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._create_error_response(str(e))
             
     def _generate_explanation(self, prompt: ProcessedPrompt) -> ResponseData:
         """Generate explanation response."""
@@ -520,7 +520,7 @@ class NLInterface:
             )
         except Exception as e:
             self.logger.error(f"Error generating explanation: {e}")
-            return {'success': True, 'result': self._create_error_response(str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._create_error_response(str(e))
             
     def _generate_comparison(self, prompt: ProcessedPrompt) -> ResponseData:
         """Generate comparison response."""
@@ -562,7 +562,7 @@ class NLInterface:
             )
         except Exception as e:
             self.logger.error(f"Error generating comparison: {e}")
-            return {'success': True, 'result': self._create_error_response(str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._create_error_response(str(e))
             
     def _generate_optimization(self, prompt: ProcessedPrompt) -> ResponseData:
         """Generate optimization response."""
@@ -604,7 +604,7 @@ class NLInterface:
             )
         except Exception as e:
             self.logger.error(f"Error generating optimization: {e}")
-            return {'success': True, 'result': self._create_error_response(str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._create_error_response(str(e))
             
     def _generate_validation(self, prompt: ProcessedPrompt) -> ResponseData:
         """Generate validation response."""
@@ -637,7 +637,7 @@ class NLInterface:
             )
         except Exception as e:
             self.logger.error(f"Error generating validation: {e}")
-            return {'success': True, 'result': self._create_error_response(str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._create_error_response(str(e))
             
     def _generate_monitoring(self, prompt: ProcessedPrompt) -> ResponseData:
         """Generate monitoring response."""
@@ -677,11 +677,11 @@ class NLInterface:
             )
         except Exception as e:
             self.logger.error(f"Error generating monitoring: {e}")
-            return {'success': True, 'result': self._create_error_response(str(e)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._create_error_response(str(e))
             
     def _create_error_response(self, error_message: str) -> ResponseData:
         """Create error response."""
-        return {'success': True, 'result': ResponseData(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return ResponseData(
             content={
                 "error": error_message
             },

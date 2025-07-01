@@ -505,7 +505,7 @@ class ForecastRouter:
             result['forecast_method'] = 'router_selected'
             result['timestamp'] = datetime.now().isoformat()
             
-            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return result
             
         except Exception as e:
             logger.error(f"Forecast router error: {e}")

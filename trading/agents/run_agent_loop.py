@@ -17,7 +17,6 @@ sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from trading.agents.agent_loop_manager import AgentLoopManager
 
-
 def setup_logging(config: Dict[str, Any]) -> None:
     """Setup logging configuration.
     
@@ -40,7 +39,6 @@ def setup_logging(config: Dict[str, Any]) -> None:
         ]
     )
 
-
     return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     """Load configuration from file.
@@ -59,8 +57,7 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
     
     with open(config_file, 'r') as f:
-        return {'success': True, 'result': json.load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-
+        return json.load(f)
 
 async def main():
     """Main entry point."""
@@ -113,7 +110,6 @@ async def main():
         print(f"Unexpected error: {e}")
         logging.error(f"Unexpected error: {e}", exc_info=True)
         sys.exit(1)
-
 
 if __name__ == "__main__":
     asyncio.run(main()) 

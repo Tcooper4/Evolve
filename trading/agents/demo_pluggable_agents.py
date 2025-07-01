@@ -18,11 +18,9 @@ from trading.agents.model_builder_agent import ModelBuilderAgent, ModelBuildRequ
 from trading.agents.performance_critic_agent import PerformanceCriticAgent, ModelEvaluationRequest
 from trading.agents.updater_agent import UpdaterAgent
 
-
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 class DemoAgent(BaseAgent):
     """A simple demo agent to show custom agent registration."""
@@ -38,10 +36,7 @@ class DemoAgent(BaseAgent):
     def __init__(self, config):
         """Initialize the demo agent."""
         super().__init__(config)
-        self.execution_count = 0
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    async def execute(self, **kwargs) -> AgentResult:
+        self.execution_count = 0async def execute(self, **kwargs) -> AgentResult:
         """Execute the demo agent logic."""
         self.execution_count += 1
         message = kwargs.get('message', 'Hello from demo agent!')
@@ -54,7 +49,6 @@ class DemoAgent(BaseAgent):
                 "timestamp": self.timestamp.isoformat()
             }
         )
-
 
 async def demo_basic_usage():
     """Demonstrate basic agent manager usage."""
@@ -82,7 +76,6 @@ async def demo_basic_usage():
     for name, status in statuses.items():
         logger.info(f"Agent {name}: enabled={status.enabled}")
 
-
 async def demo_agent_execution():
     """Demonstrate agent execution."""
     logger.info("\n=== Demo: Agent Execution ===")
@@ -103,7 +96,6 @@ async def demo_agent_execution():
         logger.info(f"Model built successfully: {result.data}")
     else:
         logger.error(f"Model building failed: {result.error_message}")
-
 
 async def demo_custom_agent():
     """Demonstrate custom agent registration."""
@@ -132,7 +124,6 @@ async def demo_custom_agent():
     else:
         logger.error(f"Demo agent failed: {result.error_message}")
 
-
 async def demo_configuration_management():
     """Demonstrate configuration management."""
     logger.info("\n=== Demo: Configuration Management ===")
@@ -156,7 +147,6 @@ async def demo_configuration_management():
     # Get execution metrics
     metrics = manager.get_execution_metrics()
     logger.info(f"Execution metrics: {json.dumps(metrics, indent=2)}")
-
 
 async def demo_agent_workflow():
     """Demonstrate a complete agent workflow."""
@@ -203,7 +193,6 @@ async def demo_agent_workflow():
     else:
         logger.info("No updates needed or update failed")
 
-
 async def demo_agent_swapping():
     """Demonstrate agent swapping and replacement."""
     logger.info("\n=== Demo: Agent Swapping ===")
@@ -222,7 +211,6 @@ async def demo_agent_swapping():
     # (In a real scenario, you might register a different implementation)
     logger.info("Agent swapping demonstration completed")
 
-
 def main():
     """Main demo function."""
     logger.info("Starting Pluggable Agents Demo")
@@ -237,7 +225,5 @@ def main():
     
     logger.info("Demo completed successfully!")
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

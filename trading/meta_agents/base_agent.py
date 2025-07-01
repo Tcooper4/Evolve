@@ -27,9 +27,7 @@ class BaseMetaAgent(ABC):
         self,
         name: str,
         config: Optional[Dict] = None,
-        log_file_path: Optional[Union[str, Path]] = None
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        log_file_path: Optional[Union[str, Path]] = None):
         """Initialize the meta agent.
         
         Args:
@@ -86,16 +84,14 @@ class BaseMetaAgent(ABC):
         self.running = True
         self.initialize()
         self.logger.info(f"{self.name} agent started successfully")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def stop(self) -> None:
         """Stop the agent and cleanup resources."""
         self.logger.info(f"Stopping {self.name} agent")
         self.running = False
         self.cleanup()
         self.logger.info(f"{self.name} agent stopped")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def run_once(self, task: Task) -> Dict[str, Any]:
         """Run a single task and track its status.
         
@@ -142,8 +138,7 @@ class BaseMetaAgent(ABC):
     def cleanup(self) -> None:
         """Cleanup agent resources. Override in subclasses if needed."""
         self.logger.info(f"Cleaning up {self.name} agent resources")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def log_action(self, action: str, details: Optional[Dict] = None) -> None:
         """Log an agent action.
         
@@ -154,8 +149,7 @@ class BaseMetaAgent(ABC):
         self.logger.info(f"Action: {action}")
         if details:
             self.logger.debug(f"Details: {details}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def generate_report(self, results: Dict[str, Any]) -> Path:
         """Generate a report file.
         
@@ -183,7 +177,7 @@ class BaseMetaAgent(ABC):
             json.dump(report, f, indent=2)
         
         self.logger.info(f"Generated report: {report_file}")
-        return {'success': True, 'result': report_file, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return report_file
     
     def get_status(self) -> Dict[str, Any]:
         """Get current agent status.
@@ -191,7 +185,7 @@ class BaseMetaAgent(ABC):
         Returns:
             Dict containing agent status information
         """
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "name": self.name,
             "status": "running" if self.running else "idle",
             "config_hash": self._get_config_hash(),
@@ -219,7 +213,7 @@ class BaseMetaAgent(ABC):
             type="simulation",
             data=task_data
         )
-        return {'success': True, 'result': self.run_once(task), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.run_once(task)
     
     def _get_config_hash(self) -> str:
         """Get a hash of the current configuration.
@@ -228,7 +222,7 @@ class BaseMetaAgent(ABC):
             String hash of the configuration
         """
         config_str = json.dumps(self.config, sort_keys=True)
-        return {'success': True, 'result': hashlib.sha256(config_str.encode()).hexdigest()[:8], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return hashlib.sha256(config_str.encode()).hexdigest()[:8]
     
     def __repr__(self) -> str:
         """Return a debug-friendly string representation of the agent.
@@ -236,7 +230,7 @@ class BaseMetaAgent(ABC):
         Returns:
             String representation of the agent
         """
-        return {'success': True, 'result': (, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return (
             f"{self.__class__.__name__}(name='{self.name}', "
             f"config_hash='{self._get_config_hash()}', "
             f"running={self.running}, "

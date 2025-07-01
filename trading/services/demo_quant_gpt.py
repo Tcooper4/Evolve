@@ -16,7 +16,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from services.quant_gpt import QuantGPT
 
-
 def demo_quant_gpt() -> dict:
     """Demonstrate QuantGPT functionality."""
     

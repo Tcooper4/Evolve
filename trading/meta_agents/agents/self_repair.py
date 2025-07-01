@@ -81,17 +81,14 @@ class SelfRepairAgent:
         )
         self.observer.start()
         
-        logger.info("Initialized SelfRepairAgent")
-
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def _load_config(self, config_path: str) -> Dict:
+        logger.info("Initialized SelfRepairAgent")def _load_config(self, config_path: str) -> Dict:
         """Load configuration from JSON file"""
         try:
             with open(config_path, 'r') as f:
                 return json.load(f)
         except FileNotFoundError:
             logger.warning(f"Config file {config_path} not found, using defaults")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
 
     def _load_repair_log(self) -> List[RepairIssue]:
         """Load repair history from log file"""
@@ -105,11 +102,11 @@ class SelfRepairAgent:
                 return [RepairIssue(**issue) for issue in raw_issues]
         except Exception as e:
             logger.error(f"Error loading repair log: {e}")
-            return {'success': True, 'result': [], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return []
 
     def _load_issue_patterns(self) -> Dict[str, Dict]:
         """Load patterns for detecting common issues"""
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "import_error": {
                 "pattern": r"ImportError: No module named '(\w+)'",
                 "severity": "high",
@@ -143,7 +140,7 @@ class SelfRepairAgent:
                 return json.load(f)
         except Exception as e:
             logger.error(f"Error loading dependency map: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
 
     async def scan_for_issues(self) -> List[RepairIssue]:
         """
@@ -495,7 +492,7 @@ class SelfRepairAgent:
                 return json.load(f)
         except Exception as e:
             logger.error(f"Error loading master config: {e}")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
 
     async def _sync_config_file(self, config_path: Path, master_config: Dict) -> None:
         """Synchronize a single config file with master config"""
@@ -547,7 +544,6 @@ class SelfRepairAgent:
         except Exception as e:
             logger.error(f"Error logging repair: {e}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     async def execute_repair_loop(self) -> None:
         """Main execution loop for the SelfRepairAgent.
         
@@ -590,17 +586,14 @@ class CodeChangeHandler(FileSystemEventHandler):
         Args:
             agent: The SelfRepairAgent instance to notify of changes
         """
-        self.agent = agent
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def on_modified(self, event) -> None:
+        self.agent = agentdef on_modified(self, event) -> None:
         """Handle file modification events.
         
         Args:
             event: File system event containing information about the modification
         """
         if event.is_directory:
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
         if event.src_path.endswith(('.py', '.json', '.h5')):
             logger.info(f"Code change detected: {event.src_path}")
             # Trigger immediate scan

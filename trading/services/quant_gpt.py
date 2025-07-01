@@ -23,7 +23,6 @@ from trading.services.quant_gpt import QuantGPT
 
 logger = logging.getLogger(__name__)
 
-
 class QuantGPT:
     """
     Natural language interface for the Evolve trading system.
@@ -118,7 +117,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error processing query: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'query': query,
                 'error': str(e),
                 'status': 'error',
@@ -143,7 +142,7 @@ class QuantGPT:
                 return self._parse_with_regex(query)
         except Exception as e:
             logger.error(f"Error parsing query: {e}")
-            return {'success': True, 'result': self._parse_with_regex(query), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._parse_with_regex(query)
     
     def _parse_with_gpt(self, query: str) -> Dict[str, Any]:
         """Parse query using GPT for better understanding."""
@@ -182,7 +181,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"GPT parsing failed: {e}")
-            return {'success': True, 'result': self._parse_with_regex(query), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return self._parse_with_regex(query)
     
     def _parse_with_regex(self, query: str) -> Dict[str, Any]:
         """Parse query using regex patterns as fallback."""
@@ -215,7 +214,7 @@ class QuantGPT:
         else:
             intent = 'general_query'
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'intent': intent,
             'symbol': symbol,
             'timeframe': timeframe,
@@ -248,7 +247,7 @@ class QuantGPT:
         if 'confidence' not in parsed:
             parsed['confidence'] = 0.8
         
-        return {'success': True, 'result': parsed, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return parsed
     
     def _execute_action(self, parsed: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -323,7 +322,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error getting model recommendation: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'action': 'model_recommendation',
                 'error': str(e),
                 'symbol': symbol,
@@ -370,7 +369,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error getting trading signal: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'action': 'trading_signal',
                 'error': str(e),
                 'symbol': symbol
@@ -407,7 +406,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error getting market analysis: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'action': 'market_analysis',
                 'error': str(e),
                 'symbol': symbol
@@ -431,7 +430,7 @@ class QuantGPT:
             
         except Exception as e:
             logger.error(f"Error getting general analysis: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'action': 'general_analysis',
                 'error': str(e),
                 'symbol': symbol
@@ -441,7 +440,7 @@ class QuantGPT:
         """Generate forecast using a specific model."""
         # This would integrate with your existing forecasting system
         # For now, return a mock forecast
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'model_id': model_id,
             'symbol': symbol,
             'timeframe': timeframe,
@@ -468,7 +467,7 @@ class QuantGPT:
             signal = 'HOLD'
             strength = 'weak'
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'signal': signal,
             'strength': strength,
             'confidence': confidence,
@@ -480,7 +479,7 @@ class QuantGPT:
         """Get market data analysis."""
         # This would integrate with your data providers
         # For now, return mock data
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'symbol': symbol,
             'timeframe': timeframe,
             'period': period,
@@ -579,14 +578,12 @@ class QuantGPT:
             return f"Comprehensive market analysis completed for {symbol}. The analysis includes model performance evaluation, market data trends, and technical indicators. Review the generated plots for visual insights."
         
         else:
-            return {'success': True, 'result': f"Analysis completed for {symbol}. The system processed your query and generated relevant insights based on available data and models.", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return f"Analysis completed for {symbol}. The system processed your query and generated relevant insights based on available data and models."
     
     def close(self):
         """Close the QuantGPT interface and clean up resources."""
         self.client.close()
 
-
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main function for command-line usage."""
     import argparse
@@ -628,14 +625,13 @@ def main():
         }
     except Exception as e:
         print(f"Error: {e}")
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "status": "failed",
             "query": args.query,
             "error": str(e)
         }
     finally:
         quant_gpt.close()
-
 
 if __name__ == "__main__":
     main() 

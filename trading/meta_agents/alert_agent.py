@@ -22,10 +22,7 @@ class AlertAgent(BaseAgent):
         """Initialize the alert agent."""
         super().__init__(config)
         self.alert_manager = AlertManager(config)
-        self.setup_logging()
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self):
+        self.setup_logging()def setup_logging(self):
         """Configure logging for alert management."""
         log_path = Path("logs/alerts")
         log_path.mkdir(parents=True, exist_ok=True)

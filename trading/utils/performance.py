@@ -44,9 +44,7 @@ class PerformanceMonitor:
         self,
         config: Optional[Dict] = None,
         log_file_path: Optional[Union[str, Path]] = None,
-        debug: bool = False
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    ):
+        debug: bool = False):
         """Initialize the performance monitor.
         
         Args:
@@ -116,8 +114,7 @@ class PerformanceMonitor:
         """Start the monitoring process."""
         if self.active:
             self.logger.warning("Monitor is already active")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
         self.active = True
         self.stop_event.clear()
         self.monitor_thread = threading.Thread(target=self._monitor_loop)
@@ -128,8 +125,7 @@ class PerformanceMonitor:
     def stop_monitoring(self) -> None:
         """Stop the monitoring process."""
         if not self.active:
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
         self.logger.info("Stopping performance monitoring...")
         self.active = False
         self.stop_event.set()
@@ -143,8 +139,7 @@ class PerformanceMonitor:
         time.sleep(1)  # Brief pause to ensure clean shutdown
         self.start_monitoring()
         self.logger.info("Performance monitoring restarted")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _monitor_loop(self) -> None:
         """Main monitoring loop."""
         while not self.stop_event.is_set():
@@ -157,8 +152,7 @@ class PerformanceMonitor:
             except Exception as e:
                 self.logger.error(f"Error in monitor loop: {str(e)}")
                 time.sleep(5)  # Brief pause before retry
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def collect_metrics(self) -> List[Metric]:
         """Collect all system metrics.
         
@@ -241,7 +235,7 @@ class PerformanceMonitor:
                 threshold=self.config["alert_thresholds"]["net_io_percent"]
             ))
         
-        return {'success': True, 'result': metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return metrics
     
     def _store_metric(self, metric: Metric) -> None:
         """Store a metric in memory and on disk.
@@ -268,8 +262,7 @@ class PerformanceMonitor:
             f.write(json.dumps(asdict(metric)) + "\n")
         
         self.logger.debug(f"Stored metric: {metric.name}={metric.value}{metric.unit}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def evaluate_alerts(self, metric: Metric) -> None:
         """Evaluate a metric against thresholds and trigger alerts.
         
@@ -277,8 +270,7 @@ class PerformanceMonitor:
             metric: Metric to evaluate
         """
         if not metric.threshold:
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            
+
         # Calculate severity thresholds
         warning_threshold = metric.threshold * self.config["alert_severities"]["warning"]
         critical_threshold = metric.threshold * self.config["alert_severities"]["critical"]
@@ -325,8 +317,7 @@ class PerformanceMonitor:
         alert_file = self.alerts_dir / f"alerts_{datetime.utcnow().strftime('%Y%m%d')}.jsonl"
         with open(alert_file, "a") as f:
             f.write(json.dumps(asdict(alert)) + "\n")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def resolve_alert(self, alert_id: str) -> None:
         """Resolve an alert.
         
@@ -339,8 +330,7 @@ class PerformanceMonitor:
             alert.resolved_at = datetime.utcnow().isoformat()
             self._store_alert(alert)
             self.logger.info(f"Alert resolved: {alert_id}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def get_metric_history(self, metric_name: str) -> List[Metric]:
         """Get historical data for a metric.
         
@@ -370,7 +360,7 @@ class PerformanceMonitor:
             if not alert.resolved:
                 alert_counts[alert.severity] += 1
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             "timestamp": datetime.utcnow().isoformat(),
             "hostname": self.hostname,
             "platform": self.platform,
@@ -398,4 +388,3 @@ class PerformanceMonitor:
         except Exception as e:
             self.logger.error(f"Error loading synthetic data: {str(e)}")
             raise 
-                return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

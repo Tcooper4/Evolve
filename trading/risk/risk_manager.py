@@ -76,14 +76,12 @@ class RiskManager:
         self._calculate_metrics()
         
         self.logger.info("Updated returns and recalculated metrics")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _calculate_metrics(self) -> None:
         """Calculate risk metrics."""
         if self.returns is None or self.returns.empty:
             self.logger.warning("No returns data available for metric calculation")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         # Calculate basic metrics
         volatility = self.returns.std() * np.sqrt(252)
         excess_returns = self.returns - (self.config.get('risk_free_rate', 0.02) / 252)
@@ -151,7 +149,7 @@ class RiskManager:
         
         if self.current_metrics is None:
             self.logger.warning("No metrics available for position limits")
-            return {'success': True, 'result': {}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {}
         
         # Get base limits from config
         max_position_size = self.config.get('max_position_size', 0.2)
@@ -221,8 +219,7 @@ class RiskManager:
         """
         if not self.metrics_history:
             self.logger.warning("No metrics history available for plotting")
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
+
         # Create subplots
         fig = make_subplots(
             rows=3,

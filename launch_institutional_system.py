@@ -524,6 +524,5 @@ def main():
         logger.error(f"Error in main: {e}")
         sys.exit(1)
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 if __name__ == "__main__":
     main() 

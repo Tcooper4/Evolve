@@ -16,7 +16,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 class DataVisualizer:
     """Class for visualizing data analysis results."""
     
@@ -269,7 +268,6 @@ class DataVisualizer:
                 
         except Exception as e:
             logger.error(f"Error plotting summary statistics: {str(e)}")
-
 
 class MarketVisualizer:
     """Class for visualizing market analysis results."""

@@ -15,7 +15,6 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-
 class BaseService(ABC):
     """
     Base class for all agent services with Redis pub/sub communication.

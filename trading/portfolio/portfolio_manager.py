@@ -65,7 +65,7 @@ class Position:
         pos_dict = asdict(self)
         if self.rationale:
             pos_dict['rationale'] = self.rationale.to_dict()
-        return {'success': True, 'result': pos_dict, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return pos_dict
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Position':
@@ -86,7 +86,7 @@ class Position:
         if 'rationale' in data:
             data['rationale'] = TradeRationale.from_dict(data['rationale'])
             
-        return {'success': True, 'result': cls(**data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return cls(**data)
 
 @dataclass
 class PortfolioState:
@@ -111,7 +111,7 @@ class PortfolioState:
         state_dict['timestamp'] = self.timestamp.isoformat()
         state_dict['open_positions'] = [p.to_dict() for p in self.open_positions]
         state_dict['closed_positions'] = [p.to_dict() for p in self.closed_positions]
-        return {'success': True, 'result': state_dict, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return state_dict
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'PortfolioState':
@@ -124,7 +124,7 @@ class PortfolioState:
         data['open_positions'] = [Position.from_dict(p) for p in data['open_positions']]
         data['closed_positions'] = [Position.from_dict(p) for p in data['closed_positions']]
         
-        return {'success': True, 'result': cls(**data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return cls(**data)
 
 class PortfolioManager:
     """Portfolio manager with full agentic support and interactive tracking."""
@@ -246,7 +246,7 @@ class PortfolioManager:
         # Publish update
         self._publish_update("position_opened", position.to_dict())
         
-        return {'success': True, 'result': position, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return position
     
     def close_position(self, position: Position, price: float) -> None:
         """Close an existing position.
@@ -290,8 +290,7 @@ class PortfolioManager:
         
         # Update metrics
         self._update_metrics()
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def update_positions(self, prices: Dict[str, float], market_data: Dict[str, Any]) -> None:
         """Update all open positions with current prices.
         
@@ -355,8 +354,7 @@ class PortfolioManager:
         
         # Generate daily commentary if needed
         self._generate_daily_commentary(market_data)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _calculate_position_size(self, symbol: str, price: float, strategy: str,
                                market_data: Dict[str, Any]) -> float:
         """Calculate position size based on risk and strategy confidence.
@@ -396,7 +394,7 @@ class PortfolioManager:
         max_position_size = self.config.get('max_position_size', 0.2)  # 20% of capital
         size = min(size, self.state.available_capital * max_position_size / price)
         
-        return {'success': True, 'result': size, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return size
     
     def _calculate_slippage(self, position: Position, price: float) -> float:
         """Calculate slippage for a trade.
@@ -415,7 +413,7 @@ class PortfolioManager:
         # Calculate slippage
         slippage = price * position.size * base_slippage * (1 + size_factor)
         
-        return {'success': True, 'result': slippage, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return slippage
     
     def _calculate_fees(self, position: Position, price: float) -> float:
         """Calculate fees for a trade.
@@ -434,7 +432,7 @@ class PortfolioManager:
         # Calculate fees
         fee = max(min_fee, price * position.size * base_fee)
         
-        return {'success': True, 'result': fee, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fee
     
     def _calculate_position_risk(self, position: Position, price: float,
                                market_data: Dict[str, Any]) -> Dict[str, float]:
@@ -462,7 +460,7 @@ class PortfolioManager:
         # Calculate beta
         beta = market_data.get('beta', {}).get(position.symbol, 1.0)
         
-        return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
             'var_95': var_95,
             'var_99': var_99,
             'volatility': volatility,
@@ -510,8 +508,7 @@ class PortfolioManager:
             'portfolio_volatility': portfolio_vol,
             'portfolio_beta': portfolio_beta
         }
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _update_strategy_weights(self) -> None:
         """Update strategy weights based on performance."""
         # Calculate strategy PnL
@@ -534,8 +531,7 @@ class PortfolioManager:
                 strategy: 1.0 / len(strategies)
                 for strategy in strategies
             }
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _generate_daily_commentary(self, market_data: Dict[str, Any]) -> None:
         """Generate daily trading commentary.
         
@@ -566,8 +562,7 @@ class PortfolioManager:
                 
                 # Publish update
                 self._publish_update("daily_commentary", commentary.to_dict())
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _publish_update(self, event_type: str, data: Dict[str, Any]) -> None:
         """Publish portfolio update to Redis.
         
@@ -585,8 +580,7 @@ class PortfolioManager:
                 self.redis.publish('portfolio_updates', json.dumps(message))
             except RedisError as e:
                 logger.error(f"Failed to publish update: {e}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _log_position(self, position: Position, action: str) -> None:
         """Log position action.
         
@@ -612,8 +606,7 @@ class PortfolioManager:
         df.to_csv(csv_path, mode='a', header=not os.path.exists(csv_path), index=False)
         
         logger.info(f"Logged {action} position for {position.symbol}")
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def _log_commentary(self, commentary: DailyCommentary) -> None:
         """Log daily commentary."""
         try:
@@ -626,7 +619,6 @@ class PortfolioManager:
         except Exception as e:
             logger.error(f"Error logging commentary: {e}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def get_position_summary(self) -> pd.DataFrame:
         """Get summary of all positions as a DataFrame.
         
@@ -682,7 +674,7 @@ class PortfolioManager:
                 
         except Exception as e:
             logger.error(f"Error generating performance summary: {e}")
-            return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return pd.DataFrame()
 
     def get_performance_summary(self) -> Dict[str, Any]:
         """Get a summary of portfolio performance.
@@ -755,7 +747,7 @@ class PortfolioManager:
             
         except Exception as e:
             logger.error(f"Error generating performance summary: {e}")
-            return {'success': True, 'result': {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
                 'error': str(e),
                 'total_positions': 0,
                 'win_rate': 0.0,
@@ -783,7 +775,6 @@ class PortfolioManager:
             logger.error(f"Error saving portfolio state: {e}")
             raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     def load(self, filename: str) -> None:
         """Load portfolio state from file.
         
@@ -803,5 +794,4 @@ class PortfolioManager:
             logger.error(f"Error loading portfolio state: {e}")
             raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 __all__ = ["PortfolioManager", "PortfolioState", "Position", "PositionStatus", "TradeDirection"]

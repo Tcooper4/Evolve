@@ -23,10 +23,7 @@ class AutomationScheduler:
         self.config = config
         self.task_manager = TaskManager(config)
         self.workflow_engine = WorkflowEngine(config)
-        self.setup_logging()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self):
+        self.setup_logging()def setup_logging(self):
         """Configure logging for scheduling."""
         log_path = Path("logs/scheduler")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -157,4 +154,3 @@ class AutomationScheduler:
 
     def parse_cron_schedule(self):
         raise NotImplementedError('Pending feature') 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

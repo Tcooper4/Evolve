@@ -293,8 +293,7 @@ class UserManager:
             payload = jwt.decode(token, self.secret_key, algorithms=["HS256"])
             return payload
         except jwt.InvalidTokenError:
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
     def _generate_token(self, user: Dict) -> str:
         """Generate JWT token for user."""
         payload = {

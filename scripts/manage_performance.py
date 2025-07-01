@@ -99,10 +99,7 @@ class PerformanceManager:
         self.prof_dir = Path("profiles")
         self.prof_dir.mkdir(parents=True, exist_ok=True)
         self.reports_dir = Path("reports/performance")
-        self.reports_dir.mkdir(parents=True, exist_ok=True)
-
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def _load_config(self, config_path: str) -> dict:
+        self.reports_dir.mkdir(parents=True, exist_ok=True)def _load_config(self, config_path: str) -> dict:
         """Load application configuration.
 
         Args:
@@ -119,7 +116,7 @@ class PerformanceManager:
             sys.exit(1)
         
         with open(config_path) as f:
-            return {'success': True, 'result': yaml.safe_load(f), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return yaml.safe_load(f)
 
     def setup_logging(self):
         """Initialize logging configuration.
@@ -180,7 +177,7 @@ class PerformanceManager:
             self.logger.info(f"Profile results saved to {profile_file}")
             self.logger.info(f"Statistics saved to {stats_file}")
             
-            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return result
         except Exception as e:
             self.logger.error(f"Failed to profile function: {e}")
             raise
@@ -217,7 +214,7 @@ class PerformanceManager:
             
             self.logger.info(f"Memory profile saved to {memory_file}")
             
-            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return result
         except Exception as e:
             self.logger.error(f"Failed to profile memory: {e}")
             raise
@@ -254,7 +251,7 @@ class PerformanceManager:
             
             self.logger.info(f"Line profile saved to {line_file}")
             
-            return {'success': True, 'result': result, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return result
         except Exception as e:
             self.logger.error(f"Failed to profile line performance: {e}")
             raise
@@ -326,7 +323,7 @@ class PerformanceManager:
             
             self.logger.info(f"Analysis saved to {analysis_file}")
             
-            return {'success': True, 'result': analysis, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return analysis
         except Exception as e:
             self.logger.error(f"Failed to analyze performance: {e}")
             raise
@@ -373,7 +370,7 @@ class PerformanceManager:
             
             self.logger.info(f"Optimization report saved to {report_file}")
             
-            return {'success': True, 'result': optimized_func, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return optimized_func
         except Exception as e:
             self.logger.error(f"Failed to optimize performance: {e}")
             raise
@@ -415,7 +412,7 @@ class PerformanceManager:
                     "severity": "medium"
                 })
             
-            return {'success': True, 'result': suggestions, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return suggestions
         except Exception as e:
             self.logger.error(f"Failed to analyze source code: {e}")
             raise
@@ -442,7 +439,7 @@ class PerformanceManager:
                 self.logger.info(f"Optimization suggestion: {suggestion}")
             
             # Return the original function
-            return {'success': True, 'result': func, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return func
             
         except Exception as e:
             self.logger.error(f"Failed to apply optimizations: {e}")
@@ -462,7 +459,7 @@ class PerformanceManager:
                 "primitive_calls": (original_stats.prim_calls - optimized_stats.prim_calls) / original_stats.prim_calls * 100
             }
             
-            return {'success': True, 'result': improvement, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return improvement
         except Exception as e:
             self.logger.error(f"Failed to compare performance: {e}")
             raise
@@ -525,7 +522,6 @@ class PerformanceManager:
             self.logger.error(f"Failed to generate performance plots: {e}")
             raise
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Main entry point for the performance management script."""
     parser = argparse.ArgumentParser(description="Performance Manager")
@@ -584,7 +580,6 @@ def main():
 
     if args.help:
         print(__doc__)
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     manager = PerformanceManager()
     if args.command == "profile":

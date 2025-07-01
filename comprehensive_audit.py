@@ -57,7 +57,7 @@ class ReturnStatementAuditor:
     def should_exclude_file(self, file_path: Path) -> bool:
         """Check if file should be excluded from audit."""
         file_str = str(file_path)
-        return {'success': True, 'result': any(pattern in file_str for pattern in self.exclude_patterns), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return any(pattern in file_str for pattern in self.exclude_patterns)
     
     def get_priority(self, file_path: str, function_name: str) -> str:
         """Determine priority level for a function."""
@@ -67,7 +67,7 @@ class ReturnStatementAuditor:
         for priority, keywords in self.categories.items():
             for keyword in keywords:
                 if keyword in file_lower or keyword in func_lower:
-                    return {'success': True, 'result': priority, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return priority
         
         return 'low'
     
@@ -124,7 +124,7 @@ class ReturnStatementAuditor:
         """Check if function has any return statements."""
         for child in ast.walk(node):
             if isinstance(child, ast.Return):
-                return {'success': True, 'result': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return True
         return False
     
     def should_function_have_return(self, node: ast.FunctionDef, content: str) -> bool:
@@ -137,7 +137,7 @@ class ReturnStatementAuditor:
         if hasattr(node, 'decorator_list'):
             for decorator in node.decorator_list:
                 if isinstance(decorator, ast.Name) and decorator.id in ['property', 'setter']:
-                    return {'success': True, 'result': False, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                    return False
         
         # Check if function has side effects (print, logging, file operations, etc.)
         function_lines = content.split('\n')[node.lineno-1:node.end_lineno]
@@ -221,7 +221,7 @@ class ReturnStatementAuditor:
                     'reason': violation['reason']
                 })
         
-        return {'success': True, 'result': self.generate_report(results), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return self.generate_report(results)
     
     def generate_report(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Generate comprehensive audit report."""
@@ -257,7 +257,7 @@ class ReturnStatementAuditor:
             'recommendations': self.generate_recommendations(priority_summary)
         }
         
-        return {'success': True, 'result': report, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return report
     
     def generate_recommendations(self, priority_summary: Dict[str, Any]) -> List[str]:
         """Generate recommendations based on audit results."""
@@ -282,7 +282,7 @@ class ReturnStatementAuditor:
         recommendations.append("✅ Add return statements with structured dictionaries containing status and metadata")
         recommendations.append("✅ Ensure all agent pipelines return usable outputs for autonomous operation")
         
-        return {'success': True, 'result': recommendations, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return recommendations
     
     def print_report(self, report: Dict[str, Any]):
         """Print formatted audit report."""
@@ -321,15 +321,13 @@ class ReturnStatementAuditor:
             print(f"   {rec}")
         
         print("\n" + "="*80)
-    
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+
     def save_report(self, report: Dict[str, Any], filename: str = "comprehensive_audit_report.json"):
         """Save audit report to JSON file."""
         with open(filename, 'w') as f:
             json.dump(report, f, indent=2)
         print(f"📄 Report saved to {filename}")
 
-    return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 def main():
     """Run comprehensive audit."""
     auditor = ReturnStatementAuditor()

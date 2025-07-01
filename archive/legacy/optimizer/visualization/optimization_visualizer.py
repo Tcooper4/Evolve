@@ -60,7 +60,7 @@ class OptimizationVisualizer:
             showlegend=True
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     @staticmethod
     def plot_parameter_importance(results: Dict) -> go.Figure:
@@ -107,7 +107,7 @@ class OptimizationVisualizer:
             showlegend=False
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     @staticmethod
     def plot_parameter_distributions(results: Dict) -> go.Figure:
@@ -154,7 +154,7 @@ class OptimizationVisualizer:
             showlegend=False
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     @staticmethod
     def plot_parameter_correlations(results: Dict) -> go.Figure:
@@ -200,7 +200,7 @@ class OptimizationVisualizer:
             yaxis_title='Parameter'
         )
         
-        return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return fig
     
     @staticmethod
     def display_optimization_summary(results: Dict) -> None:
@@ -233,5 +233,4 @@ class OptimizationVisualizer:
         
         # Display parameter correlations
         st.subheader('Parameter Correlations')
-        st.plotly_chart(OptimizationVisualizer.plot_parameter_correlations(results)) 
-            return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        st.plotly_chart(OptimizationVisualizer.plot_parameter_correlations(results))

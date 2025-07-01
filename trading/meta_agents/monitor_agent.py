@@ -24,10 +24,7 @@ class MonitorAgent(BaseAgent):
         super().__init__(config)
         self.metrics_collector = MetricsCollector(config)
         self.alert_manager = AlertManager(config, self.metrics_collector)
-        self.setup_logging()
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def setup_logging(self):
+        self.setup_logging()def setup_logging(self):
         """Configure logging for monitoring."""
         log_path = Path("logs/monitoring")
         log_path.mkdir(parents=True, exist_ok=True)

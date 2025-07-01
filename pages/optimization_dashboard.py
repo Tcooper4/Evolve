@@ -46,7 +46,7 @@ def load_optimization_results(results_dir: str = "sandbox_results") -> pd.DataFr
     results = []
     
     if not os.path.exists(results_dir):
-        return {'success': True, 'result': pd.DataFrame(), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return pd.DataFrame()
         
     for filename in os.listdir(results_dir):
         if filename.endswith(".json"):
@@ -130,7 +130,7 @@ def plot_optimization_metrics(df: pd.DataFrame) -> go.Figure:
         title_text="Optimization Metrics Over Time"
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def plot_strategy_comparison(df: pd.DataFrame) -> go.Figure:
     """Plot strategy comparison.
@@ -176,7 +176,7 @@ def plot_strategy_comparison(df: pd.DataFrame) -> go.Figure:
         title_text="Strategy Comparison"
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def plot_parameter_changes(df: pd.DataFrame) -> go.Figure:
     """Plot parameter changes over time.
@@ -254,7 +254,7 @@ def plot_parameter_changes(df: pd.DataFrame) -> go.Figure:
         title_text="Parameter Changes Over Time"
     )
     
-    return {'success': True, 'result': fig, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return fig
 
 def main():
     """Main entry point for the optimization dashboard."""
@@ -265,7 +265,6 @@ def main():
     df = load_optimization_results()
     if df.empty:
         st.warning("No optimization results found.")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     # ==== Sliders for Major Strategies ====
     st.subheader("Strategy Parameters")

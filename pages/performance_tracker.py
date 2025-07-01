@@ -59,7 +59,6 @@ def main():
 
     if not metrics:
         st.warning("No metrics found for this ticker.")
-        return {'success': True, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     # ==== Structuring Data ====
     records = []
@@ -216,7 +215,6 @@ def main():
         df.to_csv(index=False).encode("utf-8"), 
         file_name=f"{selected_ticker}_performance.csv"
     )
-
 
 if __name__ == "__main__":
     main() 
