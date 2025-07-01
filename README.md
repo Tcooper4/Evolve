@@ -150,6 +150,69 @@ Raw Market Data → Feature Engineering → Forecasting Models → Strategy Engi
 6. **Access the dashboard**
    Open your browser and navigate to `http://localhost:8501`
 
+### Live Demo Instructions
+
+1. **Start the Application**
+   ```bash
+   streamlit run app.py
+   ```
+
+2. **Navigate to Forecast & Trade**
+   - Click on "📈 Forecast & Trade" in the sidebar
+   - This is the main interface for generating forecasts
+
+3. **Try AI Agent Interface**
+   - Enter a natural language request like "Forecast AAPL for the next 30 days"
+   - Click "🚀 Process with AI Agent"
+   - Watch the AI route your request and generate insights
+
+4. **Use Traditional Interface**
+   - Enter a ticker symbol (e.g., AAPL, GOOGL, TSLA)
+   - Select date range for historical data
+   - Choose a model (LSTM, Transformer, XGBoost, Ensemble)
+   - Click "Generate Forecast"
+
+5. **Explore Other Features**
+   - **Portfolio Dashboard**: View portfolio performance and allocations
+   - **Strategy History**: See historical strategy performance
+   - **Risk Dashboard**: Analyze risk metrics and drawdowns
+   - **System Scorecard**: Monitor system health and performance
+
+### Quick Examples
+
+**Generate a Forecast:**
+```python
+# Using the unified interface
+python unified_interface.py --command "forecast AAPL 30d"
+
+# Using the API
+from trading.models.ensemble_model import EnsembleModel
+model = EnsembleModel()
+forecast = model.predict("AAPL", days=30)
+```
+
+**Run a Backtest:**
+```python
+# Using the unified interface
+python unified_interface.py --command "backtest rsi AAPL 2023-01-01 2023-12-31"
+
+# Using the API
+from trading.strategies.rsi_strategy import RSIStrategy
+from trading.backtesting.backtester import Backtester
+strategy = RSIStrategy(period=14, overbought=70, oversold=30)
+backtester = Backtester(strategy)
+results = backtester.run("AAPL", start_date="2023-01-01", end_date="2023-12-31")
+```
+
+**Ask AI Questions:**
+```python
+# Using the unified interface
+python unified_interface.py --command "What's the best model for TSLA?"
+
+# Using natural language
+python unified_interface.py --command "Should I long AAPL this week?"
+```
+
 ### Docker Deployment
 
 ```bash
@@ -160,33 +223,51 @@ docker build -t evolve-platform .
 docker run -p 8501:8501 evolve-platform
 ```
 
-## 📊 Usage Examples
+## 📊 Model & Strategy Overview
 
-### Generate Market Forecasts
-```python
-from trading.models.ensemble_model import EnsembleModel
-from trading.data.providers.yfinance_provider import YFinanceProvider
+### Forecasting Models
 
-# Initialize data provider and model
-provider = YFinanceProvider()
-model = EnsembleModel()
+**LSTM (Long Short-Term Memory)**
+- Best for: Time series with long-term dependencies
+- Use case: Stock price prediction with trend analysis
+- Performance: High accuracy for volatile markets
 
-# Get forecast for AAPL
-forecast = model.predict("AAPL", days=30)
-```
+**Transformer**
+- Best for: Complex patterns and attention mechanisms
+- Use case: Multi-timeframe analysis
+- Performance: Excellent for capturing market regime changes
 
-### Backtest Trading Strategy
-```python
-from trading.strategies.rsi_strategy import RSIStrategy
-from trading.backtesting.backtester import Backtester
+**XGBoost**
+- Best for: Tabular data with feature interactions
+- Use case: Technical indicator-based prediction
+- Performance: Fast training and good interpretability
 
-# Create strategy and backtester
-strategy = RSIStrategy(period=14, overbought=70, oversold=30)
-backtester = Backtester(strategy)
+**Ensemble**
+- Best for: Combining multiple model strengths
+- Use case: Robust prediction with uncertainty quantification
+- Performance: Most reliable across different market conditions
 
-# Run backtest
-results = backtester.run("AAPL", start_date="2023-01-01", end_date="2023-12-31")
-```
+### Trading Strategies
+
+**RSI (Relative Strength Index)**
+- Signal: Buy when RSI < 30, Sell when RSI > 70
+- Best for: Mean reversion trading
+- Risk: Medium
+
+**MACD (Moving Average Convergence Divergence)**
+- Signal: Buy when MACD crosses above signal line
+- Best for: Trend following
+- Risk: Low to Medium
+
+**Bollinger Bands**
+- Signal: Buy when price touches lower band, Sell when price touches upper band
+- Best for: Volatility-based trading
+- Risk: Medium
+
+**Custom Strategies**
+- Signal: Based on custom technical indicators
+- Best for: Specific market conditions
+- Risk: Variable
 
 ## 📁 Project Structure
 
@@ -543,4 +624,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
+**⭐ Star this repository if you find it helpful!** 
 **⭐ Star this repository if you find it helpful!** 

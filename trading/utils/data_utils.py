@@ -24,7 +24,9 @@ class DataValidator:
         Args:
             min_data_points: Minimum number of data points required
         """
-        self.min_data_points = min_data_pointsdef validate_dataframe(
+        self.min_data_points = min_data_points
+
+    def validate_dataframe(
         self,
         df: pd.DataFrame,
         required_columns: List[str],
@@ -241,7 +243,10 @@ def calculate_technical_indicators(
     indicators: List[str],
     params: Optional[Dict[str, Dict[str, int]]] = None
 ) -> pd.DataFrame:
-    """Calculate technical indicators.
+    """Calculate technical indicators (DEPRECATED).
+    
+    This function is deprecated. Use trading.feature_engineering.feature_engineer.FeatureEngineer
+    for comprehensive technical indicator calculation with better error handling and validation.
     
     Args:
         df: DataFrame with price data
@@ -251,6 +256,13 @@ def calculate_technical_indicators(
     Returns:
         DataFrame with added indicators
     """
+    import warnings
+    warnings.warn(
+        "calculate_technical_indicators is deprecated. Use trading.feature_engineering.feature_engineer.FeatureEngineer instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    
     if params is None:
         params = {
             'sma': {'window': 20},

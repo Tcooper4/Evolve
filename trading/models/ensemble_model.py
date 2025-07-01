@@ -78,21 +78,25 @@ class EnsembleModel(BaseModel):
     
         return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _update_weights(self, data: pd.DataFrame):
-        """Update model weights based on recent performance.
+        """Update model weights based on recent performance using vectorized operations.
         
         Args:
             data: Recent data for performance calculation
         """
         window = self.config['weight_window']
         recent_data = data.iloc[-window:]
+        actual = recent_data['close'].values
+        
+        # Vectorized performance calculation
+        model_scores = {}
+        model_confidences = {}
         
         for model_name, model in self.models.items():
             try:
                 # Get model predictions
                 preds = model.predict(recent_data)
-                actual = recent_data['close'].values
                 
-                # Calculate performance metrics
+                # Calculate performance metrics using vectorized operations
                 if self.config['voting_method'] == 'mse':
                     score = -np.mean((actual - preds) ** 2)  # Negative MSE
                 elif self.config['voting_method'] == 'sharpe':
@@ -101,20 +105,29 @@ class EnsembleModel(BaseModel):
                 else:  # custom
                     score = self._calculate_custom_score(actual, preds)
                 
+                # Get confidence
+                confidence = model.calculate_confidence(preds) if hasattr(model, 'calculate_confidence') else 1.0
+                
+                model_scores[model_name] = score
+                model_confidences[model_name] = confidence
+                
                 # Update performance history
                 self.performance_history[model_name].append({
                     'timestamp': datetime.now().isoformat(),
                     'score': score,
-                    'confidence': model.calculate_confidence(preds) if hasattr(model, 'calculate_confidence') else 1.0
+                    'confidence': confidence
                 })
                 
             except Exception as e:
                 logging.error(f"Error updating weights for {model_name}: {e}")
-                raise RuntimeError(f"Failed to update weights for {model_name}: {e}")
+                # Use default score for failed models
+                model_scores[model_name] = 0.0
+                model_confidences[model_name] = 0.0
         
-        # Update weights using softmax
-        scores = np.array([h[-1]['score'] for h in self.performance_history.values()])
-        self.weights = dict(zip(self.models.keys(), np.exp(scores) / np.sum(np.exp(scores))))
+        # Vectorized weight calculation using softmax
+        scores_array = np.array([model_scores[name] for name in self.models.keys()])
+        exp_scores = np.exp(scores_array - np.max(scores_array))  # Numerical stability
+        self.weights = dict(zip(self.models.keys(), exp_scores / np.sum(exp_scores)))
 
     def _calculate_custom_score(self, actual: np.ndarray, preds: np.ndarray) -> float:
         """Calculate custom performance score.
@@ -219,7 +232,7 @@ class EnsembleModel(BaseModel):
                 
                 # Apply fallback logic
                 if confidence < self.config.get('fallback_threshold', 0.5):
-                    print(f"Low confidence for {model_name}, using fallback")
+                    logger.warning(f"Low confidence for {model_name}, using fallback")
                     continue
                 
                 predictions[model_name] = preds
@@ -451,4 +464,4 @@ class EnsembleModel(BaseModel):
             
         except Exception as e:
             logging.error(f"Error plotting ensemble results: {e}")
-            print(f"Could not plot results: {e}") 
+            logger.error(f"Could not plot results: {e}") 

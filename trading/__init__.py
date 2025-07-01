@@ -1,6 +1,43 @@
-"""Trading system package."""
+"""
+Evolve Trading System
 
-__version__ = '0.1.0'
+An autonomous financial forecasting and trading strategy platform that leverages
+multiple machine learning models to predict stock price movements, generate
+technical trading signals, backtest strategies, and visualize performance.
+"""
+
+__version__ = "2.1.0"
+__author__ = "Evolve Team"
+__email__ = "support@evolve-trading.com"
+__description__ = "Autonomous Financial Forecasting & Trading Platform"
+__url__ = "https://github.com/Tcooper4/Evolve"
+__license__ = "MIT"
+
+# Core imports
+from .models import *
+from .strategies import *
+from .data import *
+from .backtesting import *
+from .optimization import *
+from .risk import *
+from .portfolio import *
+from .agents import *
+from .utils import *
+
+# Version info
+def get_version():
+    """Get the current version of the Evolve trading system."""
+    return __version__
+
+def get_version_info():
+    """Get detailed version information."""
+    return {
+        'version': __version__,
+        'author': __author__,
+        'description': __description__,
+        'url': __url__,
+        'license': __license__
+    }
 
 from trading.market import MarketAnalyzer, MarketData, MarketIndicators
 from .data.preprocessing import DataPreprocessor, FeatureEngineering, DataValidator, DataScaler

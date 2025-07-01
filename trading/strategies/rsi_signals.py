@@ -83,54 +83,68 @@ def generate_rsi_signals(
         logger.error(error_msg)
         raise RuntimeError(error_msg)
 
-def generate_signals(df: pd.DataFrame, ticker: str = None, **kwargs) -> Dict[str, Any]:
+def generate_signals(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
     """Generate trading signals using RSI strategy.
+    
+    This function implements the shared strategy interface that returns a DataFrame
+    with signal columns for consistent usage across the system.
     
     Args:
         df: Price data DataFrame with OHLCV columns
-        ticker: Optional ticker symbol for loading optimized settings
-        **kwargs: Additional parameters for signal generation
+        **kwargs: Additional parameters including:
+            - ticker: Optional ticker symbol for loading optimized settings
+            - period: RSI period (default: 14)
+            - buy_threshold: RSI level for buy signals (default: 30)
+            - sell_threshold: RSI level for sell signals (default: 70)
         
     Returns:
-        Dictionary containing signals and metadata
+        DataFrame with original data plus signal columns:
+            - signal: 1 for buy, -1 for sell, 0 for hold
+            - rsi: RSI indicator values
+            - returns: Price returns
+            - strategy_returns: Strategy returns
+            - cumulative_returns: Cumulative price returns
+            - strategy_cumulative_returns: Cumulative strategy returns
+            
+    Raises:
+        RuntimeError: If signal generation fails
     """
     try:
+        # Extract parameters
+        ticker = kwargs.get('ticker')
+        period = kwargs.get('period', 14)
+        buy_threshold = kwargs.get('buy_threshold', 30)
+        sell_threshold = kwargs.get('sell_threshold', 70)
+        
         # Generate RSI signals
-        result_df = generate_rsi_signals(df, ticker, **kwargs)
+        result_df = generate_rsi_signals(
+            df, 
+            ticker=ticker,
+            period=period,
+            buy_threshold=buy_threshold,
+            sell_threshold=sell_threshold
+        )
         
-        # Extract signals
-        signals = result_df['signal'].dropna()
+        # Ensure we have all required columns
+        required_columns = ['signal', 'rsi', 'returns', 'strategy_returns']
+        for col in required_columns:
+            if col not in result_df.columns:
+                logger.warning(f"Missing required column {col} in RSI strategy output")
+                result_df[col] = 0
         
-        # Calculate signal statistics
-        buy_signals = (signals == 1).sum()
-        sell_signals = (signals == -1).sum()
-        total_signals = buy_signals + sell_signals
+        # Add metadata columns
+        result_df['strategy_name'] = 'RSI'
+        result_df['strategy_params'] = json.dumps({
+            'period': period,
+            'buy_threshold': buy_threshold,
+            'sell_threshold': sell_threshold,
+            'ticker': ticker
+        })
         
-        # Calculate performance metrics
-        if 'strategy_returns' in result_df.columns:
-            strategy_returns = result_df['strategy_returns'].dropna()
-            total_return = (1 + strategy_returns).prod() - 1
-            sharpe_ratio = strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0
-            max_drawdown = (strategy_returns.cumsum() - strategy_returns.cumsum().expanding().max()).min()
-        else:
-            total_return = 0
-            sharpe_ratio = 0
-            max_drawdown = 0
-        
-        return {
-            'signals': signals.to_dict(),
-            'buy_signals': buy_signals,
-            'sell_signals': sell_signals,
-            'total_signals': total_signals,
-            'total_return': total_return,
-            'sharpe_ratio': sharpe_ratio,
-            'max_drawdown': max_drawdown,
-            'strategy': 'RSI',
-            'ticker': ticker,
-            'timestamp': pd.Timestamp.now().isoformat()
-        }
+        logger.info(f"Successfully generated RSI signals for {len(result_df)} data points")
+        return result_df
         
     except Exception as e:
-        error_msg = f"Error generating signals: {str(e)}"
+        error_msg = f"Error generating RSI signals: {str(e)}"
         logger.error(error_msg)
         raise RuntimeError(error_msg) 
