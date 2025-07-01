@@ -28,8 +28,10 @@ def export_weights_to_file(ticker: str, strategy: str = "balanced") -> Dict[str,
             "tcn": 0.1
         }
         
-        # Create directory if it doesn't exist
-        os.makedirs("memory", exist_ok=True)
+        try:
+            os.makedirs("memory", exist_ok=True)
+        except Exception as e:
+            print(f"Failed to create memory directory: {e}")
         
         # Save weights to file
         weights_file = f"memory/{ticker}_weights.json"

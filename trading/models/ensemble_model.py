@@ -262,7 +262,10 @@ class EnsembleModel(BaseModel):
             filepath: Path to save model
         """
         model_dir = os.path.dirname(filepath)
-        os.makedirs(model_dir, exist_ok=True)
+        try:
+            os.makedirs(model_dir, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create model_dir: {e}")
         
         # Save ensemble metadata
         metadata = {

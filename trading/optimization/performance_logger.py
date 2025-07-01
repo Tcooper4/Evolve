@@ -83,12 +83,13 @@ class PerformanceLogger:
         self.log_dir = log_dir
         self.metrics_file = os.path.join(log_dir, "optimization_metrics.jsonl")
         
-        # Create log directory
-        os.makedirs(log_dir, exist_ok=True)
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create log_dir: {e}")
         
         logger.info(f"Initialized PerformanceLogger with log directory: {log_dir}")
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def log_metrics(self, metrics: PerformanceMetrics) -> None:
         """Log performance metrics.
         

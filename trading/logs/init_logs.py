@@ -24,7 +24,10 @@ def init_log_files(log_dir: str = "logs") -> dict:
     """
     try:
         # Create logs directory if it doesn't exist
-        os.makedirs(log_dir, exist_ok=True)
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+        except Exception as e:
+            logging.error(f"Failed to create log_dir: {e}")
         
         # Get current timestamp
         timestamp = datetime.utcnow().isoformat()

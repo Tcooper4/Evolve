@@ -392,7 +392,10 @@ Based on the backtest results, the **{strategy_name}** strategy shows
         try:
             # Create output directory
             output_dir = self.export_settings['output_dir']
-            os.makedirs(output_dir, exist_ok=True)
+            try:
+                os.makedirs(output_dir, exist_ok=True)
+            except Exception as e:
+                logger.error(f"Failed to create output directory {output_dir}: {e}")
             
             # Generate filename
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') if self.export_settings['auto_timestamp'] else ''
