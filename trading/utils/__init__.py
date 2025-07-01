@@ -138,7 +138,10 @@ def save_ensemble_weights(weights: Dict[str, float]) -> None:
     """Save ensemble weights."""
     try:
         weights_path = "models/ensemble_weights.json"
-        os.makedirs(os.path.dirname(weights_path), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(weights_path), exist_ok=True)
+        except Exception as e:
+            utils_logger.error(f"Failed to create directory for weights: {e}")
         with open(weights_path, 'w') as f:
             json.dump(weights, f, indent=2)
     except Exception as e:

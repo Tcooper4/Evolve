@@ -7,6 +7,7 @@ import os
 import json
 from typing import Dict, Any
 from datetime import datetime
+import logging
 
 @ModelRegistry.register('CatBoost')
 class CatBoostModel(BaseModel):
@@ -75,7 +76,6 @@ class CatBoostModel(BaseModel):
             }
             
         except Exception as e:
-            import logging
             logging.error(f"Error in CatBoost model forecast: {e}")
             raise RuntimeError(f"CatBoost model forecasting failed: {e}")
 
@@ -95,7 +95,10 @@ class CatBoostModel(BaseModel):
         plt.show()
 
     def save(self, path: str):
-        os.makedirs(path, exist_ok=True)
+        try:
+            os.makedirs(path, exist_ok=True)
+        except Exception as e:
+            logging.error(f"Failed to create directory {path}: {e}")
         self.model.save_model(os.path.join(path, 'catboost_model.cbm'))
         with open(os.path.join(path, 'config.json'), 'w') as f:
             json.dump(self.config, f)

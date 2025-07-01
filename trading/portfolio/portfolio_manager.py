@@ -182,9 +182,12 @@ class PortfolioManager:
         # Create necessary directories with safety guards
         try:
             os.makedirs('trading/portfolio/logs', exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create trading/portfolio/logs: {e}")
+        try:
             os.makedirs('trading/portfolio/data', exist_ok=True)
         except Exception as e:
-            self.logger.error(f"Failed to create portfolio directories: {e}")
+            logger.error(f"Failed to create trading/portfolio/data: {e}")
         
         # Add file handler if no handlers exist
         if not self.logger.handlers:

@@ -573,6 +573,13 @@ def close_loggers(logger_names: Optional[List[str]] = None) -> Dict[str, Any]:
             "closed_count": 0
         }
 
+def close_loggers():
+    """Safely close and remove all handlers from root logger."""
+    log = logging.getLogger()
+    for handler in log.handlers[:]:
+        handler.close()
+        log.removeHandler(handler)
+
 def cleanup_logging_resources() -> Dict[str, Any]:
     """Clean up all logging resources and reset logging configuration.
     
