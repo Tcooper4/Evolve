@@ -5,6 +5,10 @@ import pandas as pd
 from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
+import warnings
+
+# Import centralized technical indicators
+from core.utils.technical_indicators import calculate_macd
 
 @dataclass
 class MACDConfig:
@@ -29,18 +33,13 @@ class MACDStrategy:
         if 'close' not in data.columns:
             raise ValueError("Data must contain 'close' column")
             
-        # Calculate fast and slow EMAs
-        fast_ema = data['close'].ewm(span=self.config.fast_period, adjust=False).mean()
-        slow_ema = data['close'].ewm(span=self.config.slow_period, adjust=False).mean()
-        
-        # Calculate MACD line
-        macd_line = fast_ema - slow_ema
-        
-        # Calculate signal line
-        signal_line = macd_line.ewm(span=self.config.signal_period, adjust=False).mean()
-        
-        # Calculate histogram
-        histogram = macd_line - signal_line
+        # Use centralized MACD calculation
+        macd_line, signal_line, histogram = calculate_macd(
+            data['close'], 
+            self.config.fast_period, 
+            self.config.slow_period, 
+            self.config.signal_period
+        )
         
         return macd_line, signal_line, histogram
         
