@@ -16,7 +16,9 @@ class LogManager:
             log_dir (str): Directory to store log files
         """
         self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(parents=True, exist_ok=True)def setup_logger(self, name: str, level: int = logging.INFO) -> logging.Logger:
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+    
+    def setup_logger(self, name: str, level: int = logging.INFO) -> logging.Logger:
         """Set up a logger with file and console handlers.
         
         Args:
@@ -78,7 +80,9 @@ class ModelLogger(LogManager):
             log_dir (str): Directory to store model logs
         """
         super().__init__(log_dir)
-        self.logger = self.setup_logger("model")def log_model_info(self, info: Dict[str, Any]) -> None:
+        self.logger = self.setup_logger("model")
+    
+    def log_model_info(self, info: Dict[str, Any]) -> None:
         """Log model information.
         
         Args:
@@ -117,7 +121,9 @@ class DataLogger(LogManager):
             log_dir (str): Directory to store data logs
         """
         super().__init__(log_dir)
-        self.logger = self.setup_logger("data")def log_data_info(self, info: Dict[str, Any]) -> None:
+        self.logger = self.setup_logger("data")
+    
+    def log_data_info(self, info: Dict[str, Any]) -> None:
         """Log data information.
         
         Args:
@@ -151,7 +157,9 @@ class PerformanceLogger(LogManager):
             log_dir (str): Directory to store performance logs
         """
         super().__init__(log_dir)
-        self.logger = self.setup_logger("performance")def log_performance_metrics(self, metrics: Dict[str, float]) -> None:
+        self.logger = self.setup_logger("performance")
+    
+    def log_performance_metrics(self, metrics: Dict[str, float]) -> None:
         """Log performance metrics.
         
         Args:

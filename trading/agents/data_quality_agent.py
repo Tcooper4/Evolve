@@ -19,6 +19,7 @@ from trading.data.providers.alpha_vantage_provider import AlphaVantageProvider
 from trading.data.providers.yfinance_provider import YFinanceProvider
 from trading.data.data_loader import DataLoader
 from trading.memory.agent_memory import AgentMemory
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 class AnomalyType(str, Enum):
     """Types of data anomalies."""
@@ -65,7 +66,7 @@ class DataQualityReport:
     recommendations: List[str]
     overall_score: float
 
-class DataQualityAgent:
+class DataQualityAgent(BaseAgent):
     """
     Agent responsible for:
     - Detecting data quality issues and anomalies
@@ -74,13 +75,19 @@ class DataQualityAgent:
     - Providing data quality reports and recommendations
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the Data Quality Agent.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config or {}
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="DataQualityAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
+        self.config_dict = config.custom_config or {}
         self.logger = logging.getLogger(__name__)
         self.memory = AgentMemory()
         self.data_loader = DataLoader()
@@ -93,7 +100,7 @@ class DataQualityAgent:
         }
         
         # Configuration
-        self.anomaly_thresholds = self.config.get('anomaly_thresholds', {
+        self.anomaly_thresholds = self.config_dict.get('anomaly_thresholds', {
             'z_score_threshold': 3.0,
             'iqr_multiplier': 1.5,
             'missing_data_threshold': 0.05,
@@ -102,7 +109,7 @@ class DataQualityAgent:
             'price_gap_threshold': 0.1
         })
         
-        self.quality_thresholds = self.config.get('quality_thresholds', {
+        self.quality_thresholds = self.config_dict.get('quality_thresholds', {
             'excellent': 0.9,
             'good': 0.8,
             'fair': 0.7,
@@ -123,6 +130,78 @@ class DataQualityAgent:
         
         # Load existing data
         self._load_quality_history()
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the data quality assessment logic.
+        Args:
+            **kwargs: data, symbol, data_source, action, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'assess_quality')
+            
+            if action == 'assess_quality':
+                data = kwargs.get('data')
+                symbol = kwargs.get('symbol')
+                data_source = kwargs.get('data_source', 'primary')
+                
+                if data is None or symbol is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: data and symbol"
+                    )
+                
+                report = await self.assess_data_quality(data, symbol, data_source)
+                return AgentResult(success=True, data={
+                    "quality_report": report.__dict__,
+                    "quality_level": report.quality_level.value,
+                    "overall_score": report.overall_score,
+                    "anomalies_count": len(report.anomalies)
+                })
+                
+            elif action == 'route_to_backup':
+                symbol = kwargs.get('symbol')
+                data_issues = kwargs.get('data_issues', [])
+                
+                if symbol is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: symbol"
+                    )
+                
+                backup_data = await self.route_to_backup_provider(symbol, data_issues)
+                if backup_data is not None:
+                    return AgentResult(success=True, data={
+                        "backup_data_shape": backup_data.shape,
+                        "backup_data_columns": list(backup_data.columns)
+                    })
+                else:
+                    return AgentResult(success=False, error_message="No backup data available")
+                    
+            elif action == 'get_quality_summary':
+                symbol = kwargs.get('symbol')
+                
+                if symbol is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: symbol"
+                    )
+                
+                summary = self.get_quality_summary(symbol)
+                if summary:
+                    return AgentResult(success=True, data={"quality_summary": summary})
+                else:
+                    return AgentResult(success=False, error_message="No quality summary available")
+                    
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e)
 
     async def assess_data_quality(self, 
                                 data: pd.DataFrame,

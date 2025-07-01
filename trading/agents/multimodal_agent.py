@@ -8,8 +8,10 @@ MultimodalAgent: Visual reasoning agent for trading analytics.
 import io
 import logging
 from typing import Dict, Any, Optional, List
+from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 try:
     import plotly.graph_objs as go
@@ -31,15 +33,160 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-class MultimodalAgent:
-    def __init__(self, openai_api_key: Optional[str] = None, use_blip: bool = False):
-        self.openai_api_key = openai_api_key or (openai.api_key if openai else None)
+class MultimodalAgent(BaseAgent):
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="MultimodalAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
+        
+        # Extract config from custom_config or use defaults
+        custom_config = config.custom_config or {}
+        self.openai_api_key = custom_config.get('openai_api_key') or (openai.api_key if openai else None)
+        self.use_blip = custom_config.get('use_blip', False) and BlipProcessor and BlipForConditionalGeneration and Image
+        
         if openai and self.openai_api_key:
             openai.api_key = self.openai_api_key
-        self.use_blip = use_blip and BlipProcessor and BlipForConditionalGeneration and Image
         if self.use_blip:
             self.blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-            self.blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")def plot_equity_curve(self, equity: List[float], title: str = "Equity Curve") -> bytes:
+            self.blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the multimodal analysis logic.
+        Args:
+            **kwargs: equity, returns, action, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'analyze_equity_curve')
+            
+            if action == 'analyze_equity_curve':
+                equity = kwargs.get('equity')
+                
+                if equity is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: equity"
+                    )
+                
+                result = self.analyze_equity_curve(equity)
+                return AgentResult(success=True, data={
+                    "analysis_result": result['result'],
+                    "message": result['message']
+                })
+                
+            elif action == 'analyze_drawdown':
+                equity = kwargs.get('equity')
+                
+                if equity is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: equity"
+                    )
+                
+                result = self.analyze_drawdown(equity)
+                return AgentResult(success=True, data={
+                    "analysis_result": result['result'],
+                    "message": result['message']
+                })
+                
+            elif action == 'analyze_performance':
+                returns = kwargs.get('returns')
+                
+                if returns is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: returns"
+                    )
+                
+                result = self.analyze_performance(returns)
+                return AgentResult(success=True, data={
+                    "analysis_result": result['result'],
+                    "message": result['message']
+                })
+                
+            elif action == 'plot_equity_curve':
+                equity = kwargs.get('equity')
+                title = kwargs.get('title', "Equity Curve")
+                
+                if equity is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: equity"
+                    )
+                
+                image_bytes = self.plot_equity_curve(equity, title)
+                return AgentResult(success=True, data={
+                    "image_bytes_length": len(image_bytes),
+                    "title": title
+                })
+                
+            elif action == 'plot_drawdown':
+                equity = kwargs.get('equity')
+                title = kwargs.get('title', "Drawdown")
+                
+                if equity is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: equity"
+                    )
+                
+                image_bytes = self.plot_drawdown(equity, title)
+                return AgentResult(success=True, data={
+                    "image_bytes_length": len(image_bytes),
+                    "title": title
+                })
+                
+            elif action == 'plot_performance':
+                returns = kwargs.get('returns')
+                title = kwargs.get('title', "Strategy Performance")
+                
+                if returns is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: returns"
+                    )
+                
+                image_bytes = self.plot_performance(returns, title)
+                return AgentResult(success=True, data={
+                    "image_bytes_length": len(image_bytes),
+                    "title": title
+                })
+                
+            elif action == 'vision_insight':
+                image_bytes = kwargs.get('image_bytes')
+                prompt = kwargs.get('prompt', "Describe the trading chart and its key features.")
+                
+                if image_bytes is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: image_bytes"
+                    )
+                
+                insight = self.vision_insight(image_bytes, prompt)
+                return AgentResult(success=True, data={
+                    "insight": insight,
+                    "prompt": prompt
+                })
+                
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e)
+
+    def plot_equity_curve(self, equity: List[float], title: str = "Equity Curve") -> bytes:
         plt.figure(figsize=(8, 4))
         plt.plot(equity, label="Equity")
         plt.title(title)

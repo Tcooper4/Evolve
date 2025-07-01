@@ -39,10 +39,8 @@ class FeatureEngineer(FeatureEngineering):
         except Exception as exc:  # pragma: no cover - log and continue
             logger.warning("Failed to register default indicators: %s", exc)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def register_custom_indicator(
         self, name: str, func: Callable[[pd.DataFrame], Union[pd.Series, pd.DataFrame]]
-
     ) -> None:
         """Register a custom indicator calculation.
 
@@ -513,7 +511,7 @@ class FeatureEngineer(FeatureEngineering):
         X = df[self.feature_columns]
         y = df[target_col]
 
-        return {'success': True, 'result': X, y, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return X, y
 
     def get_feature_importance(self, model) -> pd.DataFrame:
         """Get feature importance from model."""

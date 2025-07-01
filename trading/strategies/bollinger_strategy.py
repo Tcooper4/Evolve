@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple, Optional
 from dataclasses import dataclass
+from datetime import datetime
 
 @dataclass
 class BollingerConfig:
@@ -20,7 +21,9 @@ class BollingerStrategy:
         """Initialize the strategy with configuration."""
         self.config = config or BollingerConfig()
         self.signals = None
-        self.positions = Nonedef calculate_bands(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        self.positions = None
+        
+    def calculate_bands(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Calculate Bollinger Bands for the given data."""
         if 'close' not in data.columns:
             raise ValueError("Data must contain 'close' column")
@@ -35,7 +38,7 @@ class BollingerStrategy:
         upper_band = middle_band + (std * self.config.num_std)
         lower_band = middle_band - (std * self.config.num_std)
         
-        return {'success': True, 'result': upper_band, middle_band, lower_band, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return upper_band, middle_band, lower_band
         
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """Generate trading signals based on Bollinger Bands."""

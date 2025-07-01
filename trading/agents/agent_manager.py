@@ -193,13 +193,16 @@ class AgentManager:
                 custom_config=agent_config_data.get("custom_config", {})
             )
         
+        # Always instantiate the agent with AgentConfig
+        instance = agent_class(config)
+        
         # Create registry entry
         entry = AgentRegistryEntry(
             agent_class=agent_class,
             config=config,
+            instance=instance,
             metadata=agent_class.get_metadata() if hasattr(agent_class, 'get_metadata') else None
         )
-        
         self.agent_registry[name] = entry
         self.logger.info(f"Registered agent: {name}")
     
@@ -220,24 +223,14 @@ class AgentManager:
             self.logger.warning(f"Agent {name} not found in registry")
     
     def get_agent(self, name: str) -> Optional[BaseAgent]:
-        """Get an agent instance.
-        
-        Args:
-            name: Name of the agent
-            
-        Returns:
-            Agent instance if found and enabled, None otherwise
-        """
-        if name not in self.agent_registry:
-            return None
-        
-        entry = self.agent_registry[name]
-        
-        # Create instance if not exists
-        if entry.instance is None:
-            entry.instance = entry.agent_class(entry.config)
-        
-        return entry.instance if entry.instance.is_enabled() else None
+        """Get an agent instance by name."""
+        entry = self.agent_registry.get(name)
+        if entry:
+            if entry.instance is None:
+                # Instantiate if not already done
+                entry.instance = entry.agent_class(entry.config)
+            return entry.instance
+        return None
     
     def enable_agent(self, name: str) -> bool:
         """Enable an agent.

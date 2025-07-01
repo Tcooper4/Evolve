@@ -43,6 +43,13 @@ class ServiceManager:
         
         # Service configurations
         self.services = {
+            'agent_api': {
+                'script': 'launch_agent_api.py',
+                'description': 'Agent API Service with WebSocket Support',
+                'status': 'stopped',
+                'process': None,
+                'pid': None
+            },
             'model_builder': {
                 'script': 'launch_model_builder.py',
                 'description': 'Model Builder Service',

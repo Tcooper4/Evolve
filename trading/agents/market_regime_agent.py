@@ -18,6 +18,7 @@ from sklearn.preprocessing import StandardScaler
 import joblib
 import json
 import os
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 logger = logging.getLogger(__name__)
 
@@ -51,23 +52,31 @@ class RegimeAnalysis:
     regime_transition_probability: float
     market_conditions: Dict[str, Any]
 
-class MarketRegimeAgent:
+class MarketRegimeAgent(BaseAgent):
     """Advanced market regime detection and strategy routing agent."""
     
     def __init__(self, 
+                 config: Optional[AgentConfig] = None,
                  lookback_period: int = 252,
                  regime_threshold: float = 0.7,
                  model_path: Optional[str] = None):
-        """Initialize the market regime agent.
+        if config is None:
+            config = AgentConfig(
+                name="MarketRegimeAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
         
-        Args:
-            lookback_period: Days to look back for regime analysis
-            regime_threshold: Confidence threshold for regime classification
-            model_path: Path to saved regime classification model
-        """
-        self.lookback_period = lookback_period
-        self.regime_threshold = regime_threshold
-        self.model_path = model_path or "models/market_regime_classifier.pkl"
+        # Extract config from custom_config or use defaults
+        custom_config = config.custom_config or {}
+        self.lookback_period = custom_config.get('lookback_period', lookback_period)
+        self.regime_threshold = custom_config.get('regime_threshold', regime_threshold)
+        self.model_path = custom_config.get('model_path', model_path) or "models/market_regime_classifier.pkl"
         
         # Initialize components
         self.scaler = StandardScaler()
@@ -79,6 +88,104 @@ class MarketRegimeAgent:
         self._load_or_train_model()
         
         logger.info("Market Regime Agent initialized successfully")
+    
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the market regime analysis logic.
+        Args:
+            **kwargs: symbol, action, data, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'analyze_regime')
+            
+            if action == 'analyze_regime':
+                symbol = kwargs.get('symbol', 'SPY')
+                analysis = self.analyze_regime(symbol)
+                return AgentResult(success=True, data={
+                    "regime_analysis": {
+                        "current_regime": analysis.current_regime.value,
+                        "regime_confidence": analysis.regime_confidence,
+                        "regime_duration": analysis.regime_duration,
+                        "recommended_strategies": analysis.recommended_strategies,
+                        "risk_level": analysis.risk_level,
+                        "regime_transition_probability": analysis.regime_transition_probability
+                    }
+                })
+                
+            elif action == 'get_market_data':
+                symbol = kwargs.get('symbol', 'SPY')
+                period = kwargs.get('period', '1y')
+                
+                data = self.get_market_data(symbol, period)
+                return AgentResult(success=True, data={
+                    "market_data_shape": data.shape,
+                    "market_data_columns": list(data.columns),
+                    "data_range": {
+                        "start": data.index[0].isoformat(),
+                        "end": data.index[-1].isoformat()
+                    }
+                })
+                
+            elif action == 'calculate_regime_features':
+                data = kwargs.get('data')
+                
+                if data is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: data"
+                    )
+                
+                metrics = self.calculate_regime_features(data)
+                return AgentResult(success=True, data={
+                    "regime_metrics": {
+                        "volatility": metrics.volatility,
+                        "trend_strength": metrics.trend_strength,
+                        "momentum": metrics.momentum,
+                        "volume_trend": metrics.volume_trend,
+                        "correlation": metrics.correlation,
+                        "regime_confidence": metrics.regime_confidence
+                    }
+                })
+                
+            elif action == 'get_recommended_strategies':
+                regime_str = kwargs.get('regime')
+                confidence = kwargs.get('confidence', 0.7)
+                
+                if regime_str is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: regime"
+                    )
+                
+                try:
+                    regime = MarketRegime(regime_str)
+                    strategies = self.get_recommended_strategies(regime, confidence)
+                    return AgentResult(success=True, data={
+                        "recommended_strategies": strategies
+                    })
+                except ValueError:
+                    return AgentResult(
+                        success=False,
+                        error_message=f"Invalid regime: {regime_str}"
+                    )
+                
+            elif action == 'get_regime_summary':
+                summary = self.get_regime_summary()
+                return AgentResult(success=True, data={"regime_summary": summary})
+                
+            elif action == 'get_regime_confidence':
+                confidence = self.get_regime_confidence()
+                return AgentResult(success=True, data={"regime_confidence": confidence})
+                
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e)
     
     def _initialize_strategy_registry(self) -> Dict[MarketRegime, List[Dict[str, Any]]]:
         """Initialize strategy registry for each regime."""

@@ -2,15 +2,11 @@
 """Goal status tracking and management."""
 
 import json
-import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from dataclasses import dataclass, asdict
-
-# Configure logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+from memory.logger_utils import logger  # Use modular logger
 
 # Constants
 GOALS_DIR = Path("memory/goals")
@@ -27,14 +23,14 @@ class GoalStatus:
     target_date: Optional[str] = None
     priority: Optional[str] = None
 
-def ensure_goals_directory():
+def ensure_goals_directory() -> None:
     """Ensure the goals directory exists."""
     GOALS_DIR.mkdir(parents=True, exist_ok=True)
+    return None
 
 def load_goals() -> Dict[str, Any]:
     """
     Load current goal status from JSON file.
-    
     Returns:
         Dictionary containing goal status and metrics
     """
@@ -45,10 +41,8 @@ def load_goals() -> Dict[str, Any]:
                 "message": "Goal status file not found",
                 "timestamp": datetime.now().isoformat()
             }
-        
         with open(STATUS_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-            
     except Exception as e:
         error_msg = f"Error loading goals: {str(e)}"
         logger.error(error_msg)
@@ -61,44 +55,37 @@ def load_goals() -> Dict[str, Any]:
 def save_goals(status: Dict[str, Any]) -> None:
     """
     Save goal status to JSON file.
-    
     Args:
         status: Dictionary containing goal status and metrics
     """
     try:
         ensure_goals_directory()
-        
-        # Add timestamp if not present
         if "timestamp" not in status:
             status["timestamp"] = datetime.now().isoformat()
-        
         with open(STATUS_FILE, 'w', encoding='utf-8') as f:
             json.dump(status, f, indent=4)
-            
         logger.info("Goal status saved successfully")
-        
     except Exception as e:
         error_msg = f"Error saving goals: {str(e)}"
         logger.error(error_msg)
         raise
+    return None
 
 def clear_goals() -> None:
     """Clear the goal status file."""
     if STATUS_FILE.exists():
         STATUS_FILE.unlink()
         logger.info("Goal status cleared")
+    return None
 
 def get_status_summary() -> Dict[str, Any]:
     """
     Get a summary of current goal status for UI display.
-    
     Returns:
         Dictionary with status summary including progress, metrics, and recommendations
     """
     try:
         goals_data = load_goals()
-        
-        # Create summary
         summary = {
             "current_status": goals_data.get("status", "Unknown"),
             "last_updated": goals_data.get("timestamp", "Unknown"),
@@ -108,10 +95,8 @@ def get_status_summary() -> Dict[str, Any]:
             "recommendations": _generate_recommendations(goals_data),
             "alerts": _check_alerts(goals_data)
         }
-        
         logger.info(f"Generated goal status summary: {summary['current_status']}")
         return summary
-        
     except Exception as e:
         logger.error(f"Error generating status summary: {str(e)}")
         return {
@@ -186,7 +171,6 @@ def update_goal_progress(progress: float, metrics: Optional[Dict[str, Any]] = No
                         status: Optional[str] = None, message: Optional[str] = None) -> None:
     """
     Update goal progress and metrics.
-    
     Args:
         progress: Progress percentage (0.0 to 1.0)
         metrics: Optional metrics dictionary
@@ -195,37 +179,25 @@ def update_goal_progress(progress: float, metrics: Optional[Dict[str, Any]] = No
     """
     try:
         current_goals = load_goals()
-        
-        # Update progress
         current_goals["progress"] = max(0.0, min(1.0, progress))
-        
-        # Update metrics if provided
         if metrics:
             if "metrics" not in current_goals:
                 current_goals["metrics"] = {}
             current_goals["metrics"].update(metrics)
-        
-        # Update status if provided
         if status:
             current_goals["status"] = status
-        
-        # Update message if provided
         if message:
             current_goals["message"] = message
-        
-        # Save updated goals
         save_goals(current_goals)
-        
         logger.info(f"Updated goal progress to {progress:.1%}")
-        
     except Exception as e:
         logger.error(f"Error updating goal progress: {str(e)}")
         raise
+    return None
 
 def log_agent_contribution(agent_name: str, contribution: str, impact: str = "medium") -> None:
     """
     Log agent contribution to goal progress.
-    
     Args:
         agent_name: Name of the agent
         contribution: Description of the contribution
@@ -233,51 +205,35 @@ def log_agent_contribution(agent_name: str, contribution: str, impact: str = "me
     """
     try:
         current_goals = load_goals()
-        
-        # Initialize contributions if not present
         if "contributions" not in current_goals:
             current_goals["contributions"] = []
-        
-        # Add contribution
         contribution_entry = {
             "agent": agent_name,
             "contribution": contribution,
             "impact": impact,
             "timestamp": datetime.now().isoformat()
         }
-        
         current_goals["contributions"].append(contribution_entry)
-        
-        # Keep only last 50 contributions
         if len(current_goals["contributions"]) > 50:
             current_goals["contributions"] = current_goals["contributions"][-50:]
-        
         save_goals(current_goals)
-        
         logger.info(f"Logged contribution from {agent_name}: {contribution}")
-        
     except Exception as e:
         logger.error(f"Error logging agent contribution: {str(e)}")
-
     return None
 
 def get_agent_contributions(limit: int = 10) -> List[Dict[str, Any]]:
     """
     Get recent agent contributions.
-    
     Args:
         limit: Maximum number of contributions to return
-        
     Returns:
         List of recent contributions
     """
     try:
         current_goals = load_goals()
         contributions = current_goals.get("contributions", [])
-        
-        # Return most recent contributions
         return contributions[-limit:] if contributions else []
-        
     except Exception as e:
         logger.error(f"Error getting agent contributions: {str(e)}")
         return []

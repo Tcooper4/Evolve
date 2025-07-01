@@ -57,7 +57,7 @@ try:
     import empyrical as ep
     EMPYRICIAL_AVAILABLE = True
 except ImportError:
-    EMPYRICIAL_AVAILABLE = False
+    EMPYRICAL_AVAILABLE = False
     # Create a simple fallback for empyrical functions
     class EmpyricalFallback:
         @staticmethod
@@ -257,7 +257,6 @@ class Backtester:
         # Setup logging
         self._setup_logging()
         
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _setup_logging(self) -> None:
         """Setup logging configuration."""
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -269,8 +268,7 @@ class Backtester:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
-            
-                return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+    
     def _calculate_position_size(self, 
                                asset: str,
                                price: float,
@@ -309,7 +307,7 @@ class Backtester:
         position_size = sizing_method(asset, price, strategy, signal)
         
         # Apply position size limits
-        return {'success': True, 'result': max(min(position_size, MAX_POSITION_SIZE), MIN_POSITION_SIZE), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return max(min(position_size, MAX_POSITION_SIZE), MIN_POSITION_SIZE)
         
     def _calculate_volatility_adjusted_size(self, 
                                           asset: str,
@@ -536,7 +534,7 @@ class Backtester:
             portfolio_return = np.sum(mean_returns * weights)
             portfolio_vol = np.sqrt(weights.T @ cov_matrix @ weights)
             sharpe_ratio = portfolio_return / portfolio_vol
-            return {'success': True, 'result': {'success': True, 'result': -sharpe_ratio  # Minimize negative Sharpe ratio, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return -sharpe_ratio  # Minimize negative Sharpe ratio
         
         # Optimize weights
         constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
@@ -568,7 +566,7 @@ class Backtester:
         weights = np.array([1/n_assets] * n_assets)  # Initial guess
         
         def portfolio_variance(weights):
-            return {'success': True, 'result': {'success': True, 'result': weights.T @ cov_matrix @ weights, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return weights.T @ cov_matrix @ weights
         
         # Optimize weights
         constraints = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1})
@@ -600,7 +598,7 @@ class Backtester:
         def diversification_ratio(weights):
             portfolio_vol = np.sqrt(weights.T @ (corr_matrix * np.outer(vol, vol)) @ weights)
             weighted_vol = np.sum(weights * vol)
-            return {'success': True, 'result': {'success': True, 'result': -weighted_vol / portfolio_vol  # Minimize negative ratio, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return -weighted_vol / portfolio_vol  # Minimize negative ratio
         
         # Optimize weights
         n_assets = len(returns.columns)
@@ -1783,13 +1781,14 @@ class GRUModel(nn.Module):
         self.num_layers = num_layers
         
         self.gru = nn.GRU(input_dim, hidden_dim, num_layers, batch_first=True, dropout=dropout)
-        self.fc = nn.Linear(hidden_dim, output_dim)def forward(self, x):
+        self.fc = nn.Linear(hidden_dim, output_dim)
+    def forward(self, x):
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).to(x.device)
         out, _ = self.gru(x, h0)
         out = self.fc(out[:, -1, :])
         return out
 
-def run_backtest(self, strategy: Union[str, List[str]], plot: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, Any]]:
+def run_backtest(strategy: Union[str, List[str]], plot: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, Any]]:
     """Run backtest for one or more strategies.
     
     Args:
@@ -1872,7 +1871,7 @@ def run_backtest(self, strategy: Union[str, List[str]], plot: bool = True) -> Tu
         combined_df = pd.concat([res['equity_curve'] for res in self.strategy_results.values()])
         combined_trades = pd.concat([res['trade_log'] for res in self.strategy_results.values()])
         combined_metrics = self._combine_metrics([res['metrics'] for res in self.strategy_results.values()])
-        return {'success': True, 'result': combined_df, combined_trades, combined_metrics, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return (combined_df, combined_trades, combined_metrics)
 
 def _calculate_equity_curve(self, strategy: str) -> pd.DataFrame:
     """Calculate equity curve for a strategy.

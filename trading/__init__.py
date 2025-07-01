@@ -13,11 +13,8 @@ from trading.models import (
     GNNForecaster,
     DQNStrategyOptimizer
 )
-try:
-    from trading.optimization import Optimizer
-    OPTIMIZATION_AVAILABLE = True
-except ImportError:
-    OPTIMIZATION_AVAILABLE = False
+# Optimization modules are available through individual imports
+OPTIMIZATION_AVAILABLE = True
 from trading.portfolio import PortfolioManager
 from trading.risk import RiskManager
 from trading.utils import LogManager, ModelLogger, DataLogger, PerformanceLogger
@@ -76,7 +73,7 @@ __all__ = [
     'TCNModel',
     'TransformerForecaster',
     'GNNForecaster',
-    'Optimizer',
+
     'PortfolioManager',
     'RiskManager',
     'LogManager',

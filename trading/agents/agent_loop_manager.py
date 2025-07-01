@@ -30,6 +30,7 @@ from trading.agents.updater_agent import UpdaterAgent, UpdateRequest
 from trading.memory.performance_memory import PerformanceMemory
 from trading.utils.common import timer, handle_exceptions
 from trading.data.data_listener import DataListener
+from trading.agents.base_agent_interface import AgentConfig
 
 @dataclass
 class AgentLoopState:
@@ -67,10 +68,10 @@ class AgentLoopManager:
         self.config = config or {}
         self.logger = logging.getLogger(__name__)
         
-        # Initialize agents
-        self.model_builder = ModelBuilderAgent()
-        self.performance_critic = PerformanceCriticAgent()
-        self.updater = UpdaterAgent()
+        # Initialize agents with AgentConfig
+        self.model_builder = ModelBuilderAgent(AgentConfig(name="ModelBuilderAgent"))
+        self.performance_critic = PerformanceCriticAgent(AgentConfig(name="PerformanceCriticAgent"))
+        self.updater = UpdaterAgent(AgentConfig(name="UpdaterAgent"))
         
         # Initialize memory
         self.memory = PerformanceMemory()
@@ -197,28 +198,27 @@ class AgentLoopManager:
                 hyperparameters=self._get_model_hyperparameters(model_type),
                 request_id=f"cycle_{self.state.current_cycle}_{model_type}"
             )
+            # Use async execute method
+            result = await self.model_builder.execute(request=build_request)
             
-            # Build model
-            build_result = self.model_builder.build_model(build_request)
-            
-            if build_result.build_status == "success":
+            if result.build_status == "success":
                 self.state.total_models_built += 1
-                self.state.active_models.append(build_result.model_id)
+                self.state.active_models.append(result.model_id)
                 
                 # Send communication to critic
                 self._send_communication(
                     "model_builder", "performance_critic",
                     "model_built", {
-                        "model_id": build_result.model_id,
-                        "model_type": build_result.model_type,
-                        "model_path": build_result.model_path,
-                        "training_metrics": build_result.training_metrics
+                        "model_id": result.model_id,
+                        "model_type": result.model_type,
+                        "model_path": result.model_path,
+                        "training_metrics": result.training_metrics
                     }
                 )
                 
-                self.logger.info(f"Built new {model_type} model: {build_result.model_id}")
+                self.logger.info(f"Built new {model_type} model: {result.model_id}")
             else:
-                self._record_failed_operation("model_building", build_result.error_message)
+                self._record_failed_operation("model_building", result.error_message)
     
     async def _performance_critic_phase(self) -> None:
         """Execute performance critic phase."""
@@ -242,11 +242,10 @@ class AgentLoopManager:
                     test_data_path=self._get_latest_data_path(),
                     request_id=f"cycle_{self.state.current_cycle}_eval_{model_id}"
                 )
+                # Use async execute method for evaluation
+                result = await self.performance_critic.execute(request=eval_request)
                 
-                # Evaluate model
-                eval_result = self.performance_critic.evaluate_model(eval_request)
-                
-                if eval_result.evaluation_status == "success":
+                if result.evaluation_status == "success":
                     self.state.total_models_evaluated += 1
                     
                     # Send communication to updater
@@ -254,13 +253,13 @@ class AgentLoopManager:
                         "performance_critic", "updater",
                         "model_evaluated", {
                             "model_id": model_id,
-                            "evaluation_result": asdict(eval_result)
+                            "evaluation_result": asdict(result)
                         }
                     )
                     
                     self.logger.info(f"Evaluated model {model_id}")
                 else:
-                    self._record_failed_operation("model_evaluation", eval_result.error_message)
+                    self._record_failed_operation("model_evaluation", result.error_message)
                     
             except Exception as e:
                 self.logger.error(f"Error evaluating model {model_id}: {str(e)}")
@@ -286,19 +285,19 @@ class AgentLoopManager:
                     
                     if update_request:
                         # Execute update
-                        update_result = self.updater.execute_update(update_request)
+                        result = await self.updater.execute(request=update_request)
                         
-                        if update_result.update_status == "success":
+                        if result.update_status == "success":
                             self.state.total_models_updated += 1
                             
                             # Update active models list
-                            if update_result.original_model_id in self.state.active_models:
-                                self.state.active_models.remove(update_result.original_model_id)
-                            self.state.active_models.append(update_result.new_model_id)
+                            if result.original_model_id in self.state.active_models:
+                                self.state.active_models.remove(result.original_model_id)
+                            self.state.active_models.append(result.new_model_id)
                             
-                            self.logger.info(f"Updated model {update_result.original_model_id} -> {update_result.new_model_id}")
+                            self.logger.info(f"Updated model {result.original_model_id} -> {result.new_model_id}")
                         else:
-                            self._record_failed_operation("model_update", update_result.error_message)
+                            self._record_failed_operation("model_update", result.error_message)
                     
             except Exception as e:
                 self.logger.error(f"Error in updater phase: {str(e)}")
