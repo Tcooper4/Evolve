@@ -25,7 +25,6 @@ class SystemDiagnostics:
         self.health_status = {}
         self.last_check = None
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def check_data_loading(self) -> Tuple[bool, List[str]]:
         """Check data loading capabilities."""
         issues = []

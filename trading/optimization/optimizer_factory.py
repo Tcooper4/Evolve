@@ -26,8 +26,7 @@ class OptimizerFactory:
         """Initialize optimizer factory."""
         self.optimizers = {}
         self._discover_optimizers()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def _discover_optimizers(self):
         """Discover available optimizers."""
         # Get optimization directory

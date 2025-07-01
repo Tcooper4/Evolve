@@ -250,7 +250,9 @@ class DataProvider:
             api_key: API key for the provider
         """
         self.api_key = api_key
-        self.session = Noneasync def connect(self):
+        self.session = None
+
+    async def connect(self):
         """Connect to data provider."""
         raise NotImplementedError
     
@@ -283,7 +285,9 @@ class PolygonDataProvider(DataProvider):
         super().__init__(api_key)
         self.base_url = "wss://delayed.polygon.io"
         self.rest_url = "https://api.polygon.io"
-        self.websocket = Noneasync def connect(self):
+        self.websocket = None
+
+    async def connect(self):
         """Connect to Polygon websocket."""
         try:
             self.websocket = await websockets.connect(
@@ -362,7 +366,9 @@ class YFinanceDataProvider(DataProvider):
     
     def __init__(self):
         """Initialize YFinance provider."""
-        super().__init__()async def connect(self):
+        super().__init__()
+
+    async def connect(self):
         """Connect to YFinance (no connection needed)."""
         pass
     

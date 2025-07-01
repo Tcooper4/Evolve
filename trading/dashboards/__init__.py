@@ -17,7 +17,6 @@ class TradingDashboard:
         """Initialize trading dashboard."""
         self.config = config or {}
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def render_portfolio_overview(self, portfolio_data: pd.DataFrame):
         """Render portfolio overview chart."""
         try:
@@ -150,7 +149,6 @@ class StrategyDashboard:
         """Initialize strategy dashboard."""
         self.config = config or {}
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def render_strategy_performance(self, strategy_data: pd.DataFrame):
         """Render strategy performance chart."""
         try:

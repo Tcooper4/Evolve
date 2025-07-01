@@ -41,7 +41,9 @@ class MemoryLogger:
         # Add handler if not already added
         if not self.logger.handlers:
             self.logger.addHandler(file_handler)
-            self.logger.setLevel(logging.INFO)def log_memory_operation(self, operation: str, details: Dict[str, Any]) -> None:
+            self.logger.setLevel(logging.INFO)
+
+    def log_memory_operation(self, operation: str, details: Dict[str, Any]) -> None:
         """Log a memory operation.
         
         Args:

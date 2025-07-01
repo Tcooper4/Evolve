@@ -31,7 +31,9 @@ class StrategyLogger:
             )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
-            self.logger.setLevel(logging.INFO)def log_decision(self, strategy_name: str, decision: str, confidence: float, 
+            self.logger.setLevel(logging.INFO)
+
+    def log_decision(self, strategy_name: str, decision: str, confidence: float, 
                     metadata: Optional[Dict[str, Any]] = None) -> None:
         """Log a strategy decision.
         

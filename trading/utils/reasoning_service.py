@@ -80,7 +80,6 @@ class ReasoningService:
         
         logger.info(f"ReasoningService initialized: {service_name}")
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def start(self):
         """Start the reasoning service."""
         try:

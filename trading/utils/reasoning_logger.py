@@ -127,7 +127,9 @@ class ReasoningLogger:
         # Decision counter
         self.decision_counter = 0
         
-        logger.info("ReasoningLogger initialized")def log_decision(self,
+        logger.info("ReasoningLogger initialized")
+
+    def log_decision(self,
                     agent_name: str,
                     decision_type: DecisionType,
                     action_taken: str,

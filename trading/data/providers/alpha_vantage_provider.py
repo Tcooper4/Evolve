@@ -158,7 +158,8 @@ class AlphaVantageProvider(BaseDataProvider):
             try:
                 self.redis_client = redis.Redis(host='localhost', port=6379, db=0)
                 self.redis_client.ping()
-            except:
+            except (redis.ConnectionError, redis.TimeoutError) as e:
+                self.logger.debug(f"Redis connection failed: {e}")
                 self.redis_client = None
 
     def _setup(self) -> None:

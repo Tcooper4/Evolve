@@ -19,7 +19,7 @@ import pickle
 # Local imports
 from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentResult
 from trading.backtesting.backtester import Backtester
-from trading.utils.common import calculate_sharpe_ratio, calculate_max_drawdown, calculate_win_rate, timer, handle_exceptions
+from core.utils.common_helpers import calculate_sharpe_ratio, calculate_max_drawdown, calculate_win_rate, timer, handle_exceptions
 from trading.strategies.strategy_manager import StrategyManager
 from trading.memory.performance_memory import PerformanceMemory
 from trading.memory.agent_memory import AgentMemory

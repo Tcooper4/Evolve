@@ -37,7 +37,9 @@ class ModelBuilderService(BaseService):
         self.agent = ModelBuilderAgent()
         self.memory = AgentMemory()
         
-        logger.info("ModelBuilderService initialized")def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        logger.info("ModelBuilderService initialized")
+
+    def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming model building requests.
         

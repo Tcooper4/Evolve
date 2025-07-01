@@ -314,8 +314,8 @@ class PositionSizingEngine:
             
             return max(0.01, min(size, self.max_position_size))
             
-        except Exception as e:
-            logger.error(f"Error in max drawdown sizing: {e}")
+        except (ValueError, TypeError, IndexError) as e:
+            logger.debug(f"Max drawdown calculation failed: {e}")
             return 0.05
     
     def _hybrid_sizing(self, returns: pd.Series, portfolio_context: Optional[Dict[str, Any]]) -> float:
@@ -430,7 +430,8 @@ class PositionSizingEngine:
             running_max = cumulative.expanding().max()
             drawdown = (cumulative - running_max) / running_max
             return abs(drawdown.min())
-        except:
+        except (ValueError, TypeError, IndexError) as e:
+            logger.debug(f"Max drawdown calculation failed: {e}")
             return 0.0
     
     def _calculate_confidence(self, returns: pd.Series, method: SizingMethod) -> float:

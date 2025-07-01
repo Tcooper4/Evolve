@@ -212,7 +212,7 @@ class NLPAgent:
                             intent_scores['analyze'] = max(intent_scores.get('analyze', 0), score)
                         elif 'trade' in label or 'buy' in label or 'sell' in label:
                             intent_scores['trade'] = max(intent_scores.get('trade', 0), score)
-                except Exception as e:
+                except (ValueError, TypeError, AttributeError) as e:
                     logger.warning(f"Transformers intent classification failed: {e}")
             
             # Get primary intent
