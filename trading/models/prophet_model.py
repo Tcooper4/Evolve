@@ -1,11 +1,11 @@
-"""ProphetModel: Facebook Prophet wrapper for time series forecasting."""
+"""ProphetModel: Facebook Prophet wrapper for time series forecasting with holidays and macro support."""
 from .base_model import BaseModel, ModelRegistry, ValidationError
 import pandas as pd
 import numpy as np
 import os
 import json
-from typing import Dict, Any
-from datetime import datetime
+from typing import Dict, Any, Optional, List
+from datetime import datetime, timedelta
 
 # Try to import Prophet, but make it optional
 try:
@@ -14,6 +14,14 @@ try:
 except ImportError:
     PROPHET_AVAILABLE = False
     Prophet = None
+
+# Try to import holidays package
+try:
+    import holidays
+    HOLIDAYS_AVAILABLE = True
+except ImportError:
+    HOLIDAYS_AVAILABLE = False
+    holidays = None
 
 if PROPHET_AVAILABLE:
     @ModelRegistry.register('Prophet')
