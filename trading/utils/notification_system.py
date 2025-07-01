@@ -33,7 +33,6 @@ class NotificationSystem:
         
         logger.info(f"Notification system initialized - Slack: {self.notification_status['slack']}, Email: {self.notification_status['email']}")
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def send_slack_notification(self, message: str, channel: str = "#trading-alerts", 
                                username: str = "Trading Bot", icon_emoji: str = ":robot_face:") -> bool:
         """

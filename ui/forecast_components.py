@@ -224,8 +224,7 @@ class DataInput:
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize data input component."""
         self.config = config or {}
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def render_symbol_input(self) -> str:
         """Render symbol input interface."""
         try:

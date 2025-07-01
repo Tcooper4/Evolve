@@ -70,12 +70,6 @@ class LogManager:
         
         # Configure root logger
         self._configure_root_logger()
-        
-        return {
-            'success': True,
-            'message': 'Log Manager initialized successfully',
-            'timestamp': datetime.now().isoformat()
-        }
     
     def _configure_root_logger(self) -> None:
         """Configure the root logger with basic settings."""
@@ -85,12 +79,6 @@ class LogManager:
         # Remove existing handlers
         for handler in root_logger.handlers[:]:
             root_logger.removeHandler(handler)
-        
-        return {
-            'success': True,
-            'message': 'Root logger configured successfully',
-            'timestamp': datetime.now().isoformat()
-        }
     
     def setup_logger(
         self,
@@ -173,13 +161,13 @@ class LogManager:
         
         # Only configure if not already configured
         if not logger.handlers:
-            return {'success': True, 'result': self.setup_logger(
+            return self.setup_logger(
                 name,
                 level or logging.INFO,
                 log_to_file if log_to_file is not None else True,
                 log_to_console if log_to_console is not None else True,
                 structured if structured is not None else True
-            )}
+            )
         
         return logger
     

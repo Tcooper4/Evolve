@@ -10,12 +10,14 @@ import json
 import logging
 import pandas as pd
 import numpy as np
-from typing import Dict, Any, List, Optional, Union, Tuple
+from typing import Dict, Any, List, Optional, Union, Tuple, Callable
 from datetime import datetime, timedelta
 from pathlib import Path
 import hashlib
 import uuid
 import re
+import functools
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -1036,4 +1038,153 @@ def format_percentage(value: float) -> str:
         return f"{value:.2%}"
     except Exception as e:
         logger.error(f"Error formatting percentage: {e}")
-        return str(value) 
+        return str(value)
+
+# ============================================================================
+# INDICATOR UTILITIES
+# ============================================================================
+
+def normalize_indicator_name(name: str) -> str:
+    """Normalize indicator name for consistent naming.
+    
+    Args:
+        name: Original indicator name
+        
+    Returns:
+        Normalized indicator name
+    """
+    try:
+        # Remove special characters and replace with underscores
+        normalized = re.sub(r'[^a-zA-Z0-9_]', '_', str(name))
+        
+        # Remove multiple consecutive underscores
+        normalized = re.sub(r'_+', '_', normalized)
+        
+        # Remove leading/trailing underscores
+        normalized = normalized.strip('_')
+        
+        # Convert to uppercase for consistency
+        normalized = normalized.upper()
+        
+        # Handle empty strings
+        if not normalized:
+            return 'UNKNOWN_INDICATOR'
+            
+        return normalized
+        
+    except Exception as e:
+        logger.error(f"Error normalizing indicator name '{name}': {e}")
+        return 'UNKNOWN_INDICATOR'
+
+# ============================================================================
+# DECORATORS AND UTILITIES
+# ============================================================================
+
+def timer(func: Callable) -> Callable:
+    """Decorator to time function execution.
+    
+    Args:
+        func: Function to time
+        
+    Returns:
+        Wrapped function with timing
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        logger.info(f"{func.__name__} executed in {execution_time:.4f} seconds")
+        return result
+    return wrapper
+
+def handle_exceptions(logger: Optional[logging.Logger] = None, 
+                     default_return: Any = None,
+                     reraise: bool = True) -> Callable:
+    """Decorator to handle exceptions gracefully.
+    
+    Args:
+        logger: Logger instance to use
+        default_return: Default value to return on exception
+        reraise: Whether to reraise the exception
+        
+    Returns:
+        Decorator function
+    """
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                log_instance = logger or logging.getLogger(func.__module__)
+                log_instance.error(f"Error in {func.__name__}: {str(e)}")
+                if reraise:
+                    raise
+                return default_return
+        return wrapper
+    return decorator
+
+# ============================================================================
+# PERFORMANCE METRICS
+# ============================================================================
+
+def calculate_sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.02, periods: int = 252) -> float:
+    """Calculate Sharpe ratio.
+    
+    Args:
+        returns: Series of returns
+        risk_free_rate: Risk-free rate
+        periods: Number of periods per year
+        
+    Returns:
+        Sharpe ratio
+    """
+    try:
+        excess_returns = returns - risk_free_rate / periods
+        if len(excess_returns) == 0 or excess_returns.std() == 0:
+            return 0.0
+        return (excess_returns.mean() * periods) / (excess_returns.std() * np.sqrt(periods))
+    except Exception as e:
+        logger.error(f"Error calculating Sharpe ratio: {e}")
+        return 0.0
+
+def calculate_max_drawdown(returns: pd.Series) -> float:
+    """Calculate maximum drawdown.
+    
+    Args:
+        returns: Series of returns
+        
+    Returns:
+        Maximum drawdown as percentage
+    """
+    try:
+        cumulative = (1 + returns).cumprod()
+        running_max = cumulative.expanding().max()
+        drawdown = (cumulative - running_max) / running_max
+        return drawdown.min()
+    except Exception as e:
+        logger.error(f"Error calculating max drawdown: {e}")
+        return 0.0
+
+def calculate_win_rate(returns: pd.Series) -> float:
+    """Calculate win rate.
+    
+    Args:
+        returns: Series of returns
+        
+    Returns:
+        Win rate as percentage
+    """
+    try:
+        if len(returns) == 0:
+            return 0.0
+        return (returns > 0).sum() / len(returns)
+    except Exception as e:
+        logger.error(f"Error calculating win rate: {e}")
+        return 0.0
+
+# ============================================================================
+# INDICATOR UTILITIES
+# ============================================================================ 

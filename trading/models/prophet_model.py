@@ -31,7 +31,6 @@ if PROPHET_AVAILABLE:
             self.model = Prophet(**config.get('prophet_params', {}))
             self.fitted = False
             self.history = None
-            return {'success': True, 'message': 'ProphetModel initialized', 'timestamp': datetime.now().isoformat()}
 
         def fit(self, train_data: pd.DataFrame, val_data=None, **kwargs):
             """Fit the Prophet model with robust error handling.
@@ -51,6 +50,10 @@ if PROPHET_AVAILABLE:
             try:
                 # Validate Prophet configuration before fitting
                 self._validate_prophet_config()
+                
+                # Validate Prophet model has required methods
+                if not hasattr(self.model, "add_seasonality"):
+                    raise ValueError("Prophet model not properly initialized with seasonal components.")
                 
                 # Validate input data
                 if train_data is None or train_data.empty:
@@ -123,8 +126,8 @@ if PROPHET_AVAILABLE:
                         if holidays['ds'].dtype != 'datetime64[ns]':
                             try:
                                 holidays['ds'] = pd.to_datetime(holidays['ds'])
-                            except:
-                                raise ValueError("Holiday dates must be convertible to datetime")
+                            except (ValueError, TypeError) as e:
+                                raise ValueError(f"Holiday dates must be convertible to datetime: {e}")
                 
                 # Validate seasonality configuration
                 if 'seasonality_mode' in prophet_params:

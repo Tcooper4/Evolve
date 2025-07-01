@@ -36,8 +36,28 @@ from xgboost import XGBRegressor
 import plotly.express as px
 import plotly.io as pio
 from plotly.offline import plot
-import mplfinance as mpf
-import pandas_ta as ta
+
+# Try to import mplfinance, with fallback
+try:
+    import mplfinance as mpf
+    MPLFINANCE_AVAILABLE = True
+except ImportError:
+    MPLFINANCE_AVAILABLE = False
+    mpf = None
+    logging.warning("mplfinance not available - matplotlib plotting will be disabled")
+
+# Try to import pandas_ta, with fallback
+try:
+    import pandas_ta as ta
+    PANDAS_TA_AVAILABLE = True
+except ImportError as e:
+    PANDAS_TA_AVAILABLE = False
+    ta = None
+    logging.warning(f"pandas_ta not available: {e}")
+except Exception as e:
+    PANDAS_TA_AVAILABLE = False
+    ta = None
+    logging.warning(f"pandas_ta import error: {e}")
 import torch
 import torch.nn as nn
 import torch.optim as optim

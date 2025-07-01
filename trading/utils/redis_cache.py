@@ -111,14 +111,16 @@ class RedisCache:
             if hasattr(value, 'to_dict'):
                 try:
                     return json.dumps({'__dataframe__': value.to_dict()})
-                except:
+                except (TypeError, ValueError, AttributeError) as e:
+                    logger.debug(f"DataFrame serialization failed: {e}")
                     pass
             
             # Handle numpy arrays
             if hasattr(value, 'tolist'):
                 try:
                     return json.dumps({'__numpy__': value.tolist()})
-                except:
+                except (TypeError, ValueError, AttributeError) as e:
+                    logger.debug(f"NumPy array serialization failed: {e}")
                     pass
             
             # Default JSON serialization

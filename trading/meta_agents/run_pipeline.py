@@ -13,7 +13,7 @@ from typing import Dict, List, Any, Optional
 from pathlib import Path
 import json
 import yaml
-from trading.orchestrator import Orchestrator
+from .orchestrator import Orchestrator
 from trading.models import Task, Workflow, TaskStatus
 
 async def load_config(config_path: str) -> Dict[str, Any]:

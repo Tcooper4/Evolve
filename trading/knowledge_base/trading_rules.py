@@ -40,7 +40,6 @@ class RuleMetadata:
         if self.updated_at is None:
             self.updated_at = self.created_at
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
 class TradingRules:
     """A class to manage trading rules and strategies."""
 
@@ -49,7 +48,6 @@ class TradingRules:
         self.rules: Dict[str, Dict[str, Any]] = {}
         self.rule_audit_log: List[Dict[str, Any]] = []
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def add_rule(
         self,
         rule_name: str,

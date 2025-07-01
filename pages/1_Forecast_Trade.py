@@ -42,7 +42,7 @@ from trading.agents.strategy_switcher import StrategySwitcher
 from models.forecast_router import ForecastRouter
 from trading.memory.strategy_logger import log_strategy_decision as strategy_logger_decision, get_strategy_analysis
 from trading.memory.performance_logger import log_performance
-from trading.memory.model_monitor import get_model_trust_levels
+from trading.memory.model_monitor import get_default_model_trust_levels
 from trading.memory.performance_weights import get_latest_weights
 from trading.models.base_model import ModelRegistry
 from trading.data.data_loader import load_market_data
@@ -372,7 +372,7 @@ def main():
             # Get model trust levels
             try:
                 model_monitor = ModelMonitor()
-                trust_levels = model_monitor.get_model_trust_levels()
+                trust_levels = model_monitor.get_default_model_trust_levels()
                 if trust_levels:
                     st.info("**Model Trust Levels:**")
                     for model, trust in trust_levels.items():
@@ -421,7 +421,8 @@ def main():
             )
 
         # Advanced options
-        with st.expander("⚙️ Advanced Options", help="Configure advanced forecasting and backtesting parameters"):
+        with st.expander("⚙️ Advanced Options"):
+            st.caption("Configure advanced forecasting and backtesting parameters")
             # Model comparison
             compare_models = st.checkbox(
                 "Compare with Other Models", 

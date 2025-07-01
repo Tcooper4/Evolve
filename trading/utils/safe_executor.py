@@ -103,7 +103,6 @@ class SafeExecutor:
         
         logger.info(f"SafeExecutor initialized with timeout={timeout_seconds}s, memory_limit={memory_limit_mb}MB")
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def execute_model(self, 
                      model_code: str,
                      model_name: str,

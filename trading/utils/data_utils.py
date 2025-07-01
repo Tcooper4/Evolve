@@ -78,7 +78,7 @@ class DataValidator:
                 if outliers > 0:
                     issues.append(f"Found {outliers} outliers in column {col}")
         
-        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return len(issues) == 0, issues
 
 class DataPreprocessor:
     """Preprocessor for financial data."""
@@ -88,34 +88,19 @@ class DataPreprocessor:
         scale_features: bool = True,
         handle_missing: bool = True,
         remove_outliers: bool = False
-    ) -> Dict[str, Any]:
+    ):
         """Initialize the preprocessor.
         
         Args:
             scale_features: Whether to scale features
             handle_missing: Whether to handle missing values
             remove_outliers: Whether to remove outliers
-            
-        Returns:
-            Dictionary with initialization status
         """
-        try:
-            self.scale_features = scale_features
-            self.handle_missing = handle_missing
-            self.remove_outliers = remove_outliers
-            
-            self.scaler = StandardScaler()
-            self.imputer = SimpleImputer(strategy='mean')
-            
-            return {
-                "status": "success",
-                "message": "DataPreprocessor initialized successfully",
-                "scale_features": scale_features,
-                "handle_missing": handle_missing,
-                "remove_outliers": remove_outliers
-            }
-        except Exception as e:
-            return {'success': True, 'result': {"status": "error", "message": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        self.scale_features = scale_features
+        self.handle_missing = handle_missing
+        self.remove_outliers = remove_outliers
+        self.scaler = StandardScaler()
+        self.imputer = SimpleImputer(strategy='mean')
     
     def preprocess_data(
         self,
@@ -333,7 +318,7 @@ def split_data(
     val_df = df[val_end:test_end]
     test_df = df[test_end:]
     
-    return {'success': True, 'result': train_df, val_df, test_df, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return train_df, val_df, test_df
 
 def prepare_forecast_data(data: pd.DataFrame) -> pd.DataFrame:
     """Prepare data for forecasting.

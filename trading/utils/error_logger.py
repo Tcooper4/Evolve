@@ -39,7 +39,6 @@ class ErrorLogger:
         self.last_error = None
         self.error_count = 0
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def log_error(
         self,
         message: str,
