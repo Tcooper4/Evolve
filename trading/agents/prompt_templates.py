@@ -468,22 +468,286 @@ I can help you with:
 
 Just ask me anything about trading, analysis, or portfolio management!
 """,
+
+    # === RESEARCH AGENT TEMPLATES ===
+    "research_summarize": """
+Summarize this for a quant trading engineer:
+
+{text}
+
+Focus on:
+- Key insights and findings
+- Practical applications for trading
+- Technical details and methodologies
+- Potential implementation considerations
+""",
+
+    "research_code_suggestion": """
+Suggest Python code for a quant trading engineer based on this description:
+
+{description}
+
+Provide:
+- Clean, well-commented code
+- Best practices for trading systems
+- Error handling and validation
+- Performance considerations
+""",
+
+    # === MULTIMODAL AGENT TEMPLATES ===
+    "vision_chart_analysis": """
+{vision_prompt}
+
+Analyze this trading chart and provide insights for a quant trading engineer.
+Focus on:
+- Key patterns and trends
+- Technical indicators visible
+- Potential trading signals
+- Risk considerations
+- Market context and implications
+""",
+
+    "vision_equity_curve": """
+Describe the equity curve shape, trends, and any notable features for a quant trading engineer.
+
+Key aspects to analyze:
+- Overall trend direction
+- Volatility patterns
+- Drawdown periods
+- Recovery characteristics
+- Performance consistency
+- Risk-adjusted metrics
+""",
+
+    "vision_drawdown_analysis": """
+Describe drawdown spikes and risk periods in this trading equity curve.
+
+Focus on:
+- Magnitude and duration of drawdowns
+- Recovery patterns
+- Risk management implications
+- Volatility clustering
+- Potential stress testing scenarios
+""",
+
+    "vision_performance_analysis": """
+Describe the strategy's performance over time and any patterns in the returns.
+
+Analyze:
+- Return distribution
+- Performance consistency
+- Seasonal patterns
+- Risk-adjusted metrics
+- Drawdown characteristics
+- Sharpe ratio implications
+""",
+
+    # === ENHANCED PROMPT ROUTER TEMPLATES ===
+    "enhanced_intent_classification": """
+You are an intent classifier for a trading system. 
+Classify the user's intent and extract arguments as JSON.
+Available intents: forecasting, backtesting, tuning, research, portfolio, risk, sentiment
+Return format: {{"intent": "intent_name", "confidence": 0.95, "args": {{"key": "value"}}}}
+
+User Query: {query}
+""",
+
+    "enhanced_intent_extraction": """
+Task: Classify trading intent
+User input: {user_input}
+Intent:
+""",
+
+    # === STRATEGY SELECTOR TEMPLATES ===
+    "strategy_selection_reasoning": """
+Generate reasoning for strategy selection based on market conditions and analysis.
+
+Market Context: {market_context}
+Available Strategies: {available_strategies}
+Historical Performance: {historical_performance}
+
+Provide:
+- Strategy recommendation with confidence level
+- Reasoning based on market conditions
+- Risk considerations
+- Expected performance characteristics
+- Implementation recommendations
+""",
+
+    # === PERFORMANCE CRITIC TEMPLATES ===
+    "performance_evaluation": """
+Generate predictions using the model.
+
+Model Type: {model_type}
+Input Data: {input_data}
+Prediction Horizon: {prediction_horizon}
+
+Requirements:
+- Generate accurate predictions
+- Include confidence intervals
+- Consider model limitations
+- Provide uncertainty estimates
+""",
+
+    "trading_signal_generation": """
+Generate trading signals from predictions.
+
+Predictions: {predictions}
+Market Context: {market_context}
+Risk Parameters: {risk_parameters}
+
+Generate:
+- Buy/sell signals with confidence
+- Position sizing recommendations
+- Risk management rules
+- Entry/exit criteria
+""",
+
+    "performance_recommendations": """
+Generate recommendations based on evaluation results.
+
+Evaluation Results: {evaluation_results}
+Performance Metrics: {performance_metrics}
+Model Characteristics: {model_characteristics}
+
+Provide:
+- Improvement recommendations
+- Parameter optimization suggestions
+- Risk management advice
+- Implementation guidance
+""",
+
+    # === OPTIMIZER AGENT TEMPLATES ===
+    "optimization_summary": """
+Generate optimization summary.
+
+Strategy: {strategy}
+Parameters Tested: {parameters_tested}
+Best Results: {best_results}
+Performance Metrics: {performance_metrics}
+
+Summary should include:
+- Best parameter combinations
+- Performance improvements
+- Risk considerations
+- Implementation recommendations
+- Next steps for optimization
+""",
+
+    # === META RESEARCH AGENT TEMPLATES ===
+    "model_implementation_code": """
+Generate model implementation code.
+
+Model Type: {model_type}
+Requirements: {requirements}
+Framework: {framework}
+
+Provide:
+- Complete implementation code
+- Documentation and comments
+- Error handling
+- Performance optimizations
+- Testing considerations
+""",
+
+    "transformer_model_code": """
+Generate transformer model code for time series forecasting.
+
+Requirements: {requirements}
+Input Features: {input_features}
+Output Horizon: {output_horizon}
+
+Include:
+- Model architecture
+- Training loop
+- Data preprocessing
+- Evaluation metrics
+- Deployment considerations
+""",
+
+    "lstm_model_code": """
+Generate LSTM model code for financial time series.
+
+Requirements: {requirements}
+Sequence Length: {sequence_length}
+Prediction Horizon: {prediction_horizon}
+
+Include:
+- LSTM architecture
+- Data preparation
+- Training configuration
+- Validation methods
+- Performance monitoring
+""",
+
+    "ensemble_model_code": """
+Generate ensemble model code combining multiple approaches.
+
+Base Models: {base_models}
+Ensemble Method: {ensemble_method}
+Weighting Strategy: {weighting_strategy}
+
+Include:
+- Individual model implementations
+- Ensemble combination logic
+- Weight optimization
+- Performance evaluation
+- Risk management
+""",
+
+    # === DATA QUALITY AGENT TEMPLATES ===
+    "data_quality_recommendations": """
+Generate recommendations for data quality improvement.
+
+Issues Found: {issues_found}
+Data Characteristics: {data_characteristics}
+Impact Assessment: {impact_assessment}
+
+Provide:
+- Specific improvement actions
+- Data cleaning procedures
+- Quality monitoring setup
+- Validation protocols
+- Implementation timeline
+""",
+
+    # === EXECUTION AGENT TEMPLATES ===
+    "execution_summary": """
+Generate execution summary.
+
+Trades Executed: {trades_executed}
+Performance Metrics: {performance_metrics}
+Risk Measures: {risk_measures}
+
+Include:
+- Execution quality assessment
+- Performance analysis
+- Risk management effectiveness
+- Recommendations for improvement
+- Next steps
+""",
 }
 
 # Template categories for organization
 TEMPLATE_CATEGORIES = {
     "forecasting": ["forecast_request", "forecast_analysis"],
-    "intent_parsing": ["intent_classification", "intent_extraction"],
+    "intent_parsing": ["intent_classification", "intent_extraction", "enhanced_intent_classification", "enhanced_intent_extraction"],
     "response_generation": ["response_generation"],
     "backtesting": ["backtest_request", "backtest_results"],
-    "optimization": ["optimization_request", "optimization_results"],
-    "research": ["research_request", "research_summary"],
+    "optimization": ["optimization_request", "optimization_results", "optimization_summary"],
+    "research": ["research_request", "research_summary", "research_summarize", "research_code_suggestion"],
     "portfolio": ["portfolio_analysis", "portfolio_recommendations"],
     "risk": ["risk_analysis", "risk_report"],
     "sentiment": ["sentiment_analysis", "sentiment_report"],
     "voice": ["voice_command_parsing"],
     "error_handling": ["error_response", "fallback_response"],
-    "system": ["system_status", "help_message"]
+    "system": ["system_status", "help_message"],
+    "multimodal": ["vision_chart_analysis", "vision_equity_curve", "vision_drawdown_analysis", "vision_performance_analysis"],
+    "strategy": ["strategy_selection_reasoning"],
+    "performance": ["performance_evaluation", "trading_signal_generation", "performance_recommendations"],
+    "model_development": ["model_implementation_code", "transformer_model_code", "lstm_model_code", "ensemble_model_code"],
+    "data_quality": ["data_quality_recommendations"],
+    "execution": ["execution_summary"]
 }
 
 def get_template(name: str) -> str:

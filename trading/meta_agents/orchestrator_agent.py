@@ -26,8 +26,6 @@ class OrchestratorAgent(BaseAgent):
         super().__init__(config)
         self.agents: Dict[str, BaseAgent] = {}
         self.setup_logging()
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def setup_logging(self):
         """Configure logging for orchestration."""
         log_path = Path("logs/orchestration")
@@ -42,8 +40,6 @@ class OrchestratorAgent(BaseAgent):
             ]
         )
         self.logger = logging.getLogger(__name__)
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize the orchestrator agent."""
         try:

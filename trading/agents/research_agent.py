@@ -12,7 +12,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
+from base_agent_interface import BaseAgent, AgentConfig, AgentResult
+from prompt_templates import format_template
 
 # Optionally import OpenAI API
 try:
@@ -110,13 +111,19 @@ class ResearchAgent(BaseAgent):
                 
             elif action == 'summarize':
                 text = kwargs.get('text')
-                prompt = kwargs.get('prompt', "Summarize this for a quant trading engineer:")
+                custom_prompt = kwargs.get('prompt')
                 
                 if text is None:
                     return AgentResult(
                         success=False,
                         error_message="Missing required parameter: text"
                     )
+                
+                # Use centralized template if no custom prompt provided
+                if custom_prompt is None:
+                    prompt = format_template("research_summarize", text=text)
+                else:
+                    prompt = custom_prompt
                 
                 summary = self.summarize_with_openai(text, prompt)
                 return AgentResult(success=True, data={
@@ -188,10 +195,15 @@ class ResearchAgent(BaseAgent):
             logger.warning(f"arXiv search failed: {resp.status_code}")
             return []
 
-    def summarize_with_openai(self, text: str, prompt: str = "Summarize this for a quant trading engineer:") -> str:
+    def summarize_with_openai(self, text: str, prompt: str = None) -> str:
         """Use OpenAI API to summarize text."""
         if not openai or not self.openai_api_key:
             return "[OpenAI API not available]"
+        
+        # Use centralized template if no prompt provided
+        if prompt is None:
+            prompt = format_template("research_summarize", text=text)
+        
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
@@ -206,10 +218,14 @@ class ResearchAgent(BaseAgent):
         """Use OpenAI API to generate code suggestion from a description."""
         if not openai or not self.openai_api_key:
             return "[OpenAI API not available]"
+        
+        # Use centralized template for code suggestions
+        prompt = format_template("research_code_suggestion", description=description)
+        
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "Suggest Python code for a quant trading engineer."},
+                {"role": "system", "content": prompt},
                 {"role": "user", "content": description}
             ],
             max_tokens=300
