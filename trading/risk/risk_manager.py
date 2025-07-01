@@ -66,7 +66,7 @@ class RiskManager:
         
         self.logger.info(f"Initialized RiskManager with config: {self.config}")
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def update_returns(self, returns: pd.Series, benchmark_returns: Optional[pd.Series] = None) -> None:
         """Update returns data.
         

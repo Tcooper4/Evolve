@@ -55,10 +55,16 @@ def main():
         index=tickers.index(safe_session_get('selected_ticker')) if safe_session_get('selected_ticker') in tickers else 0
     )
     safe_session_set('selected_ticker', selected_ticker)
-    metrics = memory.get_metrics(selected_ticker)
-
+    metrics_response = memory.get_metrics(selected_ticker)
+    
+    if not metrics_response.get('success', False):
+        st.error(f"Error loading metrics: {metrics_response.get('error', 'Unknown error')}")
+        return
+        
+    metrics = metrics_response.get('result', {})
     if not metrics:
         st.warning("No metrics found for this ticker.")
+        return
 
     # ==== Structuring Data ====
     records = []

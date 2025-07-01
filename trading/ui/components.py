@@ -244,7 +244,7 @@ def create_confidence_interval(
     z_score = 1.96  # 95% confidence interval
     lower_bound = data['prediction'] - z_score * data['std_error']
     upper_bound = data['prediction'] + z_score * data['std_error']
-    return {'success': True, 'result': lower_bound, upper_bound, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return (lower_bound, upper_bound)
 
 def create_benchmark_overlay(
     data: pd.DataFrame,

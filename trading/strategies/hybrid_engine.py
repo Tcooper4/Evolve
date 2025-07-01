@@ -96,8 +96,6 @@ class HybridEngine:
         self.signal_history = []
         
         logger.info("Hybrid Engine initialized")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def add_strategy(self, name: str, strategy_func: Callable, weight: float = 1.0):
         """Add a strategy to the hybrid engine.
         

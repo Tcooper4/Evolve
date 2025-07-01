@@ -202,7 +202,7 @@ class PortfolioManager:
         
         logger.info(f"Initialized PortfolioManager with config: {self.config}")
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def open_position(self, symbol: str, direction: TradeDirection, price: float,
                      size: float, strategy: str, market_data: Dict[str, Any],
                      take_profit: Optional[float] = None, stop_loss: Optional[float] = None,
