@@ -22,8 +22,7 @@ class ModelMonitor:
             "tcn": 0.68,
             "transformer": 0.82
         }
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def get_model_trust_levels(self) -> Dict[str, float]:
         """Get trust levels for different models.
         
@@ -286,9 +285,9 @@ def generate_strategy_priority(
             "error": str(e)
         }
 
-def get_model_trust_levels() -> Dict[str, float]:
+def get_default_model_trust_levels() -> Dict[str, float]:
     """
-    Get trust levels for different models.
+    Get default trust levels for different models.
     
     Returns:
         Dictionary mapping model names to trust levels (0-1)

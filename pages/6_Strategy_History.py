@@ -46,6 +46,7 @@ PERF_LOG = "memory/performance_log.json"
 def load_strategy_log():
     """Load and process strategy log data."""
     if not os.path.exists(LOG_PATH):
+        return pd.DataFrame()
 
     with open(LOG_PATH, "r") as f:
         data = json.load(f)
@@ -290,7 +291,7 @@ def main():
 
     # Load data
     df = load_strategy_log()
-    if df is None:
+    if df.empty:
         st.error("No strategy log data found. Please run some strategies first.")
         return
 
@@ -313,9 +314,13 @@ def main():
         df = df[df["timestamp"] >= cutoff_date]
 
     # Model filter
-    models = df["model"].unique()
-    selected_models = st.sidebar.multiselect("🎯 Models", models, default=list(models))
-    df = df[df["model"].isin(selected_models)]
+    if "model" in df.columns:
+        models = df["model"].unique()
+        selected_models = st.sidebar.multiselect("🎯 Models", models, default=list(models))
+        df = df[df["model"].isin(selected_models)]
+    else:
+        st.sidebar.warning("No model data available")
+        selected_models = []
 
     # Agentic filter
     agentic_filter = st.sidebar.selectbox("🤖 Decision Type", ["All", "Agentic", "Manual"])

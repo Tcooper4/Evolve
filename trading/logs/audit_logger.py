@@ -19,7 +19,9 @@ class AuditLogger:
             log_file: Path to audit log file
         """
         self.log_file = log_file
-        self._ensure_log_dir()def _ensure_log_dir(self) -> Dict[str, Any]:
+        self._ensure_log_dir()
+    
+    def _ensure_log_dir(self) -> Dict[str, Any]:
         """Ensure log directory exists.
         
         Returns:

@@ -1,75 +1,120 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "trading-app"
-version = "0.1.0"
-description = "An autonomous trading and forecasting system"
+name = "evolve-clean"
+version = "1.0.0"
+description = "Advanced AI-powered trading system with real-time market analysis and automated decision making"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Evolve Team", email = "team@evolve.ai"}
 ]
 readme = "README.md"
-requires-python = ">=3.10"
-license = {text = "MIT"}
+requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+
 dependencies = [
-    "numpy>=1.24.0",
-    "pandas>=2.0.0",
-    "scipy>=1.10.0",
-    "scikit-learn>=1.3.0",
-    "torch>=2.1.0",
-    "transformers>=4.35.0",
     "streamlit>=1.28.0",
-    "plotly>=5.18.0",
-    "yfinance>=0.2.31",
-    "ta>=0.10.0",
-    "python-dotenv>=1.0.0",
-    "requests>=2.31.0",
-    "PyYAML>=6.0.1",
-    "redis>=5.0.1",
-    "fastapi>=0.104.0",
-    "uvicorn>=0.24.0",
-    "streamlit-multipage>=0.1.0",
+    "pandas>=1.5.0",
+    "numpy>=1.21.0",
+    "scikit-learn>=1.1.0",
+    "xgboost>=1.6.0",
+    "torch>=1.12.0",
+    "transformers>=4.20.0",
+    "prophet>=1.1.0",
+    "yfinance>=0.1.87",
+    "alpha-vantage>=2.3.1",
+    "redis>=4.3.0",
+    "plotly>=5.10.0",
+    "matplotlib>=3.5.0",
+    "seaborn>=0.11.0",
+    "mplfinance>=0.12.0",
+    "pandas-ta>=0.3.0",
+    "requests>=2.28.0",
+    "python-dotenv>=0.19.0",
+    "loguru>=0.6.0",
+    "joblib>=1.1.0",
+    "tqdm>=4.64.0",
+    "nltk>=3.7",
+    "spacy>=3.4.0",
+    "optuna>=3.0.0",
+    "cvxpy>=1.2.0",
+    "cvxopt>=1.3.0",
+    "gymnasium>=0.26.0",
+    "stable-baselines3>=1.6.0",
+    "praw>=7.6.0",
+    "newsapi-python>=0.2.6",
+    "fredapi>=0.4.0",
+    "wbdata>=0.3.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4.3",
-    "pytest-cov>=4.1.0",
-    "pytest-benchmark>=4.0.0",
-    "black>=23.11.0",
-    "isort>=5.12.0",
-    "flake8>=6.1.0",
-    "mypy>=1.7.0",
-    "bandit>=1.7.6",
-    "pre-commit>=3.5.0",
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+    "isort>=5.10.0",
+    "mypy>=0.991",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pre-commit>=2.20.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.8.0",
+    "pytest-asyncio>=0.21.0",
+]
+docs = [
+    "sphinx>=5.0.0",
+    "sphinx-rtd-theme>=1.0.0",
+    "myst-parser>=0.18.0",
 ]
 
-[tool.setuptools]
-packages = ["trading"]
+[project.urls]
+Homepage = "https://github.com/evolve-ai/evolve-clean"
+Documentation = "https://evolve-clean.readthedocs.io"
+Repository = "https://github.com/evolve-ai/evolve-clean.git"
+Issues = "https://github.com/evolve-ai/evolve-clean/issues"
 
 [tool.black]
 line-length = 88
-target-version = ['py39']
+target-version = ['py38', 'py39', 'py310', 'py311']
 include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
 
 [tool.isort]
 profile = "black"
 multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
 line_length = 88
+known_first_party = ["evolve", "trading", "core", "pages"]
+known_third_party = ["streamlit", "pandas", "numpy", "torch", "transformers"]
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.8"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -81,19 +126,45 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "streamlit.*",
+    "yfinance.*",
+    "alpha_vantage.*",
+    "prophet.*",
+    "transformers.*",
+    "torch.*",
+    "cvxpy.*",
+    "cvxopt.*",
+    "gymnasium.*",
+    "stable_baselines3.*",
+    "praw.*",
+    "newsapi.*",
+    "fredapi.*",
+    "wbdata.*",
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q"
-testpaths = [
-    "tests",
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
 ]
 
 [tool.coverage.run]
-source = ["."]
+source = ["evolve", "trading", "core", "pages"]
 omit = [
-    "tests/*",
-    "setup.py",
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.venv/*",
 ]
 
 [tool.coverage.report]
@@ -101,47 +172,11 @@ exclude_lines = [
     "pragma: no cover",
     "def __repr__",
     "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
     "raise NotImplementedError",
+    "if 0:",
     "if __name__ == .__main__.:",
-    "pass",
-    "raise ImportError",
-]
-
-[tool.ruff]
-line-length = 88
-target-version = "py39"
-select = ["E", "F", "B", "I"]
-ignore = []
-
-[tool.ruff.isort]
-known-first-party = ["trading_platform"]
-
-[tool.bandit]
-exclude_dirs = ["tests"]
-skips = ["B101"]
-
-[tool.pylint.messages_control]
-disable = [
-    "C0111",  # missing-docstring
-    "C0103",  # invalid-name
-    "C0330",  # bad-continuation
-    "C0326",  # bad-whitespace
-    "W0311",  # bad-indentation
-    "W0603",  # global-statement
-    "R0903",  # too-few-public-methods
-    "R0913",  # too-many-arguments
-    "R0914",  # too-many-locals
-    "R0915",  # too-many-statements
-]
-
-[tool.pylint.format]
-max-line-length = 100
-
-[tool.pylint.basic]
-good-names = ["i", "j", "k", "ex", "Run", "_", "id", "df"]
-
-[tool.pylint.similarities]
-min-similarity-lines = 4
-ignore-comments = true
-ignore-docstrings = true
-ignore-imports = true 
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+] 

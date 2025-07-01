@@ -3,12 +3,27 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Union, Callable
 from scipy import stats
-import pandas_ta as ta
+
+# Try to import pandas_ta, with fallback
+try:
+    import pandas_ta as ta
+    PANDAS_TA_AVAILABLE = True
+except ImportError as e:
+    PANDAS_TA_AVAILABLE = False
+    ta = None
+    import logging
+    logging.warning(f"pandas_ta not available: {e}")
+except Exception as e:
+    PANDAS_TA_AVAILABLE = False
+    ta = None
+    import logging
+    logging.warning(f"pandas_ta import error: {e}")
+
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from datetime import datetime, timedelta
 import logging
-from trading.utils.common import normalize_indicator_name
+from core.utils.common_helpers import normalize_indicator_name
 from . import indicators
 
 logger = logging.getLogger(__name__)

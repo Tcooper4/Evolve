@@ -45,7 +45,7 @@ class UnifiedLogger:
             log_dir: Directory to store log files
         """
         self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(parents=True, exist_ok=True)
+        _ = self.log_dir.mkdir(parents=True, exist_ok=True)
         
         # Setup loggers
         self.performance_logger = self._setup_logger(
@@ -74,6 +74,7 @@ class UnifiedLogger:
             self.log_dir / "daily_strategy.log",
             backup_count=30  # Keep 30 days
         )
+        return None
 
     def _setup_logger(self, name: str, log_file: Path, 
                      max_bytes: int = 10*1024*1024,

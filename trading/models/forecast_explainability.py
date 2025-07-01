@@ -200,7 +200,8 @@ class ForecastExplainability:
                     try:
                         pred = model.predict(bootstrap_features_noisy.iloc[-1:])[0]
                         bootstrap_predictions.append(pred)
-                    except:
+                    except (ValueError, TypeError, IndexError) as e:
+                        logger.debug(f"Bootstrap prediction failed: {e}")
                         bootstrap_predictions.append(forecast_value)
                 
                 if bootstrap_predictions:

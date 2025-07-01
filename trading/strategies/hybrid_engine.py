@@ -436,7 +436,8 @@ class HybridEngine:
                     risk_score += 2
                 elif volatility > 0.02:
                     risk_score += 1
-        except:
+        except (KeyError, ValueError, TypeError, IndexError) as e:
+            logger.debug(f"Risk calculation failed: {e}")
             pass
         
         # Determine risk level

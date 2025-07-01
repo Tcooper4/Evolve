@@ -1,0 +1,28 @@
+[flake8]
+max-line-length = 88
+extend-ignore = 
+    E203,  # whitespace before ':'
+    E501,  # line too long (handled by black)
+    W503,  # line break before binary operator
+    W504,  # line break after binary operator
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    .env,
+    build,
+    dist,
+    *.egg-info,
+    .pytest_cache,
+    .coverage,
+    htmlcov,
+    .tox,
+    .mypy_cache,
+    .ruff_cache
+per-file-ignores =
+    __init__.py:F401
+    tests/*:S101,S105,S106,S107
+    */test_*.py:S101,S105,S106,S107
+    *_test.py:S101,S105,S106,S107 
