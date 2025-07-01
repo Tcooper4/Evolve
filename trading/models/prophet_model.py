@@ -41,6 +41,9 @@ if PROPHET_AVAILABLE:
                 RuntimeError: If Prophet fitting fails
             """
             try:
+                # Validate Prophet configuration before fitting
+                self._validate_prophet_config()
+                
                 # Validate input data
                 if train_data is None or train_data.empty:
                     raise ValueError("Training data is empty or None")
@@ -87,6 +90,82 @@ if PROPHET_AVAILABLE:
                 import logging
                 logging.error(f"Error fitting Prophet model: {e}")
                 raise RuntimeError(f"Prophet model fitting failed: {e}")
+
+        def _validate_prophet_config(self):
+            """Validate Prophet configuration for holidays and seasonality.
+            
+            Raises:
+                ValueError: If configuration is invalid
+            """
+            try:
+                prophet_params = self.config.get('prophet_params', {})
+                
+                # Validate holidays configuration
+                if 'holidays' in prophet_params:
+                    holidays = prophet_params['holidays']
+                    if holidays is not None:
+                        if not isinstance(holidays, pd.DataFrame):
+                            raise ValueError("Holidays must be a pandas DataFrame")
+                        required_holiday_cols = ['ds', 'holiday']
+                        missing_cols = [col for col in required_holiday_cols if col not in holidays.columns]
+                        if missing_cols:
+                            raise ValueError(f"Holidays DataFrame missing required columns: {missing_cols}")
+                        
+                        # Validate holiday dates
+                        if holidays['ds'].dtype != 'datetime64[ns]':
+                            try:
+                                holidays['ds'] = pd.to_datetime(holidays['ds'])
+                            except:
+                                raise ValueError("Holiday dates must be convertible to datetime")
+                
+                # Validate seasonality configuration
+                if 'seasonality_mode' in prophet_params:
+                    seasonality_mode = prophet_params['seasonality_mode']
+                    valid_modes = ['additive', 'multiplicative']
+                    if seasonality_mode not in valid_modes:
+                        raise ValueError(f"Seasonality mode must be one of {valid_modes}, got {seasonality_mode}")
+                
+                # Validate yearly_seasonality
+                if 'yearly_seasonality' in prophet_params:
+                    yearly_seasonality = prophet_params['yearly_seasonality']
+                    if not isinstance(yearly_seasonality, (bool, int)):
+                        raise ValueError("yearly_seasonality must be boolean or integer")
+                    if isinstance(yearly_seasonality, int) and yearly_seasonality < 1:
+                        raise ValueError("yearly_seasonality integer must be >= 1")
+                
+                # Validate weekly_seasonality
+                if 'weekly_seasonality' in prophet_params:
+                    weekly_seasonality = prophet_params['weekly_seasonality']
+                    if not isinstance(weekly_seasonality, (bool, int)):
+                        raise ValueError("weekly_seasonality must be boolean or integer")
+                    if isinstance(weekly_seasonality, int) and weekly_seasonality < 1:
+                        raise ValueError("weekly_seasonality integer must be >= 1")
+                
+                # Validate daily_seasonality
+                if 'daily_seasonality' in prophet_params:
+                    daily_seasonality = prophet_params['daily_seasonality']
+                    if not isinstance(daily_seasonality, (bool, int)):
+                        raise ValueError("daily_seasonality must be boolean or integer")
+                    if isinstance(daily_seasonality, int) and daily_seasonality < 1:
+                        raise ValueError("daily_seasonality integer must be >= 1")
+                
+                # Validate changepoint_prior_scale
+                if 'changepoint_prior_scale' in prophet_params:
+                    changepoint_prior_scale = prophet_params['changepoint_prior_scale']
+                    if not isinstance(changepoint_prior_scale, (int, float)) or changepoint_prior_scale <= 0:
+                        raise ValueError("changepoint_prior_scale must be a positive number")
+                
+                # Validate seasonality_prior_scale
+                if 'seasonality_prior_scale' in prophet_params:
+                    seasonality_prior_scale = prophet_params['seasonality_prior_scale']
+                    if not isinstance(seasonality_prior_scale, (int, float)) or seasonality_prior_scale <= 0:
+                        raise ValueError("seasonality_prior_scale must be a positive number")
+                
+                import logging
+                logging.info("Prophet configuration validation passed")
+                
+            except Exception as e:
+                raise ValueError(f"Invalid Prophet configuration: {str(e)}")
 
         def predict(self, data: pd.DataFrame, horizon: int = 1):
             """Make predictions with fallback guards.
@@ -196,10 +275,14 @@ if PROPHET_AVAILABLE:
             self.model.plot_components(self.model.predict(self.history))
 
         def save(self, path: str):
-            os.makedirs(path, exist_ok=True)
-            self.model.save(os.path.join(path, 'prophet_model.json'))
-            with open(os.path.join(path, 'config.json'), 'w') as f:
-                json.dump(self.config, f)
+            """Save the Prophet model to disk."""
+            try:
+                os.makedirs(path, exist_ok=True)
+                self.model.save(os.path.join(path, 'prophet_model.json'))
+            except Exception as e:
+                import logging
+                logging.error(f"Failed to save Prophet model to {path}: {e}")
+                raise RuntimeError(f"Failed to save Prophet model: {e}")
 
         def load(self, path: str):
             from prophet.serialize import model_from_json

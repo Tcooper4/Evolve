@@ -176,9 +176,26 @@ class PortfolioManager:
             strategy_weights={}
         )
         
-        # Create necessary directories
-        os.makedirs('trading/portfolio/logs', exist_ok=True)
-        os.makedirs('trading/portfolio/data', exist_ok=True)
+        # Set up logging
+        self.logger.setLevel(logging.INFO)
+        
+        # Create necessary directories with safety guards
+        try:
+            os.makedirs('trading/portfolio/logs', exist_ok=True)
+            os.makedirs('trading/portfolio/data', exist_ok=True)
+        except Exception as e:
+            self.logger.error(f"Failed to create portfolio directories: {e}")
+        
+        # Add file handler if no handlers exist
+        if not self.logger.handlers:
+            try:
+                file_handler = logging.FileHandler('trading/portfolio/logs/portfolio.log')
+                file_handler.setLevel(logging.INFO)
+                formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                file_handler.setFormatter(formatter)
+                self.logger.addHandler(file_handler)
+            except Exception as e:
+                self.logger.error(f"Failed to set up portfolio logging: {e}")
         
         logger.info(f"Initialized PortfolioManager with config: {self.config}")
     
