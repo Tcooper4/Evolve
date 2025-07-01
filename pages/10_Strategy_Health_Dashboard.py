@@ -100,7 +100,7 @@ def main():
             'Max Drawdown': f"{performance['max_drawdown']:.2f}%",
             'VaR (95%)': f"{risk['var_95']:.2f}%",
             'Win Rate': f"{performance['win_rate']:.1f}%",
-            'Last Update': health['last_update']
+            'Last Update': health.get('last_update', 'N/A')
         })
     
     health_df = pd.DataFrame(health_data)
@@ -151,7 +151,7 @@ def main():
                 else:
                     st.error(f"**Critical Issues** - Score: {health['score']:.1f}")
                 
-                st.write(f"**Last Updated:** {health['last_update']}")
+                st.write(f"**Last Updated:** {health.get('last_update', 'N/A')}")
             
             # Issues and Recommendations
             col3, col4 = st.columns(2)
@@ -707,7 +707,8 @@ def get_strategy_health(strategy_name):
         'execution_score': strategy_data['execution_score'],
         'data_quality_score': strategy_data['data_quality_score'],
         'issues': strategy_data['issues'],
-        'recommendations': strategy_data['recommendations']
+        'recommendations': strategy_data['recommendations'],
+        'last_update': datetime.now().isoformat()
     }
 
 def get_strategy_performance(strategy_name):

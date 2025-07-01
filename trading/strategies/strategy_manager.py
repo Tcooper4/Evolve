@@ -124,7 +124,7 @@ class Strategy(ABC):
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     @abstractmethod
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """Generate trading signals.

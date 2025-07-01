@@ -25,6 +25,8 @@ try:
 except ImportError:
     HUGGINGFACE_AVAILABLE = False
 
+from prompt_templates import format_template
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -115,10 +117,8 @@ class EnhancedPromptRouterAgent:
             return None
             
         try:
-            system_prompt = """You are an intent classifier for a trading system. 
-            Classify the user's intent and extract arguments as JSON.
-            Available intents: forecasting, backtesting, tuning, research, portfolio, risk, sentiment
-            Return format: {"intent": "intent_name", "confidence": 0.95, "args": {"key": "value"}}"""
+            # Use centralized template for intent classification
+            system_prompt = format_template("enhanced_intent_classification", query=prompt)
             
             response = openai.ChatCompletion.create(
                 model="gpt-4",
@@ -164,10 +164,8 @@ class EnhancedPromptRouterAgent:
             return None
             
         try:
-            # Create a structured prompt for intent classification
-            structured_prompt = f"""Task: Classify trading intent
-            User input: {prompt}
-            Intent:"""
+            # Use centralized template for intent extraction
+            structured_prompt = format_template("enhanced_intent_extraction", user_input=prompt)
             
             response = self.hf_pipeline(
                 structured_prompt,
