@@ -29,7 +29,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Create logs directory if it doesn't exist
-os.makedirs('trading/nlp/logs', exist_ok=True)
+try:
+    os.makedirs('trading/nlp/logs', exist_ok=True)
+except Exception as e:
+    logger.error(f"Failed to create trading/nlp/logs: {e}")
 
 # Add file handler for debug logs
 debug_handler = logging.FileHandler('trading/nlp/logs/nlp_debug.log')

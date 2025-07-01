@@ -37,7 +37,10 @@ class RiskLogger:
         self.last_update = None
         
         # Create log directory if needed
-        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create directory for log_path: {e}")
     
     def log_metrics(
         self,

@@ -121,8 +121,10 @@ class BaseOptimizer(ABC):
         self.early_stopping_counter = 0
         
         # Setup checkpointing
-        if self.config.save_checkpoints:
+        try:
             os.makedirs(self.config.checkpoint_dir, exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create checkpoint_dir: {e}")
             
         logger.info(f"Initialized {self.__class__.__name__} with config: {self.config}")
     
@@ -321,7 +323,10 @@ class BaseOptimizer(ABC):
         
         # Save to JSONL file
         log_path = "trading/optimization/logs/optimization_metrics.jsonl"
-        os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create directory for log_path: {e}")
         
         with open(log_path, "a") as f:
             f.write(json.dumps(log_entry) + "\n")

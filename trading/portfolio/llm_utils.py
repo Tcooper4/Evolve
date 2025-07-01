@@ -100,8 +100,14 @@ class LLMInterface:
             self.enabled = True
         
         # Create necessary directories
-        os.makedirs('trading/portfolio/logs', exist_ok=True)
-        os.makedirs('trading/portfolio/data', exist_ok=True)
+        try:
+            os.makedirs('trading/portfolio/logs', exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create trading/portfolio/logs: {e}")
+        try:
+            os.makedirs('trading/portfolio/data', exist_ok=True)
+        except Exception as e:
+            logger.error(f"Failed to create trading/portfolio/data: {e}")
         
         logger.info("Initialized LLMInterface")
     

@@ -51,9 +51,12 @@ class RiskManager:
         if not self.logger.handlers:
             try:
                 os.makedirs('trading/risk/logs', exist_ok=True)
+            except Exception as e:
+                self.logger.error(f"Failed to create trading/risk/logs: {e}")
+            try:
                 os.makedirs('trading/risk/results', exist_ok=True)
             except Exception as e:
-                self.logger.error(f"Failed to create risk directories: {e}")
+                self.logger.error(f"Failed to create trading/risk/results: {e}")
                 
             debug_handler = logging.FileHandler('trading/risk/logs/risk_debug.log')
             debug_handler.setLevel(logging.DEBUG)

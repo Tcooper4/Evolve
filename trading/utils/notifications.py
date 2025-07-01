@@ -164,7 +164,7 @@ class TradeLogger:
         try:
             os.makedirs("logs", exist_ok=True)
         except Exception as e:
-            logger.error(f"Failed to create logs directory: {e}")
+            logging.error(f"Failed to create logs directory: {e}")
         
         logger.info("✅ Trade logger initialized")def add_notifier(self, notifier: BaseNotifier) -> None:
         """Add a notification system.
