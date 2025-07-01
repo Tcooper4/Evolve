@@ -11,7 +11,8 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
-from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
+from base_agent_interface import BaseAgent, AgentConfig, AgentResult
+from prompt_templates import format_template
 
 try:
     import plotly.graph_objs as go
@@ -166,13 +167,19 @@ class MultimodalAgent(BaseAgent):
                 
             elif action == 'vision_insight':
                 image_bytes = kwargs.get('image_bytes')
-                prompt = kwargs.get('prompt', "Describe the trading chart and its key features.")
+                custom_prompt = kwargs.get('prompt')
                 
                 if image_bytes is None:
                     return AgentResult(
                         success=False,
                         error_message="Missing required parameter: image_bytes"
                     )
+                
+                # Use centralized template if no custom prompt provided
+                if custom_prompt is None:
+                    prompt = format_template("vision_chart_analysis", vision_prompt="Describe the trading chart and its key features.")
+                else:
+                    prompt = custom_prompt
                 
                 insight = self.vision_insight(image_bytes, prompt)
                 return AgentResult(success=True, data={
@@ -228,7 +235,7 @@ class MultimodalAgent(BaseAgent):
         buf.seek(0)
         return buf.read()
 
-    def vision_insight(self, image_bytes: bytes, prompt: str = "Describe the trading chart and its key features.") -> str:
+    def vision_insight(self, image_bytes: bytes, prompt: str = None) -> str:
         """Pass image to a vision model and get a natural language insight."""
         if openai and self.openai_api_key:
             # OpenAI GPT-4V API
@@ -254,12 +261,15 @@ class MultimodalAgent(BaseAgent):
 
     def analyze_equity_curve(self, equity: List[float]) -> str:
         img = self.plot_equity_curve(equity)
-        return {'success': True, 'result': self.vision_insight(img, prompt="Describe the equity curve shape, trends, and any notable features for a quant trading engineer."), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        prompt = format_template("vision_equity_curve")
+        return {'success': True, 'result': self.vision_insight(img, prompt=prompt), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def analyze_drawdown(self, equity: List[float]) -> str:
         img = self.plot_drawdown(equity)
-        return {'success': True, 'result': self.vision_insight(img, prompt="Describe drawdown spikes and risk periods in this trading equity curve."), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        prompt = format_template("vision_drawdown_analysis")
+        return {'success': True, 'result': self.vision_insight(img, prompt=prompt), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def analyze_performance(self, returns: List[float]) -> str:
         img = self.plot_performance(returns)
-        return {'success': True, 'result': self.vision_insight(img, prompt="Describe the strategy's performance over time and any patterns in the returns."), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        prompt = format_template("vision_performance_analysis")
+        return {'success': True, 'result': self.vision_insight(img, prompt=prompt), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}

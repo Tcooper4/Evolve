@@ -10,6 +10,7 @@ import importlib
 from typing import Dict, Any, Optional, Callable, Union
 from functools import wraps
 import streamlit as st
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +26,6 @@ class CapabilityRouter:
         
         # Register default capabilities
         self._register_default_capabilities()
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _register_default_capabilities(self):
         """Register default system capabilities."""
         # LLM capabilities
@@ -215,8 +214,6 @@ class CapabilityRouter:
             capability_name: Name of the capability that triggered fallback
             reason: Reason for the fallback
         """
-        from datetime import datetime
-        
         log_entry = {
             'timestamp': datetime.now().isoformat(),
             'capability': capability_name,

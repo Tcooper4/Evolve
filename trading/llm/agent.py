@@ -82,7 +82,7 @@ class PromptAgent:
         
         logger.info("Enhanced Prompt Agent initialized with full pipeline routing")
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def process_prompt(self, prompt: str) -> AgentResponse:
         """Process user prompt and route through trading pipeline.
         

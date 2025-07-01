@@ -37,12 +37,6 @@ class PerformanceMemory:
             
         # Create backup on initialization
         self._create_backup()
-        
-        return {
-            'success': True,
-            'message': 'PerformanceMemory initialized successfully',
-            'timestamp': datetime.now().isoformat()
-        }
 
     def _create_backup(self) -> Dict[str, Any]:
         """Create a backup of the current performance file."""
