@@ -47,7 +47,9 @@ class LogManager:
         self.setup_logging()
         self.logger = logging.getLogger("trading")
         self.logs_dir = Path("logs")
-        self.archive_dir = Path("logs/archive")def _load_config(self, config_path: str) -> dict:
+        self.archive_dir = Path("logs/archive")
+    
+    def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
@@ -68,7 +70,6 @@ class LogManager:
         
         logging.config.dictConfig(log_config)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def rotate_logs(self, days: int = 7):
         """Rotate log files."""
         self.logger.info(f"Rotating logs older than {days} days...")

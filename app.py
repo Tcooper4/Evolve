@@ -1,182 +1,38 @@
 """
-Main Streamlit Application
+DEPRECATED: Main Streamlit Application
 
-This is the entry point for the Agentic Forecasting System dashboard.
-Provides a web interface for financial forecasting and trading strategy analysis.
+This entry point is deprecated. Please use unified_interface.py instead.
+This file now redirects to the enhanced unified interface.
 """
 
 import streamlit as st
-from typing import Dict, Any
-import logging
-from datetime import datetime
 import sys
-import warnings
 from pathlib import Path
 
-# Suppress deprecation warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="pandas_ta")
+# Add deprecation warning
+st.warning("""
+⚠️ **DEPRECATED ENTRY POINT**
 
-# Add project root to path
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+This entry point (app.py) is deprecated and will be removed in a future version.
+Please use `unified_interface.py` instead for the enhanced trading system.
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+**To run the system:**
+```bash
+streamlit run unified_interface.py
+```
+""")
 
-# Import shared utilities
-from core.session_utils import (
-    initialize_session_state, 
-    initialize_system_modules, 
-    display_system_status,
-    update_last_updated
-)
+# Redirect to unified interface
+st.info("Redirecting to unified interface...")
 
-# Import logging utilities for cleanup
+# Import and run the unified interface
 try:
-    from trading.utils.logging_utils import close_loggers
-    LOGGING_CLEANUP_AVAILABLE = True
+    from unified_interface import run_enhanced_interface
+    result = run_enhanced_interface()
+    st.success("Successfully redirected to unified interface")
 except ImportError as e:
-    logger.warning(f"Logging cleanup import failed: {e}")
-    LOGGING_CLEANUP_AVAILABLE = False
-
-# Import AgentHub for unified agent routing
-try:
-    from core.agent_hub import AgentHub
-    AGENT_HUB_AVAILABLE = True
-except ImportError as e:
-    logger.warning(f"AgentHub import failed: {e}")
-    AGENT_HUB_AVAILABLE = False
-
-# Import page modules
-from pages.home import render_home_page
-
-def main():
-    """Main application function."""
-    try:
-        # Create required directories on startup
-        create_required_directories()
-        
-        # Page configuration
-        st.set_page_config(
-            page_title="Evolve Clean Trading Dashboard",
-            page_icon="📈",
-            layout="wide",
-            initial_sidebar_state="expanded",
-        )
-
-        # Initialize session state
-        initialize_session_state()
-
-        # Initialize AgentHub if available
-        if AGENT_HUB_AVAILABLE and 'agent_hub' not in st.session_state:
-            try:
-                st.session_state['agent_hub'] = AgentHub()
-                logger.info("AgentHub initialized successfully")
-            except Exception as e:
-                logger.error(f"Failed to initialize AgentHub: {e}")
-                st.session_state["status"] = "fallback activated"
-
-        # Initialize system modules
-        module_status = initialize_system_modules()
-
-        # Display system status
-        display_system_status(module_status)
-
-        # Main dashboard content
-        st.title("🚀 Evolve Clean Trading Dashboard")
-        st.markdown("Advanced AI-powered trading system with real-time market analysis and automated decision making.")
-
-        # Update last updated timestamp
-        update_last_updated()
-
-        # Sidebar navigation
-        st.sidebar.title("📊 Navigation")
-        page = st.sidebar.selectbox(
-            "Choose a page:",
-            [
-                "🏠 Home",
-                "📈 Forecast & Trade", 
-                "📊 Portfolio Dashboard",
-                "⚡ Strategy History",
-                "🎯 Performance Tracker",
-                "🛡️ Risk Dashboard",
-                "⚙️ Settings",
-                "📋 System Scorecard"
-            ]
-        )
-
-        # Page routing
-        if page == "🏠 Home":
-            result = render_home_page(module_status, AGENT_HUB_AVAILABLE)
-            return result
-        elif page == "📈 Forecast & Trade":
-            st.switch_page("pages/1_Forecast_Trade.py")
-            return {'status': 'redirected', 'page': 'forecast_trade'}
-        elif page == "📊 Portfolio Dashboard":
-            st.switch_page("pages/portfolio_dashboard.py")
-            return {'status': 'redirected', 'page': 'portfolio_dashboard'}
-        elif page == "⚡ Strategy History":
-            st.switch_page("pages/6_Strategy_History.py")
-            return {'status': 'redirected', 'page': 'strategy_history'}
-        elif page == "🎯 Performance Tracker":
-            st.switch_page("pages/performance_tracker.py")
-            return {'status': 'redirected', 'page': 'performance_tracker'}
-        elif page == "🛡️ Risk Dashboard":
-            st.switch_page("pages/risk_dashboard.py")
-            return {'status': 'redirected', 'page': 'risk_dashboard'}
-        elif page == "⚙️ Settings":
-            st.switch_page("pages/settings.py")
-            return {'status': 'redirected', 'page': 'settings'}
-        elif page == "📋 System Scorecard":
-            st.switch_page("pages/5_📊_System_Scorecard.py")
-            return {'success': True, 'result': {'status': 'redirected', 'page': 'system_scorecard'}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-        
-        return {'status': 'unknown_page', 'page': page}
-        
-    finally:
-        # Clean up logging resources on shutdown
-        if LOGGING_CLEANUP_AVAILABLE:
-            try:
-                close_loggers()
-                logger.info("Logging resources cleaned up successfully")
-            except Exception as e:
-                logger.error(f"Failed to cleanup logging resources: {e}")
-
-def create_required_directories():
-    """Create required directories if they don't exist."""
-    required_dirs = [
-        "data",
-        "models", 
-        "logs",
-        "results",
-        "results/logs",
-        "results/reports",
-        "results/charts",
-        "results/models",
-        "results/backtests",
-        "results/forecasts",
-        "cache",
-        "backups",
-        "memory",
-        "memory/goals",
-        "memory/logs",
-        "trading/logs",
-        "trading/optimization/logs",
-        "trading/nlp/logs",
-        "trading/risk/logs"
-    ]
-    
-    for dir_path in required_dirs:
-        try:
-            Path(dir_path).mkdir(parents=True, exist_ok=True)
-            logger.debug(f"Ensured directory exists: {dir_path}")
-        except Exception as e:
-            logger.error(f"Failed to create directory {dir_path}: {e}")
-            # Continue with other directories even if one fails
-
-if __name__ == "__main__":
-    main()
+    st.error(f"Failed to import unified interface: {e}")
+    st.info("Please ensure unified_interface.py is available")
+except Exception as e:
+    st.error(f"Error running unified interface: {e}")
+    st.info("Please check the unified interface for errors")
