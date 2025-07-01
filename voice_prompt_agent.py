@@ -2,6 +2,10 @@
 
 This module provides voice-to-text capabilities using speech recognition
 and OpenAI Whisper for natural language trading commands.
+
+LEGACY MODULE: This module is being refactored to use the centralized
+agent registry and prompt templates. Consider using the new agent system
+for new implementations.
 """
 
 import speech_recognition as sr
@@ -12,7 +16,16 @@ import json
 import time
 from datetime import datetime
 import warnings
+import re
 warnings.filterwarnings('ignore')
+
+# Import centralized templates for consistency
+try:
+    from trading.agents.prompt_templates import format_template
+    TEMPLATES_AVAILABLE = True
+except ImportError:
+    TEMPLATES_AVAILABLE = False
+    format_template = None
 
 # Try to import speech recognition and Whisper
 try:
@@ -151,8 +164,6 @@ class VoicePromptAgent:
     
     def parse_trading_command(self, text: str) -> Dict[str, Any]:
         """Parse voice command into structured trading action."""
-        import re
-        
         command = {
             'action': 'unknown',
             'symbol': None,
@@ -160,6 +171,17 @@ class VoicePromptAgent:
             'confidence': 0.0,
             'raw_text': text
         }
+        
+        # Use centralized template if available
+        if TEMPLATES_AVAILABLE and format_template:
+            try:
+                # Use the voice command parsing template
+                prompt = format_template("voice_command_parsing", command=text)
+                # For now, fall back to regex parsing
+                # TODO: Integrate with LLM parsing when available
+                pass
+            except Exception as e:
+                logger.warning(f"Failed to use centralized template: {e}")
         
         # Check for forecast commands
         for pattern in self.command_patterns['forecast']:
