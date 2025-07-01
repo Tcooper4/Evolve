@@ -22,12 +22,15 @@ from enum import Enum
 import json
 import os
 from pathlib import Path
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 from trading.models.model_registry import get_available_models, ModelRegistry
 from trading.models.base_model import BaseModel
 from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
+
+logger = logging.getLogger(__name__)
 
 class ForecastingHorizon(Enum):
     """Forecasting horizon categories."""
@@ -75,6 +78,7 @@ class ModelPerformance:
 class ModelCapability:
     """Model capability profile."""
     model_id: str
+    model_type: ModelType
     supported_horizons: List[ForecastingHorizon]
     supported_regimes: List[MarketRegime]
     min_data_points: int
@@ -83,12 +87,25 @@ class ModelCapability:
     computational_complexity: str  # "low", "medium", "high"
     memory_requirements: str  # "low", "medium", "high"
 
-class ModelSelectorAgent:
+class ModelSelectorAgent(BaseAgent):
     """Agent for dynamic model selection based on market conditions and requirements."""
     
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: Optional[str] = None, config: Optional[AgentConfig] = None):
         """Initialize the Model Selector Agent."""
-        self.config_path = config_path or "config/model_selector_config.json"
+        if config is None:
+            config = AgentConfig(
+                name="ModelSelectorAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={"config_path": config_path}
+            )
+        
+        super().__init__(config)
+        
+        self.config_path = config_path or config.custom_config.get("config_path", "config/model_selector_config.json")
         self.model_registry: Dict[str, Dict] = {}
         self.performance_history: Dict[str, List[ModelPerformance]] = {}
         self.capability_profiles: Dict[str, ModelCapability] = {}
@@ -102,6 +119,111 @@ class ModelSelectorAgent:
         self.learning_rate = 0.01
         self.exploration_rate = 0.1
         self.performance_window = 30  # days
+        
+    def _setup(self):
+        """Setup method called during initialization."""
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the model selector agent.
+        
+        Args:
+            **kwargs: Parameters including action, horizon, market_regime, etc.
+            
+        Returns:
+            AgentResult: Result of the execution
+        """
+        try:
+            action = kwargs.get('action', 'select_model')
+            
+            if action == 'select_model':
+                horizon = kwargs.get('horizon')
+                market_regime = kwargs.get('market_regime')
+                data_length = kwargs.get('data_length', 100)
+                required_features = kwargs.get('required_features', [])
+                performance_weight = kwargs.get('performance_weight', 0.6)
+                capability_weight = kwargs.get('capability_weight', 0.4)
+                
+                if not horizon or not market_regime:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: horizon and market_regime"
+                    )
+                
+                selected_model, confidence = self.select_model(
+                    horizon, market_regime, data_length, required_features,
+                    performance_weight, capability_weight
+                )
+                
+                return AgentResult(
+                    success=True,
+                    data={
+                        "selected_model": selected_model,
+                        "confidence": confidence,
+                        "recommendations": self.get_model_recommendations(horizon, market_regime)
+                    }
+                )
+                
+            elif action == 'update_performance':
+                model_id = kwargs.get('model_id')
+                performance_data = kwargs.get('performance')
+                
+                if not model_id or not performance_data:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: model_id and performance"
+                    )
+                
+                performance = ModelPerformance(**performance_data)
+                self.update_model_performance(model_id, performance)
+                
+                return AgentResult(
+                    success=True,
+                    data={"message": f"Updated performance for model {model_id}"}
+                )
+                
+            elif action == 'detect_regime':
+                price_data = kwargs.get('price_data')
+                
+                if price_data is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: price_data"
+                    )
+                
+                regime = self.detect_market_regime(price_data)
+                
+                return AgentResult(
+                    success=True,
+                    data={"market_regime": regime.value}
+                )
+                
+            elif action == 'get_recommendations':
+                horizon = kwargs.get('horizon')
+                market_regime = kwargs.get('market_regime')
+                top_k = kwargs.get('top_k', 3)
+                
+                if not horizon or not market_regime:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: horizon and market_regime"
+                    )
+                
+                recommendations = self.get_model_recommendations(horizon, market_regime, top_k)
+                
+                return AgentResult(
+                    success=True,
+                    data={"recommendations": recommendations}
+                )
+                
+            else:
+                return AgentResult(
+                    success=False,
+                    error_message=f"Unknown action: {action}"
+                )
+                
+        except Exception as e:
+            return self.handle_error(e)
         
     def _load_configuration(self):
         """Load configuration from file."""

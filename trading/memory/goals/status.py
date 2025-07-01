@@ -5,8 +5,9 @@ import json
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
+import os
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -15,6 +16,11 @@ logger.setLevel(logging.INFO)
 # Constants
 GOALS_DIR = Path("memory/goals")
 STATUS_FILE = GOALS_DIR / "status.json"
+
+# Rate limiting for logging
+_last_log_time = None
+_last_log_status = None
+_log_cooldown = timedelta(minutes=5)  # Only log same status every 5 minutes
 
 @dataclass
 class GoalStatus:
@@ -115,6 +121,25 @@ class GoalStatusTracker:
             self.logger.error(f"Error updating goal progress: {str(e)}")
             raise
     
+    def _should_log_status(self, status: str) -> bool:
+        """Check if we should log this status (rate limiting)."""
+        global _last_log_time, _last_log_status
+        
+        now = datetime.now()
+        
+        # Always log if it's a different status
+        if status != _last_log_status:
+            _last_log_time = now
+            _last_log_status = status
+            return True
+        
+        # Check if enough time has passed since last log
+        if _last_log_time is None or (now - _last_log_time) > _log_cooldown:
+            _last_log_time = now
+            return True
+        
+        return False
+    
     def get_status_summary(self) -> Dict[str, Any]:
         """Get a summary of current goal status for UI display."""
         try:
@@ -131,7 +156,10 @@ class GoalStatusTracker:
                 "alerts": self._check_alerts(goals_data)
             }
             
-            self.logger.info(f"Generated goal status summary: {summary['current_status']}")
+            # Rate limit logging to prevent spam
+            if self._should_log_status(summary['current_status']):
+                self.logger.info(f"Generated goal status summary: {summary['current_status']}")
+            
             return summary
             
         except Exception as e:

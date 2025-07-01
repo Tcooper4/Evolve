@@ -78,7 +78,6 @@ class NLInterface:
         
         logger.info("NLInterface initialized with confidence thresholds and fallback prompts")
         
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def process_query(self, query: str, session_state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Process a natural language query.
         
@@ -142,7 +141,7 @@ class NLInterface:
             
         except Exception as e:
             logger.error(f"Error detecting intent: {str(e)}", exc_info=True)
-            return {'success': True, 'result': "unknown", 0.0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return "unknown", 0.0
     
     def _extract_entities(self, query: str, intent: str) -> Dict[str, Any]:
         """Extract and expand entities from query.

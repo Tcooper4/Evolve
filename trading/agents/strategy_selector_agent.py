@@ -22,6 +22,7 @@ from trading.optimization.genetic_optimizer import GeneticOptimizer
 from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 class StrategyType(str, Enum):
     """Strategy type classifications."""
@@ -62,7 +63,7 @@ class StrategyRecommendation:
     market_regime: str
     reasoning: str
 
-class StrategySelectorAgent:
+class StrategySelectorAgent(BaseAgent):
     """
     Agent responsible for:
     - Detecting best-fit strategies based on market conditions
@@ -71,13 +72,19 @@ class StrategySelectorAgent:
     - Providing strategy recommendations with confidence scores
     """
     
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize the Strategy Selector Agent.
-        
-        Args:
-            config: Configuration dictionary
-        """
-        self.config = config or {}
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="StrategySelectorAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
+        self.config_dict = config.custom_config or {}
         self.logger = logging.getLogger(__name__)
         self.memory = AgentMemory()
         self.strategy_manager = StrategyManager()
@@ -89,10 +96,10 @@ class StrategySelectorAgent:
         self.parameter_history: Dict[str, List[Dict[str, Any]]] = {}
         
         # Configuration
-        self.performance_window = self.config.get('performance_window', 30)
-        self.optimization_frequency = self.config.get('optimization_frequency', 'weekly')
-        self.min_performance_threshold = self.config.get('min_performance_threshold', 0.5)
-        self.cross_validation_periods = self.config.get('cross_validation_periods', 5)
+        self.performance_window = self.config_dict.get('performance_window', 30)
+        self.optimization_frequency = self.config_dict.get('optimization_frequency', 'weekly')
+        self.min_performance_threshold = self.config_dict.get('min_performance_threshold', 0.5)
+        self.cross_validation_periods = self.config_dict.get('cross_validation_periods', 5)
         
         # Strategy mappings
         self.strategy_mappings = {
@@ -141,8 +148,77 @@ class StrategySelectorAgent:
         
         # Load existing data
         self._load_strategy_performance()
-        
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the strategy selection logic.
+        Args:
+            **kwargs: market_data, asset_symbol, forecast_horizon, risk_tolerance, action, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'select_strategy')
+            
+            if action == 'select_strategy':
+                market_data = kwargs.get('market_data')
+                asset_symbol = kwargs.get('asset_symbol')
+                forecast_horizon = kwargs.get('forecast_horizon')
+                risk_tolerance = kwargs.get('risk_tolerance', 'medium')
+                
+                if market_data is None or asset_symbol is None or forecast_horizon is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: market_data, asset_symbol, forecast_horizon"
+                    )
+                
+                recommendation = self.select_strategy(market_data, asset_symbol, forecast_horizon, risk_tolerance)
+                return AgentResult(success=True, data={
+                    "strategy_recommendation": recommendation.__dict__,
+                    "strategy_name": recommendation.strategy_name,
+                    "confidence_score": recommendation.confidence_score,
+                    "expected_sharpe": recommendation.expected_sharpe
+                })
+                
+            elif action == 'get_recommendations':
+                market_data = kwargs.get('market_data')
+                market_regime = kwargs.get('market_regime')
+                risk_tolerance = kwargs.get('risk_tolerance', 'medium')
+                
+                if market_data is None or market_regime is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: market_data, market_regime"
+                    )
+                
+                recommendations = self.get_strategy_recommendations(market_data, market_regime, risk_tolerance)
+                return AgentResult(success=True, data={
+                    "recommendations": [rec.__dict__ for rec in recommendations],
+                    "count": len(recommendations)
+                })
+                
+            elif action == 'update_performance':
+                performance_data = kwargs.get('performance')
+                
+                if performance_data is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: performance"
+                    )
+                
+                performance = StrategyPerformance(**performance_data)
+                self.update_strategy_performance(performance)
+                return AgentResult(success=True, data={
+                    "message": f"Updated performance for {performance.strategy_name}"
+                })
+                
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e)
 
     def select_strategy(self, 
                        market_data: pd.DataFrame,

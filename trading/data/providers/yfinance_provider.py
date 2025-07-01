@@ -2,13 +2,14 @@
 
 import time
 import yfinance as yf
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import pandas as pd
 import requests
 import logging
 from pathlib import Path
 from datetime import datetime
 import pickle
+from .base_provider import BaseDataProvider, ProviderConfig
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -94,20 +95,36 @@ def cache_data(symbol: str, data: pd.DataFrame) -> None:
     except Exception as e:
         logger.error(f"Error caching data for {symbol}: {e}")
 
-class YFinanceProvider:
+class YFinanceProvider(BaseDataProvider):
     """Provider for fetching data from Yahoo Finance."""
     
-    def __init__(self, delay: float = 1.0):
+    def __init__(self, config: Optional[ProviderConfig] = None):
         """Initialize the provider.
         
         Args:
-            delay: Delay in seconds between requests
+            config: Provider configuration (optional)
         """
-        self.delay = delay
+        if config is None:
+            config = ProviderConfig(
+                name="yfinance",
+                enabled=True,
+                priority=1,
+                rate_limit_per_minute=60,
+                timeout_seconds=30,
+                retry_attempts=3,
+                custom_config={"delay": 1.0}
+            )
+        
+        super().__init__(config)
+        self.delay = config.custom_config.get("delay", 1.0) if config.custom_config else 1.0
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
+
+    def _setup(self) -> None:
+        """Setup method called during initialization."""
+        self.logger.info(f"Initialized YFinance provider with delay: {self.delay}s")
 
     def _validate_data(self, data: pd.DataFrame) -> None:
         """Validate the fetched data.
@@ -129,26 +146,36 @@ class YFinanceProvider:
         if data.isnull().any().any():
             raise ValueError("Data contains missing values")
 
-    def get_data(self, symbol: str, start_date: Optional[str] = None,
-                end_date: Optional[str] = None, interval: str = '1d') -> pd.DataFrame:
-        """Get data from Yahoo Finance with rate limiting.
+    def fetch(self, symbol: str, interval: str = '1d', **kwargs) -> pd.DataFrame:
+        """Fetch data for a given symbol and interval.
         
         Args:
             symbol: Stock symbol
-            start_date: Start date in YYYY-MM-DD format
-            end_date: End date in YYYY-MM-DD format
             interval: Data interval (1d, 1h, etc.)
+            **kwargs: Additional parameters (start_date, end_date)
             
         Returns:
             DataFrame with OHLCV data
             
         Raises:
-            RuntimeError: If data fetching fails
+            Exception: If data fetching fails
         """
+        if not self.is_enabled():
+            raise RuntimeError("Provider is disabled")
+            
+        if not self.validate_symbol(symbol):
+            raise ValueError(f"Invalid symbol: {symbol}")
+            
+        if not self.validate_interval(interval):
+            raise ValueError(f"Invalid interval: {interval}")
+        
         try:
+            self._update_status_on_request()
+            
             # Check cache first
             cached_data = get_cached_data(symbol)
             if cached_data is not None:
+                self._update_status_on_success()
                 log_data_request(symbol, True)
                 return cached_data
             
@@ -156,10 +183,10 @@ class YFinanceProvider:
             ticker = yf.Ticker(symbol)
             
             # Download data
-            logger.info(f"Fetching data for {symbol}")
+            self.logger.info(f"Fetching data for {symbol}")
             data = ticker.history(
-                start=start_date,
-                end=end_date,
+                start=kwargs.get('start_date'),
+                end=kwargs.get('end_date'),
                 interval=interval
             )
             
@@ -168,6 +195,7 @@ class YFinanceProvider:
             
             # Cache the data
             cache_data(symbol, data)
+            self._update_status_on_success()
             log_data_request(symbol, True)
             
             # Add delay between requests
@@ -177,13 +205,68 @@ class YFinanceProvider:
             
         except Exception as e:
             error_msg = str(e)
-            logger.error(f"Error fetching data for {symbol}: {error_msg}")
+            self._update_status_on_failure(error_msg)
+            self.logger.error(f"Error fetching data for {symbol}: {error_msg}")
             log_data_request(symbol, False, error_msg)
             raise RuntimeError(f"Error fetching data for {symbol}: {error_msg}")
 
+    def fetch_multiple(self, symbols: List[str], interval: str = '1d', **kwargs) -> Dict[str, pd.DataFrame]:
+        """Fetch data for multiple symbols.
+        
+        Args:
+            symbols: List of stock symbols
+            interval: Data interval (1d, 1h, etc.)
+            **kwargs: Additional parameters (start_date, end_date)
+            
+        Returns:
+            Dictionary mapping symbols to DataFrames
+            
+        Raises:
+            Exception: If data fetching fails for any symbol
+        """
+        if not self.is_enabled():
+            raise RuntimeError("Provider is disabled")
+            
+        results = {}
+        failed_symbols = []
+        
+        for symbol in symbols:
+            try:
+                results[symbol] = self.fetch(symbol, interval, **kwargs)
+            except Exception as e:
+                failed_symbols.append(symbol)
+                self.logger.error(f"Failed to fetch data for {symbol}: {e}")
+                continue
+        
+        if failed_symbols:
+            self.logger.warning(f"Failed to fetch data for symbols: {failed_symbols}")
+            
+        return results
+
+    def get_data(self, symbol: str, start_date: Optional[str] = None,
+                end_date: Optional[str] = None, interval: str = '1d') -> pd.DataFrame:
+        """Legacy method for backward compatibility.
+        
+        Args:
+            symbol: Stock symbol
+            start_date: Start date in YYYY-MM-DD format
+            end_date: End date in YYYY-MM-DD format
+            interval: Data interval (1d, 1h, etc.)
+            
+        Returns:
+            DataFrame with OHLCV data
+        """
+        kwargs = {}
+        if start_date:
+            kwargs['start_date'] = start_date
+        if end_date:
+            kwargs['end_date'] = end_date
+            
+        return self.fetch(symbol, interval, **kwargs)
+
     def get_multiple_data(self, symbols: list, start_date: Optional[str] = None,
                          end_date: Optional[str] = None, interval: str = '1d') -> Dict[str, pd.DataFrame]:
-        """Get data for multiple symbols with rate limiting.
+        """Legacy method for backward compatibility.
         
         Args:
             symbols: List of stock symbols
@@ -193,20 +276,11 @@ class YFinanceProvider:
             
         Returns:
             Dictionary mapping symbols to DataFrames
-            
-        Raises:
-            RuntimeError: If data fetching fails for any symbol
         """
-        results = {}
-        for symbol in symbols:
-            try:
-                results[symbol] = self.get_data(
-                    symbol,
-                    start_date=start_date,
-                    end_date=end_date,
-                    interval=interval
-                )
-            except Exception as e:
-                logger.error(f"Skipping {symbol} due to error: {e}")
-                continue
-        return results
+        kwargs = {}
+        if start_date:
+            kwargs['start_date'] = start_date
+        if end_date:
+            kwargs['end_date'] = end_date
+            
+        return self.fetch_multiple(symbols, interval, **kwargs)

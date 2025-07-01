@@ -11,7 +11,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 import warnings
-warnings.filterwarnings('ignore')
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 logger = logging.getLogger(__name__)
 
@@ -41,22 +41,119 @@ class RollingRetrainConfig:
     feature_engineering: bool = True
     hyperparameter_tuning: bool = True
 
-class WalkForwardAgent:
+class WalkForwardAgent(BaseAgent):
     """Walk-forward validation and rolling retraining agent."""
     
-    def __init__(self, config: Optional[RollingRetrainConfig] = None):
-        """Initialize walk-forward agent.
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="WalkForwardAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
         
-        Args:
-            config: Configuration for rolling retraining
-        """
-        self.config = config or RollingRetrainConfig()
+        # Extract config from custom_config or use defaults
+        custom_config = config.custom_config or {}
+        self.walk_forward_config = RollingRetrainConfig(
+            train_window_days=custom_config.get('train_window_days', 252),
+            test_window_days=custom_config.get('test_window_days', 63),
+            step_size_days=custom_config.get('step_size_days', 21),
+            min_train_samples=custom_config.get('min_train_samples', 100),
+            max_train_samples=custom_config.get('max_train_samples', 1000),
+            validation_split=custom_config.get('validation_split', 0.2),
+            retrain_frequency=custom_config.get('retrain_frequency', 'monthly'),
+            model_type=custom_config.get('model_type', 'xgboost'),
+            feature_engineering=custom_config.get('feature_engineering', True),
+            hyperparameter_tuning=custom_config.get('hyperparameter_tuning', True)
+        )
+        
         self.results_history = []
         self.model_history = []
         self.performance_tracker = {}
         
         logger.info("Walk-Forward Agent initialized")
-    
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the walk-forward validation logic.
+        Args:
+            **kwargs: data, target_column, feature_columns, model_factory, action, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'run_walk_forward_validation')
+            
+            if action == 'run_walk_forward_validation':
+                data = kwargs.get('data')
+                target_column = kwargs.get('target_column')
+                feature_columns = kwargs.get('feature_columns')
+                model_factory = kwargs.get('model_factory')
+                start_date = kwargs.get('start_date')
+                end_date = kwargs.get('end_date')
+                
+                if data is None or target_column is None or feature_columns is None or model_factory is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: data, target_column, feature_columns, model_factory"
+                    )
+                
+                results = self.run_walk_forward_validation(
+                    data, target_column, feature_columns, model_factory, start_date, end_date
+                )
+                return AgentResult(success=True, data={
+                    "walk_forward_results": [result.__dict__ for result in results],
+                    "results_count": len(results),
+                    "performance_summary": self.get_performance_summary()
+                })
+                
+            elif action == 'get_performance_summary':
+                summary = self.get_performance_summary()
+                return AgentResult(success=True, data={"performance_summary": summary})
+                
+            elif action == 'get_performance_trends':
+                trends = self.get_performance_trends()
+                return AgentResult(success=True, data={"performance_trends": trends})
+                
+            elif action == 'should_retrain':
+                current_performance = kwargs.get('current_performance')
+                threshold = kwargs.get('threshold', 0.1)
+                
+                if current_performance is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: current_performance"
+                    )
+                
+                should_retrain = self.should_retrain(current_performance, threshold)
+                return AgentResult(success=True, data={
+                    "should_retrain": should_retrain,
+                    "threshold": threshold
+                })
+                
+            elif action == 'export_results':
+                filepath = kwargs.get('filepath', 'logs/walk_forward_results.json')
+                success = self.export_results(filepath)
+                if success:
+                    return AgentResult(success=True, data={
+                        "message": f"Results exported to {filepath}"
+                    })
+                else:
+                    return AgentResult(success=False, error_message="Failed to export results")
+                    
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e)
+
     def run_walk_forward_validation(self, 
                                   data: pd.DataFrame,
                                   target_column: str,
@@ -90,9 +187,9 @@ class WalkForwardAgent:
                 end_date = data.index.max()
             
             # Calculate windows
-            train_window = timedelta(days=self.config.train_window_days)
-            test_window = timedelta(days=self.config.test_window_days)
-            step_size = timedelta(days=self.config.step_size_days)
+            train_window = timedelta(days=self.walk_forward_config.train_window_days)
+            test_window = timedelta(days=self.walk_forward_config.test_window_days)
+            step_size = timedelta(days=self.walk_forward_config.step_size_days)
             
             results = []
             current_date = start_date + train_window
@@ -109,7 +206,7 @@ class WalkForwardAgent:
                 test_data = data[(data.index >= test_start) & (data.index < test_end)]
                 
                 # Check minimum data requirements
-                if len(train_data) < self.config.min_train_samples:
+                if len(train_data) < self.walk_forward_config.min_train_samples:
                     logger.warning(f"Insufficient training data for period {train_start} to {train_end}")
                     current_date += step_size
                     continue
@@ -138,7 +235,7 @@ class WalkForwardAgent:
                     actual_values=test_data[target_column],
                     model_metadata={
                         'train_metrics': train_metrics,
-                        'model_type': self.config.model_type,
+                        'model_type': self.walk_forward_config.model_type,
                         'feature_count': len(feature_columns)
                     }
                 )
@@ -183,7 +280,7 @@ class WalkForwardAgent:
             y = train_data[target_column]
             
             # Split for validation
-            split_idx = int(len(X) * (1 - self.config.validation_split))
+            split_idx = int(len(X) * (1 - self.walk_forward_config.validation_split))
             X_train, X_val = X.iloc[:split_idx], X.iloc[split_idx:]
             y_train, y_val = y.iloc[:split_idx], y.iloc[split_idx:]
             

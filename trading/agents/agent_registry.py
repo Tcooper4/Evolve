@@ -14,7 +14,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime
 
-from trading.base_agent import BaseAgent
+from trading.agents.base_agent_interface import BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -88,23 +88,25 @@ class AgentRegistry:
         # Get class docstring
         doc = inspect.getdoc(agent_class) or ""
         
-        # Get capabilities from run method
+        # Get capabilities from execute method
         capabilities = []
-        run_method = getattr(agent_class, "run", None)
-        if run_method:
-            sig = inspect.signature(run_method)
+        execute_method = getattr(agent_class, "execute", None)
+        if execute_method:
+            sig = inspect.signature(execute_method)
             required_params = []
             optional_params = []
             
             for name, param in sig.parameters.items():
+                if name == 'self':
+                    continue
                 if param.default == inspect.Parameter.empty:
                     required_params.append(name)
                 else:
                     optional_params.append(name)
-                    
+            
             capabilities.append(AgentCapability(
-                name="run",
-                description=inspect.getdoc(run_method) or "Run the agent",
+                name="execute",
+                description=inspect.getdoc(execute_method) or "Execute the agent",
                 required_params=required_params,
                 optional_params=optional_params,
                 return_type=str(sig.return_annotation)

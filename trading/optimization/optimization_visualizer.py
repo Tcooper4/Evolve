@@ -20,7 +20,9 @@ class OptimizationVisualizer:
         Args:
             results: List of optimization results
         """
-        self.results = resultsdef plot_convergence(
+        self.results = results
+        
+    def plot_convergence(
         self,
         metric: str = 'sharpe_ratio',
         title: str = "Optimization Convergence"

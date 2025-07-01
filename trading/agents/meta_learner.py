@@ -11,6 +11,7 @@ from datetime import datetime
 import json
 import numpy as np
 from dataclasses import dataclass
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 logger = logging.getLogger(__name__)
 
@@ -24,24 +25,104 @@ class MetaLearningExperience:
     performance: float
     metadata: Dict[str, Any]
 
-class MetaLearnerAgent:
+class MetaLearnerAgent(BaseAgent):
     """Meta-learning agent that improves decision-making over time."""
     
-    def __init__(self, memory_size: int = 1000, learning_rate: float = 0.01):
-        """
-        Initialize the meta-learning agent.
+    def __init__(self, config: Optional[AgentConfig] = None):
+        if config is None:
+            config = AgentConfig(
+                name="MetaLearnerAgent",
+                enabled=True,
+                priority=1,
+                max_concurrent_runs=1,
+                timeout_seconds=300,
+                retry_attempts=3,
+                custom_config={}
+            )
+        super().__init__(config)
         
-        Args:
-            memory_size: Maximum number of experiences to remember
-            learning_rate: Learning rate for meta-learning updates
-        """
-        self.memory_size = memory_size
-        self.learning_rate = learning_rate
+        # Extract config from custom_config or use defaults
+        custom_config = config.custom_config or {}
+        self.memory_size = custom_config.get('memory_size', 1000)
+        self.learning_rate = custom_config.get('learning_rate', 0.01)
+        
         self.experiences: List[MetaLearningExperience] = []
         self.meta_models: Dict[str, Any] = {}
         self.performance_history: List[float] = []
         
         logger.info("Meta-learning agent initialized")
+
+    def _setup(self):
+        pass
+
+    async def execute(self, **kwargs) -> AgentResult:
+        """Execute the meta-learning logic.
+        Args:
+            **kwargs: context, action, outcome, performance, metadata, etc.
+        Returns:
+            AgentResult
+        """
+        try:
+            action = kwargs.get('action', 'store_experience')
+            
+            if action == 'store_experience':
+                context = kwargs.get('context')
+                action_taken = kwargs.get('action_taken')
+                outcome = kwargs.get('outcome')
+                performance = kwargs.get('performance')
+                metadata = kwargs.get('metadata')
+                
+                if context is None or action_taken is None or outcome is None or performance is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: context, action_taken, outcome, performance"
+                    )
+                
+                self.store_experience(context, action_taken, outcome, performance, metadata)
+                return AgentResult(success=True, data={
+                    "message": "Experience stored successfully",
+                    "total_experiences": len(self.experiences)
+                })
+                
+            elif action == 'learn_from_experiences':
+                insights = self.learn_from_experiences()
+                return AgentResult(success=True, data={
+                    "learning_insights": insights,
+                    "meta_models_count": len(self.meta_models)
+                })
+                
+            elif action == 'get_recommendation':
+                context = kwargs.get('context')
+                
+                if context is None:
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: context"
+                    )
+                
+                recommendation = self.get_recommendation(context)
+                return AgentResult(success=True, data={
+                    "recommendation": recommendation
+                })
+                
+            elif action == 'get_learning_summary':
+                summary = self.get_learning_summary()
+                return AgentResult(success=True, data={
+                    "learning_summary": summary
+                })
+                
+            elif action == 'run':
+                context = kwargs.get('context', {})
+                result = self.run(context)
+                return AgentResult(success=True, data={
+                    "meta_learning_result": result
+                })
+                
+            else:
+                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                
+        except Exception as e:
+            return self.handle_error(e)
     
     def store_experience(self, context: Dict[str, Any], action: str, 
                         outcome: Dict[str, Any], performance: float,
