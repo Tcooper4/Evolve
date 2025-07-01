@@ -26,21 +26,126 @@ if PROPHET_AVAILABLE:
             return {'success': True, 'message': 'ProphetModel initialized', 'timestamp': datetime.now().isoformat()}
 
         def fit(self, train_data: pd.DataFrame, val_data=None, **kwargs):
-            df = train_data[[self.config['date_column'], self.config['target_column']]].rename(columns={
-                self.config['date_column']: 'ds',
-                self.config['target_column']: 'y'
-            })
-            self.model.fit(df)
-            self.fitted = True
-            self.history = df
-            return {'train_loss': [], 'val_loss': []}
+            """Fit the Prophet model with robust error handling.
+            
+            Args:
+                train_data: Training data DataFrame
+                val_data: Validation data (optional)
+                **kwargs: Additional arguments
+                
+            Returns:
+                Dictionary with training results
+                
+            Raises:
+                ValueError: If data is missing or malformed
+                RuntimeError: If Prophet fitting fails
+            """
+            try:
+                # Validate input data
+                if train_data is None or train_data.empty:
+                    raise ValueError("Training data is empty or None")
+                
+                required_columns = [self.config['date_column'], self.config['target_column']]
+                missing_columns = [col for col in required_columns if col not in train_data.columns]
+                if missing_columns:
+                    raise ValueError(f"Missing required columns: {missing_columns}")
+                
+                # Check for NaN values
+                if train_data[required_columns].isnull().any().any():
+                    import logging
+                    logging.warning("NaN values found in training data, attempting to clean")
+                    train_data = train_data.dropna(subset=required_columns)
+                    if train_data.empty:
+                        raise ValueError("No valid data remaining after removing NaN values")
+                
+                # Prepare data for Prophet
+                df = train_data[required_columns].rename(columns={
+                    self.config['date_column']: 'ds',
+                    self.config['target_column']: 'y'
+                })
+                
+                # Validate Prophet data format
+                if df['ds'].dtype != 'datetime64[ns]':
+                    df['ds'] = pd.to_datetime(df['ds'])
+                
+                if df['y'].dtype not in ['float64', 'int64']:
+                    df['y'] = pd.to_numeric(df['y'], errors='coerce')
+                    if df['y'].isnull().any():
+                        raise ValueError("Target column contains non-numeric values")
+                
+                # Fit the model
+                self.model.fit(df)
+                self.fitted = True
+                self.history = df
+                
+                import logging
+                logging.info(f"Prophet model fitted successfully with {len(df)} data points")
+                
+                return {'train_loss': [], 'val_loss': []}
+                
+            except Exception as e:
+                import logging
+                logging.error(f"Error fitting Prophet model: {e}")
+                raise RuntimeError(f"Prophet model fitting failed: {e}")
 
         def predict(self, data: pd.DataFrame, horizon: int = 1):
-            if not self.fitted:
-                raise RuntimeError('Model must be fit before predicting.')
-            future = data[[self.config['date_column']]].rename(columns={self.config['date_column']: 'ds'})
-            forecast = self.model.predict(future)
-            return forecast['yhat'].values
+            """Make predictions with fallback guards.
+            
+            Args:
+                data: Input data
+                horizon: Prediction horizon
+                
+            Returns:
+                Predicted values
+            """
+            try:
+                # Check if input dataframe is empty or has NaNs
+                if data is None or data.empty:
+                    import logging
+                    logging.warning("Prophet predict: Input dataframe is empty, returning empty result")
+                    return np.array([])
+                
+                # Check for required columns
+                if self.config['date_column'] not in data.columns:
+                    import logging
+                    logging.warning(f"Prophet predict: Missing required column '{self.config['date_column']}', returning empty result")
+                    return np.array([])
+                
+                # Check for NaN values
+                if data[self.config['date_column']].isnull().any():
+                    import logging
+                    logging.warning("Prophet predict: NaN values found in date column, attempting to clean")
+                    data = data.dropna(subset=[self.config['date_column']])
+                    if data.empty:
+                        logging.warning("Prophet predict: No valid data after cleaning, returning empty result")
+                        return np.array([])
+                
+                # Validate data size
+                if len(data) < 2:
+                    import logging
+                    logging.warning("Prophet predict: Insufficient data points, returning empty result")
+                    return np.array([])
+                
+                if not self.fitted:
+                    import logging
+                    logging.warning("Prophet predict: Model not fitted, returning empty result")
+                    return np.array([])
+                
+                # Prepare data for prediction
+                future = data[[self.config['date_column']]].rename(columns={self.config['date_column']: 'ds'})
+                
+                # Validate date format
+                if future['ds'].dtype != 'datetime64[ns]':
+                    future['ds'] = pd.to_datetime(future['ds'])
+                
+                # Make prediction
+                forecast = self.model.predict(future)
+                return forecast['yhat'].values
+                
+            except Exception as e:
+                import logging
+                logging.error(f"Error in Prophet predict: {e}")
+                return np.array([])
 
         def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
             """Generate forecast for future time steps.

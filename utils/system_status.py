@@ -213,34 +213,42 @@ class SystemStatus:
             return {"status": "report_error", "error": str(e)}
             
     def print_status(self) -> dict:
-        """Print system status. Returns status dict."""
+        """Print system status to console with proper logging."""
         try:
             status = self.get_system_info()
-            print("\nSystem Status Report")
-            print("===================")
-            print(f"Timestamp: {status['timestamp']}")
-            print(f"Uptime: {status['uptime']}")
-            print("\nPlatform:")
+            logger.info("System Status Report")
+            logger.info("===================")
+            logger.info(f"Timestamp: {status['timestamp']}")
+            logger.info(f"Uptime: {status['uptime']}")
+            
+            logger.info("Platform:")
             for key, value in status['platform'].items():
-                print(f"  {key}: {value}")
-            print("\nCPU:")
+                logger.info(f"  {key}: {value}")
+            
+            logger.info("CPU:")
             for key, value in status['cpu'].items():
-                print(f"  {key}: {value}")
-            print("\nMemory:")
+                logger.info(f"  {key}: {value}")
+            
+            logger.info("Memory:")
             for key, value in status['memory'].items():
-                print(f"  {key}: {value}")
-            print("\nDisk:")
+                logger.info(f"  {key}: {value}")
+            
+            logger.info("Disk:")
             for key, value in status['disk'].items():
-                print(f"  {key}: {value}")
-            print("\nNetwork:")
+                logger.info(f"  {key}: {value}")
+            
+            logger.info("Network:")
             for key, value in status['network'].items():
-                print(f"  {key}: {value}")
-            print("\nProcess:")
+                logger.info(f"  {key}: {value}")
+            
+            logger.info("Process:")
             for key, value in status['process'].items():
-                print(f"  {key}: {value}")
-            print("\nAgent:")
+                logger.info(f"  {key}: {value}")
+            
+            logger.info("Agent:")
             for key, value in status['agent'].items():
-                print(f"  {key}: {value}")
+                logger.info(f"  {key}: {value}")
+            
             return {"status": "status_printed"}
         except Exception as e:
             self.logger.error(f"Error printing status: {str(e)}")
