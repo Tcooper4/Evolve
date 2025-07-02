@@ -973,3 +973,102 @@ def handle_exceptions(
                 return default_return
         return wrapper
     return decorator 
+
+def safe_json_load(json_str: str, default: Any = None) -> Any:
+    """
+    Safely load JSON string with error handling.
+    
+    Args:
+        json_str: JSON string to parse
+        default: Default value to return if parsing fails
+        
+    Returns:
+        Parsed JSON object or default value
+    """
+    try:
+        return json.loads(json_str)
+    except (json.JSONDecodeError, TypeError, ValueError) as e:
+        logger.warning(f"Failed to parse JSON: {e}")
+        return default
+
+def safe_json_dump(obj: Any, default: str = "{}") -> str:
+    """
+    Safely dump object to JSON string with error handling.
+    
+    Args:
+        obj: Object to serialize
+        default: Default string to return if serialization fails
+        
+    Returns:
+        JSON string or default value
+    """
+    try:
+        return json.dumps(obj)
+    except (TypeError, ValueError) as e:
+        logger.warning(f"Failed to serialize to JSON: {e}")
+        return default 
+
+def safe_json_save(obj: Any, file_path: Union[str, Path], default: bool = False) -> bool:
+    """
+    Safely save object to JSON file with error handling.
+    
+    Args:
+        obj: Object to serialize
+        file_path: Path to save the JSON file
+        default: Default return value if save fails
+        
+    Returns:
+        True if saved successfully, False otherwise
+    """
+    try:
+        ensure_directory(str(Path(file_path).parent))
+        with open(file_path, 'w') as f:
+            json.dump(obj, f, indent=2)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to save JSON to {file_path}: {e}")
+        return default
+
+def validate_config(config: Dict[str, Any], required_keys: Optional[List[str]] = None) -> Dict[str, Any]:
+    """
+    Validate configuration dictionary.
+    
+    Args:
+        config: Configuration dictionary to validate
+        required_keys: List of required keys
+        
+    Returns:
+        Dictionary with validation results
+    """
+    try:
+        if not isinstance(config, dict):
+            return {"valid": False, "error": "Config must be a dictionary"}
+        
+        if required_keys:
+            missing_keys = [key for key in required_keys if key not in config]
+            if missing_keys:
+                return {"valid": False, "error": f"Missing required keys: {missing_keys}"}
+        
+        return {"valid": True, "message": "Configuration validation passed"}
+        
+    except Exception as e:
+        return {"valid": False, "error": f"Validation error: {str(e)}"}
+
+def get_project_root() -> Path:
+    """
+    Get the project root directory.
+    
+    Returns:
+        Path to project root
+    """
+    try:
+        # Look for common project root indicators
+        current_path = Path.cwd()
+        while current_path != current_path.parent:
+            if any((current_path / indicator).exists() for indicator in ['.git', 'pyproject.toml', 'setup.py', 'requirements.txt']):
+                return current_path
+            current_path = current_path.parent
+        return Path.cwd()
+    except Exception as e:
+        logger.error(f"Error finding project root: {e}")
+        return Path.cwd() 

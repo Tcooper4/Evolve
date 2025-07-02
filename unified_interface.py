@@ -301,6 +301,20 @@ class EnhancedUnifiedInterface:
             st.title("🚀 Evolve Enhanced Trading Interface")
             st.markdown("Institutional-level AI-powered trading system with comprehensive analysis and automation.")
             
+            # Autonomous mode toggle in sidebar
+            st.sidebar.header("🤖 Autonomous Mode")
+            autonomous_mode = st.sidebar.checkbox(
+                "Enable Full Autonomous Execution",
+                value=False,
+                help="Allow system to execute all operations without user confirmation"
+            )
+            
+            if autonomous_mode:
+                st.sidebar.success("🤖 Autonomous mode enabled")
+                st.sidebar.info("System will automatically trigger forecasts, tune models, and run backtests")
+            else:
+                st.sidebar.info("👤 Manual mode - user confirmation required")
+            
             # System health indicator
             self._display_system_health()
             
