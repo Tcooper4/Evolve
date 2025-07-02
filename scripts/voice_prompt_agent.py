@@ -3,9 +3,7 @@
 This module provides voice-to-text capabilities using speech recognition
 and OpenAI Whisper for natural language trading commands.
 
-LEGACY MODULE: This module is being refactored to use the centralized
-agent registry and prompt templates. Consider using the new agent system
-for new implementations.
+All routing is now handled through the centralized PromptRouterAgent.
 """
 
 import speech_recognition as sr
@@ -27,6 +25,14 @@ except ImportError:
     TEMPLATES_AVAILABLE = False
     format_template = None
 
+# Import centralized prompt router
+try:
+    from trading.agents.prompt_router_agent import PromptRouterAgent
+    PROMPT_ROUTER_AVAILABLE = True
+except ImportError:
+    PROMPT_ROUTER_AVAILABLE = False
+    PromptRouterAgent = None
+
 # Try to import speech recognition and Whisper
 try:
     import whisper
@@ -38,7 +44,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class VoicePromptAgent:
-    """Voice prompt processing agent."""
+    """Voice prompt processing agent with centralized routing."""
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize voice prompt agent."""
@@ -46,6 +52,14 @@ class VoicePromptAgent:
         self.recognizer = sr.Recognizer()
         self.whisper_model = None
         self.voice_history = []
+        
+        # Initialize centralized prompt router
+        if PROMPT_ROUTER_AVAILABLE:
+            self.prompt_router = PromptRouterAgent(config)
+            logger.info("Initialized centralized prompt router")
+        else:
+            self.prompt_router = None
+            logger.warning("PromptRouterAgent not available, using fallback routing")
         
         # Initialize Whisper model
         if WHISPER_AVAILABLE:
@@ -55,7 +69,7 @@ class VoicePromptAgent:
             except Exception as e:
                 logger.warning(f"Could not load Whisper model: {e}")
         
-        # Trading command patterns
+        # Fallback command patterns (only used if prompt router unavailable)
         self.command_patterns = {
             'forecast': [
                 r'forecast\s+(\w+)\s+for\s+(\d+)\s+(day|days|week|weeks)',
@@ -267,13 +281,52 @@ class VoicePromptAgent:
         return command
     
     def execute_voice_command(self, command: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute parsed voice command."""
+        """Execute parsed voice command using centralized routing."""
         result = {
             'success': False,
             'action': command['action'],
             'message': '',
             'data': None,
             'timestamp': datetime.now().isoformat()
+        }
+        
+        try:
+            # Use centralized prompt router if available
+            if self.prompt_router and command['raw_text']:
+                logger.info(f"Routing voice command through PromptRouterAgent: {command['raw_text']}")
+                
+                # Route the raw text through the centralized agent
+                router_result = self.prompt_router.execute(command['raw_text'])
+                
+                result.update({
+                    'success': router_result.get('success', False),
+                    'message': router_result.get('message', 'Command processed'),
+                    'data': router_result.get('data', {}),
+                    'routed_through': 'PromptRouterAgent'
+                })
+                
+            else:
+                # Fallback to local routing if prompt router unavailable
+                logger.info("Using fallback routing for voice command")
+                result = self._execute_fallback_command(command)
+            
+            # Update voice history
+            self._update_voice_history(command, result)
+            
+        except Exception as e:
+            logger.error(f"Error executing voice command: {e}")
+            result['message'] = f"Error: {str(e)}"
+        
+        return result
+    
+    def _execute_fallback_command(self, command: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute command using fallback routing when PromptRouterAgent is unavailable."""
+        result = {
+            'success': False,
+            'action': command['action'],
+            'message': '',
+            'data': None,
+            'routed_through': 'fallback'
         }
         
         try:
@@ -290,12 +343,9 @@ class VoicePromptAgent:
             else:
                 result['message'] = f"Unknown command: {command['raw_text']}"
             
-            # Update voice history
-            self._update_voice_history(command, result)
-            
         except Exception as e:
-            logger.error(f"Error executing voice command: {e}")
-            result['message'] = f"Error: {str(e)}"
+            logger.error(f"Error in fallback command execution: {e}")
+            result['message'] = f"Fallback error: {str(e)}"
         
         return result
     

@@ -38,9 +38,9 @@ from trading.config.settings import (
 )
 from trading.utils.error_handling import handle_file_errors
 from trading.core.performance import log_performance
-from trading.memory.task_memory import Task, TaskMemory, TaskStatus
+from trading.agents.task_memory import Task, TaskMemory, TaskStatus
 from trading.base_agent import BaseAgent, AgentResult
-from trading.router import Router
+from core.agents.router import RouterAgent as Router
 
 logger = logging.getLogger(__name__)
 

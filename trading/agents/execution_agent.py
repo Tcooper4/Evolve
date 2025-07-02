@@ -1183,8 +1183,8 @@ class ExecutionAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error updating global metrics: {e}")
     
-    def _process_trade_signal(self, signal: TradeSignal, 
-                            market_data: Dict[str, Any]) -> ExecutionResult:
+    async def _process_trade_signal(self, signal: TradeSignal, 
+                                    market_data: Dict[str, Any]) -> ExecutionResult:
         """Process a single trade signal.
         
         Args:
@@ -1228,9 +1228,9 @@ class ExecutionAgent(BaseAgent):
             
             # Execute trade
             if self.execution_mode == ExecutionMode.SIMULATION:
-                position = await self._execute_simulation_trade(signal, execution_price)
+                position = self._execute_simulation_trade_sync(signal, execution_price)
             else:
-                position = await self._execute_real_trade(signal, execution_price)
+                position = self._execute_real_trade_sync(signal, execution_price)
             
             # Calculate fees
             fees = self._calculate_fees(signal, execution_price)

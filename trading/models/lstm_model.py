@@ -179,6 +179,68 @@ class LSTMModel(nn.Module):
             sequences.append(data[i:i + self.config['sequence_length']])
         return torch.stack(sequences)
 
+    def set_sequence_length(self, new_length: int):
+        """Dynamically adjust sequence length at runtime.
+        
+        Args:
+            new_length (int): New sequence length
+            
+        Raises:
+            ValueError: If new length is invalid
+        """
+        if new_length <= 0:
+            raise ValueError("Sequence length must be positive")
+        if new_length > self.config.get('max_sequence_length', 100):
+            raise ValueError(f"Sequence length {new_length} exceeds maximum allowed value of {self.config.get('max_sequence_length', 100)}")
+        
+        old_length = self.config['sequence_length']
+        self.config['sequence_length'] = new_length
+        
+        self.logger.info(f"Sequence length changed from {old_length} to {new_length}")
+        
+        # Rebuild model if necessary (for attention mechanisms)
+        if self.config.get('use_attention', False):
+            self.model = self.build_model()
+            self.model.to(self.device)
+    
+    def get_optimal_sequence_length(self, data: pd.DataFrame) -> int:
+        """Calculate optimal sequence length based on data characteristics.
+        
+        Args:
+            data (pd.DataFrame): Input data
+            
+        Returns:
+            int: Optimal sequence length
+        """
+        # Calculate based on data length and volatility
+        data_length = len(data)
+        
+        # Rule of thumb: sequence length should be 10-20% of data length
+        # but not less than 10 and not more than max_sequence_length
+        optimal_length = max(10, min(
+            int(data_length * 0.15),
+            self.config.get('max_sequence_length', 100)
+        ))
+        
+        # Adjust based on volatility
+        if 'target_column' in self.config and self.config['target_column'] in data.columns:
+            target_volatility = data[self.config['target_column']].std()
+            if target_volatility > data[self.config['target_column']].mean() * 0.1:  # High volatility
+                optimal_length = min(optimal_length + 5, self.config.get('max_sequence_length', 100))
+            elif target_volatility < data[self.config['target_column']].mean() * 0.01:  # Low volatility
+                optimal_length = max(optimal_length - 5, 10)
+        
+        return optimal_length
+    
+    def auto_adjust_sequence_length(self, data: pd.DataFrame):
+        """Automatically adjust sequence length based on data characteristics.
+        
+        Args:
+            data (pd.DataFrame): Input data
+        """
+        optimal_length = self.get_optimal_sequence_length(data)
+        self.set_sequence_length(optimal_length)
+
 class LSTMForecaster(BaseModel):
     """LSTM-based forecasting model with advanced features."""
     
