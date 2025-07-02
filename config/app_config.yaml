@@ -7,6 +7,8 @@ server:
   debug: "${DEBUG_MODE:-false}"
   workers: "${WORKERS:-4}"
   timeout: "${TIMEOUT:-60}"
+  reload: "${RELOAD:-false}"
+  access_log: "${ACCESS_LOG:-true}"
 
 # Logging Configuration
 logging:
@@ -15,6 +17,8 @@ logging:
   file: "${LOG_FILE:-logs/app.log}"
   max_size: "${LOG_MAX_SIZE:-10485760}"  # 10MB
   backup_count: "${LOG_BACKUP_COUNT:-5}"
+  console: "${LOG_CONSOLE:-true}"
+  json_format: "${LOG_JSON:-false}"
 
 # Database Settings
 database:
@@ -24,6 +28,11 @@ database:
     db: "${REDIS_DB:-0}"
     password: "${REDIS_PASSWORD:-null}"
     ssl: "${REDIS_SSL:-false}"
+    pool_size: "${REDIS_POOL_SIZE:-10}"
+    retry_on_timeout: "${REDIS_RETRY_TIMEOUT:-true}"
+  sqlite:
+    path: "${SQLITE_PATH:-data/trading.db}"
+    timeout: "${SQLITE_TIMEOUT:-30}"
 
 # Market Data Settings
 market_data:
@@ -32,6 +41,14 @@ market_data:
   cache_ttl: "${CACHE_TTL:-300}"  # 5 minutes
   max_retries: "${MAX_RETRIES:-3}"
   retry_delay: "${RETRY_DELAY:-1}"
+  providers:
+    - name: "yfinance"
+      enabled: "${YFINANCE_ENABLED:-true}"
+      rate_limit: "${YFINANCE_RATE_LIMIT:-100}"
+    - name: "alpha_vantage"
+      enabled: "${ALPHA_VANTAGE_ENABLED:-false}"
+      api_key: "${ALPHA_VANTAGE_API_KEY:-null}"
+      rate_limit: "${ALPHA_VANTAGE_RATE_LIMIT:-5}"
 
 # Model Settings
 models:
@@ -40,10 +57,14 @@ models:
     confidence_interval: "${CONFIDENCE_INTERVAL:-0.95}"
     min_training_samples: "${MIN_TRAINING_SAMPLES:-1000}"
     update_frequency: "${UPDATE_FREQUENCY:-3600}"  # 1 hour
+    ensemble_size: "${ENSEMBLE_SIZE:-5}"
+    validation_split: "${VALIDATION_SPLIT:-0.2}"
   technical:
     indicators:
       - name: "RSI"
         period: "${RSI_PERIOD:-14}"
+        overbought: "${RSI_OVERBOUGHT:-70}"
+        oversold: "${RSI_OVERSOLD:-30}"
       - name: "MACD"
         fast_period: "${MACD_FAST_PERIOD:-12}"
         slow_period: "${MACD_SLOW_PERIOD:-26}"
@@ -51,6 +72,10 @@ models:
       - name: "BB"
         period: "${BB_PERIOD:-20}"
         std_dev: "${BB_STD_DEV:-2}"
+      - name: "ATR"
+        period: "${ATR_PERIOD:-14}"
+      - name: "ADX"
+        period: "${ADX_PERIOD:-14}"
 
 # Strategy Settings
 strategies:
@@ -59,10 +84,13 @@ strategies:
     stop_loss: "${STOP_LOSS:-0.02}"
     take_profit: "${TAKE_PROFIT:-0.04}"
     max_positions: "${MAX_POSITIONS:-5}"
+    rebalance_frequency: "${REBALANCE_FREQUENCY:-1d}"
   optimization:
     method: "${OPTIMIZATION_METHOD:-bayesian}"
     n_trials: "${N_TRIALS:-100}"
     cv_folds: "${CV_FOLDS:-5}"
+    timeout: "${OPTIMIZATION_TIMEOUT:-3600}"
+    parallel_jobs: "${PARALLEL_JOBS:-4}"
 
 # Risk Management
 risk:
@@ -74,6 +102,26 @@ risk:
     SOL: "${SOL_LIMIT:-0.2}"
     default: "${DEFAULT_LIMIT:-0.1}"
   correlation_threshold: "${CORRELATION_THRESHOLD:-0.7}"
+  var_confidence: "${VAR_CONFIDENCE:-0.95}"
+  stress_test_scenarios: "${STRESS_TEST_SCENARIOS:-10}"
+
+# Agent Settings
+agents:
+  goal_planner:
+    enabled: "${GOAL_PLANNER_ENABLED:-true}"
+    update_frequency: "${GOAL_UPDATE_FREQUENCY:-3600}"
+    max_goals: "${MAX_GOALS:-10}"
+  router:
+    enabled: "${ROUTER_ENABLED:-true}"
+    confidence_threshold: "${ROUTER_CONFIDENCE:-0.7}"
+    fallback_agent: "${FALLBACK_AGENT:-commentary}"
+  self_improving:
+    enabled: "${SELF_IMPROVING_ENABLED:-true}"
+    improvement_interval: "${IMPROVEMENT_INTERVAL:-86400}"  # 24 hours
+    performance_thresholds:
+      min_sharpe: "${MIN_SHARPE:-1.0}"
+      max_drawdown: "${MAX_DRAWDOWN_THRESHOLD:-0.25}"
+      min_accuracy: "${MIN_ACCURACY:-0.6}"
 
 # NLP Settings
 nlp:
@@ -81,6 +129,13 @@ nlp:
   max_tokens: "${NLP_MAX_TOKENS:-1000}"
   temperature: "${NLP_TEMPERATURE:-0.7}"
   cache_ttl: "${NLP_CACHE_TTL:-3600}"  # 1 hour
+  models:
+    - name: "gpt-3.5-turbo"
+      enabled: "${GPT35_ENABLED:-true}"
+      max_tokens: "${GPT35_MAX_TOKENS:-1000}"
+    - name: "gpt-4"
+      enabled: "${GPT4_ENABLED:-false}"
+      max_tokens: "${GPT4_MAX_TOKENS:-2000}"
   templates:
     forecast: "${FORECAST_TEMPLATE:-trading/nlp/config/response_templates.json}"
     visualization: "${VIZ_TEMPLATE:-trading/nlp/config/viz_settings.json}"
@@ -93,9 +148,12 @@ api:
   timeout: "${API_TIMEOUT:-30}"
   max_retries: "${API_MAX_RETRIES:-3}"
   cache_ttl: "${API_CACHE_TTL:-300}"  # 5 minutes
+  version: "${API_VERSION:-v1}"
+  documentation: "${API_DOCS:-true}"
 
 # Performance Monitoring
 monitoring:
+  enabled: "${MONITORING_ENABLED:-true}"
   metrics:
     - name: "response_time"
       threshold: "${RESPONSE_TIME_THRESHOLD:-2.0}"  # seconds
@@ -103,9 +161,16 @@ monitoring:
       threshold: "${MEMORY_USAGE_THRESHOLD:-1024}"  # MB
     - name: "cpu_usage"
       threshold: "${CPU_USAGE_THRESHOLD:-80}"  # percent
+    - name: "error_rate"
+      threshold: "${ERROR_RATE_THRESHOLD:-0.05}"  # 5%
   alert:
     email: "${ALERT_EMAIL:-alerts@example.com}"
     slack: "${ALERT_SLACK:-https://hooks.slack.com/services/xxx/yyy/zzz}"
+    webhook: "${ALERT_WEBHOOK:-null}"
+  dashboard:
+    enabled: "${DASHBOARD_ENABLED:-true}"
+    port: "${DASHBOARD_PORT:-8080}"
+    refresh_interval: "${DASHBOARD_REFRESH:-30}"  # seconds
 
 # Security Settings
 security:
@@ -120,4 +185,17 @@ security:
   rate_limiting:
     enabled: "${RATE_LIMITING_ENABLED:-true}"
     window: "${RATE_LIMITING_WINDOW:-60}"  # seconds
-    max_requests: "${RATE_LIMITING_MAX_REQUESTS:-100}" 
+    max_requests: "${RATE_LIMITING_MAX_REQUESTS:-100}"
+  authentication:
+    enabled: "${AUTH_ENABLED:-false}"
+    jwt_secret: "${JWT_SECRET:-null}"
+    token_expiry: "${TOKEN_EXPIRY:-3600}"  # 1 hour
+
+# Development Settings
+development:
+  debug: "${DEV_DEBUG:-false}"
+  hot_reload: "${HOT_RELOAD:-false}"
+  profiling: "${PROFILING:-false}"
+  test_mode: "${TEST_MODE:-false}"
+  mock_data: "${MOCK_DATA:-false}"
+  seed_data: "${SEED_DATA:-false}" 

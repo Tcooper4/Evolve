@@ -2,14 +2,16 @@
 Configuration module for application settings and logging.
 """
 
-from trading.config.settings import Settings
-from trading.logging_config import LoggingConfig
-from trading.market_analysis_config import MarketAnalysisConfig
-from trading.app_config import AppConfig
+from .app_config import AppConfig
+from .config import Config
+from .logging_config import LoggingConfig
+from .market_analysis_config import MarketAnalysisConfig
+from .settings import Settings
 
 __all__ = [
-    'Settings',
+    'AppConfig',
+    'Config', 
     'LoggingConfig',
     'MarketAnalysisConfig',
-    'AppConfig'
+    'Settings'
 ] 

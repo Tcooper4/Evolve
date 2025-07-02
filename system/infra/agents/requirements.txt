@@ -29,7 +29,6 @@ pandas==2.0.2
 scikit-learn==1.2.2
 torch==2.0.1
 transformers==4.29.2
-tensorflow==2.12.0
 
 # Monitoring and logging
 grafana-api-client==1.0.3
@@ -53,7 +52,6 @@ flower==2.0.1
 
 # Model management
 mlflow==2.5.0
-tensorboard==2.12.3
 
 # Data validation
 great-expectations==0.16.13

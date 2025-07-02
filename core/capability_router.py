@@ -7,7 +7,7 @@ handle fallbacks gracefully, and log when fallbacks are triggered.
 
 import logging
 import importlib
-from typing import Dict, Any, Optional, Callable, Union
+from typing import Dict, Any, Optional, Callable, Union, List
 from functools import wraps
 import streamlit as st
 from datetime import datetime
@@ -417,7 +417,7 @@ def check_capability(name: str) -> bool:
     """
     return _capability_router.check_capability(name)
 
-def safe_call(capability_name: str, func: Callable, *args, fallback_value: Any = None, **kwargs):
+def safe_call(capability_name: str, func: Callable, *args, fallback_value: Any = None, **kwargs) -> Any:
     """Safely call a function that requires a capability.
     
     Args:
@@ -430,7 +430,7 @@ def safe_call(capability_name: str, func: Callable, *args, fallback_value: Any =
     Returns:
         Result of function call or fallback value
     """
-    return {'success': True, 'result': _capability_router.safe_call(capability_name, func, *args, fallback_value=fallback_value, **kwargs), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return _capability_router.safe_call(capability_name, func, *args, fallback_value=fallback_value, **kwargs)
 
 def with_fallback(capability_name: str, fallback_value: Any = None):
     """Decorator to provide fallback behavior for functions that require capabilities.
@@ -442,7 +442,7 @@ def with_fallback(capability_name: str, fallback_value: Any = None):
     Returns:
         Decorator function
     """
-    return {'success': True, 'result': _capability_router.with_fallback(capability_name, fallback_value), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return _capability_router.with_fallback(capability_name, fallback_value)
 
 def get_capability_status() -> Dict[str, bool]:
     """Get status of all registered capabilities.
@@ -452,7 +452,7 @@ def get_capability_status() -> Dict[str, bool]:
     """
     return _capability_router.get_capability_status()
 
-def register_capability(name: str, check_func: Callable[[], bool], fallback: Optional[Callable] = None):
+def register_capability(name: str, check_func: Callable[[], bool], fallback: Optional[Callable] = None) -> None:
     """Register a capability with its check function and optional fallback.
     
     Args:
@@ -470,7 +470,7 @@ def get_system_health() -> Dict[str, Any]:
     """
     return _capability_router.get_system_health()
 
-def get_fallback_log(limit: int = 10) -> list:
+def get_fallback_log(limit: int = 10) -> List[Dict[str, Any]]:
     """Get recent fallback logs.
     
     Args:

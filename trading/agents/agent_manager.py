@@ -360,6 +360,8 @@ class AgentManager:
             Agent status if found, None otherwise
         """
         agent = self.get_agent(name)
+        if agent:
+            return agent.get_status()
         return None
     
     def get_all_agent_statuses(self) -> Dict[str, AgentStatus]:

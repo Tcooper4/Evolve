@@ -16,9 +16,11 @@ websockets>=10.0
 # ============================================================================
 # FORECASTING MODELS
 # ============================================================================
-# Machine learning and deep learning models
+# Machine learning and deep learning models (PyTorch-focused)
 torch>=1.12.0
-tensorflow>=2.8.0,<2.11
+torchvision>=0.13.0
+torchaudio>=0.12.0
+pytorch-lightning>=1.8.0
 xgboost>=1.6.0
 catboost>=1.1.0
 prophet>=1.1.0

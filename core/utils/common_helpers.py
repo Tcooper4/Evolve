@@ -25,8 +25,9 @@ logger = logging.getLogger(__name__)
 # DATA VALIDATION HELPERS
 # ============================================================================
 
-def validate_dataframe(df: pd.DataFrame, required_columns: List[str] = None) -> Dict[str, Any]:
-    """Validate DataFrame structure and content.
+def validate_dataframe(df: pd.DataFrame, required_columns: Optional[List[str]] = None) -> Dict[str, Any]:
+    """
+    Validate DataFrame structure and content.
     
     Args:
         df: DataFrame to validate
@@ -54,7 +55,8 @@ def validate_dataframe(df: pd.DataFrame, required_columns: List[str] = None) -> 
         return {"valid": False, "error": f"Validation error: {str(e)}"}
 
 def validate_numeric_column(df: pd.DataFrame, column: str) -> Dict[str, Any]:
-    """Validate that a column contains numeric data.
+    """
+    Validate that a column contains numeric data.
     
     Args:
         df: DataFrame to check
@@ -83,7 +85,8 @@ def validate_numeric_column(df: pd.DataFrame, column: str) -> Dict[str, Any]:
         return {"valid": False, "error": f"Validation error: {str(e)}"}
 
 def validate_date_column(df: pd.DataFrame, column: str) -> Dict[str, Any]:
-    """Validate that a column contains date data.
+    """
+    Validate that a column contains date data.
     
     Args:
         df: DataFrame to check
@@ -111,12 +114,43 @@ def validate_date_column(df: pd.DataFrame, column: str) -> Dict[str, Any]:
     except Exception as e:
         return {"valid": False, "error": f"Validation error: {str(e)}"}
 
+def validate_data(data: Any, data_type: str = "any") -> Dict[str, Any]:
+    """
+    Generic data validation function.
+    
+    Args:
+        data: Data to validate
+        data_type: Type of data to validate ("any", "numeric", "date", "string")
+        
+    Returns:
+        Dictionary with validation results
+    """
+    try:
+        if data is None:
+            return {"valid": False, "error": "Data is None"}
+        
+        if data_type == "numeric":
+            if not isinstance(data, (int, float, np.number)):
+                return {"valid": False, "error": "Data is not numeric"}
+        elif data_type == "date":
+            if not isinstance(data, (datetime, pd.Timestamp)):
+                return {"valid": False, "error": "Data is not a date"}
+        elif data_type == "string":
+            if not isinstance(data, str):
+                return {"valid": False, "error": "Data is not a string"}
+        
+        return {"valid": True, "message": f"Data validation passed for type: {data_type}"}
+        
+    except Exception as e:
+        return {"valid": False, "error": f"Validation error: {str(e)}"}
+
 # ============================================================================
 # DATA PROCESSING HELPERS
 # ============================================================================
 
 def clean_dataframe(df: pd.DataFrame, remove_duplicates: bool = True, fill_method: str = 'ffill') -> pd.DataFrame:
-    """Clean DataFrame by removing duplicates and handling missing values.
+    """
+    Clean DataFrame by removing duplicates and handling missing values.
     
     Args:
         df: DataFrame to clean
@@ -146,7 +180,8 @@ def clean_dataframe(df: pd.DataFrame, remove_duplicates: bool = True, fill_metho
         return df
 
 def normalize_dataframe(df: pd.DataFrame, method: str = 'minmax') -> pd.DataFrame:
-    """Normalize DataFrame columns.
+    """
+    Normalize DataFrame columns.
     
     Args:
         df: DataFrame to normalize
@@ -182,7 +217,8 @@ def normalize_dataframe(df: pd.DataFrame, method: str = 'minmax') -> pd.DataFram
         return df
 
 def calculate_returns(prices: pd.Series, method: str = 'simple') -> pd.Series:
-    """Calculate returns from price series.
+    """
+    Calculate returns from price series.
     
     Args:
         prices: Price series
@@ -206,17 +242,18 @@ def calculate_returns(prices: pd.Series, method: str = 'simple') -> pd.Series:
         return pd.Series(dtype=float)
 
 # ============================================================================
-# FILE AND PATH HELPERS
+# FILE SYSTEM HELPERS
 # ============================================================================
 
 def ensure_directory(path: Union[str, Path]) -> bool:
-    """Ensure directory exists, creating it if necessary.
+    """
+    Ensure directory exists, create if it doesn't.
     
     Args:
         path: Directory path
         
     Returns:
-        Whether directory creation was successful
+        True if directory exists or was created successfully
     """
     try:
         Path(path).mkdir(parents=True, exist_ok=True)
@@ -226,35 +263,30 @@ def ensure_directory(path: Union[str, Path]) -> bool:
         return False
 
 def safe_file_path(base_path: str, filename: str) -> str:
-    """Create a safe file path by sanitizing the filename.
+    """
+    Create a safe file path by ensuring directory exists.
     
     Args:
         base_path: Base directory path
-        filename: Filename to sanitize
+        filename: Filename
         
     Returns:
         Safe file path
     """
     try:
-        # Remove or replace unsafe characters
-        safe_filename = re.sub(r'[<>:"/\\|?*]', '_', filename)
-        safe_filename = safe_filename.strip()
-        
-        # Ensure filename is not empty
-        if not safe_filename:
-            safe_filename = f"file_{uuid.uuid4().hex[:8]}"
-        
-        return os.path.join(base_path, safe_filename)
-        
+        full_path = Path(base_path) / filename
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        return str(full_path)
     except Exception as e:
         logger.error(f"Error creating safe file path: {e}")
-        return os.path.join(base_path, f"file_{uuid.uuid4().hex[:8]}")
+        return os.path.join(base_path, filename)
 
 def get_file_hash(file_path: Union[str, Path]) -> str:
-    """Calculate SHA-256 hash of a file.
+    """
+    Calculate SHA-256 hash of a file.
     
     Args:
-        file_path: Path to file
+        file_path: Path to the file
         
     Returns:
         File hash as hex string
@@ -274,7 +306,8 @@ def get_file_hash(file_path: Union[str, Path]) -> str:
 # ============================================================================
 
 def load_config(config_path: Union[str, Path]) -> Dict[str, Any]:
-    """Load configuration from JSON file.
+    """
+    Load configuration from JSON file.
     
     Args:
         config_path: Path to configuration file
@@ -284,33 +317,34 @@ def load_config(config_path: Union[str, Path]) -> Dict[str, Any]:
     """
     try:
         with open(config_path, 'r') as f:
-            config = json.load(f)
-        return config
+            return json.load(f)
     except Exception as e:
         logger.error(f"Error loading config from {config_path}: {e}")
         return {}
 
 def save_config(config: Dict[str, Any], config_path: Union[str, Path]) -> bool:
-    """Save configuration to JSON file.
+    """
+    Save configuration to JSON file.
     
     Args:
         config: Configuration dictionary
         config_path: Path to save configuration
         
     Returns:
-        Whether save was successful
+        True if saved successfully
     """
     try:
-        ensure_directory(os.path.dirname(config_path))
+        ensure_directory(str(Path(config_path).parent))
         with open(config_path, 'w') as f:
-            json.dump(config, f, indent=2, default=str)
+            json.dump(config, f, indent=2)
         return True
     except Exception as e:
         logger.error(f"Error saving config to {config_path}: {e}")
         return False
 
 def merge_configs(base_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
-    """Merge two configuration dictionaries.
+    """
+    Merge two configuration dictionaries.
     
     Args:
         base_config: Base configuration
@@ -322,12 +356,14 @@ def merge_configs(base_config: Dict[str, Any], override_config: Dict[str, Any]) 
     try:
         merged = base_config.copy()
         
-        for key, value in override_config.items():
-            if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
-                merged[key] = merge_configs(merged[key], value)
-            else:
-                merged[key] = value
+        def deep_merge(d1: Dict[str, Any], d2: Dict[str, Any]) -> None:
+            for key, value in d2.items():
+                if key in d1 and isinstance(d1[key], dict) and isinstance(value, dict):
+                    deep_merge(d1[key], value)
+                else:
+                    d1[key] = value
         
+        deep_merge(merged, override_config)
         return merged
         
     except Exception as e:
@@ -335,47 +371,41 @@ def merge_configs(base_config: Dict[str, Any], override_config: Dict[str, Any]) 
         return base_config
 
 # ============================================================================
-# TIME AND DATE HELPERS
+# DATE/TIME HELPERS
 # ============================================================================
 
 def parse_date_range(date_range: str) -> Tuple[datetime, datetime]:
-    """Parse date range string into start and end dates.
+    """
+    Parse date range string into start and end dates.
     
     Args:
-        date_range: Date range string (e.g., "7d", "30d", "1y")
+        date_range: Date range string (e.g., "2023-01-01:2023-12-31")
         
     Returns:
         Tuple of (start_date, end_date)
     """
     try:
-        end_date = datetime.now()
-        
-        if date_range.endswith('d'):
-            days = int(date_range[:-1])
-            start_date = end_date - timedelta(days=days)
-        elif date_range.endswith('w'):
-            weeks = int(date_range[:-1])
-            start_date = end_date - timedelta(weeks=weeks)
-        elif date_range.endswith('m'):
-            months = int(date_range[:-1])
-            start_date = end_date - timedelta(days=months * 30)
-        elif date_range.endswith('y'):
-            years = int(date_range[:-1])
-            start_date = end_date - timedelta(days=years * 365)
+        if ':' in date_range:
+            start_str, end_str = date_range.split(':', 1)
+            start_date = pd.to_datetime(start_str.strip())
+            end_date = pd.to_datetime(end_str.strip())
         else:
-            raise ValueError(f"Invalid date range format: {date_range}")
+            # Single date
+            start_date = pd.to_datetime(date_range.strip())
+            end_date = start_date + timedelta(days=1)
         
         return start_date, end_date
         
     except Exception as e:
-        logger.error(f"Error parsing date range {date_range}: {e}")
-        # Return default 30-day range
+        logger.error(f"Error parsing date range '{date_range}': {e}")
+        # Return default range
         end_date = datetime.now()
         start_date = end_date - timedelta(days=30)
         return start_date, end_date
 
 def format_timestamp(timestamp: Union[datetime, str, float]) -> str:
-    """Format timestamp to ISO string.
+    """
+    Format timestamp to ISO string.
     
     Args:
         timestamp: Timestamp to format
@@ -385,9 +415,9 @@ def format_timestamp(timestamp: Union[datetime, str, float]) -> str:
     """
     try:
         if isinstance(timestamp, str):
-            timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            timestamp = pd.to_datetime(timestamp)
         elif isinstance(timestamp, float):
-            timestamp = datetime.fromtimestamp(timestamp)
+            timestamp = pd.to_datetime(timestamp, unit='s')
         
         return timestamp.isoformat()
         
@@ -395,12 +425,22 @@ def format_timestamp(timestamp: Union[datetime, str, float]) -> str:
         logger.error(f"Error formatting timestamp: {e}")
         return datetime.now().isoformat()
 
+def get_timestamp() -> str:
+    """
+    Get current timestamp as ISO string.
+    
+    Returns:
+        Current timestamp string
+    """
+    return datetime.now().isoformat()
+
 # ============================================================================
 # LOGGING HELPERS
 # ============================================================================
 
 def setup_logger(name: str, level: int = logging.INFO, log_file: Optional[str] = None) -> logging.Logger:
-    """Set up a logger with consistent configuration.
+    """
+    Setup a logger with file and console handlers.
     
     Args:
         name: Logger name
@@ -410,39 +450,35 @@ def setup_logger(name: str, level: int = logging.INFO, log_file: Optional[str] =
     Returns:
         Configured logger
     """
-    try:
-        logger = logging.getLogger(name)
-        logger.setLevel(level)
-        
-        # Remove existing handlers
-        for handler in logger.handlers[:]:
-            logger.removeHandler(handler)
-        
-        # Create formatter
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
-        
-        # Add console handler
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        
-        # Add file handler if specified
-        if log_file:
-            ensure_directory(os.path.dirname(log_file))
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    
+    # Clear existing handlers
+    logger.handlers.clear()
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(level)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+    
+    # File handler
+    if log_file:
+        try:
+            ensure_directory(str(Path(log_file).parent))
             file_handler = logging.FileHandler(log_file)
+            file_handler.setLevel(level)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
-        
-        return logger
-        
-    except Exception as e:
-        print(f"Error setting up logger {name}: {e}")
-        return logging.getLogger(name)
+        except Exception as e:
+            logger.error(f"Error setting up file handler: {e}")
+    
+    return logger
 
-def log_function_call(func_name: str, args: tuple = None, kwargs: dict = None) -> None:
-    """Log function call for debugging.
+def log_function_call(func_name: str, args: Optional[tuple] = None, kwargs: Optional[dict] = None) -> None:
+    """
+    Log function call details.
     
     Args:
         func_name: Name of the function
@@ -452,16 +488,17 @@ def log_function_call(func_name: str, args: tuple = None, kwargs: dict = None) -
     try:
         args_str = str(args) if args else "()"
         kwargs_str = str(kwargs) if kwargs else "{}"
-        logger.debug(f"Calling {func_name} with args={args_str}, kwargs={kwargs_str}")
+        logger.debug(f"Function call: {func_name}{args_str} {kwargs_str}")
     except Exception as e:
         logger.error(f"Error logging function call: {e}")
 
 # ============================================================================
-# ERROR HANDLING HELPERS
+# EXECUTION HELPERS
 # ============================================================================
 
-def safe_execute(func: callable, *args, default_return=None, **kwargs) -> Any:
-    """Safely execute a function with error handling.
+def safe_execute(func: Callable, *args, default_return: Any = None, **kwargs) -> Any:
+    """
+    Safely execute a function with error handling.
     
     Args:
         func: Function to execute
@@ -478,8 +515,9 @@ def safe_execute(func: callable, *args, default_return=None, **kwargs) -> Any:
         logger.error(f"Error executing {func.__name__}: {e}")
         return default_return
 
-def retry_on_error(func: callable, max_retries: int = 3, delay: float = 1.0, *args, **kwargs) -> Any:
-    """Retry function execution on error.
+def retry_on_error(func: Callable, max_retries: int = 3, delay: float = 1.0, *args, **kwargs) -> Any:
+    """
+    Retry function execution on error.
     
     Args:
         func: Function to execute
@@ -489,7 +527,10 @@ def retry_on_error(func: callable, max_retries: int = 3, delay: float = 1.0, *ar
         **kwargs: Function keyword arguments
         
     Returns:
-        Function result or raises last exception
+        Function result
+        
+    Raises:
+        Exception: If all retries fail
     """
     last_exception = None
     
@@ -500,7 +541,6 @@ def retry_on_error(func: callable, max_retries: int = 3, delay: float = 1.0, *ar
             last_exception = e
             if attempt < max_retries:
                 logger.warning(f"Attempt {attempt + 1} failed for {func.__name__}: {e}")
-                import time
                 time.sleep(delay)
             else:
                 logger.error(f"All {max_retries + 1} attempts failed for {func.__name__}: {e}")
@@ -508,27 +548,24 @@ def retry_on_error(func: callable, max_retries: int = 3, delay: float = 1.0, *ar
     raise last_exception
 
 # ============================================================================
-# UTILITY FUNCTIONS
+# UTILITY HELPERS
 # ============================================================================
 
 def generate_id(prefix: str = "") -> str:
-    """Generate a unique identifier.
+    """
+    Generate a unique ID.
     
     Args:
         prefix: Optional prefix for the ID
         
     Returns:
-        Unique identifier string
+        Unique ID string
     """
-    try:
-        unique_id = uuid.uuid4().hex
-        return f"{prefix}{unique_id}" if prefix else unique_id
-    except Exception as e:
-        logger.error(f"Error generating ID: {e}")
-        return f"{prefix}{int(datetime.now().timestamp())}"
+    return f"{prefix}{uuid.uuid4().hex[:8]}" if prefix else uuid.uuid4().hex[:8]
 
 def chunk_list(lst: List[Any], chunk_size: int) -> List[List[Any]]:
-    """Split a list into chunks of specified size.
+    """
+    Split a list into chunks of specified size.
     
     Args:
         lst: List to chunk
@@ -537,14 +574,11 @@ def chunk_list(lst: List[Any], chunk_size: int) -> List[List[Any]]:
     Returns:
         List of chunks
     """
-    try:
-        return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
-    except Exception as e:
-        logger.error(f"Error chunking list: {e}")
-        return [lst]
+    return [lst[i:i + chunk_size] for i in range(0, len(lst), chunk_size)]
 
 def flatten_list(nested_list: List[Any]) -> List[Any]:
-    """Flatten a nested list.
+    """
+    Flatten a nested list.
     
     Args:
         nested_list: Nested list to flatten
@@ -552,128 +586,250 @@ def flatten_list(nested_list: List[Any]) -> List[Any]:
     Returns:
         Flattened list
     """
-    try:
-        flattened = []
-        for item in nested_list:
-            if isinstance(item, list):
-                flattened.extend(flatten_list(item))
-            else:
-                flattened.append(item)
-        return flattened
-    except Exception as e:
-        logger.error(f"Error flattening list: {e}")
-        return nested_list
-
-# ============================================================================
-# ADDITIONAL UTILITY FUNCTIONS
-# ============================================================================
-
-def safe_mkdir(path: Union[str, Path]) -> bool:
-    """Safely create directory with error handling.
-    
-    Args:
-        path: Directory path to create
-        
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        Path(path).mkdir(parents=True, exist_ok=True)
-        return True
-    except Exception as e:
-        logger.error(f"Failed to create directory {path}: {e}")
-        return False
-
-def log_to_file(message: str, log_file: str, level: str = "INFO") -> None:
-    """Log message to a specific file.
-    
-    Args:
-        message: Message to log
-        log_file: Path to log file
-        level: Log level (DEBUG, INFO, WARNING, ERROR)
-    """
-    try:
-        safe_mkdir(os.path.dirname(log_file))
-        with open(log_file, 'a', encoding='utf-8') as f:
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            f.write(f"[{timestamp}] {level}: {message}\n")
-    except Exception as e:
-        logger.error(f"Failed to log to file {log_file}: {e}")
+    flattened = []
+    for item in nested_list:
+        if isinstance(item, list):
+            flattened.extend(flatten_list(item))
+        else:
+            flattened.append(item)
+    return flattened
 
 def slugify(text: str) -> str:
-    """Convert text to URL-friendly slug.
+    """
+    Convert text to URL-friendly slug.
     
     Args:
-        text: Text to convert
+        text: Text to slugify
         
     Returns:
-        URL-friendly slug
+        Slugified text
     """
-    try:
-        # Remove special characters and convert to lowercase
-        slug = re.sub(r'[^\w\s-]', '', text.lower())
-        # Replace spaces and hyphens with single hyphens
-        slug = re.sub(r'[-\s]+', '-', slug)
-        # Remove leading/trailing hyphens
-        return slug.strip('-')
-    except Exception as e:
-        logger.error(f"Error creating slug: {e}")
-        return str(uuid.uuid4())[:8]
+    # Convert to lowercase and replace spaces with hyphens
+    slug = re.sub(r'[^\w\s-]', '', text.lower())
+    slug = re.sub(r'[-\s]+', '-', slug)
+    return slug.strip('-')
 
-def timestamp() -> str:
-    """Get current timestamp in ISO format.
-    
-    Returns:
-        ISO formatted timestamp string
+def normalize_indicator_name(name: str) -> str:
     """
-    return datetime.now().isoformat()
-
-def format_bytes(bytes_value: int) -> str:
-    """Format bytes into human readable format.
+    Normalize indicator name for consistent formatting.
     
     Args:
-        bytes_value: Number of bytes
+        name: Indicator name to normalize
         
     Returns:
-        Formatted string (e.g., "1.5 MB")
+        Normalized indicator name
     """
     try:
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-            if bytes_value < 1024.0:
-                return f"{bytes_value:.1f} {unit}"
-            bytes_value /= 1024.0
-        return f"{bytes_value:.1f} PB"
+        # Convert to lowercase
+        normalized = name.lower()
+        
+        # Replace common variations
+        replacements = {
+            'rsi': 'RSI',
+            'macd': 'MACD',
+            'bollinger': 'BB',
+            'bb': 'BB',
+            'moving_average': 'MA',
+            'ma': 'MA',
+            'exponential_moving_average': 'EMA',
+            'ema': 'EMA',
+            'simple_moving_average': 'SMA',
+            'sma': 'SMA',
+            'stochastic': 'STOCH',
+            'stoch': 'STOCH',
+            'williams_r': 'WILLR',
+            'willr': 'WILLR',
+            'average_true_range': 'ATR',
+            'atr': 'ATR',
+            'commodity_channel_index': 'CCI',
+            'cci': 'CCI',
+            'money_flow_index': 'MFI',
+            'mfi': 'MFI',
+            'on_balance_volume': 'OBV',
+            'obv': 'OBV',
+            'price_rate_of_change': 'ROC',
+            'roc': 'ROC',
+            'momentum': 'MOM',
+            'mom': 'MOM',
+            'parabolic_sar': 'PSAR',
+            'psar': 'PSAR',
+            'trix': 'TRIX',
+            'ultimate_oscillator': 'UO',
+            'uo': 'UO',
+            'chaikin_money_flow': 'CMF',
+            'cmf': 'CMF',
+            'volume_price_trend': 'VPT',
+            'vpt': 'VPT',
+            'accumulation_distribution': 'AD',
+            'ad': 'AD',
+            'chaikin_oscillator': 'CO',
+            'co': 'CO',
+            'ease_of_movement': 'EOM',
+            'eom': 'EOM',
+            'force_index': 'FI',
+            'fi': 'FI',
+            'mass_index': 'MI',
+            'mi': 'MI',
+            'negative_volume_index': 'NVI',
+            'nvi': 'NVI',
+            'positive_volume_index': 'PVI',
+            'pvi': 'PVI',
+            'volume_oscillator': 'VO',
+            'vo': 'VO',
+            'volume_rate_of_change': 'VROC',
+            'vroc': 'VROC',
+            'volume_weighted_average_price': 'VWAP',
+            'vwap': 'VWAP',
+            'volume_weighted_moving_average': 'VWMA',
+            'vwma': 'VWMA',
+            'kaufman_adaptive_moving_average': 'KAMA',
+            'kama': 'KAMA',
+            'mESA': 'MESA',
+            'mesa': 'MESA',
+            'aroon': 'AROON',
+            'aroon_oscillator': 'AROON_OSC',
+            'aroon_osc': 'AROON_OSC',
+            'balance_of_power': 'BOP',
+            'bop': 'BOP',
+            'center_of_gravity': 'COG',
+            'cog': 'COG',
+            'center_of_gravity_oscillator': 'COG_OSC',
+            'cog_osc': 'COG_OSC',
+            'detrended_price_oscillator': 'DPO',
+            'dpo': 'DPO',
+            'efficiency_ratio': 'ER',
+            'er': 'ER',
+            'fisher_transform': 'FISHER',
+            'fisher': 'FISHER',
+            'fisher_inverse': 'FISHER_INV',
+            'fisher_inv': 'FISHER_INV',
+            'high_low_index': 'HLI',
+            'hli': 'HLI',
+            'high_low_ratio': 'HLR',
+            'hlr': 'HLR',
+            'inertia': 'INERTIA',
+            'inertia': 'INERTIA',
+            'kst': 'KST',
+            'know_sure_thing': 'KST',
+            'linear_regression': 'LINREG',
+            'linreg': 'LINREG',
+            'linear_regression_angle': 'LINREG_ANGLE',
+            'linreg_angle': 'LINREG_ANGLE',
+            'linear_regression_intercept': 'LINREG_INTERCEPT',
+            'linreg_intercept': 'LINREG_INTERCEPT',
+            'linear_regression_slope': 'LINREG_SLOPE',
+            'linreg_slope': 'LINREG_SLOPE',
+            'midpoint': 'MIDPOINT',
+            'midpoint': 'MIDPOINT',
+            'midprice': 'MIDPRICE',
+            'midprice': 'MIDPRICE',
+            'sar': 'SAR',
+            'sar_ext': 'SAR_EXT',
+            'sar_extended': 'SAR_EXT',
+            'sine_wave': 'SINE',
+            'sine': 'SINE',
+            'sine_wave_lead': 'SINE_LEAD',
+            'sine_lead': 'SINE_LEAD',
+            'trend_intensity': 'TREND_INTENSITY',
+            'trend_intensity': 'TREND_INTENSITY',
+            'trend_vigor': 'TREND_VIGOR',
+            'trend_vigor': 'TREND_VIGOR',
+            'tsf': 'TSF',
+            'time_series_forecast': 'TSF',
+            'ultrafast_ma': 'UF_MA',
+            'uf_ma': 'UF_MA',
+            'variable_moving_average': 'VMA',
+            'vma': 'VMA',
+            'volume_adjusted_moving_average': 'VAMA',
+            'vama': 'VAMA',
+            'volume_price_oscillator': 'VPO',
+            'vpo': 'VPO',
+            'volume_ratio': 'VR',
+            'vr': 'VR',
+            'volume_weighted_moving_average': 'VWMA',
+            'vwma': 'VWMA',
+            'wad': 'WAD',
+            'williams_alligator': 'WILLIAMS_ALLIGATOR',
+            'williams_alligator': 'WILLIAMS_ALLIGATOR',
+            'williams_fractal': 'WILLIAMS_FRACTAL',
+            'williams_fractal': 'WILLIAMS_FRACTAL',
+            'zlema': 'ZLEMA',
+            'zero_lag_exponential_moving_average': 'ZLEMA'
+        }
+        
+        # Apply replacements
+        for old, new in replacements.items():
+            normalized = normalized.replace(old, new)
+        
+        # Handle common patterns
+        normalized = re.sub(r'_+', '_', normalized)  # Replace multiple underscores with single
+        normalized = re.sub(r'^_|_$', '', normalized)  # Remove leading/trailing underscores
+        
+        # Capitalize first letter of each word
+        normalized = ' '.join(word.capitalize() for word in normalized.split('_'))
+        
+        return normalized
+        
     except Exception as e:
-        logger.error(f"Error formatting bytes: {e}")
-        return "0 B"
+        logger.error(f"Error normalizing indicator name '{name}': {e}")
+        return name
 
-def hash_file(file_path: Union[str, Path]) -> str:
-    """Generate SHA-256 hash of a file.
+def format_number(value: float, decimals: int = 2) -> str:
+    """
+    Format a number with specified decimal places.
     
     Args:
-        file_path: Path to the file
+        value: Number to format
+        decimals: Number of decimal places
         
     Returns:
-        SHA-256 hash string
+        Formatted number string
     """
     try:
-        file_path = Path(file_path)
-        if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
-        
-        hash_sha256 = hashlib.sha256()
-        with open(file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                hash_sha256.update(chunk)
-        
-        return hash_sha256.hexdigest()
-        
+        return f"{value:.{decimals}f}"
     except Exception as e:
-        logger.error(f"Error generating file hash: {e}")
-        return ""
+        logger.error(f"Error formatting number: {e}")
+        return str(value)
+
+def format_currency(value: float, currency: str = "USD") -> str:
+    """
+    Format a number as currency.
+    
+    Args:
+        value: Number to format
+        currency: Currency code
+        
+    Returns:
+        Formatted currency string
+    """
+    try:
+        if currency == "USD":
+            return f"${value:,.2f}"
+        else:
+            return f"{value:,.2f} {currency}"
+    except Exception as e:
+        logger.error(f"Error formatting currency: {e}")
+        return str(value)
+
+def format_percentage(value: float, decimals: int = 2) -> str:
+    """
+    Format a number as percentage.
+    
+    Args:
+        value: Number to format (as decimal)
+        decimals: Number of decimal places
+        
+    Returns:
+        Formatted percentage string
+    """
+    try:
+        return f"{value * 100:.{decimals}f}%"
+    except Exception as e:
+        logger.error(f"Error formatting percentage: {e}")
+        return str(value)
 
 # ============================================================================
-# FINANCIAL CALCULATION HELPERS
+# PERFORMANCE METRICS
 # ============================================================================
 
 def calculate_sharpe_ratio(
@@ -682,7 +838,8 @@ def calculate_sharpe_ratio(
     window: int = 20,
     annualize: bool = True
 ) -> pd.Series:
-    """Calculate Sharpe ratio.
+    """
+    Calculate rolling Sharpe ratio.
     
     Args:
         returns: Return series
@@ -691,26 +848,27 @@ def calculate_sharpe_ratio(
         annualize: Whether to annualize the ratio
         
     Returns:
-        Sharpe ratio series
+        Rolling Sharpe ratio series
     """
     try:
         excess_returns = returns - risk_free_rate
         rolling_mean = excess_returns.rolling(window=window).mean()
-        rolling_std = returns.rolling(window=window).std()
+        rolling_std = excess_returns.rolling(window=window).std()
         
         sharpe = rolling_mean / rolling_std
         
         if annualize:
-            sharpe = sharpe * np.sqrt(252)  # Annualize assuming daily data
+            sharpe = sharpe * np.sqrt(252)  # Assuming daily data
         
         return sharpe
         
     except Exception as e:
         logger.error(f"Error calculating Sharpe ratio: {e}")
-        return pd.Series(index=returns.index)
+        return pd.Series(dtype=float)
 
 def calculate_drawdown(prices: pd.Series) -> pd.Series:
-    """Calculate drawdown series.
+    """
+    Calculate drawdown series.
     
     Args:
         prices: Price series
@@ -725,16 +883,17 @@ def calculate_drawdown(prices: pd.Series) -> pd.Series:
         
     except Exception as e:
         logger.error(f"Error calculating drawdown: {e}")
-        return pd.Series(index=prices.index)
+        return pd.Series(dtype=float)
 
 def calculate_max_drawdown(prices: pd.Series) -> float:
-    """Calculate maximum drawdown.
+    """
+    Calculate maximum drawdown.
     
     Args:
         prices: Price series
         
     Returns:
-        Maximum drawdown as percentage
+        Maximum drawdown as float
     """
     try:
         drawdown = calculate_drawdown(prices)
@@ -745,13 +904,14 @@ def calculate_max_drawdown(prices: pd.Series) -> float:
         return 0.0
 
 def calculate_win_rate(returns: pd.Series) -> float:
-    """Calculate win rate.
+    """
+    Calculate win rate from returns.
     
     Args:
         returns: Return series
         
     Returns:
-        Win rate as percentage
+        Win rate as float
     """
     try:
         positive_returns = returns[returns > 0]
@@ -761,353 +921,41 @@ def calculate_win_rate(returns: pd.Series) -> float:
         logger.error(f"Error calculating win rate: {e}")
         return 0.0
 
-def calculate_calmar_ratio(
-    returns: pd.Series,
-    prices: pd.Series,
-    window: int = 252
-) -> pd.Series:
-    """Calculate Calmar ratio.
-    
-    Args:
-        returns: Return series
-        prices: Price series
-        window: Rolling window size
-        
-    Returns:
-        Calmar ratio series
-    """
-    try:
-        rolling_return = returns.rolling(window=window).mean() * 252  # Annualized
-        rolling_max_dd = prices.rolling(window=window).apply(
-            lambda x: calculate_max_drawdown(x), raw=True
-        )
-        
-        calmar = rolling_return / abs(rolling_max_dd)
-        return calmar
-        
-    except Exception as e:
-        logger.error(f"Error calculating Calmar ratio: {e}")
-        return pd.Series(index=returns.index)
-
-def calculate_information_ratio(
-    returns: pd.Series,
-    benchmark_returns: pd.Series,
-    window: int = 20,
-    annualize: bool = True
-) -> pd.Series:
-    """Calculate information ratio.
-    
-    Args:
-        returns: Portfolio returns
-        benchmark_returns: Benchmark returns
-        window: Rolling window size
-        annualize: Whether to annualize
-        
-    Returns:
-        Information ratio series
-    """
-    try:
-        active_returns = returns - benchmark_returns
-        rolling_mean = active_returns.rolling(window=window).mean()
-        rolling_std = active_returns.rolling(window=window).std()
-        
-        info_ratio = rolling_mean / rolling_std
-        
-        if annualize:
-            info_ratio = info_ratio * np.sqrt(252)
-        
-        return info_ratio
-        
-    except Exception as e:
-        logger.error(f"Error calculating information ratio: {e}")
-        return pd.Series(index=returns.index)
-
-def calculate_sortino_ratio(
-    returns: pd.Series,
-    risk_free_rate: float = 0.0,
-    window: int = 20,
-    annualize: bool = True
-) -> pd.Series:
-    """Calculate Sortino ratio.
-    
-    Args:
-        returns: Return series
-        risk_free_rate: Risk-free rate
-        window: Rolling window size
-        annualize: Whether to annualize
-        
-    Returns:
-        Sortino ratio series
-    """
-    try:
-        excess_returns = returns - risk_free_rate
-        rolling_mean = excess_returns.rolling(window=window).mean()
-        
-        # Calculate downside deviation
-        downside_returns = returns[returns < 0]
-        rolling_downside_std = downside_returns.rolling(window=window).std()
-        
-        sortino = rolling_mean / rolling_downside_std
-        
-        if annualize:
-            sortino = sortino * np.sqrt(252)
-        
-        return sortino
-        
-    except Exception as e:
-        logger.error(f"Error calculating Sortino ratio: {e}")
-        return pd.Series(index=returns.index)
-
-def calculate_omega_ratio(
-    returns: pd.Series,
-    threshold: float = 0.0,
-    window: int = 20
-) -> pd.Series:
-    """Calculate Omega ratio.
-    
-    Args:
-        returns: Return series
-        threshold: Threshold return
-        window: Rolling window size
-        
-    Returns:
-        Omega ratio series
-    """
-    try:
-        def _omega_ratio(x):
-            gains = x[x > threshold].sum()
-            losses = abs(x[x < threshold].sum())
-            return gains / losses if losses != 0 else np.inf
-        
-        omega = returns.rolling(window=window).apply(_omega_ratio, raw=True)
-        return omega
-        
-    except Exception as e:
-        logger.error(f"Error calculating Omega ratio: {e}")
-        return pd.Series(index=returns.index)
-
-def calculate_treynor_ratio(
-    returns: pd.Series,
-    market_returns: pd.Series,
-    risk_free_rate: float = 0.0,
-    window: int = 20,
-    annualize: bool = True
-) -> pd.Series:
-    """Calculate Treynor ratio.
-    
-    Args:
-        returns: Portfolio returns
-        market_returns: Market returns
-        risk_free_rate: Risk-free rate
-        window: Rolling window size
-        annualize: Whether to annualize
-        
-    Returns:
-        Treynor ratio series
-    """
-    try:
-        excess_returns = returns - risk_free_rate
-        
-        # Calculate rolling beta
-        def rolling_beta(x):
-            if len(x) < 2:
-                return np.nan
-            portfolio_returns = x.iloc[:, 0]
-            market_returns = x.iloc[:, 1]
-            covariance = np.cov(portfolio_returns, market_returns)[0, 1]
-            market_variance = np.var(market_returns)
-            return covariance / market_variance if market_variance != 0 else np.nan
-        
-        combined_data = pd.concat([returns, market_returns], axis=1)
-        rolling_betas = combined_data.rolling(window=window).apply(rolling_beta, raw=True)
-        
-        rolling_mean = excess_returns.rolling(window=window).mean()
-        treynor = rolling_mean / rolling_betas
-        
-        if annualize:
-            treynor = treynor * 252
-        
-        return treynor
-        
-    except Exception as e:
-        logger.error(f"Error calculating Treynor ratio: {e}")
-        return pd.Series(index=returns.index)
-
-def calculate_alpha(
-    returns: pd.Series,
-    market_returns: pd.Series,
-    risk_free_rate: float = 0.0,
-    window: int = 20,
-    annualize: bool = True
-) -> pd.Series:
-    """Calculate Jensen's alpha.
-    
-    Args:
-        returns: Portfolio returns
-        market_returns: Market returns
-        risk_free_rate: Risk-free rate
-        window: Rolling window size
-        annualize: Whether to annualize
-        
-    Returns:
-        Alpha series
-    """
-    try:
-        excess_returns = returns - risk_free_rate
-        excess_market_returns = market_returns - risk_free_rate
-        
-        # Calculate rolling beta
-        def rolling_beta(x):
-            if len(x) < 2:
-                return np.nan
-            portfolio_returns = x.iloc[:, 0]
-            market_returns = x.iloc[:, 1]
-            covariance = np.cov(portfolio_returns, market_returns)[0, 1]
-            market_variance = np.var(market_returns)
-            return covariance / market_variance if market_variance != 0 else np.nan
-        
-        combined_data = pd.concat([excess_returns, excess_market_returns], axis=1)
-        rolling_betas = combined_data.rolling(window=window).apply(rolling_beta, raw=True)
-        
-        # Calculate alpha
-        portfolio_mean = excess_returns.rolling(window=window).mean()
-        market_mean = excess_market_returns.rolling(window=window).mean()
-        alpha = portfolio_mean - (rolling_betas * market_mean)
-        
-        if annualize:
-            alpha = alpha * 252
-        
-        return alpha
-        
-    except Exception as e:
-        logger.error(f"Error calculating alpha: {e}")
-        return pd.Series(index=returns.index)
-
-def calculate_portfolio_metrics(returns: pd.Series) -> Dict[str, float]:
-    """Calculate comprehensive portfolio metrics.
-    
-    Args:
-        returns: Return series
-        
-    Returns:
-        Dictionary of portfolio metrics
-    """
-    try:
-        metrics = {
-            'total_return': (1 + returns).prod() - 1,
-            'annualized_return': returns.mean() * 252,
-            'volatility': returns.std() * np.sqrt(252),
-            'sharpe_ratio': calculate_sharpe_ratio(returns).iloc[-1] if len(returns) > 0 else 0.0,
-            'max_drawdown': calculate_max_drawdown((1 + returns).cumprod()),
-            'win_rate': calculate_win_rate(returns),
-            'skewness': returns.skew(),
-            'kurtosis': returns.kurtosis()
-        }
-        
-        return metrics
-        
-    except Exception as e:
-        logger.error(f"Error calculating portfolio metrics: {e}")
-        return {}
-
-def format_currency(value: float) -> str:
-    """Format value as currency.
-    
-    Args:
-        value: Value to format
-        
-    Returns:
-        Formatted currency string
-    """
-    try:
-        return f"${value:,.2f}"
-    except Exception as e:
-        logger.error(f"Error formatting currency: {e}")
-        return str(value)
-
-def format_percentage(value: float) -> str:
-    """Format value as percentage.
-    
-    Args:
-        value: Value to format
-        
-    Returns:
-        Formatted percentage string
-    """
-    try:
-        return f"{value:.2%}"
-    except Exception as e:
-        logger.error(f"Error formatting percentage: {e}")
-        return str(value)
-
 # ============================================================================
-# INDICATOR UTILITIES
-# ============================================================================
-
-def normalize_indicator_name(name: str) -> str:
-    """Normalize indicator name for consistent naming.
-    
-    Args:
-        name: Original indicator name
-        
-    Returns:
-        Normalized indicator name
-    """
-    try:
-        # Remove special characters and replace with underscores
-        normalized = re.sub(r'[^a-zA-Z0-9_]', '_', str(name))
-        
-        # Remove multiple consecutive underscores
-        normalized = re.sub(r'_+', '_', normalized)
-        
-        # Remove leading/trailing underscores
-        normalized = normalized.strip('_')
-        
-        # Convert to uppercase for consistency
-        normalized = normalized.upper()
-        
-        # Handle empty strings
-        if not normalized:
-            return 'UNKNOWN_INDICATOR'
-            
-        return normalized
-        
-    except Exception as e:
-        logger.error(f"Error normalizing indicator name '{name}': {e}")
-        return 'UNKNOWN_INDICATOR'
-
-# ============================================================================
-# DECORATORS AND UTILITIES
+# DECORATORS
 # ============================================================================
 
 def timer(func: Callable) -> Callable:
-    """Decorator to time function execution.
+    """
+    Decorator to time function execution.
     
     Args:
         func: Function to time
         
     Returns:
-        Wrapped function with timing
+        Wrapped function
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
-        execution_time = end_time - start_time
-        logger.info(f"{func.__name__} executed in {execution_time:.4f} seconds")
+        logger.info(f"{func.__name__} took {end_time - start_time:.4f} seconds")
         return result
     return wrapper
 
-def handle_exceptions(logger: Optional[logging.Logger] = None, 
-                     default_return: Any = None,
-                     reraise: bool = True) -> Callable:
-    """Decorator to handle exceptions gracefully.
+def handle_exceptions(
+    logger: Optional[logging.Logger] = None, 
+    default_return: Any = None,
+    reraise: bool = True
+) -> Callable:
+    """
+    Decorator to handle exceptions.
     
     Args:
-        logger: Logger instance to use
-        default_return: Default value to return on exception
-        reraise: Whether to reraise the exception
+        logger: Logger to use
+        default_return: Default return value on error
+        reraise: Whether to reraise exceptions
         
     Returns:
         Decorator function
@@ -1118,73 +966,10 @@ def handle_exceptions(logger: Optional[logging.Logger] = None,
             try:
                 return func(*args, **kwargs)
             except Exception as e:
-                log_instance = logger or logging.getLogger(func.__module__)
-                log_instance.error(f"Error in {func.__name__}: {str(e)}")
+                log = logger or logging.getLogger(func.__module__)
+                log.error(f"Error in {func.__name__}: {e}")
                 if reraise:
                     raise
                 return default_return
         return wrapper
-    return decorator
-
-# ============================================================================
-# PERFORMANCE METRICS
-# ============================================================================
-
-def calculate_sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.02, periods: int = 252) -> float:
-    """Calculate Sharpe ratio.
-    
-    Args:
-        returns: Series of returns
-        risk_free_rate: Risk-free rate
-        periods: Number of periods per year
-        
-    Returns:
-        Sharpe ratio
-    """
-    try:
-        excess_returns = returns - risk_free_rate / periods
-        if len(excess_returns) == 0 or excess_returns.std() == 0:
-            return 0.0
-        return (excess_returns.mean() * periods) / (excess_returns.std() * np.sqrt(periods))
-    except Exception as e:
-        logger.error(f"Error calculating Sharpe ratio: {e}")
-        return 0.0
-
-def calculate_max_drawdown(returns: pd.Series) -> float:
-    """Calculate maximum drawdown.
-    
-    Args:
-        returns: Series of returns
-        
-    Returns:
-        Maximum drawdown as percentage
-    """
-    try:
-        cumulative = (1 + returns).cumprod()
-        running_max = cumulative.expanding().max()
-        drawdown = (cumulative - running_max) / running_max
-        return drawdown.min()
-    except Exception as e:
-        logger.error(f"Error calculating max drawdown: {e}")
-        return 0.0
-
-def calculate_win_rate(returns: pd.Series) -> float:
-    """Calculate win rate.
-    
-    Args:
-        returns: Series of returns
-        
-    Returns:
-        Win rate as percentage
-    """
-    try:
-        if len(returns) == 0:
-            return 0.0
-        return (returns > 0).sum() / len(returns)
-    except Exception as e:
-        logger.error(f"Error calculating win rate: {e}")
-        return 0.0
-
-# ============================================================================
-# INDICATOR UTILITIES
-# ============================================================================ 
+    return decorator 
