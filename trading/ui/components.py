@@ -16,6 +16,7 @@ import logging
 import json
 
 from .config.registry import registry, ModelConfig, StrategyConfig
+from trading.backtesting.edge_case_handler import EdgeCaseHandler
 
 logger = logging.getLogger(__name__)
 
@@ -510,6 +511,16 @@ def create_strategy_chart(
     Returns:
         Plotly figure object
     """
+    edge_handler = EdgeCaseHandler()
+    # Validate signals with edge handler
+    validation = edge_handler.validate_signals(signals['signal'] if isinstance(signals, pd.DataFrame) and 'signal' in signals.columns else signals)
+    if validation['status'] != 'success':
+        st.warning(validation['message'])
+        fallback = edge_handler.create_fallback_chart(data, chart_type='equity')
+        if fallback['chart_data']:
+            st.write(fallback['message'])
+        return go.Figure()
+    
     fig = make_subplots(rows=2, cols=1, shared_xaxes=True)
     
     # Add price data
@@ -557,6 +568,14 @@ def create_performance_report(
     Returns:
         Dictionary with report creation status and metrics summary
     """
+    edge_handler = EdgeCaseHandler()
+    # Validate results for performance metrics
+    if not results or not results.get('total_return'):
+        st.warning("No performance data available.")
+        fallback = edge_handler.create_fallback_chart(pd.DataFrame(), chart_type='performance')
+        st.write(fallback['chart_data']['message'] if fallback['chart_data'] else "No data.")
+        return {"status": "warning", "message": fallback['message']}
+    
     with st.expander(title, expanded=True):
         col1, col2, col3 = st.columns(3)
         
