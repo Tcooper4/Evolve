@@ -99,7 +99,6 @@ class MacroDataIntegration:
         
         logger.info("Macro Data Integration initialized successfully")
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _initialize_fred_series(self) -> Dict[str, Dict[str, Any]]:
         """Initialize FRED data series."""
         return {
@@ -177,7 +176,7 @@ class MacroDataIntegration:
     
     def _initialize_yield_curve_maturities(self) -> List[str]:
         """Initialize yield curve maturities."""
-        return {'success': True, 'result': ['1M', '3M', '6M', '1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '20Y', '30Y'], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return ['1M', '3M', '6M', '1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '20Y', '30Y']
     
     def get_fred_data(self, 
                      series_id: str, 

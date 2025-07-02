@@ -114,6 +114,61 @@ class ConfigManager:
                 except ValueError:
                     config[config_key] = value
         return config
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get a configuration value.
+        
+        Args:
+            key: Configuration key
+            default: Default value if key not found
+            
+        Returns:
+            Configuration value or default
+        """
+        return self.config.get(key, default)
+    
+    def set(self, key: str, value: Any) -> None:
+        """Set a configuration value.
+        
+        Args:
+            key: Configuration key
+            value: Configuration value
+        """
+        self.config[key] = value
+    
+    def update(self, config_dict: Dict[str, Any]) -> None:
+        """Update configuration with dictionary.
+        
+        Args:
+            config_dict: Configuration dictionary to merge
+        """
+        self.config.update(config_dict)
+    
+    def get_all(self) -> Dict[str, Any]:
+        """Get all configuration values.
+        
+        Returns:
+            All configuration values
+        """
+        return self.config.copy()
+    
+    def validate_all(self) -> Dict[str, Any]:
+        """Validate all loaded configurations.
+        
+        Returns:
+            Validation results
+        """
+        results = {}
+        for key, value in self.config.items():
+            try:
+                if hasattr(value, 'validate'):
+                    value.validate()
+                    results[key] = {'valid': True, 'message': 'Configuration is valid'}
+                else:
+                    results[key] = {'valid': True, 'message': 'No validation method available'}
+            except Exception as e:
+                results[key] = {'valid': False, 'message': str(e)}
+        return results
 
 class ModelConfig:
     """Configuration class for model settings."""
@@ -342,7 +397,7 @@ class DataConfig:
         else:
             other_dict = other
             
-        return {'success': True, 'result': {**self.to_dict(), **other_dict}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {**self.to_dict(), **other_dict}
 
 class TrainingConfig:
     """Configuration class for model training settings."""

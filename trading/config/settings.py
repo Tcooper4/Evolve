@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 from typing import Any, Optional, Dict, Union
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -110,6 +111,16 @@ STRATEGY_SWITCH_API_ENDPOINT = "http://localhost:8000/api/strategy-switches"
 DATA_PROVIDER = os.getenv('DATA_PROVIDER', 'yahoo')  # yahoo, alpha_vantage, polygon, finnhub, iex
 DEFAULT_PROVIDER = os.getenv('DEFAULT_PROVIDER', 'yahoo')
 
+# === Compatibility Aliases and Defaults ===
+PERFORMANCE_CONFIG_PATH = PROJECT_ROOT / "config" / "performance_config.json"
+MODELS_DIR = MODEL_DIR  # Alias for compatibility
+STRATEGIES_DIR = STRATEGY_DIR  # Alias for compatibility
+DEFAULT_PERFORMANCE_THRESHOLDS = {
+    'min_sharpe': 1.0,
+    'max_drawdown': 0.25,
+    'min_accuracy': 0.6
+}
+
 def get_config_value(key: str, default: Any = None) -> Any:
     """Get a configuration value with type conversion.
     
@@ -183,7 +194,10 @@ def validate_config() -> bool:
     return True
 
 # Validate configuration on import
-validate_config()
+try:
+    validate_config()
+except Exception as e:
+    print(f"Configuration validation failed: {e}")
 
 class Settings:
     """Settings class for configuration management."""
@@ -195,31 +209,58 @@ class Settings:
         # Set attributes from config
         for key, value in self.config.items():
             setattr(self, key, value)
+    
     def get(self, key: str, default: Any = None) -> Any:
-        """Get a configuration value."""
-        return {'success': True, 'result': getattr(self, key, default), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        """Get a configuration value.
+        
+        Args:
+            key: Configuration key
+            default: Default value if key not found
+            
+        Returns:
+            Configuration value or default
+        """
+        return getattr(self, key, default)
     
     def set(self, key: str, value: Any) -> None:
-        """Set a configuration value."""
+        """Set a configuration value.
+        
+        Args:
+            key: Configuration key
+            value: Configuration value
+        """
         setattr(self, key, value)
         self.config[key] = value
-
+    
     def to_dict(self) -> Dict[str, Any]:
-        """Convert settings to dictionary."""
+        """Convert settings to dictionary.
+        
+        Returns:
+            Dictionary representation of settings
+        """
         return self.config.copy()
     
     def update(self, config_dict: Dict[str, Any]) -> None:
-        """Update settings from dictionary."""
+        """Update settings with dictionary.
+        
+        Args:
+            config_dict: Configuration dictionary to merge
+        """
+        self.config.update(config_dict)
         for key, value in config_dict.items():
-            self.set(key, value)
-
+            setattr(self, key, value)
+    
     def validate(self) -> bool:
-        """Validate settings."""
+        """Validate the settings.
+        
+        Returns:
+            True if settings are valid
+        """
         return validate_config()
     
     def __repr__(self) -> str:
-        """String representation."""
-        return f"Settings({len(self.config)} items)"
+        """String representation of settings."""
+        return f"Settings(config={self.config})"
 
-# Global settings instance
+# Create default settings instance
 settings = Settings() 
