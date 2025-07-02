@@ -185,15 +185,50 @@ class AgentRegistry:
     
     def _get_fallback_agent(self, name: str, **kwargs) -> Optional[Any]:
         """Get a fallback agent when the requested agent is not available."""
-        logger.info(f"Using fallback for agent '{name}'")
+        logger.warning(f"Agent '{name}' not found, attempting fallback...")
         
-        # Try to create a basic agent with the same name
+        # Try multiple fallback strategies
+        fallback_strategies = [
+            self._try_base_agent_fallback,
+            self._try_generic_agent_fallback,
+            self._try_prompt_router_fallback
+        ]
+        
+        for strategy in fallback_strategies:
+            try:
+                fallback_agent = strategy(name, **kwargs)
+                if fallback_agent is not None:
+                    logger.info(f"Successfully created fallback agent for '{name}' using {strategy.__name__}")
+                    return fallback_agent
+            except Exception as e:
+                logger.debug(f"Fallback strategy {strategy.__name__} failed for '{name}': {e}")
+                continue
+        
+        logger.error(f"No fallback available for agent '{name}' - all strategies failed")
+        return None
+    
+    def _try_base_agent_fallback(self, name: str, **kwargs) -> Optional[Any]:
+        """Try to create a base agent fallback."""
         try:
-            # Import base agent if available
             from trading.agents.base_agent_interface import BaseAgent
             return BaseAgent(name=name, **kwargs)
         except ImportError:
-            logger.error(f"No fallback available for agent '{name}'")
+            return None
+    
+    def _try_generic_agent_fallback(self, name: str, **kwargs) -> Optional[Any]:
+        """Try to create a generic agent fallback."""
+        try:
+            from trading.base_agent import BaseAgent
+            return BaseAgent(name=name, **kwargs)
+        except ImportError:
+            return None
+    
+    def _try_prompt_router_fallback(self, name: str, **kwargs) -> Optional[Any]:
+        """Try to use prompt router as fallback for any agent."""
+        try:
+            from trading.agents.prompt_router_agent import PromptRouterAgent
+            return PromptRouterAgent(**kwargs)
+        except ImportError:
             return None
     
     def list_agents(self) -> List[str]:

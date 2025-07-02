@@ -532,4 +532,66 @@ def stop_scheduler() -> None:
 
 def get_scheduler_stats() -> Dict[str, Any]:
     """Get statistics from the global scheduler."""
-    return get_scheduler().get_stats() 
+    return get_scheduler().get_stats()
+
+class UpdateScheduler:
+    """Specialized scheduler for update tasks."""
+    
+    def __init__(self, check_interval: int = 6):
+        """
+        Initialize the update scheduler.
+        
+        Args:
+            check_interval: Interval in hours between update checks
+        """
+        self.check_interval = check_interval
+        self.scheduler = TaskScheduler()
+        self.running = False
+        self.logger = logging.getLogger(__name__)
+        
+    def start(self, update_func: Callable) -> None:
+        """
+        Start the update scheduler.
+        
+        Args:
+            update_func: Function to call for updates
+        """
+        try:
+            # Schedule the update function to run every check_interval hours
+            self.scheduler.add_task(
+                task_id="model_updates",
+                name="Model Update Check",
+                func=update_func,
+                schedule_type=ScheduleType.INTERVAL,
+                schedule_config={"hours": self.check_interval},
+                priority=TaskPriority.HIGH
+            )
+            
+            self.scheduler.start()
+            self.running = True
+            self.logger.info(f"Update scheduler started with {self.check_interval} hour intervals")
+            
+        except Exception as e:
+            self.logger.error(f"Error starting update scheduler: {e}")
+            raise
+    
+    def stop(self) -> None:
+        """Stop the update scheduler."""
+        try:
+            self.scheduler.stop()
+            self.running = False
+            self.logger.info("Update scheduler stopped")
+        except Exception as e:
+            self.logger.error(f"Error stopping update scheduler: {e}")
+    
+    def is_running(self) -> bool:
+        """Check if scheduler is running."""
+        return self.running
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get scheduler status."""
+        return {
+            'running': self.running,
+            'check_interval': self.check_interval,
+            'stats': self.scheduler.get_stats() if self.scheduler else {}
+        } 
