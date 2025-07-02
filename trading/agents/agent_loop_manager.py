@@ -13,6 +13,7 @@ import json
 import logging
 import asyncio
 import time
+import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
@@ -326,7 +327,7 @@ class AgentLoopManager:
             return 'ensemble'
         else:
             # Return the least represented model type
-            return {'success': True, 'result': min(model_counts, key=model_counts.get), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return min(model_counts, key=model_counts.get)
     
     def _get_model_hyperparameters(self, model_type: str) -> Dict[str, Any]:
         """Get hyperparameters for model type.

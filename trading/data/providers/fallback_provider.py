@@ -527,3 +527,6 @@ def get_fallback_provider() -> FallbackDataProvider:
         custom_config={}
     )
     return FallbackDataProvider(config)
+
+# Backward compatibility alias
+FallbackProvider = FallbackDataProvider

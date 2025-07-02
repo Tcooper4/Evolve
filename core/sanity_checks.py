@@ -575,4 +575,130 @@ def run_comprehensive_validation(df: pd.DataFrame, config: Dict[str, Any] = None
             "timestamp": datetime.now().isoformat(),
             "overall_status": "error",
             "error": f"Error during validation: {str(e)}"
-        } 
+        }
+
+# ============================================================================
+# SANITY CHECKER CLASS
+# ============================================================================
+
+class SanityChecker:
+    """Comprehensive sanity checker for the Evolve trading system."""
+    
+    def __init__(self):
+        """Initialize the sanity checker."""
+        self.logger = logging.getLogger(__name__)
+    
+    def validate_dataframe(self, df: pd.DataFrame, required_columns: Optional[List[str]] = None) -> Dict[str, Any]:
+        """
+        Validate a DataFrame for trading use.
+        
+        Args:
+            df: DataFrame to validate
+            required_columns: Optional list of required columns
+            
+        Returns:
+            Dictionary with validation results
+        """
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "overall_valid": True,
+            "checks": {}
+        }
+        
+        # Basic checks
+        results["checks"]["missing_columns"] = check_missing_columns(df, required_columns or [])
+        results["checks"]["sorted_index"] = check_sorted_index(df)
+        results["checks"]["data_quality"] = check_data_quality(df)
+        results["checks"]["price_data"] = check_price_data(df)
+        
+        # Check if any validation failed
+        for check_name, check_result in results["checks"].items():
+            if not check_result.get("valid", True):
+                results["overall_valid"] = False
+        
+        return results
+    
+    def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validate a configuration dictionary.
+        
+        Args:
+            config: Configuration to validate
+            
+        Returns:
+            Dictionary with validation results
+        """
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "overall_valid": True,
+            "checks": {}
+        }
+        
+        # Strategy config check
+        if "strategy_name" in config or "parameters" in config:
+            results["checks"]["strategy_config"] = check_strategy_thresholds(config)
+        
+        # Model config check
+        if "model_type" in config:
+            results["checks"]["model_config"] = check_model_config(config)
+        
+        # Check if any validation failed
+        for check_name, check_result in results["checks"].items():
+            if not check_result.get("valid", True):
+                results["overall_valid"] = False
+        
+        return results
+    
+    def check_system_health(self) -> Dict[str, Any]:
+        """
+        Check overall system health.
+        
+        Returns:
+            Dictionary with system health information
+        """
+        return check_system_resources()
+    
+    def check_data_freshness(self, df: pd.DataFrame, max_age_hours: int = 24) -> Dict[str, Any]:
+        """
+        Check if data is fresh enough for trading.
+        
+        Args:
+            df: DataFrame with datetime index
+            max_age_hours: Maximum age in hours
+            
+        Returns:
+            Dictionary with freshness check results
+        """
+        return check_data_freshness(df, max_age_hours)
+    
+    def run_full_validation(self, df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Run full validation suite on data and configuration.
+        
+        Args:
+            df: DataFrame to validate
+            config: Optional configuration to validate
+            
+        Returns:
+            Comprehensive validation report
+        """
+        return run_comprehensive_validation(df, config)
+    
+    def get_validation_summary(self, validation_result: Dict[str, Any]) -> str:
+        """
+        Get a human-readable summary of validation results.
+        
+        Args:
+            validation_result: Result from any validation function
+            
+        Returns:
+            Human-readable summary string
+        """
+        if validation_result.get("overall_status") == "pass":
+            return "✅ All validation checks passed"
+        elif validation_result.get("overall_status") == "fail":
+            return "❌ Some validation checks failed"
+        elif validation_result.get("overall_status") == "error":
+            return f"🚨 Validation error: {validation_result.get('error', 'Unknown error')}"
+        else:
+            return "⚠️ Validation status unclear" 
