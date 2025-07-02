@@ -613,6 +613,7 @@ class MultiStrategyHybridEngine:
         """Update strategy weights based on recent performance."""
         try:
             if not performance_data:
+                return
 
             # Calculate new weights based on performance
             total_performance = sum(performance_data.values())
@@ -641,6 +642,72 @@ class MultiStrategyHybridEngine:
             
         except Exception as e:
             logger.error(f"Error updating strategy weights: {e}")
+    
+    def update_weights_based_on_error(self, error_history: Dict[str, List[float]]):
+        """Update strategy weights based on model error over time.
+        
+        Args:
+            error_history: Dictionary mapping strategy names to lists of recent errors
+        """
+        try:
+            if not error_history:
+                return
+            
+            # Calculate average error for each strategy
+            strategy_errors = {}
+            for strategy_name, errors in error_history.items():
+                if errors and strategy_name in self.strategy_weights:
+                    # Use inverse of mean error (lower error = higher weight)
+                    mean_error = np.mean(errors)
+                    if mean_error > 0:
+                        strategy_errors[strategy_name] = 1.0 / mean_error
+                    else:
+                        strategy_errors[strategy_name] = 1.0
+            
+            if strategy_errors:
+                # Normalize weights based on inverse errors
+                total_inverse_error = sum(strategy_errors.values())
+                if total_inverse_error > 0:
+                    new_weights = {}
+                    for strategy_name, inverse_error in strategy_errors.items():
+                        new_weights[strategy_name] = inverse_error / total_inverse_error
+                    
+                    # Update weights with exponential moving average
+                    alpha = 0.05  # Slower learning rate for error-based updates
+                    for strategy_name in self.strategy_weights:
+                        if strategy_name in new_weights:
+                            self.strategy_weights[strategy_name] = (
+                                (1 - alpha) * self.strategy_weights[strategy_name] +
+                                alpha * new_weights[strategy_name]
+                            )
+                    
+                    # Normalize weights
+                    total_weight = sum(self.strategy_weights.values())
+                    for strategy_name in self.strategy_weights:
+                        self.strategy_weights[strategy_name] /= total_weight
+                    
+                    logger.info("Strategy weights updated based on error history")
+        
+        except Exception as e:
+            logger.error(f"Error updating weights based on error: {e}")
+    
+    def auto_update_weights(self, recent_performance: Dict[str, float] = None, 
+                          error_history: Dict[str, List[float]] = None):
+        """Automatically update weights based on both performance and error history."""
+        try:
+            # Update based on performance if available
+            if recent_performance:
+                self.update_strategy_weights(recent_performance)
+            
+            # Update based on error history if available
+            if error_history:
+                self.update_weights_based_on_error(error_history)
+            
+            # Log current weights
+            logger.info(f"Current strategy weights: {self.strategy_weights}")
+            
+        except Exception as e:
+            logger.error(f"Error in auto weight update: {e}")
     
     def get_performance_summary(self) -> Dict[str, Any]:
         """Get performance summary of the hybrid engine."""

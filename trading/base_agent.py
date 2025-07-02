@@ -2,7 +2,6 @@
 Base agent interface for the trading system.
 
 This module provides the base classes and interfaces that all agents must implement.
-It re-exports from the correct locations to maintain compatibility.
 """
 
 from abc import ABC, abstractmethod
@@ -10,8 +9,17 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 from datetime import datetime
 
-# Re-export from meta_agents for compatibility
-from .meta_agents.base_agent import BaseMetaAgent, Task
+@dataclass
+class Task:
+    """Task data structure for agents."""
+    task_id: str
+    task_type: str
+    status: str
+    agent: str
+    notes: Optional[str] = None
+    created_at: datetime = datetime.now()
+    updated_at: datetime = datetime.now()
+    metadata: Optional[Dict[str, Any]] = None
 
 @dataclass
 class AgentResult:
@@ -94,5 +102,7 @@ class BaseAgent(ABC):
         # Implementation can be overridden by subclasses
         pass
 
-# For backward compatibility, also export BaseMetaAgent as BaseAgent
+# For backward compatibility
+BaseMetaAgent = BaseAgent
+
 __all__ = ['BaseAgent', 'BaseMetaAgent', 'AgentResult', 'Task'] 

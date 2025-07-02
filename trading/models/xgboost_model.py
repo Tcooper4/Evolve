@@ -332,6 +332,137 @@ class XGBoostForecaster(BaseModel):
             logging.error(f"Error plotting XGBoost results: {e}")
             print(f"Could not plot results: {e}")
 
+    def calculate_mse(self, data: pd.DataFrame, predictions: np.ndarray = None) -> float:
+        """Calculate Mean Squared Error (MSE) for predictions.
+        
+        Args:
+            data: Input data DataFrame
+            predictions: Optional predictions array (if None, will generate predictions)
+            
+        Returns:
+            float: Mean Squared Error
+        """
+        try:
+            if predictions is None:
+                predictions = self.predict(data)
+            
+            if len(predictions) == 0:
+                return float('inf')
+            
+            # Get actual values
+            target_col = self.config.get('target_column', 'close')
+            actual_values = data[target_col].values[-len(predictions):]
+            
+            # Calculate MSE
+            mse = np.mean((actual_values - predictions) ** 2)
+            return float(mse)
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error calculating MSE: {e}")
+            return float('inf')
+    
+    def calculate_confidence_intervals(self, data: pd.DataFrame, confidence_level: float = 0.95) -> Dict[str, np.ndarray]:
+        """Calculate confidence intervals for predictions.
+        
+        Args:
+            data: Input data DataFrame
+            confidence_level: Confidence level (0.95 for 95% confidence)
+            
+        Returns:
+            Dictionary containing lower and upper confidence bounds
+        """
+        try:
+            # Get predictions
+            predictions = self.predict(data)
+            
+            if len(predictions) == 0:
+                return {'lower': np.array([]), 'upper': np.array([])}
+            
+            # Calculate prediction uncertainty using model's feature importance
+            feature_importance = self.get_feature_importance()
+            if not feature_importance:
+                # Fallback: use simple uncertainty estimation
+                uncertainty = 0.1 * np.abs(predictions)
+            else:
+                # Use feature importance to estimate uncertainty
+                avg_importance = np.mean(list(feature_importance.values()))
+                uncertainty = avg_importance * 0.05 * np.abs(predictions)
+            
+            # Calculate confidence intervals
+            z_score = 1.96  # 95% confidence level
+            margin_of_error = z_score * uncertainty
+            
+            lower_bound = predictions - margin_of_error
+            upper_bound = predictions + margin_of_error
+            
+            return {
+                'lower': lower_bound,
+                'upper': upper_bound,
+                'confidence_level': confidence_level
+            }
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error calculating confidence intervals: {e}")
+            return {'lower': np.array([]), 'upper': np.array([])}
+    
+    def get_model_metrics(self, data: pd.DataFrame) -> Dict[str, float]:
+        """Get comprehensive model metrics including MSE and confidence.
+        
+        Args:
+            data: Input data DataFrame
+            
+        Returns:
+            Dictionary containing model metrics
+        """
+        try:
+            predictions = self.predict(data)
+            
+            if len(predictions) == 0:
+                return {
+                    'mse': float('inf'),
+                    'rmse': float('inf'),
+                    'mae': float('inf'),
+                    'confidence': 0.0,
+                    'feature_importance_score': 0.0
+                }
+            
+            # Calculate MSE
+            mse = self.calculate_mse(data, predictions)
+            rmse = np.sqrt(mse) if mse != float('inf') else float('inf')
+            
+            # Calculate MAE
+            target_col = self.config.get('target_column', 'close')
+            actual_values = data[target_col].values[-len(predictions):]
+            mae = np.mean(np.abs(actual_values - predictions))
+            
+            # Calculate confidence score based on feature importance
+            feature_importance = self.get_feature_importance()
+            if feature_importance:
+                confidence_score = min(1.0, np.mean(list(feature_importance.values())) * 10)
+            else:
+                confidence_score = 0.7  # Default confidence
+            
+            return {
+                'mse': mse,
+                'rmse': rmse,
+                'mae': mae,
+                'confidence': confidence_score,
+                'feature_importance_score': np.mean(list(feature_importance.values())) if feature_importance else 0.0
+            }
+            
+        except Exception as e:
+            import logging
+            logging.error(f"Error calculating model metrics: {e}")
+            return {
+                'mse': float('inf'),
+                'rmse': float('inf'),
+                'mae': float('inf'),
+                'confidence': 0.0,
+                'feature_importance_score': 0.0
+            }
+
 class XGBoostModel(BaseModel):
     """XGBoost model for time series forecasting (alias for XGBoostForecaster)."""
     

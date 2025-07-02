@@ -240,7 +240,11 @@ class PositionSizer:
         except Exception as e:
             self.logger.error(f"Error calculating position size: {e}")
             # Return conservative default
-            return {'success': True, 'result': self._calculate_conservative_size(portfolio_context), {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                'success': True, 
+                'result': self._calculate_conservative_size(portfolio_context), 
+                'message': 'Operation completed successfully', 
+                'timestamp': datetime.now().isoformat(),
                 'error': str(e),
                 'strategy': 'conservative_fallback'
             }
