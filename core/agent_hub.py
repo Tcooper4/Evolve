@@ -19,72 +19,88 @@ class AgentHub:
     
     def __init__(self):
         """Initialize the AgentHub with all available agents."""
-        self.agents = {}
-        self.routing_rules = {}
-        self.fallback_agent = None
-        self.interaction_history = []
+        self.agents: Dict[str, Any] = {}
+        self.routing_rules: Dict[str, List[str]] = {}
+        self.fallback_agent: Optional[Any] = None
+        self.interaction_history: List[Dict[str, Any]] = []
         self._initialize_agents()
         self._setup_routing_rules()
 
-    def _initialize_agents(self):
-        """Initialize all available agents."""
+    def _initialize_agents(self) -> None:
+        """Initialize all available agents with proper error handling."""
         try:
             # Initialize PromptAgent
-            from trading.meta_agents.agents.prompt_agent import PromptAgent
-            self.agents['prompt'] = PromptAgent()
-            logger.info("PromptAgent initialized")
+            from trading.agents.prompt_router_agent import PromptRouterAgent
+            self.agents['prompt'] = PromptRouterAgent()
+            logger.info("PromptRouterAgent initialized")
+        except ImportError as e:
+            logger.warning(f"PromptRouterAgent not available: {e}")
         except Exception as e:
-            logger.warning(f"PromptAgent initialization failed: {e}")
+            logger.warning(f"PromptRouterAgent initialization failed: {e}")
             st.session_state["status"] = "fallback activated"
+            
         try:
             # Initialize ForecastRouter
             from models.forecast_router import ForecastRouter
             self.agents['forecast'] = ForecastRouter()
             logger.info("ForecastRouter initialized")
+        except ImportError as e:
+            logger.warning(f"ForecastRouter not available: {e}")
         except Exception as e:
             logger.warning(f"ForecastRouter initialization failed: {e}")
             st.session_state["status"] = "fallback activated"
+            
         try:
             # Initialize LLMHandler
             from trading.llm.llm_interface import LLMHandler
             self.agents['llm'] = LLMHandler()
             logger.info("LLMHandler initialized")
+        except ImportError as e:
+            logger.warning(f"LLMHandler not available: {e}")
         except Exception as e:
             logger.warning(f"LLMHandler initialization failed: {e}")
             st.session_state["status"] = "fallback activated"
+            
         try:
             # Initialize QuantGPTAgent
-            from trading.services.quant_gpt import QuantGPTAgent
-            self.agents['quant_gpt'] = QuantGPTAgent()
-            logger.info("QuantGPTAgent initialized")
+            from trading.services.quant_gpt import QuantGPT
+            self.agents['quant_gpt'] = QuantGPT()
+            logger.info("QuantGPT initialized")
+        except ImportError as e:
+            logger.warning(f"QuantGPT not available: {e}")
         except Exception as e:
-            logger.warning(f"QuantGPTAgent initialization failed: {e}")
+            logger.warning(f"QuantGPT initialization failed: {e}")
             st.session_state["status"] = "fallback activated"
+            
         # Set fallback agent
         self.fallback_agent = self.agents.get('prompt') or self.agents.get('llm')
+        if self.fallback_agent:
+            logger.info(f"Fallback agent set to: {type(self.fallback_agent).__name__}")
+        else:
+            logger.warning("No fallback agent available")
 
-    def _setup_routing_rules(self):
+    def _setup_routing_rules(self) -> None:
         """Setup routing rules for different types of prompts."""
         self.routing_rules = {
             'forecast': [
                 'forecast', 'predict', 'prediction', 'price', 'market', 'trend',
-                'technical', 'analysis', 'chart', 'indicator'
+                'technical', 'analysis', 'chart', 'indicator', 'future', 'outlook'
             ],
             'trading': [
                 'trade', 'buy', 'sell', 'position', 'portfolio', 'strategy',
-                'signal', 'execution', 'order'
+                'signal', 'execution', 'order', 'entry', 'exit', 'stop loss'
             ],
             'analysis': [
                 'analyze', 'analysis', 'report', 'metrics', 'performance',
-                'backtest', 'evaluation'
+                'backtest', 'evaluation', 'review', 'assessment'
             ],
             'llm': [
                 'explain', 'describe', 'what is', 'how to', 'why', 'when',
-                'question', 'help', 'assist'
+                'question', 'help', 'assist', 'tell me', 'show me'
             ],
             'quant_gpt': [
                 'quantitative', 'math', 'statistics', 'model', 'algorithm',
-                'optimization', 'risk', 'probability'
+                'optimization', 'risk', 'probability', 'correlation', 'regression'
             ]
         }
 
@@ -127,7 +143,15 @@ class AgentHub:
             return self._fallback_response(prompt)
             
     def _determine_agent_type(self, prompt: str) -> str:
-        """Determine the best agent type for a given prompt."""
+        """
+        Determine the best agent type for a given prompt.
+        
+        Args:
+            prompt: Lowercase prompt text
+            
+        Returns:
+            String indicating the best agent type
+        """
         scores = {}
         
         for agent_type, keywords in self.routing_rules.items():
@@ -141,8 +165,18 @@ class AgentHub:
         # Return the agent type with the highest score
         return max(scores, key=scores.get)
         
-    def _call_agent(self, agent, agent_type: str, prompt: str) -> Dict[str, Any]:
-        """Call the appropriate agent method."""
+    def _call_agent(self, agent: Any, agent_type: str, prompt: str) -> Dict[str, Any]:
+        """
+        Call the appropriate agent method.
+        
+        Args:
+            agent: The agent instance to call
+            agent_type: Type of agent being called
+            prompt: User prompt
+            
+        Returns:
+            Dictionary containing agent response
+        """
         try:
             if agent_type == 'forecast':
                 return self._call_forecast_agent(agent, prompt)
@@ -159,8 +193,17 @@ class AgentHub:
             logger.error(f"Error calling {agent_type} agent: {e}")
             return self._fallback_response(prompt)
             
-    def _call_forecast_agent(self, agent, prompt: str) -> Dict[str, Any]:
-        """Call the forecast agent."""
+    def _call_forecast_agent(self, agent: Any, prompt: str) -> Dict[str, Any]:
+        """
+        Call the forecast agent.
+        
+        Args:
+            agent: Forecast agent instance
+            prompt: User prompt
+            
+        Returns:
+            Dictionary containing forecast response
+        """
         try:
             # Extract ticker and timeframe from prompt
             ticker = self._extract_ticker(prompt)
@@ -189,8 +232,17 @@ class AgentHub:
             logger.error(f"Error in forecast agent: {e}")
             return self._fallback_response(prompt)
             
-    def _call_trading_agent(self, agent, prompt: str) -> Dict[str, Any]:
-        """Call the trading agent."""
+    def _call_trading_agent(self, agent: Any, prompt: str) -> Dict[str, Any]:
+        """
+        Call the trading agent.
+        
+        Args:
+            agent: Trading agent instance
+            prompt: User prompt
+            
+        Returns:
+            Dictionary containing trading response
+        """
         try:
             if hasattr(agent, 'process_trading_request'):
                 response = agent.process_trading_request(prompt)
@@ -213,8 +265,17 @@ class AgentHub:
             logger.error(f"Error in trading agent: {e}")
             return self._fallback_response(prompt)
             
-    def _call_analysis_agent(self, agent, prompt: str) -> Dict[str, Any]:
-        """Call the analysis agent."""
+    def _call_analysis_agent(self, agent: Any, prompt: str) -> Dict[str, Any]:
+        """
+        Call the analysis agent.
+        
+        Args:
+            agent: Analysis agent instance
+            prompt: User prompt
+            
+        Returns:
+            Dictionary containing analysis response
+        """
         try:
             if hasattr(agent, 'analyze'):
                 analysis = agent.analyze(prompt)
@@ -237,8 +298,17 @@ class AgentHub:
             logger.error(f"Error in analysis agent: {e}")
             return self._fallback_response(prompt)
             
-    def _call_quant_gpt_agent(self, agent, prompt: str) -> Dict[str, Any]:
-        """Call the QuantGPT agent."""
+    def _call_quant_gpt_agent(self, agent: Any, prompt: str) -> Dict[str, Any]:
+        """
+        Call the QuantGPT agent.
+        
+        Args:
+            agent: QuantGPT agent instance
+            prompt: User prompt
+            
+        Returns:
+            Dictionary containing QuantGPT response
+        """
         try:
             if hasattr(agent, 'process_query'):
                 response = agent.process_query(prompt)
@@ -261,8 +331,17 @@ class AgentHub:
             logger.error(f"Error in QuantGPT agent: {e}")
             return self._fallback_response(prompt)
             
-    def _call_llm_agent(self, agent, prompt: str) -> Dict[str, Any]:
-        """Call the LLM agent."""
+    def _call_llm_agent(self, agent: Any, prompt: str) -> Dict[str, Any]:
+        """
+        Call the LLM agent.
+        
+        Args:
+            agent: LLM agent instance
+            prompt: User prompt
+            
+        Returns:
+            Dictionary containing LLM response
+        """
         try:
             if hasattr(agent, 'generate_response'):
                 response = agent.generate_response(prompt)
@@ -286,7 +365,15 @@ class AgentHub:
             return self._fallback_response(prompt)
             
     def _extract_ticker(self, prompt: str) -> str:
-        """Extract ticker symbol from prompt."""
+        """
+        Extract ticker symbol from prompt.
+        
+        Args:
+            prompt: User prompt text
+            
+        Returns:
+            Extracted ticker symbol or default
+        """
         import re
         # Look for common ticker patterns
         ticker_pattern = r'\b([A-Z]{1,5})\b'
@@ -301,14 +388,30 @@ class AgentHub:
         return 'AAPL'  # Default fallback
         
     def _extract_timeframe(self, prompt: str) -> str:
-        """Extract timeframe from prompt."""
+        """
+        Extract timeframe from prompt.
+        
+        Args:
+            prompt: User prompt text
+            
+        Returns:
+            Extracted timeframe or default
+        """
         import re
         timeframe_pattern = r'\b(daily|weekly|monthly|yearly|1d|1w|1m|1y|30d|60d|90d)\b'
         match = re.search(timeframe_pattern, prompt.lower())
         return match.group(1) if match else '30d'
         
     def _fallback_response(self, prompt: str) -> Dict[str, Any]:
-        """Generate a fallback response when no agent is available."""
+        """
+        Generate a fallback response when no agent is available.
+        
+        Args:
+            prompt: Original user prompt
+            
+        Returns:
+            Dictionary containing fallback response
+        """
         return {
             'type': 'fallback',
             'content': f"I'm sorry, I couldn't process your request: '{prompt}'. Please try rephrasing or contact support.",
@@ -321,8 +424,15 @@ class AgentHub:
             }
         }
         
-    def _log_interaction(self, prompt: str, agent_type: str, response: Dict[str, Any]):
-        """Log the interaction for monitoring and debugging."""
+    def _log_interaction(self, prompt: str, agent_type: str, response: Dict[str, Any]) -> None:
+        """
+        Log the interaction for monitoring and debugging.
+        
+        Args:
+            prompt: User prompt
+            agent_type: Type of agent used
+            response: Agent response
+        """
         interaction = {
             'timestamp': datetime.now().isoformat(),
             'prompt': prompt,
@@ -337,7 +447,12 @@ class AgentHub:
             self.interaction_history = self.interaction_history[-100:]
 
     def get_agent_status(self) -> Dict[str, Any]:
-        """Get status of all agents."""
+        """
+        Get status of all agents.
+        
+        Returns:
+            Dictionary containing status of all agents
+        """
         status = {}
         for name, agent in self.agents.items():
             status[name] = {
@@ -347,8 +462,16 @@ class AgentHub:
             }
         return status
         
-    def _check_agent_health(self, agent) -> str:
-        """Check the health of an agent."""
+    def _check_agent_health(self, agent: Any) -> str:
+        """
+        Check the health of an agent.
+        
+        Args:
+            agent: Agent instance to check
+            
+        Returns:
+            Health status string
+        """
         if agent is None:
             return 'unavailable'
         try:
@@ -361,11 +484,24 @@ class AgentHub:
             return 'error'
             
     def get_recent_interactions(self, limit: int = 5) -> List[Dict[str, Any]]:
-        """Get recent interactions for monitoring."""
+        """
+        Get recent interactions for monitoring.
+        
+        Args:
+            limit: Maximum number of interactions to return
+            
+        Returns:
+            List of recent interactions
+        """
         return self.interaction_history[-limit:]
         
     def get_system_health(self) -> Dict[str, Any]:
-        """Get overall system health."""
+        """
+        Get overall system health.
+        
+        Returns:
+            Dictionary containing system health information
+        """
         agent_status = self.get_agent_status()
         available_agents = sum(1 for status in agent_status.values() if status['available'])
         total_agents = len(agent_status)
@@ -380,7 +516,12 @@ class AgentHub:
         }
         
     def reset_agents(self) -> bool:
-        """Reset all agents."""
+        """
+        Reset all agents.
+        
+        Returns:
+            True if reset successful, False otherwise
+        """
         try:
             self._initialize_agents()
             self.interaction_history = []

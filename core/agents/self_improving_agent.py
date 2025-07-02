@@ -140,11 +140,18 @@ class SelfImprovingAgent(BaseAgent):
         self.router = Router()
         self.improvement_interval = self.config.get('improvement_interval', 3600)  # 1 hour default
         self.last_improvement = 0
+        self.performance_thresholds = self.config.get('performance_thresholds', {
+            'min_sharpe': 1.0,
+            'max_drawdown': 0.25,
+            'min_accuracy': 0.6
+        })
+        self.improvement_history: List[Dict[str, Any]] = []
     
     def _setup(self):
         """Setup the self-improving agent."""
         self.model_registry = self.config.get('model_registry', {})
         self.strategy_registry = self.config.get('strategy_registry', {})
+        self.logger.info("Self-improving agent setup completed")
     
     def run(self, prompt: str, **kwargs) -> AgentResult:
         """
@@ -158,12 +165,21 @@ class SelfImprovingAgent(BaseAgent):
             AgentResult: Result of the self-improvement process
         """
         try:
+            if not self.validate_input(prompt):
+                return AgentResult(
+                    success=False,
+                    message="Invalid input provided"
+                )
+            
             # Check if it's time for improvement
             if not self._should_improve():
                 return AgentResult(
                     success=True,
                     message="Not time for improvement yet",
-                    data={'next_improvement': self.last_improvement + self.improvement_interval}
+                    data={
+                        'next_improvement': self.last_improvement + self.improvement_interval,
+                        'time_until_improvement': (self.last_improvement + self.improvement_interval) - time.time()
+                    }
                 )
                 
             # Run improvement cycle
@@ -172,14 +188,17 @@ class SelfImprovingAgent(BaseAgent):
             # Update last improvement time
             self.last_improvement = time.time()
             
-            return AgentResult(
+            result = AgentResult(
                 success=True,
                 message="Self-improvement cycle completed",
                 data=results
             )
             
+            self.log_execution(result)
+            return result
+            
         except Exception as e:
-            logger.error(f"Error in self-improvement: {e}")
+            self.logger.error(f"Error in self-improvement: {e}")
             return self.handle_error(e)
             
     def _should_improve(self) -> bool:
@@ -202,18 +221,11 @@ class SelfImprovingAgent(BaseAgent):
         results = {
             'model_improvements': [],
             'strategy_improvements': [],
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'cycle_id': f"improvement_{int(time.time())}"
         }
         
-        # Create improvement task
-        task = Task(
-            task_id=f"improvement_{int(time.time())}",
-            task_type="self_improvement",
-            status=TaskStatus.PENDING,
-            agent_name=self.name,
-            notes="Running self-improvement cycle"
-        )
-        self.task_memory.add_task(task)
+        self.logger.info("Starting self-improvement cycle")
         
         try:
             # Analyze model performance
@@ -224,17 +236,18 @@ class SelfImprovingAgent(BaseAgent):
             strategy_results = self._analyze_strategy_performance()
             results['strategy_improvements'].extend(strategy_results)
             
-            # Update task status
-            task.status = TaskStatus.COMPLETED
-            task.metadata = results
-            self.task_memory.update_task(task)
+            # Store improvement history
+            self.improvement_history.append(results)
+            
+            # Keep only last 10 improvements
+            if len(self.improvement_history) > 10:
+                self.improvement_history = self.improvement_history[-10:]
+            
+            self.logger.info(f"Self-improvement cycle completed: {len(model_results)} model improvements, {len(strategy_results)} strategy improvements")
             
         except Exception as e:
-            logger.error(f"Error in self-improvement cycle: {e}")
-            task.status = TaskStatus.FAILED
-            task.metadata = {'error': str(e)}
-            self.task_memory.update_task(task)
-            raise
+            self.logger.error(f"Error in self-improvement cycle: {e}")
+            results['error'] = str(e)
             
         return results
         
@@ -248,16 +261,6 @@ class SelfImprovingAgent(BaseAgent):
         improvements = []
         
         for model_id, model_info in self.model_registry.items():
-            # Create analysis task
-            task = Task(
-                task_id=f"model_analysis_{model_id}",
-                task_type="model_analysis",
-                status=TaskStatus.PENDING,
-                agent_name=self.name,
-                notes=f"Analyzing model {model_id}"
-            )
-            self.task_memory.add_task(task)
-            
             try:
                 # Analyze model performance
                 performance = self._get_model_performance(model_id)
@@ -265,31 +268,13 @@ class SelfImprovingAgent(BaseAgent):
                 # Check if improvement needed
                 if self._needs_improvement(performance):
                     # Generate improvement suggestion
-                    suggestion = self._generate_improvement_suggestion(model_id, performance)
-                    
-                    # Route improvement task
-                    self.router.route_task(Task(
-                        task_id=f"model_improvement_{model_id}",
-                        task_type="model_improvement",
-                        status=TaskStatus.PENDING,
-                        agent_name=self.name,
-                        notes=suggestion['description'],
-                        metadata=suggestion
-                    ))
-                    
+                    suggestion = self._generate_improvement_suggestion(model_id, performance, 'model')
                     improvements.append(suggestion)
-                    
-                # Update task status
-                task.status = TaskStatus.COMPLETED
-                task.metadata = {'performance': performance}
+                    self.logger.info(f"Generated improvement suggestion for model {model_id}")
                 
             except Exception as e:
-                logger.error(f"Error analyzing model {model_id}: {e}")
-                task.status = TaskStatus.FAILED
-                task.metadata = {'error': str(e)}
+                self.logger.error(f"Error analyzing model {model_id}: {e}")
                 
-            self.task_memory.update_task(task)
-            
         return improvements
         
     def _analyze_strategy_performance(self) -> List[Dict[str, Any]]:
@@ -302,16 +287,6 @@ class SelfImprovingAgent(BaseAgent):
         improvements = []
         
         for strategy_id, strategy_info in self.strategy_registry.items():
-            # Create analysis task
-            task = Task(
-                task_id=f"strategy_analysis_{strategy_id}",
-                task_type="strategy_analysis",
-                status=TaskStatus.PENDING,
-                agent_name=self.name,
-                notes=f"Analyzing strategy {strategy_id}"
-            )
-            self.task_memory.add_task(task)
-            
             try:
                 # Analyze strategy performance
                 performance = self._get_strategy_performance(strategy_id)
@@ -319,31 +294,13 @@ class SelfImprovingAgent(BaseAgent):
                 # Check if improvement needed
                 if self._needs_improvement(performance):
                     # Generate improvement suggestion
-                    suggestion = self._generate_improvement_suggestion(strategy_id, performance)
-                    
-                    # Route improvement task
-                    self.router.route_task(Task(
-                        task_id=f"strategy_improvement_{strategy_id}",
-                        task_type="strategy_improvement",
-                        status=TaskStatus.PENDING,
-                        agent_name=self.name,
-                        notes=suggestion['description'],
-                        metadata=suggestion
-                    ))
-                    
+                    suggestion = self._generate_improvement_suggestion(strategy_id, performance, 'strategy')
                     improvements.append(suggestion)
-                    
-                # Update task status
-                task.status = TaskStatus.COMPLETED
-                task.metadata = {'performance': performance}
+                    self.logger.info(f"Generated improvement suggestion for strategy {strategy_id}")
                 
             except Exception as e:
-                logger.error(f"Error analyzing strategy {strategy_id}: {e}")
-                task.status = TaskStatus.FAILED
-                task.metadata = {'error': str(e)}
+                self.logger.error(f"Error analyzing strategy {strategy_id}: {e}")
                 
-            self.task_memory.update_task(task)
-            
         return improvements
         
     def _get_model_performance(self, model_id: str) -> Dict[str, Any]:
@@ -356,8 +313,14 @@ class SelfImprovingAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Model performance metrics
         """
-        # Implementation depends on your metrics storage
-        return {}
+        # Mock performance data - replace with actual implementation
+        return {
+            'sharpe_ratio': 1.2,
+            'max_drawdown': 0.15,
+            'accuracy': 0.65,
+            'mse': 0.03,
+            'last_updated': datetime.now().isoformat()
+        }
         
     def _get_strategy_performance(self, strategy_id: str) -> Dict[str, Any]:
         """
@@ -369,8 +332,14 @@ class SelfImprovingAgent(BaseAgent):
         Returns:
             Dict[str, Any]: Strategy performance metrics
         """
-        # Implementation depends on your metrics storage
-        return {}
+        # Mock performance data - replace with actual implementation
+        return {
+            'sharpe_ratio': 1.1,
+            'max_drawdown': 0.20,
+            'win_rate': 0.58,
+            'profit_factor': 1.3,
+            'last_updated': datetime.now().isoformat()
+        }
         
     def _needs_improvement(self, performance: Dict[str, Any]) -> bool:
         """
@@ -382,26 +351,106 @@ class SelfImprovingAgent(BaseAgent):
         Returns:
             bool: True if improvement is needed
         """
-        # Implementation depends on your improvement criteria
+        if not performance:
+            return True
+            
+        # Check against thresholds
+        if performance.get('sharpe_ratio', 0) < self.performance_thresholds['min_sharpe']:
+            return True
+            
+        if performance.get('max_drawdown', 1) > self.performance_thresholds['max_drawdown']:
+            return True
+            
+        if performance.get('accuracy', 0) < self.performance_thresholds['min_accuracy']:
+            return True
+            
         return False
         
-    def _generate_improvement_suggestion(self, target_id: str, performance: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_improvement_suggestion(self, target_id: str, performance: Dict[str, Any], target_type: str) -> Dict[str, Any]:
         """
         Generate an improvement suggestion based on performance.
         
         Args:
             target_id: ID of the model or strategy
             performance: Performance metrics
+            target_type: Type of target ('model' or 'strategy')
             
         Returns:
             Dict[str, Any]: Improvement suggestion
         """
-        # Implementation depends on your improvement logic
+        suggestions = []
+        
+        # Analyze performance and generate specific suggestions
+        if performance.get('sharpe_ratio', 0) < self.performance_thresholds['min_sharpe']:
+            suggestions.append("Consider hyperparameter tuning to improve risk-adjusted returns")
+            
+        if performance.get('max_drawdown', 1) > self.performance_thresholds['max_drawdown']:
+            suggestions.append("Implement better risk management to reduce drawdown")
+            
+        if performance.get('accuracy', 0) < self.performance_thresholds['min_accuracy']:
+            suggestions.append("Review feature engineering and model selection")
+        
         return {
             'target_id': target_id,
-            'description': f"Improvement suggestion for {target_id}",
-            'type': 'suggestion'
+            'target_type': target_type,
+            'description': f"Improvement suggestions for {target_type} {target_id}",
+            'suggestions': suggestions,
+            'current_performance': performance,
+            'thresholds': self.performance_thresholds,
+            'timestamp': datetime.now().isoformat(),
+            'priority': 'medium'
         }
+    
+    def force_improvement(self) -> AgentResult:
+        """
+        Force an improvement cycle regardless of timing.
+        
+        Returns:
+            AgentResult: Result of the forced improvement
+        """
+        self.last_improvement = 0  # Reset timer
+        return self.run("Force improvement cycle")
+    
+    def get_improvement_history(self, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Get recent improvement history.
+        
+        Args:
+            limit: Maximum number of improvements to return
+            
+        Returns:
+            List[Dict[str, Any]]: Recent improvement history
+        """
+        return self.improvement_history[-limit:]
+    
+    def update_performance_thresholds(self, new_thresholds: Dict[str, Any]) -> None:
+        """
+        Update performance thresholds.
+        
+        Args:
+            new_thresholds: New threshold values
+        """
+        self.performance_thresholds.update(new_thresholds)
+        self.logger.info(f"Updated performance thresholds: {new_thresholds}")
+    
+    def get_status(self) -> Dict[str, Any]:
+        """
+        Get self-improving agent status information.
+        
+        Returns:
+            Dictionary containing agent status
+        """
+        base_status = super().get_status()
+        base_status.update({
+            'improvement_interval': self.improvement_interval,
+            'last_improvement': self.last_improvement,
+            'next_improvement': self.last_improvement + self.improvement_interval,
+            'performance_thresholds': self.performance_thresholds,
+            'improvement_history_count': len(self.improvement_history),
+            'registered_models': len(self.model_registry),
+            'registered_strategies': len(self.strategy_registry)
+        })
+        return base_status
 
 def run_self_improvement() -> Dict[str, Dict[str, Any]]:
     """

@@ -8,34 +8,72 @@ Ensures consistent model persistence across the Evolve system.
 import joblib
 import os
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List, Union
 from pathlib import Path
 import json
 from datetime import datetime
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 
-class BaseModel:
+class BaseModel(ABC):
     """Base class for all forecasting models with standardized save/load functionality."""
     
-    def __init__(self, model_name: str = "base_model"):
-        """Initialize base model.
+    def __init__(self, model_name: str = "base_model", config: Optional[Dict[str, Any]] = None):
+        """
+        Initialize base model.
         
         Args:
             model_name: Name of the model for logging and identification
+            config: Optional configuration dictionary
         """
-        self.model_name = model_name
-        self.fitted = False
-        self.model_path = None
-        self.config = {}
-        self.metadata = {
+        self.model_name: str = model_name
+        self.fitted: bool = False
+        self.model_path: Optional[str] = None
+        self.config: Dict[str, Any] = config or {}
+        self.metadata: Dict[str, Any] = {
             'created_at': datetime.now().isoformat(),
             'model_type': self.__class__.__name__,
-            'version': '1.0'
+            'version': '1.0',
+            'model_name': model_name
         }
+        self.training_history: List[Dict[str, Any]] = []
+        self.performance_metrics: Dict[str, Any] = {}
+        
+        logger.info(f"Initialized {self.__class__.__name__}: {model_name}")
+    
+    @abstractmethod
+    def fit(self, X: Any, y: Any, **kwargs) -> 'BaseModel':
+        """
+        Fit the model to the data.
+        
+        Args:
+            X: Training features
+            y: Training targets
+            **kwargs: Additional fitting parameters
+            
+        Returns:
+            Self for method chaining
+        """
+        pass
+    
+    @abstractmethod
+    def predict(self, X: Any, **kwargs) -> Any:
+        """
+        Make predictions using the fitted model.
+        
+        Args:
+            X: Features to predict on
+            **kwargs: Additional prediction parameters
+            
+        Returns:
+            Model predictions
+        """
+        pass
     
     def save_model(self, path: str, include_metadata: bool = True) -> Dict[str, Any]:
-        """Save model to disk with safety checks.
+        """
+        Save model to disk with safety checks.
         
         Args:
             path: Path where to save the model
@@ -46,7 +84,7 @@ class BaseModel:
         """
         try:
             # Ensure directory exists
-            os.makedirs(os.path.dirname(path), exist_ok=True)
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
             
             # Update metadata
             self.metadata['saved_at'] = datetime.now().isoformat()
@@ -56,7 +94,9 @@ class BaseModel:
             model_data = {
                 'model': self,
                 'config': self.config,
-                'fitted': self.fitted
+                'fitted': self.fitted,
+                'training_history': self.training_history,
+                'performance_metrics': self.performance_metrics
             }
             
             if include_metadata:
@@ -85,7 +125,8 @@ class BaseModel:
     
     @classmethod
     def load_model(cls, path: str) -> 'BaseModel':
-        """Load model from disk with error handling.
+        """
+        Load model from disk with error handling.
         
         Args:
             path: Path to the saved model
@@ -98,7 +139,7 @@ class BaseModel:
             ValueError: If model file is corrupted
         """
         try:
-            if not os.path.exists(path):
+            if not Path(path).exists():
                 raise FileNotFoundError(f"Model file not found: {path}")
             
             # Load model data
@@ -111,6 +152,10 @@ class BaseModel:
                     model.config = model_data['config']
                 if 'metadata' in model_data:
                     model.metadata.update(model_data['metadata'])
+                if 'training_history' in model_data:
+                    model.training_history = model_data['training_history']
+                if 'performance_metrics' in model_data:
+                    model.performance_metrics = model_data['performance_metrics']
                 model.model_path = path
             else:
                 # Legacy format - direct model object
@@ -125,7 +170,8 @@ class BaseModel:
             raise ValueError(f"Failed to load model from {path}: {str(e)}")
     
     def get_model_info(self) -> Dict[str, Any]:
-        """Get model information and metadata.
+        """
+        Get model information and metadata.
         
         Returns:
             Dictionary with model information
@@ -136,11 +182,14 @@ class BaseModel:
             'fitted': self.fitted,
             'model_path': self.model_path,
             'config': self.config,
-            'metadata': self.metadata
+            'metadata': self.metadata,
+            'training_history_count': len(self.training_history),
+            'performance_metrics': self.performance_metrics
         }
     
     def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate model configuration.
+        """
+        Validate model configuration.
         
         Args:
             config: Configuration to validate
@@ -168,7 +217,8 @@ class BaseModel:
             }
     
     def set_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Set model configuration with validation.
+        """
+        Set model configuration with validation.
         
         Args:
             config: Configuration to set
@@ -203,7 +253,8 @@ class BaseModel:
             }
     
     def export_config(self, path: str) -> Dict[str, Any]:
-        """Export model configuration to JSON file.
+        """
+        Export model configuration to JSON file.
         
         Args:
             path: Path to save configuration
@@ -212,7 +263,7 @@ class BaseModel:
             Dictionary with export status
         """
         try:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
             
             config_data = {
                 'config': self.config,
@@ -241,7 +292,8 @@ class BaseModel:
             }
     
     def import_config(self, path: str) -> Dict[str, Any]:
-        """Import model configuration from JSON file.
+        """
+        Import model configuration from JSON file.
         
         Args:
             path: Path to configuration file
@@ -250,7 +302,7 @@ class BaseModel:
             Dictionary with import status
         """
         try:
-            if not os.path.exists(path):
+            if not Path(path).exists():
                 return {
                     'success': False,
                     'error': f'Configuration file not found: {path}'
@@ -270,4 +322,73 @@ class BaseModel:
                 'success': False,
                 'error': str(e),
                 'timestamp': datetime.now().isoformat()
-            } 
+            }
+    
+    def add_training_record(self, record: Dict[str, Any]) -> None:
+        """
+        Add a training record to the model's history.
+        
+        Args:
+            record: Training record to add
+        """
+        record['timestamp'] = datetime.now().isoformat()
+        self.training_history.append(record)
+        logger.debug(f"Added training record for {self.model_name}")
+    
+    def update_performance_metrics(self, metrics: Dict[str, Any]) -> None:
+        """
+        Update the model's performance metrics.
+        
+        Args:
+            metrics: Performance metrics to update
+        """
+        self.performance_metrics.update(metrics)
+        self.performance_metrics['last_updated'] = datetime.now().isoformat()
+        logger.info(f"Updated performance metrics for {self.model_name}")
+    
+    def get_training_history(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        Get training history records.
+        
+        Args:
+            limit: Maximum number of records to return
+            
+        Returns:
+            List of training history records
+        """
+        if limit is None:
+            return self.training_history
+        return self.training_history[-limit:]
+    
+    def clear_training_history(self) -> None:
+        """Clear the training history."""
+        self.training_history.clear()
+        logger.info(f"Cleared training history for {self.model_name}")
+    
+    def is_fitted(self) -> bool:
+        """
+        Check if the model has been fitted.
+        
+        Returns:
+            True if the model is fitted
+        """
+        return self.fitted
+    
+    def get_model_size(self) -> Optional[int]:
+        """
+        Get the size of the model in bytes.
+        
+        Returns:
+            Model size in bytes or None if not available
+        """
+        if self.model_path and Path(self.model_path).exists():
+            return Path(self.model_path).stat().st_size
+        return None
+    
+    def __str__(self) -> str:
+        """String representation of the model."""
+        return f"{self.__class__.__name__}(name='{self.model_name}', fitted={self.fitted})"
+    
+    def __repr__(self) -> str:
+        """Detailed string representation of the model."""
+        return f"{self.__class__.__name__}(name='{self.model_name}', config={self.config}, fitted={self.fitted})" 

@@ -120,6 +120,9 @@ def initialize_system_modules() -> Dict[str, Any]:
         goal_tracker.generate_summary()
         module_status['goal_status'] = 'SUCCESS'
         log_status("Goal status module initialized")
+    except ImportError as e:
+        module_status['goal_status'] = f'NOT_AVAILABLE: {str(e)}'
+        log_status(f"Goal status module not available: {e}", 'WARNING')
     except Exception as e:
         module_status['goal_status'] = f'FAILED: {str(e)}'
         log_status(f"Goal status module: {e}", 'ERROR')
@@ -130,6 +133,9 @@ def initialize_system_modules() -> Dict[str, Any]:
         validator = DataValidator()
         module_status['data_validation'] = 'SUCCESS'
         log_status("Data validation module initialized")
+    except ImportError as e:
+        module_status['data_validation'] = f'NOT_AVAILABLE: {str(e)}'
+        log_status(f"Data validation module not available: {e}", 'WARNING')
     except Exception as e:
         module_status['data_validation'] = f'FAILED: {str(e)}'
         log_status(f"Data validation: {e}", 'ERROR')
@@ -140,6 +146,9 @@ def initialize_system_modules() -> Dict[str, Any]:
         consolidator = OptimizerConsolidator()
         module_status['optimizer_consolidator'] = 'SUCCESS'
         log_status("Optimizer consolidator module initialized")
+    except ImportError as e:
+        module_status['optimizer_consolidator'] = f'NOT_AVAILABLE: {str(e)}'
+        log_status(f"Optimizer consolidator module not available: {e}", 'WARNING')
     except Exception as e:
         module_status['optimizer_consolidator'] = f'FAILED: {str(e)}'
         log_status(f"Optimizer consolidator: {e}", 'ERROR')
@@ -150,6 +159,9 @@ def initialize_system_modules() -> Dict[str, Any]:
         market_analyzer = MarketAnalyzer()
         module_status['market_analysis'] = 'SUCCESS'
         log_status("Market analysis module initialized")
+    except ImportError as e:
+        module_status['market_analysis'] = f'NOT_AVAILABLE: {str(e)}'
+        log_status(f"Market analysis module not available: {e}", 'WARNING')
     except Exception as e:
         module_status['market_analysis'] = f'FAILED: {str(e)}'
         log_status(f"Market analysis: {e}", 'ERROR')
@@ -160,6 +172,9 @@ def initialize_system_modules() -> Dict[str, Any]:
         data_pipeline = DataPipeline()
         module_status['data_pipeline'] = 'SUCCESS'
         log_status("Data pipeline module initialized")
+    except ImportError as e:
+        module_status['data_pipeline'] = f'NOT_AVAILABLE: {str(e)}'
+        log_status(f"Data pipeline module not available: {e}", 'WARNING')
     except Exception as e:
         module_status['data_pipeline'] = f'FAILED: {str(e)}'
         log_status(f"Data pipeline: {e}", 'ERROR')
@@ -179,22 +194,27 @@ def display_system_status(module_status: Dict[str, Any]) -> Dict[str, Any]:
         st.sidebar.markdown("---")
         st.sidebar.subheader("🔧 System Status")
         
-        # Count successes and failures
+        # Count different status types
         success_count = sum(1 for status in module_status.values() if status == 'SUCCESS')
         failed_count = sum(1 for status in module_status.values() if 'FAILED' in str(status))
+        not_available_count = sum(1 for status in module_status.values() if 'NOT_AVAILABLE' in str(status))
         total_count = len(module_status)
         
         # Overall status
-        if failed_count == 0:
+        if failed_count == 0 and not_available_count == 0:
             st.sidebar.success(f"✅ All systems operational ({success_count}/{total_count})")
+        elif failed_count == 0:
+            st.sidebar.info(f"ℹ️ Core systems operational ({success_count}/{total_count}), {not_available_count} optional modules not available")
         else:
-            st.sidebar.warning(f"⚠️ System issues detected ({failed_count} failed, {success_count} operational)")
+            st.sidebar.warning(f"⚠️ System issues detected ({failed_count} failed, {success_count} operational, {not_available_count} not available)")
         
         # Detailed status
         with st.sidebar.expander("📊 Module Details"):
             for module, status in module_status.items():
                 if status == 'SUCCESS':
                     st.success(f"✅ {module.replace('_', ' ').title()}")
+                elif 'NOT_AVAILABLE' in str(status):
+                    st.info(f"ℹ️ {module.replace('_', ' ').title()} (not available)")
                 else:
                     st.error(f"❌ {module.replace('_', ' ').title()}: {status}")
         
@@ -208,6 +228,7 @@ def display_system_status(module_status: Dict[str, Any]) -> Dict[str, Any]:
             'timestamp': datetime.now().isoformat(),
             'success_count': success_count,
             'failed_count': failed_count,
+            'not_available_count': not_available_count,
             'total_count': total_count
         }
     except Exception as e:

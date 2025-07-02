@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 def calculate_sma(data: pd.Series, window: int, min_periods: Optional[int] = None) -> pd.Series:
-    """Calculate Simple Moving Average.
+    """
+    Calculate Simple Moving Average.
     
     Args:
         data: Price series
@@ -45,7 +46,8 @@ def calculate_sma(data: pd.Series, window: int, min_periods: Optional[int] = Non
         return pd.Series(index=data.index, dtype=float)
 
 def calculate_ema(data: pd.Series, span: int, adjust: bool = False) -> pd.Series:
-    """Calculate Exponential Moving Average.
+    """
+    Calculate Exponential Moving Average.
     
     Args:
         data: Price series
@@ -70,7 +72,8 @@ def calculate_ema(data: pd.Series, span: int, adjust: bool = False) -> pd.Series
         return pd.Series(index=data.index, dtype=float)
 
 def calculate_wma(data: pd.Series, window: int) -> pd.Series:
-    """Calculate Weighted Moving Average.
+    """
+    Calculate Weighted Moving Average.
     
     Args:
         data: Price series
@@ -101,7 +104,8 @@ def calculate_wma(data: pd.Series, window: int) -> pd.Series:
 # ============================================================================
 
 def calculate_rsi(data: pd.Series, window: int = 14) -> pd.Series:
-    """Calculate Relative Strength Index.
+    """
+    Calculate Relative Strength Index.
     
     Args:
         data: Price series
@@ -140,7 +144,8 @@ def calculate_rsi(data: pd.Series, window: int = 14) -> pd.Series:
         return pd.Series(index=data.index, dtype=float)
 
 def calculate_macd(data: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[pd.Series, pd.Series, pd.Series]:
-    """Calculate MACD (Moving Average Convergence Divergence).
+    """
+    Calculate MACD (Moving Average Convergence Divergence).
     
     Args:
         data: Price series
@@ -184,7 +189,8 @@ def calculate_macd(data: pd.Series, fast: int = 12, slow: int = 26, signal: int 
         return empty_series, empty_series, empty_series
 
 def calculate_stochastic(data: pd.DataFrame, k_window: int = 14, d_window: int = 3) -> Tuple[pd.Series, pd.Series]:
-    """Calculate Stochastic Oscillator.
+    """
+    Calculate Stochastic Oscillator.
     
     Args:
         data: DataFrame with 'high', 'low', 'close' columns
@@ -210,7 +216,6 @@ def calculate_stochastic(data: pd.DataFrame, k_window: int = 14, d_window: int =
         # Calculate %K
         lowest_low = data['low'].rolling(window=k_window).min()
         highest_high = data['high'].rolling(window=k_window).max()
-        
         k_percent = 100 * ((data['close'] - lowest_low) / (highest_high - lowest_low))
         
         # Calculate %D (SMA of %K)
@@ -228,7 +233,8 @@ def calculate_stochastic(data: pd.DataFrame, k_window: int = 14, d_window: int =
 # ============================================================================
 
 def calculate_bollinger_bands(data: pd.Series, window: int = 20, num_std: float = 2.0) -> Tuple[pd.Series, pd.Series, pd.Series]:
-    """Calculate Bollinger Bands.
+    """
+    Calculate Bollinger Bands.
     
     Args:
         data: Price series
@@ -242,25 +248,22 @@ def calculate_bollinger_bands(data: pd.Series, window: int = 20, num_std: float 
         if window <= 0:
             raise ValueError("Window must be positive")
         
-        if num_std <= 0:
-            raise ValueError("Standard deviation multiplier must be positive")
-        
         if len(data) < window:
             logger.warning(f"Insufficient data for Bollinger Bands: {len(data)} < {window}")
             empty_series = pd.Series(index=data.index, dtype=float)
             return empty_series, empty_series, empty_series
         
         # Calculate middle band (SMA)
-        middle_band = calculate_sma(data, window)
+        middle = calculate_sma(data, window)
         
         # Calculate standard deviation
         std = data.rolling(window=window).std()
         
         # Calculate upper and lower bands
-        upper_band = middle_band + (std * num_std)
-        lower_band = middle_band - (std * num_std)
+        upper = middle + (num_std * std)
+        lower = middle - (num_std * std)
         
-        return upper_band, middle_band, lower_band
+        return upper, middle, lower
         
     except Exception as e:
         logger.error(f"Error calculating Bollinger Bands: {e}")
@@ -268,7 +271,8 @@ def calculate_bollinger_bands(data: pd.Series, window: int = 20, num_std: float 
         return empty_series, empty_series, empty_series
 
 def calculate_atr(data: pd.DataFrame, window: int = 14) -> pd.Series:
-    """Calculate Average True Range.
+    """
+    Calculate Average True Range.
     
     Args:
         data: DataFrame with 'high', 'low', 'close' columns
@@ -310,7 +314,8 @@ def calculate_atr(data: pd.DataFrame, window: int = 14) -> pd.Series:
 # ============================================================================
 
 def calculate_volume_sma(data: pd.Series, window: int = 20) -> pd.Series:
-    """Calculate Volume Simple Moving Average.
+    """
+    Calculate Volume Simple Moving Average.
     
     Args:
         data: Volume series
@@ -320,13 +325,22 @@ def calculate_volume_sma(data: pd.Series, window: int = 20) -> pd.Series:
         Volume SMA series
     """
     try:
+        if window <= 0:
+            raise ValueError("Window must be positive")
+        
+        if len(data) < window:
+            logger.warning(f"Insufficient data for Volume SMA: {len(data)} < {window}")
+            return pd.Series(index=data.index, dtype=float)
+        
         return calculate_sma(data, window)
+        
     except Exception as e:
         logger.error(f"Error calculating Volume SMA: {e}")
         return pd.Series(index=data.index, dtype=float)
 
 def calculate_obv(data: pd.DataFrame) -> pd.Series:
-    """Calculate On-Balance Volume.
+    """
+    Calculate On-Balance Volume.
     
     Args:
         data: DataFrame with 'close', 'volume' columns
@@ -339,11 +353,15 @@ def calculate_obv(data: pd.DataFrame) -> pd.Series:
         if not all(col in data.columns for col in required_cols):
             raise ValueError(f"Data must contain columns: {required_cols}")
         
+        if len(data) < 2:
+            logger.warning("Insufficient data for OBV calculation")
+            return pd.Series(index=data.index, dtype=float)
+        
         # Calculate price changes
         price_change = data['close'].diff()
         
         # Initialize OBV
-        obv = pd.Series(index=data.index, dtype=float)
+        obv = pd.Series(0.0, index=data.index)
         obv.iloc[0] = data['volume'].iloc[0]
         
         # Calculate OBV
@@ -366,7 +384,8 @@ def calculate_obv(data: pd.DataFrame) -> pd.Series:
 # ============================================================================
 
 def calculate_adx(data: pd.DataFrame, window: int = 14) -> Tuple[pd.Series, pd.Series, pd.Series]:
-    """Calculate Average Directional Index.
+    """
+    Calculate Average Directional Index.
     
     Args:
         data: DataFrame with 'high', 'low', 'close' columns
@@ -391,7 +410,7 @@ def calculate_adx(data: pd.DataFrame, window: int = 14) -> Tuple[pd.Series, pd.S
         # Calculate True Range
         atr = calculate_atr(data, window)
         
-        # Calculate Directional Movement
+        # Calculate directional movement
         high_diff = data['high'].diff()
         low_diff = data['low'].diff()
         
@@ -420,7 +439,8 @@ def calculate_adx(data: pd.DataFrame, window: int = 14) -> Tuple[pd.Series, pd.S
         return empty_series, empty_series, empty_series
 
 def calculate_cci(data: pd.DataFrame, window: int = 20) -> pd.Series:
-    """Calculate Commodity Channel Index.
+    """
+    Calculate Commodity Channel Index.
     
     Args:
         data: DataFrame with 'high', 'low', 'close' columns
@@ -466,7 +486,8 @@ def calculate_cci(data: pd.DataFrame, window: int = 20) -> pd.Series:
 # ============================================================================
 
 def is_bullish(data: pd.DataFrame, strategy: str = 'sma', **kwargs) -> pd.Series:
-    """Determine if market is bullish based on technical indicators.
+    """
+    Determine if market is bullish based on technical indicators.
     
     Args:
         data: DataFrame with price data
@@ -506,7 +527,8 @@ def is_bullish(data: pd.DataFrame, strategy: str = 'sma', **kwargs) -> pd.Series
         return pd.Series(False, index=data.index)
 
 def get_support_resistance(data: pd.DataFrame, window: int = 20) -> Tuple[pd.Series, pd.Series]:
-    """Calculate support and resistance levels.
+    """
+    Calculate support and resistance levels.
     
     Args:
         data: DataFrame with 'high', 'low' columns
@@ -540,7 +562,8 @@ def get_support_resistance(data: pd.DataFrame, window: int = 20) -> Tuple[pd.Ser
         return empty_series, empty_series
 
 def calculate_all_indicators(data: pd.DataFrame) -> Dict[str, pd.Series]:
-    """Calculate all technical indicators for a dataset.
+    """
+    Calculate all technical indicators for a dataset.
     
     Args:
         data: DataFrame with OHLCV data
@@ -594,4 +617,44 @@ def calculate_all_indicators(data: pd.DataFrame) -> Dict[str, pd.Series]:
         
     except Exception as e:
         logger.error(f"Error calculating all indicators: {e}")
+        return {}
+
+def get_indicator_signals(data: pd.DataFrame, indicators: Dict[str, pd.Series]) -> Dict[str, pd.Series]:
+    """
+    Generate trading signals from technical indicators.
+    
+    Args:
+        data: DataFrame with price data
+        indicators: Dictionary of calculated indicators
+        
+    Returns:
+        Dictionary of trading signals
+    """
+    try:
+        signals = {}
+        
+        # RSI signals
+        if 'rsi' in indicators:
+            signals['rsi_oversold'] = indicators['rsi'] < 30
+            signals['rsi_overbought'] = indicators['rsi'] > 70
+        
+        # MACD signals
+        if 'macd' in indicators and 'macd_signal' in indicators:
+            signals['macd_bullish'] = indicators['macd'] > indicators['macd_signal']
+            signals['macd_bearish'] = indicators['macd'] < indicators['macd_signal']
+        
+        # Bollinger Bands signals
+        if 'bb_upper' in indicators and 'bb_lower' in indicators:
+            signals['bb_upper_breakout'] = data['close'] > indicators['bb_upper']
+            signals['bb_lower_breakout'] = data['close'] < indicators['bb_lower']
+        
+        # Moving average signals
+        if 'sma_20' in indicators and 'sma_50' in indicators:
+            signals['sma_bullish'] = indicators['sma_20'] > indicators['sma_50']
+            signals['sma_bearish'] = indicators['sma_20'] < indicators['sma_50']
+        
+        return signals
+        
+    except Exception as e:
+        logger.error(f"Error generating indicator signals: {e}")
         return {} 

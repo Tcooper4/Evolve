@@ -363,4 +363,198 @@ class DataListener:
             
         except Exception as e:
             logger.error(f"Error resuming trading: {e}")
-            return {'success': False, 'error': str(e), 'timestamp': time.time()} 
+            return {'success': False, 'error': str(e), 'timestamp': time.time()}
+
+
+class RealTimeDataFeed:
+    """Real-time data feed for streaming market data.
+    
+    This is a compatibility wrapper around DataListener for backward compatibility.
+    """
+    
+    def __init__(self, symbols: List[str] = None, **kwargs):
+        """Initialize real-time data feed.
+        
+        Args:
+            symbols: List of symbols to monitor
+            **kwargs: Additional arguments passed to DataListener
+        """
+        self.symbols = symbols or ['BTC', 'ETH', 'AAPL', 'MSFT']
+        self.data_listener = DataListener(**kwargs)
+        self.is_running = False
+        
+    def start(self, **kwargs) -> Dict[str, Any]:
+        """Start the real-time data feed.
+        
+        Args:
+            **kwargs: Additional arguments
+            
+        Returns:
+            Dictionary with start status
+        """
+        try:
+            result = self.data_listener.start(
+                symbols=self.symbols,
+                news_keywords=kwargs.get('news_keywords', ['crypto', 'stock', 'market']),
+                binance=kwargs.get('binance', True),
+                polygon=kwargs.get('polygon', False),
+                news=kwargs.get('news', True)
+            )
+            
+            if result.get('success'):
+                self.is_running = True
+                
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error starting real-time data feed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': time.time()
+            }
+    
+    def stop(self) -> Dict[str, Any]:
+        """Stop the real-time data feed.
+        
+        Returns:
+            Dictionary with stop status
+        """
+        try:
+            result = self.data_listener.stop()
+            if result.get('success'):
+                self.is_running = False
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error stopping real-time data feed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': time.time()
+            }
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get status of the real-time data feed.
+        
+        Returns:
+            Dictionary with status information
+        """
+        try:
+            status = self.data_listener.get_status()
+            if status.get('success'):
+                status['result']['is_running'] = self.is_running
+                status['result']['symbols'] = self.symbols
+            return status
+            
+        except Exception as e:
+            logger.error(f"Error getting real-time data feed status: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': time.time()
+            }
+
+
+class MarketDataStream:
+    """Market data stream for high-frequency data processing.
+    
+    This is a compatibility wrapper around DataListener for backward compatibility.
+    """
+    
+    def __init__(self, symbols: List[str] = None, **kwargs):
+        """Initialize market data stream.
+        
+        Args:
+            symbols: List of symbols to stream
+            **kwargs: Additional arguments passed to DataListener
+        """
+        self.symbols = symbols or ['BTC', 'ETH', 'AAPL', 'MSFT']
+        self.data_listener = DataListener(**kwargs)
+        self.is_active = False
+        
+    def connect(self, **kwargs) -> Dict[str, Any]:
+        """Connect to market data stream.
+        
+        Args:
+            **kwargs: Additional arguments
+            
+        Returns:
+            Dictionary with connection status
+        """
+        try:
+            result = self.data_listener.start(
+                symbols=self.symbols,
+                news_keywords=kwargs.get('news_keywords', ['market', 'trading']),
+                binance=kwargs.get('binance', True),
+                polygon=kwargs.get('polygon', False),
+                news=kwargs.get('news', False)
+            )
+            
+            if result.get('success'):
+                self.is_active = True
+                
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error connecting to market data stream: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': time.time()
+            }
+    
+    def disconnect(self) -> Dict[str, Any]:
+        """Disconnect from market data stream.
+        
+        Returns:
+            Dictionary with disconnection status
+        """
+        try:
+            result = self.data_listener.stop()
+            if result.get('success'):
+                self.is_active = False
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error disconnecting from market data stream: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': time.time()
+            }
+    
+    def is_connected(self) -> bool:
+        """Check if connected to market data stream.
+        
+        Returns:
+            True if connected
+        """
+        return self.is_active
+    
+    def get_stream_info(self) -> Dict[str, Any]:
+        """Get information about the market data stream.
+        
+        Returns:
+            Dictionary with stream information
+        """
+        try:
+            status = self.data_listener.get_status()
+            if status.get('success'):
+                info = status['result']
+                info['symbols'] = self.symbols
+                info['is_connected'] = self.is_active
+                return {
+                    'success': True,
+                    'result': info,
+                    'timestamp': time.time()
+                }
+            return status
+            
+        except Exception as e:
+            logger.error(f"Error getting market data stream info: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': time.time()
+            } 
