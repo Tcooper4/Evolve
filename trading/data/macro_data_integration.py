@@ -666,3 +666,42 @@ macro_data_integration = MacroDataIntegration()
 def get_macro_data_integration() -> MacroDataIntegration:
     """Get the global macro data integration instance."""
     return macro_data_integration
+
+# Backward compatibility aliases
+MacroDataIntegrator = MacroDataIntegration
+
+class EconomicIndicatorLoader:
+    """Economic indicator loader for backward compatibility.
+    
+    This is a compatibility wrapper around MacroDataIntegration for backward compatibility.
+    """
+    
+    def __init__(self, **kwargs):
+        """Initialize economic indicator loader.
+        
+        Args:
+            **kwargs: Arguments passed to MacroDataIntegration
+        """
+        self.macro_integration = MacroDataIntegration(**kwargs)
+    
+    def get_indicators(self, **kwargs):
+        """Get economic indicators.
+        
+        Args:
+            **kwargs: Arguments passed to get_macro_indicators
+            
+        Returns:
+            List of macro indicators
+        """
+        return self.macro_integration.get_macro_indicators(**kwargs)
+    
+    def analyze_environment(self, **kwargs):
+        """Analyze macro environment.
+        
+        Args:
+            **kwargs: Arguments passed to analyze_macro_environment
+            
+        Returns:
+            Macro environment analysis
+        """
+        return self.macro_integration.analyze_macro_environment(**kwargs)
