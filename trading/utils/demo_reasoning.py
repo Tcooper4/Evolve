@@ -6,9 +6,13 @@ Demonstrates the reasoning logger and display components with sample decisions.
 
 import time
 import random
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 import sys
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -175,7 +179,7 @@ def create_sample_model_selection_decision():
 
 def demo_basic_logging():
     """Demonstrate basic decision logging."""
-    print("=== Basic Decision Logging Demo ===")
+    logger.info("=== Basic Decision Logging Demo ===")
     
     # Initialize reasoning logger
     reasoning_logger = ReasoningLogger()
@@ -192,178 +196,159 @@ def demo_basic_logging():
     for decision_data in decisions:
         decision_id = reasoning_logger.log_decision(**decision_data)
         decision_ids.append(decision_id)
-        print(f"✅ Logged decision: {decision_id}")
+        logger.info(f"✅ Logged decision: {decision_id}")
     
     return {'success': True, 'result': reasoning_logger, decision_ids, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 def demo_display_components():
     """Demonstrate display components."""
-    print("\n=== Display Components Demo ===")
+    logger.info("\n=== Display Components Demo ===")
     
-    reasoning_logger, decision_ids = demo_basic_logging()
+    reasoning_logger = ReasoningLogger()
     display = ReasoningDisplay(reasoning_logger)
     
+    # Log a sample decision
+    decision_data = create_sample_forecast_decision()
+    decision_id = reasoning_logger.log_decision(**decision_data)
+    
     # Display statistics
-    print("\n📊 Statistics:")
-    display.display_statistics_terminal()
+    logger.info("\n📊 Statistics:")
+    stats = reasoning_logger.get_statistics()
+    logger.info(f"Total decisions: {stats['total_decisions']}")
     
     # Display recent decisions
-    print("\n📋 Recent Decisions:")
-    display.display_recent_decisions_terminal(limit=5)
+    logger.info("\n📋 Recent Decisions:")
+    display.display_recent_decisions_terminal(limit=3)
     
     # Display specific decision
-    if decision_ids:
-        print(f"\n📄 Specific Decision ({decision_ids[0]}):")
-        decision = reasoning_logger.get_decision(decision_ids[0])
-        if decision:
-            display.display_decision_terminal(decision)
+    decision = reasoning_logger.get_decision(decision_id)
+    if decision:
+        logger.info(f"\n📄 Specific Decision ({decision_ids[0]}):")
+        display.display_decision_terminal(decision)
 
 def demo_real_time_updates():
-    """Demonstrate real-time updates."""
-    print("\n=== Real-time Updates Demo ===")
+    """Demonstrate real-time decision logging."""
+    logger.info("\n=== Real-time Updates Demo ===")
     
     reasoning_logger = ReasoningLogger()
     
     # Simulate real-time decision logging
     symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'NVDA']
-    agents = ['LSTMForecaster', 'RSIStrategy', 'ModelSelector', 'RiskManager']
+    agents = ['LSTMForecaster', 'RSIStrategy', 'ModelSelector']
     
-    print("Simulating real-time decision logging...")
+    logger.info("Simulating real-time decision logging...")
     
     for i in range(5):
         # Create random decision
+        symbol = random.choice(symbols)
+        agent = random.choice(agents)
+        
         decision_data = {
-            'agent_name': random.choice(agents),
+            'agent_name': agent,
             'decision_type': random.choice(list(DecisionType)),
-            'action_taken': f"Action {i+1} for {random.choice(symbols)}",
+            'action_taken': f'Action for {symbol} at {datetime.now().strftime("%H:%M:%S")}',
             'context': {
-                'symbol': random.choice(symbols),
+                'symbol': symbol,
                 'timeframe': '1h',
-                'market_conditions': {'trend': random.choice(['bullish', 'bearish', 'neutral'])},
-                'available_data': ['price', 'volume'],
-                'constraints': {},
-                'user_preferences': {}
+                'market_conditions': {'trend': random.choice(['bullish', 'bearish', 'neutral'])}
             },
             'reasoning': {
-                'primary_reason': f'Reason for action {i+1}',
-                'supporting_factors': [f'Factor {j+1}' for j in range(3)],
-                'alternatives_considered': [f'Alternative {j+1}' for j in range(2)],
-                'risks_assessed': [f'Risk {j+1}' for j in range(2)],
-                'confidence_explanation': 'Confidence explanation',
+                'primary_reason': f'Random decision for {symbol}',
+                'supporting_factors': ['Factor 1', 'Factor 2'],
+                'alternatives_considered': ['Alternative 1'],
+                'risks_assessed': ['Risk 1'],
                 'expected_outcome': 'Expected outcome'
             },
             'confidence_level': random.choice(list(ConfidenceLevel)),
-            'metadata': {'iteration': i+1}
+            'metadata': {'iteration': i + 1}
         }
         
         decision_id = reasoning_logger.log_decision(**decision_data)
-        print(f"🔄 Logged real-time decision {i+1}: {decision_id}")
-        time.sleep(1)  # Simulate time delay
+        logger.info(f"🔄 Logged real-time decision {i+1}: {decision_id}")
+        time.sleep(0.5)
     
     # Show final statistics
-    print("\n📊 Final Statistics:")
     stats = reasoning_logger.get_statistics()
-    print(f"Total decisions: {stats['total_decisions']}")
-    print(f"Active agents: {len(stats['decisions_by_agent'])}")
+    logger.info("\n📊 Final Statistics:")
+    logger.info(f"Total decisions: {stats['total_decisions']}")
+    logger.info(f"Active agents: {len(stats['decisions_by_agent'])}")
 
 def demo_streamlit_components():
-    """Demonstrate Streamlit components (simulated)."""
-    print("\n=== Streamlit Components Demo ===")
+    """Demonstrate Streamlit components."""
+    logger.info("\n=== Streamlit Components Demo ===")
     
     reasoning_logger = ReasoningLogger()
     display = ReasoningDisplay(reasoning_logger)
     
-    # Create some sample decisions first
-    decisions = [
-        create_sample_forecast_decision(),
-        create_sample_strategy_decision(),
-        create_sample_model_selection_decision()
-    ]
-    
-    for decision_data in decisions:
+    # Log some sample decisions
+    for _ in range(3):
+        decision_data = create_sample_forecast_decision()
         reasoning_logger.log_decision(**decision_data)
     
-    print("Streamlit components would display:")
-    print("1. 📊 Statistics dashboard with charts")
-    print("2. 📋 Recent decisions table")
-    print("3. 🔴 Live decision feed")
-    print("4. 📄 Detailed decision viewer")
-    print("5. 🤖 Sidebar controls for filtering")
+    logger.info("Streamlit components would display:")
+    logger.info("1. 📊 Statistics dashboard with charts")
+    logger.info("2. 📋 Recent decisions table")
+    logger.info("3. 🔴 Live decision feed")
+    logger.info("4. 📄 Detailed decision viewer")
+    logger.info("5. 🤖 Sidebar controls for filtering")
     
-    print("\nTo run Streamlit dashboard:")
-    print("streamlit run trading/utils/reasoning_display.py")
+    logger.info("\nTo run Streamlit dashboard:")
+    logger.info("streamlit run trading/utils/reasoning_display.py")
 
 def demo_search_and_filter():
-    """Demonstrate search and filtering capabilities."""
-    print("\n=== Search and Filter Demo ===")
+    """Demonstrate search and filter functionality."""
+    logger.info("\n=== Search and Filter Demo ===")
     
     reasoning_logger = ReasoningLogger()
     
-    # Create decisions with different characteristics
-    decision_variants = [
-        {
-            'agent_name': 'LSTMForecaster',
-            'decision_type': DecisionType.FORECAST,
-            'action_taken': 'Forecast for AAPL',
-            'context': {'symbol': 'AAPL', 'timeframe': '1h'},
-            'reasoning': {'primary_reason': 'Technical analysis'},
-            'confidence_level': ConfidenceLevel.HIGH
-        },
-        {
-            'agent_name': 'RSIStrategy',
-            'decision_type': DecisionType.STRATEGY,
-            'action_taken': 'Strategy for GOOGL',
-            'context': {'symbol': 'GOOGL', 'timeframe': '4h'},
-            'reasoning': {'primary_reason': 'RSI oversold'},
-            'confidence_level': ConfidenceLevel.MEDIUM
-        },
-        {
-            'agent_name': 'ModelSelector',
-            'decision_type': DecisionType.MODEL_SELECTION,
-            'action_taken': 'Model selection for TSLA',
-            'context': {'symbol': 'TSLA', 'timeframe': '1d'},
-            'reasoning': {'primary_reason': 'Performance comparison'},
-            'confidence_level': ConfidenceLevel.HIGH
-        }
-    ]
+    # Log decisions from different agents
+    agents = ['LSTMForecaster', 'RSIStrategy', 'ModelSelector']
+    for agent in agents:
+        for _ in range(2):
+            decision_data = create_sample_forecast_decision()
+            decision_data['agent_name'] = agent
+            reasoning_logger.log_decision(**decision_data)
     
-    for decision_data in decision_variants:
-        reasoning_logger.log_decision(**decision_data)
-    
-    # Demonstrate filtering
-    print("Filtering by agent:")
+    # Test filtering by agent
+    logger.info("Filtering by agent:")
     lstm_decisions = reasoning_logger.get_agent_decisions('LSTMForecaster')
-    print(f"LSTMForecaster decisions: {len(lstm_decisions)}")
+    logger.info(f"LSTMForecaster decisions: {len(lstm_decisions)}")
     
-    print("\nFiltering by decision type:")
+    # Test filtering by decision type
+    logger.info("\nFiltering by decision type:")
     forecast_decisions = reasoning_logger.get_decisions_by_type(DecisionType.FORECAST)
-    print(f"Forecast decisions: {len(forecast_decisions)}")
+    logger.info(f"Forecast decisions: {len(forecast_decisions)}")
     
-    print("\nGetting explanations:")
-    if lstm_decisions:
-        explanation = reasoning_logger.get_explanation(lstm_decisions[0].decision_id)
-        if explanation:
-            print(f"Explanation preview: {explanation[:100]}...")
+    # Test getting explanations
+    logger.info("\nGetting explanations:")
+    if forecast_decisions:
+        decision_id = forecast_decisions[0].decision_id
+        explanation = reasoning_logger.get_explanation(decision_id)
+        logger.info(f"Explanation preview: {explanation[:100]}...")
 
 def main():
-    """Main demo function."""
-    print("🤖 Reasoning Logger and Display Demo")
-    print("=" * 50)
+    """Run the complete demo."""
+    logger.info("🤖 Reasoning Logger and Display Demo")
+    logger.info("=" * 50)
     
-    # Run all demos
-    demo_basic_logging()
-    demo_display_components()
-    demo_real_time_updates()
-    demo_streamlit_components()
-    demo_search_and_filter()
-    
-    print("\n" + "=" * 50)
-    print("✅ Demo completed!")
-    print("\n📚 Next steps:")
-    print("1. Integrate with your trading agents")
-    print("2. Start the reasoning service: python trading/utils/launch_reasoning_service.py")
-    print("3. Run Streamlit dashboard: streamlit run trading/utils/reasoning_display.py")
-    print("4. Monitor decisions in real-time")
+    try:
+        # Run all demos
+        demo_basic_logging()
+        demo_display_components()
+        demo_real_time_updates()
+        demo_streamlit_components()
+        demo_search_and_filter()
+        
+        logger.info("\n" + "=" * 50)
+        logger.info("✅ Demo completed!")
+        logger.info("\n📚 Next steps:")
+        logger.info("1. Integrate with your trading agents")
+        logger.info("2. Start the reasoning service: python trading/utils/launch_reasoning_service.py")
+        logger.info("3. Run Streamlit dashboard: streamlit run trading/utils/reasoning_display.py")
+        logger.info("4. Monitor decisions in real-time")
+        
+    except Exception as e:
+        logger.error(f"Demo failed: {e}")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main() 

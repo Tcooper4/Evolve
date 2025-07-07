@@ -163,8 +163,8 @@ class ModelDiscoveryAgent:
             days_old = (datetime.now() - pub_date).days
             if days_old < 365 * 2:  # Within 2 years
                 relevance_score += 0.2
-        except:
-            pass
+        except Exception as e:
+            logging.warning(f"Error parsing published_date: {e}")
         
         # Normalize score
         relevance_score = min(1.0, relevance_score)

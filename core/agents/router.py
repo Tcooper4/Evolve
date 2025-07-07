@@ -473,4 +473,4 @@ if __name__ == "__main__":
     # Test router
     router = RouterAgent()
     result = router.run("Forecast the price of AAPL for the next 30 days")
-    print(f"Router result: {result}")
+    logger.info(f"Router result: {result}")

@@ -14,8 +14,8 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pathlib import Path
 from trading.base_agent import BaseAgent
-from trading.task_manager import TaskManager
-from trading.task_handlers import TaskHandlerFactory
+from .task_manager import TaskManager
+from .task_handlers import TaskHandlerFactory
 
 class TaskAgent(BaseAgent):
     """Agent responsible for managing and executing tasks."""
@@ -24,7 +24,9 @@ class TaskAgent(BaseAgent):
         """Initialize the task agent."""
         super().__init__(config)
         self.task_manager = TaskManager(config)
-        self.setup_logging()def setup_logging(self):
+        self.setup_logging()
+
+    def setup_logging(self):
         """Configure logging for task management."""
         log_path = Path("logs/tasks")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -39,7 +41,6 @@ class TaskAgent(BaseAgent):
         )
         self.logger = logging.getLogger(__name__)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize the task agent."""
         try:

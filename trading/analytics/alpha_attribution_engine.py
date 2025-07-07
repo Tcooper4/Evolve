@@ -618,7 +618,8 @@ class AlphaAttributionEngine:
                     
                     # Alpha is the intercept
                     alphas.iloc[i] = model.intercept_
-                except:
+                except (ValueError, TypeError, IndexError) as e:
+                    self.logger.warning(f"Error calculating alpha for window {i}: {e}")
                     alphas.iloc[i] = np.nan
             
             return alphas.dropna()

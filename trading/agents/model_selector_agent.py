@@ -359,7 +359,8 @@ class ModelSelectorAgent(BaseAgent):
             y = prices.values
             slope = np.polyfit(x, y, 1)[0]
             return slope / prices.mean()  # Normalized slope
-        except:
+        except (ValueError, TypeError, IndexError) as e:
+            logger.warning(f"Error calculating trend strength: {e}")
             return 0.0
             
     def _calculate_mean_reversion_strength(self, returns: pd.Series) -> float:
@@ -367,7 +368,8 @@ class ModelSelectorAgent(BaseAgent):
         try:
             autocorr = returns.autocorr(lag=1)
             return abs(autocorr) if not pd.isna(autocorr) else 0.0
-        except:
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.warning(f"Error calculating mean reversion strength: {e}")
             return 0.0
             
     def select_model(self, 

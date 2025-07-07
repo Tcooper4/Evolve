@@ -19,7 +19,7 @@ import pickle
 # Local imports
 from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentResult
 from trading.models.lstm_model import LSTMForecaster
-from trading.models.xgboost_model import XGBoostForecaster
+from trading.models.xgboost_model import XGBoostModel
 from trading.models.ensemble_model import EnsembleModel
 from trading.data.preprocessing import DataPreprocessor
 from trading.feature_engineering.feature_engineer import FeatureEngineering
@@ -365,7 +365,7 @@ class ModelBuilderAgent(BaseAgent):
         }
         
         # Initialize and train model
-        model = XGBoostForecaster(hyperparams)
+        model = XGBoostModel(hyperparams)
         
         # Split data
         split_idx = int(len(X) * (1 - request.validation_split))

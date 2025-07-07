@@ -26,10 +26,11 @@ except ImportError:
 
 # Mock model imports
 try:
-    from models.tcn_model import TCNModel
+    from trading.models.tcn_model import TCNModel
     from utils.model_utils import load_model_state
 except ImportError:
-    TCNModel = pytest.Mock()
+    from unittest.mock import Mock
+    TCNModel = Mock()
     load_model_state = lambda x: {}
 
 class TestTCNModel:

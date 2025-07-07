@@ -14,9 +14,9 @@ from typing import Dict, List, Optional, Any, Type
 from datetime import datetime
 from pathlib import Path
 from trading.base_agent import BaseAgent
-from trading.task_agent import TaskAgent
-from trading.monitor_agent import MonitorAgent
-from trading.alert_agent import AlertAgent
+from .task_agent import TaskAgent
+from .monitor_agent import MonitorAgent
+from .alert_agent import AlertAgent
 
 class OrchestratorAgent(BaseAgent):
     """Agent responsible for system orchestration and coordination."""

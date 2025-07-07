@@ -3,7 +3,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from trading.forecasting.arima_model import ARIMAModel
+from trading.models.arima_model import ARIMAModel
 
 class TestARIMAModel:
     @pytest.fixture

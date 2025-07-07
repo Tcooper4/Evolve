@@ -95,7 +95,9 @@ class SecurityManager:
             ssl=os.getenv("REDIS_SSL", "true").lower() == "true"
         )
         self.security = HTTPBearer()
-        self.validator = InputValidator()def setup_logging(self):
+        self.validator = InputValidator()
+        
+    def setup_logging(self):
         """Configure logging for security manager."""
         log_path = Path("logs/security")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -315,12 +317,12 @@ class SecurityManager:
         return decorator
 
 # Create a global security manager instance
-security_manager = SecurityManager()
+# security_manager = SecurityManager()
 
 # Export commonly used decorators
-require_permission = security_manager.require_permission
-require_role = security_manager.require_role
-rate_limit = security_manager.rate_limit
-validate_input = security_manager.validate_input
-require_csrf = security_manager.require_csrf
-get_current_user = security_manager.get_current_user 
+# require_permission = security_manager.require_permission
+# require_role = security_manager.require_role
+# rate_limit = security_manager.rate_limit
+# validate_input = security_manager.validate_input
+# require_csrf = security_manager.require_csrf
+# get_current_user = security_manager.get_current_user 

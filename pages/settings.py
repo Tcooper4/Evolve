@@ -141,15 +141,82 @@ def render_settings_page():
     
     with col1:
         if st.button("Save Configuration"):
-            # TODO: Implement configuration saving
-            raise NotImplementedError('Pending feature')
-            st.success("Configuration saved successfully!")
+            try:
+                import json
+                import os
+                from pathlib import Path
+                
+                # Create config directory if it doesn't exist
+                config_dir = Path("config")
+                config_dir.mkdir(exist_ok=True)
+                
+                # Collect all session state settings
+                config_data = {
+                    "api_config": {
+                        "openai_api_key": st.session_state.get("openai_api_key", ""),
+                        "alpha_vantage_api_key": st.session_state.get("alpha_vantage_api_key", "")
+                    },
+                    "model_config": {
+                        "default_model": st.session_state.get("default_model", "LSTM"),
+                        "sequence_length": st.session_state.get("sequence_length", 30)
+                    },
+                    "risk_config": {
+                        "max_position_size": st.session_state.get("max_position_size", 10),
+                        "stop_loss": st.session_state.get("stop_loss", 2.0),
+                        "take_profit": st.session_state.get("take_profit", 4.0)
+                    },
+                    "data_config": {
+                        "data_source": st.session_state.get("data_source", "Alpha Vantage"),
+                        "update_frequency": st.session_state.get("update_frequency", "5 minutes")
+                    },
+                    "system_config": {
+                        "enable_caching": st.session_state.get("enable_caching", True),
+                        "cache_ttl": st.session_state.get("cache_ttl", 300),
+                        "log_level": st.session_state.get("log_level", "INFO"),
+                        "enable_debug": st.session_state.get("enable_debug", False)
+                    },
+                    "timestamp": datetime.now().isoformat()
+                }
+                
+                # Save to file
+                config_file = config_dir / "user_settings.json"
+                with open(config_file, 'w') as f:
+                    json.dump(config_data, f, indent=2)
+                
+                st.success(f"Configuration saved successfully to {config_file}!")
+                
+            except Exception as e:
+                st.error(f"Error saving configuration: {e}")
     
     with col2:
         if st.button("Reset to Defaults"):
-            # TODO: Implement configuration reset
-            raise NotImplementedError('Pending feature')
-            st.success("Configuration reset to defaults!")
+            try:
+                # Reset all session state to defaults
+                defaults = {
+                    "openai_api_key": "",
+                    "alpha_vantage_api_key": "",
+                    "default_model": "LSTM",
+                    "sequence_length": 30,
+                    "max_position_size": 10,
+                    "stop_loss": 2.0,
+                    "take_profit": 4.0,
+                    "data_source": "Alpha Vantage",
+                    "update_frequency": "5 minutes",
+                    "enable_caching": True,
+                    "cache_ttl": 300,
+                    "log_level": "INFO",
+                    "enable_debug": False
+                }
+                
+                # Update session state
+                for key, value in defaults.items():
+                    st.session_state[key] = value
+                
+                st.success("Configuration reset to defaults!")
+                st.rerun()  # Refresh the page to show updated values
+                
+            except Exception as e:
+                st.error(f"Error resetting configuration: {e}")
 
 def main():
     """Main function for the settings page."""

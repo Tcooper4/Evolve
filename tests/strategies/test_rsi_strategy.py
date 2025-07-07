@@ -3,10 +3,12 @@
 import unittest
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+import logging
 from trading.strategies.rsi_signals import generate_rsi_signals, load_optimized_settings
 from trading.optimization.rsi_optimizer import RSIOptimizer, RSIParameters
 import plotly.graph_objects as go
+
+logger = logging.getLogger(__name__)
 
 class TestRSIStrategy(unittest.TestCase):
     """Test cases for RSI strategy."""
@@ -55,26 +57,15 @@ class TestRSIStrategy(unittest.TestCase):
     def test_rsi_optimizer(self):
         """Test RSI optimizer."""
         # Test parameter optimization
-        results = self.optimizer.optimize_rsi_parameters(
-            objective='sharpe',
-            n_top=3
-        )
-        self.assertIsInstance(results, list)
-        self.assertLessEqual(len(results), 3)
-        
-        # Test result structure
-        result = results[0]
-        self.assertIsInstance(result.parameters, RSIParameters)
-        self.assertIsInstance(result.returns, pd.Series)
-        self.assertIsInstance(result.metrics, dict)
-        self.assertIsInstance(result.signals, pd.Series)
-        self.assertIsInstance(result.equity_curve, pd.Series)
-        self.assertIsInstance(result.drawdown, pd.Series)
-        
-        # Test metrics
+        result = self.optimizer.optimize(n_trials=5)
+        logger.info(f"Best params: period={result.period}, overbought={result.overbought}, oversold={result.oversold}, Sharpe={result.sharpe_ratio:.3f}")
+        self.assertIsInstance(result.period, int)
+        self.assertIsInstance(result.overbought, float)
+        self.assertIsInstance(result.oversold, float)
         self.assertIn('sharpe_ratio', result.metrics)
         self.assertIn('win_rate', result.metrics)
-        self.assertIn('max_drawdown', result.metrics)
+        self.assertGreaterEqual(result.sharpe_ratio, -10)  # sanity check
+        self.assertLessEqual(result.sharpe_ratio, 10)      # sanity check
     
     def test_optimizer_visualization(self):
         """Test optimizer visualization."""

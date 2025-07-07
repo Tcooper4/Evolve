@@ -24,7 +24,9 @@ class DocumentationAgent(BaseAgent):
         """Initialize the documentation agent."""
         super().__init__(config)
         self.docs_path = Path(config.get("docs_path", "docs"))
-        self.setup_logging()def setup_logging(self):
+        self.setup_logging()
+        
+    def setup_logging(self):
         """Configure logging for documentation."""
         log_path = Path("logs/documentation")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -39,7 +41,6 @@ class DocumentationAgent(BaseAgent):
         )
         self.logger = logging.getLogger(__name__)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize the documentation agent."""
         try:

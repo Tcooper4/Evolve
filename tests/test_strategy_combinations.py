@@ -19,9 +19,9 @@ from trading.strategies.bollinger_strategy import BollingerStrategy, BollingerCo
 from trading.strategies.macd_strategy import MACDStrategy
 from trading.strategies.sma_strategy import SMAStrategy
 from trading.strategies.rsi_signals import generate_rsi_signals
-from trading.strategies.hybrid_engine import HybridStrategyEngine
+from trading.strategies.hybrid_engine import HybridEngine as HybridStrategyEngine
 from trading.strategies.strategy_manager import StrategyManager
-from trading.strategies.parameter_validator import ParameterValidator
+from trading.strategies.parameter_validator import StrategyParameterValidator as ParameterValidator
 
 logger = logging.getLogger(__name__)
 

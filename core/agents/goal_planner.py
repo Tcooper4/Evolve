@@ -456,4 +456,4 @@ if __name__ == "__main__":
     # Test goal evaluation
     planner = GoalPlannerAgent()
     status = planner.run("Plan a new goal")
-    print(json.dumps(status.__dict__, indent=2, default=str))
+    logger.info(f"Goal planning test result: {json.dumps(status.__dict__, indent=2, default=str)}")

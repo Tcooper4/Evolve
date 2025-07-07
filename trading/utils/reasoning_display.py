@@ -6,11 +6,15 @@ Display components for showing agent reasoning logs in terminal and Streamlit UI
 
 import streamlit as st
 import pandas as pd
+import logging
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 import json
 from pathlib import Path
 import sys
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -32,7 +36,9 @@ class ReasoningDisplay:
         Args:
             reasoning_logger: ReasoningLogger instance
         """
-        self.logger = reasoning_loggerdef display_decision_terminal(self, decision: AgentDecision, show_explanation: bool = True):
+        self.logger = reasoning_logger
+
+    def display_decision_terminal(self, decision: AgentDecision, show_explanation: bool = True):
         """
         Display a decision in the terminal.
         
@@ -40,55 +46,55 @@ class ReasoningDisplay:
             decision: AgentDecision to display
             show_explanation: Whether to show the chat explanation
         """
-        print("\n" + "="*80)
-        print(f"🤖 AGENT DECISION: {decision.agent_name.upper()}")
-        print("="*80)
+        logger.info("\n" + "="*80)
+        logger.info(f"🤖 AGENT DECISION: {decision.agent_name.upper()}")
+        logger.info("="*80)
         
         # Basic info
-        print(f"📅 Time: {decision.timestamp}")
-        print(f"🎯 Type: {decision.decision_type.value.replace('_', ' ').title()}")
-        print(f"📈 Symbol: {decision.context.symbol}")
-        print(f"⏱️  Timeframe: {decision.context.timeframe}")
-        print(f"🎯 Action: {decision.action_taken}")
-        print(f"🎯 Confidence: {decision.confidence_level.value.replace('_', ' ').title()}")
+        logger.info(f"📅 Time: {decision.timestamp}")
+        logger.info(f"🎯 Type: {decision.decision_type.value.replace('_', ' ').title()}")
+        logger.info(f"📈 Symbol: {decision.context.symbol}")
+        logger.info(f"⏱️  Timeframe: {decision.context.timeframe}")
+        logger.info(f"🎯 Action: {decision.action_taken}")
+        logger.info(f"🎯 Confidence: {decision.confidence_level.value.replace('_', ' ').title()}")
         
         # Reasoning
-        print(f"\n🧠 REASONING:")
-        print(f"Primary Reason: {decision.reasoning.primary_reason}")
+        logger.info(f"\n🧠 REASONING:")
+        logger.info(f"Primary Reason: {decision.reasoning.primary_reason}")
         
         if decision.reasoning.supporting_factors:
-            print(f"\nSupporting Factors:")
+            logger.info(f"\nSupporting Factors:")
             for factor in decision.reasoning.supporting_factors:
-                print(f"  • {factor}")
+                logger.info(f"  • {factor}")
         
         if decision.reasoning.alternatives_considered:
-            print(f"\nAlternatives Considered:")
+            logger.info(f"\nAlternatives Considered:")
             for alt in decision.reasoning.alternatives_considered:
-                print(f"  • {alt}")
+                logger.info(f"  • {alt}")
         
         if decision.reasoning.risks_assessed:
-            print(f"\nRisks Assessed:")
+            logger.info(f"\nRisks Assessed:")
             for risk in decision.reasoning.risks_assessed:
-                print(f"  • {risk}")
+                logger.info(f"  • {risk}")
         
-        print(f"\nExpected Outcome: {decision.reasoning.expected_outcome}")
+        logger.info(f"\nExpected Outcome: {decision.reasoning.expected_outcome}")
         
         # Market conditions
         if decision.context.market_conditions:
-            print(f"\n📊 MARKET CONDITIONS:")
+            logger.info(f"\n📊 MARKET CONDITIONS:")
             for key, value in decision.context.market_conditions.items():
-                print(f"  {key}: {value}")
+                logger.info(f"  {key}: {value}")
         
         # Chat explanation
         if show_explanation:
             explanation = self.logger.get_explanation(decision.decision_id)
             if explanation:
-                print(f"\n💬 CHAT EXPLANATION:")
-                print("-" * 40)
-                print(explanation)
-                print("-" * 40)
+                logger.info(f"\n💬 CHAT EXPLANATION:")
+                logger.info("-" * 40)
+                logger.info(explanation)
+                logger.info("-" * 40)
         
-        print("="*80 + "\n")
+        logger.info("="*80 + "\n")
 
     def display_recent_decisions_terminal(self, limit: int = 10, agent_name: str = None):
         """
@@ -100,7 +106,7 @@ class ReasoningDisplay:
         """
         if agent_name:
             decisions = self.logger.get_agent_decisions(agent_name, limit=limit)
-            print(f"\n🤖 RECENT DECISIONS BY {agent_name.upper()}")
+            logger.info(f"\n🤖 RECENT DECISIONS BY {agent_name.upper()}")
         else:
             # Get decisions from all agents
             decisions = []
@@ -109,45 +115,45 @@ class ReasoningDisplay:
                 decision = self.logger.get_decision(decision_data['decision_id'])
                 if decision:
                     decisions.append(decision)
-            print(f"\n🤖 RECENT DECISIONS (ALL AGENTS)")
+            logger.info(f"\n🤖 RECENT DECISIONS (ALL AGENTS)")
         
-        print("="*80)
+        logger.info("="*80)
         
         if not decisions:
-            print("No decisions found.")
+            logger.info("No decisions found.")
 
         for i, decision in enumerate(decisions, 1):
-            print(f"\n{i}. {decision.agent_name} - {decision.decision_type.value}")
-            print(f"   📈 {decision.context.symbol} | {decision.action_taken}")
-            print(f"   🎯 {decision.reasoning.primary_reason}")
-            print(f"   ⏰ {decision.timestamp}")
-            print(f"   🎯 Confidence: {decision.confidence_level.value}")
-            print("-" * 40)
+            logger.info(f"\n{i}. {decision.agent_name} - {decision.decision_type.value}")
+            logger.info(f"   📈 {decision.context.symbol} | {decision.action_taken}")
+            logger.info(f"   🎯 {decision.reasoning.primary_reason}")
+            logger.info(f"   ⏰ {decision.timestamp}")
+            logger.info(f"   🎯 Confidence: {decision.confidence_level.value}")
+            logger.info("-" * 40)
     
     def display_statistics_terminal(self):
         """Display reasoning statistics in the terminal."""
         stats = self.logger.get_statistics()
         
-        print("\n📊 REASONING STATISTICS")
-        print("="*50)
+        logger.info("\n📊 REASONING STATISTICS")
+        logger.info("="*50)
         
-        print(f"Total Decisions: {stats['total_decisions']}")
+        logger.info(f"Total Decisions: {stats['total_decisions']}")
         
-        print(f"\nDecisions by Agent:")
+        logger.info(f"\nDecisions by Agent:")
         for agent, count in stats['decisions_by_agent'].items():
-            print(f"  {agent}: {count}")
+            logger.info(f"  {agent}: {count}")
         
-        print(f"\nDecisions by Type:")
+        logger.info(f"\nDecisions by Type:")
         for decision_type, count in stats['decisions_by_type'].items():
-            print(f"  {decision_type}: {count}")
+            logger.info(f"  {decision_type}: {count}")
         
-        print(f"\nConfidence Distribution:")
+        logger.info(f"\nConfidence Distribution:")
         for confidence, count in stats['confidence_distribution'].items():
-            print(f"  {confidence}: {count}")
+            logger.info(f"  {confidence}: {count}")
         
-        print(f"\nRecent Activity:")
+        logger.info(f"\nRecent Activity:")
         for activity in stats['recent_activity'][:5]:
-            print(f"  {activity['agent_name']} - {activity['decision_type']} - {activity['symbol']}")
+            logger.info(f"  {activity['agent_name']} - {activity['decision_type']} - {activity['symbol']}")
 
     def display_decision_streamlit(self, decision: AgentDecision):
         """
