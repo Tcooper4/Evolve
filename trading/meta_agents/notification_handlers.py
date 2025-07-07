@@ -20,7 +20,9 @@ class NotificationHandler:
     def __init__(self, config: Dict[str, Any]):
         """Initialize notification handler."""
         self.config = config
-        self.setup_logging()def setup_logging(self):
+        self.setup_logging()
+
+    def setup_logging(self):
         """Configure logging for notification handler."""
         log_path = Path("logs/notifications")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -35,7 +37,6 @@ class NotificationHandler:
         )
         self.logger = logging.getLogger(__name__)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification."""
         raise NotImplementedError
@@ -48,7 +49,9 @@ class SlackHandler(NotificationHandler):
         super().__init__(config)
         self.webhook_url = config.get('slack_webhook_url')
         if not self.webhook_url:
-            raise ValueError("Slack webhook URL not configured")async def send(self, message: Dict[str, Any]) -> bool:
+            raise ValueError("Slack webhook URL not configured")
+
+    async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification to Slack."""
         try:
             async with aiohttp.ClientSession() as session:
@@ -76,7 +79,9 @@ class WebhookHandler(NotificationHandler):
         super().__init__(config)
         self.webhook_url = config.get('webhook_url')
         if not self.webhook_url:
-            raise ValueError("Webhook URL not configured")async def send(self, message: Dict[str, Any]) -> bool:
+            raise ValueError("Webhook URL not configured")
+
+    async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification via webhook."""
         try:
             async with aiohttp.ClientSession() as session:
@@ -108,12 +113,42 @@ class EmailHandler(NotificationHandler):
         self.smtp_password = config.get('smtp_password')
         if not all([self.smtp_host, self.smtp_port, self.smtp_user, self.smtp_password]):
             raise ValueError("SMTP configuration incomplete")
+
     async def send(self, message: Dict[str, Any]) -> bool:
         """Send notification via email."""
         try:
-            # TODO: Implement email sending logic
-            self.logger.info("Email notification sent successfully")
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            # Extract email details from message
+            subject = message.get('subject', 'Evolve Trading System Notification')
+            body = message.get('body', str(message))
+            recipient = message.get('recipient', self.config.get('default_recipient'))
+            
+            if not recipient:
+                self.logger.error("No recipient specified for email notification")
+                return False
+            
+            # Create email message
+            msg = MIMEMultipart()
+            msg['From'] = self.smtp_user
+            msg['To'] = recipient
+            msg['Subject'] = subject
+            
+            # Add body to email
+            msg.attach(MIMEText(body, 'plain'))
+            
+            # Send email
+            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+                server.starttls()  # Enable TLS
+                server.login(self.smtp_user, self.smtp_password)
+                text = msg.as_string()
+                server.sendmail(self.smtp_user, recipient, text)
+            
+            self.logger.info(f"Email notification sent successfully to {recipient}")
             return True
+            
         except Exception as e:
             self.logger.error(f"Error sending email notification: {str(e)}")
             return False

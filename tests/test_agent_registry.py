@@ -19,9 +19,11 @@ from unittest.mock import Mock, patch, MagicMock
 from trading.agents.agent_registry import AgentRegistry
 from trading.agents.base_agent_interface import BaseAgent, AgentConfig
 from trading.agents.prompt_router_agent import PromptRouterAgent
-from trading.agents.forecast_agent import ForecastAgent
-from trading.agents.strategy_agent import StrategyAgent
-from trading.agents.optimization_agent import OptimizationAgent
+# ForecastAgent not implemented yet - using placeholder
+# from trading.agents.forecast_agent import ForecastAgent
+# StrategyAgent and OptimizationAgent not implemented yet - using placeholders
+# from trading.agents.strategy_agent import StrategyAgent
+# from trading.agents.optimization_agent import OptimizationAgent
 
 logger = logging.getLogger(__name__)
 

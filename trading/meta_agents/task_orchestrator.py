@@ -48,7 +48,6 @@ class TaskOrchestrator:
         self.running = False
         self._task_handlers = self._register_task_handlers()
         
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _register_task_handlers(self) -> Dict[str, Any]:
         """Register task handlers for different task types."""
         return {

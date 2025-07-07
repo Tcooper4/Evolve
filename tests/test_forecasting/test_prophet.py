@@ -3,7 +3,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from trading.forecasting.prophet_model import ProphetModel
+from trading.models.prophet_model import ProphetModel
 
 class TestProphetModel:
     @pytest.fixture

@@ -19,7 +19,7 @@ import aiohttp
 import redis
 from pathlib import Path
 from dataclasses import dataclass
-from trading.metrics_collector import MetricsCollector
+from .metrics_collector import MetricsCollector
 
 @dataclass
 class AlertRule:
@@ -42,7 +42,6 @@ class AlertRule:
         if self.metadata is None:
             self.metadata = {}
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def to_dict(self) -> Dict:
         """Convert rule to dictionary."""
         return {
@@ -137,7 +136,6 @@ class AlertManager:
         )
         self.logger = logging.getLogger(__name__)
         
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize HTTP session."""
         try:

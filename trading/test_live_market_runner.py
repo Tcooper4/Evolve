@@ -9,13 +9,16 @@ import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
+import logging
 
 from trading.live_market_runner import create_live_market_runner, ForecastResult
 
+logger = logging.getLogger(__name__)
+
 async def test_live_market_runner():
     """Test the live market runner."""
-    print("🧪 Testing Live Market Runner")
-    print("=" * 50)
+    logger.info("🧪 Testing Live Market Runner")
+    logger.info("=" * 50)
     
     # Create runner
     config = {
@@ -29,26 +32,26 @@ async def test_live_market_runner():
     
     runner = create_live_market_runner(config)
     
-    print("✅ LiveMarketRunner created successfully")
+    logger.info("✅ LiveMarketRunner created successfully")
     
     # Test initialization
-    print("\n📋 Testing initialization...")
+    logger.info("\n📋 Testing initialization...")
     await runner._initialize_market_data()
     
     # Check live data
-    print(f"📊 Live data symbols: {list(runner.live_data.keys())}")
+    logger.info(f"📊 Live data symbols: {list(runner.live_data.keys())}")
     for symbol, data in runner.live_data.items():
-        print(f"   {symbol}: ${data['price']:.2f}")
+        logger.info(f"   {symbol}: ${data['price']:.2f}")
     
     # Test trigger configurations
-    print(f"\n🔧 Testing trigger configurations...")
-    print(f"   Trigger configs: {list(runner.trigger_configs.keys())}")
+    logger.info(f"\n🔧 Testing trigger configurations...")
+    logger.info(f"   Trigger configs: {list(runner.trigger_configs.keys())}")
     
     for agent_name, config in runner.trigger_configs.items():
-        print(f"   {agent_name}: {config.trigger_type.value}, enabled: {config.enabled}")
+        logger.info(f"   {agent_name}: {config.trigger_type.value}, enabled: {config.enabled}")
     
     # Test forecast tracking
-    print(f"\n📈 Testing forecast tracking...")
+    logger.info(f"\n📈 Testing forecast tracking...")
     
     # Add test forecast
     test_forecast = ForecastResult(
@@ -61,27 +64,27 @@ async def test_live_market_runner():
     )
     
     runner.forecast_results.append(test_forecast)
-    print(f"   Added test forecast for {test_forecast.symbol}")
+    logger.info(f"   Added test forecast for {test_forecast.symbol}")
     
     # Test forecast accuracy calculation
     accuracy = runner.get_forecast_accuracy()
-    print(f"   Total forecasts: {accuracy['total_forecasts']}")
-    print(f"   Completed forecasts: {accuracy['completed_forecasts']}")
-    print(f"   Average accuracy: {accuracy['avg_accuracy']:.2%}")
+    logger.info(f"   Total forecasts: {accuracy['total_forecasts']}")
+    logger.info(f"   Completed forecasts: {accuracy['completed_forecasts']}")
+    logger.info(f"   Average accuracy: {accuracy['avg_accuracy']:.2%}")
     
     # Test state retrieval
-    print(f"\n📊 Testing state retrieval...")
+    logger.info(f"\n📊 Testing state retrieval...")
     state = runner.get_current_state()
-    print(f"   State keys: {list(state.keys())}")
-    print(f"   Running: {state['running']}")
-    print(f"   Forecast count: {state['forecast_count']}")
+    logger.info(f"   State keys: {list(state.keys())}")
+    logger.info(f"   Running: {state['running']}")
+    logger.info(f"   Forecast count: {state['forecast_count']}")
     
-    print("\n✅ All tests completed!")
+    logger.info("\n✅ All tests completed!")
 
 async def test_forecast_tracking():
     """Test forecast tracking functionality."""
-    print("\n📈 Testing Forecast Tracking")
-    print("=" * 40)
+    logger.info("\n📈 Testing Forecast Tracking")
+    logger.info("=" * 40)
     
     # Create runner
     runner = create_live_market_runner()
@@ -115,26 +118,26 @@ async def test_forecast_tracking():
     ]
     
     runner.forecast_results.extend(test_forecasts)
-    print(f"✅ Added {len(test_forecasts)} test forecasts")
+    logger.info(f"✅ Added {len(test_forecasts)} test forecasts")
     
     # Test accuracy calculation
     accuracy = runner.get_forecast_accuracy()
-    print(f"📊 Overall accuracy: {accuracy['avg_accuracy']:.2%}")
+    logger.info(f"📊 Overall accuracy: {accuracy['avg_accuracy']:.2%}")
     
     # Test symbol-specific accuracy
     aapl_accuracy = runner.get_forecast_accuracy("AAPL")
-    print(f"🍎 AAPL accuracy: {aapl_accuracy['avg_accuracy']:.2%}")
+    logger.info(f"🍎 AAPL accuracy: {aapl_accuracy['avg_accuracy']:.2%}")
     
     # Test model-specific accuracy
     model_forecasts = [f for f in runner.forecast_results if f.model_name == "model_builder"]
-    print(f"🤖 Model builder forecasts: {len(model_forecasts)}")
+    logger.info(f"🤖 Model builder forecasts: {len(model_forecasts)}")
     
-    print("✅ Forecast tracking tests completed!")
+    logger.info("✅ Forecast tracking tests completed!")
 
 async def test_agent_triggering():
     """Test agent triggering functionality."""
-    print("\n🤖 Testing Agent Triggering")
-    print("=" * 40)
+    logger.info("\n🤖 Testing Agent Triggering")
+    logger.info("=" * 40)
     
     # Create runner
     runner = create_live_market_runner()
@@ -155,7 +158,7 @@ async def test_agent_triggering():
         time_config, 
         datetime.utcnow()
     )
-    print(f"   Time-based trigger (no previous): {should_trigger}")
+    logger.info(f"   Time-based trigger (no previous): {should_trigger}")
     
     # Should not trigger (recent trigger)
     runner.last_triggers["test_agent"] = datetime.utcnow() - timedelta(seconds=30)
@@ -164,7 +167,7 @@ async def test_agent_triggering():
         time_config, 
         datetime.utcnow()
     )
-    print(f"   Time-based trigger (recent): {should_trigger}")
+    logger.info(f"   Time-based trigger (recent): {should_trigger}")
     
     # Test price move trigger
     price_config = TriggerConfig(
@@ -185,7 +188,7 @@ async def test_agent_triggering():
         price_config, 
         datetime.utcnow()
     )
-    print(f"   Price move trigger (1.5% change): {should_trigger}")
+    logger.info(f"   Price move trigger (1.5% change): {should_trigger}")
     
     # Test small price change
     runner.live_data["AAPL"]["price_change"] = 0.005  # 0.5% change
@@ -194,9 +197,9 @@ async def test_agent_triggering():
         price_config, 
         datetime.utcnow()
     )
-    print(f"   Price move trigger (0.5% change): {should_trigger}")
+    logger.info(f"   Price move trigger (0.5% change): {should_trigger}")
     
-    print("✅ Agent triggering tests completed!")
+    logger.info("✅ Agent triggering tests completed!")
 
 async def main():
     """Main test function."""
@@ -204,7 +207,7 @@ async def main():
     await test_forecast_tracking()
     await test_agent_triggering()
     
-    print(f"\n🎉 All tests completed successfully!")
+    logger.info(f"\n🎉 All tests completed successfully!")
 
 if __name__ == "__main__":
     asyncio.run(main()) 

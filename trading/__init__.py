@@ -13,43 +13,112 @@ __description__ = "Autonomous Financial Forecasting & Trading Platform"
 __url__ = "https://github.com/Tcooper4/Evolve"
 __license__ = "MIT"
 
-# Core imports
-from .models import (
-    LSTMModel, XGBoostModel, ProphetModel, ARIMAModel, 
-    EnsembleModel, BaseModel, ModelRegistry
-)
-from .strategies import (
-    RSIStrategy, MACDStrategy, BollingerStrategy, SMAStrategy,
-    HybridEngine, StrategyRegistry, CustomStrategyHandler
-)
-from .data import (
-    DataLoader, DataProvider, DataPreprocessor, 
-    AlphaVantageProvider, YFinanceProvider
-)
-from .backtesting import (
-    Backtester, PerformanceAnalyzer, RiskMetrics, 
-    PositionSizer, TradeModels
-)
-from .optimization import (
-    StrategyOptimizer, PortfolioOptimizer, OptunaOptimizer,
-    BaseOptimizer, OptimizationVisualizer
-)
-from .risk import (
-    RiskManager, PositionSizingEngine, RiskAnalyzer,
-    RiskAdjustedStrategy, RiskMetrics
-)
-from .portfolio import (
-    PortfolioManager, PortfolioSimulator, PositionSizer,
-    LLMUtils
-)
-from .agents import (
-    PromptRouterAgent, ExecutionAgent, ModelBuilderAgent,
-    StrategySelectorAgent, MarketRegimeAgent, AgentRegistry
-)
-from .utils import (
-    SafeExecutor, ReasoningLogger, PerformanceLogger,
-    ErrorHandler, ConfigUtils, DataUtils
-)
+# Core imports with error handling
+try:
+    from .models import (
+        LSTMModel, TCNModel, ARIMAModel, XGBoostModel,
+        BaseModel, TransformerForecaster, GNNForecaster, DQNStrategyOptimizer
+    )
+    MODELS_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Models import failed: {e}")
+    MODELS_AVAILABLE = False
+
+try:
+    from .strategies import (
+        StrategyManager, Strategy, StrategyMetrics,
+        BollingerStrategy, BollingerConfig,
+        MACDStrategy, MACDConfig,
+        SMAStrategy, SMAConfig,
+        generate_signals, get_signals
+    )
+    STRATEGIES_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Strategies import failed: {e}")
+    STRATEGIES_AVAILABLE = False
+
+try:
+    from .data import (
+        DataLoader, DataProvider, DataPreprocessor, 
+        AlphaVantageProvider, YFinanceProvider
+    )
+    DATA_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Data import failed: {e}")
+    DATA_AVAILABLE = False
+
+try:
+    from .backtesting import (
+        BacktestEngine, PerformanceAnalyzer, RiskMetricsEngine, 
+        PositionSizingEngine, Trade, TradeType
+    )
+    BACKTESTING_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Backtesting import failed: {e}")
+    BACKTESTING_AVAILABLE = False
+
+try:
+    from .optimization import (
+        StrategyOptimizer, BaseOptimizer, OptimizationVisualizer
+    )
+    OPTIMIZATION_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Optimization import failed: {e}")
+    OPTIMIZATION_AVAILABLE = False
+
+try:
+    from .risk import (
+        RiskManager
+    )
+    RISK_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Risk import failed: {e}")
+    RISK_AVAILABLE = False
+
+try:
+    from .portfolio import (
+        PortfolioManager
+    )
+    PORTFOLIO_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Portfolio import failed: {e}")
+    PORTFOLIO_AVAILABLE = False
+
+try:
+    from .agents import (
+        PromptRouterAgent, ModelBuilderAgent
+    )
+    AGENTS_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Agents import failed: {e}")
+    AGENTS_AVAILABLE = False
+
+try:
+    from .utils import (
+        LogManager, ModelLogger, DataLogger, PerformanceLogger
+    )
+    UTILS_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Utils import failed: {e}")
+    UTILS_AVAILABLE = False
 
 # Version info
 def get_version():
@@ -66,24 +135,42 @@ def get_version_info():
         'license': __license__
     }
 
-from trading.market import MarketAnalyzer, MarketData, MarketIndicators
-from .data.preprocessing import FeatureEngineering, DataValidator, DataScaler
-from trading.models.base_model import BaseModel
-from trading.models import (
-    LSTMModel,
-    TCNModel,
-    TransformerForecaster,
-    GNNForecaster,
-    DQNStrategyOptimizer
-)
-# Optimization modules are available through individual imports
-OPTIMIZATION_AVAILABLE = True
-from trading.portfolio import PortfolioManager
-from trading.risk import RiskManager
-from trading.utils import LogManager, ModelLogger, DataLogger
-# from trading.memory import PerformanceMemory
-from .agents.updater import UpdaterAgent
-from trading.nlp import NLInterface, PromptProcessor, ResponseFormatter, LLMProcessor
+# Additional imports with error handling
+try:
+    from trading.market import MarketAnalyzer, MarketData, MarketIndicators
+    MARKET_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Market import failed: {e}")
+    MARKET_AVAILABLE = False
+
+try:
+    from .data.preprocessing import FeatureEngineering, DataValidator, DataScaler
+    PREPROCESSING_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Preprocessing import failed: {e}")
+    PREPROCESSING_AVAILABLE = False
+
+try:
+    from .agents.updater import UpdaterAgent
+    UPDATER_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Updater import failed: {e}")
+    UPDATER_AVAILABLE = False
+
+try:
+    from trading.nlp import NLInterface, PromptProcessor, ResponseFormatter, LLMProcessor
+    NLP_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ NLP import failed: {e}")
+    NLP_AVAILABLE = False
 
 # Fix broken imports with proper error handling
 try:
@@ -111,51 +198,107 @@ except ImportError as e:
         def __init__(self):
             logger.warning("⚠️ Using fallback ModelEvaluator")
 
-from trading.visualization import TimeSeriesPlotter, PerformancePlotter, FeatureImportancePlotter, PredictionPlotter
-from trading.strategies import StrategyManager
-from trading.execution import ExecutionEngine
-from trading.config import ConfigManager
-from trading.knowledge_base import TradingRules
+try:
+    from trading.visualization import TimeSeriesPlotter, PerformancePlotter, FeatureImportancePlotter, PredictionPlotter
+    VISUALIZATION_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Visualization import failed: {e}")
+    VISUALIZATION_AVAILABLE = False
 
-__all__ = [
-    'MarketAnalyzer',
-    'MarketData',
-    'MarketIndicators',
-    'DataPreprocessor',
-    'FeatureEngineering',
-    'DataValidator',
-    'DataScaler',
-    'AlphaVantageProvider',
-    'YFinanceProvider',
-    'BaseModel',
-    'LSTMModel',
-    'TCNModel',
-    'TransformerForecaster',
-    'GNNForecaster',
+try:
+    from trading.strategies import StrategyManager
+    STRATEGY_MANAGER_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Strategy manager import failed: {e}")
+    STRATEGY_MANAGER_AVAILABLE = False
 
-    'PortfolioManager',
-    'RiskManager',
-    'LogManager',
-    'ModelLogger',
-    'DataLogger',
-    'ModelEvaluator',
-    'RegressionMetrics',
-    'ClassificationMetrics',
-    'TimeSeriesMetrics',
-    'TimeSeriesPlotter',
-    'PerformancePlotter',
-    'FeatureImportancePlotter',
-    'PredictionPlotter',
-    'StrategyManager',
-    'ExecutionEngine',
-    'ConfigManager',
-    'TradingRules'
-]
+try:
+    from trading.execution import ExecutionEngine
+    EXECUTION_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Execution import failed: {e}")
+    EXECUTION_AVAILABLE = False
+
+try:
+    from trading.config import ConfigManager
+    CONFIG_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Config import failed: {e}")
+    CONFIG_AVAILABLE = False
+
+try:
+    from trading.knowledge_base import TradingRules
+    KNOWLEDGE_AVAILABLE = True
+except ImportError as e:
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Knowledge base import failed: {e}")
+    KNOWLEDGE_AVAILABLE = False
+
+# Build __all__ list dynamically based on available modules
+__all__ = []
+
+if MODELS_AVAILABLE:
+    __all__.extend(['LSTMModel', 'TCNModel', 'ARIMAModel', 'XGBoostModel', 'BaseModel', 'TransformerForecaster', 'GNNForecaster', 'DQNStrategyOptimizer'])
+
+if STRATEGIES_AVAILABLE:
+    __all__.extend(['StrategyManager', 'Strategy', 'StrategyMetrics', 'BollingerStrategy', 'BollingerConfig', 'MACDStrategy', 'MACDConfig', 'SMAStrategy', 'SMAConfig', 'generate_signals', 'get_signals'])
+
+if DATA_AVAILABLE:
+    __all__.extend(['DataLoader', 'DataProvider', 'DataPreprocessor', 'AlphaVantageProvider', 'YFinanceProvider'])
+
+if BACKTESTING_AVAILABLE:
+    __all__.extend(['BacktestEngine', 'PerformanceAnalyzer', 'RiskMetricsEngine', 'PositionSizingEngine', 'Trade', 'TradeType'])
 
 if OPTIMIZATION_AVAILABLE:
-    __all__.append('DQNStrategyOptimizer')
+    __all__.extend(['StrategyOptimizer', 'BaseOptimizer', 'OptimizationVisualizer'])
 
-# from trading.memory import PerformanceMemory
-# __all__.append('PerformanceMemory')
+if RISK_AVAILABLE:
+    __all__.extend(['RiskManager'])
 
-__all__.append('UpdaterAgent')
+if PORTFOLIO_AVAILABLE:
+    __all__.extend(['PortfolioManager'])
+
+if AGENTS_AVAILABLE:
+    __all__.extend(['PromptRouterAgent', 'ExecutionAgent', 'ModelBuilderAgent', 'StrategySelectorAgent', 'MarketRegimeAgent', 'AgentRegistry'])
+
+if UTILS_AVAILABLE:
+    __all__.extend(['LogManager', 'ModelLogger', 'DataLogger', 'PerformanceLogger'])
+
+if MARKET_AVAILABLE:
+    __all__.extend(['MarketAnalyzer', 'MarketData', 'MarketIndicators'])
+
+if PREPROCESSING_AVAILABLE:
+    __all__.extend(['FeatureEngineering', 'DataValidator', 'DataScaler'])
+
+if UPDATER_AVAILABLE:
+    __all__.append('UpdaterAgent')
+
+if NLP_AVAILABLE:
+    __all__.extend(['NLInterface', 'PromptProcessor', 'ResponseFormatter', 'LLMProcessor'])
+
+if EVALUATION_AVAILABLE:
+    __all__.extend(['ModelEvaluator', 'RegressionMetrics', 'ClassificationMetrics', 'TimeSeriesMetrics'])
+
+if VISUALIZATION_AVAILABLE:
+    __all__.extend(['TimeSeriesPlotter', 'PerformancePlotter', 'FeatureImportancePlotter', 'PredictionPlotter'])
+
+if STRATEGY_MANAGER_AVAILABLE:
+    __all__.append('StrategyManager')
+
+if EXECUTION_AVAILABLE:
+    __all__.append('ExecutionEngine')
+
+if CONFIG_AVAILABLE:
+    __all__.append('ConfigManager')
+
+if KNOWLEDGE_AVAILABLE:
+    __all__.append('TradingRules')

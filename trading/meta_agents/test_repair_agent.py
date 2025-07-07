@@ -7,7 +7,6 @@ import pytest
 import coverage
 
 from trading.base_agent import BaseMetaAgent
-from trading.tests import conftest
 
 class TestRepairAgent(BaseMetaAgent):
     """Agent for maintaining and improving test coverage."""
@@ -19,7 +18,9 @@ class TestRepairAgent(BaseMetaAgent):
             config: Configuration dictionary
         """
         super().__init__("test_repair", config)
-        self.coverage = coverage.Coverage()def run(self) -> Dict[str, Any]:
+        self.coverage = coverage.Coverage()
+        
+    def run(self) -> Dict[str, Any]:
         """Run test analysis and repair.
         
         Returns:

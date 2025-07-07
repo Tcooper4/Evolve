@@ -3,7 +3,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from trading.forecasting.lstm_model import LSTMModel
+from trading.models.lstm_model import LSTMModel
 
 class TestLSTMModel:
     @pytest.fixture

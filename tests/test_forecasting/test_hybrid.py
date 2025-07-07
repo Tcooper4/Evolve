@@ -3,10 +3,10 @@
 import pytest
 import pandas as pd
 import numpy as np
-from trading.forecasting.hybrid_model import HybridModel
-from trading.forecasting.arima_model import ARIMAModel
-from trading.forecasting.lstm_model import LSTMModel
-from trading.forecasting.prophet_model import ProphetModel
+from trading.models.ensemble_model import EnsembleModel as HybridModel
+from trading.models.arima_model import ARIMAModel
+from trading.models.lstm_model import LSTMModel
+from trading.models.prophet_model import ProphetModel
 
 class TestHybridModel:
     @pytest.fixture

@@ -87,8 +87,7 @@ class SelfTuningOptimizer:
         self._load_history()
         
         logger.info(f"Self-tuning optimizer initialized with evaluation window: {self.evaluation_window} days")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def _load_history(self):
         """Load optimization history from file."""
         try:

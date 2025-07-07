@@ -14,6 +14,9 @@ from typing import Dict, Optional, Union, Any, List
 from datetime import datetime
 import os
 
+# Configure module-level logger
+logger = logging.getLogger(__name__)
+
 class StructuredFormatter(logging.Formatter):
     """Formatter for structured JSON logging."""
     
@@ -547,7 +550,7 @@ def close_loggers(logger_names: Optional[List[str]] = None) -> Dict[str, Any]:
                     closed_count += 1
                 except Exception as e:
                     # Log the error but continue with other handlers
-                    print(f"Warning: Failed to close handler for logger {logger.name}: {e}")
+                    logger.warning(f"Failed to close handler for logger {logger.name}: {e}")
         
         return {
             "status": "success",
