@@ -49,8 +49,6 @@ class ModelBuilder:
         }
         
         logger.info("Model Builder initialized")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def build_model(self, model_type: str, 
                    data: pd.DataFrame,
                    target_column: str = 'target',

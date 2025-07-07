@@ -3,7 +3,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from trading.agents.goal_planner import GoalPlanner
+from core.agents.goal_planner import GoalPlannerAgent as GoalPlanner
 
 class TestGoalPlanner:
     @pytest.fixture

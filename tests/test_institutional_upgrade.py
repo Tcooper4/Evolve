@@ -707,7 +707,8 @@ class InstitutionalUpgradeTester:
             try:
                 pdf_path = report_exporter.export_report(test_data, format='pdf')
                 pdf_success = True
-            except:
+            except (ImportError, RuntimeError, OSError) as e:
+                logger.warning(f"PDF export not available: {e}")
                 pdf_path = None
                 pdf_success = False
             

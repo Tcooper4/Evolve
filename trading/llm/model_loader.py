@@ -42,7 +42,9 @@ class ModelLoader:
         self.active_model: Optional[str] = None
         self._load_config(config_path)
         
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+    def initialize(self) -> Dict[str, Any]:
+        """Initialize the model loader."""
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _load_config(self, config_path: Optional[str]) -> None:
         """Load model configurations from file."""
         if config_path and Path(config_path).exists():

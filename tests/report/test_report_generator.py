@@ -6,7 +6,7 @@ import unittest
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
-from trading.report.report_generator import ReportGenerator, ReportConfig
+from trading.report.report_generator import ReportGenerator
 
 class TestReportGenerator(unittest.TestCase):
     """Test cases for report generator."""

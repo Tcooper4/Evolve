@@ -4,13 +4,21 @@ Script to fix the 5 critical syntax errors in the Evolve-main codebase.
 """
 
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 def fix_run_forecasting_pipeline():
     """Fix syntax error in run_forecasting_pipeline.py line 77-78."""
     file_path = "run_forecasting_pipeline.py"
     
     if not os.path.exists(file_path):
-        print(f"File {file_path} not found")
+        logger.warning(f"File {file_path} not found")
         return
     
     with open(file_path, 'r') as f:
@@ -24,16 +32,16 @@ def fix_run_forecasting_pipeline():
         content = content.replace(old_content, new_content)
         with open(file_path, 'w') as f:
             f.write(content)
-        print("Fixed run_forecasting_pipeline.py")
+        logger.info("Fixed run_forecasting_pipeline.py")
     else:
-        print("Could not find the problematic line in run_forecasting_pipeline.py")
+        logger.warning("Could not find the problematic line in run_forecasting_pipeline.py")
 
 def fix_model_generator():
     """Fix indentation error in agents/model_generator.py line 189."""
     file_path = "agents/model_generator.py"
     
     if not os.path.exists(file_path):
-        print(f"File {file_path} not found")
+        logger.warning(f"File {file_path} not found")
         return
     
     with open(file_path, 'r') as f:
@@ -47,16 +55,16 @@ def fix_model_generator():
         content = content.replace(old_content, new_content)
         with open(file_path, 'w') as f:
             f.write(content)
-        print("Fixed agents/model_generator.py")
+        logger.info("Fixed agents/model_generator.py")
     else:
-        print("Could not find the problematic line in agents/model_generator.py")
+        logger.warning("Could not find the problematic line in agents/model_generator.py")
 
 def fix_performance_weights():
     """Fix indentation error in memory/performance_weights.py line 151."""
     file_path = "memory/performance_weights.py"
     
     if not os.path.exists(file_path):
-        print(f"File {file_path} not found")
+        logger.warning(f"File {file_path} not found")
         return
     
     with open(file_path, 'r') as f:
@@ -70,16 +78,16 @@ def fix_performance_weights():
         content = content.replace(old_content, new_content)
         with open(file_path, 'w') as f:
             f.write(content)
-        print("Fixed memory/performance_weights.py")
+        logger.info("Fixed memory/performance_weights.py")
     else:
-        print("Could not find the problematic line in memory/performance_weights.py")
+        logger.warning("Could not find the problematic line in memory/performance_weights.py")
 
 def fix_manage_incident():
     """Fix syntax error in scripts/manage_incident.py line 74."""
     file_path = "scripts/manage_incident.py"
     
     if not os.path.exists(file_path):
-        print(f"File {file_path} not found")
+        logger.warning(f"File {file_path} not found")
         return
     
     with open(file_path, 'r') as f:
@@ -93,16 +101,16 @@ def fix_manage_incident():
         content = content.replace(old_content, new_content)
         with open(file_path, 'w') as f:
             f.write(content)
-        print("Fixed scripts/manage_incident.py")
+        logger.info("Fixed scripts/manage_incident.py")
     else:
-        print("Could not find the problematic line in scripts/manage_incident.py")
+        logger.warning("Could not find the problematic line in scripts/manage_incident.py")
 
 def fix_manage_logs():
     """Fix syntax error in scripts/manage_logs.py line 50."""
     file_path = "scripts/manage_logs.py"
     
     if not os.path.exists(file_path):
-        print(f"File {file_path} not found")
+        logger.warning(f"File {file_path} not found")
         return
     
     with open(file_path, 'r') as f:
@@ -116,13 +124,13 @@ def fix_manage_logs():
         content = content.replace(old_content, new_content)
         with open(file_path, 'w') as f:
             f.write(content)
-        print("Fixed scripts/manage_logs.py")
+        logger.info("Fixed scripts/manage_logs.py")
     else:
-        print("Could not find the problematic line in scripts/manage_logs.py")
+        logger.warning("Could not find the problematic line in scripts/manage_logs.py")
 
 def main():
     """Fix all syntax errors."""
-    print("Fixing critical syntax errors...")
+    logger.info("Fixing critical syntax errors...")
     
     fix_run_forecasting_pipeline()
     fix_model_generator()
@@ -130,7 +138,7 @@ def main():
     fix_manage_incident()
     fix_manage_logs()
     
-    print("Syntax error fixes completed!")
+    logger.info("Syntax error fixes completed!")
 
 if __name__ == "__main__":
     main() 

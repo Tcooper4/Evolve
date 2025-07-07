@@ -197,8 +197,9 @@ class GlobalErrorHandler:
                 for key in sys.session_state:
                     try:
                         _ = sys.session_state[key]
-                    except:
+                    except (AttributeError, TypeError, KeyError) as e:
                         corrupted_keys.append(key)
+                        logger.debug(f"Detected corrupted session state key {key}: {e}")
                 
                 for key in corrupted_keys:
                     del sys.session_state[key]

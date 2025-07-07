@@ -398,7 +398,8 @@ class WalkForwardAgent(BaseAgent):
             running_max = cumulative.expanding().max()
             drawdown = (cumulative - running_max) / running_max
             return drawdown.min()
-        except:
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.warning(f"Error calculating max drawdown: {e}")
             return 0.0
     
     def _update_performance_tracker(self, performance: Dict[str, float], test_start: datetime):

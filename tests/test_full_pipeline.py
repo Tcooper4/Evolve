@@ -20,11 +20,11 @@ import numpy as np
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from trading.llm.agent import get_prompt_agent
-from trading.models.forecast_router import ForecastRouter
+from models.forecast_router import ForecastRouter
 from trading.backtesting.backtester import Backtester
-from trading.execution.trade_executor import get_trade_executor
-from trading.optimization.self_tuning_optimizer import get_self_tuning_optimizer
-from trading.data.providers.fallback_provider import get_fallback_provider
+from execution.trade_executor import get_trade_executor
+from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer as get_self_tuning_optimizer
+from trading.data.providers.fallback_provider import FallbackDataProvider as get_fallback_provider
 from trading.ui.components import create_system_metrics_panel
 
 # Setup logging

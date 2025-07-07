@@ -455,8 +455,9 @@ class IntelligentForecastExplainability:
             
             try:
                 predictions = cross_val_predict(model, X, np.zeros(len(X)), cv=5)
-            except:
+            except (ValueError, TypeError, AttributeError) as e:
                 # Fallback: use single prediction
+                logger.warning(f"Cross-validation failed, using single prediction: {e}")
                 predictions = np.array([model.predict(X)[0]] * 10)
             
             return predictions

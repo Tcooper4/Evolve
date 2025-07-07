@@ -14,14 +14,72 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from trading.models.forecast_router import ForecastRouter
+from models.forecast_router import ForecastRouter
 from trading.backtesting.backtester import Backtester
-from trading.strategies.gatekeeper import StrategyGatekeeper
-from trading.execution.trade_executor import TradeExecutor
+from strategies.gatekeeper import StrategyGatekeeper
+from execution.trade_executor import TradeExecutor
 from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
 from trading.data.providers.fallback_provider import FallbackDataProvider
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class AgentConfig:
+    """Configuration for LLM agents."""
+    name: str
+    role: str
+    model_name: str
+    max_tokens: int = 500
+    temperature: float = 0.7
+    memory_enabled: bool = True
+    tools_enabled: bool = True
+
+class LLMAgent:
+    """LLM Agent for processing prompts with tools and memory."""
+    
+    def __init__(self, 
+                 config: AgentConfig,
+                 model_loader=None,
+                 memory_manager=None,
+                 tool_registry=None):
+        """Initialize LLM agent."""
+        self.config = config
+        self.model_loader = model_loader
+        self.memory_manager = memory_manager
+        self.tool_registry = tool_registry
+        self.metrics = {
+            "prompts_processed": 0,
+            "tokens_used": 0,
+            "tool_calls": 0,
+            "memory_hits": 0
+        }
+        
+    async def process_prompt(self, prompt: str, context: Optional[Dict[str, Any]] = None, tools: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Process a prompt asynchronously."""
+        self.metrics["prompts_processed"] += 1
+        
+        # Simple placeholder implementation
+        return {
+            "content": f"Processed prompt: {prompt}",
+            "metadata": {
+                "tokens": len(prompt.split()),
+                "tool_calls": 0,
+                "memory_hits": 0
+            }
+        }
+        
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get agent metrics."""
+        return self.metrics.copy()
+        
+    def reset_metrics(self) -> None:
+        """Reset agent metrics."""
+        self.metrics = {
+            "prompts_processed": 0,
+            "tokens_used": 0,
+            "tool_calls": 0,
+            "memory_hits": 0
+        }
 
 @dataclass
 class AgentResponse:
@@ -46,7 +104,34 @@ class PromptAgent:
         
         # Initialize components
         self.forecast_router = ForecastRouter()
-        self.strategy_gatekeeper = StrategyGatekeeper()
+        # Default strategy configurations
+        default_strategies = {
+            'RSI Mean Reversion': {
+                'default_active': True,
+                'preferred_regimes': ['neutral', 'volatile'],
+                'regime_weights': {'neutral': 1.0, 'volatile': 0.8},
+                'preferred_volatility': 'medium',
+                'volatility_range': [0.01, 0.03],
+                'momentum_requirement': 'any'
+            },
+            'Moving Average Crossover': {
+                'default_active': True,
+                'preferred_regimes': ['bull', 'bear'],
+                'regime_weights': {'bull': 1.0, 'bear': 0.9},
+                'preferred_volatility': 'low',
+                'volatility_range': [0.005, 0.02],
+                'momentum_requirement': 'positive'
+            },
+            'Bollinger Bands': {
+                'default_active': True,
+                'preferred_regimes': ['neutral', 'volatile'],
+                'regime_weights': {'neutral': 1.0, 'volatile': 0.9},
+                'preferred_volatility': 'high',
+                'volatility_range': [0.02, 0.05],
+                'momentum_requirement': 'any'
+            }
+        }
+        self.strategy_gatekeeper = StrategyGatekeeper(default_strategies)
         self.trade_executor = TradeExecutor()
         self.optimizer = SelfTuningOptimizer()
         self.data_provider = FallbackDataProvider()
@@ -199,7 +284,7 @@ class PromptAgent:
         
         logger.info(f"Parsed prompt - Intent: {intent}, Params: {params}")
         
-        return {'success': True, 'result': intent, params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {'success': True, 'result': intent, 'params': params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
     
     def _select_best_strategy(self, symbol: str) -> str:
         """Select best strategy based on symbol characteristics.

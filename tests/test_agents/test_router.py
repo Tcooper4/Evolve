@@ -3,7 +3,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from trading.agents.router import Router
+from core.agents.router import RouterAgent as Router
 
 class TestRouter:
     @pytest.fixture

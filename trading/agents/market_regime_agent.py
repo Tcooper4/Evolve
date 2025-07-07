@@ -351,7 +351,8 @@ class MarketRegimeAgent(BaseAgent):
                         correlation = 0.5
                 else:
                     correlation = 0.5
-            except:
+            except (ValueError, TypeError, IndexError) as e:
+                logger.warning(f"Error calculating correlation, using default: {e}")
                 correlation = 0.5
             
             # Regime confidence (based on feature consistency)
