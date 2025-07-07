@@ -39,8 +39,8 @@ class Task:
     """Task model."""
     id: str
     name: str
-    description: str = ""
     type: str
+    description: str = ""
     status: TaskStatus = TaskStatus.PENDING
     priority: TaskPriority = TaskPriority.MEDIUM
     scheduled_for: Optional[datetime] = None

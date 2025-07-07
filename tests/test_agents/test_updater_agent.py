@@ -17,69 +17,55 @@ from datetime import datetime, timedelta
 
 # Local imports
 from trading.agents.updater_agent import (
-    UpdaterAgent, ModelUpdateRequest, ModelUpdateResult
+    UpdaterAgent, UpdateRequest, UpdateResult
 )
 from trading.agents.base_agent_interface import AgentConfig
 
 
-class TestModelUpdateRequest:
-    """Test the ModelUpdateRequest dataclass."""
+class TestUpdateRequest:
+    """Test the UpdateRequest dataclass."""
     
-    def test_model_update_request_creation(self):
-        """Test creating a ModelUpdateRequest instance."""
-        request = ModelUpdateRequest(
+    def test_update_request_creation(self):
+        """Test creating an UpdateRequest instance."""
+        request = UpdateRequest(
             model_id="model_123",
-            model_path="models/model_123.pkl",
-            model_type="lstm",
-            new_data_path="data/new_data.csv",
+            evaluation_result=None,  # Will be set in actual usage
             update_type="retrain",
-            retrain_threshold=0.1,
-            performance_threshold=0.8,
+            priority="normal",
             request_id="update_456"
         )
         
         assert request.model_id == "model_123"
-        assert request.model_path == "models/model_123.pkl"
-        assert request.model_type == "lstm"
-        assert request.new_data_path == "data/new_data.csv"
         assert request.update_type == "retrain"
-        assert request.retrain_threshold == 0.1
-        assert request.performance_threshold == 0.8
+        assert request.priority == "normal"
         assert request.request_id == "update_456"
     
-    def test_model_update_request_defaults(self):
-        """Test ModelUpdateRequest with default values."""
-        request = ModelUpdateRequest(
+    def test_update_request_defaults(self):
+        """Test UpdateRequest with default values."""
+        request = UpdateRequest(
             model_id="model_123",
-            model_path="models/model_123.pkl",
-            model_type="lstm",
-            new_data_path="data/new_data.csv"
+            evaluation_result=None
         )
         
         assert request.model_id == "model_123"
-        assert request.model_path == "models/model_123.pkl"
-        assert request.model_type == "lstm"
-        assert request.new_data_path == "data/new_data.csv"
-        assert request.update_type == "incremental"
-        assert request.retrain_threshold == 0.05
-        assert request.performance_threshold == 0.7
+        assert request.priority == "normal"
         assert request.request_id is None
 
 
-class TestModelUpdateResult:
-    """Test the ModelUpdateResult dataclass."""
+class TestUpdateResult:
+    """Test the UpdateResult dataclass."""
     
-    def test_model_update_result_creation(self):
-        """Test creating a ModelUpdateResult instance."""
-        result = ModelUpdateResult(
+    def test_update_result_creation(self):
+        """Test creating an UpdateResult instance."""
+        result = UpdateResult(
             request_id="update_456",
             model_id="model_123",
+            original_model_id="model_123_old",
             update_timestamp="2024-01-01T12:00:00",
             update_type="retrain",
-            old_model_path="models/model_123_old.pkl",
             new_model_path="models/model_123_new.pkl",
-            performance_improvement=0.15,
-            training_metrics={"mse": 0.008, "mae": 0.04},
+            new_model_id="model_123_new",
+            improvement_metrics={"mse": 0.008, "mae": 0.04},
             update_status="success",
             error_message=None
         )
@@ -88,32 +74,31 @@ class TestModelUpdateResult:
         assert result.model_id == "model_123"
         assert result.update_timestamp == "2024-01-01T12:00:00"
         assert result.update_type == "retrain"
-        assert result.old_model_path == "models/model_123_old.pkl"
         assert result.new_model_path == "models/model_123_new.pkl"
-        assert result.performance_improvement == 0.15
-        assert result.training_metrics == {"mse": 0.008, "mae": 0.04}
+        assert result.new_model_id == "model_123_new"
+        assert result.improvement_metrics == {"mse": 0.008, "mae": 0.04}
         assert result.update_status == "success"
         assert result.error_message is None
     
-    def test_model_update_result_defaults(self):
-        """Test ModelUpdateResult with default values."""
-        result = ModelUpdateResult(
+    def test_update_result_defaults(self):
+        """Test UpdateResult with default values."""
+        result = UpdateResult(
             request_id="update_456",
             model_id="model_123",
+            original_model_id="model_123_old",
             update_timestamp="2024-01-01T12:00:00",
             update_type="retrain",
-            old_model_path="models/model_123_old.pkl",
-            new_model_path="models/model_123_new.pkl"
+            new_model_path="models/model_123_new.pkl",
+            new_model_id="model_123_new"
         )
         
         assert result.request_id == "update_456"
         assert result.model_id == "model_123"
         assert result.update_timestamp == "2024-01-01T12:00:00"
         assert result.update_type == "retrain"
-        assert result.old_model_path == "models/model_123_old.pkl"
         assert result.new_model_path == "models/model_123_new.pkl"
-        assert result.performance_improvement == 0.0
-        assert result.training_metrics is None
+        assert result.new_model_id == "model_123_new"
+        assert result.improvement_metrics == {}
         assert result.update_status == "success"
         assert result.error_message is None
 
@@ -213,22 +198,24 @@ class TestUpdaterAgent:
     def test_updater_agent_validate_input_valid(self, updater_agent, mock_old_model, sample_new_data):
         """Test input validation with valid data."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path=sample_new_data
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         assert updater_agent.validate_input(request=request) is True
     
     def test_updater_agent_validate_input_invalid_model_path(self, updater_agent, sample_new_data):
         """Test input validation with invalid model path."""
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path="nonexistent_model.pkl",
-            model_type="lstm",
-            new_data_path=sample_new_data
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         assert updater_agent.validate_input(request=request) is False
@@ -236,11 +223,12 @@ class TestUpdaterAgent:
     def test_updater_agent_validate_input_invalid_new_data_path(self, updater_agent, mock_old_model):
         """Test input validation with invalid new data path."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path="nonexistent_data.csv"
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         assert updater_agent.validate_input(request=request) is False
@@ -248,12 +236,12 @@ class TestUpdaterAgent:
     def test_updater_agent_validate_input_invalid_update_type(self, updater_agent, mock_old_model, sample_new_data):
         """Test input validation with invalid update type."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path=sample_new_data,
-            update_type="invalid_type"
+            evaluation_result=None,
+            update_type="invalid_type",
+            priority="normal",
+            request_id="update_456"
         )
         
         assert updater_agent.validate_input(request=request) is False
@@ -270,12 +258,12 @@ class TestUpdaterAgent:
     async def test_updater_agent_execute_success(self, updater_agent, mock_old_model, sample_new_data):
         """Test successful model update execution."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path=sample_new_data,
-            update_type="retrain"
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         result = await updater_agent.execute(request=request)
@@ -305,12 +293,12 @@ class TestUpdaterAgent:
     async def test_updater_agent_update_lstm_model(self, updater_agent, mock_old_model, sample_new_data):
         """Test LSTM model updating."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path=sample_new_data,
-            update_type="retrain"
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         result = updater_agent.update_model(request)
@@ -326,12 +314,12 @@ class TestUpdaterAgent:
     async def test_updater_agent_update_xgboost_model(self, updater_agent, mock_old_model, sample_new_data):
         """Test XGBoost model updating."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="xgboost",
-            new_data_path=sample_new_data,
-            update_type="retrain"
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         result = updater_agent.update_model(request)
@@ -346,12 +334,12 @@ class TestUpdaterAgent:
     async def test_updater_agent_incremental_update(self, updater_agent, mock_old_model, sample_new_data):
         """Test incremental model update."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path=sample_new_data,
-            update_type="incremental"
+            evaluation_result=None,
+            update_type="incremental",
+            priority="normal",
+            request_id="update_456"
         )
         
         result = updater_agent.update_model(request)
@@ -366,13 +354,12 @@ class TestUpdaterAgent:
     async def test_updater_agent_update_with_performance_threshold(self, updater_agent, mock_old_model, sample_new_data):
         """Test model update with performance threshold."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path=sample_new_data,
+            evaluation_result=None,
             update_type="retrain",
-            performance_threshold=0.9  # High threshold
+            priority="normal",
+            request_id="update_456"
         )
         
         result = updater_agent.update_model(request)
@@ -385,11 +372,12 @@ class TestUpdaterAgent:
     async def test_updater_agent_update_invalid_model_type(self, updater_agent, mock_old_model, sample_new_data):
         """Test updating with invalid model type."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="invalid_type",
-            new_data_path=sample_new_data
+            evaluation_result=None,
+            update_type="invalid_type",
+            priority="normal",
+            request_id="update_456"
         )
         
         result = updater_agent.update_model(request)
@@ -400,12 +388,12 @@ class TestUpdaterAgent:
     def test_updater_agent_get_update_history(self, updater_agent, mock_old_model, sample_new_data):
         """Test getting update history."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path=sample_new_data,
-            update_type="retrain"
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         # Update model first
@@ -416,7 +404,7 @@ class TestUpdaterAgent:
         
         assert isinstance(history, list)
         assert len(history) > 0
-        assert all(isinstance(update_result, ModelUpdateResult) for update_result in history)
+        assert all(isinstance(update_result, UpdateResult) for update_result in history)
     
     def test_updater_agent_get_update_history_nonexistent(self, updater_agent):
         """Test getting update history for nonexistent model."""
@@ -463,11 +451,12 @@ class TestUpdaterAgentErrorHandling:
     @pytest.mark.asyncio
     async def test_updater_agent_update_with_missing_model(self, updater_agent, sample_new_data):
         """Test updating with missing model file."""
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path="nonexistent_model.pkl",
-            model_type="lstm",
-            new_data_path=sample_new_data
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         result = updater_agent.update_model(request)
@@ -479,11 +468,12 @@ class TestUpdaterAgentErrorHandling:
     async def test_updater_agent_update_with_missing_new_data(self, updater_agent, mock_old_model):
         """Test updating with missing new data file."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path="nonexistent_data.csv"
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         result = updater_agent.update_model(request)
@@ -501,11 +491,12 @@ class TestUpdaterAgentErrorHandling:
         with open(invalid_data_path, 'w') as f:
             f.write("invalid,csv,data\n")
         
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path=str(invalid_data_path)
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         result = updater_agent.update_model(request)
@@ -586,12 +577,12 @@ class TestUpdaterAgentIntegration:
         
         # Update model multiple times
         for i in range(3):
-            request = ModelUpdateRequest(
+            request = UpdateRequest(
                 model_id=f"model_{i}",
-                model_path=model_path,
-                model_type="lstm",
-                new_data_path=sample_new_data,
-                update_type="retrain"
+                evaluation_result=None,
+                update_type="retrain",
+                priority="normal",
+                request_id=f"update_{i}"
             )
             
             result = updater_agent.update_model(request)
@@ -606,12 +597,12 @@ class TestUpdaterAgentIntegration:
     async def test_updater_agent_backup_integration(self, updater_agent, mock_old_model, sample_new_data):
         """Test that backups are created during updates."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path=sample_new_data,
-            update_type="retrain"
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         result = updater_agent.update_model(request)
@@ -625,12 +616,12 @@ class TestUpdaterAgentIntegration:
     async def test_updater_agent_performance_tracking(self, updater_agent, mock_old_model, sample_new_data):
         """Test that performance improvements are tracked."""
         model_path, _ = mock_old_model
-        request = ModelUpdateRequest(
+        request = UpdateRequest(
             model_id="model_123",
-            model_path=model_path,
-            model_type="lstm",
-            new_data_path=sample_new_data,
-            update_type="retrain"
+            evaluation_result=None,
+            update_type="retrain",
+            priority="normal",
+            request_id="update_456"
         )
         
         result = updater_agent.update_model(request)

@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 import json
 import os
-from trading.task_memory import TaskMemory, Task, TaskStatus
+from .task_memory import TaskMemory, Task, TaskStatus
 
 class TaskDashboard:
     """Dashboard for monitoring and managing tasks."""

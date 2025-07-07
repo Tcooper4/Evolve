@@ -13,7 +13,8 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 from pathlib import Path
 from trading.base_agent import BaseAgent
-from trading.alert_manager import AlertManager
+from .alert_manager import AlertManager
+from .metrics_collector import MetricsCollector
 
 class AlertAgent(BaseAgent):
     """Agent responsible for managing alerts and notifications."""
@@ -21,8 +22,12 @@ class AlertAgent(BaseAgent):
     def __init__(self, config: Dict):
         """Initialize the alert agent."""
         super().__init__(config)
-        self.alert_manager = AlertManager(config)
-        self.setup_logging()def setup_logging(self):
+        # Create a simple metrics collector for the alert manager
+        metrics_collector = MetricsCollector(config)
+        self.alert_manager = AlertManager(config, metrics_collector)
+        self.setup_logging()
+        
+    def setup_logging(self):
         """Configure logging for alert management."""
         log_path = Path("logs/alerts")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -37,7 +42,6 @@ class AlertAgent(BaseAgent):
         )
         self.logger = logging.getLogger(__name__)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize the alert agent."""
         try:

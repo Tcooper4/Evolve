@@ -222,7 +222,8 @@ class RollingRetrainingAgent(BaseAgent):
             rs = gain / loss
             rsi = 100 - (100 / (1 + rs))
             return rsi
-        except:
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            logger.warning(f"Error calculating RSI: {e}")
             return pd.Series(index=prices.index, data=50)
     
     def _calculate_macd(self, prices: pd.Series, fast: int = 12, slow: int = 26) -> pd.Series:
@@ -232,7 +233,8 @@ class RollingRetrainingAgent(BaseAgent):
             ema_slow = prices.ewm(span=slow).mean()
             macd = ema_fast - ema_slow
             return macd
-        except:
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Error calculating MACD: {e}")
             return pd.Series(index=prices.index, data=0)
     
     def _calculate_bollinger_position(self, prices: pd.Series, period: int = 20) -> pd.Series:
@@ -244,7 +246,8 @@ class RollingRetrainingAgent(BaseAgent):
             lower_band = sma - (2 * std)
             position = (prices - lower_band) / (upper_band - lower_band)
             return position
-        except:
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            logger.warning(f"Error calculating Bollinger position: {e}")
             return pd.Series(index=prices.index, data=0.5)
     
     def walk_forward_validation(self, 

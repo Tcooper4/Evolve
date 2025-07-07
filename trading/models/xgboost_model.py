@@ -1,470 +1,24 @@
-"""XGBoostForecaster: XGBoost wrapper for time series forecasting."""
+"""
+XGBoost Model for Time Series Forecasting
 
-from typing import Dict, Any, Optional, List, Tuple
-import pandas as pd
+This module provides an XGBoost-based model for time series forecasting
+in the Evolve trading system.
+"""
+
+import logging
 import numpy as np
-from .base_model import BaseModel, ValidationError, ModelRegistry
+import pandas as pd
+from typing import Dict, Any, Optional, Tuple
+from datetime import datetime
+import joblib
+from pathlib import Path
 
-class XGBoostForecaster(BaseModel):
-    """XGBoost model for time series forecasting."""
-    
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initialize XGBoost model.
-        
-        Args:
-            config: Model configuration dictionary
-        """
-        if config is None:
-            config = {}
-        
-        # Set default configuration
-        default_config = {
-            'n_estimators': 100,
-            'max_depth': 6,
-            'learning_rate': 0.1,
-            'subsample': 0.8,
-            'colsample_bytree': 0.8,
-            'random_state': 42,
-            'feature_columns': ['close', 'volume'],
-            'target_column': 'close',
-            'sequence_length': 10
-        }
-        default_config.update(config)
-        
-        super().__init__(default_config)
-        self._validate_config()
-        self._setup_model()
-    
-    def _validate_config(self) -> None:
-        """Validate model configuration."""
-        required_params = ['feature_columns', 'target_column', 'sequence_length']
-        for param in required_params:
-            if param not in self.config:
-                raise ValidationError(f"Missing required parameter: {param}")
-    
-    def _setup_model(self) -> None:
-        """Setup the XGBoost model."""
-        try:
-            from xgboost import XGBRegressor
-            self.model = XGBRegressor(
-                n_estimators=self.config.get('n_estimators', 100),
-                max_depth=self.config.get('max_depth', 6),
-                learning_rate=self.config.get('learning_rate', 0.1),
-                subsample=self.config.get('subsample', 0.8),
-                colsample_bytree=self.config.get('colsample_bytree', 0.8),
-                random_state=self.config.get('random_state', 42)
-            )
-        except ImportError:
-            raise ImportError("XGBoost is not installed. Please install it with: pip install xgboost")
-    
-    def fit(self, data: pd.DataFrame) -> None:
-        """Fit the model to the data with robust error handling.
-        
-        Args:
-            data: Training data
-            
-        Raises:
-            ValueError: If data is missing or malformed
-            RuntimeError: If fitting fails
-        """
-        try:
-            # Validate input data
-            if data is None or data.empty:
-                raise ValueError("Training data is empty or None")
-            
-            # Check for required columns
-            required_columns = self.config['feature_columns'] + [self.config['target_column']]
-            missing_columns = [col for col in required_columns if col not in data.columns]
-            if missing_columns:
-                raise ValueError(f"Missing required columns: {missing_columns}")
-            
-            # Check for NaN values
-            if data[required_columns].isnull().any().any():
-                import logging
-                logging.warning("NaN values found in training data, attempting to clean")
-                data = data.dropna(subset=required_columns)
-                if data.empty:
-                    raise ValueError("No valid data remaining after removing NaN values")
-            
-            # Validate data size
-            if len(data) < self.config['sequence_length'] + 1:
-                raise ValueError(f"Data length {len(data)} is insufficient for sequence length {self.config['sequence_length']}")
-            
-            # Prepare data
-            X, y = self._prepare_data(data, is_training=True)
-            
-            # Validate prepared data
-            if len(X) == 0 or len(y) == 0:
-                raise ValueError("No valid sequences could be created from the data")
-            
-            if len(X) != len(y):
-                raise ValueError(f"Length mismatch after preparation: X has {len(X)} samples, y has {len(y)} samples")
-            
-            # Fit the model
-            self.model.fit(X, y)
-            self.is_fitted = True
-            
-            import logging
-            logging.info(f"XGBoost model fitted successfully with {len(X)} samples")
-            
-        except Exception as e:
-            import logging
-            logging.error(f"Error fitting XGBoost model: {e}")
-            raise RuntimeError(f"XGBoost model fitting failed: {e}")
-    
-    def predict(self, data: pd.DataFrame) -> np.ndarray:
-        """Make predictions with fallback guards.
-        
-        Args:
-            data: Input data
-            
-        Returns:
-            Predictions
-        """
-        try:
-            # Check if input dataframe is empty or has NaNs
-            if data is None or data.empty:
-                import logging
-                logging.warning("XGBoost predict: Input dataframe is empty, returning empty result")
-                return np.array([])
-            
-            # Check for NaN values
-            if data.isnull().any().any():
-                import logging
-                logging.warning("XGBoost predict: NaN values found in input data, attempting to clean")
-                data = data.dropna()
-                if data.empty:
-                    logging.warning("XGBoost predict: No valid data after cleaning, returning empty result")
-                    return np.array([])
-            
-            # Validate data size
-            if len(data) < self.config['sequence_length'] + 1:
-                import logging
-                logging.warning(f"XGBoost predict: Data length {len(data)} is insufficient for sequence length {self.config['sequence_length']}, returning empty result")
-                return np.array([])
-            
-            # Prepare data
-            X, _ = self._prepare_data(data, is_training=False)
-            
-            # Check if prepared data is empty
-            if len(X) == 0:
-                import logging
-                logging.warning("XGBoost predict: No valid sequences could be created, returning empty result")
-                return np.array([])
-            
-            # Make predictions
-            predictions = self.model.predict(X)
-            
-            return predictions
-            
-        except Exception as e:
-            import logging
-            logging.error(f"Error in XGBoost predict: {e}")
-            return np.array([])
-    
-    def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[np.ndarray, np.ndarray]:
-        """Prepare data for training or prediction.
-        
-        Args:
-            data: Input data
-            is_training: Whether data is for training
-            
-        Returns:
-            Tuple of (X, y) arrays
-        """
-        # Validate data
-        if data.isnull().any().any():
-            raise ValidationError("Data contains missing values")
-        
-        # Check if all required columns exist
-        missing_cols = [col for col in self.config['feature_columns'] 
-                       if col not in data.columns]
-        if missing_cols:
-            raise ValidationError(f"Missing required columns: {missing_cols}")
-        
-        # Create sequences
-        X_sequences = []
-        y_values = []
-        
-        for i in range(len(data) - self.config['sequence_length']):
-            X_seq = data[self.config['feature_columns']].iloc[i:i + self.config['sequence_length']].values
-            X_sequences.append(X_seq.flatten())  # Flatten for XGBoost
-            y_values.append(data[self.config['target_column']].iloc[i + self.config['sequence_length']])
-        
-        X = np.array(X_sequences)
-        y = np.array(y_values)
-        
-        return X, y
-    
-    def get_feature_importance(self) -> Dict[str, float]:
-        """Get feature importance scores.
-        
-        Returns:
-            Dictionary of feature importance scores
-        """
-        if not hasattr(self.model, 'feature_importances_'):
-            return {}
-        
-        feature_names = []
-        for i in range(self.config['sequence_length']):
-            for col in self.config['feature_columns']:
-                feature_names.append(f"{col}_t{i}")
-        
-        return dict(zip(feature_names, self.model.feature_importances_))
+from .base_model import BaseModel
 
-    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
-        """Generate forecast for future time steps.
-        
-        Args:
-            data: Historical data DataFrame
-            horizon: Number of time steps to forecast
-            
-        Returns:
-            Dictionary containing forecast results
-        """
-        try:
-            if not self.is_fitted:
-                raise RuntimeError('Model must be fitted before forecasting.')
-            
-            # Make initial prediction
-            predictions = self.predict(data)
-            
-            # Generate multi-step forecast
-            forecast_values = []
-            current_data = data.copy()
-            
-            for i in range(horizon):
-                # Get prediction for next step
-                pred = self.predict(current_data)
-                forecast_values.append(pred[-1])
-                
-                # Update data for next iteration
-                new_row = current_data.iloc[-1].copy()
-                new_row[self.config.get('target_column', 'close')] = pred[-1]  # Update with prediction
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
-                current_data = current_data.iloc[1:]  # Remove oldest row
-            
-            return {
-                'forecast': np.array(forecast_values),
-                'confidence': 0.85,  # XGBoost confidence
-                'model': 'XGBoost',
-                'horizon': horizon,
-                'feature_importance': self.get_feature_importance()
-            }
-            
-        except Exception as e:
-            import logging
-            logging.error(f"Error in XGBoost model forecast: {e}")
-            raise RuntimeError(f"XGBoost model forecasting failed: {e}")
-
-    def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> None:
-        """Plot XGBoost model results and predictions.
-        
-        Args:
-            data: Input data DataFrame
-            predictions: Optional predictions to plot
-        """
-        try:
-            import matplotlib.pyplot as plt
-            
-            if predictions is None:
-                predictions = self.predict(data)
-            
-            plt.figure(figsize=(15, 10))
-            
-            # Plot 1: Historical vs Predicted
-            plt.subplot(2, 2, 1)
-            target_col = self.config.get('target_column', 'close')
-            plt.plot(data.index, data[target_col], label='Actual', color='blue')
-            plt.plot(data.index[-len(predictions):], predictions, label='Predicted', color='red')
-            plt.title('XGBoost Model Predictions')
-            plt.xlabel('Time')
-            plt.ylabel('Value')
-            plt.legend()
-            plt.grid(True)
-            
-            # Plot 2: Feature importance
-            plt.subplot(2, 2, 2)
-            importance = self.get_feature_importance()
-            if importance:
-                # Get top 10 features
-                top_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)[:10]
-                feature_names = [f[0] for f in top_features]
-                importance_values = [f[1] for f in top_features]
-                plt.barh(range(len(feature_names)), importance_values)
-                plt.yticks(range(len(feature_names)), feature_names)
-                plt.title('Top 10 Feature Importance')
-                plt.xlabel('Importance')
-            else:
-                plt.text(0.5, 0.5, 'Feature importance not available', 
-                        ha='center', va='center', transform=plt.gca().transAxes)
-                plt.title('Feature Importance')
-            plt.grid(True)
-            
-            # Plot 3: Prediction residuals
-            plt.subplot(2, 2, 3)
-            if len(predictions) == len(data):
-                residuals = data[target_col].values - predictions
-                plt.plot(residuals)
-                plt.title('Prediction Residuals')
-                plt.xlabel('Time')
-                plt.ylabel('Residual')
-                plt.grid(True)
-            else:
-                plt.text(0.5, 0.5, 'Residuals not available', 
-                        ha='center', va='center', transform=plt.gca().transAxes)
-                plt.title('Prediction Residuals')
-            
-            # Plot 4: Model information
-            plt.subplot(2, 2, 4)
-            plt.text(0.1, 0.8, f'Model: XGBoost', fontsize=12)
-            plt.text(0.1, 0.6, f'Features: {len(self.config.get("feature_columns", []))}', fontsize=12)
-            plt.text(0.1, 0.4, f'Target: {target_col}', fontsize=12)
-            plt.text(0.1, 0.2, f'Fitted: {self.is_fitted}', fontsize=12)
-            plt.title('Model Information')
-            plt.axis('off')
-            
-            plt.tight_layout()
-            plt.show()
-            
-        except Exception as e:
-            import logging
-            logging.error(f"Error plotting XGBoost results: {e}")
-            print(f"Could not plot results: {e}")
-
-    def calculate_mse(self, data: pd.DataFrame, predictions: np.ndarray = None) -> float:
-        """Calculate Mean Squared Error (MSE) for predictions.
-        
-        Args:
-            data: Input data DataFrame
-            predictions: Optional predictions array (if None, will generate predictions)
-            
-        Returns:
-            float: Mean Squared Error
-        """
-        try:
-            if predictions is None:
-                predictions = self.predict(data)
-            
-            if len(predictions) == 0:
-                return float('inf')
-            
-            # Get actual values
-            target_col = self.config.get('target_column', 'close')
-            actual_values = data[target_col].values[-len(predictions):]
-            
-            # Calculate MSE
-            mse = np.mean((actual_values - predictions) ** 2)
-            return float(mse)
-            
-        except Exception as e:
-            import logging
-            logging.error(f"Error calculating MSE: {e}")
-            return float('inf')
-    
-    def calculate_confidence_intervals(self, data: pd.DataFrame, confidence_level: float = 0.95) -> Dict[str, np.ndarray]:
-        """Calculate confidence intervals for predictions.
-        
-        Args:
-            data: Input data DataFrame
-            confidence_level: Confidence level (0.95 for 95% confidence)
-            
-        Returns:
-            Dictionary containing lower and upper confidence bounds
-        """
-        try:
-            # Get predictions
-            predictions = self.predict(data)
-            
-            if len(predictions) == 0:
-                return {'lower': np.array([]), 'upper': np.array([])}
-            
-            # Calculate prediction uncertainty using model's feature importance
-            feature_importance = self.get_feature_importance()
-            if not feature_importance:
-                # Fallback: use simple uncertainty estimation
-                uncertainty = 0.1 * np.abs(predictions)
-            else:
-                # Use feature importance to estimate uncertainty
-                avg_importance = np.mean(list(feature_importance.values()))
-                uncertainty = avg_importance * 0.05 * np.abs(predictions)
-            
-            # Calculate confidence intervals
-            z_score = 1.96  # 95% confidence level
-            margin_of_error = z_score * uncertainty
-            
-            lower_bound = predictions - margin_of_error
-            upper_bound = predictions + margin_of_error
-            
-            return {
-                'lower': lower_bound,
-                'upper': upper_bound,
-                'confidence_level': confidence_level
-            }
-            
-        except Exception as e:
-            import logging
-            logging.error(f"Error calculating confidence intervals: {e}")
-            return {'lower': np.array([]), 'upper': np.array([])}
-    
-    def get_model_metrics(self, data: pd.DataFrame) -> Dict[str, float]:
-        """Get comprehensive model metrics including MSE and confidence.
-        
-        Args:
-            data: Input data DataFrame
-            
-        Returns:
-            Dictionary containing model metrics
-        """
-        try:
-            predictions = self.predict(data)
-            
-            if len(predictions) == 0:
-                return {
-                    'mse': float('inf'),
-                    'rmse': float('inf'),
-                    'mae': float('inf'),
-                    'confidence': 0.0,
-                    'feature_importance_score': 0.0
-                }
-            
-            # Calculate MSE
-            mse = self.calculate_mse(data, predictions)
-            rmse = np.sqrt(mse) if mse != float('inf') else float('inf')
-            
-            # Calculate MAE
-            target_col = self.config.get('target_column', 'close')
-            actual_values = data[target_col].values[-len(predictions):]
-            mae = np.mean(np.abs(actual_values - predictions))
-            
-            # Calculate confidence score based on feature importance
-            feature_importance = self.get_feature_importance()
-            if feature_importance:
-                confidence_score = min(1.0, np.mean(list(feature_importance.values())) * 10)
-            else:
-                confidence_score = 0.7  # Default confidence
-            
-            return {
-                'mse': mse,
-                'rmse': rmse,
-                'mae': mae,
-                'confidence': confidence_score,
-                'feature_importance_score': np.mean(list(feature_importance.values())) if feature_importance else 0.0
-            }
-            
-        except Exception as e:
-            import logging
-            logging.error(f"Error calculating model metrics: {e}")
-            return {
-                'mse': float('inf'),
-                'rmse': float('inf'),
-                'mae': float('inf'),
-                'confidence': 0.0,
-                'feature_importance_score': 0.0
-            }
+logger = logging.getLogger(__name__)
 
 class XGBoostModel(BaseModel):
-    """XGBoost model for time series forecasting (alias for XGBoostForecaster)."""
+    """XGBoost-based time series forecasting model."""
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize XGBoost model.
@@ -473,34 +27,157 @@ class XGBoostModel(BaseModel):
             config: Model configuration dictionary
         """
         super().__init__(config)
-        self.forecaster = XGBoostForecaster(config)
-        self.is_fitted = False
+        
+        # Default configuration
+        self.config = config or {}
+        self.model_params = self.config.get('model_params', {
+            'n_estimators': 100,
+            'max_depth': 6,
+            'learning_rate': 0.1,
+            'subsample': 0.8,
+            'colsample_bytree': 0.8,
+            'random_state': 42
+        })
+        
+        self.model = None
+        self.is_trained = False
+        self.feature_names = None
+        
+    def _setup_model(self):
+        """Setup XGBoost model."""
+        try:
+            import xgboost as xgb
+            self.model = xgb.XGBRegressor(**self.model_params)
+            logger.info("XGBoost model initialized successfully")
+        except ImportError as e:
+            logger.error(f"XGBoost not available: {e}")
+            raise ImportError("XGBoost is required for this model. Install with: pip install xgboost")
     
-    def fit(self, data: pd.DataFrame) -> 'XGBoostModel':
-        """Fit the model to the data.
+    def prepare_features(self, data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+        """Prepare features for XGBoost model.
+        
+        Args:
+            data: Input time series data
+            
+        Returns:
+            Tuple of (features, target)
+        """
+        try:
+            # Create lag features
+            lags = [1, 2, 3, 5, 10]
+            features = pd.DataFrame()
+            
+            for lag in lags:
+                features[f'lag_{lag}'] = data['close'].shift(lag)
+            
+            # Add technical indicators
+            features['sma_5'] = data['close'].rolling(5).mean()
+            features['sma_20'] = data['close'].rolling(20).mean()
+            features['rsi'] = self._calculate_rsi(data['close'])
+            features['volatility'] = data['close'].rolling(20).std()
+            
+            # Add time features
+            features['day_of_week'] = data.index.dayofweek
+            features['month'] = data.index.month
+            
+            # Target variable
+            target = data['close'].shift(-1)  # Next day's price
+            
+            # Remove NaN values
+            features = features.dropna()
+            target = target[features.index]
+            
+            self.feature_names = features.columns.tolist()
+            
+            return features, target
+            
+        except Exception as e:
+            logger.error(f"Error preparing features: {e}")
+            raise
+    
+    def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
+        """Calculate RSI indicator."""
+        try:
+            delta = prices.diff()
+            gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+            loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+            rs = gain / loss
+            rsi = 100 - (100 / (1 + rs))
+            return rsi
+        except Exception as e:
+            logger.warning(f"Error calculating RSI: {e}")
+            return pd.Series(index=prices.index, data=50)
+    
+    def train(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Train the XGBoost model.
         
         Args:
             data: Training data
             
         Returns:
-            Self for chaining
+            Training results dictionary
         """
-        self.forecaster.fit(data)
-        self.is_fitted = True
-        return self
+        try:
+            logger.info("Starting XGBoost model training...")
+            
+            # Setup model if not already done
+            if self.model is None:
+                self._setup_model()
+            
+            # Prepare features
+            features, target = self.prepare_features(data)
+            
+            if len(features) < 50:
+                raise ValueError("Insufficient data for training (need at least 50 samples)")
+            
+            # Train model
+            self.model.fit(features, target)
+            self.is_trained = True
+            
+            # Calculate training metrics
+            train_predictions = self.model.predict(features)
+            mse = np.mean((target - train_predictions) ** 2)
+            mae = np.mean(np.abs(target - train_predictions))
+            
+            logger.info(f"XGBoost training completed. MSE: {mse:.4f}, MAE: {mae:.4f}")
+            
+            return {
+                'mse': mse,
+                'mae': mae,
+                'feature_importance': dict(zip(self.feature_names, self.model.feature_importances_))
+            }
+            
+        except Exception as e:
+            logger.error(f"Error training XGBoost model: {e}")
+            raise
     
     def predict(self, data: pd.DataFrame) -> np.ndarray:
-        """Make predictions.
+        """Generate predictions using the trained model.
         
         Args:
-            data: Input data
+            data: Input data for prediction
             
         Returns:
-            Predictions
+            Array of predictions
         """
-        if not self.is_fitted:
-            raise ValueError("Model must be fitted before making predictions")
-        return self.forecaster.predict(data)
+        try:
+            if not self.is_trained:
+                raise ValueError("Model must be trained before making predictions")
+            
+            # Prepare features
+            features, _ = self.prepare_features(data)
+            
+            if features.empty:
+                raise ValueError("No valid features for prediction")
+            
+            # Make predictions
+            predictions = self.model.predict(features)
+            
+            return predictions
+            
+        except Exception as e:
+            logger.error(f"Error making predictions: {e}")
+            raise
     
     def get_feature_importance(self) -> Dict[str, float]:
         """Get feature importance scores.
@@ -508,124 +185,78 @@ class XGBoostModel(BaseModel):
         Returns:
             Dictionary of feature importance scores
         """
-        return self.forecaster.get_feature_importance()
-
-    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
-        """Generate forecast for future time steps.
+        if not self.is_trained or self.model is None:
+            return {}
+        
+        return dict(zip(self.feature_names, self.model.feature_importances_))
+    
+    def save(self, filepath: str) -> bool:
+        """Save the trained model.
         
         Args:
-            data: Historical data DataFrame
-            horizon: Number of time steps to forecast
+            filepath: Path to save the model
             
         Returns:
-            Dictionary containing forecast results
+            True if successful
         """
         try:
-            if not self.is_fitted:
-                raise RuntimeError('Model must be fitted before forecasting.')
+            if not self.is_trained:
+                raise ValueError("Cannot save untrained model")
             
-            # Make initial prediction
-            predictions = self.predict(data)
+            # Create directory if it doesn't exist
+            Path(filepath).parent.mkdir(parents=True, exist_ok=True)
             
-            # Generate multi-step forecast
-            forecast_values = []
-            current_data = data.copy()
-            
-            for i in range(horizon):
-                # Get prediction for next step
-                pred = self.predict(current_data)
-                forecast_values.append(pred[-1])
-                
-                # Update data for next iteration
-                new_row = current_data.iloc[-1].copy()
-                new_row[self.config.get('target_column', 'close')] = pred[-1]  # Update with prediction
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
-                current_data = current_data.iloc[1:]  # Remove oldest row
-            
-            return {
-                'forecast': np.array(forecast_values),
-                'confidence': 0.85,  # XGBoost confidence
-                'model': 'XGBoost',
-                'horizon': horizon,
-                'feature_importance': self.get_feature_importance()
+            # Save model and metadata
+            model_data = {
+                'model': self.model,
+                'feature_names': self.feature_names,
+                'config': self.config,
+                'is_trained': self.is_trained,
+                'timestamp': datetime.now().isoformat()
             }
             
+            joblib.dump(model_data, filepath)
+            logger.info(f"XGBoost model saved to {filepath}")
+            return True
+            
         except Exception as e:
-            import logging
-            logging.error(f"Error in XGBoost model forecast: {e}")
-            raise RuntimeError(f"XGBoost model forecasting failed: {e}")
-
-    def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> None:
-        """Plot XGBoost model results and predictions.
+            logger.error(f"Error saving XGBoost model: {e}")
+            return False
+    
+    def load(self, filepath: str) -> bool:
+        """Load a trained model.
         
         Args:
-            data: Input data DataFrame
-            predictions: Optional predictions to plot
+            filepath: Path to the saved model
+            
+        Returns:
+            True if successful
         """
         try:
-            import matplotlib.pyplot as plt
+            model_data = joblib.load(filepath)
             
-            if predictions is None:
-                predictions = self.predict(data)
+            self.model = model_data['model']
+            self.feature_names = model_data['feature_names']
+            self.config = model_data.get('config', {})
+            self.is_trained = model_data.get('is_trained', False)
             
-            plt.figure(figsize=(15, 10))
-            
-            # Plot 1: Historical vs Predicted
-            plt.subplot(2, 2, 1)
-            target_col = self.config.get('target_column', 'close')
-            plt.plot(data.index, data[target_col], label='Actual', color='blue')
-            plt.plot(data.index[-len(predictions):], predictions, label='Predicted', color='red')
-            plt.title('XGBoost Model Predictions')
-            plt.xlabel('Time')
-            plt.ylabel('Value')
-            plt.legend()
-            plt.grid(True)
-            
-            # Plot 2: Feature importance
-            plt.subplot(2, 2, 2)
-            importance = self.get_feature_importance()
-            if importance:
-                # Get top 10 features
-                top_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)[:10]
-                feature_names = [f[0] for f in top_features]
-                importance_values = [f[1] for f in top_features]
-                plt.barh(range(len(feature_names)), importance_values)
-                plt.yticks(range(len(feature_names)), feature_names)
-                plt.title('Top 10 Feature Importance')
-                plt.xlabel('Importance')
-            else:
-                plt.text(0.5, 0.5, 'Feature importance not available', 
-                        ha='center', va='center', transform=plt.gca().transAxes)
-                plt.title('Feature Importance')
-            plt.grid(True)
-            
-            # Plot 3: Prediction residuals
-            plt.subplot(2, 2, 3)
-            if len(predictions) == len(data):
-                residuals = data[target_col].values - predictions
-                plt.plot(residuals)
-                plt.title('Prediction Residuals')
-                plt.xlabel('Time')
-                plt.ylabel('Residual')
-                plt.grid(True)
-            else:
-                plt.text(0.5, 0.5, 'Residuals not available', 
-                        ha='center', va='center', transform=plt.gca().transAxes)
-                plt.title('Prediction Residuals')
-            
-            # Plot 4: Model information
-            plt.subplot(2, 2, 4)
-            plt.text(0.1, 0.8, f'Model: XGBoost', fontsize=12)
-            plt.text(0.1, 0.6, f'Features: {len(self.config.get("feature_columns", []))}', fontsize=12)
-            plt.text(0.1, 0.4, f'Target: {target_col}', fontsize=12)
-            plt.text(0.1, 0.2, f'Fitted: {self.is_fitted}', fontsize=12)
-            plt.title('Model Information')
-            plt.axis('off')
-            
-            plt.tight_layout()
-            plt.show()
+            logger.info(f"XGBoost model loaded from {filepath}")
+            return True
             
         except Exception as e:
-            import logging
-            logging.error(f"Error plotting XGBoost results: {e}")
-            print(f"Could not plot results: {e}")
+            logger.error(f"Error loading XGBoost model: {e}")
+            return False
+    
+    def get_metadata(self) -> Dict[str, Any]:
+        """Get model metadata.
+        
+        Returns:
+            Model metadata dictionary
+        """
+        return {
+            'model_type': 'xgboost',
+            'is_trained': self.is_trained,
+            'feature_count': len(self.feature_names) if self.feature_names else 0,
+            'config': self.config,
+            'timestamp': datetime.now().isoformat()
+        }

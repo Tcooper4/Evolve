@@ -13,10 +13,11 @@ from pathlib import Path
 from datetime import datetime
 import json
 import yaml
-from trading.models import Task, Workflow, TaskStatus
-from trading.task_manager import TaskManager
-from trading.workflow_engine import WorkflowEngine
-from trading.notification_service import NotificationService
+from trading.meta_agents.models import Task, TaskStatus
+from trading.meta_agents.task_manager import TaskManager
+# from trading.task_manager import TaskManager  # Already imported above
+from trading.meta_agents.task_orchestrator import TaskOrchestrator as WorkflowEngine
+from trading.meta_agents.services.notification_service import NotificationService
 
 class Orchestrator:
     """Orchestrator for managing and coordinating automation tasks."""
@@ -27,7 +28,9 @@ class Orchestrator:
         self.task_manager = TaskManager(config)
         self.workflow_engine = WorkflowEngine(config)
         self.notification_service = NotificationService(config)
-        self.setup_logging()def setup_logging(self):
+        self.setup_logging()
+        
+    def setup_logging(self):
         """Configure logging for orchestrator."""
         log_path = Path("logs/orchestrator")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -42,7 +45,6 @@ class Orchestrator:
         )
         self.logger = logging.getLogger(__name__)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def initialize(self) -> None:
         """Initialize orchestrator components."""
         try:

@@ -64,7 +64,7 @@ def tool(
                 )
             except Exception as e:
                 logger.error(f"Tool execution failed: {str(e)}")
-                return {'success': True, 'result': {'success': True, 'result': ToolResult(, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return ToolResult(
                     success=False,
                     data=None,
                     error=str(e),

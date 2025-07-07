@@ -53,7 +53,9 @@ class NotificationService:
         self.setup_database()
         self.setup_templates()
         self.notification_queue = asyncio.Queue()
-        self.running = Falsedef setup_logging(self) -> None:
+        self.running = False
+        
+    def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/notification")
         log_path.mkdir(parents=True, exist_ok=True)

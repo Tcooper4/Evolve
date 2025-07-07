@@ -1058,4 +1058,4 @@ def run_enhanced_interface() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     result = run_enhanced_interface()
-    print(f"Interface result: {result}") 
+    logger.info(f"Interface result: {result}") 

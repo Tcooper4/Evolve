@@ -470,7 +470,7 @@ if __name__ == "__main__":
     
     # Analyze market relationships
     results = model.analyze_market_relationships(data, 'returns')
-    print("Market Analysis Results:", results)
+    logger.info(f"Market Analysis Results: {results}")
     
     # Get strategy insights
     strategy_data = pd.DataFrame({
@@ -481,4 +481,4 @@ if __name__ == "__main__":
     })
     
     insights = model.get_strategy_insights(strategy_data, 'sharpe_ratio')
-    print("Strategy Insights:", insights) 
+    logger.info(f"Strategy Insights: {insights}") 

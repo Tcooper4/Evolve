@@ -360,7 +360,8 @@ class ForecastRouter:
         """Get model confidence score."""
         try:
             return model.get_confidence()
-        except:
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning(f"Error getting model confidence: {e}")
             # Default confidence based on model type
             confidence_map = {
                 'lstm': 0.85,
@@ -375,7 +376,8 @@ class ForecastRouter:
         """Get model metadata."""
         try:
             return model.get_metadata()
-        except:
+        except (AttributeError, TypeError, ValueError) as e:
+            logger.warning(f"Error getting model metadata: {e}")
             return {
                 'model_type': model_type,
                 'timestamp': datetime.now().isoformat(),

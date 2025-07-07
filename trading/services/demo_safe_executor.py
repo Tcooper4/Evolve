@@ -10,6 +10,7 @@ import os
 import time
 import json
 from pathlib import Path
+import logging
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -17,26 +18,28 @@ sys.path.append(str(Path(__file__).parent.parent))
 from services.service_client import ServiceClient
 from utils.safe_executor import SafeExecutor, ExecutionStatus
 
+logger = logging.getLogger(__name__)
+
 def demo_safe_executor():
     """Demonstrate SafeExecutor functionality."""
     
-    print("🛡️ Safe Executor Demonstration")
-    print("=" * 60)
-    print("This demo shows how to safely execute user-defined models and strategies.")
-    print("=" * 60)
+    logger.info("🛡️ Safe Executor Demonstration")
+    logger.info("=" * 60)
+    logger.info("This demo shows how to safely execute user-defined models and strategies.")
+    logger.info("=" * 60)
     
     # Initialize ServiceClient
-    print("\n🔧 Initializing ServiceClient...")
+    logger.info("\n🔧 Initializing ServiceClient...")
     client = ServiceClient(
         redis_host='localhost',
         redis_port=6379
     )
     
-    print("✅ ServiceClient initialized successfully!")
+    logger.info("✅ ServiceClient initialized successfully!")
     
     # Demo 1: Safe Model Execution
-    print("\n🎯 Demo 1: Safe Model Execution")
-    print("-" * 40)
+    logger.info("\n🎯 Demo 1: Safe Model Execution")
+    logger.info("-" * 40)
     
     model_code = '''
 
@@ -66,7 +69,7 @@ def main(input_data):
         'window': 3
     }
     
-    print("Executing simple moving average model...")
+    logger.info("Executing simple moving average model...")
     result = client.execute_model_safely(
         model_code=model_code,
         model_name="simple_ma_model",
@@ -78,20 +81,20 @@ def main(input_data):
         execution_result = result.get('result', {})
         status = execution_result.get('status')
         
-        print(f"Status: {status}")
-        print(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
+        logger.info(f"Status: {status}")
+        logger.info(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
         
         if status == 'success':
             return_value = execution_result.get('return_value')
-            print(f"Prediction: {return_value.get('prediction', 'N/A')}")
-            print(f"Moving Average: {return_value.get('moving_average', 'N/A')}")
-            print(f"Confidence: {return_value.get('confidence', 'N/A')}")
+            logger.info(f"Prediction: {return_value.get('prediction', 'N/A')}")
+            logger.info(f"Moving Average: {return_value.get('moving_average', 'N/A')}")
+            logger.info(f"Confidence: {return_value.get('confidence', 'N/A')}")
         else:
-            print(f"Error: {execution_result.get('error', 'Unknown error')}")
+            logger.info(f"Error: {execution_result.get('error', 'Unknown error')}")
     
     # Demo 2: Safe Strategy Execution
-    print("\n🎯 Demo 2: Safe Strategy Execution")
-    print("-" * 40)
+    logger.info("\n🎯 Demo 2: Safe Strategy Execution")
+    logger.info("-" * 40)
     
     strategy_code = '''
 import numpy as np
@@ -133,7 +136,7 @@ def main(input_data):
         'rsi_overbought': 70
     }
     
-    print("Executing RSI strategy...")
+    logger.info("Executing RSI strategy...")
     result = client.execute_strategy_safely(
         strategy_code=strategy_code,
         strategy_name="rsi_strategy",
@@ -145,21 +148,21 @@ def main(input_data):
         execution_result = result.get('result', {})
         status = execution_result.get('status')
         
-        print(f"Status: {status}")
-        print(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
+        logger.info(f"Status: {status}")
+        logger.info(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
         
         if status == 'success':
             return_value = execution_result.get('return_value')
-            print(f"Signal: {return_value.get('signal', 'N/A')}")
-            print(f"Confidence: {return_value.get('confidence', 'N/A')}")
-            print(f"RSI: {return_value.get('rsi', 'N/A')}")
-            print(f"Reasoning: {return_value.get('reasoning', 'N/A')}")
+            logger.info(f"Signal: {return_value.get('signal', 'N/A')}")
+            logger.info(f"Confidence: {return_value.get('confidence', 'N/A')}")
+            logger.info(f"RSI: {return_value.get('rsi', 'N/A')}")
+            logger.info(f"Reasoning: {return_value.get('reasoning', 'N/A')}")
         else:
-            print(f"Error: {execution_result.get('error', 'Unknown error')}")
+            logger.info(f"Error: {execution_result.get('error', 'Unknown error')}")
     
     # Demo 3: Safe Indicator Execution
-    print("\n🎯 Demo 3: Safe Indicator Execution")
-    print("-" * 40)
+    logger.info("\n🎯 Demo 3: Safe Indicator Execution")
+    logger.info("-" * 40)
     
     indicator_code = '''
 import numpy as np
@@ -198,7 +201,7 @@ def main(input_data):
         'slow_period': 26
     }
     
-    print("Executing MACD indicator...")
+    logger.info("Executing MACD indicator...")
     result = client.execute_indicator_safely(
         indicator_code=indicator_code,
         indicator_name="macd_indicator",
@@ -210,21 +213,21 @@ def main(input_data):
         execution_result = result.get('result', {})
         status = execution_result.get('status')
         
-        print(f"Status: {status}")
-        print(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
+        logger.info(f"Status: {status}")
+        logger.info(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
         
         if status == 'success':
             return_value = execution_result.get('return_value')
-            print(f"MACD: {return_value.get('macd', 'N/A')}")
-            print(f"Fast MA: {return_value.get('fast_ma', 'N/A')}")
-            print(f"Slow MA: {return_value.get('slow_ma', 'N/A')}")
-            print(f"Signal: {return_value.get('signal', 'N/A')}")
+            logger.info(f"MACD: {return_value.get('macd', 'N/A')}")
+            logger.info(f"Fast MA: {return_value.get('fast_ma', 'N/A')}")
+            logger.info(f"Slow MA: {return_value.get('slow_ma', 'N/A')}")
+            logger.info(f"Signal: {return_value.get('signal', 'N/A')}")
         else:
-            print(f"Error: {execution_result.get('error', 'Unknown error')}")
+            logger.info(f"Error: {execution_result.get('error', 'Unknown error')}")
     
     # Demo 4: Error Handling (Dangerous Code)
-    print("\n🎯 Demo 4: Error Handling (Dangerous Code)")
-    print("-" * 40)
+    logger.info("\n🎯 Demo 4: Error Handling (Dangerous Code)")
+    logger.info("-" * 40)
     
     dangerous_code = '''
 import os
@@ -236,7 +239,7 @@ def main(input_data):
     return {"status": "dangerous"}
 '''
     
-    print("Attempting to execute dangerous code...")
+    logger.info("Attempting to execute dangerous code...")
     result = client.execute_model_safely(
         model_code=dangerous_code,
         model_name="dangerous_model",
@@ -248,19 +251,19 @@ def main(input_data):
         execution_result = result.get('result', {})
         status = execution_result.get('status')
         
-        print(f"Status: {status}")
+        logger.info(f"Status: {status}")
         
         if status == 'validation_error':
-            print("✅ Dangerous code was properly blocked!")
-            print(f"Error: {execution_result.get('error', 'Unknown error')}")
+            logger.info("✅ Dangerous code was properly blocked!")
+            logger.info(f"Error: {execution_result.get('error', 'Unknown error')}")
         else:
-            print("❌ Dangerous code was not properly blocked")
+            logger.info("❌ Dangerous code was not properly blocked")
     else:
-        print("❌ No response from service")
+        logger.info("❌ No response from service")
     
     # Demo 5: Timeout Handling
-    print("\n🎯 Demo 5: Timeout Handling")
-    print("-" * 40)
+    logger.info("\n🎯 Demo 5: Timeout Handling")
+    logger.info("-" * 40)
     
     timeout_code = '''
 import time
@@ -271,7 +274,7 @@ def main(input_data):
     return {"status": "completed"}
 '''
     
-    print("Executing code that should timeout...")
+    logger.info("Executing code that should timeout...")
     result = client.execute_model_safely(
         model_code=timeout_code,
         model_name="timeout_model",
@@ -283,53 +286,53 @@ def main(input_data):
         execution_result = result.get('result', {})
         status = execution_result.get('status')
         
-        print(f"Status: {status}")
-        print(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
+        logger.info(f"Status: {status}")
+        logger.info(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
         
         if status == 'timeout':
-            print("✅ Code was properly timed out!")
+            logger.info("✅ Code was properly timed out!")
         else:
-            print(f"Unexpected status: {status}")
+            logger.info(f"Unexpected status: {status}")
     else:
-        print("❌ No response from service")
+        logger.info("❌ No response from service")
     
     # Demo 6: Get Statistics
-    print("\n🎯 Demo 6: Get SafeExecutor Statistics")
-    print("-" * 40)
+    logger.info("\n🎯 Demo 6: Get SafeExecutor Statistics")
+    logger.info("-" * 40)
     
     stats_result = client.get_safe_executor_statistics()
     if stats_result and stats_result.get('type') == 'statistics':
         stats = stats_result.get('statistics', {})
-        print(f"Total Executions: {stats.get('total_executions', 0)}")
-        print(f"Successful Executions: {stats.get('successful_executions', 0)}")
-        print(f"Failed Executions: {stats.get('failed_executions', 0)}")
-        print(f"Success Rate: {stats.get('success_rate', 0):.1%}")
-        print(f"Total Execution Time: {stats.get('total_execution_time', 0):.2f}s")
-        print(f"Average Execution Time: {stats.get('average_execution_time', 0):.2f}s")
+        logger.info(f"Total Executions: {stats.get('total_executions', 0)}")
+        logger.info(f"Successful Executions: {stats.get('successful_executions', 0)}")
+        logger.info(f"Failed Executions: {stats.get('failed_executions', 0)}")
+        logger.info(f"Success Rate: {stats.get('success_rate', 0):.1%}")
+        logger.info(f"Total Execution Time: {stats.get('total_execution_time', 0):.2f}s")
+        logger.info(f"Average Execution Time: {stats.get('average_execution_time', 0):.2f}s")
     else:
-        print("❌ Could not retrieve statistics")
+        logger.info("❌ Could not retrieve statistics")
     
     # Clean up
-    print("\n🧹 Cleaning up...")
+    logger.info("\n🧹 Cleaning up...")
     cleanup_result = client.cleanup_safe_executor()
     if cleanup_result and cleanup_result.get('type') == 'cleanup_completed':
-        print("✅ Cleanup completed successfully")
+        logger.info("✅ Cleanup completed successfully")
     else:
-        print("❌ Cleanup failed")
+        logger.info("❌ Cleanup failed")
     
     client.close()
     
-    print("\n" + "=" * 60)
-    print("🎉 Safe Executor Demonstration Complete!")
-    print("=" * 60)
-    print("\n💡 Key Features Demonstrated:")
-    print("- Safe execution of user-defined models")
-    print("- Strategy execution with market data")
-    print("- Technical indicator calculation")
-    print("- Security validation (blocks dangerous code)")
-    print("- Timeout protection")
-    print("- Resource monitoring and statistics")
-    print("\n🚀 Ready to safely execute custom trading code!")
+    logger.info("\n" + "=" * 60)
+    logger.info("🎉 Safe Executor Demonstration Complete!")
+    logger.info("=" * 60)
+    logger.info("\n💡 Key Features Demonstrated:")
+    logger.info("- Safe execution of user-defined models")
+    logger.info("- Strategy execution with market data")
+    logger.info("- Technical indicator calculation")
+    logger.info("- Security validation (blocks dangerous code)")
+    logger.info("- Timeout protection")
+    logger.info("- Resource monitoring and statistics")
+    logger.info("\n🚀 Ready to safely execute custom trading code!")
 
 def main():
     """Main function."""
@@ -341,15 +344,15 @@ def main():
             "result": "success"
         }
     except KeyboardInterrupt:
-        print("\n\n⏹️  Demo interrupted by user")
+        logger.info("\n\n⏹️  Demo interrupted by user")
         return {
             "status": "interrupted",
             "demo_type": "safe_executor",
             "result": "user_interrupted"
         }
     except Exception as e:
-        print(f"\n❌ Demo failed: {e}")
-        print("💡 Make sure Redis is running and the SafeExecutor service is available")
+        logger.error(f"\n❌ Demo failed: {e}")
+        logger.error("💡 Make sure Redis is running and the SafeExecutor service is available")
         return {
             "status": "failed",
             "demo_type": "safe_executor",

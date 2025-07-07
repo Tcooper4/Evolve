@@ -10,10 +10,10 @@ import yaml
 
 from trading.logs.logger import get_logger
 from trading.logs.audit_logger import audit_logger
-from trading.model_loader import ModelLoader, ModelConfig
-from trading.agents.llm.agent import LLMAgent, AgentConfig
-from trading.memory import MemoryManager
-from trading.tools import ToolRegistry, tool
+from trading.llm.model_loader import ModelLoader, ModelConfig
+from trading.llm.agent import LLMAgent, AgentConfig
+from trading.memory.agent_memory_manager import AgentMemoryManager as MemoryManager
+from trading.llm.tools import ToolRegistry, tool
 
 # Get logger
 logger = get_logger(__name__)

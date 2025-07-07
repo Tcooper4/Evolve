@@ -311,4 +311,4 @@ def get_system_health() -> Dict[str, Any]:
 if __name__ == "__main__":
     # Run complete system initialization when executed directly
     status = run_complete_system()
-    print(f"System initialization completed: {status}") 
+    logger.info(f"System initialization completed: {status}") 

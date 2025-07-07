@@ -4,13 +4,21 @@ Script to fix the PerformanceLogger __init__ method by removing the return None 
 """
 
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 def fix_performance_logger():
     """Fix the PerformanceLogger __init__ method."""
     file_path = "trading/optimization/performance_logger.py"
     
     if not os.path.exists(file_path):
-        print(f"File {file_path} not found")
+        logger.warning(f"File {file_path} not found")
         return
     
     # Read the file
@@ -28,9 +36,9 @@ def fix_performance_logger():
         with open(file_path, 'w') as f:
             f.write(content)
         
-        print("Fixed PerformanceLogger __init__ method")
+        logger.info("Fixed PerformanceLogger __init__ method")
     else:
-        print("Could not find the problematic line to fix")
+        logger.warning("Could not find the problematic line to fix")
 
 if __name__ == "__main__":
     fix_performance_logger() 

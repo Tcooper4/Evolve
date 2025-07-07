@@ -88,7 +88,13 @@ class LoggingConfig:
             logging.info("Logging configuration initialized successfully")
             
         except Exception as e:
-            print(f"Error setting up logging: {e}", file=sys.stderr)
+            # Use basic logging for error since logging setup failed
+            logging.basicConfig(
+                level=logging.ERROR,
+                format='%(asctime)s - %(levelname)s - %(message)s',
+                handlers=[logging.StreamHandler(sys.stderr)]
+            )
+            logging.error(f"Error setting up logging: {e}")
             # Fallback to basic logging
             logging.basicConfig(
                 level=logging.INFO,

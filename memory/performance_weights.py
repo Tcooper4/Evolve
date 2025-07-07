@@ -7,10 +7,14 @@ based on historical performance metrics, including drift detection and retrainin
 
 import os
 import json
+import logging
 import pandas as pd
 from datetime import datetime
 from trading.memory.performance_memory import PerformanceMemory
 from models.retrain import trigger_retraining_if_needed
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 WEIGHT_HISTORY_PATH = "memory/weight_history.json"
 CURRENT_WEIGHT_PATH = "memory/model_weights.json"
@@ -158,7 +162,7 @@ def detect_weight_drift(history: dict, sensitivity=0.1):
             new = current[ticker].get(model, 0)
             drift = abs(new - old)
             if drift > sensitivity:
-                print(f"[DRIFT] {model} weight changed by {drift:.2f} on {ticker}")
+                logger.warning(f"[DRIFT] {model} weight changed by {drift:.2f} on {ticker}")
 
 def get_latest_weights():
     """

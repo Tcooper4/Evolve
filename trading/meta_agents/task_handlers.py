@@ -17,7 +17,7 @@ from alpha_vantage.timeseries import TimeSeries
 import torch
 import torch.nn as nn
 
-from trading.task_manager import Task
+from .task_manager import Task
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,9 @@ class BaseTaskHandler(ABC):
     
     def __init__(self, config_path: str = "config.json"):
         self.config = self._load_config(config_path)
-        self.setup_logging()def _load_config(self, config_path: str) -> Dict:
+        self.setup_logging()
+        
+    def _load_config(self, config_path: str) -> Dict:
         try:
             with open(config_path, 'r') as f:
                 return json.load(f)
@@ -41,7 +43,6 @@ class BaseTaskHandler(ABC):
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     @abstractmethod
     async def handle(self, task: Task) -> Any:
         """Handle the task."""
@@ -339,7 +340,9 @@ class TaskHandler:
     def __init__(self, config: Dict[str, Any]):
         """Initialize task handler."""
         self.config = config
-        self.setup_logging()def setup_logging(self):
+        self.setup_logging()
+    
+    def setup_logging(self):
         """Configure logging for task handler."""
         log_path = Path("logs/tasks")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -354,7 +357,6 @@ class TaskHandler:
         )
         self.logger = logging.getLogger(__name__)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def execute(self, *args, **kwargs) -> Any:
         """Execute the task."""
         raise NotImplementedError
