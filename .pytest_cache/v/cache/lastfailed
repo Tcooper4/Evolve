@@ -822,5 +822,6 @@
   "tests/test_strategies/test_sma.py": true,
   "tests/test_strategy_combinations.py": true,
   "tests/test_task_dashboard.py": true,
-  "tests/test_task_integration.py": true
+  "tests/test_task_integration.py": true,
+  "tests/test_production_readiness.py": true
 }

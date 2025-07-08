@@ -35,7 +35,7 @@ try:
     
     import pandas_ta as ta
     PANDAS_TA_AVAILABLE = True
-    print("pandas_ta successfully imported with compatibility patches")
+    logger.info("pandas_ta successfully imported with compatibility patches")
 except ImportError as e:
     warnings.warn(f"pandas_ta import failed: {e}. Technical indicators may not be available.")
     ta = None
