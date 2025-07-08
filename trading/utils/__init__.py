@@ -57,7 +57,7 @@ from utils.math_utils import (
 )
 
 # Import from core utils
-from core.utils.common_helpers import ensure_directory
+from utils.common_helpers import ensure_directory
 
 utils_logger = std_logging.getLogger(__name__)
 

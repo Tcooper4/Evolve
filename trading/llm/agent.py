@@ -284,7 +284,7 @@ class PromptAgent:
         
         logger.info(f"Parsed prompt - Intent: {intent}, Params: {params}")
         
-        return {'success': True, 'result': intent, 'params': params, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return intent, params
     
     def _select_best_strategy(self, symbol: str) -> str:
         """Select best strategy based on symbol characteristics.

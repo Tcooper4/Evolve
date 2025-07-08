@@ -100,7 +100,7 @@ class EnhancedStrategyEngine:
         
         try:
             # Initialize meta-agent for continuous improvement
-            from trading.meta_agents.agents.performance_checker import PerformanceChecker
+            # from trading.meta_agents.agents.performance_checker import PerformanceChecker  # Removed - meta_agents deleted
             self.meta_agent = PerformanceChecker()
         except ImportError:
             logger.warning("PerformanceChecker not available - using fallback")

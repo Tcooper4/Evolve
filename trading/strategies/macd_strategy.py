@@ -8,7 +8,7 @@ from datetime import datetime
 import warnings
 
 # Import centralized technical indicators
-from core.utils.technical_indicators import calculate_macd
+from utils.technical_indicators import calculate_macd
 
 @dataclass
 class MACDConfig:
