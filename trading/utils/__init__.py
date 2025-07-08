@@ -1,4 +1,14 @@
-"""Utility modules for the trading package."""
+"""Utility modules for the trading package.
+
+This module provides comprehensive utilities for:
+- Data processing and validation
+- Logging and monitoring
+- Mathematical calculations
+- File operations
+- Time utilities
+- Validation functions
+- And more...
+"""
 
 import logging as std_logging
 import os
@@ -8,7 +18,46 @@ import numpy as np
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 
+# Core utility modules
 from .logging import LogManager, ModelLogger, DataLogger, PerformanceLogger
+from .data_utils import (
+    DataValidator,
+    DataPreprocessor,
+    resample_data,
+    calculate_technical_indicators,
+    split_data,
+    prepare_forecast_data
+)
+from .validation_utils import (
+    ValidationError,
+    DataValidator as ValidationDataValidator,
+    ParameterValidator,
+    ConfigValidator,
+    validate_numeric_range,
+    validate_string_length,
+    validate_datetime_range,
+    validate_file_exists,
+    validate_directory_exists
+)
+from .time_utils import MarketHours, TimeUtils
+
+# Import from root utils directory
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+from utils.math_utils import (
+    calculate_sharpe_ratio,
+    calculate_max_drawdown,
+    calculate_win_rate,
+    calculate_profit_factor,
+    calculate_calmar_ratio,
+    calculate_volatility,
+    calculate_beta,
+    calculate_alpha
+)
+
+# Import from core utils
+from core.utils.common_helpers import ensure_directory
 
 utils_logger = std_logging.getLogger(__name__)
 
@@ -167,11 +216,274 @@ def check_data_quality(data: pd.DataFrame) -> bool:
         utils_logger.error(f"Error checking data quality: {e}")
         return False
 
+def get_system_info() -> Dict[str, Any]:
+    """Get comprehensive system information."""
+    try:
+        import platform
+        import psutil
+        import sys
+        
+        return {
+            'platform': platform.platform(),
+            'python_version': sys.version,
+            'cpu_count': psutil.cpu_count(),
+            'memory_total': psutil.virtual_memory().total,
+            'memory_available': psutil.virtual_memory().available,
+            'disk_usage': psutil.disk_usage('/').percent,
+            'current_time': datetime.now().isoformat()
+        }
+    except Exception as e:
+        utils_logger.error(f"Error getting system info: {e}")
+        return {'error': str(e)}
+
+# Missing utility functions that are expected by the system
+def get_current_time() -> datetime:
+    """Get current time."""
+    return datetime.now()
+
+def format_timestamp(dt: datetime, format_str: str = "%Y-%m-%d %H:%M:%S") -> str:
+    """Format timestamp."""
+    return dt.strftime(format_str)
+
+def parse_timestamp(timestamp_str: str) -> datetime:
+    """Parse timestamp string."""
+    return datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+
+def get_time_difference(dt1: datetime, dt2: datetime) -> timedelta:
+    """Get time difference between two datetimes."""
+    return abs(dt1 - dt2)
+
+def is_market_open() -> bool:
+    """Check if market is currently open."""
+    market_hours = MarketHours()
+    return market_hours.is_market_open(datetime.now())
+
+def get_next_market_open() -> datetime:
+    """Get next market open time."""
+    market_hours = MarketHours()
+    return market_hours.get_next_market_open(datetime.now())
+
+def get_previous_market_close() -> datetime:
+    """Get previous market close time."""
+    market_hours = MarketHours()
+    # This is a simplified implementation
+    return datetime.now() - timedelta(hours=16)
+
+def convert_timezone(dt: datetime, timezone: str) -> datetime:
+    """Convert datetime to specified timezone."""
+    time_utils = TimeUtils()
+    return time_utils.to_timezone(dt, timezone)
+
+def get_trading_days(start_date: datetime, end_date: datetime) -> List[datetime]:
+    """Get list of trading days between dates."""
+    # Simplified implementation - returns weekdays
+    trading_days = []
+    current = start_date
+    while current <= end_date:
+        if current.weekday() < 5:  # Monday to Friday
+            trading_days.append(current)
+        current += timedelta(days=1)
+    return trading_days
+
+def get_holidays() -> List[datetime]:
+    """Get list of market holidays."""
+    # Simplified implementation - returns empty list
+    return []
+
+# File utility functions
+def save_json(data: Dict[str, Any], filepath: str) -> None:
+    """Save data as JSON."""
+    ensure_directory(os.path.dirname(filepath))
+    with open(filepath, 'w') as f:
+        json.dump(data, f, indent=2)
+
+def load_json(filepath: str) -> Dict[str, Any]:
+    """Load data from JSON."""
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_pickle(data: Any, filepath: str) -> None:
+    """Save data as pickle."""
+    import pickle
+    ensure_directory(os.path.dirname(filepath))
+    with open(filepath, 'wb') as f:
+        pickle.dump(data, f)
+
+def load_pickle(filepath: str) -> Any:
+    """Load data from pickle."""
+    import pickle
+    if os.path.exists(filepath):
+        with open(filepath, 'rb') as f:
+            return pickle.load(f)
+    return None
+
+def save_csv(data: pd.DataFrame, filepath: str) -> None:
+    """Save DataFrame as CSV."""
+    ensure_directory(os.path.dirname(filepath))
+    data.to_csv(filepath, index=False)
+
+def load_csv(filepath: str) -> pd.DataFrame:
+    """Load DataFrame from CSV."""
+    if os.path.exists(filepath):
+        return pd.read_csv(filepath)
+    return pd.DataFrame()
+
+def get_file_size(filepath: str) -> int:
+    """Get file size in bytes."""
+    if os.path.exists(filepath):
+        return os.path.getsize(filepath)
+    return 0
+
+def get_file_modified_time(filepath: str) -> datetime:
+    """Get file modification time."""
+    if os.path.exists(filepath):
+        return datetime.fromtimestamp(os.path.getmtime(filepath))
+    return datetime.now()
+
+def backup_file(filepath: str, backup_dir: str = "backups") -> str:
+    """Create backup of file."""
+    if not os.path.exists(filepath):
+        return ""
+    
+    ensure_directory(backup_dir)
+    filename = os.path.basename(filepath)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = os.path.join(backup_dir, f"{filename}.{timestamp}")
+    
+    import shutil
+    shutil.copy2(filepath, backup_path)
+    return backup_path
+
+def cleanup_old_files(directory: str, days: int = 30) -> int:
+    """Clean up files older than specified days."""
+    if not os.path.exists(directory):
+        return 0
+    
+    cutoff_time = datetime.now() - timedelta(days=days)
+    deleted_count = 0
+    
+    for filename in os.listdir(directory):
+        filepath = os.path.join(directory, filename)
+        if os.path.isfile(filepath):
+            file_time = datetime.fromtimestamp(os.path.getmtime(filepath))
+            if file_time < cutoff_time:
+                os.remove(filepath)
+                deleted_count += 1
+    
+    return deleted_count
+
+# Data utility functions
+def load_data(symbol: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
+    """Load data for a symbol."""
+    # This is a stub - in practice would use data providers
+    return pd.DataFrame()
+
+# Validation utility functions
+def validate_symbol(symbol: str) -> bool:
+    """Validate symbol format."""
+    return bool(symbol and len(symbol) > 0)
+
+def validate_timeframe(timeframe: str) -> bool:
+    """Validate timeframe format."""
+    valid_timeframes = ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M']
+    return timeframe in valid_timeframes
+
+def validate_date_range(start_date: str, end_date: str) -> bool:
+    """Validate date range."""
+    try:
+        start = datetime.fromisoformat(start_date)
+        end = datetime.fromisoformat(end_date)
+        return start < end
+    except:
+        return False
+
+def validate_model_type(model_type: str) -> bool:
+    """Validate model type."""
+    valid_types = ['lstm', 'transformer', 'xgboost', 'prophet', 'ensemble']
+    return model_type.lower() in valid_types
+
+def validate_strategy_type(strategy_type: str) -> bool:
+    """Validate strategy type."""
+    valid_types = ['rsi', 'macd', 'bollinger', 'custom']
+    return strategy_type.lower() in valid_types
+
+def validate_portfolio_data(data: pd.DataFrame) -> bool:
+    """Validate portfolio data."""
+    return not data.empty and 'symbol' in data.columns
+
+def validate_trade_data(data: pd.DataFrame) -> bool:
+    """Validate trade data."""
+    return not data.empty and 'symbol' in data.columns
+
+def validate_forecast_data(data: pd.DataFrame) -> bool:
+    """Validate forecast data."""
+    return not data.empty and 'forecast' in data.columns
+
 __all__ = [
+    # Core utility modules
     'LogManager',
     'ModelLogger',
     'DataLogger',
     'PerformanceLogger',
+    
+    # Data utilities
+    'DataValidator',
+    'DataPreprocessor',
+    'resample_data',
+    'calculate_technical_indicators',
+    'split_data',
+    'prepare_forecast_data',
+    'load_data',
+    
+    # Math utilities
+    'calculate_sharpe_ratio',
+    'calculate_max_drawdown',
+    'calculate_win_rate',
+    'calculate_profit_factor',
+    'calculate_calmar_ratio',
+    'calculate_volatility',
+    'calculate_beta',
+    'calculate_alpha',
+
+    
+    # Validation utilities
+    'validate_symbol',
+    'validate_timeframe',
+    'validate_date_range',
+    'validate_model_type',
+    'validate_strategy_type',
+    'validate_portfolio_data',
+    'validate_trade_data',
+    'validate_forecast_data',
+    
+    # File utilities
+    'ensure_directory',
+    'save_json',
+    'load_json',
+    'save_pickle',
+    'load_pickle',
+    'save_csv',
+    'load_csv',
+    'get_file_size',
+    'get_file_modified_time',
+    'backup_file',
+    'cleanup_old_files',
+    
+    # Time utilities
+    'get_current_time',
+    'format_timestamp',
+    'parse_timestamp',
+    'get_time_difference',
+    'is_market_open',
+    'get_next_market_open',
+    'get_previous_market_close',
+    'convert_timezone',
+    'get_trading_days',
+    'get_holidays',
+    
+    # Model management utilities
     'check_model_performance',
     'detect_model_drift',
     'validate_update_result',
@@ -180,5 +492,6 @@ __all__ = [
     'check_update_frequency',
     'get_ensemble_weights',
     'save_ensemble_weights',
-    'check_data_quality'
+    'check_data_quality',
+    'get_system_info'
 ] 

@@ -17,7 +17,7 @@ except ImportError:
     DEAP_AVAILABLE = False
     deap = base = creator = tools = algorithms = None
 
-from .base_optimizer import BaseOptimizer, OptimizationResult
+from ..base_optimizer import BaseOptimizer, OptimizationResult
 import plotly.graph_objects as go
 
 logger = logging.getLogger(__name__)

@@ -37,7 +37,9 @@ class UpdaterService(BaseService):
         self.agent = UpdaterAgent()
         self.memory = AgentMemory()
         
-        logger.info("UpdaterService initialized")def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        logger.info("UpdaterService initialized")
+        
+    def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming model update requests.
         

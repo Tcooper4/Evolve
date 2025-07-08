@@ -354,4 +354,14 @@ def get_error_summary() -> Dict[str, Any]:
 
 def register_recovery_handler(error_type: str, recovery_func: Callable):
     """Register global recovery handler."""
-    global_error_handler.register_recovery_handler(error_type, recovery_func) 
+    global_error_handler.register_recovery_handler(error_type, recovery_func)
+
+ErrorHandler = GlobalErrorHandler
+
+__all__ = [
+    'ErrorHandler',
+    'handle_exceptions',
+    'safe_execute',
+    'get_error_summary',
+    'register_recovery_handler'
+] 

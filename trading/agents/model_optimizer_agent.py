@@ -20,8 +20,8 @@ import uuid
 from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentResult
 from trading.memory.agent_memory import AgentMemory
 from trading.models.model_registry import ModelRegistry
-from trading.optimization.bayesian_optimizer import BayesianOptimizer
-from trading.optimization.genetic_optimizer import GeneticOptimizer
+from trading.optimization.strategy_optimizer import BayesianOptimization
+from trading.optimization.legacy.genetic_optimizer import GeneticOptimizer
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class ModelOptimizerAgent(BaseAgent):
         self.model_registry = ModelRegistry()
         
         # Optimization engines
-        self.bayesian_optimizer = BayesianOptimizer()
+        self.bayesian_optimizer = BayesianOptimization()
         self.genetic_optimizer = GeneticOptimizer()
         
         # Configuration
