@@ -103,7 +103,7 @@ class DataValidator:
                 if not pd.api.types.is_datetime64_dtype(df[col]):
                     issues.append(f"Column {col} is not datetime")
         
-        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return len(issues) == 0, issues
 
 class ParameterValidator:
     """Validator for parameter values and types."""
@@ -114,7 +114,9 @@ class ParameterValidator:
         Args:
             param_schema: Parameter schema dictionary
         """
-        self.param_schema = param_schemadef validate_parameters(
+        self.param_schema = param_schema
+    
+    def validate_parameters(
         self,
         params: Dict[str, Any]
     ) -> Tuple[bool, List[str]]:
@@ -169,7 +171,7 @@ class ParameterValidator:
                     f"Parameter {name} does not match pattern: {schema['pattern']}"
                 )
         
-        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return len(issues) == 0, issues
 
 class ConfigValidator:
     """Validator for configuration files."""
@@ -232,7 +234,7 @@ class ConfigValidator:
                 if not validator(config[key]):
                     issues.append(f"Invalid value for key {key}")
         
-        return {'success': True, 'result': len(issues) == 0, issues, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return len(issues) == 0, issues
     
     def validate_config_file(
         self,
@@ -258,7 +260,7 @@ class ConfigValidator:
             
             return self.validate_config(config)
         except Exception as e:
-            return {'success': True, 'result': False, [f"Error loading config file: {e}"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return False, [f"Error loading config file: {e}"]
 
 def validate_numeric_range(
     value: Union[int, float],

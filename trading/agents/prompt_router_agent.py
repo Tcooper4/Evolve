@@ -1,535 +1,586 @@
 """
-PromptRouterAgent: Smart prompt router for agent orchestration.
-- Detects user intent (forecasting, backtesting, tuning, research)
-- Parses arguments using OpenAI, HuggingFace, or regex fallback
-- Routes to the correct agent automatically
-- Always returns a usable parsed intent
-- Uses centralized prompt templates for consistency
+Prompt Router Agent
+
+This agent intelligently routes user requests to appropriate agents based on:
+- Request type and content analysis
+- Agent capabilities and availability
+- Historical performance and success rates
+- Current system load and priorities
+
+Features:
+- Natural language request classification
+- Agent capability matching
+- Load balancing and priority management
+- Fallback handling and error recovery
+- Performance tracking and optimization
 """
 
+import logging
 import re
 import json
-import logging
-from typing import Dict, Any, Optional, Tuple, List
-from dataclasses import dataclass
-from datetime import datetime
-import os
-
-try:
-    import openai
-except ImportError:
-    openai = None
-
-try:
-    from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
-    import torch
-    HUGGINGFACE_AVAILABLE = True
-except ImportError:
-    HUGGINGFACE_AVAILABLE = False
+from typing import Dict, List, Optional, Any, Tuple
+from datetime import datetime, timedelta
+from dataclasses import dataclass, asdict
+from enum import Enum
+import numpy as np
 
 from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
-from .prompt_templates import get_template, format_template
+from trading.memory.agent_memory import AgentMemory
+from trading.utils.reasoning_logger import ReasoningLogger, DecisionType, ConfidenceLevel
 
 logger = logging.getLogger(__name__)
 
+class RequestType(Enum):
+    """Types of user requests."""
+    FORECAST = "forecast"
+    STRATEGY = "strategy"
+    ANALYSIS = "analysis"
+    OPTIMIZATION = "optimization"
+    PORTFOLIO = "portfolio"
+    SYSTEM = "system"
+    GENERAL = "general"
+    UNKNOWN = "unknown"
+
+class AgentCapability(Enum):
+    """Agent capabilities."""
+    FORECASTING = "forecasting"
+    STRATEGY_GENERATION = "strategy_generation"
+    MARKET_ANALYSIS = "market_analysis"
+    OPTIMIZATION = "optimization"
+    PORTFOLIO_MANAGEMENT = "portfolio_management"
+    SYSTEM_MONITORING = "system_monitoring"
+    GENERAL_QUERY = "general_query"
+
 @dataclass
-class ParsedIntent:
-    """Structured parsed intent result."""
-    intent: str
+class AgentInfo:
+    """Information about an available agent."""
+    name: str
+    capabilities: List[AgentCapability]
+    priority: int
+    max_concurrent: int
+    current_load: int
+    success_rate: float
+    avg_response_time: float
+    last_used: datetime
+    is_available: bool = True
+    custom_config: Optional[Dict[str, Any]] = None
+
+@dataclass
+class RoutingDecision:
+    """Routing decision for a user request."""
+    request_id: str
+    request_type: RequestType
+    primary_agent: str
+    fallback_agents: List[str]
     confidence: float
-    args: Dict[str, Any]
-    provider: str  # 'openai', 'huggingface', 'regex'
-    raw_response: str
-    error: Optional[str] = None
+    reasoning: str
+    expected_response_time: float
+    priority: int
+    timestamp: datetime
+    metadata: Optional[Dict[str, Any]] = None
 
 class PromptRouterAgent(BaseAgent):
     """
-    Smart prompt router that selects the best LLM provider and routes user intents.
+    Intelligent prompt router that directs user requests to appropriate agents.
     
-    LLM Selection Priority:
-    1. OpenAI GPT-4 (highest quality, most reliable)
-    2. HuggingFace models (good quality, local deployment)
-    3. Regex fallback (basic pattern matching, always available)
-    
-    Agent Routing:
-    - forecasting: Routes to forecasting agents (LSTM, Transformer, etc.)
-    - backtesting: Routes to backtesting engine
-    - tuning: Routes to optimization agents
-    - research: Routes to research and analysis agents
-    - portfolio: Routes to portfolio management agents
-    - risk: Routes to risk analysis agents
-    - sentiment: Routes to sentiment analysis agents
+    This agent analyzes incoming requests and determines the best agent(s) to handle
+    them based on capabilities, availability, performance history, and current load.
     """
     
     def __init__(self, config: Optional[AgentConfig] = None):
-        """
-        Initialize the prompt router agent.
-        
-        Args:
-            config: Agent configuration with LLM provider settings
-        """
+        """Initialize the prompt router agent."""
         if config is None:
             config = AgentConfig(
-                name="prompt_router",
+                name="PromptRouterAgent",
                 enabled=True,
                 priority=1,
-                custom_config={
-                    'openai_api_key': os.getenv('OPENAI_API_KEY'),
-                    'huggingface_model': os.getenv('HUGGINGFACE_MODEL', 'gpt2'),
-                    'huggingface_api_key': os.getenv('HUGGINGFACE_API_KEY'),
-                    'prefer_openai': True,  # Prefer OpenAI over other providers
-                    'regex_fallback_enabled': True  # Enable regex fallback
-                }
+                max_concurrent_runs=10,
+                timeout_seconds=30,
+                retry_attempts=3,
+                custom_config={}
             )
-        
         super().__init__(config)
         
-        # Get configuration
-        self.openai_api_key = self.config.custom_config.get('openai_api_key')
-        self.huggingface_model = self.config.custom_config.get('huggingface_model', 'gpt2')
-        self.huggingface_api_key = self.config.custom_config.get('huggingface_api_key')
-        self.prefer_openai = self.config.custom_config.get('prefer_openai', True)
-        self.regex_fallback_enabled = self.config.custom_config.get('regex_fallback_enabled', True)
+        self.logger = logging.getLogger(__name__)
+        self.memory = AgentMemory()
+        self.reasoning_logger = ReasoningLogger()
         
-        self.hf_pipeline = None
-        self.parsing_history = []
-        
-        # Initialize LLM providers in order of preference
-        self._initialize_providers()
-        
-        # Intent keywords for regex fallback (simplified and cleaned up)
-        self.intent_keywords = {
-            'forecasting': ['forecast', 'predict', 'projection', 'future', 'price', 'trend'],
-            'backtesting': ['backtest', 'historical', 'simulate', 'performance', 'past', 'test'],
-            'tuning': ['tune', 'optimize', 'hyperparameter', 'search', 'bayesian', 'parameter'],
-            'research': ['research', 'find', 'paper', 'github', 'arxiv', 'summarize', 'analyze'],
-            'portfolio': ['portfolio', 'position', 'holdings', 'allocation', 'balance'],
-            'risk': ['risk', 'volatility', 'drawdown', 'var', 'sharpe'],
-            'sentiment': ['sentiment', 'news', 'social', 'twitter', 'reddit', 'emotion']
+        # Request classification patterns
+        self.classification_patterns = {
+            RequestType.FORECAST: [
+                r'\b(forecast|predict|future|next|upcoming|tomorrow|next week|next month)\b',
+                r'\b(price|stock|market|trend|movement|direction)\b',
+                r'\b(how much|what will|when will|where will)\b'
+            ],
+            RequestType.STRATEGY: [
+                r'\b(strategy|strategy|trading|signal|entry|exit|position)\b',
+                r'\b(buy|sell|hold|long|short|trade)\b',
+                r'\b(rsi|macd|bollinger|moving average|indicator)\b'
+            ],
+            RequestType.ANALYSIS: [
+                r'\b(analyze|analysis|examine|study|review|assess|evaluate)\b',
+                r'\b(performance|metrics|statistics|data|chart|graph)\b',
+                r'\b(why|what caused|what happened|explain)\b'
+            ],
+            RequestType.OPTIMIZATION: [
+                r'\b(optimize|tune|improve|enhance|better|best|optimal)\b',
+                r'\b(parameters|settings|configuration|hyperparameters)\b',
+                r'\b(performance|efficiency|accuracy|speed)\b'
+            ],
+            RequestType.PORTFOLIO: [
+                r'\b(portfolio|allocation|diversification|risk|balance)\b',
+                r'\b(asset|investment|holdings|positions|weights)\b',
+                r'\b(rebalance|adjust|change|modify)\b'
+            ],
+            RequestType.SYSTEM: [
+                r'\b(system|status|health|monitor|check|diagnose)\b',
+                r'\b(error|problem|issue|bug|fix|repair)\b',
+                r'\b(restart|stop|start|configure|setup)\b'
+            ]
         }
         
-        # Argument extraction patterns (simplified)
-        self.arg_patterns = {
-            'symbol': r'\b([A-Z]{1,5})\b',
-            'date': r'\b(\d{4}-\d{2}-\d{2})\b',
-            'number': r'\b(\d+(?:\.\d+)?)\b',
-            'percentage': r'\b(\d+(?:\.\d+)?%)\b',
-            'timeframe': r'\b(daily|weekly|monthly|yearly|1d|1w|1m|1y)\b',
-            'model': r'\b(lstm|transformer|xgboost|prophet|arima|ensemble)\b',
-            'strategy': r'\b(momentum|mean_reversion|bollinger|macd|rsi)\b'
+        # Available agents and their capabilities
+        self.available_agents: Dict[str, AgentInfo] = {}
+        
+        # Routing history for learning
+        self.routing_history: List[RoutingDecision] = []
+        
+        # Performance tracking
+        self.performance_metrics = {
+            'total_requests': 0,
+            'successful_routes': 0,
+            'avg_response_time': 0.0,
+            'agent_usage': {}
         }
-
-    def _initialize_providers(self):
-        """Initialize LLM providers in order of preference."""
-        # Initialize OpenAI if available and preferred
-        if openai and self.openai_api_key:
-            openai.api_key = self.openai_api_key
-            logger.info("✅ OpenAI initialized for prompt routing")
         
-        # Initialize HuggingFace if available
-        if HUGGINGFACE_AVAILABLE:
-            try:
-                self._init_huggingface()
-                logger.info("✅ HuggingFace initialized for prompt routing")
-            except Exception as e:
-                logger.warning(f"⚠️ HuggingFace initialization failed: {e}")
+        # Initialize agent registry
+        self._initialize_agent_registry()
         
-        # Log available providers
-        available_providers = self.get_available_providers()
-        logger.info(f"Available LLM providers: {available_providers}")
-
-    def _init_huggingface(self):
-        """Initialize HuggingFace pipeline."""
-        try:
-            tokenizer = AutoTokenizer.from_pretrained(self.huggingface_model)
-            model = AutoModelForCausalLM.from_pretrained(self.huggingface_model)
-            
-            # Add padding token if not present
-            if tokenizer.pad_token is None:
-                tokenizer.pad_token = tokenizer.eos_token
-            
-            self.hf_pipeline = pipeline(
-                "text-generation",
-                model=model,
-                tokenizer=tokenizer,
-                device=0 if torch.cuda.is_available() else -1
+        self.logger.info("PromptRouterAgent initialized successfully")
+    
+    def _initialize_agent_registry(self):
+        """Initialize the registry of available agents."""
+        # Define available agents and their capabilities
+        agent_definitions = {
+            'ModelSelectorAgent': {
+                'capabilities': [AgentCapability.FORECASTING],
+                'priority': 1,
+                'max_concurrent': 3,
+                'success_rate': 0.85,
+                'avg_response_time': 2.5
+            },
+            'StrategySelectorAgent': {
+                'capabilities': [AgentCapability.STRATEGY_GENERATION],
+                'priority': 1,
+                'max_concurrent': 3,
+                'success_rate': 0.80,
+                'avg_response_time': 3.0
+            },
+            'MarketAnalyzerAgent': {
+                'capabilities': [AgentCapability.MARKET_ANALYSIS],
+                'priority': 2,
+                'max_concurrent': 2,
+                'success_rate': 0.90,
+                'avg_response_time': 4.0
+            },
+            'MetaTunerAgent': {
+                'capabilities': [AgentCapability.OPTIMIZATION],
+                'priority': 2,
+                'max_concurrent': 1,
+                'success_rate': 0.75,
+                'avg_response_time': 15.0
+            },
+            'PortfolioManagerAgent': {
+                'capabilities': [AgentCapability.PORTFOLIO_MANAGEMENT],
+                'priority': 1,
+                'max_concurrent': 2,
+                'success_rate': 0.88,
+                'avg_response_time': 5.0
+            },
+            'SystemMonitorAgent': {
+                'capabilities': [AgentCapability.SYSTEM_MONITORING],
+                'priority': 3,
+                'max_concurrent': 5,
+                'success_rate': 0.95,
+                'avg_response_time': 1.0
+            },
+            'QuantGPTAgent': {
+                'capabilities': [AgentCapability.GENERAL_QUERY],
+                'priority': 2,
+                'max_concurrent': 5,
+                'success_rate': 0.82,
+                'avg_response_time': 3.5
+            }
+        }
+        
+        for agent_name, info in agent_definitions.items():
+            self.available_agents[agent_name] = AgentInfo(
+                name=agent_name,
+                capabilities=info['capabilities'],
+                priority=info['priority'],
+                max_concurrent=info['max_concurrent'],
+                current_load=0,
+                success_rate=info['success_rate'],
+                avg_response_time=info['avg_response_time'],
+                last_used=datetime.now() - timedelta(hours=1),
+                is_available=True
             )
-        except Exception as e:
-            logger.error(f"Failed to initialize HuggingFace: {e}")
-            self.hf_pipeline = None
-
-    def parse_intent_openai(self, prompt: str) -> Optional[ParsedIntent]:
+        
+        self.logger.info(f"Initialized {len(self.available_agents)} agents in registry")
+    
+    def route_request(self, user_request: str, context: Optional[Dict[str, Any]] = None) -> RoutingDecision:
         """
-        Parse intent using OpenAI GPT-4 (highest quality).
-        
-        This method provides the most accurate intent classification and argument extraction.
-        Falls back to text-based extraction if JSON parsing fails.
-        """
-        if not openai or not self.openai_api_key:
-            return None
-            
-        try:
-            # Use centralized template for intent classification
-            system_prompt = format_template("intent_classification", query=prompt)
-            
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=200,
-                temperature=0.1
-            )
-            
-            content = response.choices[0].message['content'].strip()
-            
-            # Try to extract JSON from response
-            json_match = re.search(r'\{.*\}', content, re.DOTALL)
-            if json_match:
-                parsed = json.loads(json_match.group(0))
-                return ParsedIntent(
-                    intent=parsed.get('intent', 'unknown'),
-                    confidence=parsed.get('confidence', 0.8),
-                    args=parsed.get('args', {}),
-                    provider='openai',
-                    raw_response=content
-                )
-            
-            # Fallback: extract intent from text
-            intent = self._extract_intent_from_text(content)
-            return ParsedIntent(
-                intent=intent,
-                confidence=0.7,
-                args=self._extract_args_regex(prompt),
-                provider='openai',
-                raw_response=content
-            )
-            
-        except Exception as e:
-            logger.warning(f"OpenAI parsing failed: {e}")
-            return None
-
-    def parse_intent_huggingface(self, prompt: str) -> Optional[ParsedIntent]:
-        """
-        Parse intent using HuggingFace model (good quality, local deployment).
-        
-        This method provides decent intent classification with local model deployment.
-        Useful when OpenAI is not available or for privacy-sensitive applications.
-        """
-        if not self.hf_pipeline:
-            return None
-            
-        try:
-            # Use centralized template for intent extraction
-            structured_prompt = format_template("intent_extraction", query=prompt)
-            
-            response = self.hf_pipeline(
-                structured_prompt,
-                max_length=100,
-                num_return_sequences=1,
-                temperature=0.1,
-                do_sample=True
-            )
-            
-            generated_text = response[0]['generated_text']
-            
-            # Extract intent from generated text
-            intent = self._extract_intent_from_text(generated_text)
-            args = self._extract_args_regex(prompt)
-            
-            return ParsedIntent(
-                intent=intent,
-                confidence=0.6,  # Lower confidence than OpenAI
-                args=args,
-                provider='huggingface',
-                raw_response=generated_text
-            )
-            
-        except Exception as e:
-            logger.warning(f"HuggingFace parsing failed: {e}")
-            return None
-
-    def parse_intent_regex(self, prompt: str) -> ParsedIntent:
-        """
-        Parse intent using regex patterns (basic fallback).
-        
-        This method provides basic pattern matching when LLM providers are unavailable.
-        Always available but with lower accuracy and limited argument extraction.
-        """
-        if not self.regex_fallback_enabled:
-            raise ValueError("Regex fallback is disabled")
-        
-        # Extract intent using keyword matching
-        intent = self._extract_intent_from_text(prompt)
-        
-        # Extract arguments using regex patterns
-        args = self._extract_args_regex(prompt)
-        
-        return ParsedIntent(
-            intent=intent,
-            confidence=0.4,  # Lower confidence for regex
-            args=args,
-            provider='regex',
-            raw_response=prompt
-        )
-
-    def _extract_intent_from_text(self, text: str) -> str:
-        """Extract intent from text using keyword matching."""
-        text_lower = text.lower()
-        
-        # Count keyword matches for each intent
-        intent_scores = {}
-        for intent, keywords in self.intent_keywords.items():
-            score = sum(1 for keyword in keywords if keyword in text_lower)
-            if score > 0:
-                intent_scores[intent] = score
-        
-        # Return intent with highest score, or 'unknown' if no matches
-        if intent_scores:
-            return max(intent_scores.items(), key=lambda x: x[1])[0]
-        else:
-            return 'unknown'
-
-    def _extract_args_regex(self, prompt: str) -> Dict[str, Any]:
-        """Extract arguments using regex patterns."""
-        args = {}
-        
-        for arg_type, pattern in self.arg_patterns.items():
-            matches = re.findall(pattern, prompt, re.IGNORECASE)
-            if matches:
-                args[arg_type] = matches[0] if len(matches) == 1 else matches
-        
-        return args
-
-    def parse_intent(self, prompt: str) -> ParsedIntent:
-        """
-        Parse intent using the best available provider.
-        
-        Provider selection order:
-        1. OpenAI (if available and preferred)
-        2. HuggingFace (if available)
-        3. Regex fallback (always available)
+        Route a user request to the most appropriate agent(s).
         
         Args:
-            prompt: User prompt to parse
+            user_request: The user's request text
+            context: Additional context information
             
         Returns:
-            ParsedIntent with intent classification and extracted arguments
-            
-        Raises:
-            ValueError: If prompt is empty or invalid
+            Routing decision with agent recommendations
         """
-        # Validate prompt
-        if not prompt or not isinstance(prompt, str):
-            logger.warning("Empty or invalid prompt provided, returning unknown intent")
-            return ParsedIntent(
-                intent='unknown',
-                confidence=0.0,
-                args={},
-                provider='regex',
-                raw_response='',
-                error='Empty or invalid prompt'
-            )
-        
-        # Clean and normalize prompt
-        prompt = prompt.strip()
-        if len(prompt) < 3:
-            logger.warning("Prompt too short, returning unknown intent")
-            return ParsedIntent(
-                intent='unknown',
-                confidence=0.0,
-                args={},
-                provider='regex',
-                raw_response=prompt,
-                error='Prompt too short'
-            )
-        
-        # Check for maximum length
-        if len(prompt) > 10000:
-            logger.warning("Prompt too long, truncating to 10000 characters")
-            prompt = prompt[:10000]
+        request_id = f"route_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{np.random.randint(1000, 9999)}"
         
         try:
-            # Try OpenAI first if preferred and available
-            if self.prefer_openai:
-                result = self.parse_intent_openai(prompt)
-                if result:
-                    self._log_parsing_result(prompt, result)
-                    return result
+            # Classify the request type
+            request_type = self._classify_request(user_request)
             
-            # Try HuggingFace
-            result = self.parse_intent_huggingface(prompt)
-            if result:
-                self._log_parsing_result(prompt, result)
-                return result
+            # Find suitable agents
+            suitable_agents = self._find_suitable_agents(request_type, user_request)
             
-            # Try OpenAI if not preferred but available
-            if not self.prefer_openai:
-                result = self.parse_intent_openai(prompt)
-                if result:
-                    self._log_parsing_result(prompt, result)
-                    return result
+            # Select primary and fallback agents
+            primary_agent, fallback_agents = self._select_agents(suitable_agents, context)
             
-            # Fallback to regex
-            result = self.parse_intent_regex(prompt)
-            self._log_parsing_result(prompt, result)
-            return result
+            # Calculate confidence and expected response time
+            confidence = self._calculate_routing_confidence(request_type, primary_agent, suitable_agents)
+            expected_response_time = self._estimate_response_time(primary_agent, request_type)
             
-        except Exception as e:
-            logger.error(f"Error parsing intent: {e}")
-            # Return fallback result with error
-            return ParsedIntent(
-                intent='unknown',
-                confidence=0.0,
-                args={},
-                provider='regex',
-                raw_response=prompt,
-                error=str(e)
-            )
-
-    def _log_parsing_result(self, prompt: str, result: ParsedIntent):
-        """Log parsing result for monitoring and debugging."""
-        log_entry = {
-            'timestamp': datetime.now().isoformat(),
-            'prompt': prompt[:100] + '...' if len(prompt) > 100 else prompt,
-            'intent': result.intent,
-            'confidence': result.confidence,
-            'provider': result.provider,
-            'args_count': len(result.args)
-        }
-        
-        self.parsing_history.append(log_entry)
-        
-        # Keep only last 100 entries
-        if len(self.parsing_history) > 100:
-            self.parsing_history = self.parsing_history[-100:]
-
-    async def execute(self, prompt: str, agents: Optional[Dict[str, Any]] = None) -> AgentResult:
-        """
-        Execute prompt routing and agent orchestration.
-        
-        This method:
-        1. Parses the user prompt to determine intent
-        2. Routes to the appropriate agent based on intent
-        3. Returns structured results with routing information
-        """
-        try:
-            # Parse intent from prompt
-            parsed_intent = self.parse_intent(prompt)
+            # Determine priority
+            priority = self._determine_priority(request_type, context)
             
-            # Route to appropriate agent
-            if agents:
-                routing_result = self.route_prompt(prompt, agents)
-            else:
-                routing_result = {
-                    'routed_agent': None,
-                    'routing_reason': 'No agents available',
-                    'intent': parsed_intent.intent
+            # Create routing decision
+            decision = RoutingDecision(
+                request_id=request_id,
+                request_type=request_type,
+                primary_agent=primary_agent,
+                fallback_agents=fallback_agents,
+                confidence=confidence,
+                reasoning=self._generate_routing_reasoning(request_type, primary_agent, suitable_agents),
+                expected_response_time=expected_response_time,
+                priority=priority,
+                timestamp=datetime.now(),
+                metadata={
+                    'user_request': user_request,
+                    'context': context,
+                    'suitable_agents': [agent.name for agent in suitable_agents]
                 }
-            
-            return AgentResult(
-                success=True,
-                data={
-                    'parsed_intent': parsed_intent,
-                    'routing_result': routing_result,
-                    'available_providers': self.get_available_providers(),
-                    'system_health': self.get_system_health()
-                },
-                message=f"Intent '{parsed_intent.intent}' parsed with {parsed_intent.confidence:.2f} confidence using {parsed_intent.provider}",
-                timestamp=datetime.now().isoformat()
             )
+            
+            # Log the routing decision
+            self._log_routing_decision(decision)
+            
+            # Update performance metrics
+            self._update_performance_metrics(decision)
+            
+            self.logger.info(f"Routed request to {primary_agent} with confidence {confidence:.2f}")
+            
+            return decision
             
         except Exception as e:
-            logger.error(f"Error in prompt routing: {e}")
-            return AgentResult(
-                success=False,
-                data={'error': str(e)},
-                message=f"Prompt routing failed: {e}",
-                timestamp=datetime.now().isoformat()
-            )
-
-    def route_prompt(self, prompt: str, agents: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Route prompt to the most appropriate agent based on parsed intent.
+            self.logger.error(f"Error routing request: {e}")
+            # Return fallback decision
+            return self._create_fallback_decision(request_id, user_request)
+    
+    def _classify_request(self, user_request: str) -> RequestType:
+        """Classify the type of user request."""
+        user_request_lower = user_request.lower()
         
-        Routing logic:
-        - forecasting: Routes to forecasting agents (LSTM, Transformer, etc.)
-        - backtesting: Routes to backtesting engine
-        - tuning: Routes to optimization agents
-        - research: Routes to research and analysis agents
-        - portfolio: Routes to portfolio management agents
-        - risk: Routes to risk analysis agents
-        - sentiment: Routes to sentiment analysis agents
-        """
-        parsed_intent = self.parse_intent(prompt)
+        # Calculate scores for each request type
+        type_scores = {}
+        for request_type, patterns in self.classification_patterns.items():
+            score = 0
+            for pattern in patterns:
+                matches = re.findall(pattern, user_request_lower)
+                score += len(matches)
+            type_scores[request_type] = score
         
-        # Define routing rules
-        routing_rules = {
-            'forecasting': ['lstm_agent', 'transformer_agent', 'ensemble_agent', 'forecast_agent'],
-            'backtesting': ['backtest_agent', 'simulation_agent'],
-            'tuning': ['optimization_agent', 'hyperparameter_agent', 'bayesian_agent'],
-            'research': ['research_agent', 'analysis_agent', 'paper_agent'],
-            'portfolio': ['portfolio_agent', 'allocation_agent'],
-            'risk': ['risk_agent', 'volatility_agent'],
-            'sentiment': ['sentiment_agent', 'news_agent']
+        # Find the type with highest score
+        if type_scores:
+            best_type = max(type_scores.items(), key=lambda x: x[1])
+            if best_type[1] > 0:
+                return best_type[0]
+        
+        return RequestType.GENERAL
+    
+    def _find_suitable_agents(self, request_type: RequestType, user_request: str) -> List[AgentInfo]:
+        """Find agents suitable for handling the request."""
+        suitable_agents = []
+        
+        # Map request types to capabilities
+        capability_mapping = {
+            RequestType.FORECAST: [AgentCapability.FORECASTING],
+            RequestType.STRATEGY: [AgentCapability.STRATEGY_GENERATION],
+            RequestType.ANALYSIS: [AgentCapability.MARKET_ANALYSIS],
+            RequestType.OPTIMIZATION: [AgentCapability.OPTIMIZATION],
+            RequestType.PORTFOLIO: [AgentCapability.PORTFOLIO_MANAGEMENT],
+            RequestType.SYSTEM: [AgentCapability.SYSTEM_MONITORING],
+            RequestType.GENERAL: [AgentCapability.GENERAL_QUERY],
+            RequestType.UNKNOWN: [AgentCapability.GENERAL_QUERY]
         }
         
-        # Find available agents for the intent
-        available_agents = routing_rules.get(parsed_intent.intent, [])
-        routed_agent = None
+        required_capabilities = capability_mapping.get(request_type, [AgentCapability.GENERAL_QUERY])
         
-        for agent_name in available_agents:
-            if agent_name in agents and agents[agent_name].get('enabled', False):
-                routed_agent = agent_name
-                break
+        for agent in self.available_agents.values():
+            if not agent.is_available:
+                continue
+                
+            # Check if agent has required capabilities
+            if any(cap in agent.capabilities for cap in required_capabilities):
+                suitable_agents.append(agent)
         
+        # If no specific agents found, include general query agents
+        if not suitable_agents:
+            for agent in self.available_agents.values():
+                if AgentCapability.GENERAL_QUERY in agent.capabilities and agent.is_available:
+                    suitable_agents.append(agent)
+        
+        return suitable_agents
+    
+    def _select_agents(self, suitable_agents: List[AgentInfo], context: Optional[Dict[str, Any]] = None) -> Tuple[str, List[str]]:
+        """Select primary and fallback agents from suitable agents."""
+        if not suitable_agents:
+            return "QuantGPTAgent", []
+        
+        # Score agents based on multiple factors
+        agent_scores = []
+        for agent in suitable_agents:
+            score = self._calculate_agent_score(agent, context)
+            agent_scores.append((agent, score))
+        
+        # Sort by score (highest first)
+        agent_scores.sort(key=lambda x: x[1], reverse=True)
+        
+        # Select primary agent
+        primary_agent = agent_scores[0][0].name
+        
+        # Select fallback agents (next 2 best)
+        fallback_agents = [agent.name for agent, _ in agent_scores[1:3]]
+        
+        return primary_agent, fallback_agents
+    
+    def _calculate_agent_score(self, agent: AgentInfo, context: Optional[Dict[str, Any]] = None) -> float:
+        """Calculate a score for an agent based on multiple factors."""
+        score = 0.0
+        
+        # Success rate (40% weight)
+        score += agent.success_rate * 0.4
+        
+        # Availability (20% weight)
+        availability_score = 1.0 - (agent.current_load / agent.max_concurrent)
+        score += availability_score * 0.2
+        
+        # Response time (20% weight)
+        response_score = max(0, 1.0 - (agent.avg_response_time / 30.0))  # Normalize to 30s max
+        score += response_score * 0.2
+        
+        # Priority (10% weight)
+        priority_score = 1.0 - (agent.priority - 1) / 3.0  # Normalize priority 1-3
+        score += priority_score * 0.1
+        
+        # Recency (10% weight)
+        hours_since_use = (datetime.now() - agent.last_used).total_seconds() / 3600
+        recency_score = max(0, 1.0 - (hours_since_use / 24.0))  # Normalize to 24h
+        score += recency_score * 0.1
+        
+        return score
+    
+    def _calculate_routing_confidence(self, request_type: RequestType, primary_agent: str, suitable_agents: List[AgentInfo]) -> float:
+        """Calculate confidence in the routing decision."""
+        if not suitable_agents:
+            return 0.3  # Low confidence if no suitable agents
+        
+        # Base confidence from primary agent success rate
+        primary_agent_info = self.available_agents.get(primary_agent)
+        if not primary_agent_info:
+            return 0.5
+        
+        base_confidence = primary_agent_info.success_rate
+        
+        # Adjust based on number of suitable agents
+        if len(suitable_agents) == 1:
+            # Only one option, lower confidence
+            base_confidence *= 0.8
+        elif len(suitable_agents) >= 3:
+            # Many options, higher confidence in selection
+            base_confidence *= 1.1
+        
+        # Adjust based on request type clarity
+        if request_type == RequestType.UNKNOWN:
+            base_confidence *= 0.7
+        
+        return min(1.0, max(0.0, base_confidence))
+    
+    def _estimate_response_time(self, primary_agent: str, request_type: RequestType) -> float:
+        """Estimate expected response time."""
+        agent_info = self.available_agents.get(primary_agent)
+        if not agent_info:
+            return 5.0  # Default estimate
+        
+        base_time = agent_info.avg_response_time
+        
+        # Adjust based on request type complexity
+        complexity_multipliers = {
+            RequestType.FORECAST: 1.0,
+            RequestType.STRATEGY: 1.2,
+            RequestType.ANALYSIS: 1.5,
+            RequestType.OPTIMIZATION: 3.0,
+            RequestType.PORTFOLIO: 2.0,
+            RequestType.SYSTEM: 0.8,
+            RequestType.GENERAL: 1.0,
+            RequestType.UNKNOWN: 1.5
+        }
+        
+        multiplier = complexity_multipliers.get(request_type, 1.0)
+        return base_time * multiplier
+    
+    def _determine_priority(self, request_type: RequestType, context: Optional[Dict[str, Any]] = None) -> int:
+        """Determine the priority of the request."""
+        # Base priority from request type
+        base_priorities = {
+            RequestType.SYSTEM: 1,  # Highest priority
+            RequestType.FORECAST: 2,
+            RequestType.STRATEGY: 2,
+            RequestType.ANALYSIS: 3,
+            RequestType.OPTIMIZATION: 3,
+            RequestType.PORTFOLIO: 2,
+            RequestType.GENERAL: 4,
+            RequestType.UNKNOWN: 4
+        }
+        
+        priority = base_priorities.get(request_type, 4)
+        
+        # Adjust based on context
+        if context:
+            if context.get('urgent', False):
+                priority = max(1, priority - 1)
+            if context.get('user_type') == 'premium':
+                priority = max(1, priority - 1)
+        
+        return priority
+    
+    def _generate_routing_reasoning(self, request_type: RequestType, primary_agent: str, suitable_agents: List[AgentInfo]) -> str:
+        """Generate reasoning for the routing decision."""
+        reasoning_parts = []
+        
+        reasoning_parts.append(f"Request classified as {request_type.value}")
+        reasoning_parts.append(f"Selected {primary_agent} as primary agent")
+        
+        if suitable_agents:
+            reasoning_parts.append(f"Found {len(suitable_agents)} suitable agents")
+            
+            # Add agent-specific reasoning
+            primary_agent_info = self.available_agents.get(primary_agent)
+            if primary_agent_info:
+                reasoning_parts.append(f"{primary_agent} has {primary_agent_info.success_rate:.1%} success rate")
+                reasoning_parts.append(f"Expected response time: {primary_agent_info.avg_response_time:.1f}s")
+        
+        return "; ".join(reasoning_parts)
+    
+    def _log_routing_decision(self, decision: RoutingDecision):
+        """Log the routing decision for analysis."""
+        # Log to reasoning logger
+        self.reasoning_logger.log_decision(
+            agent_name='PromptRouterAgent',
+            decision_type=DecisionType.ROUTING,
+            action_taken=f"Routed to {decision.primary_agent}",
+            context={
+                'request_type': decision.request_type.value,
+                'confidence': decision.confidence,
+                'priority': decision.priority,
+                'expected_response_time': decision.expected_response_time
+            },
+            reasoning={
+                'primary_reason': decision.reasoning,
+                'supporting_factors': [
+                    f"Request type: {decision.request_type.value}",
+                    f"Primary agent: {decision.primary_agent}",
+                    f"Fallback agents: {', '.join(decision.fallback_agents)}"
+                ],
+                'alternatives_considered': [f"Could have used: {', '.join(decision.fallback_agents)}"],
+                'confidence_explanation': f"Confidence {decision.confidence:.1%} based on agent capabilities and performance"
+            },
+            confidence_level=ConfidenceLevel.HIGH if decision.confidence > 0.8 else ConfidenceLevel.MEDIUM,
+            metadata=decision.metadata
+        )
+        
+        # Store in routing history
+        self.routing_history.append(decision)
+        
+        # Keep only last 1000 decisions
+        if len(self.routing_history) > 1000:
+            self.routing_history = self.routing_history[-1000:]
+    
+    def _update_performance_metrics(self, decision: RoutingDecision):
+        """Update performance tracking metrics."""
+        self.performance_metrics['total_requests'] += 1
+        
+        # Update agent usage
+        primary_agent = decision.primary_agent
+        if primary_agent not in self.performance_metrics['agent_usage']:
+            self.performance_metrics['agent_usage'][primary_agent] = 0
+        self.performance_metrics['agent_usage'][primary_agent] += 1
+    
+    def _create_fallback_decision(self, request_id: str, user_request: str) -> RoutingDecision:
+        """Create a fallback routing decision when normal routing fails."""
+        return RoutingDecision(
+            request_id=request_id,
+            request_type=RequestType.UNKNOWN,
+            primary_agent="QuantGPTAgent",
+            fallback_agents=[],
+            confidence=0.3,
+            reasoning="Fallback routing due to error in request classification",
+            expected_response_time=5.0,
+            priority=4,
+            timestamp=datetime.now(),
+            metadata={'user_request': user_request, 'error': 'Routing failed'}
+        )
+    
+    def get_routing_statistics(self) -> Dict[str, Any]:
+        """Get routing statistics and performance metrics."""
         return {
-            'routed_agent': routed_agent,
-            'routing_reason': f"Intent '{parsed_intent.intent}' matched to agent '{routed_agent}'" if routed_agent else f"No available agent for intent '{parsed_intent.intent}'",
-            'intent': parsed_intent.intent,
-            'confidence': parsed_intent.confidence,
-            'available_agents': available_agents
+            'total_requests': self.performance_metrics['total_requests'],
+            'successful_routes': self.performance_metrics['successful_routes'],
+            'avg_response_time': self.performance_metrics['avg_response_time'],
+            'agent_usage': self.performance_metrics['agent_usage'],
+            'recent_decisions': len(self.routing_history),
+            'available_agents': len([a for a in self.available_agents.values() if a.is_available])
         }
+    
+    def update_agent_status(self, agent_name: str, is_available: bool, current_load: int = 0):
+        """Update the status of an agent."""
+        if agent_name in self.available_agents:
+            self.available_agents[agent_name].is_available = is_available
+            self.available_agents[agent_name].current_load = current_load
+            self.logger.info(f"Updated {agent_name} status: available={is_available}, load={current_load}")
+    
+    def record_agent_performance(self, agent_name: str, success: bool, response_time: float):
+        """Record performance metrics for an agent."""
+        if agent_name in self.available_agents:
+            agent = self.available_agents[agent_name]
+            
+            # Update success rate with exponential moving average
+            alpha = 0.1
+            agent.success_rate = alpha * (1.0 if success else 0.0) + (1 - alpha) * agent.success_rate
+            
+            # Update response time with exponential moving average
+            agent.avg_response_time = alpha * response_time + (1 - alpha) * agent.avg_response_time
+            
+            # Update last used time
+            agent.last_used = datetime.now()
+            
+            self.logger.debug(f"Updated {agent_name} performance: success_rate={agent.success_rate:.3f}, avg_response_time={agent.avg_response_time:.2f}s")
 
-    def get_available_providers(self) -> List[str]:
-        """Get list of available LLM providers."""
-        providers = []
-        
-        if openai and self.openai_api_key:
-            providers.append('openai')
-        
-        if self.hf_pipeline:
-            providers.append('huggingface')
-        
-        if self.regex_fallback_enabled:
-            providers.append('regex')
-        
-        return providers
-
-    def get_provider_status(self) -> Dict[str, bool]:
-        """Get status of all LLM providers."""
-        return {
-            'openai': bool(openai and self.openai_api_key),
-            'huggingface': bool(self.hf_pipeline),
-            'regex': self.regex_fallback_enabled
-        }
-
-    def get_parsing_history(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get recent parsing history for monitoring."""
-        return self.parsing_history[-limit:] if self.parsing_history else []
-
-    def get_system_health(self) -> Dict[str, Any]:
-        """Get system health information."""
-        return {
-            'available_providers': self.get_available_providers(),
-            'provider_status': self.get_provider_status(),
-            'parsing_history_count': len(self.parsing_history),
-            'prefer_openai': self.prefer_openai,
-            'regex_fallback_enabled': self.regex_fallback_enabled
-        }
-
-    def reset_parsing_history(self) -> None:
-        """Reset parsing history."""
-        self.parsing_history = []
-        logger.info("Parsing history reset") 
+# Convenience function for creating router agent
+def create_prompt_router() -> PromptRouterAgent:
+    """Create a configured prompt router agent."""
+    return PromptRouterAgent() 
