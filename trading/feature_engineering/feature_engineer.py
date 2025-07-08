@@ -28,7 +28,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from datetime import datetime, timedelta
 import logging
-from core.utils.common_helpers import normalize_indicator_name
+from utils.common_helpers import normalize_indicator_name
 from . import indicators
 
 logger = logging.getLogger(__name__)

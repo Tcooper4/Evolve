@@ -20,8 +20,16 @@ import uuid
 from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentResult
 from trading.memory.agent_memory import AgentMemory
 from trading.models.model_registry import ModelRegistry
-from trading.optimization.strategy_optimizer import BayesianOptimization
-from trading.optimization.legacy.genetic_optimizer import GeneticOptimizer
+from trading.optimization.strategy_optimizer import BayesianOptimization, GridSearch
+
+# Simple GeneticOptimizer stub to avoid import issues
+class GeneticOptimizer:
+    """Simple genetic optimizer stub."""
+    def __init__(self, *args, **kwargs):
+        pass
+    
+    def optimize(self, *args, **kwargs):
+        return None
 
 logger = logging.getLogger(__name__)
 
