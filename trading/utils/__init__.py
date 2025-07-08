@@ -396,7 +396,8 @@ def validate_date_range(start_date: str, end_date: str) -> bool:
         start = datetime.fromisoformat(start_date)
         end = datetime.fromisoformat(end_date)
         return start < end
-    except:
+    except (ValueError, TypeError) as e:
+        utils_logger.warning(f"Invalid date format: {start_date} or {end_date}. Error: {e}")
         return False
 
 def validate_model_type(model_type: str) -> bool:

@@ -165,9 +165,9 @@ def main():
     
     # Print summary
     if non_utf8_files:
-        print("\nNon-UTF-8 files found:")
+        logger.info("\nNon-UTF-8 files found:")
         for file_path, encoding in non_utf8_files:
-            print(f"- {file_path} ({encoding})")
+            logger.info(f"- {file_path} ({encoding})")
 
 if __name__ == "__main__":
     main() 

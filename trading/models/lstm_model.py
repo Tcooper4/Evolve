@@ -705,4 +705,4 @@ class LSTMForecaster(BaseModel):
             
         except Exception as e:
             self.logger.error(f"Error plotting LSTM results: {e}")
-            print(f"Could not plot results: {e}") 
+            logger.error(f"Could not plot results: {e}") 

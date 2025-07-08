@@ -9,6 +9,8 @@ from typing import Dict, Any
 from datetime import datetime
 import logging
 
+logger = logging.getLogger(__name__)
+
 @ModelRegistry.register('CatBoost')
 class CatBoostModel(BaseModel):
     def __init__(self, config):
@@ -80,14 +82,14 @@ class CatBoostModel(BaseModel):
             raise RuntimeError(f"CatBoost model forecasting failed: {e}")
 
     def summary(self):
-        print("CatBoostModel: CatBoostRegressor wrapper")
-        print(self.model)
+        logger.info("CatBoostModel: CatBoostRegressor wrapper")
+        logger.info(str(self.model))
 
     def infer(self):
         pass  # CatBoost is always in inference mode after fitting
 
     def shap_interpret(self, X_sample):
-        print("CatBoost SHAP summary plot:")
+        logger.info("CatBoost SHAP summary plot:")
         shap_values = self.model.get_feature_importance(Pool(X_sample, np.zeros(X_sample.shape[0])))
         import matplotlib.pyplot as plt
         plt.bar(self.feature_columns, shap_values)

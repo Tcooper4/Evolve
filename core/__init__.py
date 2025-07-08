@@ -9,6 +9,8 @@ This module provides the foundational architecture components including:
 - Logging system
 """
 
+from typing import Dict, Any
+
 # Import interfaces
 from .interfaces import (
     # Data types

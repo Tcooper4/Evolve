@@ -189,6 +189,112 @@ class BollingerBandsStrategy(BaseStrategy):
             'std_dev': (1.0, 3.0)
         }
 
+class CCIStrategy(BaseStrategy):
+    """Commodity Channel Index strategy."""
+    
+    def __init__(self):
+        super().__init__("CCI", "Commodity Channel Index strategy")
+        self.parameters = {
+            'period': 20,
+            'constant': 0.015,
+            'oversold_threshold': -100.0,
+            'overbought_threshold': 100.0
+        }
+    
+    def generate_signals(self, data: pd.DataFrame, **kwargs) -> pd.DataFrame:
+        """Generate CCI signals."""
+        if not self.validate_data(data):
+            raise ValueError("Data must contain OHLCV columns")
+        
+        # Calculate CCI
+        typical_price = (data['High'] + data['Low'] + data['Close']) / 3
+        sma_tp = typical_price.rolling(window=self.parameters['period']).mean()
+        mean_deviation = typical_price.rolling(window=self.parameters['period']).apply(
+            lambda x: np.mean(np.abs(x - x.mean()))
+        )
+        cci = (typical_price - sma_tp) / (self.parameters['constant'] * mean_deviation)
+        
+        # Generate signals
+        signals = pd.DataFrame(index=data.index)
+        signals['cci'] = cci
+        signals['signal'] = 0
+        
+        # Buy signal when CCI crosses above oversold threshold
+        signals.loc[(cci > self.parameters['oversold_threshold']) & 
+                   (cci.shift(1) <= self.parameters['oversold_threshold']), 'signal'] = 1
+        
+        # Sell signal when CCI crosses below overbought threshold
+        signals.loc[(cci < self.parameters['overbought_threshold']) & 
+                   (cci.shift(1) >= self.parameters['overbought_threshold']), 'signal'] = -1
+        
+        return signals
+    
+    def get_parameter_space(self) -> Dict[str, Any]:
+        """Get CCI parameter space."""
+        return {
+            'period': (10, 30),
+            'constant': (0.01, 0.03),
+            'oversold_threshold': (-200, -50),
+            'overbought_threshold': (50, 200)
+        }
+
+class ATRStrategy(BaseStrategy):
+    """Average True Range strategy."""
+    
+    def __init__(self):
+        super().__init__("ATR", "Average True Range strategy")
+        self.parameters = {
+            'period': 14,
+            'multiplier': 2.0,
+            'volatility_threshold': 0.02
+        }
+    
+    def generate_signals(self, data: pd.DataFrame, **kwargs) -> pd.DataFrame:
+        """Generate ATR signals."""
+        if not self.validate_data(data):
+            raise ValueError("Data must contain OHLCV columns")
+        
+        # Calculate ATR
+        high_low = data['High'] - data['Low']
+        high_close = np.abs(data['High'] - data['Close'].shift(1))
+        low_close = np.abs(data['Low'] - data['Close'].shift(1))
+        true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+        atr = true_range.ewm(span=self.parameters['period']).mean()
+        
+        # Calculate ATR-based Bollinger Bands
+        middle_band = data['Close'].rolling(window=self.parameters['period']).mean()
+        upper_band = middle_band + (self.parameters['multiplier'] * atr)
+        lower_band = middle_band - (self.parameters['multiplier'] * atr)
+        
+        # Calculate volatility filter
+        volatility = data['Close'].pct_change().rolling(window=self.parameters['period']).std()
+        
+        # Generate signals
+        signals = pd.DataFrame(index=data.index)
+        signals['atr'] = atr
+        signals['upper_band'] = upper_band
+        signals['lower_band'] = lower_band
+        signals['volatility'] = volatility
+        signals['signal'] = 0
+        
+        # Buy signal when price touches lower band and volatility is high enough
+        buy_condition = (data['Close'] <= lower_band) & (volatility >= self.parameters['volatility_threshold'])
+        signals.loc[buy_condition, 'signal'] = 1
+        
+        # Sell signal when price touches upper band and volatility is high enough
+        sell_condition = (data['Close'] >= upper_band) & (volatility >= self.parameters['volatility_threshold'])
+        signals.loc[sell_condition, 'signal'] = -1
+        
+        return signals
+    
+    def get_parameter_space(self) -> Dict[str, Any]:
+        """Get ATR parameter space."""
+        return {
+            'period': (10, 20),
+            'multiplier': (1.0, 3.0),
+            'volatility_threshold': (0.01, 0.05)
+        }
+
 class StrategyRegistry:
     """Registry for managing trading strategies."""
     
@@ -202,6 +308,8 @@ class StrategyRegistry:
         self.register_strategy(RSIStrategy())
         self.register_strategy(MACDStrategy())
         self.register_strategy(BollingerBandsStrategy())
+        self.register_strategy(CCIStrategy())
+        self.register_strategy(ATRStrategy())
     
     def register_strategy(self, strategy: BaseStrategy):
         """Register a strategy."""

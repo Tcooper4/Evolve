@@ -11,35 +11,46 @@ import os
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
+import logging
+from pathlib import Path
+from typing import Dict, Any
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Add the project root to the path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
 
 def test_agent_imports():
     """Test that the new agents can be imported."""
-    print("🔧 Testing Agent Imports...")
+    logger.info("🔧 Testing Agent Imports...")
     
     try:
         from trading.agents import PromptRouterAgent, RegimeDetectionAgent, create_prompt_router, create_regime_detection_agent
-        print("✅ Prompt Router and Regime Detection agents imported successfully")
+        logger.info("✅ Prompt Router and Regime Detection agents imported successfully")
         return True
     except ImportError as e:
-        print(f"❌ Import error: {e}")
+        logger.error(f"❌ Import error: {e}")
         return False
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        logger.error(f"❌ Unexpected error: {e}")
         return False
 
 def test_prompt_router_agent():
     """Test the Prompt Router agent functionality."""
-    print("\n🔧 Testing Prompt Router Agent...")
+    logger.info("\n🔧 Testing Prompt Router Agent...")
     
     try:
         from trading.agents import create_prompt_router
         
         # Create router agent
         router = create_prompt_router()
-        print("✅ Prompt Router agent created")
+        logger.info("✅ Prompt Router agent created")
         
         # Test request routing
         test_requests = [
@@ -54,28 +65,28 @@ def test_prompt_router_agent():
         
         for request in test_requests:
             decision = router.route_request(request)
-            print(f"✅ Routed '{request[:30]}...' to {decision.primary_agent} (confidence: {decision.confidence:.2f})")
+            logger.info(f"✅ Routed '{request[:30]}...' to {decision.primary_agent} (confidence: {decision.confidence:.2f})")
         
         # Test routing statistics
         stats = router.get_routing_statistics()
-        print(f"✅ Routing statistics: {stats['total_requests']} requests processed")
+        logger.info(f"✅ Routing statistics: {stats['total_requests']} requests processed")
         
         return True
         
     except Exception as e:
-        print(f"❌ Prompt Router agent error: {e}")
+        logger.error(f"❌ Prompt Router agent error: {e}")
         return False
 
 def test_regime_detection_agent():
     """Test the Regime Detection agent functionality."""
-    print("\n🔧 Testing Regime Detection Agent...")
+    logger.info("\n🔧 Testing Regime Detection Agent...")
     
     try:
         from trading.agents import create_regime_detection_agent
         
         # Create regime detection agent
         regime_agent = create_regime_detection_agent()
-        print("✅ Regime Detection agent created")
+        logger.info("✅ Regime Detection agent created")
         
         # Create sample market data
         np.random.seed(42)
@@ -119,23 +130,23 @@ def test_regime_detection_agent():
             # Detect regime
             result = regime_agent.detect_regime(data, f"TEST_{scenario_name.upper()}")
             
-            print(f"✅ {scenario_name}: Detected {result.regime.value} regime "
+            logger.info(f"✅ {scenario_name}: Detected {result.regime.value} regime "
                   f"(confidence: {result.confidence:.2f}, strategies: {result.recommended_strategies})")
         
         # Test regime statistics
         stats = regime_agent.get_regime_statistics()
-        print(f"✅ Regime statistics: {stats['total_detections']} detections, "
+        logger.info(f"✅ Regime statistics: {stats['total_detections']} detections, "
               f"recent regime: {stats['recent_regime']}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Regime Detection agent error: {e}")
+        logger.error(f"❌ Regime Detection agent error: {e}")
         return False
 
 def test_agent_integration():
     """Test integration between the new agents."""
-    print("\n🔧 Testing Agent Integration...")
+    logger.info("\n🔧 Testing Agent Integration...")
     
     try:
         from trading.agents import create_prompt_router, create_regime_detection_agent
@@ -148,7 +159,7 @@ def test_agent_integration():
         regime_request = "What's the current market regime for AAPL?"
         routing_decision = router.route_request(regime_request)
         
-        print(f"✅ Routed regime request to: {routing_decision.primary_agent}")
+        logger.info(f"✅ Routed regime request to: {routing_decision.primary_agent}")
         
         # Test regime detection with sample data
         np.random.seed(42)
@@ -159,18 +170,18 @@ def test_agent_integration():
         
         regime_result = regime_agent.detect_regime(data, "AAPL")
         
-        print(f"✅ Detected regime: {regime_result.regime.value} "
+        logger.info(f"✅ Detected regime: {regime_result.regime.value} "
               f"with recommended strategies: {regime_result.recommended_strategies}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Agent integration error: {e}")
+        logger.error(f"❌ Agent integration error: {e}")
         return False
 
 def test_agent_interface():
     """Test that agents follow the BaseAgent interface."""
-    print("\n🔧 Testing Agent Interface...")
+    logger.info("\n🔧 Testing Agent Interface...")
     
     try:
         from trading.agents import PromptRouterAgent, RegimeDetectionAgent
@@ -179,7 +190,7 @@ def test_agent_interface():
         # Test inheritance
         assert issubclass(PromptRouterAgent, BaseAgent)
         assert issubclass(RegimeDetectionAgent, BaseAgent)
-        print("✅ Agents inherit from BaseAgent")
+        logger.info("✅ Agents inherit from BaseAgent")
         
         # Test required methods exist
         router = PromptRouterAgent()
@@ -189,18 +200,18 @@ def test_agent_interface():
         assert hasattr(router, 'route_request'), "PromptRouterAgent missing route_request"
         assert hasattr(regime_agent, 'detect_regime'), "RegimeDetectionAgent missing detect_regime"
         
-        print("✅ Agents have required methods")
+        logger.info("✅ Agents have required methods")
         
         return True
         
     except Exception as e:
-        print(f"❌ Interface test error: {e}")
+        logger.error(f"❌ Interface test error: {e}")
         return False
 
 def main():
     """Run all tests."""
-    print("🚀 Starting New Agents Tests")
-    print("=" * 50)
+    logger.info("🚀 Starting New Agents Tests")
+    logger.info("=" * 50)
     
     tests = [
         ("Agent Imports", test_agent_imports),
@@ -214,24 +225,24 @@ def main():
     total = len(tests)
     
     for test_name, test_func in tests:
-        print(f"\n📋 Running: {test_name}")
+        logger.info(f"\n📋 Running: {test_name}")
         try:
             if test_func():
                 passed += 1
-                print(f"✅ {test_name}: PASSED")
+                logger.info(f"✅ {test_name}: PASSED")
             else:
-                print(f"❌ {test_name}: FAILED")
+                logger.error(f"❌ {test_name}: FAILED")
         except Exception as e:
-            print(f"❌ {test_name}: ERROR - {e}")
+            logger.error(f"❌ {test_name}: ERROR - {e}")
     
-    print("\n" + "=" * 50)
-    print(f"📊 Test Results: {passed}/{total} tests passed")
+    logger.info("\n" + "=" * 50)
+    logger.info(f"📊 Test Results: {passed}/{total} tests passed")
     
     if passed == total:
-        print("🎉 All tests passed! New agents are working correctly.")
+        logger.info("🎉 All tests passed! New agents are working correctly.")
         return 0
     else:
-        print("⚠️  Some tests failed. Please check the errors above.")
+        logger.warning(f"⚠️  Some tests failed. Please check the errors above.")
         return 1
 
 if __name__ == "__main__":

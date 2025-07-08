@@ -634,9 +634,9 @@ async def main():
     try:
         await manager.start_loop()
     except KeyboardInterrupt:
-        print("\nShutting down...")
+        logger.info("\nShutting down...")
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

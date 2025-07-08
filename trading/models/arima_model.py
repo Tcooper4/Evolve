@@ -7,9 +7,12 @@ from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 import warnings
+import logging
 warnings.filterwarnings('ignore')
 
 from .base_model import BaseModel
+
+logger = logging.getLogger(__name__)
 
 class ARIMAModel(BaseModel):
     """ARIMA model for time series forecasting."""
@@ -232,7 +235,6 @@ class ARIMAModel(BaseModel):
                             best_aic = aic
                             best_order = (p, d, q)
                     except Exception as e:
-                        import logging
                         logging.error(f"Error fitting ARIMA model with order {(p, d, q)}: {e}")
                         continue
         return {
@@ -326,7 +328,6 @@ class ARIMAModel(BaseModel):
             }
             
         except Exception as e:
-            import logging
             logging.error(f"Error in ARIMA model forecast: {e}")
             raise RuntimeError(f"ARIMA model forecasting failed: {e}")
 
@@ -377,7 +378,6 @@ class ARIMAModel(BaseModel):
                     plot_acf(residuals, ax=plt.gca(), lags=40)
                     plt.title('ACF of Residuals')
                 except Exception as e:
-                    import logging
                     logging.error(f"Error plotting ACF of residuals: {e}")
                     plt.text(0.5, 0.5, 'ACF not available', 
                             ha='center', va='center', transform=plt.gca().transAxes)
@@ -401,6 +401,5 @@ class ARIMAModel(BaseModel):
             plt.show()
             
         except Exception as e:
-            import logging
             logging.error(f"Error plotting ARIMA results: {e}")
-            print(f"Could not plot results: {e}") 
+            logger.error(f"Could not plot results: {e}") 

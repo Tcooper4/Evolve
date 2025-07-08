@@ -26,7 +26,9 @@ class SecretManager:
         self.config_path = config_path
         self.setup_logging()
         self.load_config()
-        self.setup_encryption()def setup_logging(self) -> None:
+        self.setup_encryption()
+
+    def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/secrets")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -41,7 +43,6 @@ class SecretManager:
         )
         self.logger = logging.getLogger(__name__)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_config(self) -> None:
         """Load configuration."""
         try:
@@ -77,7 +78,6 @@ class SecretManager:
             self.logger.error(f"Error setting up encryption: {str(e)}")
             raise
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def encrypt_secret(self, secret: str) -> str:
         """Encrypt a secret."""
         try:
@@ -183,7 +183,7 @@ def main():
             manager.save_secret(args.name, args.value)
         elif args.action == 'get':
             value = manager.get_secret(args.name)
-            print(value)
+            logger.info(str(value))
         elif args.action == 'delete':
             manager.delete_secret(args.name)
     except KeyboardInterrupt:

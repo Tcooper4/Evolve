@@ -15,6 +15,8 @@ import logging
 # Local imports
 from trading.models.base_model import BaseModel, ValidationError, ModelRegistry
 
+logger = logging.getLogger(__name__)
+
 class PositionalEncoding(nn.Module):
     """Positional encoding for transformer model."""
     
@@ -490,4 +492,4 @@ class TransformerForecaster(BaseModel):
         })
         self.fit(df.iloc[:80], df.iloc[80:])
         y_pred = self.predict(df.iloc[80:])
-        print('Synthetic test MSE:', ((y_pred - df['close'].iloc[80:].values) ** 2).mean())
+        logger.info(f'Synthetic test MSE: {((y_pred - df["close"].iloc[80:].values) ** 2).mean()}')

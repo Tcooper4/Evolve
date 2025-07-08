@@ -8,6 +8,7 @@ including stop-loss, take-profit, automatic exits, and detailed logging.
 
 import asyncio
 import json
+import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 
@@ -16,6 +17,9 @@ from trading.agents.execution_agent import (
     RiskControls, RiskThreshold, RiskThresholdType, ExitReason
 )
 from trading.agents.base_agent_interface import AgentConfig
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 def create_risk_aware_signals() -> List[TradeSignal]:
     """Create trade signals with risk controls for demonstration."""
@@ -149,8 +153,8 @@ def create_market_scenarios() -> List[Dict[str, Any]]:
 
 async def demo_risk_controls():
     """Demonstrate comprehensive risk controls functionality."""
-    print("🛡️ Risk Controls Demo")
-    print("=" * 60)
+    logger.info("🛡️ Risk Controls Demo")
+    logger.info("=" * 60)
     
     # Create execution agent with risk controls enabled
     config = {
@@ -194,20 +198,20 @@ async def demo_risk_controls():
     agent_config = AgentConfig(**config)
     execution_agent = ExecutionAgent(agent_config)
     
-    print(f"✅ ExecutionAgent initialized with risk controls")
-    print(f"📊 Default risk controls: {execution_agent.default_risk_controls.to_dict()}")
+    logger.info(f"✅ ExecutionAgent initialized with risk controls")
+    logger.info(f"📊 Default risk controls: {execution_agent.default_risk_controls.to_dict()}")
     
     # Create risk-aware signals
     signals = create_risk_aware_signals()
-    print(f"\n📈 Created {len(signals)} signals with custom risk controls")
+    logger.info(f"\n📈 Created {len(signals)} signals with custom risk controls")
     
     for i, signal in enumerate(signals, 1):
-        print(f"  Signal {i}: {signal.symbol} - {signal.strategy}")
-        print(f"    Risk Controls: {signal.risk_controls.to_dict()}")
+        logger.info(f"  Signal {i}: {signal.symbol} - {signal.strategy}")
+        logger.info(f"    Risk Controls: {signal.risk_controls.to_dict()}")
     
     # Execute initial trades
-    print("\n🔄 Executing initial trades...")
-    print("-" * 40)
+    logger.info("\n🔄 Executing initial trades...")
+    logger.info("-" * 40)
     
     initial_market_data = {
         'AAPL': {'price': 150.25, 'volatility': 0.15, 'volume': 1000000},
@@ -223,23 +227,23 @@ async def demo_risk_controls():
     )
     
     if result.success:
-        print("✅ Initial trades executed successfully")
-        print(f"  Portfolio status: {result.data['portfolio_state']}")
-        print(f"  Risk metrics: {result.data['risk_metrics']}")
+        logger.info("✅ Initial trades executed successfully")
+        logger.info(f"  Portfolio status: {result.data['portfolio_state']}")
+        logger.info(f"  Risk metrics: {result.data['risk_metrics']}")
     else:
-        print(f"❌ Initial trades failed: {result.message}")
+        logger.error(f"❌ Initial trades failed: {result.message}")
         return
     
     # Test different market scenarios
     scenarios = create_market_scenarios()
     
-    print(f"\n🧪 Testing {len(scenarios)} market scenarios...")
-    print("=" * 60)
+    logger.info(f"\n🧪 Testing {len(scenarios)} market scenarios...")
+    logger.info("=" * 60)
     
     for i, scenario in enumerate(scenarios, 1):
-        print(f"\n📊 Scenario {i}: {scenario['name']}")
-        print(f"   Description: {scenario['description']}")
-        print("-" * 40)
+        logger.info(f"\n📊 Scenario {i}: {scenario['name']}")
+        logger.info(f"   Description: {scenario['description']}")
+        logger.info("-" * 40)
         
         # Update market data and run risk monitoring
         result = await execution_agent.execute(
@@ -250,62 +254,62 @@ async def demo_risk_controls():
         )
         
         if result.success:
-            print("✅ Risk monitoring completed")
+            logger.info("✅ Risk monitoring completed")
             
             # Show portfolio changes
             portfolio_state = result.data['portfolio_state']
             risk_metrics = result.data['risk_metrics']
             
-            print(f"  Cash: ${portfolio_state['cash']:.2f}")
-            print(f"  Equity: ${portfolio_state['equity']:.2f}")
-            print(f"  Unrealized PnL: ${portfolio_state['unrealized_pnl']:.2f}")
-            print(f"  Daily PnL: ${risk_metrics['daily_pnl']:.2f}")
-            print(f"  Open positions: {len(portfolio_state['open_positions'])}")
+            logger.info(f"  Cash: ${portfolio_state['cash']:.2f}")
+            logger.info(f"  Equity: ${portfolio_state['equity']:.2f}")
+            logger.info(f"  Unrealized PnL: ${portfolio_state['unrealized_pnl']:.2f}")
+            logger.info(f"  Daily PnL: ${risk_metrics['daily_pnl']:.2f}")
+            logger.info(f"  Open positions: {len(portfolio_state['open_positions'])}")
             
             # Show position details
             for position in portfolio_state['open_positions']:
-                print(f"    {position['symbol']}: {position['size']:.2f} shares "
-                      f"@ ${position['entry_price']:.2f} "
-                      f"(Unrealized: ${position['unrealized_pnl']:.2f})")
+                logger.info(f"    {position['symbol']}: {position['size']:.2f} shares "
+                          f"@ ${position['entry_price']:.2f} "
+                          f"(Unrealized: ${position['unrealized_pnl']:.2f})")
         else:
-            print(f"❌ Risk monitoring failed: {result.message}")
+            logger.error(f"❌ Risk monitoring failed: {result.message}")
     
     # Show exit events
-    print(f"\n📋 Exit Events Summary")
-    print("=" * 60)
+    logger.info(f"\n📋 Exit Events Summary")
+    logger.info("=" * 60)
     
     exit_events = execution_agent.get_exit_events()
-    print(f"Total exit events: {len(exit_events)}")
+    logger.info(f"Total exit events: {len(exit_events)}")
     
     for event in exit_events:
         exit_data = event['exit_event']
-        print(f"  {exit_data['symbol']}: {exit_data['exit_reason']} "
+        logger.info(f"  {exit_data['symbol']}: {exit_data['exit_reason']} "
               f"@ ${exit_data['exit_price']:.2f} "
               f"(PnL: ${exit_data['pnl']:.2f})")
     
     # Show risk summary
-    print(f"\n📊 Risk Management Summary")
-    print("=" * 60)
+    logger.info(f"\n📊 Risk Management Summary")
+    logger.info("=" * 60)
     
     risk_summary = execution_agent.get_risk_summary()
-    print(f"Total exits: {risk_summary['total_exits']}")
-    print(f"Total PnL: ${risk_summary['total_pnl']:.2f}")
-    print(f"Daily PnL: ${risk_summary['daily_pnl']:.2f}")
+    logger.info(f"Total exits: {risk_summary['total_exits']}")
+    logger.info(f"Total PnL: ${risk_summary['total_pnl']:.2f}")
+    logger.info(f"Daily PnL: ${risk_summary['daily_pnl']:.2f}")
     
-    print("\nExit reasons breakdown:")
+    logger.info("\nExit reasons breakdown:")
     for reason, count in risk_summary['exit_reasons'].items():
-        print(f"  {reason}: {count} exits")
+        logger.info(f"  {reason}: {count} exits")
     
-    print("\nPnL by exit reason:")
+    logger.info("\nPnL by exit reason:")
     for reason, data in risk_summary['pnl_by_reason'].items():
-        print(f"  {reason}: ${data['total']:.2f} (avg: ${data['avg']:.2f})")
+        logger.info(f"  {reason}: ${data['total']:.2f} (avg: ${data['avg']:.2f})")
     
-    print(f"\n✅ Risk controls demo completed!")
+    logger.info(f"\n✅ Risk controls demo completed!")
 
 async def demo_risk_threshold_types():
     """Demonstrate different risk threshold types."""
-    print("\n🎯 Risk Threshold Types Demo")
-    print("=" * 60)
+    logger.info("\n🎯 Risk Threshold Types Demo")
+    logger.info("=" * 60)
     
     # Create agent
     config = {
@@ -329,7 +333,7 @@ async def demo_risk_threshold_types():
     ]
     
     for threshold_name, threshold_type, value, *args in threshold_types:
-        print(f"\n📊 Testing {threshold_name} threshold:")
+        logger.info(f"\n📊 Testing {threshold_name} threshold:")
         
         # Create risk controls
         if threshold_type == RiskThresholdType.ATR_BASED:
@@ -368,16 +372,16 @@ async def demo_risk_threshold_types():
             market_data
         )
         
-        print(f"  Entry price: ${signal.entry_price:.2f}")
-        print(f"  Stop loss price: ${stop_loss_price:.2f}")
-        print(f"  Stop loss distance: ${abs(stop_loss_price - signal.entry_price):.2f}")
+        logger.info(f"  Entry price: ${signal.entry_price:.2f}")
+        logger.info(f"  Stop loss price: ${stop_loss_price:.2f}")
+        logger.info(f"  Stop loss distance: ${abs(stop_loss_price - signal.entry_price):.2f}")
     
-    print(f"\n✅ Threshold types demo completed!")
+    logger.info(f"\n✅ Threshold types demo completed!")
 
 async def demo_emergency_exits():
     """Demonstrate emergency exit scenarios."""
-    print("\n🚨 Emergency Exits Demo")
-    print("=" * 60)
+    logger.info("\n🚨 Emergency Exits Demo")
+    logger.info("=" * 60)
     
     # Create agent
     config = {
@@ -425,10 +429,10 @@ async def demo_emergency_exits():
     result = await agent.execute(signals=signals, market_data=market_data)
     
     if result.success:
-        print("✅ Initial positions opened")
+        logger.info("✅ Initial positions opened")
         
         # Simulate daily loss limit breach
-        print("\n📉 Simulating daily loss limit breach...")
+        logger.info("\n📉 Simulating daily loss limit breach...")
         
         # Update daily PnL to breach limit
         agent.daily_pnl = -0.015  # -1.5% (above 1% limit)
@@ -441,18 +445,18 @@ async def demo_emergency_exits():
         )
         
         if result.success:
-            print("✅ Emergency exit triggered")
-            print(f"  Daily PnL: {agent.daily_pnl:.2%}")
-            print(f"  Open positions: {len(agent.portfolio_manager.state.open_positions)}")
+            logger.info("✅ Emergency exit triggered")
+            logger.info(f"  Daily PnL: {agent.daily_pnl:.2%}")
+            logger.info(f"  Open positions: {len(agent.portfolio_manager.state.open_positions)}")
         else:
-            print(f"❌ Emergency exit failed: {result.message}")
+            logger.error(f"❌ Emergency exit failed: {result.message}")
     
-    print(f"\n✅ Emergency exits demo completed!")
+    logger.info(f"\n✅ Emergency exits demo completed!")
 
 async def main():
     """Run all risk controls demos."""
-    print("🛡️ Comprehensive Risk Controls Demo")
-    print("=" * 80)
+    logger.info("🛡️ Comprehensive Risk Controls Demo")
+    logger.info("=" * 80)
     
     try:
         # Run main risk controls demo
@@ -464,10 +468,10 @@ async def main():
         # Run emergency exits demo
         await demo_emergency_exits()
         
-        print(f"\n🎉 All risk controls demos completed successfully!")
+        logger.info(f"\n🎉 All risk controls demos completed successfully!")
         
     except Exception as e:
-        print(f"❌ Demo failed: {e}")
+        logger.error(f"❌ Demo failed: {e}")
         import traceback
         traceback.print_exc()
 

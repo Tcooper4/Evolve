@@ -701,4 +701,63 @@ class SanityChecker:
         elif validation_result.get("overall_status") == "error":
             return f"🚨 Validation error: {validation_result.get('error', 'Unknown error')}"
         else:
-            return "⚠️ Validation status unclear" 
+            return "⚠️ Validation status unclear"
+
+class SanityChecks:
+    """Sanity checks wrapper class for backward compatibility."""
+    
+    def __init__(self):
+        """Initialize the sanity checks wrapper."""
+        self.checker = SanityChecker()
+    
+    def check_missing_columns(self, df: pd.DataFrame, required_columns: List[str]) -> Dict[str, Any]:
+        """Check for missing required columns in DataFrame."""
+        return check_missing_columns(df, required_columns)
+    
+    def check_sorted_index(self, df: pd.DataFrame) -> Dict[str, Any]:
+        """Check if DataFrame index is properly sorted."""
+        return check_sorted_index(df)
+    
+    def check_data_quality(self, df: pd.DataFrame) -> Dict[str, Any]:
+        """Comprehensive data quality check."""
+        return check_data_quality(df)
+    
+    def check_price_data(self, df: pd.DataFrame) -> Dict[str, Any]:
+        """Check price data for common issues."""
+        return check_price_data(df)
+    
+    def check_strategy_thresholds(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Check strategy configuration thresholds."""
+        return check_strategy_thresholds(config)
+    
+    def check_model_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Check model configuration parameters."""
+        return check_model_config(config)
+    
+    def check_system_resources(self) -> Dict[str, Any]:
+        """Check system resource availability."""
+        return check_system_resources()
+    
+    def check_data_freshness(self, df: pd.DataFrame, max_age_hours: int = 24) -> Dict[str, Any]:
+        """Check data freshness."""
+        return check_data_freshness(df, max_age_hours)
+    
+    def run_comprehensive_validation(self, df: pd.DataFrame, config: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Run comprehensive validation."""
+        return run_comprehensive_validation(df, config)
+    
+    def validate_dataframe(self, df: pd.DataFrame, required_columns: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Validate DataFrame using the SanityChecker."""
+        return self.checker.validate_dataframe(df, required_columns)
+    
+    def validate_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate configuration using the SanityChecker."""
+        return self.checker.validate_config(config)
+    
+    def check_system_health(self) -> Dict[str, Any]:
+        """Check system health using the SanityChecker."""
+        return self.checker.check_system_health()
+    
+    def run_full_validation(self, df: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Run full validation using the SanityChecker."""
+        return self.checker.run_full_validation(df, config) 

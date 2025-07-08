@@ -306,3 +306,41 @@ def update_last_updated() -> Dict[str, Any]:
             'error': str(e),
             'timestamp': datetime.now().isoformat()
         }
+
+class SessionUtils:
+    """Session utilities wrapper class for backward compatibility."""
+    
+    @staticmethod
+    def initialize_session_state() -> Dict[str, Any]:
+        """Initialize Streamlit session state with core components."""
+        return initialize_session_state()
+    
+    @staticmethod
+    def log_status(message: str, status: str = 'INFO'):
+        """Helper function to log status messages consistently."""
+        return log_status(message, status)
+    
+    @staticmethod
+    def initialize_system_modules() -> Dict[str, Any]:
+        """Initialize system modules and return their status."""
+        return initialize_system_modules()
+    
+    @staticmethod
+    def display_system_status(module_status: Dict[str, Any]) -> Dict[str, Any]:
+        """Display system status information in the Streamlit interface."""
+        return display_system_status(module_status)
+    
+    @staticmethod
+    def safe_session_get(key: str, default: Any = None) -> Any:
+        """Safely get a value from Streamlit session state."""
+        return safe_session_get(key, default)
+    
+    @staticmethod
+    def safe_session_set(key: str, value: Any) -> Dict[str, Any]:
+        """Safely set a value in Streamlit session state."""
+        return safe_session_set(key, value)
+    
+    @staticmethod
+    def update_last_updated() -> Dict[str, Any]:
+        """Update the last_updated timestamp in session state."""
+        return update_last_updated()

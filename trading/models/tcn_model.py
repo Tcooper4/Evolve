@@ -14,6 +14,8 @@ import torch.nn.functional as F
 # Local imports
 from .base_model import BaseModel, ValidationError, ModelRegistry
 
+logger = logging.getLogger(__name__)
+
 class TemporalBlock(nn.Module):
     """Temporal block for TCN."""
     
@@ -239,7 +241,7 @@ class TCNModel(BaseModel):
         try:
             import shap
         except ImportError:
-            print("SHAP is not installed. Please install it with 'pip install shap'.")
+            logger.warning("SHAP is not installed. Please install it with 'pip install shap'.")
             return
         explainer = shap.DeepExplainer(self.model, X_sample)
         shap_values = explainer.shap_values(X_sample)
@@ -291,7 +293,7 @@ class TCNModel(BaseModel):
                 
                 # Log progress
                 if (epoch + 1) % 10 == 0:
-                    print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
+                    logger.info(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
             
             return history
             
@@ -393,4 +395,4 @@ class TCNModel(BaseModel):
             
         except Exception as e:
             logging.error(f"Error plotting TCN results: {e}")
-            print(f"Could not plot results: {e}") 
+            logger.error(f"Could not plot results: {e}") 
