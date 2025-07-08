@@ -463,11 +463,11 @@ if __name__ == "__main__":
     
     # Add task
     result = memory.add_task(task)
-    print(f"Add task result: {result}")
+    memory.logger.info(f"Add task result: {result}")
     
     # Update task
     result = memory.update_task("test_001", status=TaskStatus.COMPLETED)
-    print(f"Update task result: {result}")
+    memory.logger.info(f"Update task result: {result}")
     
     # Get tasks
     pending_result = memory.get_tasks_by_status(TaskStatus.PENDING)
@@ -476,5 +476,5 @@ if __name__ == "__main__":
     pending_tasks = pending_result.get('result', []) if pending_result.get('success') else []
     completed_tasks = completed_result.get('result', []) if completed_result.get('success') else []
     
-    print(f"Pending tasks: {len(pending_tasks)}")
-    print(f"Completed tasks: {len(completed_tasks)}") 
+    memory.logger.info(f"Pending tasks: {len(pending_tasks)}")
+    memory.logger.info(f"Completed tasks: {len(completed_tasks)}") 

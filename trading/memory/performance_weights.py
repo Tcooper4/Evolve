@@ -6,6 +6,9 @@ import json
 import os
 from typing import Dict, Any, Optional
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 def export_weights_to_file(ticker: str, strategy: str = "balanced") -> Dict[str, float]:
     """
@@ -31,7 +34,7 @@ def export_weights_to_file(ticker: str, strategy: str = "balanced") -> Dict[str,
         try:
             os.makedirs("memory", exist_ok=True)
         except Exception as e:
-            print(f"Failed to create memory directory: {e}")
+            logger.error(f"Failed to create memory directory: {e}")
         
         # Save weights to file
         weights_file = f"memory/{ticker}_weights.json"
@@ -48,7 +51,7 @@ def export_weights_to_file(ticker: str, strategy: str = "balanced") -> Dict[str,
         return default_weights
         
     except Exception as e:
-        print(f"Error exporting weights: {e}")
+        logger.error(f"Error exporting weights: {e}")
         return {"lstm": 1.0}  # Fallback to single model
 
 def get_latest_weights(ticker: str = "AAPL") -> Dict[str, float]:
@@ -77,5 +80,5 @@ def get_latest_weights(ticker: str = "AAPL") -> Dict[str, float]:
                 "tcn": 0.1
             }
     except Exception as e:
-        print(f"Error loading weights: {e}")
+        logger.error(f"Error loading weights: {e}")
         return {"lstm": 1.0}  # Fallback to single model 

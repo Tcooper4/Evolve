@@ -17,9 +17,17 @@ import time
 import json
 import asyncio
 import threading
+import logging
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Add project root to path
 project_root = Path(__file__).parent
@@ -27,27 +35,27 @@ sys.path.insert(0, str(project_root))
 
 def validate_environment():
     """Validate environment configuration."""
-    print("🔍 Validating Environment Configuration...")
+    logger.info("🔍 Validating Environment Configuration...")
     
     # Check for .env file
     if not os.path.exists('.env'):
-        print("⚠️  .env file not found. Creating from template...")
+        logger.warning("⚠️  .env file not found. Creating from template...")
         if os.path.exists('env.example'):
             import shutil
             shutil.copy('env.example', '.env')
-            print("✅ Created .env from template. Please configure your API keys.")
+            logger.warning("✅ Created .env from template. Please configure your API keys.")
             return False
         else:
-            print("❌ env.example not found. Cannot create .env file.")
+            logger.error("❌ env.example not found. Cannot create .env file.")
             return False
     
     # Load environment variables
     try:
         from dotenv import load_dotenv
         load_dotenv()
-        print("✅ Environment variables loaded")
+        logger.info("✅ Environment variables loaded")
     except ImportError:
-        print("⚠️  python-dotenv not available, using system environment")
+        logger.warning("⚠️  python-dotenv not available, using system environment")
     
     # Check required environment variables
     required_vars = [
@@ -62,16 +70,16 @@ def validate_environment():
             missing_vars.append(var)
     
     if missing_vars:
-        print(f"⚠️  Missing environment variables: {missing_vars}")
-        print("Please set these variables in your .env file")
+        logger.warning(f"⚠️  Missing environment variables: {missing_vars}")
+        logger.warning("Please set these variables in your .env file")
         return False
     
-    print("✅ Environment validation passed")
+    logger.info("✅ Environment validation passed")
     return True
 
 def initialize_system_resilience():
     """Initialize system resilience and monitoring."""
-    print("\n🔍 Initializing System Resilience...")
+    logger.info("🔍 Initializing System Resilience...")
     
     try:
         from system_resilience import SystemResilience, start_system_monitoring
@@ -81,28 +89,28 @@ def initialize_system_resilience():
         
         # Start monitoring
         start_system_monitoring()
-        print("✅ System monitoring started")
+        logger.info("✅ System monitoring started")
         
         # Perform initial health check
         health = resilience.get_system_health()
-        print(f"✅ Initial health check: {health['overall_status']}")
+        logger.info(f"✅ Initial health check: {health['overall_status']}")
         
         return resilience
         
     except Exception as e:
-        print(f"❌ System resilience initialization failed: {e}")
+        logger.error(f"❌ System resilience initialization failed: {e}")
         return None
 
 def initialize_enhanced_interface():
     """Initialize enhanced interface."""
-    print("\n🔍 Initializing Enhanced Interface...")
+    logger.info("🔍 Initializing Enhanced Interface...")
     
     try:
         from unified_interface_v2 import EnhancedUnifiedInterfaceV2
         
         # Initialize interface
         interface = EnhancedUnifiedInterfaceV2()
-        print("✅ Enhanced interface initialized")
+        logger.info("✅ Enhanced interface initialized")
         
         # Test component initialization
         components = [
@@ -117,53 +125,53 @@ def initialize_enhanced_interface():
             if hasattr(interface, component):
                 initialized_components += 1
         
-        print(f"✅ {initialized_components}/{len(components)} components initialized")
+        logger.info(f"✅ {initialized_components}/{len(components)} components initialized")
         
         return interface
         
     except Exception as e:
-        print(f"❌ Enhanced interface initialization failed: {e}")
+        logger.error(f"❌ Enhanced interface initialization failed: {e}")
         return None
 
 def perform_comprehensive_health_check(resilience):
     """Perform comprehensive health check."""
-    print("\n🔍 Performing Comprehensive Health Check...")
+    logger.info("🔍 Performing Comprehensive Health Check...")
     
     try:
         health = resilience.get_system_health()
         
         # Check overall status
         if health['overall_status'] == 'healthy':
-            print("✅ Overall system health: HEALTHY")
+            logger.info("✅ Overall system health: HEALTHY")
         elif health['overall_status'] == 'warning':
-            print("⚠️  Overall system health: WARNING")
+            logger.warning("⚠️  Overall system health: WARNING")
         else:
-            print("❌ Overall system health: ERROR")
+            logger.error("❌ Overall system health: ERROR")
         
         # Check individual components
         for component, status in health['components'].items():
             if status['status'] == 'healthy':
-                print(f"  ✅ {component}: {status['message']}")
+                logger.info(f"  ✅ {component}: {status['message']}")
             elif status['status'] == 'warning':
-                print(f"  ⚠️  {component}: {status['message']}")
+                logger.warning(f"  ⚠️  {component}: {status['message']}")
             else:
-                print(f"  ❌ {component}: {status['message']}")
+                logger.error(f"  ❌ {component}: {status['message']}")
         
         # Check for issues
         if health['issues']:
-            print(f"\n⚠️  Issues detected: {len(health['issues'])}")
+            logger.warning(f"\n⚠️  Issues detected: {len(health['issues'])}")
             for issue in health['issues']:
-                print(f"  - {issue}")
+                logger.warning(f"  - {issue}")
         
         return health['overall_status'] == 'healthy'
         
     except Exception as e:
-        print(f"❌ Health check failed: {e}")
+        logger.error(f"❌ Health check failed: {e}")
         return False
 
 def start_streamlit_interface():
     """Start Streamlit interface."""
-    print("\n🚀 Starting Streamlit Interface...")
+    logger.info("🚀 Starting Streamlit Interface...")
     
     try:
         import subprocess
@@ -173,8 +181,8 @@ def start_streamlit_interface():
         cmd = [sys.executable, "-m", "streamlit", "run", "unified_interface_v2.py", 
                "--server.port=8501", "--server.address=0.0.0.0"]
         
-        print("Starting Streamlit server...")
-        print("Access the application at: http://localhost:8501")
+        logger.info("Starting Streamlit server...")
+        logger.info("Access the application at: http://localhost:8501")
         
         # Run in background
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -184,47 +192,47 @@ def start_streamlit_interface():
         
         # Check if process is still running
         if process.poll() is None:
-            print("✅ Streamlit server started successfully")
+            logger.info("✅ Streamlit server started successfully")
             return process
         else:
-            print("❌ Streamlit server failed to start")
+            logger.error("❌ Streamlit server failed to start")
             return None
             
     except Exception as e:
-        print(f"❌ Failed to start Streamlit: {e}")
+        logger.error(f"❌ Failed to start Streamlit: {e}")
         return None
 
 def display_production_status(interface, resilience):
     """Display production status."""
-    print("\n" + "=" * 70)
-    print("🏭 EVOLVE TRADING PLATFORM - PRODUCTION STATUS")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("🏭 EVOLVE TRADING PLATFORM - PRODUCTION STATUS")
+    logger.info("=" * 70)
     
     # System status
     health = resilience.get_system_health()
-    print(f"System Status: {health['overall_status'].upper()}")
-    print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info(f"System Status: {health['overall_status'].upper()}")
+    logger.info(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     # Component status
-    print("\n📊 Component Status:")
+    logger.info("\n📊 Component Status:")
     for component, status in health['components'].items():
         icon = "✅" if status['status'] == 'healthy' else "⚠️" if status['status'] == 'warning' else "❌"
-        print(f"  {icon} {component}: {status['status']}")
+        logger.info(f"  {icon} {component}: {status['status']}")
     
     # Performance metrics
     performance = resilience.get_performance_report()
     if 'cpu_usage_avg' in performance:
-        print(f"\n📈 Performance Metrics:")
-        print(f"  CPU Usage: {performance['cpu_usage_avg']:.1f}%")
-        print(f"  Memory Usage: {performance.get('memory_usage_avg', 'N/A')}%")
+        logger.info(f"\n📈 Performance Metrics:")
+        logger.info(f"  CPU Usage: {performance['cpu_usage_avg']:.1f}%")
+        logger.info(f"  Memory Usage: {performance.get('memory_usage_avg', 'N/A')}%")
     
     # Access information
-    print(f"\n🌐 Access Information:")
-    print(f"  Web Interface: http://localhost:8501")
-    print(f"  Health Check: http://localhost:8501/_stcore/health")
+    logger.info(f"\n🌐 Access Information:")
+    logger.info(f"  Web Interface: http://localhost:8501")
+    logger.info(f"  Health Check: http://localhost:8501/_stcore/health")
     
     # Features available
-    print(f"\n🎯 Features Available:")
+    logger.info(f"\n🎯 Features Available:")
     features = [
         "Multi-tab UI (Forecast, Strategy, Backtest, Report, System)",
         "Natural language prompt processing",
@@ -239,51 +247,51 @@ def display_production_status(interface, resilience):
     ]
     
     for feature in features:
-        print(f"  ✅ {feature}")
+        logger.info(f"  ✅ {feature}")
     
-    print("\n" + "=" * 70)
-    print("🎉 EVOLVE TRADING PLATFORM IS NOW LIVE!")
-    print("=" * 70)
+    logger.info("\n" + "=" * 70)
+    logger.info("🎉 EVOLVE TRADING PLATFORM IS NOW LIVE!")
+    logger.info("=" * 70)
 
 def run_production_launch():
     """Run complete production launch."""
-    print("🚀 EVOLVE TRADING PLATFORM - PRODUCTION LAUNCH")
-    print("=" * 70)
-    print(f"Launch Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 70)
+    logger.info("🚀 EVOLVE TRADING PLATFORM - PRODUCTION LAUNCH")
+    logger.info("=" * 70)
+    logger.info(f"Launch Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logger.info("=" * 70)
     
     # Step 1: Validate environment
     if not validate_environment():
-        print("❌ Environment validation failed. Please configure your environment.")
+        logger.error("❌ Environment validation failed. Please configure your environment.")
         return False
     
     # Step 2: Initialize system resilience
     resilience = initialize_system_resilience()
     if not resilience:
-        print("❌ System resilience initialization failed.")
+        logger.error("❌ System resilience initialization failed.")
         return False
     
     # Step 3: Initialize enhanced interface
     interface = initialize_enhanced_interface()
     if not interface:
-        print("❌ Enhanced interface initialization failed.")
+        logger.error("❌ Enhanced interface initialization failed.")
         return False
     
     # Step 4: Perform health check
     if not perform_comprehensive_health_check(resilience):
-        print("⚠️  Health check shows issues. Continuing with warnings...")
+        logger.warning("⚠️  Health check shows issues. Continuing with warnings...")
     
     # Step 5: Start Streamlit interface
     streamlit_process = start_streamlit_interface()
     if not streamlit_process:
-        print("❌ Failed to start Streamlit interface.")
+        logger.error("❌ Failed to start Streamlit interface.")
         return False
     
     # Step 6: Display production status
     display_production_status(interface, resilience)
     
     # Step 7: Keep running
-    print("\n🔄 System is running. Press Ctrl+C to stop.")
+    logger.info("\n🔄 System is running. Press Ctrl+C to stop.")
     
     try:
         # Monitor system while running
@@ -293,16 +301,16 @@ def run_production_launch():
             # Perform periodic health check
             health = resilience.get_system_health()
             if health['overall_status'] == 'error':
-                print("❌ System health degraded to ERROR status")
+                logger.error("❌ System health degraded to ERROR status")
                 break
             
             # Check if Streamlit is still running
             if streamlit_process.poll() is not None:
-                print("❌ Streamlit process stopped unexpectedly")
+                logger.error("❌ Streamlit process stopped unexpectedly")
                 break
                 
     except KeyboardInterrupt:
-        print("\n🛑 Shutting down system...")
+        logger.info("\n🛑 Shutting down system...")
         
         # Stop monitoring
         from system_resilience import stop_system_monitoring
@@ -313,7 +321,7 @@ def run_production_launch():
             streamlit_process.terminate()
             streamlit_process.wait()
         
-        print("✅ System shutdown complete")
+        logger.info("✅ System shutdown complete")
     
     return True
 

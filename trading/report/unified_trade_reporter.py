@@ -420,7 +420,8 @@ class UnifiedTradeReporter:
                 if isinstance(timestamp, str):
                     try:
                         timestamp = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                    except:
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Invalid timestamp format: {timestamp}, using current time. Error: {e}")
                         timestamp = datetime.now()
                 elif not isinstance(timestamp, datetime):
                     timestamp = datetime.now()

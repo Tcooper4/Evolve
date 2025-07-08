@@ -483,12 +483,12 @@ def main():
         service = ConfigService(args.config)
         
         if args.get:
-            print(json.dumps(service.get_config(args.get), indent=2))
+            logger.info(json.dumps(service.get_config(args.get), indent=2))
         elif args.set:
             content = json.loads(input("Enter config content: "))
             service.set_config(args.set, content)
         elif args.history:
-            print(json.dumps(service.get_config_history(args.history), indent=2))
+            logger.info(json.dumps(service.get_config_history(args.history), indent=2))
         elif args.restore:
             version = input("Enter version to restore: ")
             service.restore_config(args.restore, version)

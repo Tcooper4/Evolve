@@ -1,30 +1,32 @@
 #!/usr/bin/env python3
 """
-Agent Leaderboard Dashboard Launcher
+Launch Agent Leaderboard Dashboard
 
-Launches the Streamlit dashboard for agent performance leaderboard visualization.
+This script launches the agent leaderboard dashboard for monitoring agent performance.
 """
 
 import os
 import sys
-import subprocess
-import argparse
+import logging
 from pathlib import Path
+from typing import List
 
-# Add the project root to the Python path
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Add project root to path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-def check_dependencies():
+def check_dependencies() -> bool:
     """Check if required dependencies are installed."""
-    required_packages = [
-        'streamlit',
-        'plotly',
-        'pandas',
-        'numpy'
-    ]
-    
+    required_packages = ['streamlit', 'pandas', 'plotly']
     missing_packages = []
+    
     for package in required_packages:
         try:
             __import__(package)
@@ -32,108 +34,77 @@ def check_dependencies():
             missing_packages.append(package)
     
     if missing_packages:
-        print(f"❌ Missing required packages: {', '.join(missing_packages)}")
-        print("Install them with: pip install " + " ".join(missing_packages))
+        logger.error(f"❌ Missing required packages: {', '.join(missing_packages)}")
+        logger.info("Install them with: pip install " + " ".join(missing_packages))
         return False
     
     return True
 
-def launch_dashboard(port=8501, host="localhost", headless=False):
-    """Launch the Streamlit dashboard."""
-    dashboard_path = Path(__file__).parent / "leaderboard_dashboard.py"
+def check_dashboard_file() -> bool:
+    """Check if dashboard file exists."""
+    dashboard_path = Path("trading/agents/leaderboard_dashboard.py")
     
     if not dashboard_path.exists():
-        print(f"❌ Dashboard file not found: {dashboard_path}")
+        logger.error(f"❌ Dashboard file not found: {dashboard_path}")
         return False
-    
-    # Build the streamlit command
-    cmd = [
-        "streamlit", "run", str(dashboard_path),
-        "--server.port", str(port),
-        "--server.address", host
-    ]
-    
-    if headless:
-        cmd.extend(["--server.headless", "true"])
-    
-    print(f"🚀 Launching Agent Leaderboard Dashboard...")
-    print(f"📍 URL: http://{host}:{port}")
-    print(f"📁 Dashboard: {dashboard_path}")
-    print("=" * 60)
-    
-    try:
-        # Launch the dashboard
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to launch dashboard: {e}")
-        return False
-    except KeyboardInterrupt:
-        print("\n👋 Dashboard stopped by user")
-        return True
     
     return True
+
+def launch_dashboard():
+    """Launch the agent leaderboard dashboard."""
+    try:
+        import subprocess
+        import webbrowser
+        import time
+        
+        # Configuration
+        host = "localhost"
+        port = 8502
+        dashboard_path = "trading/agents/leaderboard_dashboard.py"
+        
+        logger.info(f"🚀 Launching Agent Leaderboard Dashboard...")
+        logger.info(f"📍 URL: http://{host}:{port}")
+        logger.info(f"📁 Dashboard: {dashboard_path}")
+        logger.info("=" * 60)
+        
+        # Launch Streamlit
+        cmd = [
+            sys.executable, "-m", "streamlit", "run", 
+            str(dashboard_path), 
+            "--server.port", str(port),
+            "--server.address", host
+        ]
+        
+        process = subprocess.Popen(cmd)
+        
+        # Wait a moment for the server to start
+        time.sleep(3)
+        
+        # Open browser
+        webbrowser.open(f"http://{host}:{port}")
+        
+        # Wait for process to complete
+        process.wait()
+        
+    except KeyboardInterrupt:
+        logger.info("\n👋 Dashboard stopped by user")
+    except Exception as e:
+        logger.error(f"❌ Failed to launch dashboard: {e}")
 
 def main():
     """Main function."""
-    parser = argparse.ArgumentParser(
-        description="Launch Agent Leaderboard Dashboard",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python launch_leaderboard_dashboard.py
-  python launch_leaderboard_dashboard.py --port 8502
-  python launch_leaderboard_dashboard.py --host 0.0.0.0 --port 8503
-  python launch_leaderboard_dashboard.py --headless
-        """
-    )
+    logger.info("🔧 Checking dependencies...")
     
-    parser.add_argument(
-        "--port", "-p",
-        type=int,
-        default=8501,
-        help="Port to run the dashboard on (default: 8501)"
-    )
-    
-    parser.add_argument(
-        "--host", "-H",
-        default="localhost",
-        help="Host to bind the dashboard to (default: localhost)"
-    )
-    
-    parser.add_argument(
-        "--headless", "-d",
-        action="store_true",
-        help="Run in headless mode (no browser auto-open)"
-    )
-    
-    parser.add_argument(
-        "--check-deps", "-c",
-        action="store_true",
-        help="Check dependencies and exit"
-    )
-    
-    args = parser.parse_args()
-    
-    # Check dependencies if requested
-    if args.check_deps:
-        if check_dependencies():
-            print("✅ All dependencies are installed")
-            return 0
-        else:
-            return 1
-    
-    # Check dependencies before launching
     if not check_dependencies():
-        return 1
+        return
     
-    # Launch the dashboard
-    success = launch_dashboard(
-        port=args.port,
-        host=args.host,
-        headless=args.headless
-    )
+    if not check_dashboard_file():
+        return
     
-    return 0 if success else 1
+    logger.info("✅ All dependencies are installed")
+    
+    # Launch dashboard
+    launch_dashboard()
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    main() 

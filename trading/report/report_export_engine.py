@@ -5,10 +5,12 @@ Auto-generates markdown/PDF reports with strategy logic, performance, backtest g
 Provides comprehensive reporting and export capabilities.
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple, Optional, Any
-import logging
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 from enum import Enum
@@ -36,8 +38,6 @@ try:
 except ImportError:
     PDF_AVAILABLE = False
     logger.warning("ReportLab not available, PDF export will be skipped")
-
-logger = logging.getLogger(__name__)
 
 class ReportFormat(Enum):
     """Report export formats."""
@@ -105,7 +105,9 @@ class ReportExportEngine:
         self.report_history = []
         self.templates = self._initialize_templates()
         
-        logger.info("Report Export Engine initialized successfully")def _initialize_templates(self) -> Dict[str, str]:
+        logger.info("Report Export Engine initialized successfully")
+    
+    def _initialize_templates(self) -> Dict[str, str]:
         """Initialize report templates."""
         return {
             'executive_summary': """
@@ -861,6 +863,7 @@ class ReportExportEngine:
         """Generate charts for the report."""
         try:
             if not PLOTTING_AVAILABLE:
+                return
 
             # Generate various charts based on available data
             if 'backtest_data' in data:

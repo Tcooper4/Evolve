@@ -24,6 +24,8 @@ import gzip
 import shutil
 import os
 
+logger = logging.getLogger(__name__)
+
 class LogLevel(Enum):
     """Log level enumeration."""
     DEBUG = "DEBUG"
@@ -66,7 +68,7 @@ class LoggingService:
                 else:
                     raise ValueError(f"Unsupported config file format: {self.config_path}")
         except Exception as e:
-            print(f"Error loading config: {str(e)}")
+            logger.error(f"Error loading config: {str(e)}")
             raise
 
     def setup_database(self) -> None:
@@ -107,7 +109,7 @@ class LoggingService:
             
             self.conn.commit()
         except Exception as e:
-            print(f"Error setting up database: {str(e)}")
+            logger.error(f"Error setting up database: {str(e)}")
             raise
     
         return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
@@ -124,7 +126,7 @@ class LoggingService:
                 )
                 self.setup_logger(config)
         except Exception as e:
-            print(f"Error initializing loggers: {str(e)}")
+            logger.error(f"Error initializing loggers: {str(e)}")
             raise
     
         return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
@@ -153,7 +155,7 @@ class LoggingService:
             
             self.loggers[config.name] = logger
         except Exception as e:
-            print(f"Error setting up logger {config.name}: {str(e)}")
+            logger.error(f"Error setting up logger {config.name}: {str(e)}")
             raise
     
         return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
@@ -201,10 +203,10 @@ class LoggingService:
                 return handler
             
             else:
-                print(f"Unknown handler type: {handler_type}")
+                logger.error(f"Unknown handler type: {handler_type}")
 
         except Exception as e:
-            print(f"Error creating handler: {str(e)}")
+            logger.error(f"Error creating handler: {str(e)}")
             return None
     
     def create_filter(self, config: Dict[str, Any]) -> Optional[logging.Filter]:
@@ -219,10 +221,10 @@ class LoggingService:
                 return RegexFilter(config['pattern'])
             
             else:
-                print(f"Unknown filter type: {filter_type}")
+                logger.error(f"Unknown filter type: {filter_type}")
 
         except Exception as e:
-            print(f"Error creating filter: {str(e)}")
+            logger.error(f"Error creating filter: {str(e)}")
             return None
     
     def get_logger(self, name: str) -> logging.Logger:
@@ -232,7 +234,7 @@ class LoggingService:
                 raise ValueError(f"Logger {name} not found")
             return self.loggers[name]
         except Exception as e:
-            print(f"Error getting logger: {str(e)}")
+            logger.error(f"Error getting logger: {str(e)}")
             raise
     
     def log(self, logger_name: str, level: LogLevel, message: str, **kwargs) -> None:
@@ -266,7 +268,7 @@ class LoggingService:
             log_func = getattr(logger, level.value.lower())
             log_func(message, **kwargs)
         except Exception as e:
-            print(f"Error logging message: {str(e)}")
+            logger.error(f"Error logging message: {str(e)}")
             raise
 
     def get_logs(self, start_time: Optional[datetime] = None, end_time: Optional[datetime] = None,
@@ -318,7 +320,7 @@ class LoggingService:
             
             return results
         except Exception as e:
-            print(f"Error getting logs: {str(e)}")
+            logger.error(f"Error getting logs: {str(e)}")
             raise
     
     def cleanup_old_logs(self, days: int) -> None:
@@ -332,9 +334,9 @@ class LoggingService:
             ''', (cutoff_date,))
             
             self.conn.commit()
-            print(f"Cleaned up logs older than {days} days")
+            logger.info(f"Cleaned up logs older than {days} days")
         except Exception as e:
-            print(f"Error cleaning up old logs: {str(e)}")
+            logger.error(f"Error cleaning up old logs: {str(e)}")
             raise
 
     def rotate_logs(self) -> None:
@@ -361,7 +363,7 @@ class LoggingService:
                             # Clear original file
                             file_path.unlink()
         except Exception as e:
-            print(f"Error rotating logs: {str(e)}")
+            logger.error(f"Error rotating logs: {str(e)}")
             raise
 
     def process_log_queue(self) -> None:
@@ -379,7 +381,7 @@ class LoggingService:
                 except Queue.Empty:
                     continue
         except Exception as e:
-            print(f"Error processing log queue: {str(e)}")
+            logger.error(f"Error processing log queue: {str(e)}")
             raise
 
     async def start(self) -> None:
@@ -400,7 +402,7 @@ class LoggingService:
                 
                 await asyncio.sleep(self.config.get('check_interval', 3600))
         except Exception as e:
-            print(f"Error in logging service: {str(e)}")
+            logger.error(f"Error in logging service: {str(e)}")
             raise
         finally:
             self.running = False
@@ -416,7 +418,9 @@ class RegexFilter(logging.Filter):
     def __init__(self, pattern: str):
         """Initialize filter with pattern."""
         super().__init__()
-        self.pattern = re.compile(pattern)def filter(self, record: logging.LogRecord) -> bool:
+        self.pattern = re.compile(pattern)
+
+    def filter(self, record: logging.LogRecord) -> bool:
         """Filter log record."""
         return bool(self.pattern.search(record.getMessage()))
 
@@ -437,9 +441,9 @@ def main():
         else:
             asyncio.run(service.start())
     except KeyboardInterrupt:
-        print("Logging service interrupted")
+        logger.info("Logging service interrupted")
     except Exception as e:
-        print(f"Error in logging service: {str(e)}")
+        logger.error(f"Error in logging service: {str(e)}")
         raise
 
 if __name__ == '__main__':

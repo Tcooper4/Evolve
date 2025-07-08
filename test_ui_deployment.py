@@ -13,8 +13,16 @@ import sys
 import os
 import time
 import json
+import logging
 from pathlib import Path
 from typing import Dict, Any, List
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Add project root to path
 project_root = Path(__file__).parent
@@ -22,43 +30,43 @@ sys.path.insert(0, str(project_root))
 
 def test_enhanced_interface_import():
     """Test enhanced interface import."""
-    print("🔍 Testing Enhanced Interface Import...")
+    logger.info("🔍 Testing Enhanced Interface Import...")
     
     try:
         from unified_interface_v2 import EnhancedUnifiedInterfaceV2, run_enhanced_interface_v2
-        print("✅ Enhanced interface import successful")
+        logger.info("✅ Enhanced interface import successful")
         return True
     except ImportError as e:
-        print(f"❌ Enhanced interface import failed: {e}")
+        logger.error(f"❌ Enhanced interface import failed: {e}")
         return False
 
 def test_system_resilience():
     """Test system resilience features."""
-    print("\n🔍 Testing System Resilience...")
+    logger.info("\n🔍 Testing System Resilience...")
     
     try:
         from system_resilience import SystemResilience, get_system_resilience
         
         # Test system resilience initialization
         resilience = SystemResilience()
-        print("✅ System resilience initialization successful")
+        logger.info("✅ System resilience initialization successful")
         
         # Test health checks
         health_status = resilience.get_system_health()
-        print(f"✅ Health status retrieved: {health_status['overall_status']}")
+        logger.info(f"✅ Health status retrieved: {health_status['overall_status']}")
         
         # Test performance metrics
         performance = resilience.get_performance_report()
-        print("✅ Performance metrics retrieved")
+        logger.info("✅ Performance metrics retrieved")
         
         return True
     except Exception as e:
-        print(f"❌ System resilience test failed: {e}")
+        logger.error(f"❌ System resilience test failed: {e}")
         return False
 
 def test_deployment_configuration():
     """Test deployment configuration files."""
-    print("\n🔍 Testing Deployment Configuration...")
+    logger.info("\n🔍 Testing Deployment Configuration...")
     
     deployment_files = [
         "deploy/Dockerfile.production",
@@ -71,21 +79,21 @@ def test_deployment_configuration():
     all_exist = True
     for file_path in deployment_files:
         if os.path.exists(file_path):
-            print(f"✅ {file_path} exists")
+            logger.info(f"✅ {file_path} exists")
         else:
-            print(f"❌ {file_path} missing")
+            logger.error(f"❌ {file_path} missing")
             all_exist = False
     
     return all_exist
 
 def test_environment_variables():
     """Test environment variable configuration."""
-    print("\n🔍 Testing Environment Variables...")
+    logger.info("\n🔍 Testing Environment Variables...")
     
     try:
         # Check if env.example exists
         if os.path.exists("env.example"):
-            print("✅ env.example file exists")
+            logger.info("✅ env.example file exists")
             
             # Read and validate env.example
             with open("env.example", "r") as f:
@@ -106,26 +114,26 @@ def test_environment_variables():
                     missing_vars.append(var)
             
             if missing_vars:
-                print(f"⚠️  Missing variables in env.example: {missing_vars}")
+                logger.warning(f"⚠️  Missing variables in env.example: {missing_vars}")
             else:
-                print("✅ All required variables in env.example")
+                logger.info("✅ All required variables in env.example")
             
             return True
         else:
-            print("❌ env.example file missing")
+            logger.error("❌ env.example file missing")
             return False
             
     except Exception as e:
-        print(f"❌ Environment variables test failed: {e}")
+        logger.error(f"❌ Environment variables test failed: {e}")
         return False
 
 def test_production_requirements():
     """Test production requirements file."""
-    print("\n🔍 Testing Production Requirements...")
+    logger.info("\n🔍 Testing Production Requirements...")
     
     try:
         if os.path.exists("requirements.production.txt"):
-            print("✅ requirements.production.txt exists")
+            logger.info("✅ requirements.production.txt exists")
             
             # Read requirements
             with open("requirements.production.txt", "r") as f:
@@ -147,22 +155,22 @@ def test_production_requirements():
                     missing_packages.append(package)
             
             if missing_packages:
-                print(f"⚠️  Missing packages in requirements.production.txt: {missing_packages}")
+                logger.warning(f"⚠️  Missing packages in requirements.production.txt: {missing_packages}")
             else:
-                print("✅ All essential packages in requirements.production.txt")
+                logger.info("✅ All essential packages in requirements.production.txt")
             
             return True
         else:
-            print("❌ requirements.production.txt missing")
+            logger.error("❌ requirements.production.txt missing")
             return False
             
     except Exception as e:
-        print(f"❌ Production requirements test failed: {e}")
+        logger.error(f"❌ Production requirements test failed: {e}")
         return False
 
 def test_docker_configuration():
     """Test Docker configuration."""
-    print("\n🔍 Testing Docker Configuration...")
+    logger.info("\n🔍 Testing Docker Configuration...")
     
     try:
         # Test Dockerfile.production
@@ -185,76 +193,76 @@ def test_docker_configuration():
                     missing_features.append(feature)
             
             if missing_features:
-                print(f"⚠️  Missing Docker features: {missing_features}")
+                logger.warning(f"⚠️  Missing Docker features: {missing_features}")
             else:
-                print("✅ Dockerfile.production has all essential features")
+                logger.info("✅ Dockerfile.production has all essential features")
             
             return True
         else:
-            print("❌ Dockerfile.production missing")
+            logger.error("❌ Dockerfile.production missing")
             return False
             
     except Exception as e:
-        print(f"❌ Docker configuration test failed: {e}")
+        logger.error(f"❌ Docker configuration test failed: {e}")
         return False
 
 def test_ui_features():
     """Test UI features."""
-    print("\n🔍 Testing UI Features...")
+    logger.info("\n🔍 Testing UI Features...")
     
     try:
         # Test enhanced interface features
         from unified_interface_v2 import EnhancedUnifiedInterfaceV2
         
         interface = EnhancedUnifiedInterfaceV2()
-        print("✅ Enhanced interface initialization successful")
+        logger.info("✅ Enhanced interface initialization successful")
         
         # Test component initialization
         if hasattr(interface, 'agent_hub'):
-            print("✅ Agent hub component available")
+            logger.info("✅ Agent hub component available")
         
         if hasattr(interface, 'data_feed'):
-            print("✅ Data feed component available")
+            logger.info("✅ Data feed component available")
         
         if hasattr(interface, 'prompt_router'):
-            print("✅ Prompt router component available")
+            logger.info("✅ Prompt router component available")
         
         if hasattr(interface, 'model_monitor'):
-            print("✅ Model monitor component available")
+            logger.info("✅ Model monitor component available")
         
         if hasattr(interface, 'strategy_logger'):
-            print("✅ Strategy logger component available")
+            logger.info("✅ Strategy logger component available")
         
         if hasattr(interface, 'portfolio_manager'):
-            print("✅ Portfolio manager component available")
+            logger.info("✅ Portfolio manager component available")
         
         if hasattr(interface, 'strategy_selector'):
-            print("✅ Strategy selector component available")
+            logger.info("✅ Strategy selector component available")
         
         if hasattr(interface, 'market_regime_agent'):
-            print("✅ Market regime agent component available")
+            logger.info("✅ Market regime agent component available")
         
         if hasattr(interface, 'hybrid_engine'):
-            print("✅ Hybrid engine component available")
+            logger.info("✅ Hybrid engine component available")
         
         if hasattr(interface, 'quant_gpt'):
-            print("✅ QuantGPT component available")
+            logger.info("✅ QuantGPT component available")
         
         if hasattr(interface, 'reporter'):
-            print("✅ Reporter component available")
+            logger.info("✅ Reporter component available")
         
         if hasattr(interface, 'backtester'):
-            print("✅ Backtester component available")
+            logger.info("✅ Backtester component available")
         
         return True
         
     except Exception as e:
-        print(f"❌ UI features test failed: {e}")
+        logger.error(f"❌ UI features test failed: {e}")
         return False
 
 def test_fallback_mechanisms():
     """Test fallback mechanisms."""
-    print("\n🔍 Testing Fallback Mechanisms...")
+    logger.info("\n🔍 Testing Fallback Mechanisms...")
     
     try:
         from unified_interface_v2 import EnhancedUnifiedInterfaceV2
@@ -265,27 +273,27 @@ def test_fallback_mechanisms():
         if hasattr(interface, 'data_feed'):
             try:
                 data = interface.data_feed.get_historical_data("AAPL", "2023-01-01", "2023-12-31")
-                print("✅ Data feed fallback working")
+                logger.info("✅ Data feed fallback working")
             except Exception as e:
-                print(f"⚠️  Data feed fallback issue: {e}")
+                logger.warning(f"⚠️  Data feed fallback issue: {e}")
         
         # Test fallback model monitor
         if hasattr(interface, 'model_monitor'):
             try:
                 trust_levels = interface.model_monitor.get_model_trust_levels()
-                print("✅ Model monitor fallback working")
+                logger.info("✅ Model monitor fallback working")
             except Exception as e:
-                print(f"⚠️  Model monitor fallback issue: {e}")
+                logger.warning(f"⚠️  Model monitor fallback issue: {e}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Fallback mechanisms test failed: {e}")
+        logger.error(f"❌ Fallback mechanisms test failed: {e}")
         return False
 
 def test_export_functionality():
     """Test export functionality."""
-    print("\n🔍 Testing Export Functionality...")
+    logger.info("\n🔍 Testing Export Functionality...")
     
     try:
         from unified_interface_v2 import EnhancedUnifiedInterfaceV2
@@ -303,19 +311,19 @@ def test_export_functionality():
         
         for method in export_methods:
             if hasattr(interface, method):
-                print(f"✅ {method} method available")
+                logger.info(f"✅ {method} method available")
             else:
-                print(f"❌ {method} method missing")
+                logger.error(f"❌ {method} method missing")
         
         return True
         
     except Exception as e:
-        print(f"❌ Export functionality test failed: {e}")
+        logger.error(f"❌ Export functionality test failed: {e}")
         return False
 
 def test_health_monitoring():
     """Test health monitoring."""
-    print("\n🔍 Testing Health Monitoring...")
+    logger.info("\n🔍 Testing Health Monitoring...")
     
     try:
         from system_resilience import get_system_resilience
@@ -324,26 +332,26 @@ def test_health_monitoring():
         
         # Test health status
         health = resilience.get_system_health()
-        print(f"✅ Health monitoring working - Status: {health['overall_status']}")
+        logger.info(f"✅ Health monitoring working - Status: {health['overall_status']}")
         
         # Test performance metrics
         performance = resilience.get_performance_report()
-        print("✅ Performance monitoring working")
+        logger.info("✅ Performance monitoring working")
         
         # Test component health
         for component, status in health['components'].items():
-            print(f"  - {component}: {status['status']}")
+            logger.info(f"  - {component}: {status['status']}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Health monitoring test failed: {e}")
+        logger.error(f"❌ Health monitoring test failed: {e}")
         return False
 
 def run_comprehensive_test():
     """Run comprehensive UI and deployment test."""
-    print("🚀 Starting UI and Deployment Readiness Test")
-    print("=" * 60)
+    logger.info("🚀 Starting UI and Deployment Readiness Test")
+    logger.info("=" * 60)
     
     test_results = {}
     
@@ -366,28 +374,28 @@ def run_comprehensive_test():
             result = test_func()
             test_results[test_name] = result
         except Exception as e:
-            print(f"❌ {test_name} test crashed: {e}")
+            logger.error(f"❌ {test_name} test crashed: {e}")
             test_results[test_name] = False
     
     # Print summary
-    print("\n" + "=" * 60)
-    print("📊 TEST SUMMARY")
-    print("=" * 60)
+    logger.info("\n" + "=" * 60)
+    logger.info("📊 TEST SUMMARY")
+    logger.info("=" * 60)
     
     passed = sum(test_results.values())
     total = len(test_results)
     
     for test_name, result in test_results.items():
         status = "✅ PASS" if result else "❌ FAIL"
-        print(f"{status} {test_name}")
+        logger.info(f"{status} {test_name}")
     
-    print(f"\nOverall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
+    logger.info(f"\nOverall: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
     
     if passed == total:
-        print("🎉 All tests passed! UI and deployment are ready.")
+        logger.info("🎉 All tests passed! UI and deployment are ready.")
         return True
     else:
-        print("⚠️  Some tests failed. Please review the issues above.")
+        logger.warning("⚠️  Some tests failed. Please review the issues above.")
         return False
 
 if __name__ == "__main__":
