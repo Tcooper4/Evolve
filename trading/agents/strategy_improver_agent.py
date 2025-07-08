@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 
 from trading.strategies.bollinger_strategy import BollingerStrategy
 from trading.strategies.rsi_strategy import RSIStrategy
@@ -23,6 +24,37 @@ from trading.memory.strategy_logger import StrategyLogger
 from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class StrategyImprovementRequest:
+    """Request for strategy improvement."""
+    strategy_name: str
+    improvement_type: str  # 'parameter_optimization', 'logic_update', 'threshold_adjustment'
+    performance_thresholds: Optional[Dict[str, float]] = None
+    optimization_method: str = 'bayesian'
+    max_iterations: int = 30
+    timeout: int = 1800
+    priority: str = 'normal'  # 'low', 'normal', 'high', 'urgent'
+    market_conditions: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+@dataclass
+class StrategyImprovementResult:
+    """Result of strategy improvement process."""
+    success: bool
+    strategy_name: str
+    improvement_type: str
+    old_performance: Optional[Dict[str, float]] = None
+    new_performance: Optional[Dict[str, float]] = None
+    improvement_metrics: Optional[Dict[str, float]] = None
+    changes_made: Optional[Dict[str, Any]] = None
+    optimization_history: Optional[List[Dict[str, Any]]] = None
+    error_message: Optional[str] = None
+    timestamp: datetime = None
+    
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
 
 class StrategyImproverAgent(BaseAgent):
     """

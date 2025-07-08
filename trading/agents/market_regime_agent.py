@@ -52,6 +52,30 @@ class RegimeAnalysis:
     regime_transition_probability: float
     market_conditions: Dict[str, Any]
 
+@dataclass
+class MarketRegimeRequest:
+    """Request for market regime analysis."""
+    symbol: str = "SPY"
+    period: str = "1y"
+    analysis_type: str = "full"  # 'full', 'quick', 'detailed'
+    include_strategies: bool = True
+    include_risk_assessment: bool = True
+    metadata: Optional[Dict[str, Any]] = None
+
+@dataclass
+class MarketRegimeResult:
+    """Result of market regime analysis."""
+    success: bool
+    symbol: str
+    regime_analysis: Optional[RegimeAnalysis] = None
+    market_data: Optional[pd.DataFrame] = None
+    error_message: Optional[str] = None
+    timestamp: datetime = None
+    
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
+
 class MarketRegimeAgent(BaseAgent):
     """Advanced market regime detection and strategy routing agent."""
     
