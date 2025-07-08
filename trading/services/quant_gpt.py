@@ -608,7 +608,7 @@ def main():
         result = quant_gpt.process_query(args.query)
         
         # Print results
-        print(json.dumps(result, indent=2))
+        logger.info(json.dumps(result, indent=2))
         
         return {
             "status": "completed",
@@ -617,14 +617,14 @@ def main():
         }
         
     except KeyboardInterrupt:
-        print("\nInterrupted by user")
+        logger.info("\nInterrupted by user")
         return {
             "status": "interrupted",
             "query": args.query,
             "result": "user_interrupted"
         }
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         return {
             "status": "failed",
             "query": args.query,

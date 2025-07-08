@@ -6,6 +6,7 @@ import os
 import json
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
+import logging
 
 # Try to import Prophet, but make it optional
 try:
@@ -22,6 +23,8 @@ try:
 except ImportError:
     HOLIDAYS_AVAILABLE = False
     holidays = None
+
+logger = logging.getLogger(__name__)
 
 if PROPHET_AVAILABLE:
     @ModelRegistry.register('Prophet')
@@ -66,8 +69,7 @@ if PROPHET_AVAILABLE:
                 
                 # Check for NaN values
                 if train_data[required_columns].isnull().any().any():
-                    import logging
-                    logging.warning("NaN values found in training data, attempting to clean")
+                    logger.warning("NaN values found in training data, attempting to clean")
                     train_data = train_data.dropna(subset=required_columns)
                     if train_data.empty:
                         raise ValueError("No valid data remaining after removing NaN values")
@@ -92,14 +94,12 @@ if PROPHET_AVAILABLE:
                 self.fitted = True
                 self.history = df
                 
-                import logging
-                logging.info(f"Prophet model fitted successfully with {len(df)} data points")
+                logger.info(f"Prophet model fitted successfully with {len(df)} data points")
                 
                 return {'train_loss': [], 'val_loss': []}
                 
             except Exception as e:
-                import logging
-                logging.error(f"Error fitting Prophet model: {e}")
+                logger.error(f"Error fitting Prophet model: {e}")
                 raise RuntimeError(f"Prophet model fitting failed: {e}")
 
         def _validate_prophet_config(self):
@@ -172,8 +172,7 @@ if PROPHET_AVAILABLE:
                     if not isinstance(seasonality_prior_scale, (int, float)) or seasonality_prior_scale <= 0:
                         raise ValueError("seasonality_prior_scale must be a positive number")
                 
-                import logging
-                logging.info("Prophet configuration validation passed")
+                logger.info("Prophet configuration validation passed")
                 
             except Exception as e:
                 raise ValueError(f"Invalid Prophet configuration: {str(e)}")
@@ -191,34 +190,29 @@ if PROPHET_AVAILABLE:
             try:
                 # Check if input dataframe is empty or has NaNs
                 if data is None or data.empty:
-                    import logging
-                    logging.warning("Prophet predict: Input dataframe is empty, returning empty result")
+                    logger.warning("Prophet predict: Input dataframe is empty, returning empty result")
                     return np.array([])
                 
                 # Check for required columns
                 if self.config['date_column'] not in data.columns:
-                    import logging
-                    logging.warning(f"Prophet predict: Missing required column '{self.config['date_column']}', returning empty result")
+                    logger.warning(f"Prophet predict: Missing required column '{self.config['date_column']}', returning empty result")
                     return np.array([])
                 
                 # Check for NaN values
                 if data[self.config['date_column']].isnull().any():
-                    import logging
-                    logging.warning("Prophet predict: NaN values found in date column, attempting to clean")
+                    logger.warning("Prophet predict: NaN values found in date column, attempting to clean")
                     data = data.dropna(subset=[self.config['date_column']])
                     if data.empty:
-                        logging.warning("Prophet predict: No valid data after cleaning, returning empty result")
+                        logger.warning("Prophet predict: No valid data after cleaning, returning empty result")
                         return np.array([])
                 
                 # Validate data size
                 if len(data) < 2:
-                    import logging
-                    logging.warning("Prophet predict: Insufficient data points, returning empty result")
+                    logger.warning("Prophet predict: Insufficient data points, returning empty result")
                     return np.array([])
                 
                 if not self.fitted:
-                    import logging
-                    logging.warning("Prophet predict: Model not fitted, returning empty result")
+                    logger.warning("Prophet predict: Model not fitted, returning empty result")
                     return np.array([])
                 
                 # Prepare data for prediction
@@ -233,8 +227,7 @@ if PROPHET_AVAILABLE:
                 return forecast['yhat'].values
                 
             except Exception as e:
-                import logging
-                logging.error(f"Error in Prophet predict: {e}")
+                logger.error(f"Error in Prophet predict: {e}")
                 return np.array([])
 
         def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
@@ -270,19 +263,18 @@ if PROPHET_AVAILABLE:
                 }
                 
             except Exception as e:
-                import logging
-                logging.error(f"Error in Prophet model forecast: {e}")
+                logger.error(f"Error in Prophet model forecast: {e}")
                 raise RuntimeError(f"Prophet model forecasting failed: {e}")
 
         def summary(self):
-            print("ProphetModel: Facebook Prophet wrapper")
-            print(self.model)
+            logger.info("ProphetModel: Facebook Prophet wrapper")
+            logger.info(str(self.model))
 
         def infer(self):
             pass  # Prophet is always in inference mode after fitting
 
         def shap_interpret(self, X_sample):
-            print("SHAP not supported for Prophet. Showing component plots instead.")
+            logger.warning("SHAP not supported for Prophet. Showing component plots instead.")
             self.model.plot_components(self.model.predict(self.history))
 
         def save(self, path: str):
@@ -291,8 +283,7 @@ if PROPHET_AVAILABLE:
                 os.makedirs(path, exist_ok=True)
                 self.model.save(os.path.join(path, 'prophet_model.json'))
             except Exception as e:
-                import logging
-                logging.error(f"Failed to save Prophet model to {path}: {e}")
+                logger.error(f"Failed to save Prophet model to {path}: {e}")
                 raise RuntimeError(f"Failed to save Prophet model: {e}")
 
         def load(self, path: str):

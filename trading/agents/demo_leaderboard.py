@@ -85,9 +85,9 @@ def generate_realistic_performance_data(agent_name: str) -> Dict[str, float]:
 
 def demo_basic_leaderboard_usage():
     """Demonstrate basic leaderboard functionality."""
-    print("\n" + "="*60)
-    print("BASIC LEADERBOARD USAGE")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("BASIC LEADERBOARD USAGE")
+    logger.info("="*60)
     
     # Initialize leaderboard
     leaderboard = AgentLeaderboard()
@@ -107,26 +107,26 @@ def demo_basic_leaderboard_usage():
         )
     
     # Display leaderboard
-    print("\nTop 5 Agents by Sharpe Ratio:")
+    logger.info("\nTop 5 Agents by Sharpe Ratio:")
     top_agents = leaderboard.get_leaderboard(top_n=5, sort_by="sharpe_ratio")
     for i, agent in enumerate(top_agents, 1):
-        print(f"{i}. {agent['agent_name']}: Sharpe={agent['sharpe_ratio']:.2f}, "
+        logger.info(f"{i}. {agent['agent_name']}: Sharpe={agent['sharpe_ratio']:.2f}, "
               f"Drawdown={agent['max_drawdown']:.2%}, WinRate={agent['win_rate']:.2%}")
     
     # Show active vs deprecated agents
-    print(f"\nActive Agents: {leaderboard.get_active_agents()}")
-    print(f"Deprecated Agents: {leaderboard.get_deprecated_agents()}")
+    logger.info(f"\nActive Agents: {leaderboard.get_active_agents()}")
+    logger.info(f"Deprecated Agents: {leaderboard.get_deprecated_agents()}")
     
     # Show as DataFrame
-    print("\nLeaderboard as DataFrame:")
+    logger.info("\nLeaderboard as DataFrame:")
     df = leaderboard.as_dataframe()
-    print(df[['agent_name', 'sharpe_ratio', 'max_drawdown', 'win_rate', 'total_return', 'status']].to_string(index=False))
+    logger.info(df[['agent_name', 'sharpe_ratio', 'max_drawdown', 'win_rate', 'total_return', 'status']].to_string(index=False))
 
 def demo_deprecation_scenarios():
     """Demonstrate deprecation functionality with poor performers."""
-    print("\n" + "="*60)
-    print("DEPRECATION SCENARIOS")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("DEPRECATION SCENARIOS")
+    logger.info("="*60)
     
     leaderboard = AgentLeaderboard()
     
@@ -139,16 +139,16 @@ def demo_deprecation_scenarios():
     
     for agent_name, sharpe, drawdown, win_rate, total_return in poor_performers:
         leaderboard.update_performance(agent_name, sharpe, drawdown, win_rate, total_return)
-        print(f"Added {agent_name}: Sharpe={sharpe:.2f}, Drawdown={drawdown:.2%}, WinRate={win_rate:.2%}")
+        logger.info(f"Added {agent_name}: Sharpe={sharpe:.2f}, Drawdown={drawdown:.2%}, WinRate={win_rate:.2%}")
     
-    print(f"\nDeprecated Agents: {leaderboard.get_deprecated_agents()}")
-    print(f"Active Agents: {leaderboard.get_active_agents()}")
+    logger.info(f"\nDeprecated Agents: {leaderboard.get_deprecated_agents()}")
+    logger.info(f"Active Agents: {leaderboard.get_active_agents()}")
 
 def demo_agent_manager_integration():
     """Demonstrate integration with AgentManager."""
-    print("\n" + "="*60)
-    print("AGENT MANAGER INTEGRATION")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("AGENT MANAGER INTEGRATION")
+    logger.info("="*60)
     
     # Initialize agent manager
     config = AgentManagerConfig(
@@ -173,25 +173,25 @@ def demo_agent_manager_integration():
         )
     
     # Get leaderboard data through manager
-    print("\nTop 3 Agents via AgentManager:")
+    logger.info("\nTop 3 Agents via AgentManager:")
     top_agents = manager.get_leaderboard(top_n=3, sort_by="sharpe_ratio")
     for i, agent in enumerate(top_agents, 1):
-        print(f"{i}. {agent['agent_name']}: Sharpe={agent['sharpe_ratio']:.2f}, "
+        logger.info(f"{i}. {agent['agent_name']}: Sharpe={agent['sharpe_ratio']:.2f}, "
               f"Return={agent['total_return']:.2%}")
     
     # Get deprecated agents
     deprecated = manager.get_deprecated_agents()
-    print(f"\nDeprecated Agents: {deprecated}")
+    logger.info(f"\nDeprecated Agents: {deprecated}")
     
     # Get active agents
     active = manager.get_active_agents()
-    print(f"Active Agents: {active}")
+    logger.info(f"Active Agents: {active}")
 
 def demo_leaderboard_analytics():
     """Demonstrate advanced leaderboard analytics."""
-    print("\n" + "="*60)
-    print("LEADERBOARD ANALYTICS")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("LEADERBOARD ANALYTICS")
+    logger.info("="*60)
     
     leaderboard = AgentLeaderboard()
     
@@ -210,32 +210,32 @@ def demo_leaderboard_analytics():
     # Get DataFrame for analysis
     df = leaderboard.as_dataframe()
     
-    print("\nPerformance Summary:")
-    print(f"Total Agents: {len(df)}")
-    print(f"Active Agents: {len(df[df['status'] == 'active'])}")
-    print(f"Deprecated Agents: {len(df[df['status'] == 'deprecated'])}")
+    logger.info("\nPerformance Summary:")
+    logger.info(f"Total Agents: {len(df)}")
+    logger.info(f"Active Agents: {len(df[df['status'] == 'active'])}")
+    logger.info(f"Deprecated Agents: {len(df[df['status'] == 'deprecated'])}")
     
-    print("\nPerformance Statistics:")
-    print(f"Average Sharpe Ratio: {df['sharpe_ratio'].mean():.2f}")
-    print(f"Average Max Drawdown: {df['max_drawdown'].mean():.2%}")
-    print(f"Average Win Rate: {df['win_rate'].mean():.2%}")
-    print(f"Average Total Return: {df['total_return'].mean():.2%}")
+    logger.info("\nPerformance Statistics:")
+    logger.info(f"Average Sharpe Ratio: {df['sharpe_ratio'].mean():.2f}")
+    logger.info(f"Average Max Drawdown: {df['max_drawdown'].mean():.2%}")
+    logger.info(f"Average Win Rate: {df['win_rate'].mean():.2%}")
+    logger.info(f"Average Total Return: {df['total_return'].mean():.2%}")
     
     # Show best performers by different metrics
-    print("\nBest Performers by Metric:")
+    logger.info("\nBest Performers by Metric:")
     best_sharpe = df.loc[df['sharpe_ratio'].idxmax()]
     best_return = df.loc[df['total_return'].idxmax()]
     best_win_rate = df.loc[df['win_rate'].idxmax()]
     
-    print(f"Best Sharpe: {best_sharpe['agent_name']} ({best_sharpe['sharpe_ratio']:.2f})")
-    print(f"Best Return: {best_return['agent_name']} ({best_return['total_return']:.2%})")
-    print(f"Best Win Rate: {best_return['agent_name']} ({best_win_rate['win_rate']:.2%})")
+    logger.info(f"Best Sharpe: {best_sharpe['agent_name']} ({best_sharpe['sharpe_ratio']:.2f})")
+    logger.info(f"Best Return: {best_return['agent_name']} ({best_return['total_return']:.2%})")
+    logger.info(f"Best Win Rate: {best_return['agent_name']} ({best_win_rate['win_rate']:.2%})")
 
 def demo_reporting_integration():
     """Demonstrate how leaderboard data can be used in reports."""
-    print("\n" + "="*60)
-    print("REPORTING INTEGRATION")
-    print("="*60)
+    logger.info("\n" + "="*60)
+    logger.info("REPORTING INTEGRATION")
+    logger.info("="*60)
     
     leaderboard = AgentLeaderboard()
     
@@ -269,21 +269,21 @@ def demo_reporting_integration():
         "performance_history": leaderboard.get_history(limit=10)
     }
     
-    print("\nReport Data Structure:")
+    logger.info("\nReport Data Structure:")
     for section, data in report_data.items():
-        print(f"\n{section.upper()}:")
+        logger.info(f"\n{section.upper()}:")
         if isinstance(data, dict):
             for key, value in data.items():
-                print(f"  {key}: {value}")
+                logger.info(f"  {key}: {value}")
         elif isinstance(data, list):
-            print(f"  {len(data)} items")
+            logger.info(f"  {len(data)} items")
         else:
-            print(f"  {data}")
+            logger.info(f"  {data}")
 
 async def main():
     """Run all demo scenarios."""
-    print("AGENT LEADERBOARD DEMO")
-    print("="*60)
+    logger.info("AGENT LEADERBOARD DEMO")
+    logger.info("="*60)
     
     # Run all demo scenarios
     demo_basic_leaderboard_usage()
@@ -292,17 +292,17 @@ async def main():
     demo_leaderboard_analytics()
     demo_reporting_integration()
     
-    print("\n" + "="*60)
-    print("DEMO COMPLETED")
-    print("="*60)
-    print("\nKey Features Demonstrated:")
-    print("✓ Basic leaderboard functionality")
-    print("✓ Performance tracking and updates")
-    print("✓ Automatic deprecation of underperformers")
-    print("✓ AgentManager integration")
-    print("✓ Analytics and reporting capabilities")
-    print("✓ DataFrame export for dashboards")
-    print("✓ Performance history tracking")
+    logger.info("\n" + "="*60)
+    logger.info("DEMO COMPLETED")
+    logger.info("="*60)
+    logger.info("\nKey Features Demonstrated:")
+    logger.info("✓ Basic leaderboard functionality")
+    logger.info("✓ Performance tracking and updates")
+    logger.info("✓ Automatic deprecation of underperformers")
+    logger.info("✓ AgentManager integration")
+    logger.info("✓ Analytics and reporting capabilities")
+    logger.info("✓ DataFrame export for dashboards")
+    logger.info("✓ Performance history tracking")
 
 if __name__ == "__main__":
     asyncio.run(main()) 

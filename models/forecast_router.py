@@ -551,7 +551,7 @@ class ForecastRouter:
             
         except Exception as e:
             logger.error(f"Error plotting forecast results: {e}")
-            print(f"Could not plot results: {e}")
+            logger.warning(f"Could not plot results: {e}")
 
 # Example usage:
 if __name__ == "__main__":
@@ -566,4 +566,4 @@ if __name__ == "__main__":
         horizon=30,
         model_type='auto'  # Let router select best model
     )
-    print(f"Forecast result: {result}") 
+    logger.info(f"Forecast result: {result}") 

@@ -55,7 +55,9 @@ class CLIService(cmd.Cmd):
         self.load_config()
         self.setup_completion()
         colorama.init()
-        self._add_commands()def setup_logging(self) -> None:
+        self._add_commands()
+
+    def setup_logging(self) -> None:
         """Set up logging."""
         log_path = Path("logs/cli")
         log_path.mkdir(parents=True, exist_ok=True)
@@ -70,7 +72,6 @@ class CLIService(cmd.Cmd):
         )
         self.logger = logging.getLogger(__name__)
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def load_config(self) -> None:
         """Load configuration."""
         try:
@@ -101,22 +102,21 @@ class CLIService(cmd.Cmd):
             self.logger.error(f"Error setting up completion: {str(e)}")
             raise
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def print_error(self, message: str) -> None:
         """Print error message."""
-        print(f"{Fore.RED}Error: {message}{Style.RESET_ALL}")
+        self.logger.error(f"Error: {message}")
 
     def print_success(self, message: str) -> None:
         """Print success message."""
-        print(f"{Fore.GREEN}Success: {message}{Style.RESET_ALL}")
+        self.logger.info(f"Success: {message}")
 
     def print_info(self, message: str) -> None:
         """Print info message."""
-        print(f"{Fore.BLUE}Info: {message}{Style.RESET_ALL}")
+        self.logger.info(f"Info: {message}")
 
     def print_warning(self, message: str) -> None:
         """Print warning message."""
-        print(f"{Fore.YELLOW}Warning: {message}{Style.RESET_ALL}")
+        self.logger.warning(f"Warning: {message}")
 
     def do_help(self, arg: str) -> None:
         """Show help message."""
@@ -124,18 +124,18 @@ class CLIService(cmd.Cmd):
             # Show help for specific command
             try:
                 func = getattr(self, f'do_{arg}')
-                print(func.__doc__ or f'No help available for {arg}')
+                self.logger.info(func.__doc__ or f'No help available for {arg}')
             except AttributeError:
                 self.print_error(f'No help available for {arg}')
         else:
             # Show general help
-            print("\nAvailable commands:")
+            self.logger.info("\nAvailable commands:")
             for name in self.get_names():
                 if name.startswith('do_'):
                     command = name[3:]
                     func = getattr(self, name)
                     doc = func.__doc__ or 'No help available'
-                    print(f"\n{command}: {doc}")
+                    self.logger.info(f"\n{command}: {doc}")
 
     def do_exit(self, arg: str) -> bool:
         """Exit the CLI."""
@@ -159,7 +159,7 @@ class CLIService(cmd.Cmd):
     
     def do_pwd(self, arg: str) -> None:
         """Print working directory."""
-        print(os.getcwd())
+        self.print_info(os.getcwd())
 
     def do_ls(self, arg: str) -> None:
         """List directory contents."""
@@ -174,9 +174,9 @@ class CLIService(cmd.Cmd):
             for item in items:
                 item_path = os.path.join(path, item)
                 if os.path.isdir(item_path):
-                    print(f"{Fore.BLUE}{item}/{Style.RESET_ALL}")
+                    self.print_info(f"{Fore.BLUE}{item}/{Style.RESET_ALL}")
                 else:
-                    print(item)
+                    self.print_info(item)
         except Exception as e:
             self.print_error(f"Error listing directory: {str(e)}")
 
@@ -187,7 +187,7 @@ class CLIService(cmd.Cmd):
                 self.print_error("File path required")
 
             with open(arg, 'r') as f:
-                print(f.read())
+                self.print_info(f.read())
         except Exception as e:
             self.print_error(f"Error reading file: {str(e)}")
     
@@ -264,7 +264,7 @@ class CLIService(cmd.Cmd):
             result = subprocess.run(arg, shell=True, capture_output=True, text=True)
             
             if result.stdout:
-                print(result.stdout)
+                self.print_info(result.stdout)
             if result.stderr:
                 self.print_error(result.stderr)
             
@@ -280,7 +280,7 @@ class CLIService(cmd.Cmd):
         try:
             if not arg:
                 # Show all config
-                print(json.dumps(self.config, indent=2))
+                self.print_info(json.dumps(self.config, indent=2))
 
             args = arg.split()
             if len(args) == 1:
@@ -288,7 +288,7 @@ class CLIService(cmd.Cmd):
                 value = self.config
                 for key in args[0].split('.'):
                     value = value.get(key)
-                print(json.dumps(value, indent=2))
+                self.print_info(json.dumps(value, indent=2))
             elif len(args) == 2:
                 # Set config value
                 keys = args[0].split('.')
@@ -318,7 +318,7 @@ class CLIService(cmd.Cmd):
         """Show command history."""
         try:
             for i in range(readline.get_current_history_length()):
-                print(f"{i + 1}: {readline.get_history_item(i + 1)}")
+                self.print_info(f"{i + 1}: {readline.get_history_item(i + 1)}")
         except Exception as e:
             self.print_error(f"Error showing history: {str(e)}")
 
@@ -332,15 +332,15 @@ class CLIService(cmd.Cmd):
 
     def do_echo(self, arg: str) -> None:
         """Echo text."""
-        print(arg)
+        self.print_info(arg)
 
     def do_date(self, arg: str) -> None:
         """Show current date and time."""
-        print(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        self.print_info(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
 
     def do_whoami(self, arg: str) -> None:
         """Show current user."""
-        print(getpass.getuser())
+        self.print_info(getpass.getuser())
 
     def do_env(self, arg: str) -> None:
         """Show environment variables."""
@@ -348,12 +348,12 @@ class CLIService(cmd.Cmd):
             if not arg:
                 # Show all environment variables
                 for key, value in os.environ.items():
-                    print(f"{key}={value}")
+                    self.print_info(f"{key}={value}")
             else:
                 # Show specific environment variable
                 value = os.environ.get(arg)
                 if value is not None:
-                    print(value)
+                    self.print_info(value)
                 else:
                     self.print_error(f"Environment variable not found: {arg}")
         except Exception as e:

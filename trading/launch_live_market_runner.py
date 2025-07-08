@@ -70,12 +70,12 @@ def load_config(config_path: str = "trading/live/config.json") -> Dict[str, Any]
 
 async def main():
     """Main function."""
-    print("🚀 Launching Live Market Runner")
-    print("=" * 50)
+    logger = logging.getLogger(__name__)
+    logger.info("🚀 Launching Live Market Runner")
+    logger.info("=" * 50)
     
     # Setup logging
     setup_logging()
-    logger = logging.getLogger(__name__)
     
     # Load configuration
     config = load_config()
@@ -83,13 +83,13 @@ async def main():
     # Create runner
     runner = create_live_market_runner(config)
     
-    print(f"✅ Live Market Runner created")
-    print(f"📊 Symbols: {config['symbols']}")
-    print(f"🤖 Agents: {list(config['triggers'].keys())}")
+    logger.info(f"✅ Live Market Runner created")
+    logger.info(f"📊 Symbols: {config['symbols']}")
+    logger.info(f"🤖 Agents: {list(config['triggers'].keys())}")
     
     # Setup signal handlers
     def signal_handler(signum, frame):
-        print(f"\n🛑 Received signal {signum}, shutting down...")
+        logger.info(f"\n🛑 Received signal {signum}, shutting down...")
         asyncio.create_task(runner.stop())
         sys.exit(0)
 
@@ -97,23 +97,23 @@ async def main():
     signal.signal(signal.SIGTERM, signal_handler)
     
     # Start the runner
-    print(f"\n🔄 Starting Live Market Runner...")
+    logger.info(f"\n🔄 Starting Live Market Runner...")
     await runner.start()
     
-    print(f"✅ Live Market Runner is running!")
-    print(f"   Press Ctrl+C to stop")
-    print(f"   Logs: trading/live/logs/")
-    print(f"   Forecasts: trading/live/forecast_results.json")
+    logger.info(f"✅ Live Market Runner is running!")
+    logger.info(f"   Press Ctrl+C to stop")
+    logger.info(f"   Logs: trading/live/logs/")
+    logger.info(f"   Forecasts: trading/live/forecast_results.json")
     
     # Keep running
     try:
         while runner.running:
             await asyncio.sleep(1)
     except KeyboardInterrupt:
-        print(f"\n🛑 Shutting down...")
+        logger.info(f"\n🛑 Shutting down...")
     finally:
         await runner.stop()
-        print(f"✅ Live Market Runner stopped")
+        logger.info(f"✅ Live Market Runner stopped")
 
 if __name__ == "__main__":
     asyncio.run(main()) 

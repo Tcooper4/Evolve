@@ -9,9 +9,12 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import logging
 
 # Local imports
 from trading.models.base_model import BaseModel, ValidationError, ModelRegistry
+
+logger = logging.getLogger(__name__)
 
 class GNNLayer(nn.Module):
     """Graph Neural Network layer."""
@@ -377,7 +380,7 @@ class GNNForecaster(BaseModel):
                     patience_counter += 1
                     
                 if patience_counter >= patience:
-                    print(f"Early stopping at epoch {epoch}")
+                    logger.info(f"Early stopping at epoch {epoch}")
                     break
                     
                 history['val_loss'].append(val_loss.item())
@@ -385,7 +388,7 @@ class GNNForecaster(BaseModel):
             history['train_loss'].append(train_loss.item())
             
             if epoch % 10 == 0:
-                print(f"Epoch {epoch}: train_loss = {train_loss.item():.4f}, "
+                logger.info(f"Epoch {epoch}: train_loss = {train_loss.item():.4f}, "
                       f"val_loss = {val_loss.item():.4f if val_data is not None else 'N/A'}")
                 
         return history
@@ -442,8 +445,7 @@ class GNNForecaster(BaseModel):
             }
             
         except Exception as e:
-            import logging
-            logging.error(f"Error in GNN model forecast: {e}")
+            logger.error(f"Error in GNN model forecast: {e}")
             raise RuntimeError(f"GNN model forecasting failed: {e}")
 
     def summary(self):
@@ -457,7 +459,7 @@ class GNNForecaster(BaseModel):
         try:
             import shap
         except ImportError:
-            print("SHAP is not installed. Please install it with 'pip install shap'.")
+            logger.warning("SHAP is not installed. Please install it with 'pip install shap'.")
             return
         explainer = shap.DeepExplainer(self.model, X_sample)
         shap_values = explainer.shap_values(X_sample)
@@ -473,4 +475,4 @@ class GNNForecaster(BaseModel):
         })
         self.fit(df.iloc[:80], df.iloc[80:])
         y_pred = self.predict(df.iloc[80:])
-        print('Synthetic test MSE:', ((y_pred.flatten() - df['close'].iloc[80:].values) ** 2).mean())
+        logger.info(f'Synthetic test MSE: {((y_pred.flatten() - df["close"].iloc[80:].values) ** 2).mean()}')

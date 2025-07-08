@@ -10,6 +10,7 @@ import sys
 import os
 import time
 from pathlib import Path
+import logging
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -17,14 +18,16 @@ sys.path.append(str(Path(__file__).parent.parent))
 from services.quant_gpt import QuantGPT
 from services.service_client import ServiceClient
 
+logger = logging.getLogger(__name__)
+
 def example_queries():
     """Run example queries through QuantGPT."""
     
-    print("🤖 QuantGPT Trading Interface Examples")
-    print("=" * 60)
+    logger.info("🤖 QuantGPT Trading Interface Examples")
+    logger.info("=" * 60)
     
     # Initialize QuantGPT (direct usage)
-    print("Initializing QuantGPT...")
+    logger.info("Initializing QuantGPT...")
     quant_gpt = QuantGPT(
         openai_api_key=os.getenv('OPENAI_API_KEY'),
         redis_host='localhost',
@@ -40,12 +43,12 @@ def example_queries():
         "Find the optimal model for GOOGL on 1h timeframe"
     ]
     
-    print(f"\nRunning {len(queries)} example queries...")
-    print("-" * 60)
+    logger.info(f"\nRunning {len(queries)} example queries...")
+    logger.info("-" * 60)
     
     for i, query in enumerate(queries, 1):
-        print(f"\n📝 Query {i}: {query}")
-        print("-" * 40)
+        logger.info(f"\n📝 Query {i}: {query}")
+        logger.info("-" * 40)
         
         try:
             # Process the query
@@ -59,43 +62,43 @@ def example_queries():
                 results = result.get('results', {})
                 commentary = result.get('gpt_commentary', '')
                 
-                print(f"✅ Success (processed in {processing_time:.2f}s)")
-                print(f"Intent: {parsed.get('intent', 'unknown')}")
-                print(f"Symbol: {parsed.get('symbol', 'N/A')}")
-                print(f"Timeframe: {parsed.get('timeframe', 'N/A')}")
-                print(f"Period: {parsed.get('period', 'N/A')}")
+                logger.info(f"✅ Success (processed in {processing_time:.2f}s)")
+                logger.info(f"Intent: {parsed.get('intent', 'unknown')}")
+                logger.info(f"Symbol: {parsed.get('symbol', 'N/A')}")
+                logger.info(f"Timeframe: {parsed.get('timeframe', 'N/A')}")
+                logger.info(f"Period: {parsed.get('period', 'N/A')}")
                 
                 # Display action-specific results
                 action = results.get('action', 'unknown')
-                print(f"Action: {action}")
+                logger.info(f"Action: {action}")
                 
                 if action == 'model_recommendation':
                     best_model = results.get('best_model')
                     if best_model:
-                        print(f"Best Model: {best_model['model_type'].upper()}")
-                        print(f"Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}")
+                        logger.info(f"Best Model: {best_model['model_type'].upper()}")
+                        logger.info(f"Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}")
                 
                 elif action == 'trading_signal':
                     signal = results.get('signal', {})
                     if signal:
-                        print(f"Signal: {signal['signal']}")
-                        print(f"Strength: {signal['strength']}")
-                        print(f"Confidence: {signal['confidence']:.1%}")
+                        logger.info(f"Signal: {signal['signal']}")
+                        logger.info(f"Strength: {signal['strength']}")
+                        logger.info(f"Confidence: {signal['confidence']:.1%}")
                 
                 # Display GPT commentary
                 if commentary:
-                    print(f"\n🤖 GPT Commentary:")
-                    print("-" * 30)
-                    print(commentary)
+                    logger.info(f"\n🤖 GPT Commentary:")
+                    logger.info("-" * 30)
+                    logger.info(commentary)
             
             else:
                 error = result.get('error', 'Unknown error')
-                print(f"❌ Error: {error}")
+                logger.error(f"❌ Error: {error}")
             
         except Exception as e:
-            print(f"❌ Exception: {e}")
+            logger.error(f"❌ Exception: {e}")
         
-        print("\n" + "=" * 60)
+        logger.info("\n" + "=" * 60)
     
     # Clean up
     quant_gpt.close()
@@ -103,11 +106,11 @@ def example_queries():
 def example_service_client():
     """Demonstrate QuantGPT usage through ServiceClient."""
     
-    print("\n🔗 QuantGPT via ServiceClient Example")
-    print("=" * 60)
+    logger.info("\n🔗 QuantGPT via ServiceClient Example")
+    logger.info("=" * 60)
     
     # Initialize ServiceClient
-    print("Initializing ServiceClient...")
+    logger.info("Initializing ServiceClient...")
     client = ServiceClient(
         redis_host='localhost',
         redis_port=6379
@@ -120,12 +123,12 @@ def example_service_client():
         "Analyze ETHUSDT market"
     ]
     
-    print(f"\nRunning {len(service_queries)} queries via ServiceClient...")
-    print("-" * 60)
+    logger.info(f"\nRunning {len(service_queries)} queries via ServiceClient...")
+    logger.info("-" * 60)
     
     for i, query in enumerate(service_queries, 1):
-        print(f"\n📝 Service Query {i}: {query}")
-        print("-" * 40)
+        logger.info(f"\n📝 Service Query {i}: {query}")
+        logger.info("-" * 40)
         
         try:
             # Process query via service
@@ -134,36 +137,36 @@ def example_service_client():
             processing_time = time.time() - start_time
             
             if result:
-                print(f"✅ Service Response (processed in {processing_time:.2f}s)")
-                print(f"Type: {result.get('type', 'unknown')}")
+                logger.info(f"✅ Service Response (processed in {processing_time:.2f}s)")
+                logger.info(f"Type: {result.get('type', 'unknown')}")
                 
                 if result.get('type') == 'query_processed':
                     query_result = result.get('result', {})
                     if query_result.get('status') == 'success':
                         parsed = query_result.get('parsed_intent', {})
-                        print(f"Intent: {parsed.get('intent', 'unknown')}")
-                        print(f"Symbol: {parsed.get('symbol', 'N/A')}")
+                        logger.info(f"Intent: {parsed.get('intent', 'unknown')}")
+                        logger.info(f"Symbol: {parsed.get('symbol', 'N/A')}")
                         
                         commentary = query_result.get('gpt_commentary', '')
                         if commentary:
-                            print(f"\n🤖 GPT Commentary:")
-                            print("-" * 30)
-                            print(commentary[:200] + "..." if len(commentary) > 200 else commentary)
+                            logger.info(f"\n🤖 GPT Commentary:")
+                            logger.info("-" * 30)
+                            logger.info(commentary[:200] + "..." if len(commentary) > 200 else commentary)
                     else:
-                        print(f"❌ Query Error: {query_result.get('error', 'Unknown error')}")
+                        logger.error(f"❌ Query Error: {query_result.get('error', 'Unknown error')}")
                 else:
-                    print(f"❌ Service Error: {result.get('error', 'Unknown error')}")
+                    logger.error(f"❌ Service Error: {result.get('error', 'Unknown error')}")
             else:
-                print("❌ No response from service")
+                logger.error("❌ No response from service")
             
         except Exception as e:
-            print(f"❌ Exception: {e}")
+            logger.error(f"❌ Exception: {e}")
         
-        print("\n" + "=" * 60)
+        logger.info("\n" + "=" * 60)
     
     # Get available symbols
-    print("\n📊 Available Symbols and Parameters")
-    print("-" * 40)
+    logger.info("\n📊 Available Symbols and Parameters")
+    logger.info("-" * 40)
     
     try:
         symbols_result = client.get_available_symbols()
@@ -173,15 +176,15 @@ def example_service_client():
             periods = symbols_result.get('periods', [])
             models = symbols_result.get('models', [])
             
-            print(f"Symbols: {', '.join(symbols)}")
-            print(f"Timeframes: {', '.join(timeframes)}")
-            print(f"Periods: {', '.join(periods)}")
-            print(f"Models: {', '.join(models)}")
+            logger.info(f"Symbols: {', '.join(symbols)}")
+            logger.info(f"Timeframes: {', '.join(timeframes)}")
+            logger.info(f"Periods: {', '.join(periods)}")
+            logger.info(f"Models: {', '.join(models)}")
         else:
-            print("❌ Could not retrieve available symbols")
+            logger.error("❌ Could not retrieve available symbols")
     
     except Exception as e:
-        print(f"❌ Exception: {e}")
+        logger.error(f"❌ Exception: {e}")
     
     # Clean up
     client.close()
@@ -194,22 +197,22 @@ def main():
             import redis
             r = redis.Redis(host='localhost', port=6379)
             r.ping()
-            print("✅ Redis connection successful")
+            logger.info("✅ Redis connection successful")
         except Exception as e:
-            print(f"⚠️  Redis not available: {e}")
-            print("Running direct QuantGPT examples only...")
+            logger.warning(f"⚠️  Redis not available: {e}")
+            logger.warning("Running direct QuantGPT examples only...")
             example_queries()
 
         # Run both examples
         example_queries()
         example_service_client()
         
-        print("\n🎉 All examples completed successfully!")
+        logger.info("\n🎉 All examples completed successfully!")
         
     except KeyboardInterrupt:
-        print("\n\n⏹️  Examples interrupted by user")
+        logger.warning("\n\n⏹️  Examples interrupted by user")
     except Exception as e:
-        print(f"\n❌ Error running examples: {e}")
+        logger.error(f"\n❌ Error running examples: {e}")
 
 if __name__ == "__main__":
     main() 

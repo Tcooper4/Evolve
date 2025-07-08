@@ -7,11 +7,14 @@ import os
 import json
 from typing import Dict, Any
 from datetime import datetime
+import logging
 
 try:
     from autoformer_pytorch import Autoformer
 except ImportError:
     Autoformer = None
+
+logger = logging.getLogger(__name__)
 
 @ModelRegistry.register('Autoformer')
 class AutoformerModel(BaseModel):
@@ -142,8 +145,8 @@ class AutoformerModel(BaseModel):
             Dictionary containing model summary information
         """
         try:
-            print("AutoformerModel: Autoformer wrapper")
-            print(self.model)
+            logger.info("AutoformerModel: Autoformer wrapper")
+            logger.info(str(self.model))
             
             return {
                 'success': True,
@@ -191,7 +194,7 @@ class AutoformerModel(BaseModel):
             Dictionary containing interpretation results
         """
         try:
-            print("SHAP not directly supported for Autoformer. Showing attention weights if available.")
+            logger.warning("SHAP not directly supported for Autoformer. Showing attention weights if available.")
             # If the model exposes attention weights, plot them here
             if hasattr(self.model, 'get_attention_weights'):
                 attn = self.model.get_attention_weights(X_sample)
@@ -208,7 +211,7 @@ class AutoformerModel(BaseModel):
                     'attention_weights_available': True
                 }
             else:
-                print("No attention weights available.")
+                logger.warning("No attention weights available.")
                 return {
                     'success': True,
                     'message': 'No attention weights available',
@@ -320,8 +323,7 @@ class AutoformerModel(BaseModel):
             }
             
         except Exception as e:
-            import logging
-            logging.error(f"Error in Autoformer model forecast: {e}")
+            logger.error(f"Error in Autoformer model forecast: {e}")
             raise RuntimeError(f"Autoformer model forecasting failed: {e}")
 
     def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> Dict[str, Any]:

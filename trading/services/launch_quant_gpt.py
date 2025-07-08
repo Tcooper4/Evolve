@@ -67,16 +67,16 @@ def main():
         logger.info("Ready to process natural language queries")
         
         # Interactive mode
-        print("\n🤖 QuantGPT Trading Interface")
-        print("=" * 50)
-        print("Enter your trading queries in natural language:")
-        print("Examples:")
-        print("- 'Give me the best model for NVDA over 90 days'")
-        print("- 'Should I long TSLA this week?'")
-        print("- 'Analyze BTCUSDT market conditions'")
-        print("- 'What's the trading signal for AAPL?'")
-        print("Type 'quit' to exit")
-        print("=" * 50)
+        logger.info("\n🤖 QuantGPT Trading Interface")
+        logger.info("=" * 50)
+        logger.info("Enter your trading queries in natural language:")
+        logger.info("Examples:")
+        logger.info("- 'Give me the best model for NVDA over 90 days'")
+        logger.info("- 'Should I long TSLA this week?'")
+        logger.info("- 'Analyze BTCUSDT market conditions'")
+        logger.info("- 'What's the trading signal for AAPL?'")
+        logger.info("Type 'quit' to exit")
+        logger.info("=" * 50)
         
         while True:
             try:
@@ -95,54 +95,54 @@ def main():
                 result = quant_gpt.process_query(query)
                 
                 # Display results
-                print("\n📊 Results:")
-                print("-" * 30)
+                logger.info("\n📊 Results:")
+                logger.info("-" * 30)
                 
                 if result.get('status') == 'success':
                     # Display parsed intent
                     parsed = result.get('parsed_intent', {})
-                    print(f"Intent: {parsed.get('intent', 'unknown')}")
-                    print(f"Symbol: {parsed.get('symbol', 'N/A')}")
-                    print(f"Timeframe: {parsed.get('timeframe', 'N/A')}")
-                    print(f"Period: {parsed.get('period', 'N/A')}")
+                    logger.info(f"Intent: {parsed.get('intent', 'unknown')}")
+                    logger.info(f"Symbol: {parsed.get('symbol', 'N/A')}")
+                    logger.info(f"Timeframe: {parsed.get('timeframe', 'N/A')}")
+                    logger.info(f"Period: {parsed.get('period', 'N/A')}")
                     
                     # Display results summary
                     results = result.get('results', {})
                     action = results.get('action', 'unknown')
-                    print(f"Action: {action}")
+                    logger.info(f"Action: {action}")
                     
                     if action == 'model_recommendation':
                         best_model = results.get('best_model')
                         if best_model:
-                            print(f"Best Model: {best_model['model_type'].upper()}")
-                            print(f"Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}")
+                            logger.info(f"Best Model: {best_model['model_type'].upper()}")
+                            logger.info(f"Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}")
                     
                     elif action == 'trading_signal':
                         signal = results.get('signal', {})
                         if signal:
-                            print(f"Signal: {signal['signal']}")
-                            print(f"Strength: {signal['strength']}")
-                            print(f"Confidence: {signal['confidence']:.1%}")
+                            logger.info(f"Signal: {signal['signal']}")
+                            logger.info(f"Strength: {signal['strength']}")
+                            logger.info(f"Confidence: {signal['confidence']:.1%}")
                     
                     # Display GPT commentary
                     commentary = result.get('gpt_commentary', '')
                     if commentary:
-                        print(f"\n🤖 GPT Commentary:")
-                        print("-" * 30)
-                        print(commentary)
+                        logger.info(f"\n🤖 GPT Commentary:")
+                        logger.info("-" * 30)
+                        logger.info(commentary)
                 
                 else:
                     error = result.get('error', 'Unknown error')
-                    print(f"❌ Error: {error}")
+                    logger.error(f"❌ Error: {error}")
                 
-                print("\n" + "=" * 50)
+                logger.info("\n" + "=" * 50)
                 
             except KeyboardInterrupt:
                 logger.info("Received keyboard interrupt")
                 break
             except Exception as e:
                 logger.error(f"Error processing query: {e}")
-                print(f"❌ Error: {e}")
+                logger.error(f"❌ Error: {e}")
         
         logger.info("QuantGPT service shutting down...")
         quant_gpt.close()

@@ -10,6 +10,7 @@ import os
 import time
 import json
 from pathlib import Path
+import logging
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -17,10 +18,12 @@ sys.path.append(str(Path(__file__).parent.parent))
 from services.service_client import ServiceClient
 from utils.safe_executor import SafeExecutor, ExecutionStatus
 
+logger = logging.getLogger(__name__)
+
 def test_direct_safe_executor():
     """Test direct SafeExecutor usage."""
-    print("🧪 Testing Direct SafeExecutor Usage")
-    print("=" * 50)
+    logger.info("🧪 Testing Direct SafeExecutor Usage")
+    logger.info("=" * 50)
     
     try:
         # Initialize SafeExecutor
@@ -32,8 +35,8 @@ def test_direct_safe_executor():
         )
         
         # Test 1: Valid model execution
-        print("\n📝 Test 1: Valid Model Execution")
-        print("-" * 40)
+        logger.info("\n📝 Test 1: Valid Model Execution")
+        logger.info("-" * 40)
         
         valid_code = '''
 def main(input_data):
@@ -47,18 +50,18 @@ def main(input_data):
             model_type="test"
         )
         
-        print(f"Status: {result.status.value}")
-        print(f"Execution Time: {result.execution_time:.2f}s")
+        logger.info(f"Status: {result.status.value}")
+        logger.info(f"Execution Time: {result.execution_time:.2f}s")
         
         if result.status == ExecutionStatus.SUCCESS:
-            print(f"Return Value: {result.return_value}")
-            print("✅ Valid model execution test passed")
+            logger.info(f"Return Value: {result.return_value}")
+            logger.info("✅ Valid model execution test passed")
         else:
-            print(f"❌ Valid model execution test failed: {result.error}")
+            logger.error(f"❌ Valid model execution test failed: {result.error}")
         
         # Test 2: Dangerous code validation
-        print("\n📝 Test 2: Dangerous Code Validation")
-        print("-" * 40)
+        logger.info("\n📝 Test 2: Dangerous Code Validation")
+        logger.info("-" * 40)
         
         dangerous_code = '''
 import os
@@ -76,16 +79,16 @@ def main(input_data):
             model_type="test"
         )
         
-        print(f"Status: {result.status.value}")
+        logger.info(f"Status: {result.status.value}")
         
         if result.status == ExecutionStatus.VALIDATION_ERROR:
-            print("✅ Dangerous code validation test passed")
+            logger.info("✅ Dangerous code validation test passed")
         else:
-            print(f"❌ Dangerous code validation test failed: {result.status.value}")
+            logger.error(f"❌ Dangerous code validation test failed: {result.status.value}")
         
         # Test 3: Timeout handling
-        print("\n📝 Test 3: Timeout Handling")
-        print("-" * 40)
+        logger.info("\n📝 Test 3: Timeout Handling")
+        logger.info("-" * 40)
         
         timeout_code = '''
 import time
@@ -102,17 +105,17 @@ def main(input_data):
             model_type="test"
         )
         
-        print(f"Status: {result.status.value}")
-        print(f"Execution Time: {result.execution_time:.2f}s")
+        logger.info(f"Status: {result.status.value}")
+        logger.info(f"Execution Time: {result.execution_time:.2f}s")
         
         if result.status == ExecutionStatus.TIMEOUT:
-            print("✅ Timeout handling test passed")
+            logger.info("✅ Timeout handling test passed")
         else:
-            print(f"❌ Timeout handling test failed: {result.status.value}")
+            logger.error(f"❌ Timeout handling test failed: {result.status.value}")
         
         # Test 4: Syntax error handling
-        print("\n📝 Test 4: Syntax Error Handling")
-        print("-" * 40)
+        logger.info("\n📝 Test 4: Syntax Error Handling")
+        logger.info("-" * 40)
         
         syntax_error_code = '''
 def main(input_data):
@@ -126,16 +129,16 @@ def main(input_data):
             model_type="test"
         )
         
-        print(f"Status: {result.status.value}")
+        logger.info(f"Status: {result.status.value}")
         
         if result.status == ExecutionStatus.VALIDATION_ERROR:
-            print("✅ Syntax error handling test passed")
+            logger.info("✅ Syntax error handling test passed")
         else:
-            print(f"❌ Syntax error handling test failed: {result.status.value}")
+            logger.error(f"❌ Syntax error handling test failed: {result.status.value}")
         
         # Test 5: Strategy execution
-        print("\n📝 Test 5: Strategy Execution")
-        print("-" * 40)
+        logger.info("\n📝 Test 5: Strategy Execution")
+        logger.info("-" * 40)
         
         strategy_code = '''
 def main(input_data):
@@ -160,18 +163,18 @@ def main(input_data):
             parameters={}
         )
         
-        print(f"Status: {result.status.value}")
-        print(f"Execution Time: {result.execution_time:.2f}s")
+        logger.info(f"Status: {result.status.value}")
+        logger.info(f"Execution Time: {result.execution_time:.2f}s")
         
         if result.status == ExecutionStatus.SUCCESS:
-            print(f"Strategy Result: {result.return_value}")
-            print("✅ Strategy execution test passed")
+            logger.info(f"Strategy Result: {result.return_value}")
+            logger.info("✅ Strategy execution test passed")
         else:
-            print(f"❌ Strategy execution test failed: {result.error}")
+            logger.error(f"❌ Strategy execution test failed: {result.error}")
         
         # Test 6: Indicator execution
-        print("\n📝 Test 6: Indicator Execution")
-        print("-" * 40)
+        logger.info("\n📝 Test 6: Indicator Execution")
+        logger.info("-" * 40)
         
         indicator_code = '''
 def main(input_data):
@@ -196,39 +199,39 @@ def main(input_data):
             parameters={}
         )
         
-        print(f"Status: {result.status.value}")
-        print(f"Execution Time: {result.execution_time:.2f}s")
+        logger.info(f"Status: {result.status.value}")
+        logger.info(f"Execution Time: {result.execution_time:.2f}s")
         
         if result.status == ExecutionStatus.SUCCESS:
-            print(f"Indicator Result: {result.return_value}")
-            print("✅ Indicator execution test passed")
+            logger.info(f"Indicator Result: {result.return_value}")
+            logger.info("✅ Indicator execution test passed")
         else:
-            print(f"❌ Indicator execution test failed: {result.error}")
+            logger.error(f"❌ Indicator execution test failed: {result.error}")
         
         # Get statistics
-        print("\n📊 SafeExecutor Statistics")
-        print("-" * 40)
+        logger.info("\n📊 SafeExecutor Statistics")
+        logger.info("-" * 40)
         
         stats = executor.get_statistics()
-        print(f"Total Executions: {stats['total_executions']}")
-        print(f"Successful Executions: {stats['successful_executions']}")
-        print(f"Failed Executions: {stats['failed_executions']}")
-        print(f"Success Rate: {stats['success_rate']:.1%}")
-        print(f"Total Execution Time: {stats['total_execution_time']:.2f}s")
-        print(f"Average Execution Time: {stats['average_execution_time']:.2f}s")
+        logger.info(f"Total Executions: {stats['total_executions']}")
+        logger.info(f"Successful Executions: {stats['successful_executions']}")
+        logger.info(f"Failed Executions: {stats['failed_executions']}")
+        logger.info(f"Success Rate: {stats['success_rate']:.1%}")
+        logger.info(f"Total Execution Time: {stats['total_execution_time']:.2f}s")
+        logger.info(f"Average Execution Time: {stats['average_execution_time']:.2f}s")
         
         # Clean up
         executor.cleanup()
         return True
         
     except Exception as e:
-        print(f"❌ Direct SafeExecutor test failed: {e}")
+        logger.error(f"❌ Direct SafeExecutor test failed: {e}")
         return False
 
 def test_service_client():
     """Test SafeExecutor via ServiceClient."""
-    print("\n🔗 Testing SafeExecutor via ServiceClient")
-    print("=" * 50)
+    logger.info("\n🔗 Testing SafeExecutor via ServiceClient")
+    logger.info("=" * 50)
     
     try:
         # Initialize ServiceClient
@@ -238,8 +241,8 @@ def test_service_client():
         )
         
         # Test 1: Model execution via service
-        print("\n📝 Service Test 1: Model Execution")
-        print("-" * 40)
+        logger.info("\n📝 Service Test 1: Model Execution")
+        logger.info("-" * 40)
         
         model_code = '''
 def main(input_data):
@@ -257,21 +260,21 @@ def main(input_data):
             execution_result = result.get('result', {})
             status = execution_result.get('status')
             
-            print(f"Status: {status}")
-            print(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
+            logger.info(f"Status: {status}")
+            logger.info(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
             
             if status == 'success':
                 return_value = execution_result.get('return_value')
-                print(f"Return Value: {return_value}")
-                print("✅ Service model execution test passed")
+                logger.info(f"Return Value: {return_value}")
+                logger.info("✅ Service model execution test passed")
             else:
-                print(f"❌ Service model execution test failed: {execution_result.get('error')}")
+                logger.error(f"❌ Service model execution test failed: {execution_result.get('error')}")
         else:
-            print("❌ No response from service")
+            logger.error("❌ No response from service")
         
         # Test 2: Strategy execution via service
-        print("\n📝 Service Test 2: Strategy Execution")
-        print("-" * 40)
+        logger.info("\n📝 Service Test 2: Strategy Execution")
+        logger.info("-" * 40)
         
         strategy_code = '''
 def main(input_data):
@@ -297,54 +300,54 @@ def main(input_data):
             execution_result = result.get('result', {})
             status = execution_result.get('status')
             
-            print(f"Status: {status}")
-            print(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
+            logger.info(f"Status: {status}")
+            logger.info(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
             
             if status == 'success':
                 return_value = execution_result.get('return_value')
-                print(f"Strategy Result: {return_value}")
-                print("✅ Service strategy execution test passed")
+                logger.info(f"Strategy Result: {return_value}")
+                logger.info("✅ Service strategy execution test passed")
             else:
-                print(f"❌ Service strategy execution test failed: {execution_result.get('error')}")
+                logger.error(f"❌ Service strategy execution test failed: {execution_result.get('error')}")
         else:
-            print("❌ No response from service")
+            logger.error("❌ No response from service")
         
         # Test 3: Get statistics via service
-        print("\n📝 Service Test 3: Get Statistics")
-        print("-" * 40)
+        logger.info("\n📝 Service Test 3: Get Statistics")
+        logger.info("-" * 40)
         
         stats_result = client.get_safe_executor_statistics()
         if stats_result and stats_result.get('type') == 'statistics':
             stats = stats_result.get('statistics', {})
-            print(f"Total Executions: {stats.get('total_executions', 0)}")
-            print(f"Successful Executions: {stats.get('successful_executions', 0)}")
-            print(f"Failed Executions: {stats.get('failed_executions', 0)}")
-            print(f"Success Rate: {stats.get('success_rate', 0):.1%}")
-            print("✅ Service statistics test passed")
+            logger.info(f"Total Executions: {stats.get('total_executions', 0)}")
+            logger.info(f"Successful Executions: {stats.get('successful_executions', 0)}")
+            logger.info(f"Failed Executions: {stats.get('failed_executions', 0)}")
+            logger.info(f"Success Rate: {stats.get('success_rate', 0):.1%}")
+            logger.info("✅ Service statistics test passed")
         else:
-            print("❌ Service statistics test failed")
+            logger.error("❌ Service statistics test failed")
         
         # Test 4: Cleanup via service
-        print("\n📝 Service Test 4: Cleanup")
-        print("-" * 40)
+        logger.info("\n📝 Service Test 4: Cleanup")
+        logger.info("-" * 40)
         
         cleanup_result = client.cleanup_safe_executor()
         if cleanup_result and cleanup_result.get('type') == 'cleanup_completed':
-            print("✅ Service cleanup test passed")
+            logger.info("✅ Service cleanup test passed")
         else:
-            print("❌ Service cleanup test failed")
+            logger.error("❌ Service cleanup test failed")
         
         client.close()
         return True
         
     except Exception as e:
-        print(f"❌ ServiceClient test failed: {e}")
+        logger.error(f"❌ ServiceClient test failed: {e}")
         return False
 
 def test_security_features():
     """Test security features of SafeExecutor."""
-    print("\n🛡️ Testing Security Features")
-    print("=" * 50)
+    logger.info("\n🛡️ Testing Security Features")
+    logger.info("=" * 50)
     
     try:
         executor = SafeExecutor(
@@ -381,8 +384,8 @@ def test_security_features():
         total_tests = len(dangerous_tests)
         
         for test in dangerous_tests:
-            print(f"\n📝 Testing: {test['name']}")
-            print("-" * 30)
+            logger.info(f"\n📝 Testing: {test['name']}")
+            logger.info("-" * 30)
             
             result = executor.execute_model(
                 model_code=test['code'],
@@ -392,34 +395,34 @@ def test_security_features():
             )
             
             if result.status == ExecutionStatus.VALIDATION_ERROR:
-                print("✅ Security test passed - dangerous code blocked")
+                logger.info("✅ Security test passed - dangerous code blocked")
                 passed_tests += 1
             else:
-                print(f"❌ Security test failed - dangerous code allowed: {result.status.value}")
+                logger.error(f"❌ Security test failed - dangerous code allowed: {result.status.value}")
         
-        print(f"\n📊 Security Test Results: {passed_tests}/{total_tests} passed")
+        logger.info(f"\n📊 Security Test Results: {passed_tests}/{total_tests} passed")
         
         executor.cleanup()
         return passed_tests == total_tests
         
     except Exception as e:
-        print(f"❌ Security features test failed: {e}")
+        logger.error(f"❌ Security features test failed: {e}")
         return False
 
 def main():
     """Run all SafeExecutor tests."""
-    print("🚀 Safe Executor Test Suite")
-    print("=" * 60)
+    logger.info("🚀 Safe Executor Test Suite")
+    logger.info("=" * 60)
     
     # Check Redis availability
     try:
         import redis
         r = redis.Redis(host='localhost', port=6379)
         r.ping()
-        print("✅ Redis connection successful")
+        logger.info("✅ Redis connection successful")
     except Exception as e:
-        print(f"⚠️  Redis not available: {e}")
-        print("Running direct SafeExecutor tests only...")
+        logger.warning(f"⚠️  Redis not available: {e}")
+        logger.info("Running direct SafeExecutor tests only...")
         test_direct_safe_executor()
         test_security_features()
 
@@ -432,34 +435,34 @@ def main():
     
     results = []
     for test_name, test_func in tests:
-        print(f"\n{'='*20} {test_name} {'='*20}")
+        logger.info(f"\n{'='*20} {test_name} {'='*20}")
         try:
             result = test_func()
             results.append((test_name, result))
         except Exception as e:
-            print(f"❌ {test_name} test crashed: {e}")
+            logger.error(f"❌ {test_name} test crashed: {e}")
             results.append((test_name, False))
     
     # Summary
-    print(f"\n{'='*60}")
-    print("📊 Test Results Summary")
-    print("=" * 60)
+    logger.info(f"\n{'='*60}")
+    logger.info("📊 Test Results Summary")
+    logger.info("=" * 60)
     
     passed = 0
     total = len(results)
     
     for test_name, result in results:
         status = "✅ PASSED" if result else "❌ FAILED"
-        print(f"{test_name}: {status}")
+        logger.info(f"{test_name}: {status}")
         if result:
             passed += 1
     
-    print(f"\nOverall: {passed}/{total} tests passed")
+    logger.info(f"\nOverall: {passed}/{total} tests passed")
     
     if passed == total:
-        print("🎉 All tests passed! SafeExecutor is working correctly.")
+        logger.info("🎉 All tests passed! SafeExecutor is working correctly.")
     else:
-        print("⚠️  Some tests failed. Check the output above for details.")
+        logger.warning("⚠️  Some tests failed. Check the output above for details.")
 
 if __name__ == "__main__":
     main() 

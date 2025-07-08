@@ -5,9 +5,12 @@ Simple test script for the report generation system.
 
 import sys
 from pathlib import Path
+import logging
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
+
+logger = logging.getLogger(__name__)
 
 def test_imports():
     """Test that all imports work."""
@@ -15,10 +18,10 @@ def test_imports():
         from report.report_generator import ReportGenerator, generate_quick_report
         from report.report_client import ReportClient
         from report.report_service import ReportService
-        print("✅ All imports successful")
+        logger.info("✅ All imports successful")
         return True
     except Exception as e:
-        print(f"❌ Import error: {e}")
+        logger.error(f"❌ Import error: {e}")
         return False
 
 def test_basic_report():
@@ -60,15 +63,15 @@ def test_basic_report():
             period='7d'
         )
         
-        print(f"✅ Report generated successfully: {report_data['report_id']}")
-        print(f"📊 Trade metrics: {report_data['trade_metrics'].total_trades} trades")
-        print(f"🤖 Model metrics: MSE = {report_data['model_metrics'].mse:.4f}")
-        print(f"📁 Files created: {list(report_data['files'].keys())}")
+        logger.info(f"✅ Report generated successfully: {report_data['report_id']}")
+        logger.info(f"📊 Trade metrics: {report_data['trade_metrics'].total_trades} trades")
+        logger.info(f"🤖 Model metrics: MSE = {report_data['model_metrics'].mse:.4f}")
+        logger.info(f"📁 Files created: {list(report_data['files'].keys())}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Report generation error: {e}")
+        logger.error(f"❌ Report generation error: {e}")
         return False
 
 def test_client():
@@ -79,19 +82,19 @@ def test_client():
         client = ReportClient()
         status = client.get_service_status()
         
-        print(f"✅ Client initialized successfully")
-        print(f"🔍 Service status: {status}")
+        logger.info(f"✅ Client initialized successfully")
+        logger.info(f"🔍 Service status: {status}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Client error: {e}")
+        logger.error(f"❌ Client error: {e}")
         return False
 
 def main():
     """Run all tests."""
-    print("🧪 Testing Report Generation System")
-    print("=" * 50)
+    logger.info("🧪 Testing Report Generation System")
+    logger.info("=" * 50)
     
     tests = [
         ("Import Test", test_imports),
@@ -103,19 +106,19 @@ def main():
     total = len(tests)
     
     for test_name, test_func in tests:
-        print(f"\n🔍 Running {test_name}...")
+        logger.info(f"\n🔍 Running {test_name}...")
         if test_func():
             passed += 1
         else:
-            print(f"❌ {test_name} failed")
+            logger.error(f"❌ {test_name} failed")
     
-    print(f"\n" + "=" * 50)
-    print(f"📊 Test Results: {passed}/{total} passed")
+    logger.info(f"\n" + "=" * 50)
+    logger.info(f"📊 Test Results: {passed}/{total} passed")
     
     if passed == total:
-        print("🎉 All tests passed! Report system is working correctly.")
+        logger.info("🎉 All tests passed! Report system is working correctly.")
     else:
-        print("⚠️  Some tests failed. Check the errors above.")
+        logger.warning("⚠️  Some tests failed. Check the errors above.")
     
     return passed == total
 
