@@ -11,7 +11,7 @@ import logging
 import pandas as pd
 import numpy as np
 from datetime import datetime
-from .base_optimizer import BaseOptimizer, OptimizationResult
+from ..base_optimizer import BaseOptimizer, OptimizationResult
 
 logger = logging.getLogger(__name__)
 

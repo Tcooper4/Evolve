@@ -7,21 +7,52 @@ import json
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Union
 from pathlib import Path
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 
 from trading.models.model_registry import ModelRegistry
 from trading.models.base_model import BaseModel
 from trading.optimization.legacy.bayesian_optimizer import BayesianOptimizer
-from trading.optimization.genetic_optimizer import GeneticOptimizer
+from trading.optimization.legacy.genetic_optimizer import GeneticOptimizer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
 from trading.memory.model_monitor import ModelMonitor
 from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class ModelImprovementRequest:
+    """Request for model improvement."""
+    model_name: str
+    improvement_type: str  # 'hyperparameter', 'architecture', 'feature_engineering'
+    performance_thresholds: Optional[Dict[str, float]] = None
+    optimization_method: str = 'bayesian'
+    max_iterations: int = 50
+    timeout: int = 3600
+    priority: str = 'normal'  # 'low', 'normal', 'high', 'urgent'
+    metadata: Optional[Dict[str, Any]] = None
+
+@dataclass
+class ModelImprovementResult:
+    """Result of model improvement process."""
+    success: bool
+    model_name: str
+    improvement_type: str
+    old_performance: Optional[Dict[str, float]] = None
+    new_performance: Optional[Dict[str, float]] = None
+    improvement_metrics: Optional[Dict[str, float]] = None
+    changes_made: Optional[Dict[str, Any]] = None
+    optimization_history: Optional[List[Dict[str, Any]]] = None
+    error_message: Optional[str] = None
+    timestamp: datetime = None
+    
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
 
 class ModelImproverAgent(BaseAgent):
     """
