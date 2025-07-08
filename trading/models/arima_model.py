@@ -29,11 +29,6 @@ class ARIMAModel(BaseModel):
         self.order = config.get('order', (1, 1, 1)) if config else (1, 1, 1)
         self.seasonal_order = config.get('seasonal_order', None) if config else None
         self.is_fitted = False
-        return {
-            'success': True,
-            'message': 'ARIMAModel initialized successfully',
-            'timestamp': pd.Timestamp.now().isoformat()
-        }
 
     def fit(self, data: pd.Series) -> Dict[str, Any]:
         """Fit the ARIMA model.
@@ -402,4 +397,12 @@ class ARIMAModel(BaseModel):
             
         except Exception as e:
             logging.error(f"Error plotting ARIMA results: {e}")
-            logger.error(f"Could not plot results: {e}") 
+            logger.error(f"Could not plot results: {e}")
+
+    def _prepare_data(self, data: pd.Series) -> pd.Series:
+        """Prepare data for ARIMA model (stub for abstract method)."""
+        return data
+
+    def build_model(self) -> None:
+        """Build ARIMA model (stub for abstract method)."""
+        pass 
