@@ -29,7 +29,7 @@ from trading.agents.model_builder_agent import ModelBuilderAgent, ModelBuildRequ
 from trading.agents.performance_critic_agent import PerformanceCriticAgent, ModelEvaluationRequest
 from trading.agents.updater_agent import UpdaterAgent, UpdateRequest
 from trading.memory.performance_memory import PerformanceMemory
-from core.utils.common_helpers import timer, handle_exceptions
+from utils.common_helpers import timer, handle_exceptions
 from trading.data.data_listener import DataListener
 from trading.agents.base_agent_interface import AgentConfig
 

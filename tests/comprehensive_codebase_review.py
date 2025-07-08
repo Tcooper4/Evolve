@@ -143,7 +143,7 @@ def test_optimization_modules():
     
     # Genetic Optimizer
     try:
-        from trading.optimization.genetic_optimizer import create_genetic_optimizer
+        from trading.optimization.core_optimizer import create_genetic_optimizer
         results['genetic_optimizer'] = "✅ Available"
     except Exception as e:
         results['genetic_optimizer'] = f"⚠️ {e}"

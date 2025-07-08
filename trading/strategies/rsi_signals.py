@@ -31,7 +31,7 @@ except Exception as e:
     PANDAS_TA_AVAILABLE = False
     logging.warning(f"pandas_ta import error: {e}")
 
-from core.utils.common_helpers import normalize_indicator_name
+from utils.common_helpers import normalize_indicator_name
 
 # Configure logging
 logger = logging.getLogger(__name__)

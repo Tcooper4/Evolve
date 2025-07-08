@@ -27,15 +27,12 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import shared utilities
-from core.session_utils import (
+from utils.session_utils import (
     initialize_session_state, 
     safe_session_get,
     safe_session_set,
     update_last_updated
 )
-
-# Import AgentHub for unified agent routing
-from core.agent_hub import AgentHub
 
 # Import trading components
 from trading.agents.strategy_switcher import StrategySwitcher

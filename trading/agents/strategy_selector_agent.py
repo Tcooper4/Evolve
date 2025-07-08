@@ -18,7 +18,7 @@ from trading.strategies.rsi_signals import generate_rsi_signals
 from trading.strategies.macd_strategy import MACDStrategy
 from trading.strategies.bollinger_strategy import BollingerStrategy
 from trading.strategies.sma_strategy import SMAStrategy
-from trading.optimization.genetic_optimizer import GeneticOptimizer
+from trading.optimization.core_optimizer import GeneticOptimizer
 from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
