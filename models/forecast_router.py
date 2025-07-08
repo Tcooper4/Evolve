@@ -256,7 +256,8 @@ class ForecastRouter:
         except Exception as e:
             logger.error(f"Forecast error: {str(e)}")
             # Return fallback result instead of raising
-            return {'success': True, 'result': self._get_fallback_result(data, horizon), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            fallback_result = self._get_fallback_result(data, horizon)
+            return fallback_result
     
     def _generate_fallback_data(self) -> pd.DataFrame:
         """Generate fallback data when none is provided."""
@@ -307,7 +308,7 @@ class ForecastRouter:
                 'target_column': 'close'
             },
             'lstm': {
-                'hidden_size': 64,
+                'hidden_dim': 64,
                 'num_layers': 2,
                 'dropout': 0.2,
                 'learning_rate': 0.001,

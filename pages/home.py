@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any
 
-from core.session_utils import safe_session_get
+from utils.session_utils import safe_session_get
 from trading.memory.model_monitor import ModelMonitor
 from trading.memory.strategy_logger import StrategyLogger
 

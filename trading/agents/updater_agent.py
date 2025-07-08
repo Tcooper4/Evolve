@@ -22,7 +22,7 @@ from trading.agents.base_agent_interface import BaseAgent, AgentConfig, AgentRes
 from trading.agents.model_builder_agent import ModelBuilderAgent, ModelBuildRequest
 from trading.agents.performance_critic_agent import ModelEvaluationRequest, ModelEvaluationResult
 from trading.optimization.strategy_optimizer import StrategyOptimizer
-from core.utils.common_helpers import timer, handle_exceptions
+from utils.common_helpers import timer, handle_exceptions
 from trading.memory.performance_memory import PerformanceMemory
 from trading.memory.agent_memory import AgentMemory
 from trading.utils.reward_function import RewardFunction
