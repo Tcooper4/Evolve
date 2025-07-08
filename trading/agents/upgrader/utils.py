@@ -48,7 +48,7 @@ def check_model_status(model_id: str, config: Dict) -> Tuple[bool, str]:
         
     except Exception as e:
         logger.error(f"Error checking model status: {str(e)}")
-        return {'success': True, 'result': False, "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False, f"Error: {str(e)}"
 
 def check_component_status(component: str) -> Tuple[bool, str]:
     """
@@ -79,7 +79,7 @@ def check_component_status(component: str) -> Tuple[bool, str]:
         
     except Exception as e:
         logger.error(f"Error checking component status: {str(e)}")
-        return {'success': True, 'result': False, "", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return False, f"Error: {str(e)}"
 
 def detect_drift(model_id: str) -> bool:
     """

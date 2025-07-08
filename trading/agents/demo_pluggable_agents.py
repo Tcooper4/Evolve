@@ -36,7 +36,8 @@ class DemoAgent(BaseAgent):
     def __init__(self, config):
         """Initialize the demo agent."""
         super().__init__(config)
-        self.execution_count = 0async def execute(self, **kwargs) -> AgentResult:
+        self.execution_count = 0
+    async def execute(self, **kwargs) -> AgentResult:
         """Execute the demo agent logic."""
         self.execution_count += 1
         message = kwargs.get('message', 'Hello from demo agent!')
