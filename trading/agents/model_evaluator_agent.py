@@ -67,6 +67,28 @@ class ModelPerformance:
     timestamps: List[datetime]
     confidence_scores: Optional[np.ndarray] = None
 
+@dataclass
+class ModelEvaluationRequest:
+    """Request for model evaluation."""
+    model_id: str
+    performance_data: Dict[str, Any]
+    evaluation_metrics: Optional[List[str]] = None
+    evaluation_window: Optional[int] = None
+    timestamp: datetime = None
+    
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
+
+@dataclass
+class ModelEvaluationResult:
+    """Result of model evaluation request."""
+    request: ModelEvaluationRequest
+    evaluation_result: EvaluationResult
+    success: bool
+    error_message: Optional[str] = None
+    processing_time: float = 0.0
+
 class ModelEvaluatorAgent(BaseAgent):
     """
     Model Evaluator Agent that:

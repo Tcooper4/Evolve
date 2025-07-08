@@ -81,8 +81,8 @@ class ForecastEngine:
             from trading.models.ridge_model import RidgeModel
             from trading.models.garch_model import GARCHModel
             
-            # Initialize model instances
-            self.models[ModelType.LSTM] = LSTMModel()
+            # Initialize model instances with proper parameters
+            self.models[ModelType.LSTM] = LSTMModel(input_dim=1, hidden_dim=50, output_dim=1)
             self.models[ModelType.ARIMA] = ARIMAModel()
             self.models[ModelType.XGBOOST] = XGBoostModel()
             self.models[ModelType.RIDGE] = RidgeModel()
