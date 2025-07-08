@@ -460,9 +460,9 @@ def handle_underperformance(status_report: Dict[str, Any]) -> None:
         
     except Exception as e:
         logger.error(f"Error in legacy handle_underperformance: {e}")
-        print("[Agent Callback] Underperformance detected. Status report:")
-        print(status_report)
-        print("TODO: Implement agentic response (e.g., trigger retraining, alert, etc.)")
+        logger.info("[Agent Callback] Underperformance detected. Status report:")
+        logger.info(status_report)
+        logger.info("TODO: Implement agentic response (e.g., trigger retraining, alert, etc.)")
 
 # --- Initialize Default Event Handlers ---
 def _initialize_default_handlers():

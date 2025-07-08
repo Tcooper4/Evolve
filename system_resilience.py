@@ -349,7 +349,8 @@ class SystemResilience:
                 r = redis.Redis(host='localhost', port=6379, db=0, socket_timeout=5)
                 r.ping()
                 redis_healthy = True
-            except:
+            except (redis.ConnectionError, redis.TimeoutError, Exception) as e:
+                logger.debug(f"Redis connection failed: {e}")
                 pass
             
             # Check MongoDB connection
@@ -358,7 +359,8 @@ class SystemResilience:
                 client = pymongo.MongoClient('mongodb://localhost:27017/', serverSelectionTimeoutMS=5000)
                 client.admin.command('ping')
                 mongo_healthy = True
-            except:
+            except (pymongo.errors.ConnectionFailure, pymongo.errors.ServerSelectionTimeoutError, Exception) as e:
+                logger.debug(f"MongoDB connection failed: {e}")
                 pass
             
             # Determine overall status

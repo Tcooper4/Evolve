@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Optional, Dict, Union
 from datetime import datetime
 from dotenv import load_dotenv
+import logging
 
 # Load environment variables from .env file
 load_dotenv()
@@ -197,7 +198,7 @@ def validate_config() -> bool:
 try:
     validate_config()
 except Exception as e:
-    print(f"Configuration validation failed: {e}")
+    logger.error(f"Configuration validation failed: {e}")
 
 class Settings:
     """Settings class for configuration management."""

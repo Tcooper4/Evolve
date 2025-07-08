@@ -57,7 +57,9 @@ class ReportClient:
         # Initialize report generator
         self.report_generator = ReportGenerator(**kwargs)
         
-        logger.info("ReportClient initialized")def generate_report(self,
+        logger.info("ReportClient initialized")
+    
+    def generate_report(self,
                        trade_data: Dict[str, Any],
                        model_data: Dict[str, Any],
                        strategy_data: Dict[str, Any],

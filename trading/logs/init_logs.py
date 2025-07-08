@@ -100,9 +100,9 @@ def main() -> dict:
         result = init_log_files()
         
         if result['success']:
-            print("All logging files verified or recreated.")
+            logger.info("All logging files verified or recreated.")
         else:
-            print(f"Log initialization completed with errors: {result['errors']}")
+            logger.error(f"Log initialization completed with errors: {result['errors']}")
             
         return result
         
@@ -112,7 +112,7 @@ def main() -> dict:
             'message': f'Error in main: {str(e)}',
             'timestamp': datetime.utcnow().isoformat()
         }
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         return error_result
 
 if __name__ == "__main__":

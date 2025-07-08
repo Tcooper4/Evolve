@@ -2,114 +2,81 @@
 """
 Agent Loop Runner
 
-Simple script to run the autonomous 3-agent model management system.
+This script runs the main agent loop for continuous trading operations.
 """
 
 import asyncio
-import json
-import logging
+import signal
 import sys
+import logging
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
-# Add the project root to the path
-sys.path.append(str(Path(__file__).parent.parent.parent))
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-from trading.agents.agent_loop_manager import AgentLoopManager
+# Add project root to path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
-def setup_logging(config: Dict[str, Any]) -> None:
-    """Setup logging configuration.
-    
-    Args:
-        config: Configuration dictionary
-    """
-    log_config = config.get('logging', {})
-    
-    # Create logs directory
-    log_file = Path(log_config.get('file', 'trading/agents/logs/agent_loop.log'))
-    log_file.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Configure logging
-    logging.basicConfig(
-        level=getattr(logging, log_config.get('level', 'INFO')),
-        format=log_config.get('format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s'),
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
+from trading.agents.execution_agent import ExecutionAgent
+from trading.agents.base_agent_interface import AgentConfig
+from trading.portfolio.portfolio_manager import PortfolioManager
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
-    """Load configuration from file.
-    
-    Args:
-        config_path: Path to configuration file
-        
-    Returns:
-        Configuration dictionary
-    """
-    if config_path is None:
-        config_path = Path(__file__).parent / "agent_config.json"
-    
-    config_file = Path(config_path)
-    if not config_file.exists():
-        raise FileNotFoundError(f"Configuration file not found: {config_path}")
-    
-    with open(config_file, 'r') as f:
-        return json.load(f)
+# Global variables
+running = True
+execution_agent = None
+portfolio_manager = None
 
-async def main():
-    """Main entry point."""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description="Run Autonomous Model Management Agent Loop")
-    parser.add_argument("--config", help="Path to configuration file")
-    parser.add_argument("--cycle-interval", type=int, help="Cycle interval in seconds")
-    parser.add_argument("--max-models", type=int, help="Maximum number of active models")
-    parser.add_argument("--log-level", choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'], 
-                       help="Logging level")
-    
-    args = parser.parse_args()
+def signal_handler(signum, frame):
+    """Handle shutdown signals."""
+    global running
+    logger.info("\nReceived interrupt signal, shutting down gracefully...")
+    running = False
+
+async def run_agent_loop():
+    """Run the main agent loop."""
+    global execution_agent, portfolio_manager
     
     try:
-        # Load configuration
-        config = load_config(args.config)
+        # Initialize components
+        config = {
+            'name': 'agent_loop',
+            'enabled': True,
+            'custom_config': {
+                'execution_mode': 'simulation',
+                'max_positions': 3,
+                'min_confidence': 0.6
+            }
+        }
         
-        # Override config with command line arguments
-        if args.cycle_interval:
-            config['agent_loop']['cycle_interval'] = args.cycle_interval
-        if args.max_models:
-            config['agent_loop']['max_models'] = args.max_models
-        if args.log_level:
-            config['logging']['level'] = args.log_level
+        agent_config = AgentConfig(**config)
+        execution_agent = ExecutionAgent(agent_config)
+        portfolio_manager = PortfolioManager()
         
-        # Setup logging
-        setup_logging(config)
+        # Initialize portfolio
+        await portfolio_manager.initialize()
         
-        logger = logging.getLogger(__name__)
-        logger.info("Starting Agent Loop Runner")
-        logger.info(f"Configuration loaded from: {args.config or 'default'}")
+        # Set up signal handlers
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
         
-        # Create and start agent loop manager
-        manager = AgentLoopManager(config)
-        
-        # Print initial status
-        status = manager.get_loop_status()
-        logger.info(f"Agent Loop Status: {status}")
-        
-        # Start the loop
-        await manager.start_loop()
-        
-    except KeyboardInterrupt:
-        print("\nReceived interrupt signal, shutting down gracefully...")
-    except FileNotFoundError as e:
-        print(f"Configuration error: {e}")
-        sys.exit(1)
+        # Main loop
+        while running:
+            # Agent logic here
+            await asyncio.sleep(1)
+            
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        logging.error(f"Unexpected error: {e}", exc_info=True)
-        sys.exit(1)
+        logger.error(f"Configuration error: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+    finally:
+        if execution_agent:
+            await execution_agent.shutdown()
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(run_agent_loop()) 

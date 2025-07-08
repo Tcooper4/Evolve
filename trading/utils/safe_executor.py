@@ -326,7 +326,7 @@ def set_resource_limits():
         resource.setrlimit(resource.RLIMIT_FSIZE, (file_limit, file_limit))
         
     except Exception as e:
-        print(f"Warning: Could not set resource limits: {{e}}")
+        logger.warning(f"Warning: Could not set resource limits: {e}")
 
 # Signal handler for timeout
 def timeout_handler(signum, frame):
@@ -405,7 +405,7 @@ try:
         'memory_used': 0.0  # Will be calculated by parent process
     }}
     
-    print(json.dumps(output))
+    logger.info(json.dumps(output))
     
 except Exception as e:
     error_output = {{
@@ -414,7 +414,7 @@ except Exception as e:
         'traceback': traceback.format_exc(),
         'execution_time': time.time() - start_time if 'start_time' in locals() else 0.0
     }}
-    print(json.dumps(error_output))
+    logger.error(json.dumps(error_output))
     
 finally:
     # Cancel alarm
@@ -520,7 +520,7 @@ finally:
             resource.setrlimit(resource.RLIMIT_FSIZE, (file_limit, file_limit))
             
         except Exception as e:
-            logger.warning(f"Could not set resource limits: {e}")
+            logger.warning(f"Warning: Could not set resource limits: {e}")
 
     def _timeout_handler(self, signum, frame):
         """Signal handler for timeout."""

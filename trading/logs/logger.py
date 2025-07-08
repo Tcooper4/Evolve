@@ -38,7 +38,8 @@ def _load_config() -> dict:
             with open(config_path, "r") as f:
                 return yaml.safe_load(f).get("logging", {})
         except Exception as e:
-            print(f"Error loading log config: {e}")
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error loading log config: {e}")
     return {}
 
 def _get_log_level() -> int:

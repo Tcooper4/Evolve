@@ -454,40 +454,40 @@ def main():
     try:
         if args.action == 'start':
             if not args.service:
-                print("Error: --service is required for start action")
+                logger.error("Error: --service is required for start action")
                 return {"status": "failed", "action": "start", "error": "Missing service parameter"}
             result = manager.start_service(args.service)
-            print(json.dumps(result, indent=2))
+            logger.info(json.dumps(result, indent=2))
             return {"status": "completed", "action": "start", "result": result}
             
         elif args.action == 'stop':
             if not args.service:
-                print("Error: --service is required for stop action")
+                logger.error("Error: --service is required for stop action")
                 return {"status": "failed", "action": "stop", "error": "Missing service parameter"}
             result = manager.stop_service(args.service)
-            print(json.dumps(result, indent=2))
+            logger.info(json.dumps(result, indent=2))
             return {"status": "completed", "action": "stop", "result": result}
             
         elif args.action == 'start-all':
             result = manager.start_all_services()
-            print(json.dumps(result, indent=2))
+            logger.info(json.dumps(result, indent=2))
             return {"status": "completed", "action": "start-all", "result": result}
             
         elif args.action == 'stop-all':
             result = manager.stop_all_services()
-            print(json.dumps(result, indent=2))
+            logger.info(json.dumps(result, indent=2))
             return {"status": "completed", "action": "stop-all", "result": result}
             
         elif args.action == 'status':
             result = manager.get_service_status()
-            print(json.dumps(result, indent=2))
+            logger.info(json.dumps(result, indent=2))
             return {'success': True, 'result': {"status": "completed", "action": "status", "result": result}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
             
     except KeyboardInterrupt:
-        print("\nShutting down...")
+        logger.info("\nShutting down...")
         return {"status": "interrupted", "action": args.action}
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         return {"status": "failed", "action": args.action, "error": str(e)}
     finally:
         manager.shutdown()

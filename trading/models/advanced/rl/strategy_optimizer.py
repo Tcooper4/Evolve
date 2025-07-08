@@ -11,6 +11,8 @@ from collections import deque
 import random
 import logging
 
+logger = logging.getLogger(__name__)
+
 class StrategyOptimizer(ABC):
     def __init__(self, state_dim: int, action_dim: int, config: Dict[str, Any]):
         """Initialize the strategy optimizer.
@@ -240,7 +242,7 @@ class StrategyOptimizer(ABC):
             
         except Exception as e:
             logging.error(f"Error plotting DQN results: {e}")
-            print(f"Could not plot results: {e}")
+            logger.error(f"Could not plot results: {e}")
 
 class DQNStrategyOptimizer(StrategyOptimizer):
     """Deep Q-Network based strategy optimizer."""

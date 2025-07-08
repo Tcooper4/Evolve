@@ -9,6 +9,7 @@ import sys
 import os
 import time
 from pathlib import Path
+import logging
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -16,10 +17,12 @@ sys.path.append(str(Path(__file__).parent.parent))
 from services.quant_gpt import QuantGPT
 from services.service_client import ServiceClient
 
+logger = logging.getLogger(__name__)
+
 def test_direct_quant_gpt():
     """Test direct QuantGPT usage."""
-    print("🧪 Testing Direct QuantGPT Usage")
-    print("=" * 50)
+    logger.info("🧪 Testing Direct QuantGPT Usage")
+    logger.info("=" * 50)
     
     try:
         # Initialize QuantGPT
@@ -37,43 +40,43 @@ def test_direct_quant_gpt():
         ]
         
         for i, query in enumerate(test_queries, 1):
-            print(f"\n📝 Test Query {i}: {query}")
-            print("-" * 40)
+            logger.info(f"\n📝 Test Query {i}: {query}")
+            logger.info("-" * 40)
             
             start_time = time.time()
             result = quant_gpt.process_query(query)
             processing_time = time.time() - start_time
             
-            print(f"Processing Time: {processing_time:.2f}s")
-            print(f"Status: {result.get('status', 'unknown')}")
+            logger.info(f"Processing Time: {processing_time:.2f}s")
+            logger.info(f"Status: {result.get('status', 'unknown')}")
             
             if result.get('status') == 'success':
                 parsed = result.get('parsed_intent', {})
-                print(f"Intent: {parsed.get('intent', 'unknown')}")
-                print(f"Symbol: {parsed.get('symbol', 'N/A')}")
-                print(f"Timeframe: {parsed.get('timeframe', 'N/A')}")
-                print(f"Period: {parsed.get('period', 'N/A')}")
+                logger.info(f"Intent: {parsed.get('intent', 'unknown')}")
+                logger.info(f"Symbol: {parsed.get('symbol', 'N/A')}")
+                logger.info(f"Timeframe: {parsed.get('timeframe', 'N/A')}")
+                logger.info(f"Period: {parsed.get('period', 'N/A')}")
                 
                 commentary = result.get('gpt_commentary', '')
                 if commentary:
-                    print(f"GPT Commentary: {commentary[:100]}...")
+                    logger.info(f"GPT Commentary: {commentary[:100]}...")
                 
-                print("✅ Test passed")
+                logger.info("✅ Test passed")
             else:
                 error = result.get('error', 'Unknown error')
-                print(f"❌ Test failed: {error}")
+                logger.error(f"❌ Test failed: {error}")
         
         quant_gpt.close()
         return True
         
     except Exception as e:
-        print(f"❌ Direct QuantGPT test failed: {e}")
+        logger.error(f"❌ Direct QuantGPT test failed: {e}")
         return False
 
 def test_service_client():
     """Test QuantGPT via ServiceClient."""
-    print("\n🔗 Testing QuantGPT via ServiceClient")
-    print("=" * 50)
+    logger.info("\n🔗 Testing QuantGPT via ServiceClient")
+    logger.info("=" * 50)
     
     try:
         # Initialize ServiceClient
@@ -90,55 +93,55 @@ def test_service_client():
         ]
         
         for i, query in enumerate(test_queries, 1):
-            print(f"\n📝 Service Test Query {i}: {query}")
-            print("-" * 40)
+            logger.info(f"\n📝 Service Test Query {i}: {query}")
+            logger.info("-" * 40)
             
             start_time = time.time()
             result = client.process_natural_language_query(query)
             processing_time = time.time() - start_time
             
-            print(f"Processing Time: {processing_time:.2f}s")
+            logger.info(f"Processing Time: {processing_time:.2f}s")
             
             if result:
-                print(f"Response Type: {result.get('type', 'unknown')}")
+                logger.info(f"Response Type: {result.get('type', 'unknown')}")
                 
                 if result.get('type') == 'query_processed':
                     query_result = result.get('result', {})
                     if query_result.get('status') == 'success':
                         parsed = query_result.get('parsed_intent', {})
-                        print(f"Intent: {parsed.get('intent', 'unknown')}")
-                        print(f"Symbol: {parsed.get('symbol', 'N/A')}")
-                        print("✅ Service test passed")
+                        logger.info(f"Intent: {parsed.get('intent', 'unknown')}")
+                        logger.info(f"Symbol: {parsed.get('symbol', 'N/A')}")
+                        logger.info("✅ Service test passed")
                     else:
-                        print(f"❌ Query failed: {query_result.get('error', 'Unknown error')}")
+                        logger.error(f"❌ Query failed: {query_result.get('error', 'Unknown error')}")
                 else:
-                    print(f"❌ Service error: {result.get('error', 'Unknown error')}")
+                    logger.error(f"❌ Service error: {result.get('error', 'Unknown error')}")
             else:
-                print("❌ No response from service")
+                logger.error("❌ No response from service")
         
         # Test available symbols
-        print(f"\n📊 Testing Available Symbols")
-        print("-" * 40)
+        logger.info(f"\n📊 Testing Available Symbols")
+        logger.info("-" * 40)
         
         symbols_result = client.get_available_symbols()
         if symbols_result and symbols_result.get('type') == 'available_symbols':
             symbols = symbols_result.get('symbols', [])
-            print(f"Available Symbols: {', '.join(symbols)}")
-            print("✅ Symbols test passed")
+            logger.info(f"Available Symbols: {', '.join(symbols)}")
+            logger.info("✅ Symbols test passed")
         else:
-            print("❌ Symbols test failed")
+            logger.error("❌ Symbols test failed")
         
         client.close()
         return True
         
     except Exception as e:
-        print(f"❌ ServiceClient test failed: {e}")
+        logger.error(f"❌ ServiceClient test failed: {e}")
         return False
 
 def test_query_parsing():
     """Test query parsing functionality."""
-    print("\n🔍 Testing Query Parsing")
-    print("=" * 50)
+    logger.info("\n🔍 Testing Query Parsing")
+    logger.info("=" * 50)
     
     try:
         quant_gpt = QuantGPT(
@@ -169,8 +172,8 @@ def test_query_parsing():
         ]
         
         for i, test_case in enumerate(test_cases, 1):
-            print(f"\n📝 Parsing Test {i}: {test_case['query']}")
-            print("-" * 40)
+            logger.info(f"\n📝 Parsing Test {i}: {test_case['query']}")
+            logger.info("-" * 40)
             
             result = quant_gpt.process_query(test_case['query'])
             
@@ -181,17 +184,17 @@ def test_query_parsing():
                 intent = parsed.get('intent')
                 expected_intent = test_case.get('expected_intent')
                 if intent == expected_intent:
-                    print(f"✅ Intent: {intent}")
+                    logger.info(f"✅ Intent: {intent}")
                 else:
-                    print(f"❌ Intent mismatch: expected {expected_intent}, got {intent}")
+                    logger.error(f"❌ Intent mismatch: expected {expected_intent}, got {intent}")
                 
                 # Check symbol
                 symbol = parsed.get('symbol')
                 expected_symbol = test_case.get('expected_symbol')
                 if symbol == expected_symbol:
-                    print(f"✅ Symbol: {symbol}")
+                    logger.info(f"✅ Symbol: {symbol}")
                 else:
-                    print(f"❌ Symbol mismatch: expected {expected_symbol}, got {symbol}")
+                    logger.error(f"❌ Symbol mismatch: expected {expected_symbol}, got {symbol}")
                 
                 # Check other parameters
                 for param in ['timeframe', 'period']:
@@ -199,35 +202,35 @@ def test_query_parsing():
                         value = parsed.get(param)
                         expected_value = test_case.get(f'expected_{param}')
                         if value == expected_value:
-                            print(f"✅ {param}: {value}")
+                            logger.info(f"✅ {param}: {value}")
                         else:
-                            print(f"❌ {param} mismatch: expected {expected_value}, got {value}")
+                            logger.error(f"❌ {param} mismatch: expected {expected_value}, got {value}")
                 
-                print("✅ Parsing test passed")
+                logger.info("✅ Parsing test passed")
             else:
-                print(f"❌ Parsing test failed: {result.get('error', 'Unknown error')}")
+                logger.error(f"❌ Parsing test failed: {result.get('error', 'Unknown error')}")
         
         quant_gpt.close()
         return True
         
     except Exception as e:
-        print(f"❌ Query parsing test failed: {e}")
+        logger.error(f"❌ Query parsing test failed: {e}")
         return False
 
 def main():
     """Run all QuantGPT tests."""
-    print("🚀 QuantGPT Test Suite")
-    print("=" * 60)
+    logger.info("🚀 QuantGPT Test Suite")
+    logger.info("=" * 60)
     
     # Check Redis availability
     try:
         import redis
         r = redis.Redis(host='localhost', port=6379)
         r.ping()
-        print("✅ Redis connection successful")
+        logger.info("✅ Redis connection successful")
     except Exception as e:
-        print(f"⚠️  Redis not available: {e}")
-        print("Running direct QuantGPT tests only...")
+        logger.warning(f"⚠️  Redis not available: {e}")
+        logger.info("Running direct QuantGPT tests only...")
         test_direct_quant_gpt()
         test_query_parsing()
 
@@ -240,34 +243,34 @@ def main():
     
     results = []
     for test_name, test_func in tests:
-        print(f"\n{'='*20} {test_name} {'='*20}")
+        logger.info(f"\n{'='*20} {test_name} {'='*20}")
         try:
             result = test_func()
             results.append((test_name, result))
         except Exception as e:
-            print(f"❌ {test_name} test crashed: {e}")
+            logger.error(f"❌ {test_name} test crashed: {e}")
             results.append((test_name, False))
     
     # Summary
-    print(f"\n{'='*60}")
-    print("📊 Test Results Summary")
-    print("=" * 60)
+    logger.info(f"\n{'='*60}")
+    logger.info("📊 Test Results Summary")
+    logger.info("=" * 60)
     
     passed = 0
     total = len(results)
     
     for test_name, result in results:
         status = "✅ PASSED" if result else "❌ FAILED"
-        print(f"{test_name}: {status}")
+        logger.info(f"{test_name}: {status}")
         if result:
             passed += 1
     
-    print(f"\nOverall: {passed}/{total} tests passed")
+    logger.info(f"\nOverall: {passed}/{total} tests passed")
     
     if passed == total:
-        print("🎉 All tests passed! QuantGPT is working correctly.")
+        logger.info("🎉 All tests passed! QuantGPT is working correctly.")
     else:
-        print("⚠️  Some tests failed. Check the output above for details.")
+        logger.warning("⚠️  Some tests failed. Check the output above for details.")
 
 if __name__ == "__main__":
     main() 
