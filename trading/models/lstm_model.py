@@ -40,7 +40,6 @@ class LSTMModel(nn.Module):
         self.dropout = dropout
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.to(self.device)
-        return {'success': True, 'message': 'LSTMModel initialized', 'timestamp': datetime.now().isoformat()}
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the LSTM model.

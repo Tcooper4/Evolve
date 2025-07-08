@@ -16,15 +16,34 @@ import warnings
 
 # Workaround for pandas_ta numpy compatibility issue
 try:
-    # Patch numpy import issue in pandas_ta
+    # Patch numpy import issue in pandas_ta for newer numpy versions
     import numpy
     if not hasattr(numpy, 'NaN'):
         numpy.NaN = numpy.nan
     
+    # Additional patches for newer numpy versions
+    if not hasattr(numpy, 'float'):
+        numpy.float = float
+    if not hasattr(numpy, 'int'):
+        numpy.int = int
+    
+    # Suppress pandas_ta warnings
+    import warnings
+    warnings.filterwarnings("ignore", category=UserWarning, module="pandas_ta")
+    warnings.filterwarnings("ignore", category=FutureWarning, module="pandas_ta")
+    warnings.filterwarnings("ignore", category=DeprecationWarning, module="pandas_ta")
+    
     import pandas_ta as ta
+    PANDAS_TA_AVAILABLE = True
+    print("pandas_ta successfully imported with compatibility patches")
 except ImportError as e:
     warnings.warn(f"pandas_ta import failed: {e}. Technical indicators may not be available.")
     ta = None
+    PANDAS_TA_AVAILABLE = False
+except Exception as e:
+    warnings.warn(f"pandas_ta compatibility issue: {e}. Using fallback indicators.")
+    ta = None
+    PANDAS_TA_AVAILABLE = False
 
 from trading.logs.logger import log_metrics
 
