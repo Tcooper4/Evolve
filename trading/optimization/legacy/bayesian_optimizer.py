@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import plotly.graph_objects as go
-from .base_optimizer import BaseOptimizer, OptimizationResult
+from ..base_optimizer import BaseOptimizer, OptimizationResult
 
 class BayesianOptimizer(BaseOptimizer):
     """Bayesian optimizer using Optuna."""

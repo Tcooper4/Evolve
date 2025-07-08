@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Tuple, Union, Callable
 from datetime import datetime
 import random
 from deap import base, creator, tools, algorithms
-from .base_optimizer import BaseOptimizer, OptimizationResult
+from ..base_optimizer import BaseOptimizer, OptimizationResult
 import plotly.graph_objects as go
 import optuna
 

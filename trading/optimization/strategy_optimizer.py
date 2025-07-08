@@ -14,6 +14,8 @@ from pydantic import Field, validator
 import torch.nn as nn
 import json
 from pathlib import Path
+import matplotlib.pyplot as plt
+import os
 
 # Try to import ray and its submodules
 try:
@@ -1023,14 +1025,75 @@ class StrategyOptimizer(BaseOptimizer):
         with open(results_dir / f"{strategy_class.__name__}_optimization.json", 'w') as f:
             json.dump(results, f, indent=4)
 
-    def plot_results(self, **kwargs):
-        """Plot optimization results."""
-        # TODO: Implement plotting functionality for optimization results
-        # - Add matplotlib/plotly visualizations for convergence curves
-        # - Show parameter evolution over iterations
-        # - Display objective function landscape
-        # - Create interactive dashboards for optimization progress
-        pass
+    def plot_optimization_results(self, save_path: Optional[str] = None) -> None:
+        """Plot optimization results with convergence and parameter evolution.
+        
+        Args:
+            save_path: Optional path to save the plot
+        """
+        try:
+            if not self.optimization_history:
+                self.logger.warning("No optimization history available for plotting")
+                return
+            
+            # Create subplots
+            fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+            fig.suptitle('Strategy Optimization Results', fontsize=16)
+            
+            # Plot 1: Convergence curve
+            iterations = range(1, len(self.optimization_history) + 1)
+            best_scores = [entry['best_score'] for entry in self.optimization_history]
+            axes[0, 0].plot(iterations, best_scores, 'b-', linewidth=2)
+            axes[0, 0].set_title('Convergence Curve')
+            axes[0, 0].set_xlabel('Iteration')
+            axes[0, 0].set_ylabel('Best Score')
+            axes[0, 0].grid(True, alpha=0.3)
+            
+            # Plot 2: Parameter evolution
+            if self.optimization_history:
+                param_names = list(self.optimization_history[0]['best_params'].keys())
+                for i, param in enumerate(param_names[:3]):  # Show first 3 parameters
+                    values = [entry['best_params'].get(param, 0) for entry in self.optimization_history]
+                    axes[0, 1].plot(iterations, values, label=param, linewidth=2)
+                axes[0, 1].set_title('Parameter Evolution')
+                axes[0, 1].set_xlabel('Iteration')
+                axes[0, 1].set_ylabel('Parameter Value')
+                axes[0, 1].legend()
+                axes[0, 1].grid(True, alpha=0.3)
+            
+            # Plot 3: Score distribution
+            all_scores = [score for entry in self.optimization_history for score in entry.get('scores', [])]
+            if all_scores:
+                axes[1, 0].hist(all_scores, bins=20, alpha=0.7, color='green')
+                axes[1, 0].set_title('Score Distribution')
+                axes[1, 0].set_xlabel('Score')
+                axes[1, 0].set_ylabel('Frequency')
+                axes[1, 0].grid(True, alpha=0.3)
+            
+            # Plot 4: Optimization progress
+            if len(self.optimization_history) > 1:
+                improvements = []
+                for i in range(1, len(self.optimization_history)):
+                    improvement = self.optimization_history[i]['best_score'] - self.optimization_history[i-1]['best_score']
+                    improvements.append(improvement)
+                
+                axes[1, 1].bar(range(len(improvements)), improvements, alpha=0.7, color='orange')
+                axes[1, 1].set_title('Score Improvements')
+                axes[1, 1].set_xlabel('Iteration')
+                axes[1, 1].set_ylabel('Score Improvement')
+                axes[1, 1].grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+            
+            if save_path:
+                plt.savefig(save_path, dpi=300, bbox_inches='tight')
+                self.logger.info(f"Optimization plot saved to {save_path}")
+            
+            plt.show()
+            
+        except Exception as e:
+            self.logger.error(f"Error plotting optimization results: {e}")
+            raise
 
     def get_available_optimizers(self) -> List[str]:
         """Get list of available optimizers.
@@ -1095,27 +1158,72 @@ class StrategyOptimizer(BaseOptimizer):
         # - Add support for multiple objective functions (multi-objective optimization)
         raise NotImplementedError('Pending feature - requires cross-validation implementation')
 
-    def save_optimization_results(self, results: Dict[str, Any], save_path: str) -> None:
-        """Save optimization results to file.
+    def save_optimization_results(self, filepath: str) -> None:
+        """Save optimization results to a JSON file.
         
         Args:
-            results: Optimization results
-            save_path: Path to save results
+            filepath: Path to save the optimization results
         """
-        # TODO: Implement save functionality
-        raise NotImplementedError('Pending feature')
+        try:
+            # Prepare data for saving
+            save_data = {
+                'optimization_history': self.optimization_history,
+                'best_params': self.best_params,
+                'best_score': self.best_score,
+                'optimization_config': {
+                    'strategy_name': self.strategy_name,
+                    'param_space': self.param_space,
+                    'n_trials': self.n_trials,
+                    'timeout': self.timeout
+                },
+                'timestamp': datetime.now().isoformat(),
+                'version': '1.0'
+            }
+            
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            
+            # Save to file
+            with open(filepath, 'w') as f:
+                json.dump(save_data, f, indent=2, default=str)
+            
+            self.logger.info(f"Optimization results saved to {filepath}")
+            
+        except Exception as e:
+            self.logger.error(f"Error saving optimization results: {e}")
+            raise
 
-    def load_optimization_results(self, file_path: str) -> Dict[str, Any]:
-        """Load optimization results from file.
+    def load_optimization_results(self, filepath: str) -> Dict[str, Any]:
+        """Load optimization results from a JSON file.
         
         Args:
-            file_path: Path to results file
+            filepath: Path to load the optimization results from
             
         Returns:
-            Loaded results
+            Dictionary containing the loaded optimization data
         """
-        # TODO: Implement load functionality
-        raise NotImplementedError('Pending feature')
+        try:
+            with open(filepath, 'r') as f:
+                data = json.load(f)
+            
+            # Restore optimization state
+            self.optimization_history = data.get('optimization_history', [])
+            self.best_params = data.get('best_params', {})
+            self.best_score = data.get('best_score', float('-inf'))
+            
+            # Validate loaded data
+            if not self.optimization_history:
+                self.logger.warning("No optimization history found in loaded file")
+            
+            self.logger.info(f"Optimization results loaded from {filepath}")
+            return data
+            
+        except FileNotFoundError:
+            self.logger.error(f"Optimization results file not found: {filepath}")
+            raise
+        except Exception as e:
+            self.logger.error(f"Error loading optimization results: {e}")
+            raise
 
 __all__ = ["StrategyOptimizer", "StrategyOptimizerConfig"] 
 
