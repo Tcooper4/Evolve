@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from trading.models.model_registry import ModelRegistry
 from trading.models.base_model import BaseModel
-from trading.optimization.bayesian_optimizer import BayesianOptimizer
+from trading.optimization.legacy.bayesian_optimizer import BayesianOptimizer
 from trading.optimization.genetic_optimizer import GeneticOptimizer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory

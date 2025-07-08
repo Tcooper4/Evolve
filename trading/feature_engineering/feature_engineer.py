@@ -6,17 +6,22 @@ from scipy import stats
 
 # Try to import pandas_ta, with fallback
 try:
+    # Patch numpy for pandas_ta compatibility
+    import numpy
+    if not hasattr(numpy, 'NaN'):
+        numpy.NaN = numpy.nan
+    if not hasattr(numpy, 'float'):
+        numpy.float = float
+    if not hasattr(numpy, 'int'):
+        numpy.int = int
+    
     import pandas_ta as ta
     PANDAS_TA_AVAILABLE = True
 except ImportError as e:
     PANDAS_TA_AVAILABLE = False
-    ta = None
-    import logging
     logging.warning(f"pandas_ta not available: {e}")
 except Exception as e:
     PANDAS_TA_AVAILABLE = False
-    ta = None
-    import logging
     logging.warning(f"pandas_ta import error: {e}")
 
 from sklearn.preprocessing import StandardScaler
