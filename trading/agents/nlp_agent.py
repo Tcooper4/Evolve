@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 import re
+from dataclasses import dataclass
 
 # Import NLP libraries with fallback handling
 try:
@@ -46,6 +47,31 @@ except ImportError:
 from trading.utils.logging_utils import setup_logger
 
 logger = setup_logger(__name__)
+
+@dataclass
+class NLPRequest:
+    """Request for NLP processing."""
+    prompt: str
+    timestamp: datetime
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+@dataclass
+class NLPResult:
+    """Result of NLP processing."""
+    original_prompt: str
+    timestamp: datetime
+    intent: Dict[str, Any]
+    sentiment: Dict[str, Any]
+    entities: Dict[str, List[str]]
+    strategy_suggestions: List[Dict[str, Any]]
+    market_regime: Dict[str, Any]
+    timeframe: Dict[str, Any]
+    tickers: List[str]
+    confidence: float
+    routing: Dict[str, Any]
+    error: Optional[str] = None
 
 class NLPAgent:
     """Advanced NLP agent for trading prompt parsing and model routing."""

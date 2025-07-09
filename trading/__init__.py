@@ -54,7 +54,7 @@ except ImportError as e:
     DATA_AVAILABLE = False
 
 try:
-    from .backtesting import (
+    from trading.backtesting import (
         BacktestEngine, PerformanceAnalyzer, RiskMetricsEngine, 
         PositionSizingEngine, Trade, TradeType
     )
@@ -66,7 +66,7 @@ except ImportError as e:
     BACKTESTING_AVAILABLE = False
 
 try:
-    from .optimization import (
+    from trading.optimization import (
         StrategyOptimizer, BaseOptimizer, OptimizationVisualizer
     )
     OPTIMIZATION_AVAILABLE = True
@@ -77,7 +77,7 @@ except ImportError as e:
     OPTIMIZATION_AVAILABLE = False
 
 try:
-    from .risk import (
+    from trading.risk import (
         RiskManager
     )
     RISK_AVAILABLE = True
@@ -88,7 +88,7 @@ except ImportError as e:
     RISK_AVAILABLE = False
 
 try:
-    from .portfolio import (
+    from trading.portfolio import (
         PortfolioManager
     )
     PORTFOLIO_AVAILABLE = True
@@ -99,7 +99,7 @@ except ImportError as e:
     PORTFOLIO_AVAILABLE = False
 
 try:
-    from .agents import (
+    from trading.agents import (
         PromptRouterAgent, ModelBuilderAgent
     )
     AGENTS_AVAILABLE = True
@@ -110,7 +110,7 @@ except ImportError as e:
     AGENTS_AVAILABLE = False
 
 try:
-    from .utils import (
+    from trading.utils import (
         LogManager, ModelLogger, DataLogger, PerformanceLogger
     )
     UTILS_AVAILABLE = True
@@ -146,7 +146,7 @@ except ImportError as e:
     MARKET_AVAILABLE = False
 
 try:
-    from .data.preprocessing import FeatureEngineering, DataValidator, DataScaler
+    from trading.data.preprocessing import FeatureEngineering, DataValidator, DataScaler
     PREPROCESSING_AVAILABLE = True
 except ImportError as e:
     import logging
@@ -155,7 +155,7 @@ except ImportError as e:
     PREPROCESSING_AVAILABLE = False
 
 try:
-    from .agents.updater import UpdaterAgent
+    from trading.agents.updater import UpdaterAgent
     UPDATER_AVAILABLE = True
 except ImportError as e:
     import logging

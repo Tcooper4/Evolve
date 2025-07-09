@@ -66,6 +66,33 @@ class DataQualityReport:
     recommendations: List[str]
     overall_score: float
 
+@dataclass
+class DataQualityRequest:
+    """Request for data quality operations."""
+    operation_type: str  # 'assess_quality', 'route_to_backup', 'get_quality_summary'
+    symbol: str
+    data: Optional[pd.DataFrame] = None
+    data_source: str = 'primary'
+    data_issues: Optional[List[DataAnomaly]] = None
+    priority: str = 'normal'
+    metadata: Optional[Dict[str, Any]] = None
+
+@dataclass
+class DataQualityResult:
+    """Result of data quality operations."""
+    success: bool
+    operation_type: str
+    symbol: str
+    quality_report: Optional[DataQualityReport] = None
+    backup_data: Optional[pd.DataFrame] = None
+    quality_summary: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    timestamp: datetime = None
+    
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
+
 class DataQualityAgent(BaseAgent):
     """
     Agent responsible for:

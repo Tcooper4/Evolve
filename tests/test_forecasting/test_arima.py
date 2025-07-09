@@ -1,8 +1,14 @@
 """Tests for the ARIMA forecasting model."""
 
+import sys
+import os
 import pytest
 import pandas as pd
 import numpy as np
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from trading.models.arima_model import ARIMAModel
 
 class TestARIMAModel:

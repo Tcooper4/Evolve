@@ -34,6 +34,23 @@ from trading.utils.reward_function import RewardFunction
 from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 @dataclass
+class MetaTuningRequest:
+    """Meta-tuning request."""
+    model_type: str
+    action: str  # 'tune_hyperparameters', 'get_history', 'get_best_params', 'add_param_space', 'clear_history'
+    objective_function: Optional[Callable] = None
+    n_trials: Optional[int] = None
+    method: str = 'auto'
+    param_space: Optional[Dict[str, Any]] = None
+
+@dataclass
+class MetaTuningResult:
+    """Meta-tuning result."""
+    success: bool
+    data: Dict[str, Any]
+    error_message: Optional[str] = None
+
+@dataclass
 class TuningResult:
     """Result of a hyperparameter tuning run."""
     tuning_id: str

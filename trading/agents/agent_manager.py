@@ -26,6 +26,22 @@ from trading.agents.execution_agent import ExecutionAgent
 from trading.agents.agent_leaderboard import AgentLeaderboard
 
 @dataclass
+class AgentManagementRequest:
+    """Agent management request."""
+    action: str  # 'register', 'unregister', 'enable', 'disable', 'execute', 'get_status', 'update_config'
+    agent_name: Optional[str] = None
+    agent_class: Optional[Type[BaseAgent]] = None
+    config: Optional[AgentConfig] = None
+    kwargs: Optional[Dict[str, Any]] = None
+
+@dataclass
+class AgentManagementResult:
+    """Agent management result."""
+    success: bool
+    data: Dict[str, Any]
+    error_message: Optional[str] = None
+
+@dataclass
 class AgentRegistryEntry:
     """Entry in the agent registry."""
     agent_class: Type[BaseAgent]

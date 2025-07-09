@@ -5,11 +5,16 @@ This module contains comprehensive tests for the PositionSizer class,
 covering all sizing strategies, edge cases, and integration scenarios.
 """
 
+import sys
+import os
 import pytest
 import numpy as np
 import pandas as pd
 from datetime import datetime
 from unittest.mock import Mock, patch
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from trading.portfolio.position_sizer import (
     PositionSizer, SizingStrategy, SizingParameters,

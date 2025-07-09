@@ -1,9 +1,15 @@
 """Tests for the Router Intent Detection."""
 
+import sys
+import os
 import pytest
 import pandas as pd
 import numpy as np
-from core.agents.router import RouterAgent as Router
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from trading.agents.router import RouterAgent as Router
 
 class TestRouter:
     @pytest.fixture

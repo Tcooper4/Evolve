@@ -5,11 +5,16 @@ This module tests the prompt template formatter against malformed or missing
 variables to ensure robust error handling and fallback behavior.
 """
 
+import sys
+import os
 import pytest
 import json
 from typing import Dict, Any, Optional
 import logging
 from unittest.mock import Mock, patch
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import template formatter
 from trading.agents.prompt_templates import (

@@ -16,12 +16,26 @@ from concurrent.futures import ThreadPoolExecutor
 
 from trading.models.model_registry import ModelRegistry
 from trading.models.base_model import BaseModel
-from trading.optimization.bayesian_optimizer import BayesianOptimizer
+from trading.optimization.core_optimizer import BayesianOptimizer
 from trading.optimization.core_optimizer import GeneticOptimizer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.memory.agent_memory import AgentMemory
 from trading.agents.model_selector_agent import ModelSelectorAgent
 from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
+
+@dataclass
+class FeedbackRequest:
+    """Feedback request."""
+    action: str  # 'process_feedback', 'get_ensemble_weights', 'get_model_performance_summary'
+    feedback: Optional[Dict[str, Any]] = None
+    model_name: Optional[str] = None
+
+@dataclass
+class FeedbackResult:
+    """Feedback result."""
+    success: bool
+    data: Dict[str, Any]
+    error_message: Optional[str] = None
 
 @dataclass
 class ModelFeedback:

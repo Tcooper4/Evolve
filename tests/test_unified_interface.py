@@ -7,10 +7,11 @@ Verify that the unified interface works correctly.
 
 import sys
 import os
+import pytest
 from pathlib import Path
 
-# Add current directory to path
-sys.path.append(str(Path(__file__).parent))
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def test_unified_interface():
     """Test the unified interface functionality."""
@@ -19,7 +20,7 @@ def test_unified_interface():
     
     try:
         # Import unified interface
-        from unified_interface import UnifiedInterface
+        from interface.unified_interface import UnifiedInterface
         print("✅ Successfully imported UnifiedInterface")
         
         # Initialize interface
@@ -70,7 +71,7 @@ def test_unified_interface():
         
     except ImportError as e:
         print(f"❌ Import error: {e}")
-        print("Make sure unified_interface.py is in the current directory")
+        print("Make sure unified_interface.py is in the interface directory")
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
 
@@ -82,7 +83,7 @@ def test_streamlit_import():
         print("✅ Streamlit is available")
         
         # Test unified interface Streamlit functions
-        from unified_interface import streamlit_ui, render_main_interface
+        from interface.unified_interface import streamlit_ui, render_main_interface
         print("✅ Streamlit UI functions are available")
         
     except ImportError:
@@ -97,9 +98,9 @@ def main():
     
     print("\n📋 Test Summary:")
     print("If all tests passed, you can:")
-    print("1. Use command line: python unified_interface.py --terminal")
+    print("1. Use command line: python interface/unified_interface.py --terminal")
     print("2. Use Streamlit: streamlit run app.py")
-    print("3. Execute commands: python unified_interface.py --command 'help'")
+    print("3. Execute commands: python interface/unified_interface.py --command 'help'")
 
 if __name__ == "__main__":
     main() 
