@@ -1,36 +1,110 @@
-import unittest
+import pytest
 from unittest.mock import Mock, patch
 import pandas as pd
 import numpy as np
 from datetime import datetime
 import sys
 import os
+import uuid
 
 # Add the project root to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from trading.agents.task_memory import TaskMemory, Task, TaskStatus
 from trading.agents.task_dashboard import TaskDashboard
 from trading.meta_agents.agents.model_builder import ModelBuilder
 # ModelMetrics and ModelOutput may not exist - using placeholders
 
-class TestTaskIntegration(unittest.TestCase):
-    def setUp(self):
-        """Set up test environment before each test."""
-        self.task_memory = TaskMemory()
-        self.dashboard = TaskDashboard(self.task_memory)
-        self.model_builder = ModelBuilder()
+@pytest.fixture
+def task_memory():
+    """Create a task memory instance for testing."""
+    return TaskMemory()
+
+@pytest.fixture
+def dashboard(task_memory):
+    """Create a task dashboard instance for testing."""
+    return TaskDashboard(task_memory)
+
+@pytest.fixture
+def model_builder():
+    """Create a model builder instance for testing."""
+    return ModelBuilder()
+
+@pytest.fixture
+def sample_data():
+    """Create sample data for model training."""
+    return pd.DataFrame({
+        'timestamp': pd.date_range(start='2024-01-01', periods=100, freq='D'),
+        'price': np.random.normal(100, 10, 100),
+        'volume': np.random.normal(1000, 100, 100)
+    })
+
+def test_model_training_task_flow(task_memory, model_builder, sample_data):
+    """Test the complete flow of model training task creation and tracking."""
+    # Start model training
+    task_id = str(uuid.uuid4())
+    task = Task(
+        task_id=task_id,
+        type="model_training",
+        status=TaskStatus.PENDING,
+        metadata={
+            'agent': 'model_builder',
+            'creation_time': datetime.now().isoformat(),
+            'model_type': 'lstm'
+        },
+        notes="Starting LSTM model training"
+    )
+    task_memory.add_task(task)
+    
+    # Verify task creation
+    created_task = task_memory.get_task(task_id)
+    assert created_task is not None
+    assert created_task.status == TaskStatus.PENDING
+    
+    # Simulate model training
+    try:
+        # Run LSTM model
+        result = model_builder.run_lstm(sample_data)
         
-        # Create sample data for model training
-        self.sample_data = pd.DataFrame({
-            'timestamp': pd.date_range(start='2024-01-01', periods=100, freq='D'),
-            'price': np.random.normal(100, 10, 100),
-            'volume': np.random.normal(1000, 100, 100)
+        # Update task status
+        task.status = TaskStatus.COMPLETED
+        task.metadata.update({
+            'completion_time': datetime.now().isoformat(),
+            'duration': '5 minutes',
+            'metrics': {
+                'mse': result.metrics.mse,
+                'sharpe_ratio': result.metrics.sharpe_ratio,
+                'max_drawdown': result.metrics.max_drawdown
+            }
         })
+        task_memory.update_task(task)
         
-    def test_model_training_task_flow(self):
-        """Test the complete flow of model training task creation and tracking."""
-        # Start model training
+        # Verify task completion
+        completed_task = task_memory.get_task(task_id)
+        assert completed_task.status == TaskStatus.COMPLETED
+        assert 'metrics' in completed_task.metadata
+        
+    except Exception as e:
+        # Update task status on failure
+        task.status = TaskStatus.FAILED
+        task.metadata.update({
+            'error': str(e),
+            'completion_time': datetime.now().isoformat()
+        })
+        task_memory.update_task(task)
+        
+        # Verify task failure
+        failed_task = task_memory.get_task(task_id)
+        assert failed_task.status == TaskStatus.FAILED
+        assert 'error' in failed_task.metadata
+
+def test_multiple_model_training_tasks(task_memory, model_builder, sample_data):
+    """Test handling multiple concurrent model training tasks."""
+    model_types = ['lstm', 'xgboost', 'prophet', 'garch', 'ridge', 'hybrid']
+    task_ids = []
+    
+    # Create tasks for different model types
+    for model_type in model_types:
         task_id = str(uuid.uuid4())
         task = Task(
             task_id=task_id,
@@ -39,23 +113,35 @@ class TestTaskIntegration(unittest.TestCase):
             metadata={
                 'agent': 'model_builder',
                 'creation_time': datetime.now().isoformat(),
-                'model_type': 'lstm'
+                'model_type': model_type
             },
-            notes="Starting LSTM model training"
+            notes=f"Starting {model_type} model training"
         )
-        self.task_memory.add_task(task)
+        task_memory.add_task(task)
+        task_ids.append(task_id)
         
-        # Verify task creation
-        created_task = self.task_memory.get_task(task_id)
-        self.assertIsNotNone(created_task)
-        self.assertEqual(created_task.status, TaskStatus.PENDING)
-        
-        # Simulate model training
+    # Verify all tasks are created
+    assert len(task_memory.tasks) == len(model_types)
+    
+    # Simulate training for each model
+    for task_id, model_type in zip(task_ids, model_types):
         try:
-            # Run LSTM model
-            result = self.model_builder.run_lstm(self.sample_data)
-            
+            # Run appropriate model
+            if model_type == 'lstm':
+                result = model_builder.run_lstm(sample_data)
+            elif model_type == 'xgboost':
+                result = model_builder.run_xgboost(sample_data)
+            elif model_type == 'prophet':
+                result = model_builder.run_prophet(sample_data)
+            elif model_type == 'garch':
+                result = model_builder.run_garch(sample_data)
+            elif model_type == 'ridge':
+                result = model_builder.run_ridge(sample_data)
+            else:  # hybrid
+                result = model_builder.run_hybrid(sample_data)
+                
             # Update task status
+            task = task_memory.get_task(task_id)
             task.status = TaskStatus.COMPLETED
             task.metadata.update({
                 'completion_time': datetime.now().isoformat(),
@@ -66,150 +152,75 @@ class TestTaskIntegration(unittest.TestCase):
                     'max_drawdown': result.metrics.max_drawdown
                 }
             })
-            self.task_memory.update_task(task)
-            
-            # Verify task completion
-            completed_task = self.task_memory.get_task(task_id)
-            self.assertEqual(completed_task.status, TaskStatus.COMPLETED)
-            self.assertIn('metrics', completed_task.metadata)
+            task_memory.update_task(task)
             
         except Exception as e:
             # Update task status on failure
+            task = task_memory.get_task(task_id)
             task.status = TaskStatus.FAILED
             task.metadata.update({
                 'error': str(e),
                 'completion_time': datetime.now().isoformat()
             })
-            self.task_memory.update_task(task)
+            task_memory.update_task(task)
             
-            # Verify task failure
-            failed_task = self.task_memory.get_task(task_id)
-            self.assertEqual(failed_task.status, TaskStatus.FAILED)
-            self.assertIn('error', failed_task.metadata)
-            
-    def test_multiple_model_training_tasks(self):
-        """Test handling multiple concurrent model training tasks."""
-        model_types = ['lstm', 'xgboost', 'prophet', 'garch', 'ridge', 'hybrid']
-        task_ids = []
+    # Verify task status distribution
+    completed_tasks = task_memory.get_tasks_by_status(TaskStatus.COMPLETED)
+    failed_tasks = task_memory.get_tasks_by_status(TaskStatus.FAILED)
+    
+    assert len(completed_tasks) + len(failed_tasks) == len(model_types)
+
+def test_dashboard_task_display(task_memory, model_builder, sample_data):
+    """Test dashboard display of model training tasks."""
+    # Create and complete some model training tasks
+    test_multiple_model_training_tasks(task_memory, model_builder, sample_data)
+    
+    # Verify dashboard metrics
+    total_tasks = len(task_memory.tasks)
+    completed_tasks = len(task_memory.get_tasks_by_status(TaskStatus.COMPLETED))
+    failed_tasks = len(task_memory.get_tasks_by_status(TaskStatus.FAILED))
+    
+    assert total_tasks == 6  # 6 model types
+    assert completed_tasks + failed_tasks == total_tasks
+    
+    # Test task filtering
+    model_tasks = [t for t in task_memory.tasks if t.metadata.get('model_type') == 'lstm']
+    assert len(model_tasks) == 1
+
+def test_error_handling_and_recovery(task_memory):
+    """Test error handling and recovery in the task system."""
+    # Create a task
+    task_id = str(uuid.uuid4())
+    task = Task(
+        task_id=task_id,
+        type="model_training",
+        status=TaskStatus.PENDING,
+        metadata={
+            'agent': 'model_builder',
+            'creation_time': datetime.now().isoformat(),
+            'model_type': 'lstm'
+        },
+        notes="Starting LSTM model training"
+    )
+    task_memory.add_task(task)
+    
+    # Simulate a failure
+    try:
+        # Intentionally cause an error
+        raise ValueError("Test error")
+    except Exception as e:
+        # Update task status on failure
+        task.status = TaskStatus.FAILED
+        task.metadata.update({
+            'error': str(e),
+            'completion_time': datetime.now().isoformat()
+        })
+        task_memory.update_task(task)
         
-        # Create tasks for different model types
-        for model_type in model_types:
-            task_id = str(uuid.uuid4())
-            task = Task(
-                task_id=task_id,
-                type="model_training",
-                status=TaskStatus.PENDING,
-                metadata={
-                    'agent': 'model_builder',
-                    'creation_time': datetime.now().isoformat(),
-                    'model_type': model_type
-                },
-                notes=f"Starting {model_type} model training"
-            )
-            self.task_memory.add_task(task)
-            task_ids.append(task_id)
-            
-        # Verify all tasks are created
-        self.assertEqual(len(self.task_memory.tasks), len(model_types))
-        
-        # Simulate training for each model
-        for task_id, model_type in zip(task_ids, model_types):
-            try:
-                # Run appropriate model
-                if model_type == 'lstm':
-                    result = self.model_builder.run_lstm(self.sample_data)
-                elif model_type == 'xgboost':
-                    result = self.model_builder.run_xgboost(self.sample_data)
-                elif model_type == 'prophet':
-                    result = self.model_builder.run_prophet(self.sample_data)
-                elif model_type == 'garch':
-                    result = self.model_builder.run_garch(self.sample_data)
-                elif model_type == 'ridge':
-                    result = self.model_builder.run_ridge(self.sample_data)
-                else:  # hybrid
-                    result = self.model_builder.run_hybrid(self.sample_data)
-                    
-                # Update task status
-                task = self.task_memory.get_task(task_id)
-                task.status = TaskStatus.COMPLETED
-                task.metadata.update({
-                    'completion_time': datetime.now().isoformat(),
-                    'duration': '5 minutes',
-                    'metrics': {
-                        'mse': result.metrics.mse,
-                        'sharpe_ratio': result.metrics.sharpe_ratio,
-                        'max_drawdown': result.metrics.max_drawdown
-                    }
-                })
-                self.task_memory.update_task(task)
-                
-            except Exception as e:
-                # Update task status on failure
-                task = self.task_memory.get_task(task_id)
-                task.status = TaskStatus.FAILED
-                task.metadata.update({
-                    'error': str(e),
-                    'completion_time': datetime.now().isoformat()
-                })
-                self.task_memory.update_task(task)
-                
-        # Verify task status distribution
-        completed_tasks = self.task_memory.get_tasks_by_status(TaskStatus.COMPLETED)
-        failed_tasks = self.task_memory.get_tasks_by_status(TaskStatus.FAILED)
-        
-        self.assertEqual(len(completed_tasks) + len(failed_tasks), len(model_types))
-        
-    def test_dashboard_task_display(self):
-        """Test dashboard display of model training tasks."""
-        # Create and complete some model training tasks
-        self.test_multiple_model_training_tasks()
-        
-        # Verify dashboard metrics
-        total_tasks = len(self.task_memory.tasks)
-        completed_tasks = len(self.task_memory.get_tasks_by_status(TaskStatus.COMPLETED))
-        failed_tasks = len(self.task_memory.get_tasks_by_status(TaskStatus.FAILED))
-        
-        self.assertEqual(total_tasks, 6)  # 6 model types
-        self.assertEqual(completed_tasks + failed_tasks, total_tasks)
-        
-        # Test task filtering
-        model_tasks = [t for t in self.task_memory.tasks if t.metadata.get('model_type') == 'lstm']
-        self.assertEqual(len(model_tasks), 1)
-        
-    def test_error_handling_and_recovery(self):
-        """Test error handling and recovery in the task system."""
-        # Create a task
-        task_id = str(uuid.uuid4())
-        task = Task(
-            task_id=task_id,
-            type="model_training",
-            status=TaskStatus.PENDING,
-            metadata={
-                'agent': 'model_builder',
-                'creation_time': datetime.now().isoformat(),
-                'model_type': 'lstm'
-            },
-            notes="Starting LSTM model training"
-        )
-        self.task_memory.add_task(task)
-        
-        # Simulate a failure
-        try:
-            # Intentionally cause an error
-            raise ValueError("Test error")
-        except Exception as e:
-            # Update task status
-            task.status = TaskStatus.FAILED
-            task.metadata.update({
-                'error': str(e),
-                'completion_time': datetime.now().isoformat()
-            })
-            self.task_memory.update_task(task)
-            
-        # Verify error handling
-        failed_task = self.task_memory.get_task(task_id)
-        self.assertEqual(failed_task.status, TaskStatus.FAILED)
-        self.assertIn('error', failed_task.metadata)
+        # Verify task failure
+        failed_task = task_memory.get_task(task_id)
+        assert failed_task.status == TaskStatus.FAILED
+        assert 'error' in failed_task.metadata
         
         # Test task retry
         retry_task = Task(
@@ -224,11 +235,8 @@ class TestTaskIntegration(unittest.TestCase):
             },
             notes=f"Retrying failed task {task_id}"
         )
-        self.task_memory.add_task(retry_task)
+        task_memory.add_task(retry_task)
         
         # Verify retry task
-        self.assertIsNotNone(self.task_memory.get_task(retry_task.task_id))
-        self.assertEqual(retry_task.metadata.get('retry_of'), task_id)
-
-if __name__ == '__main__':
-    unittest.main() 
+        assert task_memory.get_task(retry_task.task_id) is not None
+        assert retry_task.metadata.get('retry_of') == task_id 

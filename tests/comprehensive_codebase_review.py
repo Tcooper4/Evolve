@@ -157,7 +157,7 @@ def test_optimization_modules():
     
     # Bayesian Optimizer
     try:
-        from trading.optimization.bayesian_optimizer import BayesianOptimizer
+        from trading.optimization.core_optimizer import BayesianOptimizer
         results['bayesian_optimizer'] = "✅ Available"
     except Exception as e:
         results['bayesian_optimizer'] = f"⚠️ {e}"

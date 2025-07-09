@@ -184,6 +184,15 @@ class TradeSignal:
         return cls(**data)
 
 @dataclass
+class ExecutionRequest:
+    """Request for execution agent operations."""
+    operation_type: str  # 'execute', 'exit', 'status', etc.
+    signal: Optional[TradeSignal] = None
+    market_data: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    timestamp: datetime = datetime.utcnow()
+
+@dataclass
 class ExecutionResult:
     """Execution result data class."""
     success: bool

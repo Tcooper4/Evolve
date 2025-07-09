@@ -35,6 +35,24 @@ class SortMetric(Enum):
     PROFIT_FACTOR = "profit_factor"
 
 @dataclass
+class LeaderboardRequest:
+    """Leaderboard request."""
+    action: str  # 'get_leaderboard', 'update_performance', 'get_agent_performance', 'get_deprecated', 'get_active', 'get_history', 'get_stats'
+    agent_name: Optional[str] = None
+    top_n: Optional[int] = None
+    sort_by: Optional[str] = None
+    status_filter: Optional[str] = None
+    limit: Optional[int] = None
+    performance_data: Optional[Dict[str, Any]] = None
+
+@dataclass
+class LeaderboardResult:
+    """Leaderboard result."""
+    success: bool
+    data: Dict[str, Any]
+    error_message: Optional[str] = None
+
+@dataclass
 class AgentPerformance:
     """Represents agent performance metrics."""
     agent_name: str

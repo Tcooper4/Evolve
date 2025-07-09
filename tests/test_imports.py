@@ -5,6 +5,11 @@ Test script to check all imports and identify any remaining issues.
 
 import sys
 import traceback
+from pathlib import Path
+
+# Add the project root to the path
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 def test_import(module_name):
     """Test importing a module and return success status."""
@@ -14,7 +19,6 @@ def test_import(module_name):
         return True
     except Exception as e:
         print(f"❌ {module_name} failed to import: {e}")
-        traceback.print_exc()
         return None
 
 def main():
@@ -23,13 +27,19 @@ def main():
     print("=" * 50)
     
     modules_to_test = [
-        "trading.memory.model_monitor",
-        "llm.llm_summary", 
+        "trading.memory.agent_memory_manager",
         "trading.portfolio.portfolio_manager",
         "trading.risk.risk_analyzer",
-        "agents.strategy_switcher",
-        "trading.utils",
-        "fpdf"
+        "trading.agents.market_regime_agent",
+        "trading.utils.logging_utils",
+        "trading.strategies.bollinger_strategy",
+        "trading.models.forecast_router",
+        "trading.optimization.self_tuning_optimizer",
+        "trading.backtesting.backtester",
+        "trading.data.providers.yfinance_provider",
+        "strategies.gatekeeper",
+        "utils.config_loader",
+        "config.app_config"
     ]
     
     success_count = 0
@@ -49,5 +59,6 @@ def main():
         print("⚠️  Some imports failed. Check the errors above.")
 
     return None
+
 if __name__ == "__main__":
     main() 

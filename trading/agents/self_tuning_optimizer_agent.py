@@ -15,7 +15,7 @@ from pathlib import Path
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-from trading.optimization.bayesian_optimizer import BayesianOptimizer
+from trading.optimization.core_optimizer import BayesianOptimizer
 from trading.optimization.core_optimizer import GeneticOptimizer
 from trading.market.market_analyzer import MarketAnalyzer
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
@@ -29,6 +29,24 @@ class OptimizationTrigger(str, Enum):
     SCHEDULED = "scheduled"
     VOLATILITY_SPIKE = "volatility_spike"
     MANUAL = "manual"
+
+@dataclass
+class SelfTuningRequest:
+    """Self-tuning optimization request."""
+    strategy_name: str
+    action: str  # 'check_triggers', 'optimize_parameters', 'get_summary', 'set_constraints'
+    current_parameters: Optional[Dict[str, Any]] = None
+    strategy_performance: Optional[pd.Series] = None
+    market_data: Optional[pd.DataFrame] = None
+    triggers: Optional[List[OptimizationTrigger]] = None
+    constraints: Optional[List[Dict[str, Any]]] = None
+
+@dataclass
+class SelfTuningResult:
+    """Self-tuning optimization result."""
+    success: bool
+    data: Dict[str, Any]
+    error_message: Optional[str] = None
 
 @dataclass
 class OptimizationResult:

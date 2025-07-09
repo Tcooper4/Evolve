@@ -23,6 +23,23 @@ from trading.memory.agent_memory import AgentMemory
 from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 @dataclass
+class ResearchRequest:
+    """Research request."""
+    action: str  # 'discover_papers', 'evaluate_models', 'auto_implement', 'get_summary'
+    keywords: Optional[List[str]] = None
+    max_papers: Optional[int] = None
+    threshold: Optional[float] = None
+    papers: Optional[List['ResearchPaper']] = None
+    evaluations: Optional[List['ModelEvaluation']] = None
+
+@dataclass
+class ResearchResult:
+    """Research result."""
+    success: bool
+    data: Dict[str, Any]
+    error_message: Optional[str] = None
+
+@dataclass
 class ResearchPaper:
     """Research paper information."""
     title: str
