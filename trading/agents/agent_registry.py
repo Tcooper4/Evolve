@@ -37,6 +37,23 @@ class AgentCategory(Enum):
     UTILITY = "utility"
 
 @dataclass
+class AgentRegistrationRequest:
+    """Agent registration request."""
+    action: str  # 'register', 'unregister', 'get', 'list', 'search', 'update_status'
+    agent_info: Optional['AgentInfo'] = None
+    agent_name: Optional[str] = None
+    status: Optional[str] = None
+    query: Optional[str] = None
+    category: Optional[str] = None
+
+@dataclass
+class AgentRegistrationResult:
+    """Agent registration result."""
+    success: bool
+    data: Dict[str, Any]
+    error_message: Optional[str] = None
+
+@dataclass
 class AgentCapability:
     """Agent capability definition."""
     name: str

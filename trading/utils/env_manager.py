@@ -12,7 +12,7 @@ class EnvironmentSettings(BaseSettings):
     """Environment settings with validation."""
     
     # API Keys
-    POLYGON_KEY: SecretStr
+    POLYGON_API_KEY: SecretStr
     OPENAI_API_KEY: SecretStr
     
     # Redis Configuration

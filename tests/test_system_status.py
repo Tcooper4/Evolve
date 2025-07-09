@@ -5,8 +5,13 @@ import sys
 import os
 import importlib
 import traceback
+import pytest
 from typing import Dict, List, Tuple, Any
 import logging
+from datetime import datetime
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +29,6 @@ class SystemStatusTester:
             'details': []
         }
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def test_core_modules(self):
         """Test core trading modules."""
         logger.info("Testing core modules...")

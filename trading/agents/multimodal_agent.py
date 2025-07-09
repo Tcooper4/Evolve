@@ -11,8 +11,8 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
-from base_agent_interface import BaseAgent, AgentConfig, AgentResult
-from prompt_templates import format_template
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
+from .prompt_templates import format_template
 
 try:
     import plotly.graph_objs as go

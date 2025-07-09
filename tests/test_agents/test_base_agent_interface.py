@@ -5,11 +5,16 @@ This module tests the base agent interface and ensures all agents
 properly implement the required functionality.
 """
 
+import sys
+import os
 import pytest
 import asyncio
 from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, Any
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Local imports
 from trading.agents.base_agent_interface import (

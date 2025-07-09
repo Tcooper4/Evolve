@@ -72,6 +72,25 @@ class ExecutionResult:
     risk_metrics: Dict[str, float]
     metadata: Dict[str, Any]
 
+@dataclass
+class RiskControlRequest:
+    """Request for risk control operations."""
+    operation_type: str  # 'check_risk', 'execute_trade', 'get_risk_summary'
+    trade_request: Optional[TradeRequest] = None
+    metadata: Optional[Dict[str, Any]] = None
+    timestamp: datetime = datetime.now()
+
+@dataclass
+class RiskControlResult:
+    """Result of risk control operations."""
+    success: bool
+    operation_type: str
+    risk_check: Optional[RiskCheck] = None
+    execution_result: Optional[ExecutionResult] = None
+    risk_summary: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    timestamp: datetime = datetime.now()
+
 class ExecutionRiskControlAgent(BaseAgent):
     """Advanced execution risk control agent with comprehensive risk management."""
     

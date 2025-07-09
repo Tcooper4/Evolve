@@ -79,6 +79,17 @@ class RoutingDecision:
     timestamp: datetime
     metadata: Optional[Dict[str, Any]] = None
 
+@dataclass
+class ParsedIntent:
+    """Structured parsed intent result."""
+    intent: str
+    confidence: float
+    args: Dict[str, Any]
+    provider: str  # 'openai', 'huggingface', 'regex'
+    raw_response: str
+    error: Optional[str] = None
+    json_spec: Optional[Dict[str, Any]] = None  # Full JSON spec for debugging
+
 class PromptRouterAgent(BaseAgent):
     """
     Intelligent prompt router that directs user requests to appropriate agents.

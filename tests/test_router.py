@@ -1,8 +1,14 @@
 """Tests for the router functionality."""
 
+import sys
+import os
 import pytest
 from unittest.mock import Mock, patch
-from core.agents.router import RouterAgent as AgentRouter
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from trading.agents.router import RouterAgent as AgentRouter
 from trading.agents.intent_detector import IntentDetector
 
 class TestRouter:

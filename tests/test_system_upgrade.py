@@ -12,14 +12,14 @@ This script tests all the upgrades made to the Evolve trading system:
 import sys
 import os
 import logging
+import pytest
 from pathlib import Path
 from typing import Dict, Any, List
 import json
 from datetime import datetime
 
 # Add project root to path
-project_root = Path(__file__).parent
-sys.path.insert(0, str(project_root))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Configure logging
 logging.basicConfig(
@@ -38,7 +38,6 @@ class SystemUpgradeTester:
         self.failed_tests = 0
         self.total_tests = 0
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def run_all_tests(self) -> Dict[str, Any]:
         """Run all system upgrade tests."""
         logger.info("🚀 Starting System Upgrade Tests")
@@ -70,7 +69,7 @@ class SystemUpgradeTester:
         
         # Test AgentHub
         try:
-            from core.agent_hub import AgentHub
+            from fallback.agent_hub import AgentHub
             agent_hub = AgentHub()
             
             # Test system health
@@ -95,7 +94,7 @@ class SystemUpgradeTester:
         
         # Test CapabilityRouter
         try:
-            from core.capability_router import get_system_health, get_capability_status
+            from fallback.capability_router import get_system_health, get_capability_status
             
             # Test capability status
             capabilities = get_capability_status()
@@ -249,8 +248,8 @@ class SystemUpgradeTester:
         
         # Test that all components return proper health status
         health_checks = [
-            ("AgentHub", "core.agent_hub", "AgentHub"),
-            ("CapabilityRouter", "core.capability_router", "get_system_health"),
+            ("AgentHub", "fallback.agent_hub", "AgentHub"),
+            ("CapabilityRouter", "fallback.capability_router", "get_system_health"),
             ("DataFeed", "data.live_feed", "get_data_feed"),
             ("RLTrader", "rl.rl_trader", "get_rl_trader"),
             ("UnifiedInterface", "unified_interface", "UnifiedInterface")

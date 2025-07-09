@@ -86,10 +86,16 @@ class AgentMemoryManager:
         """Initialize storage backend."""
         try:
             import redis
+            import os
+            
+            # Get Redis password from environment
+            redis_password = os.getenv('REDIS_PASSWORD')
+            
             self.redis_client = redis.Redis(
                 host=redis_host,
                 port=redis_port,
                 db=redis_db,
+                password=redis_password,
                 decode_responses=True,
                 socket_connect_timeout=1
             )

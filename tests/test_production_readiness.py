@@ -19,13 +19,14 @@ import logging
 import json
 import os
 import sys
+from contextlib import contextmanager
 
 # Add project root to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import components to test
 try:
-    from unified_interface import EnhancedUnifiedInterface
+    from interface.unified_interface import EnhancedUnifiedInterface
     from trading.strategies.hybrid_engine import HybridEngine
     from trading.models.forecast_engine import ForecastEngine
     from trading.agents.prompt_router_agent import PromptRouterAgent

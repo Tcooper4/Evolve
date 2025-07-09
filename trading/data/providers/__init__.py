@@ -32,7 +32,7 @@ class ProviderManager:
     def _initialize_providers(self) -> None:
         """Initialize all available data providers."""
         # Get API keys from environment
-        alpha_vantage_key = os.getenv("ALPHA_VANTAGE_KEY", "")
+        alpha_vantage_key = os.getenv("ALPHA_VANTAGE_API_KEY", "")
         
         # YFinance configuration
         yfinance_config = ProviderConfig(

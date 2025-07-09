@@ -156,11 +156,21 @@ class AlphaVantageProvider(BaseDataProvider):
         self.redis_client = None
         if REDIS_AVAILABLE:
             try:
-                self.redis_client = redis.Redis(host='localhost', port=6379, db=0)
+                import os
+                redis_password = os.getenv('REDIS_PASSWORD')
+                self.redis_client = redis.Redis(
+                    host='localhost', 
+                    port=6379, 
+                    db=0,
+                    password=redis_password
+                )
                 self.redis_client.ping()
             except (redis.ConnectionError, redis.TimeoutError) as e:
                 self.logger.debug(f"Redis connection failed: {e}")
                 self.redis_client = None
+        
+        # Call setup method
+        self._setup()
 
     def _setup(self) -> None:
         """Setup method called during initialization."""

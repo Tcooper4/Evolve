@@ -16,6 +16,23 @@ from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 logger = logging.getLogger(__name__)
 
 @dataclass
+class MetaLearningRequest:
+    """Meta-learning request."""
+    action: str  # 'store_experience', 'learn_from_experiences', 'get_recommendation', 'get_summary', 'run'
+    context: Optional[Dict[str, Any]] = None
+    action_taken: Optional[str] = None
+    outcome: Optional[Dict[str, Any]] = None
+    performance: Optional[float] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+@dataclass
+class MetaLearningResult:
+    """Meta-learning result."""
+    success: bool
+    data: Dict[str, Any]
+    error_message: Optional[str] = None
+
+@dataclass
 class MetaLearningExperience:
     """Represents a learning experience for meta-learning."""
     timestamp: datetime
@@ -383,4 +400,7 @@ class MetaLearnerAgent(BaseAgent):
                 'success': False,
                 'error': str(e),
                 'timestamp': datetime.now().isoformat()
-            } 
+            }
+
+# Alias for backward compatibility
+MetaLearner = MetaLearnerAgent 

@@ -1,10 +1,16 @@
 """Tests for the RSI strategy using pandas-ta."""
 
+import sys
+import os
 import pytest
 import pandas as pd
 import numpy as np
 from unittest.mock import patch, mock_open
 import json
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from trading.strategies.rsi_signals import generate_rsi_signals, load_optimized_settings
 
 class TestRSISignals:

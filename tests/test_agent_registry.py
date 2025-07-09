@@ -15,6 +15,9 @@ import os
 import sys
 from unittest.mock import Mock, patch, MagicMock
 
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # Import agent registry components
 from trading.agents.agent_registry import AgentRegistry
 from trading.agents.base_agent_interface import BaseAgent, AgentConfig

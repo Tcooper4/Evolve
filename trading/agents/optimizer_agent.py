@@ -97,6 +97,44 @@ class StrategyConfig:
         return cls(**data)
 
 @dataclass
+class OptimizationRequest:
+    """Optimization request data class."""
+    optimization_type: OptimizationType
+    target_metric: OptimizationMetric
+    symbols: List[str]
+    time_periods: List[Dict[str, Any]]
+    strategy_configs: List[StrategyConfig]
+    parameters_to_optimize: List[OptimizationParameter]
+    max_iterations: int = 1000
+    parallel_workers: int = 4
+    min_trades: int = 10
+    confidence_threshold: float = 0.05
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            'optimization_type': self.optimization_type.value,
+            'target_metric': self.target_metric.value,
+            'symbols': self.symbols,
+            'time_periods': self.time_periods,
+            'strategy_configs': [config.to_dict() for config in self.strategy_configs],
+            'parameters_to_optimize': [param.to_dict() for param in self.parameters_to_optimize],
+            'max_iterations': self.max_iterations,
+            'parallel_workers': self.parallel_workers,
+            'min_trades': self.min_trades,
+            'confidence_threshold': self.confidence_threshold
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'OptimizationRequest':
+        """Create from dictionary."""
+        data['optimization_type'] = OptimizationType(data['optimization_type'])
+        data['target_metric'] = OptimizationMetric(data['target_metric'])
+        data['strategy_configs'] = [StrategyConfig.from_dict(config) for config in data['strategy_configs']]
+        data['parameters_to_optimize'] = [OptimizationParameter.from_dict(param) for param in data['parameters_to_optimize']]
+        return cls(**data)
+
+@dataclass
 class OptimizationResult:
     """Optimization result data class."""
     parameter_combination: Dict[str, Any]
