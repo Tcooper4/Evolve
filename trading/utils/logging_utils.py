@@ -322,6 +322,28 @@ class LogManager:
 # Create singleton instance
 log_manager = LogManager()
 
+def setup_logger(
+    name: str,
+    level: int = logging.INFO,
+    log_to_file: bool = True,
+    log_to_console: bool = True,
+    structured: bool = True
+) -> logging.Logger:
+    """Set up a logger with specified configuration.
+    
+    Args:
+        name: Name of the logger
+        level: Logging level
+        log_to_file: Whether to log to file
+        log_to_console: Whether to log to console
+        structured: Whether to use structured logging
+        
+    Returns:
+        Configured logger
+    """
+    log_manager = LogManager()
+    return log_manager.setup_logger(name, level, log_to_file, log_to_console, structured)
+
 def get_logger(
     name: str,
     level: Optional[int] = None,

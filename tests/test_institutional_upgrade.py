@@ -13,6 +13,7 @@ This script validates all the institutional-level improvements:
 """
 
 import sys
+import os
 import logging
 import json
 import pandas as pd
@@ -21,6 +22,9 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List
 import warnings
 warnings.filterwarnings('ignore')
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Configure logging
 logging.basicConfig(
@@ -108,7 +112,7 @@ class InstitutionalUpgradeTester:
         
         try:
             # Test unified interface
-            from unified_interface import get_enhanced_interface
+            from interface.unified_interface import get_enhanced_interface
             
             interface = get_enhanced_interface()
             

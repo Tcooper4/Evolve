@@ -12,8 +12,27 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from base_agent_interface import BaseAgent, AgentConfig, AgentResult
-from prompt_templates import format_template
+from dataclasses import dataclass
+from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
+from .prompt_templates import format_template
+
+@dataclass
+class ResearchRequest:
+    """Research request."""
+    action: str  # 'research', 'search_github', 'search_arxiv', 'summarize', 'code_suggestion'
+    topic: Optional[str] = None
+    query: Optional[str] = None
+    max_results: Optional[int] = None
+    text: Optional[str] = None
+    description: Optional[str] = None
+    prompt: Optional[str] = None
+
+@dataclass
+class ResearchResult:
+    """Research result."""
+    success: bool
+    data: Dict[str, Any]
+    error_message: Optional[str] = None
 
 # Optionally import OpenAI API
 try:

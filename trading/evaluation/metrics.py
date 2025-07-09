@@ -220,3 +220,26 @@ class RiskMetrics:
         if not self.metrics:
             raise ValueError("No metrics have been calculated yet")
         return self.metrics.copy()
+
+# Standalone functions for compatibility with existing imports
+def calculate_sharpe_ratio(returns: np.ndarray, risk_free_rate: float = 0.0) -> float:
+    """Calculate the Sharpe ratio for a series of returns."""
+    if len(returns) == 0:
+        return 0.0
+    excess = returns - risk_free_rate / len(returns)
+    return float(np.sqrt(252) * excess.mean() / excess.std()) if excess.std() != 0 else 0.0
+
+def calculate_max_drawdown(returns: np.ndarray) -> float:
+    """Calculate maximum drawdown for a series of returns."""
+    if len(returns) == 0:
+        return 0.0
+    cumulative = (1 + returns).cumprod()
+    running_max = np.maximum.accumulate(cumulative)
+    drawdowns = cumulative / running_max - 1
+    return float(drawdowns.min())
+
+def calculate_win_rate(returns: np.ndarray) -> float:
+    """Calculate win rate (percentage of positive returns)."""
+    if len(returns) == 0:
+        return 0.0
+    return float(np.sum(returns > 0) / len(returns))

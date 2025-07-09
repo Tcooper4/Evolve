@@ -14,12 +14,12 @@ import json
 from pathlib import Path
 import warnings
 
-# Technical analysis imports
+# Technical analysis imports - using pandas_ta instead of talib
 try:
-    import talib
+    import pandas_ta as ta
     TA_AVAILABLE = True
 except ImportError as e:
-    logging.warning(f"TA-Lib not available: {e}")
+    logging.warning(f"pandas_ta not available: {e}")
     TA_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
@@ -160,13 +160,17 @@ class RegimeClassifier:
         """Calculate trend strength using ADX or similar."""
         try:
             if TA_AVAILABLE and len(prices) > 14:
-                # Use ADX for trend strength
+                # Use ADX for trend strength with pandas_ta
                 high = prices  # Simplified - use price as high/low
                 low = prices
                 close = prices
                 
-                adx = talib.ADX(high, low, close, timeperiod=14)
-                return adx.iloc[-1] / 100.0 if not np.isnan(adx.iloc[-1]) else 0.5
+                adx = ta.adx(high, low, close, length=14)
+                if adx is not None and not adx.empty:
+                    adx_value = adx.iloc[-1] if isinstance(adx, pd.Series) else adx['ADX_14'].iloc[-1]
+                    return adx_value / 100.0 if not np.isnan(adx_value) else 0.5
+                else:
+                    return 0.5
             else:
                 # Manual trend strength calculation
                 returns = prices.pct_change().dropna()

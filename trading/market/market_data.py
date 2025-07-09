@@ -53,7 +53,9 @@ class MarketData:
         self.last_update = {}
         self.alpha_vantage = None
         if self.config.get('use_alpha_vantage', False):
-            self.alpha_vantage = TimeSeries(key=self.config.get('alpha_vantage_key'))
+            alpha_vantage_key = os.getenv('ALPHA_VANTAGE_API_KEY')
+            if alpha_vantage_key:
+                self.alpha_vantage = TimeSeries(key=alpha_vantage_key)
         
         # Initialize error tracking
         self.error_counts = {

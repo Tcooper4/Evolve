@@ -33,6 +33,26 @@ class TaskStatus(Enum):
     CANCELLED = "cancelled"
 
 @dataclass
+class TaskDelegationRequest:
+    """Task delegation request."""
+    action: str  # 'delegate_task', 'delegate_workflow', 'get_task_status', 'cancel_task', 'get_agent_status', 'register_agent'
+    task_description: Optional[str] = None
+    workflow: Optional[Dict[str, Any]] = None
+    task_id: Optional[str] = None
+    agent_name: Optional[str] = None
+    roles: Optional[List[str]] = None
+    capabilities: Optional[List[str]] = None
+    priority: Optional[str] = None
+    timeout: Optional[int] = None
+
+@dataclass
+class TaskDelegationResult:
+    """Task delegation result."""
+    success: bool
+    data: Dict[str, Any]
+    error_message: Optional[str] = None
+
+@dataclass
 class Task:
     """Represents a task to be delegated."""
     task_id: str

@@ -55,6 +55,30 @@ class TradeApproval:
     timestamp: datetime
     metadata: Dict[str, Any]
 
+@dataclass
+class RiskAssessmentRequest:
+    """Request for risk assessment operations."""
+    operation_type: str  # 'approve_trade', 'get_risk_summary', 'assess_portfolio'
+    trade_id: Optional[str] = None
+    symbol: Optional[str] = None
+    size: Optional[float] = None
+    side: Optional[str] = None
+    price: Optional[float] = None
+    portfolio_context: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    timestamp: datetime = datetime.now()
+
+@dataclass
+class RiskAssessmentResult:
+    """Result of risk assessment operations."""
+    success: bool
+    operation_type: str
+    trade_approval: Optional[TradeApproval] = None
+    risk_summary: Optional[Dict[str, Any]] = None
+    risk_checks: Optional[List[RiskCheck]] = None
+    error_message: Optional[str] = None
+    timestamp: datetime = datetime.now()
+
 class ExecutionRiskAgent(BaseAgent):
     """Execution risk control agent for trade approval and risk management."""
     
