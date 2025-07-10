@@ -439,7 +439,7 @@ with st.sidebar:
 # --- Main Layout ---
 st.markdown("""
 <div class="main-header">
-    <h1>🚀 Evolve AI Trading</h1>
+    <h1>Evolve AI Trading</h1>
     <p>Natural Language Trading Intelligence</p>
 </div>
 """, unsafe_allow_html=True)
@@ -462,7 +462,7 @@ if 'agent_logger' not in st.session_state:
 st.markdown("""
 <div class="prompt-container">
     <h3 style="text-align: center; margin-bottom: 1.5rem; color: #333;">
-        💬 Ask me anything about trading
+        Ask me anything about trading
     </h3>
     <p style="text-align: center; color: #666; margin-bottom: 2rem;">
         Examples: "Show me the best forecast for AAPL", "Switch to RSI strategy and optimize it", 
@@ -480,11 +480,11 @@ prompt = st.text_input(
 
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    submit = st.button("🚀 Submit", use_container_width=True)
+    submit = st.button("Submit", use_container_width=True)
 
 # Process prompt
 if submit and prompt:
-    with st.spinner("🤖 Processing your request..."):
+    with st.spinner("Processing your request..."):
         try:
             if st.session_state.prompt_agent:
                 response = st.session_state.prompt_agent.process_prompt(prompt)
@@ -501,43 +501,43 @@ if submit and prompt:
                 if hasattr(response, 'message'):
                     message_lower = response.message.lower()
                     if 'forecast' in message_lower:
-                        st.session_state.main_nav = "📊 Forecast & Trade"
+                        st.session_state.main_nav = "Forecasting"
                     elif 'strategy' in message_lower:
-                        st.session_state.main_nav = "🧠 Strategy Builder"
+                        st.session_state.main_nav = "Strategy Lab"
                     elif 'report' in message_lower or 'export' in message_lower:
-                        st.session_state.main_nav = "📁 Reports & Exports"
+                        st.session_state.main_nav = "Reports"
                     elif 'tune' in message_lower or 'optimize' in message_lower:
-                        st.session_state.main_nav = "📈 Model Tuner"
+                        st.session_state.main_nav = "Model Lab"
                     elif 'setting' in message_lower:
-                        st.session_state.main_nav = "⚙️ Settings"
+                        st.session_state.main_nav = "Settings"
                 
-                st.success("✅ Request processed successfully!")
+                st.success("Request processed successfully!")
             else:
-                st.error("❌ Core components not available. Please check system configuration.")
+                st.error("Core components not available. Please check system configuration.")
         except Exception as e:
-            st.error(f"❌ Error processing request: {str(e)}")
+            st.error(f"Error processing request: {str(e)}")
 
 # Display conversation history
 if st.session_state.conversation_history:
-    st.markdown("### 📝 Recent Conversations")
+    st.markdown("### Recent Conversations")
     for i, conv in enumerate(reversed(st.session_state.conversation_history[-5:])):
-        with st.expander(f"💬 {conv['prompt'][:50]}...", expanded=False):
+        with st.expander(f"{conv['prompt'][:50]}...", expanded=False):
             st.markdown(f"""
             <div class="conversation-item">
-                <div class="conversation-prompt">🤔 **Your Question:**</div>
+                <div class="conversation-prompt">Your Question:</div>
                 <div style="margin-bottom: 1rem;">{conv['prompt']}</div>
-                <div class="conversation-prompt">🤖 **AI Response:**</div>
+                <div class="conversation-prompt">AI Response:</div>
                 <div class="conversation-response">{getattr(conv['response'], 'message', 'No response available.')}</div>
             </div>
             """, unsafe_allow_html=True)
             
             if hasattr(conv['response'], 'data') and conv['response'].data:
-                with st.expander("📊 Detailed Data", expanded=False):
+                with st.expander("Detailed Data", expanded=False):
                     st.json(conv['response'].data)
 
 # Display agent logs
 if st.session_state.agent_logger:
-    with st.expander("🔍 Agent Activity Logs", expanded=False):
+    with st.expander("Agent Activity Logs", expanded=False):
         try:
             from trading.memory.agent_logger import AgentAction, LogLevel
             
@@ -545,7 +545,7 @@ if st.session_state.agent_logger:
             recent_logs = st.session_state.agent_logger.get_recent_logs(limit=20)
             
             if recent_logs:
-                st.markdown("#### 🤖 Recent Agent Actions")
+                st.markdown("#### Recent Agent Actions")
                 
                 # Filter options
                 col1, col2, col3 = st.columns(3)
@@ -592,12 +592,12 @@ if st.session_state.agent_logger:
                     
                     # Show performance metrics if available
                     if log.performance_metrics:
-                        with st.expander("📊 Performance Metrics", expanded=False):
+                        with st.expander("Performance Metrics", expanded=False):
                             st.json(log.performance_metrics)
                     
                     # Show error details if available
                     if log.error_details:
-                        with st.expander("❌ Error Details", expanded=False):
+                        with st.expander("Error Details", expanded=False):
                             st.error(log.error_details)
             else:
                 st.info("No recent agent activity to display.")
@@ -606,283 +606,97 @@ if st.session_state.agent_logger:
             st.warning(f"Could not load agent logs: {e}")
 
 # --- Main Content ---
-if primary_nav == "🏠 Home & Chat":
+if primary_nav == "Home & Chat":
     # Enhanced home page with chat interface
-    st.markdown("### 💬 AI Trading Assistant")
+    st.markdown("### AI Trading Assistant")
     
     # Display conversation history with better styling
     if st.session_state.conversation_history:
-        st.markdown("#### 📝 Recent Conversations")
+        st.markdown("#### Recent Conversations")
         for i, conv in enumerate(reversed(st.session_state.conversation_history[-5:])):
-            with st.expander(f"💬 {conv['prompt'][:50]}...", expanded=False):
+            with st.expander(f"{conv['prompt'][:50]}...", expanded=False):
                 st.markdown(f"""
                 <div class="conversation-item">
-                    <div class="conversation-prompt">🤔 **Your Question:**</div>
+                    <div class="conversation-prompt">Your Question:</div>
                     <div style="margin-bottom: 1rem;">{conv['prompt']}</div>
-                    <div class="conversation-prompt">🤖 **AI Response:**</div>
+                    <div class="conversation-prompt">AI Response:</div>
                     <div class="conversation-response">{getattr(conv['response'], 'message', 'No response available.')}</div>
                 </div>
                 """, unsafe_allow_html=True)
                 
                 if hasattr(conv['response'], 'data') and conv['response'].data:
-                    with st.expander("📊 Detailed Data", expanded=False):
+                    with st.expander("Detailed Data", expanded=False):
                         st.json(conv['response'].data)
     else:
         st.markdown("""
         <div class="result-card">
-            <h3>🎯 Welcome to Evolve AI Trading</h3>
+            <h3>Welcome to Evolve AI Trading</h3>
             <p>Start by asking me anything about trading! I can help you with:</p>
             <ul>
-                <li>📊 <strong>Forecasting:</strong> "Show me the best forecast for AAPL"</li>
-                <li>🧠 <strong>Strategy Analysis:</strong> "Switch to RSI strategy and optimize it"</li>
-                <li>📈 <strong>Model Building:</strong> "Create a new model for cryptocurrency trading"</li>
-                <li>📁 <strong>Reports:</strong> "Generate a performance report for my portfolio"</li>
-                <li>🔍 <strong>Market Analysis:</strong> "What's the current market sentiment?"</li>
+                <li><strong>Forecasting:</strong> "Show me the best forecast for AAPL"</li>
+                <li><strong>Strategy Analysis:</strong> "Switch to RSI strategy and optimize it"</li>
+                <li><strong>Model Building:</strong> "Create a new model for cryptocurrency trading"</li>
+                <li><strong>Reports:</strong> "Generate a performance report for my portfolio"</li>
+                <li><strong>Market Analysis:</strong> "What's the current market sentiment?"</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
 
-elif primary_nav == "📊 Forecasting":
-    st.markdown("### 📊 Advanced Forecasting")
-    
-    # Forecasting interface
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.markdown("""
-        <div class="result-card">
-            <h3>🎯 Multi-Model Forecasting</h3>
-            <p>Get comprehensive forecasts using our ensemble of AI models.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Symbol input
-        symbol = st.text_input("Enter Symbol", placeholder="e.g., AAPL, TSLA, ETH-USD")
-        
-        # Forecast parameters
-        forecast_days = st.slider("Forecast Horizon (Days)", 1, 30, 7)
-        confidence_level = st.slider("Confidence Level", 0.8, 0.99, 0.95)
-        
-        if st.button("🚀 Generate Forecast", use_container_width=True):
-            if symbol:
-                with st.spinner("🤖 Generating forecast..."):
-                    try:
-                        # Simulate forecast generation
-                        st.success(f"✅ Forecast generated for {symbol}")
-                        
-                        # Display forecast results
-                        st.markdown("""
-                        <div class="result-card">
-                            <h3>📈 Forecast Results</h3>
-                            <p>Forecast analysis completed successfully.</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # Mock forecast data
-                        forecast_data = {
-                            'symbol': symbol,
-                            'predicted_price': 150.25,
-                            'confidence_interval': [145.50, 155.00],
-                            'trend': 'bullish',
-                            'models_used': ['LSTM', 'Transformer', 'Ensemble'],
-                            'accuracy_score': 0.87
-                        }
-                        
-                        st.json(forecast_data)
-                        
-                    except Exception as e:
-                        st.error(f"❌ Error generating forecast: {e}")
-            else:
-                st.warning("⚠️ Please enter a symbol")
-    
-    with col2:
-        st.markdown("""
-        <div class="result-card">
-            <h3>📊 Model Performance</h3>
-            <p>Current model performance metrics:</p>
-            <ul>
-                <li>LSTM: 87% accuracy</li>
-                <li>Transformer: 89% accuracy</li>
-                <li>Ensemble: 92% accuracy</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+elif primary_nav == "Forecasting":
+    # Import and run the forecasting page
+    try:
+        from pages.Forecasting import main as forecasting_main
+        forecasting_main()
+    except ImportError as e:
+        st.error(f"Forecasting page not available: {e}")
+        st.info("Please ensure the Forecasting.py page exists in the pages directory")
+    except Exception as e:
+        st.error(f"Error loading Forecasting page: {e}")
 
-elif primary_nav == "🧠 Strategy Lab":
-    st.markdown("### 🧠 Strategy Laboratory")
-    
-    # Strategy selection and optimization
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.markdown("""
-        <div class="result-card">
-            <h3>🎯 Strategy Selection</h3>
-            <p>Choose and optimize trading strategies.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        strategy_type = st.selectbox(
-            "Select Strategy",
-            ["RSI Mean Reversion", "MACD Crossover", "Bollinger Bands", "Moving Average", "Custom"]
-        )
-        
-        if strategy_type == "Custom":
-            custom_strategy = st.text_area("Define Custom Strategy", placeholder="Enter your strategy logic...")
-        
-        optimization_level = st.select_slider(
-            "Optimization Level",
-            options=["None", "Basic", "Advanced", "Full"]
-        )
-        
-        if st.button("🔧 Optimize Strategy", use_container_width=True):
-            st.success("✅ Strategy optimization completed!")
-    
-    with col2:
-        st.markdown("""
-        <div class="result-card">
-            <h3>📊 Strategy Performance</h3>
-            <p>Performance metrics for selected strategies:</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Mock strategy performance
-        performance_data = {
-            'RSI Mean Reversion': {'sharpe': 1.2, 'win_rate': 0.65, 'max_dd': 0.08},
-            'MACD Crossover': {'sharpe': 0.9, 'win_rate': 0.58, 'max_dd': 0.12},
-            'Bollinger Bands': {'sharpe': 1.1, 'win_rate': 0.62, 'max_dd': 0.10}
-        }
-        
-        if strategy_type in performance_data:
-            perf = performance_data[strategy_type]
-            st.metric("Sharpe Ratio", f"{perf['sharpe']:.2f}")
-            st.metric("Win Rate", f"{perf['win_rate']:.1%}")
-            st.metric("Max Drawdown", f"{perf['max_dd']:.1%}")
+elif primary_nav == "Strategy Lab":
+    # Import and run the strategy lab page
+    try:
+        from pages.Strategy_Lab import main as strategy_lab_main
+        strategy_lab_main()
+    except ImportError as e:
+        st.error(f"Strategy Lab page not available: {e}")
+        st.info("Please ensure the Strategy_Lab.py page exists in the pages directory")
+    except Exception as e:
+        st.error(f"Error loading Strategy Lab page: {e}")
 
-elif primary_nav == "📈 Model Lab":
-    st.markdown("### 📈 Model Laboratory")
-    
-    # Model synthesis and management
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.markdown("""
-        <div class="result-card">
-            <h3>🤖 AI Model Synthesis</h3>
-            <p>Create and optimize new AI models using advanced synthesis techniques.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Model synthesis interface
-        synthesis_type = st.selectbox(
-            "Model Type",
-            ["LSTM", "Transformer", "Ensemble", "Custom", "Auto-Generated"]
-        )
-        
-        target_performance = st.slider("Target Performance", 0.7, 0.95, 0.85)
-        max_complexity = st.slider("Max Complexity", 0.1, 1.0, 0.6)
-        
-        if st.button("🔬 Synthesize Model", use_container_width=True):
-            with st.spinner("🤖 Synthesizing new model..."):
-                try:
-                    # Initialize ModelSynthesizerAgent
-                    from trading.agents.model_synthesizer_agent import ModelSynthesizerAgent
-                    
-                    synthesizer = ModelSynthesizerAgent()
-                    
-                    # Create synthesis request
-                    from trading.agents.model_synthesizer_agent import SynthesisRequest, ModelType
-                    
-                    request = SynthesisRequest(
-                        target_performance=target_performance,
-                        max_complexity=max_complexity,
-                        preferred_model_types=[ModelType.LSTM if synthesis_type == "LSTM" else ModelType.TRANSFORMER],
-                        data_characteristics={'features': ['price', 'volume', 'technical_indicators']},
-                        constraints={'max_training_time': 1800}
-                    )
-                    
-                    st.success("✅ Model synthesis initiated!")
-                    st.info("🔄 Model is being trained in the background...")
-                    
-                except Exception as e:
-                    st.error(f"❌ Model synthesis failed: {e}")
-    
-    with col2:
-        st.markdown("""
-        <div class="result-card">
-            <h3>📊 Model Registry</h3>
-            <p>Active models in the system:</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Mock model registry
-        models = [
-            {"name": "LSTM_v1", "accuracy": 0.87, "status": "Active"},
-            {"name": "Transformer_v2", "accuracy": 0.89, "status": "Active"},
-            {"name": "Ensemble_v1", "accuracy": 0.92, "status": "Active"},
-            {"name": "Synthesized_v1", "accuracy": 0.85, "status": "Training"}
-        ]
-        
-        for model in models:
-            status_color = "🟢" if model["status"] == "Active" else "🟡"
-            st.markdown(f"{status_color} **{model['name']}** - {model['accuracy']:.1%} accuracy")
+elif primary_nav == "Model Lab":
+    # Import and run the model lab page
+    try:
+        from pages.Model_Lab import main as model_lab_main
+        model_lab_main()
+    except ImportError as e:
+        st.error(f"Model Lab page not available: {e}")
+        st.info("Please ensure the Model_Lab.py page exists in the pages directory")
+    except Exception as e:
+        st.error(f"Error loading Model Lab page: {e}")
 
-elif primary_nav == "📁 Reports":
-    st.markdown("### 📁 Comprehensive Reports")
-    
-    # Report generation interface
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.markdown("""
-        <div class="result-card">
-            <h3>📊 Report Generator</h3>
-            <p>Generate comprehensive trading reports and analytics.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        report_type = st.selectbox(
-            "Report Type",
-            ["Performance Report", "Risk Analysis", "Strategy Backtest", "Model Evaluation", "Portfolio Summary"]
-        )
-        
-        date_range = st.date_input(
-            "Date Range",
-            value=(datetime.now() - timedelta(days=30), datetime.now())
-        )
-        
-        include_charts = st.checkbox("Include Interactive Charts", value=True)
-        export_format = st.selectbox("Export Format", ["PDF", "Excel", "HTML", "JSON"])
-        
-        if st.button("📄 Generate Report", use_container_width=True):
-            st.success("✅ Report generation completed!")
-            st.info("📥 Report is ready for download")
-    
-    with col2:
-        st.markdown("""
-        <div class="result-card">
-            <h3>📈 Quick Analytics</h3>
-            <p>Key performance indicators:</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Mock analytics
-        st.metric("Total Return", "12.5%", "+2.3%")
-        st.metric("Sharpe Ratio", "1.8", "+0.2")
-        st.metric("Max Drawdown", "8.2%", "-1.1%")
-        st.metric("Win Rate", "68%", "+3%")
+elif primary_nav == "Reports":
+    # Import and run the reports page
+    try:
+        from pages.Reports import main as reports_main
+        reports_main()
+    except ImportError as e:
+        st.error(f"Reports page not available: {e}")
+        st.info("Please ensure the Reports.py page exists in the pages directory")
+    except Exception as e:
+        st.error(f"Error loading Reports page: {e}")
 
 # Handle advanced navigation
 if 'advanced_nav' in locals():
-    if advanced_nav == "⚙️ Settings":
-        st.markdown("### ⚙️ Advanced Settings")
+    if advanced_nav == "Settings":
+        st.markdown("### Advanced Settings")
         
         col1, col2 = st.columns(2)
         
         with col1:
             st.markdown("""
             <div class="result-card">
-                <h3>🔧 System Configuration</h3>
+                <h3>System Configuration</h3>
                 <p>Advanced system settings and preferences.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -900,7 +714,7 @@ if 'advanced_nav' in locals():
         with col2:
             st.markdown("""
             <div class="result-card">
-                <h3>📈 Performance Settings</h3>
+                <h3>Performance Settings</h3>
                 <p>Optimize your trading performance and monitoring.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -913,17 +727,17 @@ if 'advanced_nav' in locals():
             st.subheader("Auto-Trading")
             auto_trading = st.checkbox("Enable Auto-Trading")
             if auto_trading:
-                st.warning("⚠️ Auto-trading is enabled. Please review your risk settings.")
+                st.warning("Auto-trading is enabled. Please review your risk settings.")
     
-    elif advanced_nav == "🔍 System Monitor":
-        st.markdown("### 🔍 System Monitor")
+    elif advanced_nav == "System Monitor":
+        st.markdown("### System Monitor")
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
             st.markdown("""
             <div class="result-card">
-                <h3>🖥️ System Health</h3>
+                <h3>System Health</h3>
                 <p>Real-time system monitoring.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -935,7 +749,7 @@ if 'advanced_nav' in locals():
         with col2:
             st.markdown("""
             <div class="result-card">
-                <h3>🌐 Network Status</h3>
+                <h3>Network Status</h3>
                 <p>Network connectivity and data feeds.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -947,7 +761,7 @@ if 'advanced_nav' in locals():
         with col3:
             st.markdown("""
             <div class="result-card">
-                <h3>🤖 AI Models</h3>
+                <h3>AI Models</h3>
                 <p>Model performance and status.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -956,12 +770,12 @@ if 'advanced_nav' in locals():
             st.metric("Avg Accuracy", "87.2%", "+1.1%")
             st.metric("Training Jobs", "2", "In Progress")
     
-    elif advanced_nav == "📊 Performance Analytics":
-        st.markdown("### 📊 Performance Analytics")
+    elif advanced_nav == "Performance Analytics":
+        st.markdown("### Performance Analytics")
         
         st.markdown("""
         <div class="result-card">
-            <h3>📈 Advanced Analytics Dashboard</h3>
+            <h3>Advanced Analytics Dashboard</h3>
             <p>Comprehensive performance analysis and insights.</p>
         </div>
         """, unsafe_allow_html=True)
@@ -990,15 +804,15 @@ if 'advanced_nav' in locals():
             for metric, value in risk_metrics.items():
                 st.metric(metric, f"{value:.2f}")
     
-    elif advanced_nav == "🛡️ Risk Management":
-        st.markdown("### 🛡️ Risk Management")
+    elif advanced_nav == "Risk Management":
+        st.markdown("### Risk Management")
         
         col1, col2 = st.columns(2)
         
         with col1:
             st.markdown("""
             <div class="result-card">
-                <h3>⚠️ Risk Alerts</h3>
+                <h3>Risk Alerts</h3>
                 <p>Current risk monitoring and alerts.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -1018,7 +832,7 @@ if 'advanced_nav' in locals():
         with col2:
             st.markdown("""
             <div class="result-card">
-                <h3>📊 Risk Metrics</h3>
+                <h3>Risk Metrics</h3>
                 <p>Current risk exposure and limits.</p>
             </div>
             """, unsafe_allow_html=True)
@@ -1032,7 +846,7 @@ if 'advanced_nav' in locals():
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 2rem 0;">
-    <p>🚀 Evolve AI Trading Platform | Professional Trading Intelligence</p>
+    <p>Evolve AI Trading Platform | Professional Trading Intelligence</p>
     <p style="font-size: 0.8rem;">Built with advanced AI and machine learning</p>
 </div>
 """, unsafe_allow_html=True) 
