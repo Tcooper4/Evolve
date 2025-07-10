@@ -35,7 +35,25 @@ if PROPHET_AVAILABLE:
     class ProphetModel(BaseModel):
         def __init__(self, config):
             super().__init__(config)
-            self.model = Prophet(**config.get('prophet_params', {}))
+            
+            # Get Prophet parameters with defaults
+            prophet_params = config.get('prophet_params', {})
+            
+            # Add holiday support if enabled
+            if config.get('add_holidays', False) and HOLIDAYS_AVAILABLE:
+                country = config.get('holiday_country', 'US')
+                prophet_params['holidays'] = self._get_country_holidays(country)
+                logger.info(f"Added holidays for country: {country}")
+            
+            # Add changepoint control
+            if 'changepoint_prior_scale' not in prophet_params:
+                prophet_params['changepoint_prior_scale'] = config.get('changepoint_prior_scale', 0.05)
+            
+            # Add seasonality control
+            if 'seasonality_prior_scale' not in prophet_params:
+                prophet_params['seasonality_prior_scale'] = config.get('seasonality_prior_scale', 10.0)
+            
+            self.model = Prophet(**prophet_params)
             self.fitted = False
             self.history = None
 
@@ -180,6 +198,81 @@ if PROPHET_AVAILABLE:
                 
             except Exception as e:
                 raise ValueError(f"Invalid Prophet configuration: {str(e)}")
+
+        def _get_country_holidays(self, country: str = 'US') -> pd.DataFrame:
+            """Get country holidays for Prophet.
+            
+            Args:
+                country: Country code for holidays
+                
+            Returns:
+                DataFrame with holiday dates
+            """
+            try:
+                if not HOLIDAYS_AVAILABLE:
+                    logger.warning("Holidays package not available, skipping holiday addition")
+                    return None
+                
+                # Get holidays for the specified country
+                country_holidays = holidays.country_holidays(country)
+                
+                # Convert to DataFrame format expected by Prophet
+                holiday_dates = []
+                holiday_names = []
+                
+                # Get holidays for the next 5 years
+                current_year = datetime.now().year
+                for year in range(current_year, current_year + 5):
+                    year_holidays = country_holidays.get(year, {})
+                    for date, name in year_holidays.items():
+                        holiday_dates.append(date)
+                        holiday_names.append(name)
+                
+                if holiday_dates:
+                    holidays_df = pd.DataFrame({
+                        'ds': holiday_dates,
+                        'holiday': holiday_names
+                    })
+                    logger.info(f"Added {len(holidays_df)} holidays for {country}")
+                    return holidays_df
+                else:
+                    logger.warning(f"No holidays found for country: {country}")
+                    return None
+                    
+            except Exception as e:
+                logger.error(f"Error getting holidays for {country}: {e}")
+                return None
+
+        def add_custom_holidays(self, holidays_df: pd.DataFrame):
+            """Add custom holidays to the Prophet model.
+            
+            Args:
+                holidays_df: DataFrame with columns 'ds' (date) and 'holiday' (name)
+            """
+            try:
+                if not self.fitted:
+                    raise ValueError("Model must be fitted before adding custom holidays")
+                
+                if holidays_df is None or holidays_df.empty:
+                    logger.warning("Empty holidays DataFrame provided")
+                    return
+                
+                # Validate holiday DataFrame
+                required_cols = ['ds', 'holiday']
+                missing_cols = [col for col in required_cols if col not in holidays_df.columns]
+                if missing_cols:
+                    raise ValueError(f"Missing required columns: {missing_cols}")
+                
+                # Convert dates to datetime
+                holidays_df['ds'] = pd.to_datetime(holidays_df['ds'])
+                
+                # Add holidays to the model
+                self.model.add_country_holidays(country_name='custom', holidays_df=holidays_df)
+                logger.info(f"Added {len(holidays_df)} custom holidays")
+                
+            except Exception as e:
+                logger.error(f"Error adding custom holidays: {e}")
+                raise
 
         def predict(self, data: pd.DataFrame, horizon: int = 1):
             """Make predictions with fallback guards.

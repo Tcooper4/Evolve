@@ -20,30 +20,71 @@ def test_basic_imports():
     """Test that core modules can be imported."""
     logger.info("Testing basic imports...")
     
+    # Test core imports
     try:
-        # Test core imports
-        from core.utils.common_helpers import safe_execute, validate_data
+        from utils.common_helpers import safe_execute, validate_data
         logger.info("✅ Core utils imported successfully")
     except ImportError as e:
         logger.error(f"❌ Failed to import core utils: {e}")
         return False
     
+    # Test trading imports
     try:
-        # Test trading imports
+        import trading
+        logger.info("✅ Trading module imported successfully")
+    except ImportError as e:
+        logger.error(f"❌ Failed to import trading module: {e}")
+        return False
+    
+    # Test specific trading submodules
+    try:
         from trading.strategies.rsi_signals import generate_rsi_signals
         logger.info("✅ Trading strategies imported successfully")
     except ImportError as e:
         logger.error(f"❌ Failed to import trading strategies: {e}")
         return False
     
+    # Test agent imports
     try:
-        # Test agent imports
         from trading.agents.base_agent_interface import BaseAgent, AgentConfig
         logger.info("✅ Agent interface imported successfully")
     except ImportError as e:
         logger.error(f"❌ Failed to import agent interface: {e}")
         return False
     
+    # Test optimization imports
+    try:
+        from trading.optimization import StrategyOptimizer, BaseOptimizer
+        logger.info("✅ Optimization module imported successfully")
+    except ImportError as e:
+        logger.error(f"❌ Failed to import optimization module: {e}")
+        return False
+    
+    # Test risk imports
+    try:
+        from trading.risk import RiskManager
+        logger.info("✅ Risk module imported successfully")
+    except ImportError as e:
+        logger.error(f"❌ Failed to import risk module: {e}")
+        return False
+    
+    # Test portfolio imports
+    try:
+        from trading.portfolio import PortfolioManager
+        logger.info("✅ Portfolio module imported successfully")
+    except ImportError as e:
+        logger.error(f"❌ Failed to import portfolio module: {e}")
+        return False
+    
+    # Test utils imports
+    try:
+        from trading.utils import LoggingManager, DataValidator, ConfigManager
+        logger.info("✅ Utils module imported successfully")
+    except ImportError as e:
+        logger.error(f"❌ Failed to import utils module: {e}")
+        return False
+    
+    logger.info("✅ All basic imports validated successfully")
     return True
 
 def test_basic_functionality():
@@ -169,8 +210,8 @@ def test_agent_functionality():
         
         # Test agent creation and execution
         agent = TestAgent()
-        self.assertTrue(agent.config.name == "test_agent")
-        self.assertTrue(agent.config.enabled)
+        assert agent.config.name == "test_agent", f"Expected 'test_agent', got '{agent.config.name}'"
+        assert agent.config.enabled, "Agent should be enabled"
         
         logger.info("✅ Agent functionality tests passed")
         return True

@@ -17,6 +17,7 @@ class SMAConfig:
     long_window: int = 50
     min_volume: float = 1000.0
     min_price: float = 1.0
+    confirmation_periods: int = 3  # Number of periods to confirm trend change
 
 class SMAStrategy:
     """Simple Moving Average (SMA) trading strategy implementation."""
@@ -54,9 +55,36 @@ class SMAStrategy:
         signals = pd.DataFrame(index=data.index)
         signals['signal'] = 0
         
-        # Generate signals based on SMA crossover
-        signals.loc[short_sma > long_sma, 'signal'] = 1  # Buy signal
-        signals.loc[short_sma < long_sma, 'signal'] = -1  # Sell signal
+        # Generate signals based on SMA crossover with trend confirmation
+        # Calculate the difference between short and long SMA
+        sma_diff = short_sma - long_sma
+        
+        # Initialize signal arrays
+        buy_signals = pd.Series(0, index=data.index)
+        sell_signals = pd.Series(0, index=data.index)
+        
+        # Apply trend confirmation logic
+        for i in range(self.config.confirmation_periods, len(data)):
+            try:
+                # Check if trend has been consistent for confirmation_periods
+                start_idx = max(0, i - self.config.confirmation_periods)
+                end_idx = min(len(sma_diff), i + 1)
+                recent_diffs = sma_diff.iloc[start_idx:end_idx]
+                
+                # Buy signal: short SMA consistently above long SMA
+                if len(recent_diffs) >= self.config.confirmation_periods and all(recent_diffs > 0):
+                    buy_signals.iloc[i] = 1
+                
+                # Sell signal: short SMA consistently below long SMA
+                if len(recent_diffs) >= self.config.confirmation_periods and all(recent_diffs < 0):
+                    sell_signals.iloc[i] = 1
+            except IndexError as e:
+                # Log the error and continue with next iteration
+                warnings.warn(f"Index error in SMA strategy at position {i}: {e}")
+                continue
+        
+        # Combine signals (buy takes precedence over sell)
+        signals['signal'] = buy_signals - sell_signals
         
         # Add SMAs to signals
         signals['short_sma'] = short_sma

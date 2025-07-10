@@ -26,6 +26,8 @@ except Exception as e:
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+from sklearn.feature_selection import VarianceThreshold, RFE, SelectKBest, f_regression
+from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime, timedelta
 import logging
 from utils.common_helpers import normalize_indicator_name
@@ -43,6 +45,22 @@ class FeatureEngineer(FeatureEngineering):
         self.config = config or {}
         self.scaler = StandardScaler()
         self.pca = PCA(n_components=0.95)  # Keep 95% of variance
+        
+        # Feature selection components
+        self.variance_threshold = VarianceThreshold(threshold=0.01)  # Remove low variance features
+        self.feature_selector = None
+        self.selected_features = []
+        
+        # Feature selection configuration
+        self.feature_selection_config = self.config.get('feature_selection', {
+            'enable_variance_threshold': True,
+            'enable_recursive_elimination': True,
+            'enable_k_best': True,
+            'k_best_features': 50,
+            'variance_threshold': 0.01,
+            'rfe_n_features': 30
+        })
+        
         self.feature_columns = []
         # Dictionary of custom indicator functions registered by name
         self.custom_indicators: Dict[
@@ -118,11 +136,131 @@ class FeatureEngineer(FeatureEngineering):
                 
         return descriptions
 
-    def engineer_features(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Engineer all features from the input data.
+    def select_features(self, features: pd.DataFrame, target: pd.Series = None) -> pd.DataFrame:
+        """Apply feature selection to reduce dimensionality.
+        
+        Args:
+            features: Input features DataFrame
+            target: Target variable for supervised feature selection
+            
+        Returns:
+            DataFrame with selected features
+        """
+        try:
+            selected_features = features.copy()
+            
+            # 1. Variance Threshold (remove low variance features)
+            if self.feature_selection_config.get('enable_variance_threshold', True):
+                logger.info("Applying variance threshold feature selection...")
+                self.variance_threshold = VarianceThreshold(
+                    threshold=self.feature_selection_config.get('variance_threshold', 0.01)
+                )
+                selected_features = pd.DataFrame(
+                    self.variance_threshold.fit_transform(selected_features),
+                    index=selected_features.index,
+                    columns=selected_features.columns[self.variance_threshold.get_support()]
+                )
+                logger.info(f"Variance threshold reduced features from {features.shape[1]} to {selected_features.shape[1]}")
+            
+            # 2. Recursive Feature Elimination (if target is provided)
+            if (self.feature_selection_config.get('enable_recursive_elimination', True) 
+                and target is not None and len(target) > 0):
+                logger.info("Applying recursive feature elimination...")
+                try:
+                    estimator = RandomForestRegressor(n_estimators=50, random_state=42)
+                    rfe = RFE(
+                        estimator=estimator,
+                        n_features_to_select=self.feature_selection_config.get('rfe_n_features', 30)
+                    )
+                    selected_features = pd.DataFrame(
+                        rfe.fit_transform(selected_features, target),
+                        index=selected_features.index,
+                        columns=selected_features.columns[rfe.support_]
+                    )
+                    self.feature_selector = rfe
+                    logger.info(f"RFE reduced features to {selected_features.shape[1]}")
+                except Exception as e:
+                    logger.warning(f"RFE failed: {e}")
+            
+            # 3. Select K Best features (if target is provided)
+            elif (self.feature_selection_config.get('enable_k_best', True) 
+                  and target is not None and len(target) > 0):
+                logger.info("Applying K-best feature selection...")
+                try:
+                    k_best = SelectKBest(
+                        score_func=f_regression,
+                        k=min(self.feature_selection_config.get('k_best_features', 50), selected_features.shape[1])
+                    )
+                    selected_features = pd.DataFrame(
+                        k_best.fit_transform(selected_features, target),
+                        index=selected_features.index,
+                        columns=selected_features.columns[k_best.get_support()]
+                    )
+                    self.feature_selector = k_best
+                    logger.info(f"K-best reduced features to {selected_features.shape[1]}")
+                except Exception as e:
+                    logger.warning(f"K-best failed: {e}")
+            
+            # Store selected feature names
+            self.selected_features = selected_features.columns.tolist()
+            
+            logger.info(f"Feature selection completed. Final features: {len(self.selected_features)}")
+            return selected_features
+            
+        except Exception as e:
+            logger.error(f"Feature selection failed: {e}")
+            return features
+
+    def get_feature_importance(self, model=None) -> pd.DataFrame:
+        """Get feature importance scores.
+        
+        Args:
+            model: Trained model with feature_importances_ attribute
+            
+        Returns:
+            DataFrame with feature importance scores
+        """
+        try:
+            if model and hasattr(model, 'feature_importances_'):
+                # Use model's feature importance
+                importance_df = pd.DataFrame({
+                    'feature': self.selected_features or self.feature_columns,
+                    'importance': model.feature_importances_
+                })
+            elif self.feature_selector and hasattr(self.feature_selector, 'ranking_'):
+                # Use RFE ranking
+                importance_df = pd.DataFrame({
+                    'feature': self.selected_features,
+                    'ranking': self.feature_selector.ranking_
+                })
+            elif self.feature_selector and hasattr(self.feature_selector, 'scores_'):
+                # Use K-best scores
+                importance_df = pd.DataFrame({
+                    'feature': self.selected_features,
+                    'score': self.feature_selector.scores_
+                })
+            else:
+                # Fallback to variance scores
+                features = self.selected_features or self.feature_columns
+                importance_df = pd.DataFrame({
+                    'feature': features,
+                    'variance': [1.0] * len(features)  # Placeholder
+                })
+            
+            return importance_df.sort_values('importance' if 'importance' in importance_df.columns 
+                                           else 'ranking' if 'ranking' in importance_df.columns 
+                                           else 'score', ascending=False)
+            
+        except Exception as e:
+            logger.error(f"Error getting feature importance: {e}")
+            return pd.DataFrame()
+
+    def engineer_features(self, data: pd.DataFrame, target: pd.Series = None) -> pd.DataFrame:
+        """Engineer all features from the input data with feature selection.
 
         Args:
             data: Input DataFrame with OHLCV data
+            target: Optional target variable for supervised feature selection
 
         Returns:
             DataFrame with engineered features
@@ -160,6 +298,10 @@ class FeatureEngineer(FeatureEngineering):
 
         # Fill NaN values
         features = features.fillna(method="ffill").fillna(0)
+
+        # Apply feature selection to reduce dimensionality
+        if self.feature_selection_config.get('enable_variance_threshold', True):
+            features = self.select_features(features, target)
 
         # Scale features
         features = self._scale_features(features)
@@ -532,19 +674,6 @@ class FeatureEngineer(FeatureEngineering):
         y = df[target_col]
 
         return X, y
-
-    def get_feature_importance(self, model) -> pd.DataFrame:
-        """Get feature importance from model."""
-        if hasattr(model, "feature_importances_"):
-            importance = model.feature_importances_
-        elif hasattr(model, "coef_"):
-            importance = model.coef_
-        else:
-            return pd.DataFrame()
-
-        return pd.DataFrame(
-            {"feature": self.feature_columns, "importance": importance}
-        ).sort_values("importance", ascending=False)
 
     def get_feature_metrics(self) -> Dict[str, int]:
         """Get feature engineering metrics."""

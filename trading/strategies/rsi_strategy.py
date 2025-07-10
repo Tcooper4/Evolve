@@ -10,6 +10,13 @@ from typing import Dict, Any, List
 from datetime import datetime
 import logging
 
+from .rsi_utils import (
+    calculate_rsi, 
+    generate_rsi_signals_core, 
+    validate_rsi_parameters,
+    get_default_rsi_parameters
+)
+
 logger = logging.getLogger(__name__)
 
 class RSIStrategy:
@@ -24,12 +31,17 @@ class RSIStrategy:
             oversold_threshold: RSI threshold for oversold condition
             overbought_threshold: RSI threshold for overbought condition
         """
+        # Validate parameters
+        is_valid, error_msg = validate_rsi_parameters(rsi_period, oversold_threshold, overbought_threshold)
+        if not is_valid:
+            raise ValueError(f"Invalid RSI parameters: {error_msg}")
+        
         self.rsi_period = rsi_period
         self.oversold_threshold = oversold_threshold
         self.overbought_threshold = overbought_threshold
         
     def calculate_rsi(self, data: pd.DataFrame) -> pd.Series:
-        """Calculate RSI for the given data.
+        """Calculate RSI for the given data using shared utilities.
         
         Args:
             data: Price data with 'Close' column
@@ -37,12 +49,7 @@ class RSIStrategy:
         Returns:
             RSI values
         """
-        delta = data['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=self.rsi_period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=self.rsi_period).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs))
-        return rsi
+        return calculate_rsi(data['Close'], self.rsi_period)
     
     def generate_signals(self, data: pd.DataFrame, **kwargs) -> List[Dict[str, Any]]:
         """Generate trading signals based on RSI.

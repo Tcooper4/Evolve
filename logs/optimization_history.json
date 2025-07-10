@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2025-07-10T15:45:45.760772",
+    "model_type": "lstm",
+    "parameters": {
+      "layers": 2
+    },
+    "performance_metrics": {
+      "accuracy": 0.85
+    }
+  }
+]

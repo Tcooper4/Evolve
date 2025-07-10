@@ -27,6 +27,13 @@ from trading.memory.performance_memory import PerformanceMemory
 from trading.memory.agent_memory import AgentMemory
 from trading.utils.reward_function import RewardFunction
 
+# Try to import Streamlit for notifications
+try:
+    import streamlit as st
+    STREAMLIT_AVAILABLE = True
+except ImportError:
+    STREAMLIT_AVAILABLE = False
+
 @dataclass
 class UpdateRequest:
     """Request for model update."""
@@ -143,15 +150,37 @@ class UpdaterAgent(BaseAgent):
                     }
                 )
             else:
+                # Log and notify about failure
+                error_msg = result.error_message or "Model update failed"
+                self.logger.error(f"Model update failed for {request.model_id}: {error_msg}")
+                
+                # Show Streamlit notification if available
+                if STREAMLIT_AVAILABLE:
+                    try:
+                        st.error(f"❌ Model update failed for {request.model_id}: {error_msg}")
+                    except Exception:
+                        pass  # Streamlit context not available
+                
                 return AgentResult(
                     success=False,
-                    error_message=result.error_message or "Model update failed"
+                    error_message=error_msg
                 )
                 
         except Exception as e:
+            # Log and notify about exception
+            error_msg = f"Updater agent execution failed: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            
+            # Show Streamlit notification if available
+            if STREAMLIT_AVAILABLE:
+                try:
+                    st.error(f"❌ Updater agent error: {str(e)}")
+                except Exception:
+                    pass  # Streamlit context not available
+            
             return AgentResult(
                 success=False,
-                error_message=str(e)
+                error_message=error_msg
             )
     
     def validate_input(self, **kwargs) -> bool:

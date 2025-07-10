@@ -20,6 +20,8 @@ try:
 except ImportError:
     SHAP_AVAILABLE = False
 
+from lime.lime_tabular import LimeTabularExplainer
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -229,59 +231,50 @@ class ForecastExplainability:
                 'upper': forecast_value * 1.05
             }
     
-    def _calculate_feature_importance(self, model: Any, features: pd.DataFrame) -> Dict[str, float]:
-        """Calculate feature importance using SHAP or model-specific methods.
-        
-        Args:
-            model: Trained model
-            features: Feature data
-            
-        Returns:
-            Feature importance dictionary
-        """
+    def _calculate_feature_importance(self, model: Any, features: pd.DataFrame, method: str = "shap") -> Dict[str, float]:
+        """Calculate feature importance using SHAP, LIME, or model-specific methods."""
         try:
             feature_importance = {}
-            
-            # Method 1: SHAP values
-            if SHAP_AVAILABLE and hasattr(model, 'predict'):
+            if method.lower() == "lime":
+                # LIME explainer
                 try:
-                    # Create SHAP explainer
-                    if self.shap_config['explainer_type'] == 'tree':
-                        explainer = shap.TreeExplainer(model)
-                    elif self.shap_config['explainer_type'] == 'linear':
-                        explainer = shap.LinearExplainer(model, features)
-                    else:
-                        explainer = shap.KernelExplainer(model.predict, features.sample(min(100, len(features))))
-                    
-                    # Calculate SHAP values
-                    shap_values = explainer.shap_values(features.iloc[-1:])
-                    
-                    if isinstance(shap_values, list):
-                        shap_values = shap_values[0]
-                    
-                    # Get feature importance
-                    feature_names = features.columns
-                    for i, feature in enumerate(feature_names):
-                        if i < len(shap_values[0]):
-                            importance = abs(shap_values[0][i])
-                            feature_importance[feature] = float(importance)
-                    
-                    # Sort by importance
-                    feature_importance = dict(sorted(
-                        feature_importance.items(),
-                        key=lambda x: x[1],
-                        reverse=True
-                    ))
-                    
-                    # Limit to top features
-                    max_features = self.shap_config['max_features']
-                    feature_importance = dict(list(feature_importance.items())[:max_features])
-                    
+                    explainer = LimeTabularExplainer(
+                        training_data=features.values,
+                        feature_names=features.columns.tolist(),
+                        mode="regression"
+                    )
+                    exp = explainer.explain_instance(features.iloc[-1].values, model.predict, num_features=min(20, features.shape[1]))
+                    for feature, importance in exp.as_list():
+                        feature_importance[feature] = abs(importance)
+                    feature_importance = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
                     return feature_importance
-                    
                 except Exception as e:
-                    logger.warning(f"SHAP calculation failed: {e}")
-            
+                    logger.warning(f"LIME calculation failed: {e}")
+            elif method.lower() == "shap":
+                if SHAP_AVAILABLE and hasattr(model, 'predict'):
+                    try:
+                        # Model type detection
+                        model_name = type(model).__name__.lower()
+                        if "xgboost" in model_name or "randomforest" in model_name or hasattr(model, 'feature_importances_'):
+                            explainer = shap.TreeExplainer(model)
+                        elif "linear" in model_name or hasattr(model, 'coef_'):
+                            explainer = shap.LinearExplainer(model, features)
+                        else:
+                            explainer = shap.KernelExplainer(model.predict, features.sample(min(100, len(features))))
+                        shap_values = explainer.shap_values(features.iloc[-1:])
+                        if isinstance(shap_values, list):
+                            shap_values = shap_values[0]
+                        feature_names = features.columns
+                        for i, feature in enumerate(feature_names):
+                            if i < len(shap_values[0]):
+                                importance = abs(shap_values[0][i])
+                                feature_importance[feature] = float(importance)
+                        feature_importance = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
+                        max_features = self.shap_config.get('max_features', 20)
+                        feature_importance = dict(list(feature_importance.items())[:max_features])
+                        return feature_importance
+                    except Exception as e:
+                        logger.warning(f"SHAP calculation failed: {e}")
             # Method 2: Model-specific feature importance
             if hasattr(model, 'feature_importances_'):
                 # Tree-based models (Random Forest, XGBoost, etc.)

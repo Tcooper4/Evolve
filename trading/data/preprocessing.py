@@ -722,47 +722,147 @@ class DataScaler:
         self.config = config or {}
         self._validate_config()
         self.scaling_method = self.config.get('scaling_method', 'standard')
+        self.outlier_method = self.config.get('outlier_method', 'zscore')
+        self.outlier_threshold = self.config.get('outlier_threshold', 3.0)
+        self.enable_outlier_clipping = self.config.get('enable_outlier_clipping', True)
+        self.enable_zscore_standardization = self.config.get('enable_zscore_standardization', True)
         self._feature_stats = {}
         self.is_fitted = False
 
     def _validate_config(self) -> None:
         """Validate configuration parameters."""
         if 'scaling_method' in self.config:
-            if self.config['scaling_method'] not in ['standard', 'minmax']:
-                raise ValueError("scaling_method must be 'standard' or 'minmax'")
+            if self.config['scaling_method'] not in ['standard', 'minmax', 'robust']:
+                raise ValueError("scaling_method must be 'standard', 'minmax', or 'robust'")
+                
+        if 'outlier_method' in self.config:
+            if self.config['outlier_method'] not in ['zscore', 'iqr', 'mad']:
+                raise ValueError("outlier_method must be 'zscore', 'iqr', or 'mad'")
+                
+        if 'outlier_threshold' in self.config:
+            if not isinstance(self.config['outlier_threshold'], (int, float)) or self.config['outlier_threshold'] <= 0:
+                raise ValueError("outlier_threshold must be a positive number")
 
     def _validate_input(self, data: pd.DataFrame) -> None:
         """Validate input data."""
         if data.empty:
             raise ValueError("Input data is empty")
+            
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("Input must be a pandas DataFrame")
+
+    def _handle_outliers(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Handle outliers using configurable method."""
+        if not self.enable_outlier_clipping:
+            return data
+            
+        result = data.copy()
         
-        if not isinstance(data.index, pd.DatetimeIndex):
-            raise ValueError("Data index must be DatetimeIndex")
+        for col in result.select_dtypes(include=[np.number]).columns:
+            if self.outlier_method == 'zscore':
+                result = self._clip_outliers_zscore(result, col)
+            elif self.outlier_method == 'iqr':
+                result = self._clip_outliers_iqr(result, col)
+            elif self.outlier_method == 'mad':
+                result = self._clip_outliers_mad(result, col)
         
-        if not data.index.is_monotonic_increasing:
-            raise ValueError("Data index must be sorted in ascending order")
+        return result
+
+    def _clip_outliers_zscore(self, data: pd.DataFrame, column: str) -> pd.DataFrame:
+        """Clip outliers using z-score method."""
+        mean_val = data[column].mean()
+        std_val = data[column].std()
         
-        # Check for infinite values
-        inf_cols = data.columns[data.isin([np.inf, -np.inf]).any()].tolist()
-        if inf_cols:
-            raise ValueError(f"Infinite values found in columns: {inf_cols}")
+        if std_val == 0:
+            return data
+            
+        z_scores = np.abs((data[column] - mean_val) / std_val)
+        outliers = z_scores > self.outlier_threshold
+        
+        if outliers.any():
+            # Clip outliers to threshold
+            upper_bound = mean_val + self.outlier_threshold * std_val
+            lower_bound = mean_val - self.outlier_threshold * std_val
+            data.loc[data[column] > upper_bound, column] = upper_bound
+            data.loc[data[column] < lower_bound, column] = lower_bound
+            
+        return data
+
+    def _clip_outliers_iqr(self, data: pd.DataFrame, column: str) -> pd.DataFrame:
+        """Clip outliers using IQR method."""
+        Q1 = data[column].quantile(0.25)
+        Q3 = data[column].quantile(0.75)
+        IQR = Q3 - Q1
+        
+        if IQR == 0:
+            return data
+            
+        upper_bound = Q3 + self.outlier_threshold * IQR
+        lower_bound = Q1 - self.outlier_threshold * IQR
+        
+        data.loc[data[column] > upper_bound, column] = upper_bound
+        data.loc[data[column] < lower_bound, column] = lower_bound
+        
+        return data
+
+    def _clip_outliers_mad(self, data: pd.DataFrame, column: str) -> pd.DataFrame:
+        """Clip outliers using Median Absolute Deviation method."""
+        median_val = data[column].median()
+        mad = np.median(np.abs(data[column] - median_val))
+        
+        if mad == 0:
+            return data
+            
+        upper_bound = median_val + self.outlier_threshold * mad
+        lower_bound = median_val - self.outlier_threshold * mad
+        
+        data.loc[data[column] > upper_bound, column] = upper_bound
+        data.loc[data[column] < lower_bound, column] = lower_bound
+        
+        return data
+
+    def _standardize_zscore(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Apply z-score standardization."""
+        if not self.enable_zscore_standardization:
+            return data
+            
+        result = data.copy()
+        
+        for col in result.select_dtypes(include=[np.number]).columns:
+            if col in self._feature_stats:
+                stats = self._feature_stats[col]
+                mean_val = stats['mean']
+                std_val = stats['std']
+                
+                if std_val == 0:
+                    std_val = 1.0  # Avoid division by zero
+                    
+                result[col] = (result[col] - mean_val) / std_val
+        
+        return result
 
     def fit(self, data: pd.DataFrame) -> 'DataScaler':
         """Fit the scaler to the data."""
         self._validate_input(data)
         
+        # Handle outliers first
+        data_cleaned = self._handle_outliers(data)
+        
         self._feature_stats = {}
-        for col in data.select_dtypes(include=[np.number]).columns:
+        for col in data_cleaned.select_dtypes(include=[np.number]).columns:
             # Handle case where std=0
-            std = data[col].std()
+            std = data_cleaned[col].std()
             if std == 0:
                 std = 1.0  # Use 1.0 as default std to avoid division by zero
             
             self._feature_stats[col] = {
-                'mean': data[col].mean(),
+                'mean': data_cleaned[col].mean(),
                 'std': std,
-                'min': data[col].min(),
-                'max': data[col].max()
+                'min': data_cleaned[col].min(),
+                'max': data_cleaned[col].max(),
+                'median': data_cleaned[col].median(),
+                'q1': data_cleaned[col].quantile(0.25),
+                'q3': data_cleaned[col].quantile(0.75)
             }
         
         self.is_fitted = True
@@ -775,25 +875,33 @@ class DataScaler:
         if not self.is_fitted:
             raise ValueError("Scaler must be fitted before transform")
         
-        result = data.copy()
+        # Handle outliers
+        result = self._handle_outliers(data)
         
-        for col in data.select_dtypes(include=[np.number]).columns:
+        # Apply scaling
+        for col in result.select_dtypes(include=[np.number]).columns:
             if col in self._feature_stats:
                 stats = self._feature_stats[col]
                 
                 if self.scaling_method == 'standard':
-                    # Handle case where std=0
+                    # Z-score standardization
                     std = stats['std']
                     if std == 0:
                         std = 1.0
-                    
-                    result[col] = (data[col] - stats['mean']) / std
-                else:  # minmax
-                    # Handle case where min=max
+                    result[col] = (result[col] - stats['mean']) / std
+                elif self.scaling_method == 'minmax':
+                    # Min-max scaling
                     if stats['max'] == stats['min']:
                         result[col] = 0.0
                     else:
-                        result[col] = (data[col] - stats['min']) / (stats['max'] - stats['min'])
+                        result[col] = (result[col] - stats['min']) / (stats['max'] - stats['min'])
+                elif self.scaling_method == 'robust':
+                    # Robust scaling using median and IQR
+                    iqr = stats['q3'] - stats['q1']
+                    if iqr == 0:
+                        result[col] = 0.0
+                    else:
+                        result[col] = (result[col] - stats['median']) / iqr
         
         return result
 
@@ -815,37 +923,31 @@ class DataScaler:
                 stats = self._feature_stats[col]
                 
                 if self.scaling_method == 'standard':
-                    # Handle case where std=0
                     std = stats['std']
                     if std == 0:
                         std = 1.0
-                    
                     result[col] = data[col] * std + stats['mean']
-                else:  # minmax
-                    # Handle case where min=max
+                elif self.scaling_method == 'minmax':
                     if stats['max'] == stats['min']:
                         result[col] = stats['min']
                     else:
                         result[col] = data[col] * (stats['max'] - stats['min']) + stats['min']
+                elif self.scaling_method == 'robust':
+                    iqr = stats['q3'] - stats['q1']
+                    if iqr == 0:
+                        result[col] = stats['median']
+                    else:
+                        result[col] = data[col] * iqr + stats['median']
         
         return result
 
     def get_params(self) -> Dict[str, Any]:
         """Get scaler parameters."""
-        return {
-            'scaling_method': self.scaling_method,
-            'feature_stats': self._feature_stats.copy()
-        }
+        return self.config.copy()
 
-    def set_params(self, **params) -> 'DataScaler':
-        """Set scaler parameters."""
-        self.config.update(params)
-        self._validate_config()
-        
-        if 'scaling_method' in params:
-            self.scaling_method = params['scaling_method']
-        
-        return self
+    def get_feature_stats(self) -> Dict[str, Dict[str, float]]:
+        """Get feature statistics."""
+        return self._feature_stats.copy()
 
 def remove_outliers(df: pd.DataFrame, method: str = 'iqr', columns: Optional[list] = None) -> pd.DataFrame:
     """Remove outliers using IQR or Z-score method.

@@ -92,6 +92,11 @@ def run_backtest_strategy(strategy_name: str, symbol: str, start_date: datetime,
                          end_date: datetime, params: dict) -> dict:
     """Run backtest for a given strategy."""
     try:
+        # Validate parameters
+        for param, value in params.items():
+            if isinstance(value, (int, float)) and value <= 0:
+                return {"success": False, "error": f"Parameter {param} must be > 0, got {value}"}
+        
         # Import strategy modules
         if strategy_name == "Bollinger Bands":
             from trading.strategies.bollinger_strategy import BollingerStrategy, BollingerConfig
@@ -159,11 +164,16 @@ def main():
     with st.sidebar:
         st.header("Backtest Configuration")
         
-        # Strategy selection
-        strategy = st.selectbox(
-            "Strategy",
-            ["Bollinger Bands", "Moving Average Crossover", "RSI Mean Reversion", "MACD Momentum"]
+        # Strategy selection with multiselect for strategy combos
+        strategy_list = ["Bollinger Bands", "Moving Average Crossover", "RSI Mean Reversion", "MACD Momentum"]
+        selected_strategies = st.multiselect(
+            "Select Strategies",
+            strategy_list,
+            default=[strategy_list[0]] if strategy_list else []
         )
+        
+        # Use first selected strategy for single strategy backtest
+        strategy = selected_strategies[0] if selected_strategies else None
         
         # Symbol input
         symbol = st.text_input("Symbol", value="AAPL").upper()
