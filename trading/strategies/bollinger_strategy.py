@@ -17,6 +17,7 @@ class BollingerConfig:
     num_std: float = 2.0
     min_volume: float = 1000.0
     min_price: float = 1.0
+    squeeze_threshold: float = 0.1  # Threshold for squeeze detection (bandwidth ratio)
 
 class BollingerStrategy:
     """Bollinger Bands trading strategy implementation."""
@@ -61,13 +62,24 @@ class BollingerStrategy:
         # Calculate Bollinger Bands
         upper_band, middle_band, lower_band = self.calculate_bands(data)
         
+        # Calculate squeeze condition (bandwidth)
+        bandwidth = (upper_band - lower_band) / middle_band
+        squeeze_condition = bandwidth < self.config.squeeze_threshold
+        
         # Initialize signals DataFrame
         signals = pd.DataFrame(index=data.index)
         signals['signal'] = 0
         
-        # Generate signals
-        signals.loc[data['close'] < lower_band, 'signal'] = 1  # Buy signal
-        signals.loc[data['close'] > upper_band, 'signal'] = -1  # Sell signal
+        # Generate signals (avoid trades during squeeze)
+        buy_condition = (data['close'] < lower_band) & ~squeeze_condition
+        sell_condition = (data['close'] > upper_band) & ~squeeze_condition
+        
+        signals.loc[buy_condition, 'signal'] = 1  # Buy signal
+        signals.loc[sell_condition, 'signal'] = -1  # Sell signal
+        
+        # Add squeeze information
+        signals['bandwidth'] = bandwidth
+        signals['squeeze'] = squeeze_condition
         
         # Add bands to signals
         signals['upper_band'] = upper_band

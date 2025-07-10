@@ -18,6 +18,7 @@ class MACDConfig:
     signal_period: int = 9
     min_volume: float = 1000.0
     min_price: float = 1.0
+    tolerance: float = 0.001  # Tolerance buffer for crossover detection
 
 class MACDStrategy:
     """MACD trading strategy implementation."""
@@ -59,9 +60,16 @@ class MACDStrategy:
         signals = pd.DataFrame(index=data.index)
         signals['signal'] = 0
         
-        # Generate signals based on MACD line crossing signal line
-        signals.loc[macd_line > signal_line, 'signal'] = 1  # Buy signal
-        signals.loc[macd_line < signal_line, 'signal'] = -1  # Sell signal
+        # Generate signals based on MACD line crossing signal line with tolerance buffer
+        # Calculate the difference between MACD and signal line
+        macd_diff = macd_line - signal_line
+        
+        # Apply tolerance buffer to avoid repeated triggers on equality
+        buy_condition = macd_diff > self.config.tolerance
+        sell_condition = macd_diff < -self.config.tolerance
+        
+        signals.loc[buy_condition, 'signal'] = 1  # Buy signal
+        signals.loc[sell_condition, 'signal'] = -1  # Sell signal
         
         # Drop duplicate consecutive signals to avoid over-trading
         signals['signal'] = signals['signal'].loc[~(signals['signal'] == signals['signal'].shift(1))]

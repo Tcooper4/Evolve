@@ -333,6 +333,17 @@ class CustomStrategyHandler:
     
     def _generate_sma_signals(self, data: pd.DataFrame, period: int, threshold: float) -> pd.Series:
         """Generate SMA-based signals."""
+        # Add check to ensure df contains 'close' and no NaNs before calculations
+        if 'close' not in data.columns or data['close'].isna().all():
+            logger.warning("SMA signals: Missing 'close' column or all NaN values")
+            return pd.DataFrame(index=data.index)
+        
+        # Handle NaN values in close column
+        if data['close'].isna().any():
+            logger.warning("SMA signals: NaN values found in close column, filling with forward fill")
+            data = data.copy()
+            data['close'] = data['close'].fillna(method='ffill').fillna(method='bfill')
+        
         sma = data['close'].rolling(period).mean()
         signals = pd.Series(0, index=data.index)
         signals[data['close'] > sma * (1 + threshold)] = 1

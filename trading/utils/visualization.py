@@ -108,51 +108,104 @@ def plot_shap_values(model: Any, data: pd.DataFrame) -> go.Figure:
     Returns:
         Plotly figure
     """
-    if not hasattr(model, 'shap_interpret'):
-        raise ValueError("Model does not support SHAP interpretation")
+    # Check if SHAP is available
+    try:
+        import shap
+        SHAP_AVAILABLE = True
+    except ImportError:
+        SHAP_AVAILABLE = False
     
-    shap_values = model.shap_interpret(data)
-    
-    # Create subplot for SHAP summary plot
-    fig = make_subplots(rows=2, cols=1, 
-                       subplot_titles=('SHAP Summary Plot', 'Feature Importance'))
-    
-    # Add SHAP summary plot
-    for i, feature in enumerate(data.columns):
-        fig.add_trace(
-            go.Scatter(
-                x=shap_values[:, i],
-                y=[feature] * len(shap_values),
-                mode='markers',
-                name=feature,
-                marker=dict(
-                    size=8,
-                    color=data[feature],
-                    colorscale='Viridis',
-                    showscale=True
-                )
-            ),
-            row=1, col=1
+    if not SHAP_AVAILABLE:
+        # Create fallback visualization
+        fig = go.Figure()
+        fig.add_annotation(
+            text="SHAP not available. Install with: pip install shap",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=16, color="red")
         )
+        fig.update_layout(
+            title='SHAP Values Analysis (Not Available)',
+            height=400,
+            showlegend=False
+        )
+        return fig
     
-    # Add feature importance bar plot
-    feature_importance = np.abs(shap_values).mean(axis=0)
-    fig.add_trace(
-        go.Bar(
-            x=data.columns,
-            y=feature_importance,
-            name='Feature Importance'
-        ),
-        row=2, col=1
-    )
+    if not hasattr(model, 'shap_interpret'):
+        # Create fallback visualization
+        fig = go.Figure()
+        fig.add_annotation(
+            text="Model does not support SHAP interpretation",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=16, color="orange")
+        )
+        fig.update_layout(
+            title='SHAP Values Analysis (Not Supported)',
+            height=400,
+            showlegend=False
+        )
+        return fig
     
-    fig.update_layout(
-        title='SHAP Values Analysis',
-        height=800,
-        showlegend=False
-    )
-    
-    return fig
+    try:
+        shap_values = model.shap_interpret(data)
+        
+        # Create subplot for SHAP summary plot
+        fig = make_subplots(rows=2, cols=1, 
+                           subplot_titles=('SHAP Summary Plot', 'Feature Importance'))
+        
+        # Add SHAP summary plot
+        for i, feature in enumerate(data.columns):
+            fig.add_trace(
+                go.Scatter(
+                    x=shap_values[:, i],
+                    y=[feature] * len(shap_values),
+                    mode='markers',
+                    name=feature,
+                    marker=dict(
+                        size=8,
+                        color=data[feature],
+                        colorscale='Viridis',
+                        showscale=True
+                    )
+                ),
+                row=1, col=1
+            )
+        
+        # Add feature importance bar plot
+        feature_importance = np.abs(shap_values).mean(axis=0)
+        fig.add_trace(
+            go.Bar(
+                x=data.columns,
+                y=feature_importance,
+                name='Feature Importance'
+            ),
+            row=2, col=1
+        )
+        
+        fig.update_layout(
+            title='SHAP Values Analysis',
+            height=800,
+            showlegend=False
+        )
+        
+        return fig
+        
+    except Exception as e:
+        # Create error visualization
+        fig = go.Figure()
+        fig.add_annotation(
+            text=f"SHAP calculation failed: {str(e)}",
+            xref="paper", yref="paper",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=14, color="red")
+        )
+        fig.update_layout(
+            title='SHAP Values Analysis (Error)',
+            height=400,
+            showlegend=False
+        )
+        return fig
 
 def plot_backtest_results(results: pd.DataFrame) -> go.Figure:
     """Plot backtest results including cumulative returns and drawdown.

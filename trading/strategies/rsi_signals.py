@@ -11,27 +11,12 @@ from datetime import datetime, timedelta
 import warnings
 warnings.filterwarnings('ignore')
 
-# Try to import pandas_ta, with fallback
-try:
-    # Patch numpy for pandas_ta compatibility
-    import numpy
-    if not hasattr(numpy, 'NaN'):
-        numpy.NaN = numpy.nan
-    if not hasattr(numpy, 'float'):
-        numpy.float = float
-    if not hasattr(numpy, 'int'):
-        numpy.int = int
-    
-    import pandas_ta as ta
-    PANDAS_TA_AVAILABLE = True
-except ImportError as e:
-    PANDAS_TA_AVAILABLE = False
-    logging.warning(f"pandas_ta not available: {e}")
-except Exception as e:
-    PANDAS_TA_AVAILABLE = False
-    logging.warning(f"pandas_ta import error: {e}")
-
 from utils.common_helpers import normalize_indicator_name
+from .rsi_utils import (
+    generate_rsi_signals_core,
+    validate_rsi_parameters,
+    get_default_rsi_parameters
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -61,7 +46,8 @@ def generate_rsi_signals(
     period: int = 14,
     buy_threshold: float = 30,
     sell_threshold: float = 70,
-    user_config: dict = None
+    user_config: dict = None,
+    streamlit_session: dict = None
 ) -> pd.DataFrame:
     """Generate RSI trading signals with user-configurable thresholds.
     
@@ -87,8 +73,14 @@ def generate_rsi_signals(
             sell_threshold = user_config.get('sell_threshold', sell_threshold)
             period = user_config.get('period', period)
         
+        # Apply Streamlit session configuration if provided
+        if streamlit_session:
+            buy_threshold = streamlit_session.get('rsi_buy_threshold', buy_threshold)
+            sell_threshold = streamlit_session.get('rsi_sell_threshold', sell_threshold)
+            period = streamlit_session.get('rsi_period', period)
+        
         # Load optimized settings if available and no user config
-        if ticker and not user_config:
+        if ticker and not user_config and not streamlit_session:
             optimized = load_optimized_settings(ticker)
             if optimized:
                 period = optimized["optimal_period"]
@@ -96,27 +88,20 @@ def generate_rsi_signals(
                 sell_threshold = optimized["sell_threshold"]
                 logger.info(f"Using optimized RSI settings for {ticker}")
         
-        # Calculate RSI
-        if PANDAS_TA_AVAILABLE and ta is not None:
-            df['rsi'] = ta.rsi(df['Close'], length=period)
-        else:
-            df['rsi'] = calculate_rsi_fallback(df['Close'], period)
-            logger.info("Using fallback RSI calculation")
+        # Validate parameters
+        is_valid, error_msg = validate_rsi_parameters(period, buy_threshold, sell_threshold)
+        if not is_valid:
+            raise ValueError(f"Invalid RSI parameters: {error_msg}")
         
-        # Generate signals
-        df['signal'] = 0
-        df.loc[df['rsi'] < buy_threshold, 'signal'] = 1  # Buy signal
-        df.loc[df['rsi'] > sell_threshold, 'signal'] = -1  # Sell signal
+        # Use shared core function
+        result_df = generate_rsi_signals_core(
+            df, 
+            period=period,
+            buy_threshold=buy_threshold,
+            sell_threshold=sell_threshold
+        )
         
-        # Calculate returns
-        df['returns'] = df['Close'].pct_change()
-        df['strategy_returns'] = df['signal'].shift(1) * df['returns']
-        
-        # Calculate cumulative returns
-        df['cumulative_returns'] = (1 + df['returns']).cumprod()
-        df['strategy_cumulative_returns'] = (1 + df['strategy_returns']).cumprod()
-        
-        return df
+        return result_df
         
     except Exception as e:
         error_msg = f"Error generating RSI signals: {str(e)}"

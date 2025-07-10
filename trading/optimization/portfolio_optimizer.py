@@ -206,6 +206,210 @@ class PortfolioOptimizer:
             logger.error(f"Error in Black-Litterman optimization: {e}")
             return {'error': str(e)}
     
+    def risk_parity_optimization(
+        self, 
+        returns: pd.DataFrame,
+        target_risk: Optional[float] = None,
+        risk_measure: str = "volatility"
+    ) -> Dict[str, Any]:
+        """Risk Parity Optimization.
+        
+        Args:
+            returns: Asset returns DataFrame
+            target_risk: Target portfolio risk level (if None, use equal risk contribution)
+            risk_measure: Risk measure ('volatility', 'cvar', 'var')
+            
+        Returns:
+            Dictionary with optimization results
+        """
+        if not CVXPY_AVAILABLE:
+            return self._simple_risk_parity(returns, target_risk, risk_measure)
+        
+        try:
+            # Calculate covariance matrix
+            Sigma = returns.cov()
+            n_assets = len(returns.columns)
+            
+            # Define variables
+            w = cp.Variable(n_assets)
+            
+            if risk_measure == "volatility":
+                # Risk parity using volatility
+                portfolio_vol = cp.sqrt(cp.quad_form(w, Sigma))
+                
+                # Risk contribution of each asset
+                risk_contrib = []
+                for i in range(n_assets):
+                    # Marginal contribution to risk
+                    marginal_risk = (Sigma @ w)[i] / portfolio_vol
+                    risk_contrib.append(w[i] * marginal_risk)
+                
+                # Objective: minimize sum of squared differences in risk contributions
+                target_risk_contrib = portfolio_vol / n_assets
+                objective = cp.Minimize(cp.sum_squares(cp.hstack(risk_contrib) - target_risk_contrib))
+                
+            elif risk_measure == "cvar":
+                # Risk parity using CVaR
+                alpha = 0.05  # 95% confidence level
+                portfolio_returns = returns @ w
+                cvar = cp.quantile(portfolio_returns, alpha) + (1/alpha) * cp.mean(cp.pos(-portfolio_returns - cp.quantile(portfolio_returns, alpha)))
+                
+                # Simplified risk parity for CVaR
+                objective = cp.Minimize(cvar)
+                
+            else:  # VaR
+                # Risk parity using VaR
+                alpha = 0.05  # 95% confidence level
+                portfolio_returns = returns @ w
+                var = cp.quantile(portfolio_returns, alpha)
+                objective = cp.Minimize(var)
+            
+            # Constraints
+            constraints_list = [
+                w >= 0,  # Long-only constraint
+                cp.sum(w) == 1  # Budget constraint
+            ]
+            
+            if target_risk is not None and risk_measure == "volatility":
+                constraints_list.append(portfolio_vol <= target_risk)
+            
+            # Solve problem
+            problem = cp.Problem(objective, constraints_list)
+            problem.solve()
+            
+            if problem.status == 'optimal':
+                weights = w.value
+                portfolio_return = returns.mean() @ weights
+                portfolio_vol = np.sqrt(weights @ Sigma @ weights)
+                sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
+                
+                # Calculate risk contributions
+                risk_contributions = self._calculate_risk_contributions(weights, Sigma, risk_measure)
+                
+                result = {
+                    'weights': dict(zip(returns.columns, weights)),
+                    'portfolio_return': portfolio_return,
+                    'portfolio_volatility': portfolio_vol,
+                    'sharpe_ratio': sharpe_ratio,
+                    'risk_contributions': risk_contributions,
+                    'risk_measure': risk_measure,
+                    'optimization_status': 'optimal'
+                }
+                
+                # Save results
+                self._save_optimization_results('risk_parity', result)
+                
+                return result
+            else:
+                logger.warning(f"Risk parity optimization failed: {problem.status}")
+                return {'error': f'Optimization failed: {problem.status}'}
+                
+        except Exception as e:
+            logger.error(f"Error in risk parity optimization: {e}")
+            return self._simple_risk_parity(returns, target_risk, risk_measure)
+    
+    def enhanced_black_litterman_optimization(
+        self, 
+        returns: pd.DataFrame,
+        market_caps: pd.Series,
+        views: Dict[str, float],
+        confidence: Dict[str, float],
+        tau: float = 0.05,
+        risk_aversion: float = 3.0,
+        view_type: str = "absolute"
+    ) -> Dict[str, Any]:
+        """Enhanced Black-Litterman Model with multiple view types.
+        
+        Args:
+            returns: Asset returns DataFrame
+            market_caps: Market capitalization weights
+            views: Dictionary of views {asset: expected_return}
+            confidence: Dictionary of confidence levels {asset: confidence}
+            tau: Scaling parameter
+            risk_aversion: Risk aversion parameter
+            view_type: Type of views ('absolute', 'relative', 'ranking')
+            
+        Returns:
+            Dictionary with optimization results
+        """
+        try:
+            # Calculate market equilibrium returns
+            mu_market = returns.mean()
+            Sigma = returns.cov()
+            
+            # Market equilibrium returns (reverse optimization)
+            pi = risk_aversion * Sigma @ market_caps
+            
+            # Create view matrix based on view type
+            assets = list(views.keys())
+            
+            if view_type == "absolute":
+                # Absolute views: asset A will return X%
+                P = np.zeros((len(views), len(returns.columns)))
+                q = np.array(list(views.values()))
+                
+                for i, asset in enumerate(assets):
+                    if asset in returns.columns:
+                        col_idx = returns.columns.get_loc(asset)
+                        P[i, col_idx] = 1
+                        
+            elif view_type == "relative":
+                # Relative views: asset A will outperform asset B by X%
+                P = np.zeros((len(views), len(returns.columns)))
+                q = []
+                
+                for i, (view_pair, outperformance) in enumerate(views.items()):
+                    asset_a, asset_b = view_pair.split(' vs ')
+                    if asset_a in returns.columns and asset_b in returns.columns:
+                        col_a = returns.columns.get_loc(asset_a)
+                        col_b = returns.columns.get_loc(asset_b)
+                        P[i, col_a] = 1
+                        P[i, col_b] = -1
+                        q.append(outperformance)
+                
+                q = np.array(q)
+                
+            elif view_type == "ranking":
+                # Ranking views: assets ranked by expected performance
+                P = np.zeros((len(views)-1, len(returns.columns)))
+                q = np.zeros(len(views)-1)
+                
+                ranked_assets = list(views.keys())
+                for i in range(len(ranked_assets)-1):
+                    asset_a = ranked_assets[i]
+                    asset_b = ranked_assets[i+1]
+                    if asset_a in returns.columns and asset_b in returns.columns:
+                        col_a = returns.columns.get_loc(asset_a)
+                        col_b = returns.columns.get_loc(asset_b)
+                        P[i, col_a] = 1
+                        P[i, col_b] = -1
+                        q[i] = views[asset_a] - views[asset_b]
+            
+            # Confidence matrix
+            Omega = np.diag([1/confidence[asset] for asset in assets])
+            
+            # Black-Litterman posterior estimates
+            M1 = np.linalg.inv(np.linalg.inv(tau * Sigma) + P.T @ np.linalg.inv(Omega) @ P)
+            M2 = np.linalg.inv(tau * Sigma) @ pi + P.T @ np.linalg.inv(Omega) @ q
+            
+            mu_bl = M1 @ M2
+            Sigma_bl = Sigma + M1
+            
+            # Convert to Series
+            mu_bl_series = pd.Series(mu_bl, index=returns.columns)
+            
+            # Run mean-variance optimization with BL estimates
+            return self.mean_variance_optimization(
+                returns, 
+                target_return=None,
+                risk_aversion=risk_aversion,
+                constraints={'bl_views': views, 'view_type': view_type}
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in enhanced Black-Litterman optimization: {e}")
+            return {'error': str(e)}
+    
     def min_cvar_optimization(
         self, 
         returns: pd.DataFrame, 
@@ -314,6 +518,88 @@ class PortfolioOptimizer:
             logger.error(f"Error in simple mean-variance: {e}")
             return {'error': str(e)}
     
+    def _simple_risk_parity(self, returns: pd.DataFrame, target_risk: Optional[float], risk_measure: str) -> Dict[str, Any]:
+        """Simple risk parity implementation without CVXPY."""
+        try:
+            Sigma = returns.cov()
+            n_assets = len(returns.columns)
+            
+            # Equal weight starting point
+            weights = np.ones(n_assets) / n_assets
+            
+            # Iterative optimization to achieve risk parity
+            max_iter = 100
+            tolerance = 1e-6
+            
+            for iteration in range(max_iter):
+                # Calculate current risk contributions
+                portfolio_vol = np.sqrt(weights @ Sigma @ weights)
+                risk_contrib = []
+                
+                for i in range(n_assets):
+                    marginal_risk = (Sigma @ weights)[i] / portfolio_vol
+                    risk_contrib.append(weights[i] * marginal_risk)
+                
+                risk_contrib = np.array(risk_contrib)
+                target_contrib = portfolio_vol / n_assets
+                
+                # Check convergence
+                if np.max(np.abs(risk_contrib - target_contrib)) < tolerance:
+                    break
+                
+                # Update weights to equalize risk contributions
+                for i in range(n_assets):
+                    if risk_contrib[i] > 0:
+                        weights[i] *= target_contrib / risk_contrib[i]
+                
+                # Normalize weights
+                weights = weights / np.sum(weights)
+            
+            # Calculate portfolio metrics
+            portfolio_return = returns.mean() @ weights
+            portfolio_vol = np.sqrt(weights @ Sigma @ weights)
+            sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
+            
+            # Calculate risk contributions
+            risk_contributions = self._calculate_risk_contributions(weights, Sigma, risk_measure)
+            
+            result = {
+                'weights': dict(zip(returns.columns, weights)),
+                'portfolio_return': portfolio_return,
+                'portfolio_volatility': portfolio_vol,
+                'sharpe_ratio': sharpe_ratio,
+                'risk_contributions': risk_contributions,
+                'risk_measure': risk_measure,
+                'optimization_status': 'simple_risk_parity',
+                'iterations': iteration + 1
+            }
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in simple risk parity: {e}")
+            return {'error': str(e)}
+    
+    def _calculate_risk_contributions(self, weights: np.ndarray, Sigma: pd.DataFrame, risk_measure: str) -> Dict[str, float]:
+        """Calculate risk contributions for each asset."""
+        try:
+            portfolio_vol = np.sqrt(weights @ Sigma @ weights)
+            risk_contrib = {}
+            
+            for i, asset in enumerate(Sigma.columns):
+                if risk_measure == "volatility":
+                    marginal_risk = (Sigma @ weights)[i] / portfolio_vol
+                    risk_contrib[asset] = weights[i] * marginal_risk
+                else:
+                    # Simplified for other risk measures
+                    risk_contrib[asset] = weights[i] * portfolio_vol / len(weights)
+            
+            return risk_contrib
+            
+        except Exception as e:
+            logger.error(f"Error calculating risk contributions: {e}")
+            return {}
+    
     def _simple_cvar_optimization(self, returns: pd.DataFrame, confidence_level: float, target_return: Optional[float]) -> Dict[str, Any]:
         """Simplified CVaR optimization without CVXPY."""
         try:
@@ -407,25 +693,6 @@ class PortfolioOptimizer:
         try:
             strategies = {}
             
-            # Mean-Variance
-            mv_result = self.mean_variance_optimization(returns)
-            if 'error' not in mv_result:
-                strategies['Mean-Variance'] = {
-                    'Return': mv_result['portfolio_return'],
-                    'Volatility': mv_result['portfolio_volatility'],
-                    'Sharpe': mv_result['sharpe_ratio']
-                }
-            
-            # Min-CVaR
-            cvar_result = self.min_cvar_optimization(returns)
-            if 'error' not in cvar_result:
-                strategies['Min-CVaR'] = {
-                    'Return': cvar_result['portfolio_return'],
-                    'Volatility': cvar_result['portfolio_volatility'],
-                    'Sharpe': cvar_result['sharpe_ratio'],
-                    'CVaR': cvar_result['cvar']
-                }
-            
             # Equal Weight (benchmark)
             n_assets = len(returns.columns)
             equal_weights = np.ones(n_assets) / n_assets
@@ -439,7 +706,84 @@ class PortfolioOptimizer:
                 'Sharpe': equal_sharpe
             }
             
-            return pd.DataFrame(strategies).T
+            # Mean-Variance
+            mv_result = self.mean_variance_optimization(returns)
+            if 'error' not in mv_result:
+                strategies['Mean-Variance'] = {
+                    'Return': mv_result['portfolio_return'],
+                    'Volatility': mv_result['portfolio_volatility'],
+                    'Sharpe': mv_result['sharpe_ratio']
+                }
+            
+            # Risk Parity
+            rp_result = self.risk_parity_optimization(returns)
+            if 'error' not in rp_result:
+                strategies['Risk Parity'] = {
+                    'Return': rp_result['portfolio_return'],
+                    'Volatility': rp_result['portfolio_volatility'],
+                    'Sharpe': rp_result['sharpe_ratio']
+                }
+            
+            # Min-CVaR
+            cvar_result = self.min_cvar_optimization(returns)
+            if 'error' not in cvar_result:
+                strategies['Min-CVaR'] = {
+                    'Return': cvar_result['portfolio_return'],
+                    'Volatility': cvar_result['portfolio_volatility'],
+                    'Sharpe': cvar_result['sharpe_ratio'],
+                    'CVaR': cvar_result['cvar']
+                }
+            
+            # Black-Litterman (if market caps available)
+            if len(returns.columns) >= 2:
+                market_caps = pd.Series(1.0/len(returns.columns), index=returns.columns)
+                views = {returns.columns[0]: 0.05}  # Simple view
+                confidence = {returns.columns[0]: 0.5}
+                
+                bl_result = self.black_litterman_optimization(returns, market_caps, views, confidence)
+                if 'error' not in bl_result:
+                    strategies['Black-Litterman'] = {
+                        'Return': bl_result['portfolio_return'],
+                        'Volatility': bl_result['portfolio_volatility'],
+                        'Sharpe': bl_result['sharpe_ratio']
+                    }
+                
+                # Enhanced Black-Litterman with relative views
+                if len(returns.columns) >= 3:
+                    relative_views = {f"{returns.columns[0]} vs {returns.columns[1]}": 0.02}
+                    relative_confidence = {f"{returns.columns[0]} vs {returns.columns[1]}": 0.6}
+                    
+                    ebl_result = self.enhanced_black_litterman_optimization(
+                        returns, market_caps, relative_views, relative_confidence, view_type="relative"
+                    )
+                    if 'error' not in ebl_result:
+                        strategies['Enhanced BL (Relative)'] = {
+                            'Return': ebl_result['portfolio_return'],
+                            'Volatility': ebl_result['portfolio_volatility'],
+                            'Sharpe': ebl_result['sharpe_ratio']
+                        }
+            
+            # Risk parity with different risk measures
+            rp_cvar_result = self.risk_parity_optimization(returns, risk_measure="cvar")
+            if 'error' not in rp_cvar_result:
+                strategies['Risk Parity (CVaR)'] = {
+                    'Return': rp_cvar_result['portfolio_return'],
+                    'Volatility': rp_cvar_result['portfolio_volatility'],
+                    'Sharpe': rp_cvar_result['sharpe_ratio']
+                }
+            
+            # Create comparison DataFrame
+            comparison_df = pd.DataFrame(strategies).T
+            comparison_df = comparison_df.round(4)
+            
+            # Save comparison
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            comparison_file = self.results_dir / f"strategy_comparison_{timestamp}.csv"
+            comparison_df.to_csv(comparison_file)
+            
+            logger.info(f"Strategy comparison saved to {comparison_file}")
+            
+            return comparison_df
             
         except Exception as e:
             logger.error(f"Error comparing strategies: {e}")

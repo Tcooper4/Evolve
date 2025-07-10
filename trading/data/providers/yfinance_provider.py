@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 import pickle
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 from .base_provider import BaseDataProvider, ProviderConfig
 
 # Configure logging
@@ -149,8 +150,13 @@ class YFinanceProvider(BaseDataProvider):
         if data.isnull().any().any():
             raise ValueError("Data contains missing values")
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type((requests.RequestException, ValueError, RuntimeError))
+    )
     def fetch(self, symbol: str, interval: str = '1d', **kwargs) -> pd.DataFrame:
-        """Fetch data for a given symbol and interval.
+        """Fetch data for a given symbol and interval with retry logic.
         
         Args:
             symbol: Stock symbol
@@ -161,7 +167,7 @@ class YFinanceProvider(BaseDataProvider):
             DataFrame with OHLCV data
             
         Raises:
-            Exception: If data fetching fails
+            Exception: If data fetching fails after all retries
         """
         if not self.is_enabled():
             raise RuntimeError("Provider is disabled")

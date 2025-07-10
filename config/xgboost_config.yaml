@@ -1,0 +1,40 @@
+# XGBoost Model Configuration
+# This file contains hyperparameters for the XGBoost model
+# Can be overridden by environment variables
+
+xgboost:
+  # Core parameters
+  n_estimators: 100
+  max_depth: 6
+  learning_rate: 0.1
+  subsample: 0.8
+  colsample_bytree: 0.8
+  random_state: 42
+  
+  # Objective and evaluation
+  objective: "reg:squarederror"
+  eval_metric: "rmse"
+  
+  # Regularization
+  reg_alpha: 0.0
+  reg_lambda: 1.0
+  
+  # Tree construction
+  min_child_weight: 1
+  gamma: 0.0
+  
+  # Early stopping
+  early_stopping_rounds: 10
+  
+  # Feature engineering
+  feature_engineering:
+    use_lag_features: true
+    lag_periods: [1, 2, 3, 5, 10]
+    use_technical_indicators: true
+    use_time_features: true
+    
+  # Training settings
+  training:
+    validation_split: 0.2
+    cross_validation_folds: 5
+    max_training_samples: 10000 

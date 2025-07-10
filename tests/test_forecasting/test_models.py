@@ -266,6 +266,88 @@ class TestXGBoostModel(TestModelBase):
         except ImportError:
             pytest.skip("XGBoost not available")
 
+    def test_xgboost_output_validation(self, train_data):
+        """Test XGBoost output length, shape, and MSE thresholds."""
+        try:
+            from trading.models.xgboost_model import XGBoostModel
+            from sklearn.metrics import mean_squared_error
+            
+            config = {
+                'feature_columns': ['sma_20', 'sma_50', 'rsi', 'volatility', 'returns'],
+                'target_column': 'target',
+                'xgboost_params': {
+                    'n_estimators': 50,
+                    'max_depth': 4,
+                    'learning_rate': 0.1,
+                    'objective': 'reg:squarederror',
+                    'random_state': 42
+                }
+            }
+            
+            model = XGBoostModel(config)
+            model.fit(train_data)
+            
+            # Test prediction output length
+            test_data = train_data.tail(5)
+            predictions = model.predict(test_data)
+            assert len(predictions) == 5, f"Expected 5 predictions, got {len(predictions)}"
+            
+            # Test prediction shape
+            assert predictions.ndim == 1, f"Expected 1D array, got {predictions.ndim}D"
+            
+            # Test MSE threshold on synthetic data
+            synthetic_data = train_data.copy()
+            synthetic_data['close'] = np.linspace(100, 200, len(synthetic_data))
+            synthetic_data['target'] = synthetic_data['close'] + np.random.normal(0, 1, len(synthetic_data))
+            
+            model.fit(synthetic_data)
+            synthetic_predictions = model.predict(synthetic_data.tail(20))
+            synthetic_actual = synthetic_data['target'].tail(20)
+            
+            mse = mean_squared_error(synthetic_actual, synthetic_predictions)
+            assert mse < 1000, f"MSE too high: {mse}, expected < 1000"
+            
+            # Test that predictions are finite
+            assert np.all(np.isfinite(predictions)), "Predictions contain NaN or infinite values"
+            
+            # Test that predictions are reasonable (not extreme values)
+            assert np.all(predictions > -1000) and np.all(predictions < 10000), "Predictions outside reasonable range"
+            
+        except ImportError:
+            pytest.skip("XGBoost not available")
+
+    def test_xgboost_auto_feature_engineering(self, train_data):
+        """Test XGBoost auto feature engineering functionality."""
+        try:
+            from trading.models.xgboost_model import XGBoostModel
+            
+            config = {
+                'feature_columns': ['sma_20', 'sma_50', 'rsi', 'volatility', 'returns'],
+                'target_column': 'target',
+                'auto_feature_engineering': True,
+                'xgboost_params': {
+                    'n_estimators': 50,
+                    'max_depth': 4,
+                    'learning_rate': 0.1,
+                    'objective': 'reg:squarederror',
+                    'random_state': 42
+                }
+            }
+            
+            model = XGBoostModel(config)
+            
+            # Test that auto feature engineering is enabled
+            assert model.config.get('auto_feature_engineering', False) is True
+            
+            # Test feature preparation with auto engineering
+            features, target = model.prepare_features(train_data)
+            assert len(features) > 0, "Auto feature engineering should produce features"
+            assert len(target) > 0, "Auto feature engineering should produce target"
+            assert len(features) == len(target), "Features and target should have same length"
+            
+        except ImportError:
+            pytest.skip("XGBoost not available")
+
 class TestRidgeModel(TestModelBase):
     """Test Ridge regression model functionality."""
     

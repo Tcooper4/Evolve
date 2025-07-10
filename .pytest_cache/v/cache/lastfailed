@@ -1018,5 +1018,7 @@
   "trading/report/test_simple.py::test_client": true,
   "trading/test_live_market_runner.py::test_live_market_runner": true,
   "trading/test_live_market_runner.py::test_forecast_tracking": true,
-  "trading/test_live_market_runner.py::test_agent_triggering": true
+  "trading/test_live_market_runner.py::test_agent_triggering": true,
+  "tests/test_forecasting/test_hybrid.py::TestHybridModel::test_model_failure_fallback": true,
+  "tests/test_forecasting/test_hybrid.py::TestHybridModel::test_weight_normalization": true
 }

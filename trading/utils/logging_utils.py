@@ -86,11 +86,23 @@ class LogManager:
     def setup_logger(
         self,
         name: str,
-        level: int = logging.INFO,
+        level: int = None,
         log_to_file: bool = True,
         log_to_console: bool = True,
         structured: bool = True
     ) -> logging.Logger:
+        # Add fallback log level
+        if level is None:
+            level = os.getenv("LOG_LEVEL", "INFO")
+            # Convert string level to logging constant
+            level_map = {
+                "DEBUG": logging.DEBUG,
+                "INFO": logging.INFO,
+                "WARNING": logging.WARNING,
+                "ERROR": logging.ERROR,
+                "CRITICAL": logging.CRITICAL
+            }
+            level = level_map.get(level.upper(), logging.INFO)
         """Set up a logger with specified configuration.
         
         Args:

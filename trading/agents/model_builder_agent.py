@@ -128,9 +128,25 @@ class ModelBuilderAgent(BaseAgent):
                 )
                 
         except Exception as e:
+            # Log detailed error information
+            error_msg = f"Model building failed: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
+            
+            # Log to agent memory for tracking
+            try:
+                self.agent_memory.log_outcome(
+                    agent="ModelBuilderAgent",
+                    action="build_model",
+                    success=False,
+                    error=str(e),
+                    timestamp=datetime.now().isoformat()
+                )
+            except Exception as mem_error:
+                self.logger.warning(f"Failed to log to agent memory: {mem_error}")
+            
             return AgentResult(
                 success=False,
-                error_message=str(e)
+                error_message=error_msg
             )
     
     def validate_input(self, **kwargs) -> bool:

@@ -1,0 +1,280 @@
+# User Roles Configuration
+# This file defines user roles and their permissions for the trading system
+
+# Role Definitions
+roles:
+  admin:
+    name: "Administrator"
+    description: "Full system access with administrative privileges"
+    permissions:
+      - "system:read"
+      - "system:write"
+      - "system:delete"
+      - "user:create"
+      - "user:read"
+      - "user:update"
+      - "user:delete"
+      - "strategy:create"
+      - "strategy:read"
+      - "strategy:update"
+      - "strategy:delete"
+      - "strategy:execute"
+      - "portfolio:read"
+      - "portfolio:write"
+      - "risk:read"
+      - "risk:write"
+      - "backtest:create"
+      - "backtest:read"
+      - "backtest:delete"
+      - "model:create"
+      - "model:read"
+      - "model:update"
+      - "model:delete"
+      - "model:train"
+      - "data:read"
+      - "data:write"
+      - "alerts:create"
+      - "alerts:read"
+      - "alerts:update"
+      - "alerts:delete"
+      - "reports:create"
+      - "reports:read"
+      - "reports:delete"
+      - "audit:read"
+      - "config:read"
+      - "config:write"
+    restrictions: []
+    max_sessions: 10
+    session_timeout: 86400  # 24 hours
+
+  trader:
+    name: "Trader"
+    description: "Professional trader with full trading capabilities"
+    permissions:
+      - "strategy:create"
+      - "strategy:read"
+      - "strategy:update"
+      - "strategy:execute"
+      - "portfolio:read"
+      - "portfolio:write"
+      - "risk:read"
+      - "risk:write"
+      - "backtest:create"
+      - "backtest:read"
+      - "backtest:delete"
+      - "model:read"
+      - "model:train"
+      - "data:read"
+      - "data:write"
+      - "alerts:create"
+      - "alerts:read"
+      - "alerts:update"
+      - "reports:create"
+      - "reports:read"
+    restrictions:
+      - "Cannot delete strategies"
+      - "Cannot access system configuration"
+      - "Cannot manage users"
+    max_sessions: 5
+    session_timeout: 43200  # 12 hours
+
+  analyst:
+    name: "Analyst"
+    description: "Data analyst with read access and analysis capabilities"
+    permissions:
+      - "strategy:read"
+      - "portfolio:read"
+      - "risk:read"
+      - "backtest:create"
+      - "backtest:read"
+      - "model:read"
+      - "data:read"
+      - "reports:create"
+      - "reports:read"
+    restrictions:
+      - "Cannot execute strategies"
+      - "Cannot modify portfolio"
+      - "Cannot create or modify strategies"
+      - "Cannot access system configuration"
+    max_sessions: 3
+    session_timeout: 21600  # 6 hours
+
+  viewer:
+    name: "Viewer"
+    description: "Read-only access to view reports and basic data"
+    permissions:
+      - "portfolio:read"
+      - "risk:read"
+      - "backtest:read"
+      - "model:read"
+      - "data:read"
+      - "reports:read"
+    restrictions:
+      - "Cannot execute any write operations"
+      - "Cannot create or modify strategies"
+      - "Cannot access system configuration"
+      - "Cannot view sensitive data"
+    max_sessions: 2
+    session_timeout: 10800  # 3 hours
+
+  demo:
+    name: "Demo User"
+    description: "Limited access for demonstration purposes"
+    permissions:
+      - "strategy:read"
+      - "portfolio:read"
+      - "backtest:create"
+      - "backtest:read"
+      - "model:read"
+      - "data:read"
+      - "reports:read"
+    restrictions:
+      - "Cannot execute live strategies"
+      - "Cannot modify portfolio"
+      - "Cannot access real market data"
+      - "Cannot create or modify strategies"
+      - "Cannot access system configuration"
+      - "Session expires after 1 hour"
+    max_sessions: 1
+    session_timeout: 3600  # 1 hour
+
+# Permission Categories
+permission_categories:
+  system:
+    description: "System-level operations"
+    permissions:
+      - "system:read"
+      - "system:write"
+      - "system:delete"
+  
+  user:
+    description: "User management operations"
+    permissions:
+      - "user:create"
+      - "user:read"
+      - "user:update"
+      - "user:delete"
+  
+  strategy:
+    description: "Trading strategy operations"
+    permissions:
+      - "strategy:create"
+      - "strategy:read"
+      - "strategy:update"
+      - "strategy:delete"
+      - "strategy:execute"
+  
+  portfolio:
+    description: "Portfolio management operations"
+    permissions:
+      - "portfolio:read"
+      - "portfolio:write"
+  
+  risk:
+    description: "Risk management operations"
+    permissions:
+      - "risk:read"
+      - "risk:write"
+  
+  backtest:
+    description: "Backtesting operations"
+    permissions:
+      - "backtest:create"
+      - "backtest:read"
+      - "backtest:delete"
+  
+  model:
+    description: "Model management operations"
+    permissions:
+      - "model:create"
+      - "model:read"
+      - "model:update"
+      - "model:delete"
+      - "model:train"
+  
+  data:
+    description: "Data access operations"
+    permissions:
+      - "data:read"
+      - "data:write"
+  
+  alerts:
+    description: "Alert management operations"
+    permissions:
+      - "alerts:create"
+      - "alerts:read"
+      - "alerts:update"
+      - "alerts:delete"
+  
+  reports:
+    description: "Report management operations"
+    permissions:
+      - "reports:create"
+      - "reports:read"
+      - "reports:delete"
+  
+  audit:
+    description: "Audit log access"
+    permissions:
+      - "audit:read"
+  
+  config:
+    description: "Configuration management"
+    permissions:
+      - "config:read"
+      - "config:write"
+
+# Default Role Assignment
+default_role: "viewer"
+
+# Role Hierarchy (for inheritance)
+role_hierarchy:
+  admin:
+    inherits: []
+  trader:
+    inherits: ["analyst"]
+  analyst:
+    inherits: ["viewer"]
+  viewer:
+    inherits: []
+  demo:
+    inherits: []
+
+# Session Management
+session_config:
+  default_timeout: 3600  # 1 hour
+  max_sessions_per_user: 5
+  session_cleanup_interval: 300  # 5 minutes
+  remember_me_duration: 604800  # 7 days
+
+# Security Settings
+security:
+  password_policy:
+    min_length: 8
+    require_uppercase: true
+    require_lowercase: true
+    require_digits: true
+    require_special: true
+    max_age_days: 90
+  
+  login_policy:
+    max_attempts: 5
+    lockout_duration: 900  # 15 minutes
+    require_mfa: false
+  
+  token_policy:
+    access_token_expiry: 3600  # 1 hour
+    refresh_token_expiry: 604800  # 7 days
+    max_refresh_tokens: 5
+
+# Audit Configuration
+audit:
+  enabled: true
+  log_level: "INFO"
+  retention_days: 90
+  sensitive_operations:
+    - "user:create"
+    - "user:delete"
+    - "strategy:execute"
+    - "portfolio:write"
+    - "config:write" 
