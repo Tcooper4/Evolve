@@ -20,6 +20,7 @@ from typing import Dict, Any, List, Optional, Tuple
 import warnings
 import logging
 import json
+from dataclasses import asdict
 
 # Suppress warnings
 warnings.filterwarnings('ignore')
@@ -456,15 +457,18 @@ def create_new_model():
                     from trading.agents.model_creator_agent import get_model_creator_agent
                     
                     agent = get_model_creator_agent()
-                    model_spec = agent.create_model(requirements, model_name)
+                    model_spec, success, errors = agent.create_and_validate_model(requirements, model_name)
                     
-                    st.success(f"Model '{model_spec.name}' created successfully!")
-                    st.json(model_spec.__dict__)
-                    
-                    # Add to session state
-                    if 'created_models' not in st.session_state:
-                        st.session_state.created_models = []
-                    st.session_state.created_models.append(model_spec.__dict__)
+                    if success:
+                        st.success(f"Model '{model_spec.name}' created successfully!")
+                        st.json(asdict(model_spec))
+                        
+                        # Add to session state
+                        if 'created_models' not in st.session_state:
+                            st.session_state.created_models = []
+                        st.session_state.created_models.append(asdict(model_spec))
+                    else:
+                        st.error(f"Model creation failed: {', '.join(errors)}")
                     
                 except Exception as e:
                     st.error(f"Error creating model: {e}")

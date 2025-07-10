@@ -343,9 +343,40 @@ class EventHandlers:
                 logger.warning(f"Performance issue: {issue}")
             
             # Implement automated responses
-            # - Trigger model retraining
-            # - Adjust trading parameters
-            # - Switch strategies
+            logger.info(f"Implementing automated responses for {agent_name}")
+            
+            # Action 1: Trigger model retraining if performance is poor
+            if performance_data['sharpe_ratio'] < 0.5:
+                logger.info(f"Low Sharpe ratio detected - triggering model retraining")
+                try:
+                    from trading.agents.model_optimizer_agent import ModelOptimizerAgent
+                    optimizer = ModelOptimizerAgent()
+                    optimizer.execute(action='optimize_model', model_id='current')
+                    logger.info("Model retraining triggered successfully")
+                except Exception as e:
+                    logger.error(f"Failed to trigger model retraining: {e}")
+            
+            # Action 2: Adjust trading parameters
+            if performance_data['max_drawdown'] > 0.15:
+                logger.info(f"High drawdown detected - adjusting trading parameters")
+                try:
+                    from trading.strategies.gatekeeper import StrategyGatekeeper
+                    gatekeeper = StrategyGatekeeper()
+                    gatekeeper.adjust_risk_parameters(reduce_risk=True)
+                    logger.info("Trading parameters adjusted")
+                except Exception as e:
+                    logger.error(f"Failed to adjust trading parameters: {e}")
+            
+            # Action 3: Switch strategies if needed
+            if performance_data['sharpe_ratio'] < 0.3:
+                logger.info(f"Very low Sharpe ratio - switching to conservative strategy")
+                try:
+                    from trading.strategies.gatekeeper import StrategyGatekeeper
+                    gatekeeper = StrategyGatekeeper()
+                    gatekeeper.switch_strategy('conservative')
+                    logger.info("Switched to conservative strategy")
+                except Exception as e:
+                    logger.error(f"Failed to switch strategy: {e}")
             if performance_data['sharpe_ratio'] < 0.5:
                 logger.warning(f"Low Sharpe ratio detected for {agent_name}: {performance_data['sharpe_ratio']}")
                 return "low_performance"
@@ -377,18 +408,42 @@ class EventHandlers:
             logger.warning(f"Metric {metric} breached threshold: {value} > {threshold}")
             
             # Implement threshold breach responses
+            logger.info(f"Implementing threshold breach responses for agent {event_data.agent_id}")
+            
+            # Determine breach type based on metric
+            if metric in ['sharpe_ratio', 'return_rate', 'win_rate']:
+                breach_type = "performance"
+            elif metric in ['max_drawdown', 'var', 'volatility']:
+                breach_type = "risk"
+            else:
+                breach_type = "unknown"
+            
             if breach_type == "performance":
-                logger.warning(f"Performance threshold breached for {agent_name}")
+                logger.warning(f"Performance threshold breached for {event_data.agent_id}")
+                # Action: Reduce position sizes and switch to conservative mode
+                try:
+                    from trading.strategies.gatekeeper import StrategyGatekeeper
+                    gatekeeper = StrategyGatekeeper()
+                    gatekeeper.adjust_risk_parameters(reduce_risk=True)
+                    logger.info("Reduced position sizes due to performance breach")
+                except Exception as e:
+                    logger.error(f"Failed to adjust risk parameters: {e}")
                 return "performance_breach"
             elif breach_type == "risk":
-                logger.error(f"Risk threshold breached for {agent_name}")
+                logger.error(f"Risk threshold breached for {event_data.agent_id}")
+                # Action: Stop trading and switch to conservative mode
+                try:
+                    from trading.strategies.gatekeeper import StrategyGatekeeper
+                    gatekeeper = StrategyGatekeeper()
+                    gatekeeper.switch_strategy('conservative')
+                    gatekeeper.stop_trading()
+                    logger.info("Stopped trading due to risk breach")
+                except Exception as e:
+                    logger.error(f"Failed to stop trading: {e}")
                 return "risk_breach"
             else:
                 logger.info(f"Unknown breach type: {breach_type}")
                 return "unknown_breach"
-            # - Stop trading
-            # - Reduce position sizes
-            # - Switch to conservative mode
             
         except Exception as e:
             logger.error(f"Error handling threshold breach event: {e}")
@@ -410,10 +465,42 @@ class EventHandlers:
             
             logger.error(f"Error type: {error_type}, Message: {error_message}")
             
-            # TODO: Implement error recovery
-            # - Restart agent
-            # - Switch to backup system
-            # - Send emergency alerts
+            # Implement error recovery
+            logger.info(f"Implementing error recovery for agent {event_data.agent_id}")
+            
+            # Action 1: Restart agent if possible
+            try:
+                agent_manager = get_agent_manager()
+                agent = agent_manager.get_agent(event_data.agent_id)
+                if agent:
+                    agent_manager.update_agent_status(event_data.agent_id, AgentStatus.INACTIVE)
+                    logger.info(f"Agent {event_data.agent_id} stopped for recovery")
+                    # In a real implementation, this would trigger a restart
+            except Exception as e:
+                logger.error(f"Failed to restart agent {event_data.agent_id}: {e}")
+            
+            # Action 2: Switch to backup system if available
+            try:
+                backup_agent_id = f"{event_data.agent_id}_backup"
+                backup_agent = agent_manager.get_agent(backup_agent_id)
+                if backup_agent:
+                    agent_manager.update_agent_status(backup_agent_id, AgentStatus.ACTIVE)
+                    logger.info(f"Switched to backup agent {backup_agent_id}")
+            except Exception as e:
+                logger.error(f"Failed to switch to backup agent: {e}")
+            
+            # Action 3: Send emergency alerts
+            try:
+                from trading.meta_agents.notification_handlers import NotificationHandler
+                handler = NotificationHandler()
+                handler.send_alert(
+                    level="critical",
+                    message=f"System error in agent {event_data.agent_id}: {error_type} - {error_message}",
+                    recipients=["admin", "emergency"]
+                )
+                logger.info("Emergency alert sent")
+            except Exception as e:
+                logger.error(f"Failed to send emergency alert: {e}")
             
         except Exception as e:
             logger.error(f"Error handling system error event: {e}")
