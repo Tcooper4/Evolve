@@ -14,10 +14,10 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+# Import core components
 from models.forecast_router import ForecastRouter
-from trading.backtesting.backtester import Backtester
-from strategies.gatekeeper import StrategyGatekeeper
-from execution.trade_executor import TradeExecutor
+from trading.strategies.gatekeeper import StrategyGatekeeper
+from trading.execution.trade_execution_simulator import TradeExecutionSimulator
 from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
 from trading.data.providers.fallback_provider import FallbackDataProvider
 
@@ -132,7 +132,7 @@ class PromptAgent:
             }
         }
         self.strategy_gatekeeper = StrategyGatekeeper(default_strategies)
-        self.trade_executor = TradeExecutor()
+        self.trade_executor = TradeExecutionSimulator()
         self.optimizer = SelfTuningOptimizer()
         self.data_provider = FallbackDataProvider()
         

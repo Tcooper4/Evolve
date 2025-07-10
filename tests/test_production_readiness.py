@@ -20,9 +20,29 @@ import json
 import os
 import sys
 from contextlib import contextmanager
+from pathlib import Path
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Define COMPONENTS_AVAILABLE flag
+COMPONENTS_AVAILABLE = True  # Set to False if components are missing
+
+# Add sample_price_data fixture
+@pytest.fixture
+def sample_price_data():
+    """Create sample price data for testing."""
+    dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='D')
+    np.random.seed(42)
+    prices = 100 + np.cumsum(np.random.normal(0, 1, len(dates)))
+    volumes = np.random.uniform(1000000, 5000000, len(dates))
+    return pd.DataFrame({
+        'Open': prices * 0.99,
+        'High': prices * 1.02,
+        'Low': prices * 0.98,
+        'Close': prices,
+        'Volume': volumes
+    }, index=dates)
 
 # Import components to test
 try:

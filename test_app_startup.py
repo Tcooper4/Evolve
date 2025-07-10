@@ -84,8 +84,9 @@ def test_core_modules():
         print(f"❌ PromptAgent import failed: {e}")
         return False
     
+    # Test strategy engine import
     try:
-        from strategies.strategy_engine import StrategyEngine
+        from trading.strategies.enhanced_strategy_engine import StrategyEngine
         print("✅ StrategyEngine imported successfully")
     except ImportError as e:
         print(f"❌ StrategyEngine import failed: {e}")

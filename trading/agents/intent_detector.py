@@ -1,9 +1,29 @@
 """Intent Detector for trading agents."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class IntentDetectionRequest:
+    """Request for intent detection."""
+    text: str
+    context: Optional[Dict[str, Any]] = None
+    user_id: Optional[str] = None
+    session_id: Optional[str] = None
+
+@dataclass
+class IntentDetectionResult:
+    """Result from intent detection."""
+    intent: str
+    confidence: float
+    entities: Dict[str, Any]
+    action: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    processing_time: Optional[float] = None
 
 class IntentDetector:
     """Detects user intent from natural language input."""

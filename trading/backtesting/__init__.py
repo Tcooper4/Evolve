@@ -12,14 +12,14 @@ This module provides a comprehensive backtesting framework with support for:
 - Unified trade reporting integration
 """
 
-from .backtester import Backtester as BacktestEngine
-from .enhanced_backtester import EnhancedBacktester, run_forecast_backtest, run_multi_model_backtest, run_strategy_comparison
-from .position_sizing import PositionSizing, PositionSizingEngine
-from .risk_metrics import RiskMetric, RiskMetricsEngine
-from .trade_models import Trade, TradeType
-from .performance_analysis import PerformanceAnalyzer
-from .visualization import BacktestVisualizer
-from .edge_case_handler import EdgeCaseHandler
+from trading.backtesting.backtester import Backtester as BacktestEngine
+from trading.backtesting.enhanced_backtester import EnhancedBacktester, run_forecast_backtest, run_multi_model_backtest, run_strategy_comparison
+from trading.backtesting.position_sizing import PositionSizing, PositionSizingEngine
+from trading.backtesting.risk_metrics import RiskMetric, RiskMetricsEngine
+from trading.backtesting.trade_models import Trade, TradeType
+from trading.backtesting.performance_analysis import PerformanceAnalyzer
+from trading.backtesting.visualization import BacktestVisualizer
+from trading.backtesting.edge_case_handler import EdgeCaseHandler
 
 __all__ = [
     'BacktestEngine',

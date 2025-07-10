@@ -22,7 +22,7 @@ def test_basic_imports():
     
     try:
         # Test core imports
-        from core.utils.common_helpers import safe_execute, validate_data
+        from utils.common_helpers import safe_execute, validate_data
         logger.info("✅ Core utils imported successfully")
     except ImportError as e:
         logger.error(f"❌ Failed to import core utils: {e}")

@@ -22,7 +22,7 @@ import uvicorn
 from trading.agents.agent_registry import AgentRegistry
 from trading.agents.agent_manager import AgentManager
 from trading.agents.agent_loop_manager import AgentLoopManager
-from trading.config.agent_config import AgentConfig
+from trading.agents.base_agent_interface import AgentConfig
 from trading.utils.logging_utils import log_manager
 from trading.services.websocket_service import WebSocketService
 

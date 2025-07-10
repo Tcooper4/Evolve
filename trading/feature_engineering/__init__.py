@@ -1,4 +1,3 @@
-from .feature_engineer import FeatureEngineer
-from . import indicators
+from trading.feature_engineering import indicators
 
-__all__ = ["FeatureEngineer", "indicators"]
+__all__ = ["indicators"]

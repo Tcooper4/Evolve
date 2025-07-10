@@ -103,7 +103,7 @@ class AgentMemoryManager:
             logger.info("Redis connection established")
             
         except Exception as e:
-            logger.warning(f"Redis connection failed: {e}")
+            logger.debug(f"Redis connection failed (using fallback): {e}")
             self.redis_client = None
             
             # Setup fallback storage

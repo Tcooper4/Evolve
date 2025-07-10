@@ -22,7 +22,7 @@ from pathlib import Path
 import pandas as pd
 from datetime import datetime, timedelta
 
-from trading.models.forecast_router import ForecastRouter
+from models.forecast_router import ForecastRouter
 from trading.utils.data_utils import load_data, prepare_forecast_data
 from trading.utils.logging import setup_logging
 from trading.config.settings import get_config_value

@@ -1,11 +1,31 @@
 """Self-improving agent implementation."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
+from dataclasses import dataclass
 from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class SelfImprovementRequest:
+    """Request for self-improvement task."""
+    task_id: str
+    task_type: str
+    parameters: Dict[str, Any]
+    priority: int = 1
+    timeout_seconds: Optional[int] = None
+
+@dataclass
+class SelfImprovementResult:
+    """Result from self-improvement task."""
+    success: bool
+    task_id: str
+    improvement_metrics: Dict[str, Any]
+    learning_outcomes: Dict[str, Any]
+    error_message: Optional[str] = None
+    execution_time: Optional[datetime] = None
 
 class SelfImprovingAgent(BaseAgent):
     """Agent that can learn and improve its performance over time."""
