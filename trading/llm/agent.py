@@ -104,6 +104,25 @@ class PromptAgent:
         
         # Initialize components
         self.forecast_router = ForecastRouter()
+        
+        # Initialize model creator for dynamic model generation
+        try:
+            from trading.agents.model_creator_agent import get_model_creator_agent
+            self.model_creator = get_model_creator_agent()
+            logger.info("Model creator agent initialized successfully")
+        except Exception as e:
+            logger.warning(f"Could not initialize model creator: {e}")
+            self.model_creator = None
+        
+        # Initialize prompt router for intelligent routing
+        try:
+            from trading.agents.prompt_router_agent import create_prompt_router
+            self.prompt_router = create_prompt_router()
+            logger.info("Prompt router agent initialized successfully")
+        except Exception as e:
+            logger.warning(f"Could not initialize prompt router: {e}")
+            self.prompt_router = None
+        
         # Default strategy configurations
         default_strategies = {
             'RSI Mean Reversion': {
@@ -195,6 +214,8 @@ class PromptAgent:
                 return self._handle_optimization_request(params)
             elif intent == 'analyze':
                 return self._handle_analysis_request(params)
+            elif intent == 'create_model':
+                return self._handle_model_creation_request(params)
             else:
                 return {'success': True, 'result': self._handle_general_request(prompt, params), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
                 
@@ -237,7 +258,9 @@ class PromptAgent:
                 timeframe = f"{int(timeframe_match.group(1)) * 30}d"
         
         # Determine intent
-        if any(word in prompt_lower for word in ['forecast', 'predict', 'price']):
+        if any(word in prompt_lower for word in ['create model', 'build model', 'new model', 'custom model']):
+            intent = 'create_model'
+        elif any(word in prompt_lower for word in ['forecast', 'predict', 'price']):
             intent = 'forecast'
         elif any(word in prompt_lower for word in ['strategy', 'strategy', 'signal']):
             intent = 'strategy'
@@ -261,10 +284,17 @@ class PromptAgent:
         
         # Extract model preference
         model = None
-        for model_key, model_name in self.model_registry.items():
-            if model_key in prompt_lower:
-                model = model_name
-                break
+        create_new_model = False
+        
+        # Check for dynamic model creation requests
+        if any(phrase in prompt_lower for phrase in ['create model', 'build model', 'new model', 'custom model']):
+            create_new_model = True
+            model = 'dynamic'
+        else:
+            for model_key, model_name in self.model_registry.items():
+                if model_key in prompt_lower:
+                    model = model_name
+                    break
         
         # Auto-select best strategy if none specified
         if not strategy:
@@ -279,6 +309,7 @@ class PromptAgent:
             'timeframe': timeframe,
             'strategy': strategy,
             'model': model,
+            'create_new_model': create_new_model,
             'prompt': prompt
         }
         
@@ -719,6 +750,129 @@ class PromptAgent:
                 recommendations=["Check data availability and symbol validity"]
             )
     
+    def _handle_model_creation_request(self, params: Dict[str, Any]) -> AgentResponse:
+        """Handle dynamic model creation request.
+        
+        Args:
+            params: Request parameters
+            
+        Returns:
+            Agent response
+        """
+        try:
+            if not self.model_creator:
+                return AgentResponse(
+                    success=False,
+                    message="Model creator not available",
+                    recommendations=["Please try using an existing model"]
+                )
+            
+            # Extract model requirements from prompt
+            prompt = params['prompt']
+            symbol = params['symbol']
+            
+            # Generate model requirements based on prompt
+            requirements = self._generate_model_requirements(prompt, symbol)
+            
+            # Create model name
+            model_name = f"dynamic_{symbol}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            # Create and validate model
+            model_spec, success, errors = self.model_creator.create_and_validate_model(
+                requirements, model_name
+            )
+            
+            if success:
+                # Run full evaluation
+                evaluation = self.model_creator.run_full_evaluation(model_name)
+                
+                message = f"Successfully created model '{model_spec.name}':\n"
+                message += f"Framework: {model_spec.framework}\n"
+                message += f"Type: {model_spec.model_type}\n"
+                message += f"Performance Grade: {evaluation.performance_grade}\n"
+                message += f"RMSE: {evaluation.metrics.get('rmse', 'N/A'):.4f}\n"
+                message += f"Sharpe: {evaluation.metrics.get('sharpe_ratio', 'N/A'):.4f}\n"
+                
+                recommendations = evaluation.recommendations
+                
+                next_actions = [
+                    f"Test model on {symbol} data",
+                    "Compare with existing models",
+                    "Add to ensemble if performance is good"
+                ]
+                
+                return AgentResponse(
+                    success=True,
+                    message=message,
+                    data={
+                        'model_spec': asdict(model_spec),
+                        'evaluation': asdict(evaluation)
+                    },
+                    recommendations=recommendations,
+                    next_actions=next_actions
+                )
+            else:
+                return AgentResponse(
+                    success=False,
+                    message=f"Model creation failed: {', '.join(errors)}",
+                    recommendations=["Try a different model description", "Use an existing model instead"]
+                )
+                
+        except Exception as e:
+            logger.error(f"Error in model creation request: {e}")
+            return AgentResponse(
+                success=False,
+                message=f"Model creation failed: {str(e)}",
+                recommendations=["Try a simpler model description", "Use an existing model"]
+            )
+    
+    def _generate_model_requirements(self, prompt: str, symbol: str) -> str:
+        """Generate model requirements from prompt.
+        
+        Args:
+            prompt: User prompt
+            symbol: Trading symbol
+            
+        Returns:
+            Model requirements string
+        """
+        prompt_lower = prompt.lower()
+        
+        # Extract model type preferences
+        if 'lstm' in prompt_lower or 'neural' in prompt_lower or 'deep' in prompt_lower:
+            model_type = 'LSTM neural network'
+        elif 'transformer' in prompt_lower or 'attention' in prompt_lower:
+            model_type = 'Transformer model'
+        elif 'xgboost' in prompt_lower or 'gradient' in prompt_lower:
+            model_type = 'XGBoost gradient boosting'
+        elif 'random' in prompt_lower or 'forest' in prompt_lower:
+            model_type = 'Random Forest'
+        elif 'linear' in prompt_lower or 'regression' in prompt_lower:
+            model_type = 'Linear regression'
+        else:
+            model_type = 'machine learning model'
+        
+        # Extract complexity preferences
+        if 'simple' in prompt_lower or 'basic' in prompt_lower:
+            complexity = 'simple'
+        elif 'complex' in prompt_lower or 'advanced' in prompt_lower:
+            complexity = 'complex'
+        else:
+            complexity = 'moderate'
+        
+        # Generate requirements
+        requirements = f"Create a {complexity} {model_type} for forecasting {symbol} stock prices"
+        
+        # Add specific requirements based on prompt
+        if 'accurate' in prompt_lower or 'precise' in prompt_lower:
+            requirements += " with high accuracy"
+        if 'fast' in prompt_lower or 'quick' in prompt_lower:
+            requirements += " optimized for speed"
+        if 'robust' in prompt_lower or 'stable' in prompt_lower:
+            requirements += " with robust performance"
+        
+        return requirements
+
     def _handle_general_request(self, prompt: str, params: Dict[str, Any]) -> AgentResponse:
         """Handle general request with full pipeline.
         
