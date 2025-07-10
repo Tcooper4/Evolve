@@ -22,9 +22,18 @@ class PerformanceAnalyzer:
         metrics = {}
         try:
             metrics['total_return'] = (df['equity_curve'].iloc[-1] / df['equity_curve'].iloc[0]) - 1 if 'equity_curve' in df else np.nan
-            metrics['annualized_return'] = df['returns'].mean() * 252 if 'returns' in df else np.nan
-            metrics['volatility'] = df['returns'].std() * np.sqrt(252) if 'returns' in df else np.nan
-            metrics['sharpe_ratio'] = metrics['annualized_return'] / metrics['volatility'] if metrics['volatility'] else np.nan
+            
+            # Use log returns for accurate compounding
+            if 'returns' in df:
+                log_returns = np.log1p(df['returns'])
+                metrics['annualized_return'] = log_returns.mean() * 252
+                metrics['volatility'] = log_returns.std() * np.sqrt(252)
+                metrics['sharpe_ratio'] = metrics['annualized_return'] / metrics['volatility'] if metrics['volatility'] > 0 else np.nan
+            else:
+                metrics['annualized_return'] = np.nan
+                metrics['volatility'] = np.nan
+                metrics['sharpe_ratio'] = np.nan
+            
             metrics['max_drawdown'] = self._max_drawdown(df['equity_curve']) if 'equity_curve' in df else np.nan
             metrics['num_trades'] = len(trade_log) if trade_log is not None else 0
             metrics['win_rate'] = (trade_log['pnl'] > 0).mean() if 'pnl' in trade_log else np.nan

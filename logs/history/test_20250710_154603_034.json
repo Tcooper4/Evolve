@@ -1,0 +1,7 @@
+{
+  "timestamp": "2025-07-10T15:46:03.034129",
+  "event_type": "test",
+  "data": {
+    "message": "Hello World"
+  }
+}

@@ -8,6 +8,8 @@ import logging
 from pydantic import BaseModel, EmailStr
 import uuid
 from dataclasses import field
+import hmac
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -288,17 +290,28 @@ class UserManager:
             return []
     
     def verify_token(self, token: str) -> Optional[Dict]:
-        """Verify JWT token and return user data."""
+        """Verify JWT token and return user data with timing attack protection."""
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=["HS256"])
             return payload
         except jwt.InvalidTokenError:
-
-    def _generate_token(self, user: Dict) -> str:
-        """Generate JWT token for user."""
-        payload = {
-            "username": user["username"],
-            "role": user["role"],
-            "exp": datetime.utcnow() + timedelta(days=1)
-        }
-        return {'success': True, 'result': jwt.encode(payload, self.secret_key, algorithm="HS256"), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return None
+    
+    def verify_password(self, password: str, hashed_password: str) -> bool:
+        """Verify password with timing attack protection."""
+        try:
+            # Use hmac.compare_digest for constant-time comparison
+            return hmac.compare_digest(
+                hashlib.sha256(password.encode()).hexdigest(),
+                hashed_password
+            )
+        except Exception:
+            return False
+    
+    def verify_api_key(self, provided_key: str, stored_key: str) -> bool:
+        """Verify API key with timing attack protection."""
+        try:
+            # Use hmac.compare_digest for constant-time comparison
+            return hmac.compare_digest(provided_key, stored_key)
+        except Exception:
+            return False

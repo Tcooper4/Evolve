@@ -644,11 +644,21 @@ def main():
             with st.spinner("Running backtest..."):
                 if selected_strategy in strategies:
                     params = strategies[selected_strategy]['default_params']
-                    backtest_data = generate_strategy_backtest(selected_strategy, symbol, params)
-                    if backtest_data:
-                        st.session_state.current_strategy = backtest_data
-                        st.session_state.strategy_history.append(backtest_data)
-                        st.success("Backtest completed!")
+                    
+                    # Validate parameters
+                    valid_params = True
+                    for param, value in params.items():
+                        if isinstance(value, (int, float)) and value <= 0:
+                            st.error(f"Parameter {param} must be > 0, got {value}")
+                            valid_params = False
+                            break
+                    
+                    if valid_params:
+                        backtest_data = generate_strategy_backtest(selected_strategy, symbol, params)
+                        if backtest_data:
+                            st.session_state.current_strategy = backtest_data
+                            st.session_state.strategy_history.append(backtest_data)
+                            st.success("Backtest completed!")
     
     # Main content area
     col1, col2 = st.columns([2, 1])

@@ -124,10 +124,153 @@ class EnsembleModel(BaseModel):
                 model_scores[model_name] = 0.0
                 model_confidences[model_name] = 0.0
         
-        # Vectorized weight calculation using softmax
-        scores_array = np.array([model_scores[name] for name in self.models.keys()])
-        exp_scores = np.exp(scores_array - np.max(scores_array))  # Numerical stability
-        self.weights = dict(zip(self.models.keys(), exp_scores / np.sum(exp_scores)))
+        # Enhanced dynamic weighting with multiple factors
+        self.weights = self._calculate_dynamic_weights(model_scores, model_confidences, data)
+
+    def _calculate_dynamic_weights(self, model_scores: Dict[str, float], 
+                                 model_confidences: Dict[str, float], 
+                                 data: pd.DataFrame) -> Dict[str, float]:
+        """Calculate dynamic weights using multiple performance factors.
+        
+        Args:
+            model_scores: Performance scores for each model
+            model_confidences: Confidence scores for each model
+            data: Historical data for trend analysis
+            
+        Returns:
+            Dictionary of normalized weights
+        """
+        # Get historical performance trends
+        historical_performance = self._get_historical_performance()
+        
+        # Calculate trend-based weights
+        trend_weights = self._calculate_trend_weights(data)
+        
+        # Calculate volatility-adjusted weights
+        volatility_weights = self._calculate_volatility_weights(data)
+        
+        # Combine all factors
+        final_weights = {}
+        for model_name in self.models.keys():
+            # Base score (current performance)
+            base_score = model_scores.get(model_name, 0.0)
+            
+            # Historical performance (weighted average of recent scores)
+            hist_score = historical_performance.get(model_name, 0.0)
+            
+            # Confidence score
+            conf_score = model_confidences.get(model_name, 0.5)
+            
+            # Trend alignment score
+            trend_score = trend_weights.get(model_name, 0.5)
+            
+            # Volatility adjustment
+            vol_score = volatility_weights.get(model_name, 0.5)
+            
+            # Combine scores with configurable weights
+            weights_config = self.config.get('weight_factors', {
+                'current_performance': 0.4,
+                'historical_performance': 0.2,
+                'confidence': 0.15,
+                'trend_alignment': 0.15,
+                'volatility_adjustment': 0.1
+            })
+            
+            final_score = (
+                weights_config['current_performance'] * base_score +
+                weights_config['historical_performance'] * hist_score +
+                weights_config['confidence'] * conf_score +
+                weights_config['trend_alignment'] * trend_score +
+                weights_config['volatility_adjustment'] * vol_score
+            )
+            
+            final_weights[model_name] = max(0.01, final_score)  # Minimum weight
+        
+        # Normalize weights
+        total_weight = sum(final_weights.values())
+        if total_weight > 0:
+            final_weights = {k: v / total_weight for k, v in final_weights.items()}
+        else:
+            # Fallback to equal weights
+            n_models = len(self.models)
+            final_weights = {k: 1.0 / n_models for k in self.models.keys()}
+        
+        return final_weights
+
+    def _get_historical_performance(self) -> Dict[str, float]:
+        """Get historical performance scores for each model."""
+        historical_scores = {}
+        
+        for model_name, history in self.performance_history.items():
+            if len(history) > 0:
+                # Calculate weighted average of recent performance
+                recent_scores = [entry['score'] for entry in history[-10:]]  # Last 10 entries
+                weights = np.exp(np.linspace(0, 1, len(recent_scores)))  # Exponential weighting
+                weighted_avg = np.average(recent_scores, weights=weights)
+                historical_scores[model_name] = weighted_avg
+            else:
+                historical_scores[model_name] = 0.0
+        
+        return historical_scores
+
+    def _calculate_trend_weights(self, data: pd.DataFrame) -> Dict[str, float]:
+        """Calculate weights based on trend alignment."""
+        # Calculate market trend
+        returns = data['close'].pct_change().dropna()
+        market_trend = returns.mean()
+        market_volatility = returns.std()
+        
+        trend_weights = {}
+        for model_name, model in self.models.items():
+            try:
+                # Get model's trend prediction
+                preds = model.predict(data.iloc[-20:])
+                pred_returns = np.diff(preds) / preds[:-1]
+                pred_trend = np.mean(pred_returns)
+                
+                # Calculate trend alignment
+                trend_alignment = 1 - abs(market_trend - pred_trend) / (market_volatility + 1e-8)
+                trend_alignment = np.clip(trend_alignment, 0, 1)
+                
+                trend_weights[model_name] = trend_alignment
+                
+            except Exception as e:
+                logging.warning(f"Error calculating trend weight for {model_name}: {e}")
+                trend_weights[model_name] = 0.5
+        
+        return trend_weights
+
+    def _calculate_volatility_weights(self, data: pd.DataFrame) -> Dict[str, float]:
+        """Calculate weights based on volatility regime."""
+        # Calculate current volatility
+        returns = data['close'].pct_change().dropna()
+        current_volatility = returns.std()
+        
+        # Calculate historical volatility for comparison
+        historical_volatility = returns.rolling(20).std().mean()
+        
+        # Determine volatility regime
+        if current_volatility > historical_volatility * 1.5:
+            regime = 'high_volatility'
+        elif current_volatility < historical_volatility * 0.5:
+            regime = 'low_volatility'
+        else:
+            regime = 'normal_volatility'
+        
+        # Assign weights based on regime
+        volatility_weights = {}
+        for model_name in self.models.keys():
+            if regime == 'high_volatility':
+                # Prefer models that handle volatility well
+                volatility_weights[model_name] = 0.8 if 'lstm' in model_name.lower() else 0.6
+            elif regime == 'low_volatility':
+                # Prefer simpler models
+                volatility_weights[model_name] = 0.8 if 'arima' in model_name.lower() else 0.6
+            else:
+                # Normal regime - balanced weights
+                volatility_weights[model_name] = 0.7
+        
+        return volatility_weights
 
     def _calculate_custom_score(self, actual: np.ndarray, preds: np.ndarray) -> float:
         """Calculate custom performance score.
