@@ -350,6 +350,22 @@ class AgentAPIService:
                 logger.error(f"Error getting system status: {str(e)}")
                 raise HTTPException(status_code=500, detail=str(e))
         
+        @self.app.post("/trigger")
+        async def trigger_agentic_action(request: Dict[str, Any]):
+            """Universal agentic trigger endpoint: accepts a prompt and returns agentic result."""
+            try:
+                prompt = request.get('prompt')
+                if not prompt:
+                    raise HTTPException(status_code=400, detail="Missing 'prompt' in request body")
+                # Route prompt through PromptAgent or PromptRouterAgent
+                from trading.llm.agent import PromptAgent
+                agent = PromptAgent()
+                result = agent.process_prompt(prompt)
+                return {"success": True, "result": result, "timestamp": datetime.now().isoformat()}
+            except Exception as e:
+                logger.error(f"Error in /trigger endpoint: {e}")
+                return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        
         # WebSocket endpoints
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
