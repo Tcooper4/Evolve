@@ -109,8 +109,7 @@ class TradeExecutionSimulator:
         self.orders: Dict[str, Order] = {}
         self.execution_history: List[ExecutionResult] = []
         self.market_data_cache: Dict[str, pd.DataFrame] = {}
-        
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+    
     def place_order(self, 
                    symbol: str,
                    order_type: OrderType,

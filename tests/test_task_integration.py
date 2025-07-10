@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from trading.agents.task_memory import TaskMemory, Task, TaskStatus
 from trading.agents.task_dashboard import TaskDashboard
-from trading.meta_agents.agents.model_builder import ModelBuilder
+from trading.agents.model_builder_agent import ModelBuilderAgent as ModelBuilder
 # ModelMetrics and ModelOutput may not exist - using placeholders
 
 @pytest.fixture

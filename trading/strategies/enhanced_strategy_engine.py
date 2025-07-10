@@ -71,6 +71,109 @@ class StrategyResult:
     execution_time: float
     timestamp: datetime
 
+class PerformanceChecker:
+    """Comprehensive meta-agent for strategy and model performance evaluation and improvement."""
+    # Default thresholds (can be loaded from config)
+    THRESHOLDS = {
+        'min_sharpe_ratio': 0.5,
+        'max_drawdown': -0.15,
+        'min_win_rate': 0.45,
+        'max_volatility': 0.25,
+        'min_calmar_ratio': 0.5,
+        'max_mse': 0.1,
+        'min_accuracy': 0.55
+    }
+
+    def __init__(self, thresholds: Optional[Dict[str, float]] = None):
+        self.thresholds = thresholds or self.THRESHOLDS.copy()
+
+    def check_strategy_performance(self, strategy_name: str, performance: Dict[str, float]) -> Dict[str, Any]:
+        """Evaluate strategy performance and recommend actions."""
+        sharpe = performance.get('sharpe_ratio', 0)
+        drawdown = performance.get('max_drawdown', 0)
+        win_rate = performance.get('win_rate', 0)
+        volatility = performance.get('volatility', 0)
+        calmar = performance.get('calmar_ratio', 0)
+        total_return = performance.get('total_return', 0)
+
+        should_retire = (
+            sharpe < 0 or
+            drawdown < self.thresholds['max_drawdown'] * 2 or
+            win_rate < 0.2 or
+            total_return < -0.2
+        )
+        should_tune = (
+            sharpe < self.thresholds['min_sharpe_ratio'] or
+            drawdown < self.thresholds['max_drawdown'] or
+            win_rate < self.thresholds['min_win_rate'] or
+            volatility > self.thresholds['max_volatility']
+        )
+        confidence = max(0.0, min(1.0, 0.5 + 0.5 * (sharpe - self.thresholds['min_sharpe_ratio'])))
+        recommendations = []
+        if should_retire:
+            recommendations.append("Retire or replace this strategy due to persistent underperformance.")
+        elif should_tune:
+            recommendations.append("Tune parameters or retrain this strategy to improve performance.")
+        else:
+            recommendations.append("Strategy is performing within acceptable thresholds.")
+        if volatility > self.thresholds['max_volatility']:
+            recommendations.append("Reduce position size or add risk controls due to high volatility.")
+        if win_rate < self.thresholds['min_win_rate']:
+            recommendations.append("Review entry/exit logic to improve win rate.")
+        return {
+            'should_retire': should_retire,
+            'should_tune': should_tune and not should_retire,
+            'confidence': round(confidence, 3),
+            'recommendations': recommendations,
+            'timestamp': datetime.now().isoformat()
+        }
+
+    def check_model_performance(self, model_name: str, performance: Dict[str, float]) -> Dict[str, Any]:
+        """Evaluate model performance and recommend actions."""
+        mse = performance.get('mse', 1.0)
+        accuracy = performance.get('accuracy', 0.0)
+        sharpe = performance.get('sharpe_ratio', 0)
+        should_retrain = mse > self.thresholds['max_mse'] or accuracy < self.thresholds['min_accuracy']
+        should_replace = sharpe < 0 or mse > self.thresholds['max_mse'] * 2
+        recommendations = []
+        if should_replace:
+            recommendations.append("Replace this model due to poor performance (negative Sharpe or high MSE).")
+        elif should_retrain:
+            recommendations.append("Retrain or tune this model to improve accuracy and reduce error.")
+        else:
+            recommendations.append("Model is performing within acceptable thresholds.")
+        if accuracy < self.thresholds['min_accuracy']:
+            recommendations.append("Collect more data or improve feature engineering to boost accuracy.")
+        return {
+            'should_retrain': should_retrain and not should_replace,
+            'should_replace': should_replace,
+            'recommendations': recommendations,
+            'timestamp': datetime.now().isoformat()
+        }
+
+    def suggest_improvements(self, name: str, performance: Dict[str, float], is_model: bool = False) -> List[str]:
+        """Suggest concrete improvements for a strategy or model."""
+        suggestions = []
+        if is_model:
+            if performance.get('mse', 0) > self.thresholds['max_mse']:
+                suggestions.append("Reduce model complexity or regularize to lower MSE.")
+            if performance.get('accuracy', 1) < self.thresholds['min_accuracy']:
+                suggestions.append("Add more training data or features to improve accuracy.")
+            if performance.get('sharpe_ratio', 0) < self.thresholds['min_sharpe_ratio']:
+                suggestions.append("Tune hyperparameters or try alternative model architectures.")
+        else:
+            if performance.get('sharpe_ratio', 0) < self.thresholds['min_sharpe_ratio']:
+                suggestions.append("Increase lookback window or adjust signal thresholds.")
+            if performance.get('max_drawdown', 0) < self.thresholds['max_drawdown']:
+                suggestions.append("Add stop-loss or reduce leverage to control drawdown.")
+            if performance.get('win_rate', 1) < self.thresholds['min_win_rate']:
+                suggestions.append("Refine entry/exit rules to improve win rate.")
+            if performance.get('volatility', 0) > self.thresholds['max_volatility']:
+                suggestions.append("Reduce position size or add volatility filters.")
+        if not suggestions:
+            suggestions.append("No major improvements needed at this time.")
+        return suggestions
+
 class EnhancedStrategyEngine:
     """Enhanced strategy engine with institutional-level capabilities."""
     
@@ -86,8 +189,6 @@ class EnhancedStrategyEngine:
         self._initialize_components()
         
         logger.info("Enhanced Strategy Engine initialized")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def _initialize_components(self):
         """Initialize strategy engine components."""
         try:

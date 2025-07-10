@@ -17,6 +17,9 @@ logging.basicConfig(
     ]
 )
 
+# Create logger instance
+logger = logging.getLogger(__name__)
+
 def test_capability_router():
     """Test capability router fixes."""
     print("Testing CapabilityRouter...")

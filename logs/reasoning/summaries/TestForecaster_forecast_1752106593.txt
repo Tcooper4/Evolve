@@ -1,0 +1,29 @@
+
+# Decision Summary
+
+**Agent:** TestForecaster  
+**Type:** Forecast  
+**Time:** 2025-07-09T20:16:33.984261  
+**Symbol:** AAPL  
+**Timeframe:** 1h
+
+## Action Taken
+Predicted AAPL will be 185.50
+
+## Primary Reason
+Technical analysis
+
+## Confidence Level
+High
+
+## Supporting Factors
+
+- RSI
+
+- MACD
+
+
+## Expected Outcome
+5% upside
+
+## Market Conditions

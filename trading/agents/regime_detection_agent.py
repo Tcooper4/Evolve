@@ -124,6 +124,48 @@ class RegimeDetectionAgent(BaseAgent):
         
         self.logger.info("RegimeDetectionAgent initialized successfully")
     
+    async def execute(self, **kwargs) -> AgentResult:
+        """
+        Execute the regime detection agent's main logic.
+        
+        Args:
+            **kwargs: Expected to contain 'data' and optionally 'symbol'
+            
+        Returns:
+            AgentResult: Result of the regime detection
+        """
+        try:
+            data = kwargs.get('data')
+            symbol = kwargs.get('symbol', 'UNKNOWN')
+            
+            if data is None:
+                return AgentResult(
+                    success=False,
+                    error_message="No data provided for regime detection",
+                    error_type="MissingData"
+                )
+            
+            # Detect regime
+            result = self.detect_regime(data, symbol)
+            
+            return AgentResult(
+                success=True,
+                data={
+                    'regime': result.regime.value,
+                    'confidence': result.confidence,
+                    'recommended_strategies': result.recommended_strategies,
+                    'symbol': symbol
+                },
+                metadata={
+                    'detection_method': result.detection_method,
+                    'features_used': result.features_used,
+                    'timestamp': result.timestamp.isoformat()
+                }
+            )
+            
+        except Exception as e:
+            return self.handle_error(e)
+    
     def detect_regime(self, data: pd.DataFrame, symbol: str = "UNKNOWN") -> RegimeResult:
         """
         Detect the current market regime.

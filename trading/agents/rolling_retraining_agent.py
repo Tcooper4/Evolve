@@ -46,6 +46,27 @@ class RetrainingConfig:
     performance_threshold: float = 0.1  # 10% degradation threshold
     max_models: int = 10  # maximum models to keep
 
+@dataclass
+class RetrainingRequest:
+    """Request for model retraining."""
+    symbol: str
+    data: pd.DataFrame
+    model_type: str = "auto"
+    target_col: str = "returns"
+    force_retrain: bool = False
+    performance_threshold: Optional[float] = None
+    custom_config: Optional[Dict[str, Any]] = None
+
+@dataclass
+class RetrainingResult:
+    """Result from model retraining."""
+    success: bool
+    model_path: Optional[str] = None
+    performance_metrics: Optional[Dict[str, float]] = None
+    feature_importance: Optional[Dict[str, float]] = None
+    error_message: Optional[str] = None
+    retrain_date: Optional[datetime] = None
+
 class RollingRetrainingAgent(BaseAgent):
     """Advanced rolling retraining and walk-forward validation agent."""
     

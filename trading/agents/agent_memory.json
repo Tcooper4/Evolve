@@ -1,0 +1,710 @@
+{
+  "ModelBuilderAgent": {
+    "build": [
+      {
+        "timestamp": "2025-07-09T15:54:28.823979",
+        "model_id": "56fdaba4-ad37-47ab-840c-5b701e31bdce",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:54:28.884415",
+        "model_id": "f9fecd33-c4c1-40f2-a493-f8cd4f943b69",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:54:28.936285",
+        "model_id": "9ae20965-cc19-4c8d-8929-e40262c80310",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:54:29.010209",
+        "model_id": "c71856bd-691f-4d60-b90c-89adc28dce78",
+        "model_type": "invalid_type",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:54:29.079839",
+        "model_id": "e3c2b9ba-46f9-4b5b-a6d9-35d272818953",
+        "model_type": "xgboost",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:54:29.179258",
+        "model_id": "b0d6917d-9fd7-4ebf-90f1-22f7b284ed6e",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:54:29.261517",
+        "model_id": "f353d122-43f6-4b82-ba66-b41fa1558fa1",
+        "model_type": "ensemble",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:54:29.339996",
+        "model_id": "c91bde5c-9cf2-4c7c-bcd3-66209544b99a",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:54:29.409770",
+        "model_id": "2e2e5f61-7cb8-45ec-a70c-e55ed0e0010b",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:54:29.531520",
+        "model_id": "a52770f9-32f9-44d1-8198-599222560599",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:54:29.639638",
+        "model_id": "a8fd9f8f-a401-44a9-92db-4d2e7874f594",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "[Errno 2] No such file or directory: 'nonexistent_file.csv'",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.324710",
+        "model_id": "51fc4309-5ec6-4272-b14e-75bb7f621834",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.385782",
+        "model_id": "4c292212-80cb-4a71-8e11-12adfde094e6",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.433968",
+        "model_id": "e052a93c-009d-4a20-8666-a65a7e136262",
+        "model_type": "xgboost",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.480593",
+        "model_id": "39de9a02-8adb-4e74-bdf6-fc8cc467f5af",
+        "model_type": "ensemble",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.525644",
+        "model_id": "1dd4d2b2-5b49-4922-a95e-4c1a1dadac85",
+        "model_type": "invalid_type",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.573693",
+        "model_id": "921420a9-bd03-4547-8622-3f8154eb2417",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.619410",
+        "model_id": "07d8c4c9-9eb5-481a-91fb-5ace1233739e",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.663836",
+        "model_id": "8222cbab-8f55-4e6b-99ef-d3401559630b",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.720690",
+        "model_id": "79260629-04c0-4699-a02b-4307ee362e68",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.764146",
+        "model_id": "8bcf9853-c715-48a4-b226-05245063e9a1",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T15:59:33.788921",
+        "model_id": "4f6d6253-0f87-481d-ae35-aa65f2c7f283",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "[Errno 2] No such file or directory: 'nonexistent_file.csv'",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.061222",
+        "model_id": "b24ae771-a67f-41eb-b0ea-70c4a2e0b7e7",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.159071",
+        "model_id": "0a744d56-7bb6-4db1-b1f1-59ec774c6830",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.247605",
+        "model_id": "65861edf-26f2-4714-a4c3-ce45eae32939",
+        "model_type": "xgboost",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.333512",
+        "model_id": "05d8e5a3-2656-46e0-87cf-f18461575334",
+        "model_type": "ensemble",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.414741",
+        "model_id": "796529b0-d848-4b37-918e-1cf17af7b450",
+        "model_type": "invalid_type",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.496594",
+        "model_id": "2555a0d3-20d1-415c-b91a-ff1a84330c27",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.596817",
+        "model_id": "fa016cf8-d7ab-416e-b605-6bf98a8f7a4d",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.678367",
+        "model_id": "a4f497a5-b4e1-429b-afa6-57a1c43b8c56",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.776763",
+        "model_id": "13fa86b4-5838-4d5a-96e0-573bcd0a168a",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.862132",
+        "model_id": "0c97c42b-e41e-49d1-a9b9-0fb99da8e4c3",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:12:05.908248",
+        "model_id": "e2847a6f-674f-48ad-8897-d3afdb89c176",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "[Errno 2] No such file or directory: 'nonexistent_file.csv'",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:08.056979",
+        "model_id": "56c6a0cb-d869-4a84-a69c-edcda85628f9",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "[Errno 2] No such file or directory: 'nonexistent_file.csv'",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:08.297480",
+        "model_id": "c5199d0e-d132-4d4e-b0cc-1a02977196a3",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:08.528589",
+        "model_id": "f987eac1-364f-44ce-b650-7a14a232a776",
+        "model_type": "ensemble",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:08.696987",
+        "model_id": "2b1036ff-0e6b-43a4-862c-453cf5934c7d",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:08.781203",
+        "model_id": "c3a208ff-8d82-4650-b7b3-60f2b5bb1697",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:08.870147",
+        "model_id": "6c7772ef-f613-4a85-9e53-1a6f2ca65686",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:08.985943",
+        "model_id": "146b6a9f-ff5f-4625-9438-d65e2eaa37b4",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:09.115859",
+        "model_id": "55f17c83-8ec6-4dc4-a482-d9b755afc22b",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:09.214494",
+        "model_id": "81c58b73-34d1-4a9f-84da-99e26a0bec39",
+        "model_type": "invalid_type",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:09.315068",
+        "model_id": "e29c5eb4-f64e-460d-994c-997af505e772",
+        "model_type": "xgboost",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:46:09.489216",
+        "model_id": "6e9e716d-0c65-48b0-95c6-6d9af66b0782",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.375931",
+        "model_id": "4ce7df07-a6fb-4e19-ac03-46a416991738",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.437632",
+        "model_id": "d5ebc813-db69-43a0-b6e1-ecef8302b28c",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.482807",
+        "model_id": "99c46884-e67c-44d8-a278-6895730c5edc",
+        "model_type": "invalid_type",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.528719",
+        "model_id": "92b3210f-f3ea-47e3-b720-99db769103ea",
+        "model_type": "ensemble",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.583743",
+        "model_id": "48c91722-6622-4ac8-bf14-4c6a0464be59",
+        "model_type": "xgboost",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.630147",
+        "model_id": "e07224df-c300-4de7-9d2d-bb7e7c03df9a",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.699702",
+        "model_id": "aca7503f-e738-4d6f-907a-cf6d5eaaefeb",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.751313",
+        "model_id": "dd8e48da-c676-4524-bf07-7409d8c0e0c6",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.823639",
+        "model_id": "f5125f1f-357f-4de2-aa2e-d5281d99fcee",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.880053",
+        "model_id": "82aca6fa-7742-4fe7-a519-8689c6d2647c",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T18:51:35.980920",
+        "model_id": "93f8e5f8-172c-4df5-9ab6-09b68a624018",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "[Errno 2] No such file or directory: 'nonexistent_file.csv'",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.265605",
+        "model_id": "ffd84d1f-c67f-4acc-b89e-632ec98331fb",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.377425",
+        "model_id": "32bcb6cb-4dd1-49af-bd5d-efad4b9fab52",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.432004",
+        "model_id": "bfdabd17-73b2-4a7c-ac72-e339609cddfe",
+        "model_type": "xgboost",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.484537",
+        "model_id": "14e3fdbf-18d0-44c5-832d-9b1cf4780f06",
+        "model_type": "ensemble",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.544430",
+        "model_id": "8afd8e6a-d4d9-49a6-b53a-a7172a7beec5",
+        "model_type": "invalid_type",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.601813",
+        "model_id": "7b74dbd3-b590-4d3d-8775-1329642b147d",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.651107",
+        "model_id": "ac7f7b07-2057-4512-ac35-790dd4c087a3",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.702218",
+        "model_id": "7bfe0275-ff10-415a-8c85-567bd814839f",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.757219",
+        "model_id": "4885c613-fe09-4c72-8a64-00de7156eed3",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.800670",
+        "model_id": "7aa01317-3470-4c9a-b258-af870d38dda2",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T19:56:37.837166",
+        "model_id": "779717c5-3718-4808-a374-2dd8099a2105",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "[Errno 2] No such file or directory: 'nonexistent_file.csv'",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:10.153641",
+        "model_id": "e87afbc5-7e9f-45a5-b197-5d0fa9296ae5",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "[Errno 2] No such file or directory: 'nonexistent_file.csv'",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:10.245506",
+        "model_id": "f9aa16d7-79f5-4f0b-9c15-cb1524d4e004",
+        "model_type": "invalid_type",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:10.324062",
+        "model_id": "df07d401-7d42-4b75-be7c-c0bd94f7b15e",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:10.411760",
+        "model_id": "b142fd26-f73c-4bff-a536-939b9d8a7b31",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:10.524058",
+        "model_id": "65561f13-4787-4cba-bef5-ee5c5163202b",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:10.671459",
+        "model_id": "ebec2216-424a-44b5-8bb9-54d33c4d08a6",
+        "model_type": "ensemble",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:10.814116",
+        "model_id": "b4233cc6-1b17-415a-b1d8-3ba6ab4f34a2",
+        "model_type": "xgboost",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:10.907373",
+        "model_id": "5bddb432-f27b-4788-8cf3-b0d72bcdc17f",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:11.015696",
+        "model_id": "37c996bd-3305-4a17-9053-39d9509ef548",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:11.149363",
+        "model_id": "dc47ee5b-9b2a-4e5b-ae9e-eb7964ab6330",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:14:11.239470",
+        "model_id": "24cd8dd9-0b62-4645-99bf-d83e4f08f932",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:58.784328",
+        "model_id": "e6ecd0cf-6696-4fae-bca1-422119d41fbb",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "[Errno 2] No such file or directory: 'nonexistent_file.csv'",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:58.855554",
+        "model_id": "62a5e4d2-7022-4ed6-afc2-565cf18bedf4",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:59.096595",
+        "model_id": "9c6eb444-669c-473f-8638-8602feb4ca23",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:59.191760",
+        "model_id": "f693d494-6a57-4ccb-9d7b-9d98b5c86b1c",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:59.249072",
+        "model_id": "27580972-f7a9-4a04-93ba-fdd9877986a2",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:59.326136",
+        "model_id": "938babf0-3ad2-4e17-8edd-47dca254df34",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:59.384601",
+        "model_id": "6a067b8f-25bf-4b77-b5b4-1a5106fa11b2",
+        "model_type": "ensemble",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:59.466234",
+        "model_id": "93b67c54-2254-4c8f-83f7-8763f1875210",
+        "model_type": "invalid_type",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:59.542399",
+        "model_id": "cfe5ed0b-735f-4a0c-95c5-7a25824920cd",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:59.602883",
+        "model_id": "7e7fc208-eaea-4a69-a5ca-3fc933c07d6d",
+        "model_type": "xgboost",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      },
+      {
+        "timestamp": "2025-07-09T20:21:59.687027",
+        "model_id": "ce658527-0832-487c-8c1f-1358fa917881",
+        "model_type": "lstm",
+        "status": "failed",
+        "error_message": "Missing required columns: ['Open', 'High', 'Low', 'Close', 'Volume']",
+        "reward": 0.0
+      }
+    ]
+  }
+}

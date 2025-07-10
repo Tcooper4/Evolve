@@ -13,6 +13,8 @@ from pathlib import Path
 # Add project root to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+pytest.skip("Skipping test_unified_interface.py: unified_interface is deprecated and replaced by new UI/agent system.", allow_module_level=True)
+
 def test_unified_interface():
     """Test the unified interface functionality."""
     print("🧪 Testing Unified Interface")

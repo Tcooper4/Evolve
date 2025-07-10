@@ -106,10 +106,10 @@ def initialize_enhanced_interface():
     logger.info("Initializing Enhanced Interface...")
     
     try:
-        from unified_interface_v2 import EnhancedUnifiedInterfaceV2
+        from interface.unified_interface import UnifiedInterface
         
         # Initialize interface
-        interface = EnhancedUnifiedInterfaceV2()
+        interface = UnifiedInterface()
         logger.info("Enhanced interface initialized")
         
         # Test component initialization
@@ -117,12 +117,12 @@ def initialize_enhanced_interface():
             'agent_hub', 'data_feed', 'prompt_router', 'model_monitor',
             'strategy_logger', 'portfolio_manager', 'strategy_selector',
             'market_regime_agent', 'hybrid_engine', 'quant_gpt',
-            'reporter', 'backtester'
+            'report_exporter'
         ]
         
         initialized_components = 0
         for component in components:
-            if hasattr(interface, component):
+            if component in interface.components:
                 initialized_components += 1
         
         logger.info(f"{initialized_components}/{len(components)} components initialized")
@@ -178,7 +178,7 @@ def start_streamlit_interface():
         import sys
         
         # Start Streamlit
-        cmd = [sys.executable, "-m", "streamlit", "run", "unified_interface_v2.py", 
+        cmd = [sys.executable, "-m", "streamlit", "run", "interface/unified_interface.py", 
                "--server.port=8501", "--server.address=0.0.0.0"]
         
         logger.info("Starting Streamlit server...")

@@ -1,0 +1,53 @@
+{
+  "timestamp": "2025-07-09T20:24:35.866633",
+  "uptime": "12 days, 10:59:40",
+  "platform": {
+    "system": "Windows",
+    "release": "11",
+    "version": "10.0.26100",
+    "machine": "AMD64",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel"
+  },
+  "cpu": {
+    "usage_percent": 31.5,
+    "count": 8,
+    "frequency": 1690.0,
+    "load_avg": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "memory": {
+    "total": 16936132608,
+    "available": 2696527872,
+    "used": 14239604736,
+    "percent": 84.1
+  },
+  "disk": {
+    "total": 510810648576,
+    "used": 501830647808,
+    "free": 8980000768,
+    "percent": 98.2
+  },
+  "network": {
+    "bytes_sent": 102569318,
+    "bytes_recv": 358077206,
+    "packets_sent": 264649,
+    "packets_recv": 440899
+  },
+  "process": {
+    "pid": 57452,
+    "name": "python.exe",
+    "status": "running",
+    "cpu_percent": 0.0,
+    "memory_percent": 5.451318298983408,
+    "create_time": "2025-07-09T20:21:11.033897"
+  },
+  "agent": {
+    "status": "stopped",
+    "pid": null,
+    "uptime": null,
+    "last_heartbeat": null
+  }
+}

@@ -29,6 +29,7 @@ from .model_selector_agent import ModelSelectorAgent, ModelPerformance, ModelCap
 from .model_optimizer_agent import ModelOptimizerAgent, OptimizationResult, OptimizationConfig, OptimizationType, OptimizationStatus
 from .model_evaluator_agent import ModelEvaluatorAgent, ModelEvaluationRequest, ModelEvaluationResult
 from .model_improver_agent import ModelImproverAgent, ModelImprovementRequest, ModelImprovementResult
+from .model_synthesizer_agent import ModelSynthesizerAgent, SynthesisRequest, SynthesisResult, ModelArchitecture, ModelType as SynthesisModelType, SynthesisStatus
 from .performance_critic_agent import PerformanceCriticAgent, ModelEvaluationRequest, ModelEvaluationResult
 
 # Strategy Agents
@@ -72,9 +73,7 @@ from .walk_forward_agent import WalkForwardAgent, WalkForwardRequest, WalkForwar
 from .updater_agent import UpdaterAgent, UpdateRequest, UpdateResult
 from .self_improving_agent import SelfImprovingAgent, SelfImprovementRequest, SelfImprovementResult
 from .intent_detector import IntentDetector, IntentDetectionRequest, IntentDetectionResult
-from .market_analyzer_agent import MarketAnalyzerAgent
 from .regime_detection_agent import RegimeDetectionAgent, create_regime_detection_agent
-from .quant_gpt_agent import QuantGPTAgent
 from .commentary_agent import CommentaryAgent, create_commentary_agent
 
 # Prompt Templates
@@ -120,6 +119,12 @@ __all__ = [
     'ModelImprovementRequest',
     'ModelImprovementResult',
     'PerformanceCriticAgent',
+    'ModelSynthesizerAgent',
+    'SynthesisRequest',
+    'SynthesisResult',
+    'ModelArchitecture',
+    'SynthesisModelType',
+    'SynthesisStatus',
     
     # Strategy Agents
     'StrategySelectorAgent',
@@ -216,10 +221,8 @@ __all__ = [
     'IntentDetector',
     'IntentDetectionRequest',
     'IntentDetectionResult',
-    'MarketAnalyzerAgent',
     'RegimeDetectionAgent',
     'create_regime_detection_agent',
-    'QuantGPTAgent',
     'CommentaryAgent',
     'create_commentary_agent',
     

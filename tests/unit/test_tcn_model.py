@@ -9,11 +9,15 @@ This module tests:
 - Model state preservation
 """
 
-import pytest
+import sys
 import os
+import pytest
 from pathlib import Path
 import numpy as np
 from typing import Dict, Any
+
+# Add project root to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Mock torch if not available
 try:
@@ -24,14 +28,20 @@ except ImportError:
     torch.randn = lambda *args: np.random.randn(*args)
     torch.cuda = type('MockCUDA', (), {'is_available': lambda: False})
 
-# Mock model imports
+# Mock model imports with fallback
 try:
     from trading.models.tcn_model import TCNModel
-    from utils.model_utils import load_model_state
 except ImportError:
     from unittest.mock import Mock
     TCNModel = Mock()
+    print("Warning: TCNModel not available, using mock")
+
+try:
+    from utils.model_utils import load_model_state
+except ImportError:
+    from unittest.mock import Mock
     load_model_state = lambda x: {}
+    print("Warning: load_model_state not available, using mock")
 
 class TestTCNModel:
     @pytest.fixture

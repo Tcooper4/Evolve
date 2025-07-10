@@ -169,6 +169,55 @@ class PromptRouterAgent(BaseAgent):
         
         self.logger.info("PromptRouterAgent initialized successfully")
     
+    async def execute(self, **kwargs) -> AgentResult:
+        """
+        Execute the prompt router agent's main logic.
+        
+        Args:
+            **kwargs: Expected to contain 'user_request' and optionally 'context'
+            
+        Returns:
+            AgentResult: Result of the routing decision
+        """
+        try:
+            user_request = kwargs.get('user_request', '')
+            context = kwargs.get('context', {})
+            
+            if not user_request:
+                return AgentResult(
+                    success=False,
+                    error_message="No user request provided",
+                    error_type="MissingRequest"
+                )
+            
+            # Route the request
+            decision = self.route_request(user_request, context)
+            
+            # Log the decision
+            self._log_routing_decision(decision)
+            
+            # Update performance metrics
+            self._update_performance_metrics(decision)
+            
+            return AgentResult(
+                success=True,
+                data={
+                    'routing_decision': decision,
+                    'primary_agent': decision.primary_agent,
+                    'fallback_agents': decision.fallback_agents,
+                    'confidence': decision.confidence,
+                    'expected_response_time': decision.expected_response_time
+                },
+                metadata={
+                    'request_type': decision.request_type.value,
+                    'reasoning': decision.reasoning,
+                    'priority': decision.priority
+                }
+            )
+            
+        except Exception as e:
+            return self.handle_error(e)
+    
     def _initialize_agent_registry(self):
         """Initialize the registry of available agents."""
         # Define available agents and their capabilities
