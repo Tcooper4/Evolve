@@ -24,6 +24,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 # Local imports
 from .report_generator import ReportGenerator, TradeMetrics, ModelMetrics, StrategyReasoning
@@ -599,54 +600,59 @@ class UnifiedTradeReporter:
             return {}
     
     def _generate_charts(self, trade_analysis: TradeAnalysis, symbol: str) -> Dict[str, str]:
-        """Generate comprehensive charts for the trade analysis."""
+        """Generate charts for the trade analysis."""
         try:
+            # Set matplotlib backend to non-interactive to avoid Tkinter issues
+            import matplotlib
+            matplotlib.use('Agg')  # Use non-interactive backend
+            
+            import matplotlib.pyplot as plt
+            import matplotlib.dates as mdates
+            from pathlib import Path
+            import time
+            
+            charts_dir = self.output_dir / 'charts'
+            charts_dir.mkdir(exist_ok=True)
             charts = {}
             
-            # Check if matplotlib is properly configured
+            # Generate equity curve chart
             try:
-                plt.style.use('seaborn-v0_8')
-            except Exception as style_error:
-                logger.warning(f"Could not set matplotlib style: {style_error}")
-                # Continue with default style
-            
-            # Ensure output directory exists
-            charts_dir = self.output_dir / 'charts'
-            charts_dir.mkdir(parents=True, exist_ok=True)
-            
-            # 1. Equity Curve
-            if trade_analysis.equity_curve.dates and trade_analysis.equity_curve.equity_values:
-                try:
-                    fig, ax = plt.subplots(figsize=(12, 8))
-                    ax.plot(trade_analysis.equity_curve.dates, trade_analysis.equity_curve.equity_values, 
-                           linewidth=2, color='blue', label='Portfolio Value')
-                    ax.plot(trade_analysis.equity_curve.dates, trade_analysis.equity_curve.running_max, 
-                           linewidth=1, color='green', alpha=0.7, label='Peak Value')
-                    ax.fill_between(trade_analysis.equity_curve.dates, 
-                                  trade_analysis.equity_curve.equity_values, 
-                                  trade_analysis.equity_curve.running_max, 
-                                  alpha=0.3, color='red', label='Drawdown')
+                equity_curve = trade_analysis.equity_curve
+                if len(equity_curve.dates) > 1:
+                    fig, ax = plt.subplots(figsize=(12, 6))
+                    ax.plot(equity_curve.dates, equity_curve.equity_values, linewidth=2, color='blue', label='Portfolio Value')
+                    ax.plot(equity_curve.dates, equity_curve.running_max, linewidth=1, color='green', alpha=0.7, label='Running Max')
+                    
+                    # Format x-axis
+                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+                    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+                    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+                    
                     ax.set_title(f'Equity Curve - {symbol}')
                     ax.set_xlabel('Date')
                     ax.set_ylabel('Portfolio Value ($)')
                     ax.legend()
                     ax.grid(True, alpha=0.3)
                     
-                    # Save chart
                     chart_path = charts_dir / f'equity_curve_{symbol}_{int(time.time())}.png'
                     plt.savefig(chart_path, dpi=300, bbox_inches='tight')
                     plt.close()
                     charts['equity_curve'] = str(chart_path)
-                except Exception as e:
-                    logger.warning(f"Could not generate equity curve chart: {e}")
+            except Exception as e:
+                logger.warning(f"Could not generate equity curve chart: {e}")
             
-            # 2. Drawdown Chart
-            if trade_analysis.equity_curve.drawdown:
-                try:
+            # Generate drawdown chart
+            try:
+                if len(equity_curve.dates) > 1:
                     fig, ax = plt.subplots(figsize=(12, 6))
-                    ax.fill_between(trade_analysis.equity_curve.dates, 
-                                  trade_analysis.equity_curve.drawdown, 
-                                  alpha=0.7, color='red', label='Drawdown')
+                    ax.fill_between(equity_curve.dates, equity_curve.drawdown, 0, alpha=0.3, color='red', label='Drawdown')
+                    ax.plot(equity_curve.dates, equity_curve.drawdown, linewidth=1, color='red')
+                    
+                    # Format x-axis
+                    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+                    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
+                    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+                    
                     ax.set_title(f'Drawdown Analysis - {symbol}')
                     ax.set_xlabel('Date')
                     ax.set_ylabel('Drawdown (%)')
@@ -657,69 +663,61 @@ class UnifiedTradeReporter:
                     plt.savefig(chart_path, dpi=300, bbox_inches='tight')
                     plt.close()
                     charts['drawdown'] = str(chart_path)
-                except Exception as e:
-                    logger.warning(f"Could not generate drawdown chart: {e}")
+            except Exception as e:
+                logger.warning(f"Could not generate drawdown chart: {e}")
             
-            # 3. PnL Distribution
-            if trade_analysis.trade_log:
-                try:
-                    pnls = [t.get('pnl', 0) for t in trade_analysis.trade_log]
-                    fig, ax = plt.subplots(figsize=(10, 6))
-                    ax.hist(pnls, bins=30, alpha=0.7, color='blue', edgecolor='black')
-                    ax.axvline(np.mean(pnls), color='red', linestyle='--', label=f'Mean: ${np.mean(pnls):.2f}')
-                    ax.set_title(f'PnL Distribution - {symbol}')
-                    ax.set_xlabel('PnL ($)')
-                    ax.set_ylabel('Frequency')
-                    ax.legend()
-                    ax.grid(True, alpha=0.3)
+            # Generate monthly returns heatmap
+            try:
+                trades = trade_analysis.trade_log
+                if trades:
+                    # Group trades by month
+                    monthly_returns = {}
+                    for trade in trades:
+                        trade_date = datetime.fromisoformat(trade['entry_time'].replace('Z', '+00:00'))
+                        month_key = f"{trade_date.year}-{trade_date.month:02d}"
+                        if month_key not in monthly_returns:
+                            monthly_returns[month_key] = 0
+                        monthly_returns[month_key] += trade.get('pnl', 0)
                     
-                    chart_path = charts_dir / f'pnl_distribution_{symbol}_{int(time.time())}.png'
-                    plt.savefig(chart_path, dpi=300, bbox_inches='tight')
-                    plt.close()
-                    charts['pnl_distribution'] = str(chart_path)
-                except Exception as e:
-                    logger.warning(f"Could not generate PnL distribution chart: {e}")
-            
-            # 4. Monthly Returns Heatmap
-            if trade_analysis.performance_attribution.get('monthly_performance'):
-                try:
-                    monthly_data = trade_analysis.performance_attribution['monthly_performance']
-                    if monthly_data:
-                        # Create monthly returns matrix
-                        years = sorted(set([k.split('-')[0] for k in monthly_data.keys()]))
+                    if monthly_returns:
+                        # Create heatmap data
+                        years = sorted(list(set(k.split('-')[0] for k in monthly_returns.keys())))
                         months = list(range(1, 13))
                         
-                        returns_matrix = np.zeros((len(years), 12))
-                        for year_idx, year in enumerate(years):
+                        returns_matrix = []
+                        for year in years:
+                            row = []
                             for month in months:
-                                key = f"{year}-{month:02d}"
-                                if key in monthly_data:
-                                    returns_matrix[year_idx, month-1] = monthly_data[key]
+                                month_key = f"{year}-{month:02d}"
+                                row.append(monthly_returns.get(month_key, 0))
+                            returns_matrix.append(row)
                         
-                        fig, ax = plt.subplots(figsize=(12, 6))
-                        im = ax.imshow(returns_matrix, cmap='RdYlGn', aspect='auto')
-                        ax.set_xticks(range(12))
-                        ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
-                        ax.set_yticks(range(len(years)))
-                        ax.set_yticklabels(years)
-                        ax.set_title(f'Monthly Returns Heatmap - {symbol}')
-                        
-                        # Add colorbar
-                        cbar = plt.colorbar(im, ax=ax)
-                        cbar.set_label('PnL ($)')
-                        
-                        chart_path = charts_dir / f'monthly_heatmap_{symbol}_{int(time.time())}.png'
-                        plt.savefig(chart_path, dpi=300, bbox_inches='tight')
-                        plt.close()
-                        charts['monthly_heatmap'] = str(chart_path)
-                except Exception as e:
-                    logger.warning(f"Could not generate monthly heatmap chart: {e}")
+                        if returns_matrix:
+                            fig, ax = plt.subplots(figsize=(12, 8))
+                            im = ax.imshow(returns_matrix, cmap='RdYlGn', aspect='auto')
+                            ax.set_xticks(range(12))
+                            ax.set_xticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+                            ax.set_yticks(range(len(years)))
+                            ax.set_yticklabels(years)
+                            ax.set_title(f'Monthly Returns Heatmap - {symbol}')
+                            
+                            # Add colorbar
+                            cbar = plt.colorbar(im, ax=ax)
+                            cbar.set_label('PnL ($)')
+                            
+                            chart_path = charts_dir / f'monthly_heatmap_{symbol}_{int(time.time())}.png'
+                            plt.savefig(chart_path, dpi=300, bbox_inches='tight')
+                            plt.close()
+                            charts['monthly_heatmap'] = str(chart_path)
+            except Exception as e:
+                logger.warning(f"Could not generate monthly heatmap chart: {e}")
             
             return charts
             
         except Exception as e:
             logger.error(f"Error generating charts: {e}")
+            # Return empty dict instead of failing completely
             return {}
     
     def _generate_summary(self, trade_analysis: TradeAnalysis) -> Dict[str, Any]:

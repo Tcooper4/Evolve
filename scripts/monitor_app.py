@@ -302,12 +302,43 @@ class ApplicationMonitor:
         Args:
             message: Alert message to send
         """
+        # Implement actual email sending logic
         try:
-            # TODO: Implement actual email sending logic
-            # For now, just log the message
-            logger.info(f"Email alert would be sent: {message}")
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            # Email configuration
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+            sender_email = os.environ.get('SENDER_EMAIL', '')
+            sender_password = os.environ.get('SENDER_PASSWORD', '')
+            
+            if not sender_email or not sender_password:
+                logger.warning("Email credentials not configured, skipping email notification")
+                return False
+            
+            # Create message
+            msg = MIMEMultipart()
+            msg['From'] = sender_email
+            msg['To'] = recipient_email
+            msg['Subject'] = subject
+            
+            msg.attach(MIMEText(message, 'plain'))
+            
+            # Send email
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+            server.quit()
+            
+            logger.info(f"Email notification sent to {recipient_email}")
+            return True
+            
         except Exception as e:
-            logger.error(f"Error sending email alert: {e}")
+            logger.error(f"Failed to send email notification: {e}")
+            return False
 
     def _send_slack_alert(self, message: str) -> None:
         """
