@@ -47,17 +47,23 @@ class DataProvider:
             return False
     
     def _health_check(self) -> bool:
-        """Implement health check in subclasses."""
-        raise NotImplementedError
+        """Implement health check in subclasses (stub)."""
+        import logging
+        logging.getLogger(__name__).warning("_health_check() not implemented for base DataProvider; override in subclass.")
+        return False
     
     def get_historical_data(self, symbol: str, start_date: str, 
                           end_date: str, interval: str = '1d') -> Optional[pd.DataFrame]:
-        """Get historical data from provider."""
-        raise NotImplementedError
+        """Get historical data from provider (stub)."""
+        import logging
+        logging.getLogger(__name__).warning("get_historical_data() not implemented for base DataProvider; override in subclass.")
+        return None
     
     def get_live_data(self, symbol: str) -> Optional[Dict]:
-        """Get live data from provider."""
-        raise NotImplementedError
+        """Get live data from provider (stub)."""
+        import logging
+        logging.getLogger(__name__).warning("get_live_data() not implemented for base DataProvider; override in subclass.")
+        return None
     
     def get_provider_status(self) -> Dict[str, Any]:
         """Get provider status information."""
