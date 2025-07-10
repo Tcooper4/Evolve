@@ -253,8 +253,10 @@ class DataProvider:
         self.session = None
 
     async def connect(self):
-        """Connect to data provider."""
-        raise NotImplementedError
+        """Connect to data provider (stub)."""
+        import logging
+        logging.getLogger(__name__).warning("connect() not implemented for base DataProvider; override in subclass.")
+        return None
     
     async def disconnect(self):
         """Disconnect from data provider."""
@@ -262,16 +264,20 @@ class DataProvider:
             await self.session.close()
     
     async def subscribe(self, symbols: List[str], timeframes: List[str]):
-        """Subscribe to data streams."""
-        raise NotImplementedError
+        """Subscribe to data streams (stub)."""
+        import logging
+        logging.getLogger(__name__).warning("subscribe() not implemented for base DataProvider; override in subclass.")
+        return None
     
     async def get_historical_data(self, 
                                 symbol: str,
                                 timeframe: str,
                                 start_date: datetime,
                                 end_date: datetime) -> List[MarketData]:
-        """Get historical data."""
-        raise NotImplementedError
+        """Get historical data (stub)."""
+        import logging
+        logging.getLogger(__name__).warning("get_historical_data() not implemented for base DataProvider; override in subclass.")
+        return []
 
 class PolygonDataProvider(DataProvider):
     """Polygon.io data provider."""

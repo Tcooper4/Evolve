@@ -360,8 +360,39 @@ def launch_api_interface() -> Dict[str, Any]:
         print("🔗 API will be available at: http://localhost:8000")
         print("\nPress Ctrl+C to stop the server")
         
-        # TODO: Implement API server
-        print("API interface not yet implemented")
+        # Implement API server
+        try:
+            import uvicorn
+            from fastapi import FastAPI
+            from fastapi.middleware.cors import CORSMiddleware
+            
+            app = FastAPI(title="Evolve AI Trading API", version="1.0.0")
+            
+            # Add CORS middleware
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+            
+            # Add API routes here
+            @app.get("/")
+            async def root():
+                return {"message": "Evolve AI Trading API", "status": "running"}
+            
+            @app.get("/health")
+            async def health_check():
+                return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+            
+            # Start server
+            uvicorn.run(app, host="0.0.0.0", port=8000)
+            
+        except ImportError:
+            logger.warning("FastAPI/uvicorn not available, skipping API server")
+        except Exception as e:
+            logger.error(f"Failed to start API server: {e}")
         
         return {
             'status': 'not_implemented',

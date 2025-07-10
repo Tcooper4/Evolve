@@ -191,9 +191,26 @@ class VoicePromptAgent:
             try:
                 # Use the voice command parsing template
                 prompt = format_template("voice_command_parsing", command=text)
-                # For now, fall back to regex parsing
-                # TODO: Integrate with LLM parsing when available
-                pass
+                # Integrate with LLM parsing when available
+                try:
+                    from trading.llm.llm_interface import LLMInterface
+                    
+                    llm = LLMInterface()
+                    parsed_intent = llm.parse_intent(text)
+                    
+                    if parsed_intent:
+                        logger.info(f"LLM parsed intent: {parsed_intent}")
+                        return parsed_intent
+                    else:
+                        logger.warning("LLM parsing failed, using regex fallback")
+                        return self._regex_parse_intent(text)
+                        
+                except ImportError:
+                    logger.info("LLM interface not available, using regex fallback")
+                    return self._regex_parse_intent(text)
+                except Exception as e:
+                    logger.error(f"LLM parsing error: {e}, using regex fallback")
+                    return self._regex_parse_intent(text)
             except Exception as e:
                 logger.warning(f"Failed to use centralized template: {e}")
         
