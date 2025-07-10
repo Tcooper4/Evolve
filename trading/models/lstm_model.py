@@ -14,6 +14,8 @@ from sklearn.preprocessing import StandardScaler
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.tensorboard import SummaryWriter
+import os
 
 # Local imports
 from .base_model import BaseModel
@@ -62,8 +64,10 @@ class LSTMModel(nn.Module):
 
     def train_model(self, data: pd.DataFrame, target: pd.Series, 
                    epochs: int, batch_size: int = 32, 
-                   learning_rate: float = 0.001) -> Dict[str, List[float]]:
-        """Train the LSTM model with data cleaning.
+                   learning_rate: float = 0.001, 
+                   patience: int = 10,
+                   checkpoint_dir: str = "models/checkpoints") -> Dict[str, List[float]]:
+        """Train the LSTM model with data cleaning, early stopping, and checkpointing.
 
         Args:
             data (pd.DataFrame): Input features
@@ -71,6 +75,8 @@ class LSTMModel(nn.Module):
             epochs (int): Number of training epochs
             batch_size (int, optional): Batch size. Defaults to 32.
             learning_rate (float, optional): Learning rate. Defaults to 0.001.
+            patience (int, optional): Early stopping patience. Defaults to 10.
+            checkpoint_dir (str, optional): Directory for model checkpoints. Defaults to "models/checkpoints".
 
         Returns:
             Dict[str, List[float]]: Training history with loss values
@@ -93,9 +99,13 @@ class LSTMModel(nn.Module):
         
         self.logger.info(f"Data cleaned: {len(data)} -> {len(X)} samples after removing NaN/infinite values")
         
-        # Initialize optimizer and loss function
+        # Initialize optimizer, loss function, and scheduler
         optimizer = Adam(self.parameters(), lr=learning_rate)
         criterion = nn.MSELoss()
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
+        
+        # Setup checkpoint directory
+        os.makedirs(checkpoint_dir, exist_ok=True)
         
         # Scale the data
         X_scaled = self.scaler.fit_transform(X)
@@ -114,7 +124,12 @@ class LSTMModel(nn.Module):
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         
         # Training history
-        history = {'train_loss': []}
+        history = {'train_loss': [], 'val_loss': []}
+        
+        # Early stopping variables
+        best_loss = float('inf')
+        patience_counter = 0
+        best_model_state = None
         
         # Training loop
         self.train()
@@ -140,9 +155,38 @@ class LSTMModel(nn.Module):
             avg_epoch_loss = epoch_loss / len(dataloader)
             history['train_loss'].append(avg_epoch_loss)
             
+            # Update learning rate scheduler
+            scheduler.step(avg_epoch_loss)
+            
+            # Early stopping check
+            if avg_epoch_loss < best_loss:
+                best_loss = avg_epoch_loss
+                patience_counter = 0
+                best_model_state = self.state_dict().copy()
+                
+                # Save checkpoint
+                checkpoint_path = os.path.join(checkpoint_dir, f"best_model_epoch_{epoch+1}.pt")
+                torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': best_model_state,
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'loss': best_loss,
+                    'config': self.config
+                }, checkpoint_path)
+                self.logger.info(f"Saved best model checkpoint: {checkpoint_path}")
+            else:
+                patience_counter += 1
+            
             # Log progress
             if (epoch + 1) % 10 == 0:
-                self.logger.info(f'Epoch [{epoch+1}/{epochs}], Loss: {avg_epoch_loss:.4f}')
+                self.logger.info(f'Epoch [{epoch+1}/{epochs}], Loss: {avg_epoch_loss:.4f}, Patience: {patience_counter}/{patience}')
+            
+            # Early stopping
+            if patience_counter >= patience:
+                self.logger.info(f'Early stopping triggered after {epoch+1} epochs')
+                # Load best model
+                self.load_state_dict(best_model_state)
+                break
         
         return history
 
@@ -460,7 +504,7 @@ class LSTMForecaster(BaseModel):
     
     def fit(self, X: pd.DataFrame, y: pd.Series, 
             epochs: int = 100, batch_size: int = 32, 
-            learning_rate: float = 0.001) -> Dict[str, List[float]]:
+            learning_rate: float = 0.001, validation_split: float = 0.2) -> Dict[str, List[float]]:
         """Train the model with robust error handling.
         
         Args:
@@ -523,22 +567,30 @@ class LSTMForecaster(BaseModel):
             # Prepare data
             X_seq, y_seq = self._prepare_data(X, is_training=True)
             
-            # Create DataLoader
-            dataset = TensorDataset(X_seq, y_seq)
-            dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+            # Split data for validation
+            split_idx = int(len(X_seq) * (1 - validation_split))
+            X_train, X_val = X_seq[:split_idx], X_seq[split_idx:]
+            y_train, y_val = y_seq[:split_idx], y_seq[split_idx:]
+            
+            # Create DataLoaders
+            train_dataset = TensorDataset(X_train, y_train)
+            val_dataset = TensorDataset(X_val, y_val)
+            train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+            val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
             
             # Initialize optimizer and loss function
             optimizer = Adam(self.model.parameters(), lr=learning_rate)
             criterion = nn.MSELoss()
             
             # Training history
-            history = {'train_loss': []}
+            history = {'train_loss': [], 'val_loss': []}
             
             # Training loop
             self.model.train()
             for epoch in range(epochs):
-                epoch_loss = 0.0
-                for batch_X, batch_y in dataloader:
+                # Training phase
+                train_loss = 0.0
+                for batch_X, batch_y in train_dataloader:
                     # Move batch to device
                     batch_X = batch_X.to(self.device)
                     batch_y = batch_y.to(self.device)
@@ -552,15 +604,33 @@ class LSTMForecaster(BaseModel):
                     loss.backward()
                     optimizer.step()
                     
-                    epoch_loss += loss.item()
+                    train_loss += loss.item()
                 
-                # Calculate average epoch loss
-                avg_epoch_loss = epoch_loss / len(dataloader)
-                history['train_loss'].append(avg_epoch_loss)
+                # Validation phase
+                val_loss = 0.0
+                self.model.eval()
+                with torch.no_grad():
+                    for batch_X, batch_y in val_dataloader:
+                        batch_X = batch_X.to(self.device)
+                        batch_y = batch_y.to(self.device)
+                        
+                        outputs = self.model(batch_X)
+                        loss = criterion(outputs, batch_y)
+                        val_loss += loss.item()
+                
+                # Calculate average losses
+                avg_train_loss = train_loss / len(train_dataloader)
+                avg_val_loss = val_loss / len(val_dataloader)
+                
+                history['train_loss'].append(avg_train_loss)
+                history['val_loss'].append(avg_val_loss)
                 
                 # Log progress
                 if (epoch + 1) % 10 == 0:
-                    self.logger.info(f'Epoch [{epoch+1}/{epochs}], Loss: {avg_epoch_loss:.4f}')
+                    self.logger.info(f'Epoch [{epoch+1}/{epochs}], Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}')
+                
+                # Set model back to training mode
+                self.model.train()
             
             self.logger.info(f"LSTM model training completed successfully with {len(X)} data points")
             return history

@@ -527,6 +527,290 @@ class RayOptimization(OptimizationMethod):
             convergence_history=all_scores
         )
 
+class GeneticAlgorithm(OptimizationMethod):
+    """Genetic Algorithm optimization method."""
+    
+    def optimize(self, objective: Callable, param_space: Dict[str, Any], 
+                data: pd.DataFrame, **kwargs) -> OptimizationResult:
+        """Run Genetic Algorithm optimization.
+        
+        Args:
+            objective: Objective function to minimize
+            param_space: Parameter space to search
+            data: Market data
+            **kwargs: Additional optimization parameters
+            
+        Returns:
+            OptimizationResult object
+        """
+        start_time = datetime.now()
+        
+        # GA parameters
+        population_size = kwargs.get('population_size', 50)
+        n_generations = kwargs.get('n_generations', 100)
+        mutation_rate = kwargs.get('mutation_rate', 0.1)
+        crossover_rate = kwargs.get('crossover_rate', 0.8)
+        elite_size = kwargs.get('elite_size', 5)
+        
+        # Initialize population
+        population = self._initialize_population(param_space, population_size)
+        
+        best_score = float('inf')
+        best_params = None
+        all_scores = []
+        all_params = []
+        convergence_history = []
+        
+        for generation in range(n_generations):
+            # Evaluate population
+            scores = []
+            for individual in population:
+                try:
+                    score = objective(individual, data)
+                    scores.append(score)
+                    all_scores.append(score)
+                    all_params.append(individual.copy())
+                    
+                    if score < best_score:
+                        best_score = score
+                        best_params = individual.copy()
+                        
+                except Exception as e:
+                    self.logger.warning(f"Error evaluating individual: {e}")
+                    scores.append(float('inf'))
+            
+            convergence_history.append(best_score)
+            
+            # Check early stopping
+            if self._check_early_stopping(convergence_history, patience=10):
+                self.logger.info(f"Early stopping at generation {generation}")
+                break
+            
+            # Selection
+            selected = self._selection(population, scores, elite_size)
+            
+            # Crossover
+            offspring = self._crossover(selected, crossover_rate, population_size - elite_size)
+            
+            # Mutation
+            offspring = self._mutation(offspring, mutation_rate, param_space)
+            
+            # Update population
+            population = selected[:elite_size] + offspring
+        
+        end_time = datetime.now()
+        optimization_time = (end_time - start_time).total_seconds()
+        
+        return OptimizationResult(
+            best_params=best_params,
+            best_score=best_score,
+            all_scores=all_scores,
+            all_params=all_params,
+            optimization_time=optimization_time,
+            n_iterations=n_generations,
+            convergence_history=convergence_history
+        )
+    
+    def _initialize_population(self, param_space: Dict[str, Any], population_size: int) -> List[Dict[str, Any]]:
+        """Initialize random population."""
+        population = []
+        for _ in range(population_size):
+            individual = {}
+            for param, space in param_space.items():
+                if isinstance(space, (list, tuple)):
+                    individual[param] = np.random.choice(space)
+                elif isinstance(space, dict):
+                    if space.get('type') == 'int':
+                        individual[param] = np.random.randint(space['start'], space['end'] + 1)
+                    else:
+                        individual[param] = np.random.uniform(space['start'], space['end'])
+            population.append(individual)
+        return population
+    
+    def _selection(self, population: List[Dict[str, Any]], scores: List[float], 
+                  elite_size: int) -> List[Dict[str, Any]]:
+        """Tournament selection."""
+        # Keep elite individuals
+        elite_indices = np.argsort(scores)[:elite_size]
+        selected = [population[i] for i in elite_indices]
+        
+        # Tournament selection for rest
+        tournament_size = 3
+        while len(selected) < len(population):
+            tournament_indices = np.random.choice(len(population), tournament_size, replace=False)
+            tournament_scores = [scores[i] for i in tournament_indices]
+            winner_idx = tournament_indices[np.argmin(tournament_scores)]
+            selected.append(population[winner_idx])
+        
+        return selected
+    
+    def _crossover(self, selected: List[Dict[str, Any]], crossover_rate: float, 
+                  offspring_size: int) -> List[Dict[str, Any]]:
+        """Uniform crossover."""
+        offspring = []
+        for _ in range(offspring_size):
+            if np.random.random() < crossover_rate and len(selected) >= 2:
+                parent1, parent2 = np.random.choice(selected, 2, replace=False)
+                child = {}
+                for param in parent1.keys():
+                    if np.random.random() < 0.5:
+                        child[param] = parent1[param]
+                    else:
+                        child[param] = parent2[param]
+                offspring.append(child)
+            else:
+                offspring.append(np.random.choice(selected))
+        return offspring
+    
+    def _mutation(self, offspring: List[Dict[str, Any]], mutation_rate: float, 
+                 param_space: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Gaussian mutation."""
+        for individual in offspring:
+            for param, space in param_space.items():
+                if np.random.random() < mutation_rate:
+                    if isinstance(space, (list, tuple)):
+                        individual[param] = np.random.choice(space)
+                    elif isinstance(space, dict):
+                        if space.get('type') == 'int':
+                            individual[param] = np.random.randint(space['start'], space['end'] + 1)
+                        else:
+                            # Gaussian mutation
+                            current_value = individual[param]
+                            std = (space['end'] - space['start']) * 0.1
+                            new_value = current_value + np.random.normal(0, std)
+                            new_value = np.clip(new_value, space['start'], space['end'])
+                            individual[param] = new_value
+        return offspring
+
+
+class ParticleSwarmOptimization(OptimizationMethod):
+    """Particle Swarm Optimization method."""
+    
+    def optimize(self, objective: Callable, param_space: Dict[str, Any], 
+                data: pd.DataFrame, **kwargs) -> OptimizationResult:
+        """Run Particle Swarm Optimization.
+        
+        Args:
+            objective: Objective function to minimize
+            param_space: Parameter space to search
+            data: Market data
+            **kwargs: Additional optimization parameters
+            
+        Returns:
+            OptimizationResult object
+        """
+        start_time = datetime.now()
+        
+        # PSO parameters
+        n_particles = kwargs.get('n_particles', 30)
+        n_iterations = kwargs.get('n_iterations', 100)
+        w = kwargs.get('inertia_weight', 0.7)  # Inertia weight
+        c1 = kwargs.get('cognitive_weight', 1.5)  # Cognitive weight
+        c2 = kwargs.get('social_weight', 1.5)  # Social weight
+        
+        # Initialize particles
+        particles, velocities = self._initialize_particles(param_space, n_particles)
+        
+        # Initialize personal and global best
+        personal_best = particles.copy()
+        personal_best_scores = [float('inf')] * n_particles
+        global_best = None
+        global_best_score = float('inf')
+        
+        all_scores = []
+        all_params = []
+        convergence_history = []
+        
+        for iteration in range(n_iterations):
+            # Evaluate particles
+            for i, particle in enumerate(particles):
+                try:
+                    score = objective(particle, data)
+                    all_scores.append(score)
+                    all_params.append(particle.copy())
+                    
+                    # Update personal best
+                    if score < personal_best_scores[i]:
+                        personal_best[i] = particle.copy()
+                        personal_best_scores[i] = score
+                    
+                    # Update global best
+                    if score < global_best_score:
+                        global_best = particle.copy()
+                        global_best_score = score
+                        
+                except Exception as e:
+                    self.logger.warning(f"Error evaluating particle: {e}")
+                    continue
+            
+            convergence_history.append(global_best_score)
+            
+            # Check early stopping
+            if self._check_early_stopping(convergence_history, patience=10):
+                self.logger.info(f"Early stopping at iteration {iteration}")
+                break
+            
+            # Update velocities and positions
+            for i in range(n_particles):
+                for param in param_space.keys():
+                    # Velocity update
+                    r1, r2 = np.random.random(2)
+                    cognitive_velocity = c1 * r1 * (personal_best[i][param] - particles[i][param])
+                    social_velocity = c2 * r2 * (global_best[param] - particles[i][param])
+                    
+                    velocities[i][param] = w * velocities[i][param] + cognitive_velocity + social_velocity
+                    
+                    # Position update
+                    particles[i][param] += velocities[i][param]
+                    
+                    # Boundary handling
+                    space = param_space[param]
+                    if isinstance(space, (list, tuple)):
+                        particles[i][param] = np.clip(particles[i][param], 0, len(space) - 1)
+                        particles[i][param] = int(particles[i][param])
+                    elif isinstance(space, dict):
+                        particles[i][param] = np.clip(particles[i][param], space['start'], space['end'])
+        
+        end_time = datetime.now()
+        optimization_time = (end_time - start_time).total_seconds()
+        
+        return OptimizationResult(
+            best_params=global_best,
+            best_score=global_best_score,
+            all_scores=all_scores,
+            all_params=all_params,
+            optimization_time=optimization_time,
+            n_iterations=n_iterations,
+            convergence_history=convergence_history
+        )
+    
+    def _initialize_particles(self, param_space: Dict[str, Any], n_particles: int) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Initialize particles and velocities."""
+        particles = []
+        velocities = []
+        
+        for _ in range(n_particles):
+            particle = {}
+            velocity = {}
+            
+            for param, space in param_space.items():
+                if isinstance(space, (list, tuple)):
+                    particle[param] = np.random.randint(0, len(space))
+                    velocity[param] = np.random.uniform(-1, 1)
+                elif isinstance(space, dict):
+                    if space.get('type') == 'int':
+                        particle[param] = np.random.randint(space['start'], space['end'] + 1)
+                        velocity[param] = np.random.uniform(-1, 1)
+                    else:
+                        particle[param] = np.random.uniform(space['start'], space['end'])
+                        velocity[param] = np.random.uniform(-0.1, 0.1) * (space['end'] - space['start'])
+            
+            particles.append(particle)
+            velocities.append(velocity)
+        
+        return particles, velocities
+
+
 class OptunaOptimization(OptimizationMethod):
     """Optuna optimization method."""
     
@@ -828,7 +1112,7 @@ class StrategyOptimizerConfig(OptimizerConfig):
     @validator('optimizer_type', allow_reuse=True)
     def validate_optimizer_type(cls, v):
         """Validate optimizer type."""
-        valid_types = ["grid", "bayesian", "genetic"]
+        valid_types = ["grid", "bayesian", "genetic", "pso", "optuna", "pytorch", "ray"]
         if v not in valid_types:
             raise ValueError(f"optimizer_type must be one of {valid_types}")
         return v
@@ -905,7 +1189,9 @@ class StrategyOptimizer(BaseOptimizer):
             "bayesian": BayesianOptimization,
             "ray": RayOptimization if RAY_AVAILABLE else None,
             "optuna": OptunaOptimization,
-            "pytorch": PyTorchOptimization
+            "pytorch": PyTorchOptimization,
+            "genetic": GeneticAlgorithm,
+            "pso": ParticleSwarmOptimization
         }
         
         optimizer_class = optimizer_map.get(self.config.optimizer_type)

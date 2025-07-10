@@ -40,6 +40,10 @@ class ARIMAModel(BaseModel):
             Dictionary with fit status and model reference
         """
         try:
+            # Add input length check
+            if len(data) < 20:
+                raise ValueError("ARIMA requires at least 20 data points.")
+            
             # Create ARIMA model
             if self.seasonal_order:
                 from statsmodels.tsa.statespace.sarimax import SARIMAX

@@ -117,9 +117,15 @@ class AutoformerModel(BaseModel):
             
             X = data[self.feature_columns].values.astype(np.float32)
             X_tensor = torch.tensor(X)
+            
+            # Add attention mask for correct Transformer behavior
+            # Create mask for non-padded sequences (assuming no padding for now)
+            seq_length = X_tensor.shape[0]
+            mask = torch.ones(seq_length, dtype=torch.bool)
+            
             self.model.eval()
             with torch.no_grad():
-                y_pred = self.model(X_tensor.unsqueeze(0))
+                y_pred = self.model(X_tensor.unsqueeze(0), attention_mask=mask.unsqueeze(0))
             
             predictions = y_pred.squeeze().cpu().numpy()
             

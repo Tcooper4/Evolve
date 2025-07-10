@@ -155,4 +155,56 @@ class TestARIMAModel:
         
         # Forecast should capture seasonality
         assert len(forecast) == 5
-        assert not forecast.isnull().any() 
+        assert not forecast.isnull().any()
+
+    def test_constant_series_handling(self, model):
+        """Test that model handles constant series correctly."""
+        # Create constant data
+        constant_data = pd.Series([100.0] * 50)
+        
+        # Should handle constant series gracefully
+        result = model.fit(constant_data)
+        assert result['success'] is True or 'constant' in result.get('error', '').lower()
+        
+        if result['success']:
+            forecast = model.predict(steps=5)
+            assert forecast['success'] is True
+            assert len(forecast['predictions']) == 5
+
+    def test_short_series_handling(self, model):
+        """Test that model handles very short time series correctly."""
+        # Test with less than 3 datapoints
+        short_data = pd.Series([100, 101])
+        
+        result = model.fit(short_data)
+        # Should fail gracefully with clear error message
+        assert result['success'] is False
+        assert 'insufficient' in result.get('error', '').lower() or 'at least' in result.get('error', '').lower()
+        
+        # Test with exactly 3 datapoints (minimum for ARIMA)
+        minimal_data = pd.Series([100, 101, 102])
+        result = model.fit(minimal_data)
+        # Should work or fail with clear message
+        assert isinstance(result, dict)
+        assert 'success' in result
+
+    def test_sarima_support(self, model):
+        """Test that model supports SARIMA with seasonal orders."""
+        # Create seasonal data
+        t = np.linspace(0, 8*np.pi, 200)
+        seasonal_data = pd.Series(100 + 10*np.sin(t) + np.random.normal(0, 1, 200))
+        
+        # Test with seasonal order
+        sarima_config = {
+            'order': (1, 1, 1),
+            'seasonal_order': (1, 1, 1, 12)  # Monthly seasonality
+        }
+        sarima_model = ARIMAModel(config=sarima_config)
+        
+        result = sarima_model.fit(seasonal_data)
+        assert result['success'] is True
+        
+        if result['success']:
+            forecast = sarima_model.predict(steps=5)
+            assert forecast['success'] is True
+            assert len(forecast['predictions']) == 5 

@@ -8,6 +8,10 @@ import numpy as np
 from typing import Dict, List, Any, Optional, Tuple
 import logging
 from dataclasses import dataclass
+import json
+import os
+from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +34,9 @@ class ModelParameterTuner:
     def __init__(self):
         """Initialize the parameter tuner."""
         self.parameter_configs = self._initialize_parameter_configs()
+        self.history_file = Path("logs/optimization_history.json")
+        self.history_file.parent.mkdir(exist_ok=True)
+        self._load_optimization_history()
     
     def _initialize_parameter_configs(self) -> Dict[str, List[ParameterConfig]]:
         """Initialize parameter configurations for different models."""
@@ -478,6 +485,63 @@ class ModelParameterTuner:
         except Exception as e:
             logger.error(f"Error loading parameter preset: {e}")
             return {}
+
+    def _load_optimization_history(self):
+        """Load optimization history from file."""
+        try:
+            if self.history_file.exists():
+                with open(self.history_file, 'r') as f:
+                    self.optimization_history = json.load(f)
+            else:
+                self.optimization_history = []
+        except Exception as e:
+            logger.warning(f"Could not load optimization history: {e}")
+            self.optimization_history = []
+    
+    def _save_optimization_history(self):
+        """Save optimization history to file."""
+        try:
+            with open(self.history_file, 'w') as f:
+                json.dump(self.optimization_history, f, indent=2, default=str)
+        except Exception as e:
+            logger.error(f"Could not save optimization history: {e}")
+    
+    def add_optimization_result(self, model_type: str, parameters: Dict[str, Any], 
+                               performance_metrics: Dict[str, float]):
+        """Add optimization result to history.
+        
+        Args:
+            model_type: Type of model optimized
+            parameters: Parameters used
+            performance_metrics: Performance metrics achieved
+        """
+        result = {
+            'timestamp': datetime.now().isoformat(),
+            'model_type': model_type,
+            'parameters': parameters,
+            'performance_metrics': performance_metrics
+        }
+        self.optimization_history.append(result)
+        self._save_optimization_history()
+        logger.info(f"Added optimization result for {model_type}")
+    
+    def get_optimization_history(self, model_type: Optional[str] = None, 
+                                limit: int = 50) -> List[Dict[str, Any]]:
+        """Get optimization history.
+        
+        Args:
+            model_type: Filter by model type (optional)
+            limit: Maximum number of results to return
+            
+        Returns:
+            List of optimization results
+        """
+        if model_type:
+            filtered = [r for r in self.optimization_history if r['model_type'] == model_type]
+        else:
+            filtered = self.optimization_history
+        
+        return filtered[-limit:] if limit else filtered
 
 # Global instance
 parameter_tuner = ModelParameterTuner()

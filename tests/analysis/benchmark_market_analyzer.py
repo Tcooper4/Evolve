@@ -88,9 +88,8 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         
     def _generate_plots(self):
         """Generate benchmark result plots."""
-        # Set style
+        # Set style without modifying global rcParams
         sns.set_style('whitegrid')
-        plt.rcParams['figure.figsize'] = (12, 8)
         
         # Create interactive HTML reports
         self._generate_interactive_report()
@@ -213,7 +212,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         
     def _plot_data_fetching(self):
         """Plot data fetching performance."""
-        plt.figure()
+        plt.figure(figsize=(12, 8))
         df_fetch = pd.DataFrame(self.results['data_fetching'])
         
         # Create box plot
@@ -224,7 +223,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         plt.savefig(self.benchmark_dir / 'data_fetching.png')
         
         # Create violin plot
-        plt.figure()
+        plt.figure(figsize=(12, 8))
         sns.violinplot(data=df_fetch, x='symbol', y='time')
         plt.title('Data Fetching Distribution')
         plt.xticks(rotation=45)
@@ -233,7 +232,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         
     def _plot_single_analysis(self):
         """Plot single analysis performance."""
-        plt.figure()
+        plt.figure(figsize=(12, 8))
         df_single = pd.DataFrame(self.results['single_analysis'])
         
         # Create box plot
@@ -244,7 +243,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         plt.savefig(self.benchmark_dir / 'single_analysis.png')
         
         # Create heatmap
-        plt.figure()
+        plt.figure(figsize=(12, 8))
         pivot = df_single.pivot_table(
             values='time',
             index='symbol',
@@ -258,7 +257,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         
     def _plot_batch_analysis(self):
         """Plot batch analysis performance."""
-        plt.figure()
+        plt.figure(figsize=(12, 8))
         df_batch = pd.DataFrame(self.results['batch_analysis'])
         
         # Create box plot
@@ -268,7 +267,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         plt.savefig(self.benchmark_dir / 'batch_analysis.png')
         
         # Create regression plot
-        plt.figure()
+        plt.figure(figsize=(12, 8))
         sns.regplot(data=df_batch, x='batch_size', y='time')
         plt.title('Batch Size vs Processing Time')
         plt.tight_layout()
@@ -276,7 +275,7 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         
     def _plot_memory_usage(self):
         """Plot memory usage."""
-        plt.figure()
+        plt.figure(figsize=(12, 8))
         df_memory = pd.DataFrame(self.results['memory_usage'])
         
         # Create line plot

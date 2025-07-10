@@ -139,8 +139,8 @@ def load_model_templates():
             'best_for': 'Maximum accuracy and robustness',
             'complexity': 'High',
             'training_time': '30-90 minutes',
-            'parameters': ['models', 'weights', 'voting_method'],
-            'default_params': {'models': ['LSTM', 'XGBoost'], 'weights': [0.6, 0.4], 'voting_method': 'weighted'}
+            'parameters': ['models', 'weights', 'voting_method', 'weight_update_frequency'],
+            'default_params': {'models': ['LSTM', 'XGBoost'], 'weights': [0.6, 0.4], 'voting_method': 'weighted', 'weight_update_frequency': 7}
         },
         'Autoformer': {
             'description': 'Auto-correlation transformer',
@@ -424,6 +424,42 @@ def display_model_details(model_data: Dict[str, Any]):
                 </div>
                 """, unsafe_allow_html=True)
         
+        # Special handling for ensemble models
+        if model_data['type'] == 'Ensemble' and 'weights' in model_data['parameters']:
+            st.markdown("### 🎛️ Ensemble Weight Controls")
+            
+            weights = model_data['parameters']['weights']
+            models = model_data['parameters'].get('models', [f'Model_{i}' for i in range(len(weights))])
+            
+            # Create weight sliders
+            new_weights = []
+            for i, (model, weight) in enumerate(zip(models, weights)):
+                new_weight = st.slider(
+                    f"Weight for {model}",
+                    min_value=0.0,
+                    max_value=1.0,
+                    value=float(weight),
+                    step=0.05,
+                    help=f"Adjust weight for {model} in ensemble"
+                )
+                new_weights.append(new_weight)
+            
+            # Normalize weights
+            total_weight = sum(new_weights)
+            if total_weight > 0:
+                normalized_weights = [w / total_weight for w in new_weights]
+                st.write("**Normalized Weights:**")
+                for model, weight in zip(models, normalized_weights):
+                    st.write(f"- {model}: {weight:.2%}")
+                
+                # Update button
+                if st.button("Update Ensemble Weights"):
+                    model_data['parameters']['weights'] = normalized_weights
+                    model_data['last_updated'] = datetime.now()
+                    st.success("Ensemble weights updated!")
+            else:
+                st.warning("Total weight cannot be zero")
+        
     except Exception as e:
         logger.error(f"Error displaying model details: {e}")
 
@@ -431,6 +467,34 @@ def main():
     """Main model lab function."""
     st.title("Model Laboratory")
     st.markdown("Create, train, and manage AI models for trading")
+    
+    # Add explanations for users
+    with st.expander("ℹ️ About Model Laboratory", expanded=False):
+        st.markdown("""
+        **Model Laboratory** is your AI model development workspace where you can:
+        
+        ### 🧬 **Model Synthesis**
+        - **LSTM Models**: Long Short-Term Memory networks for time series forecasting with memory capabilities
+        - **XGBoost Models**: Gradient boosting for structured data with feature importance analysis
+        - **Transformer Models**: Attention-based models for complex sequence modeling
+        - **Ensemble Models**: Combinations of multiple models for maximum accuracy
+        
+        ### 🔧 **Model Tuning**
+        - **Hyperparameter Optimization**: Automatically find the best model parameters
+        - **Feature Engineering**: Create and test new features for better performance
+        - **Cross-Validation**: Ensure model robustness across different data periods
+        
+        ### 📊 **Performance Tracking**
+        - **Real-time Metrics**: Monitor accuracy, RMSE, MAE, and other performance indicators
+        - **Model Comparison**: Compare different models side-by-side
+        - **Performance History**: Track how models improve over time
+        
+        ### 🎯 **Best Practices**
+        - **LSTM**: Use for time series with long-term dependencies (stock prices, weather data)
+        - **XGBoost**: Use for structured data with clear feature relationships
+        - **Transformer**: Use for complex patterns requiring attention mechanisms
+        - **Ensemble**: Use when you need maximum accuracy and robustness
+        """)
     
     # Initialize session state
     initialize_session_state()

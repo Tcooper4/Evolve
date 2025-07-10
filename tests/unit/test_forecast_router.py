@@ -146,9 +146,16 @@ class TestForecastRouter(unittest.TestCase):
                     # Check result structure
                     self.assertIsInstance(result, dict)
                     self.assertIn('forecast', result)
-                    self.assertIn('model_type', result)
+                    self.assertIn('model', result)
                     self.assertIn('confidence', result)
                     self.assertIn('metadata', result)
+                    
+                    # Check output shape and type
+                    self.assertIsInstance(result['forecast'], (np.ndarray, pd.Series))
+                    if isinstance(result['forecast'], np.ndarray):
+                        self.assertEqual(len(result['forecast']), 30)
+                    elif isinstance(result['forecast'], pd.Series):
+                        self.assertEqual(len(result['forecast']), 30)
                     
     def test_get_forecast_with_empty_data(self):
         """Test forecast generation with empty data."""

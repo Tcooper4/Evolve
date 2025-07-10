@@ -65,7 +65,8 @@ class FallbackReportExporter:
             
             # Generate filename if not provided
             if filename is None:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                # Use microsecond precision to avoid overwrites
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:-3]  # Include milliseconds
                 filename = f"fallback_report_{timestamp}.{format}"
             
             filepath = os.path.join(self._export_dir, filename)

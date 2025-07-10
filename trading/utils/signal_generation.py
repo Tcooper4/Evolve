@@ -69,11 +69,17 @@ def calculate_technical_indicators(data: pd.DataFrame, config: SignalConfig) -> 
     rs = gain / loss
     data["rsi"] = 100 - (100 / (1 + rs))
     
-    # Calculate MACD
-    exp1 = data["close"].ewm(span=12, adjust=False).mean()
-    exp2 = data["close"].ewm(span=26, adjust=False).mean()
+    # Calculate MACD with span validation
+    span1, span2, signal_span = 12, 26, 9
+    
+    # Validate MACD spans
+    if span1 >= span2:
+        raise ValueError("MACD span1 must be less than span2.")
+    
+    exp1 = data["close"].ewm(span=span1, adjust=False).mean()
+    exp2 = data["close"].ewm(span=span2, adjust=False).mean()
     data["macd"] = exp1 - exp2
-    data["macd_signal"] = data["macd"].ewm(span=9, adjust=False).mean()
+    data["macd_signal"] = data["macd"].ewm(span=signal_span, adjust=False).mean()
     
     # Calculate Bollinger Bands
     data["bb_middle"] = data["close"].rolling(window=config.lookback_period).mean()

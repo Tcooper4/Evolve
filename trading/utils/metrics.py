@@ -4,6 +4,23 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Union, Tuple, Any, Optional
 
+def _safe_divide(numerator: float, denominator: float, default_value: float = 0.0) -> float:
+    """Safely divide two numbers, returning default_value if denominator is zero or NaN.
+    
+    Args:
+        numerator: The numerator
+        denominator: The denominator
+        default_value: Value to return if division is not possible
+        
+    Returns:
+        Result of division or default_value
+    """
+    if denominator == 0 or np.isnan(denominator) or np.isinf(denominator):
+        return default_value
+    if np.isnan(numerator) or np.isinf(numerator):
+        return default_value
+    return numerator / denominator
+
 def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     """Calculate forecast performance metrics.
     
@@ -52,7 +69,7 @@ def calculate_trading_metrics(returns: np.ndarray,
     total_return = np.prod(1 + returns) - 1
     annualized_return = (1 + total_return) ** (252 / len(returns)) - 1
     volatility = np.std(returns) * np.sqrt(252)
-    sharpe_ratio = annualized_return / volatility if volatility != 0 else 0
+    sharpe_ratio = _safe_divide(annualized_return, volatility, default_value=0.0)
     
     # Calculate drawdown
     cumulative_returns = np.cumprod(1 + returns)
@@ -65,7 +82,12 @@ def calculate_trading_metrics(returns: np.ndarray,
     
     # Calculate alpha and beta if benchmark provided
     if benchmark_returns is not None:
-        beta = np.cov(returns, benchmark_returns)[0, 1] / np.var(benchmark_returns)
+        benchmark_variance = np.var(benchmark_returns)
+        beta = _safe_divide(
+            np.cov(returns, benchmark_returns)[0, 1], 
+            benchmark_variance, 
+            default_value=0.0
+        )
         alpha = annualized_return - beta * np.mean(benchmark_returns) * 252
     else:
         alpha = None
