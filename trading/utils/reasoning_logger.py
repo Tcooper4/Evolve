@@ -7,6 +7,7 @@ Provides chat-style explanations of why agents made specific decisions.
 
 import json
 import logging
+import os
 import time
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Union

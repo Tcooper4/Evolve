@@ -218,7 +218,7 @@ class SystemUpgradeTester:
         
         # Test unified interface
         try:
-            from unified_interface import UnifiedInterface
+            from interface.unified_interface import UnifiedInterface
             
             interface = UnifiedInterface()
             
@@ -252,7 +252,7 @@ class SystemUpgradeTester:
             ("CapabilityRouter", "fallback.capability_router", "get_system_health"),
             ("DataFeed", "data.live_feed", "get_data_feed"),
             ("RLTrader", "rl.rl_trader", "get_rl_trader"),
-            ("UnifiedInterface", "unified_interface", "UnifiedInterface")
+            ("UnifiedInterface", "interface.unified_interface", "UnifiedInterface")
         ]
         
         for name, module_path, component in health_checks:

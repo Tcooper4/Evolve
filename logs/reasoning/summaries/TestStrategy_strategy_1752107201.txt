@@ -1,0 +1,27 @@
+
+# Decision Summary
+
+**Agent:** TestStrategy  
+**Type:** Strategy  
+**Time:** 2025-07-09T20:26:41.922409  
+**Symbol:** AAPL  
+**Timeframe:** Unknown
+
+## Action Taken
+Executed RSI Strategy strategy: BUY 100 shares
+
+## Primary Reason
+RSI oversold
+
+## Confidence Level
+Medium
+
+## Supporting Factors
+
+- Support level
+
+
+## Expected Outcome
+3% gain
+
+## Market Conditions

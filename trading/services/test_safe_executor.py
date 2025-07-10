@@ -16,7 +16,7 @@ import logging
 sys.path.append(str(Path(__file__).parent.parent))
 
 from services.service_client import ServiceClient
-from utils.safe_executor import SafeExecutor, ExecutionStatus
+from trading.utils.safe_executor import SafeExecutor, ExecutionStatus
 
 logger = logging.getLogger(__name__)
 

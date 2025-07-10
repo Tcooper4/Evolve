@@ -29,7 +29,7 @@ from sklearn.decomposition import PCA
 from datetime import datetime, timedelta
 import logging
 from utils.common_helpers import normalize_indicator_name
-from . import indicators
+from trading.feature_engineering import indicators
 
 logger = logging.getLogger(__name__)
 

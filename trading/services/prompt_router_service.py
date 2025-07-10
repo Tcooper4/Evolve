@@ -37,7 +37,9 @@ class PromptRouterService(BaseService):
         self.agent = PromptRouterAgent()
         self.memory = AgentMemory()
         
-        logger.info("PromptRouterService initialized")def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        logger.info("PromptRouterService initialized")
+        
+    def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming prompt routing requests.
         

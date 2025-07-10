@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from utils.reasoning_logger import ReasoningLogger, AgentDecision, DecisionType, ConfidenceLevel
+from trading.utils.reasoning_logger import ReasoningLogger, AgentDecision, DecisionType, ConfidenceLevel
 
 class ReasoningDisplay:
     """

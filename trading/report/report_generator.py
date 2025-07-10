@@ -125,7 +125,6 @@ class ReportGenerator:
         
         logger.info("ReportGenerator initialized")
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def generate_comprehensive_report(self,
                                     trade_data: Dict[str, Any],
                                     model_data: Dict[str, Any],

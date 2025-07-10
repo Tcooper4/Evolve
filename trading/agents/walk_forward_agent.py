@@ -41,6 +41,17 @@ class RollingRetrainConfig:
     feature_engineering: bool = True
     hyperparameter_tuning: bool = True
 
+@dataclass
+class WalkForwardRequest:
+    """Request for walk-forward validation."""
+    data: pd.DataFrame
+    target_column: str
+    feature_columns: List[str]
+    model_factory: Callable
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    config: Optional[RollingRetrainConfig] = None
+
 class WalkForwardAgent(BaseAgent):
     """Walk-forward validation and rolling retraining agent."""
     

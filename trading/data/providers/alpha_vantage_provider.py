@@ -169,12 +169,16 @@ class AlphaVantageProvider(BaseDataProvider):
                 self.logger.debug(f"Redis connection failed: {e}")
                 self.redis_client = None
         
-        # Call setup method
+        # Call setup method after all attributes are set
         self._setup()
 
     def _setup(self) -> None:
         """Setup method called during initialization."""
-        self.logger.info(f"Initialized Alpha Vantage provider with delay: {self.delay}s")
+        # Only log if delay attribute exists
+        if hasattr(self, 'delay'):
+            self.logger.info(f"Initialized Alpha Vantage provider with delay: {self.delay}s")
+        else:
+            self.logger.info("Initialized Alpha Vantage provider")
         
     def _validate_data(self, data: pd.DataFrame) -> None:
         """Validate the fetched data.

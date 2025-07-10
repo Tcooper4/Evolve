@@ -2,7 +2,7 @@ import pytest
 import json
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from trading.alert_manager import AlertManager
+from system.infra.agents.alert_manager import AlertManager
 
 @pytest.fixture
 def test_config():

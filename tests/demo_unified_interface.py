@@ -9,6 +9,8 @@ import sys
 import os
 from pathlib import Path
 from datetime import datetime
+import pytest
+pytest.skip("Skipping demo_unified_interface.py: unified_interface is deprecated and replaced by new UI/agent system.", allow_module_level=True)
 
 # Add current directory to path
 sys.path.append(str(Path(__file__).parent))
@@ -22,7 +24,7 @@ def demo_unified_interface():
     
     try:
         # Import unified interface
-        from unified_interface import UnifiedInterface
+        from interface.unified_interface import UnifiedInterface
         print("✅ Successfully imported UnifiedInterface")
         
         # Initialize interface

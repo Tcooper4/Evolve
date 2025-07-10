@@ -37,7 +37,9 @@ class MetaTunerService(BaseService):
         self.agent = MetaTunerAgent()
         self.memory = AgentMemory()
         
-        logger.info("MetaTunerService initialized")def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        logger.info("MetaTunerService initialized")
+        
+    def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming tuning requests.
         

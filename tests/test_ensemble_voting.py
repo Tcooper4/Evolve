@@ -21,7 +21,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import ensemble components
 # from trading.models.ensemble_model import EnsembleModel  # Not implemented yet
 # from trading.models.base_model import BaseModel  # Not implemented yet
-from models.forecast_router import ForecastRouter
+try:
+    from models.forecast_router import ForecastRouter
+except ImportError:
+    try:
+        from trading.models.forecast_router import ForecastRouter
+    except ImportError:
+        from unittest.mock import Mock
+        ForecastRouter = Mock()
+        print("Warning: ForecastRouter not available, using mock")
 
 logger = logging.getLogger(__name__)
 

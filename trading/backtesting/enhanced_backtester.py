@@ -21,13 +21,13 @@ import pandas as pd
 import numpy as np
 
 # Local imports
-from .backtester import Backtester
-from .performance_analysis import PerformanceAnalyzer
-from .risk_metrics import RiskMetricsEngine
-from .trade_models import Trade, TradeType
-from ..report.unified_trade_reporter import UnifiedTradeReporter, generate_unified_report
-from ..models.base_model import BaseModel
-from ..strategies.base_strategy import BaseStrategy
+from trading.backtesting.backtester import Backtester
+from trading.backtesting.performance_analysis import PerformanceAnalyzer
+from trading.backtesting.risk_metrics import RiskMetricsEngine
+from trading.backtesting.trade_models import Trade, TradeType
+from trading.report.unified_trade_reporter import UnifiedTradeReporter, generate_unified_report
+from trading.models.base_model import BaseModel
+from trading.strategies.registry import BaseStrategy
 
 logger = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 # Add project root to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from trading.agents.router import RouterAgent as AgentRouter
+from trading.agents.prompt_router_agent import PromptRouterAgent as AgentRouter
 from trading.agents.intent_detector import IntentDetector
 
 class TestRouter:
