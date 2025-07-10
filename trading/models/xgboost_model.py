@@ -44,11 +44,28 @@ class XGBoostModel(BaseModel):
         self.feature_names = None
         
     def _setup_model(self):
-        """Setup XGBoost model."""
+        """Setup XGBoost model with config-driven parameters."""
         try:
             import xgboost as xgb
-            self.model = xgb.XGBRegressor(**self.model_params)
-            logger.info("XGBoost model initialized successfully")
+            
+            # Get XGBoost parameters from config or use defaults
+            xgboost_config = self.config.get('xgboost', {})
+            default_params = {
+                'n_estimators': 100,
+                'max_depth': 6,
+                'learning_rate': 0.1,
+                'subsample': 0.8,
+                'colsample_bytree': 0.8,
+                'random_state': 42,
+                'objective': 'reg:squarederror',
+                'eval_metric': 'rmse'
+            }
+            
+            # Merge config with defaults
+            model_params = {**default_params, **xgboost_config}
+            
+            self.model = xgb.XGBRegressor(**model_params)
+            logger.info(f"XGBoost model initialized with parameters: {model_params}")
         except ImportError as e:
             logger.error(f"XGBoost not available: {e}")
             raise ImportError("XGBoost is required for this model. Install with: pip install xgboost")

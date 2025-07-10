@@ -7,13 +7,24 @@ import streamlit as st
 import logging
 from typing import Any, Dict, Optional
 from datetime import datetime
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 def safe_session_get(key: str, default: Any = None) -> Any:
-    """Safely get a value from session state."""
+    """Safely get a value from session state with fallback default."""
     try:
-        return st.session_state.get(key, default)
+        value = st.session_state.get(key, default)
+        # Additional check to ensure we don't return None for critical values
+        if value is None and key in ['forecast', 'market_data', 'model_results']:
+            # Return appropriate default based on key
+            if key == 'forecast':
+                return pd.DataFrame()
+            elif key == 'market_data':
+                return pd.DataFrame()
+            elif key == 'model_results':
+                return {}
+        return value
     except Exception as e:
         logger.warning(f"Error getting session state for key {key}: {e}")
         return default

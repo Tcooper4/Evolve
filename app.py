@@ -339,17 +339,15 @@ st.markdown("""
 # --- Sidebar ---
 with st.sidebar:
     st.markdown("""
-    <div style="text-align: center; padding: 1.5rem 0;">
+    <div style="text-align: center; padding: 1rem 0;">
         <h2 style="color: #2c3e50; margin-bottom: 0.5rem;">🚀 Evolve AI</h2>
-        <p style="color: #6c757d; font-size: 0.9rem; font-weight: 500;">Autonomous Trading Intelligence</p>
-        <div style="width: 50px; height: 3px; background: linear-gradient(90deg, #667eea, #764ba2); margin: 1rem auto; border-radius: 2px;"></div>
+        <p style="color: #6c757d; font-size: 0.9rem;">Autonomous Trading Intelligence</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Main Navigation - Professional Layout
-    st.markdown("### 📊 Main Features")
+    # Main Navigation - Simplified
+    st.markdown("### 📊 Navigation")
     
-    # Primary Actions - Clean Icons
     primary_nav = st.radio(
         "",
         [
@@ -362,79 +360,55 @@ with st.sidebar:
         key = os.getenv('KEY', '')
     )
     
-    st.markdown("---")
-    
     # Advanced Tools (Collapsible)
-    with st.expander("🔧 Advanced Tools", expanded=False):
+    with st.expander("🔧 Advanced", expanded=False):
         advanced_nav = st.radio(
             "",
             [
                 "⚙️ Settings",
-                "📊 System Monitor", 
-                "📈 Performance Analytics",
-                "🛡️ Risk Management"
+                "📊 Monitor", 
+                "📈 Analytics",
+                "🛡️ Risk"
             ],
             key = os.getenv('KEY', '')
         )
     
     # Developer Tools (Hidden by default)
     if os.environ.get('EVOLVE_DEV_MODE', '0') == '1':
-        st.markdown("---")
-        with st.expander("🛠️ Developer Tools", expanded=False):
-            st.markdown("- 🐛 Debug Console")
-            st.markdown("- 📝 System Logs")
-            st.markdown("- ⚡ Performance Monitor")
-            st.markdown("- 🔌 API Testing")
+        with st.expander("🛠️ Dev Tools", expanded=False):
+            st.markdown("- 🐛 Debug")
+            st.markdown("- 📝 Logs")
+            st.markdown("- ⚡ Performance")
+            st.markdown("- 🔌 API")
     
     st.markdown("---")
     
-    # System Status - Enhanced
-    st.markdown("### 🟢 System Status")
+    # System Status - Simplified
+    st.markdown("### 🟢 Status")
     
-    # Status indicators with better styling
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("""
-        <div style="display: flex; align-items: center; margin: 0.5rem 0;">
-            <span style="color: #28a745; font-size: 1.2rem;">●</span>
-            <span style="font-size: 0.9rem; font-weight: 500; margin-left: 0.5rem;">Core Systems</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div style="display: flex; align-items: center; margin: 0.5rem 0;">
-            <span style="color: #28a745; font-size: 1.2rem;">●</span>
-            <span style="font-size: 0.9rem; font-weight: 500; margin-left: 0.5rem;">Data Feed</span>
-        </div>
-        """, unsafe_allow_html=True)
+    # Status indicators - compact
+    status_items = [
+        ("Core Systems", "🟢"),
+        ("Data Feed", "🟢"),
+        ("AI Models", "🟢"),
+        ("Agents", "🟢")
+    ]
     
-    with col2:
-        st.markdown("""
-        <div style="display: flex; align-items: center; margin: 0.5rem 0;">
-            <span style="color: #28a745; font-size: 1.2rem;">●</span>
-            <span style="font-size: 0.9rem; font-weight: 500; margin-left: 0.5rem;">AI Models</span>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div style="display: flex; align-items: center; margin: 0.5rem 0;">
-            <span style="color: #28a745; font-size: 1.2rem;">●</span>
-            <span style="font-size: 0.9rem; font-weight: 500; margin-left: 0.5rem;">Agents</span>
-        </div>
-        """, unsafe_allow_html=True)
+    for name, status in status_items:
+        st.markdown(f"{status} {name}")
     
-    # Quick Stats - Enhanced
+    # Quick Stats - Compact
     st.markdown("---")
-    st.markdown("### 📊 Quick Stats")
+    st.markdown("### 📊 Stats")
     
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("🤖 Active Models", "12", "+2")
-        st.metric("⚡ Strategies", "8", "0")
+        st.metric("🤖 Models", "12")
+        st.metric("📈 Success", "94.2%")
     
     with col2:
-        st.metric("📈 Success Rate", "94.2%", "+1.2%")
-        st.metric("💰 Avg Return", "2.8%", "+0.3%")
+        st.metric("⚡ Strategies", "8")
+        st.metric("💰 Return", "2.8%")
 
 # --- Main Layout ---
 # Top Navigation Bar

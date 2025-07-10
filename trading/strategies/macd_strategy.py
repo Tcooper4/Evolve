@@ -44,7 +44,7 @@ class MACDStrategy:
         return macd_line, signal_line, histogram
         
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Generate trading signals based on MACD."""
+        """Generate trading signals based on MACD with de-duplication."""
         if not isinstance(data, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame")
             
@@ -62,6 +62,9 @@ class MACDStrategy:
         # Generate signals based on MACD line crossing signal line
         signals.loc[macd_line > signal_line, 'signal'] = 1  # Buy signal
         signals.loc[macd_line < signal_line, 'signal'] = -1  # Sell signal
+        
+        # Drop duplicate consecutive signals to avoid over-trading
+        signals['signal'] = signals['signal'].loc[~(signals['signal'] == signals['signal'].shift(1))]
         
         # Add MACD components to signals
         signals['macd_line'] = macd_line
