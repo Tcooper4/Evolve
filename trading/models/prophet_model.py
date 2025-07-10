@@ -13,8 +13,12 @@ try:
     from prophet import Prophet
     PROPHET_AVAILABLE = True
 except ImportError:
-    PROPHET_AVAILABLE = False
-    Prophet = None
+    try:
+        from fbprophet import Prophet
+        PROPHET_AVAILABLE = True
+    except ImportError:
+        PROPHET_AVAILABLE = False
+        Prophet = None
 
 # Try to import holidays package
 try:

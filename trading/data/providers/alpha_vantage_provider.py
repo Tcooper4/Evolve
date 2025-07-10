@@ -209,11 +209,38 @@ class AlphaVantageProvider(BaseDataProvider):
         Returns:
             True if rate limited, False otherwise
         """
-        if "Note" in response.json():
-            note = response.json()["Note"]
-            if "API call frequency" in note or "premium" in note.lower():
+        try:
+            response_data = response.json()
+            
+            # Check for error messages
+            if "Error Message" in response_data:
+                error_msg = response_data["Error Message"]
+                raise AlphaVantageError(f"AlphaVantage error: {error_msg}")
+            
+            # Check for rate limit notes
+            if "Note" in response_data:
+                note = response_data["Note"]
+                if "API call frequency" in note or "premium" in note.lower():
+                    return True
+                else:
+                    raise AlphaVantageError(f"AlphaVantage error: {note}")
+            
+            # Check for invalid symbol or other errors
+            if "Information" in response_data:
+                info = response_data["Information"]
+                if "Invalid API call" in info or "symbol" in info.lower():
+                    raise AlphaVantageError(f"AlphaVantage error: {info}")
+            
+            return False
+            
+        except ValueError:
+            # Response is not JSON
+            if "API call frequency" in response.text or "premium" in response.text.lower():
                 return True
-        return False
+            return False
+        except Exception as e:
+            logger.warning(f"Error parsing AlphaVantage response: {e}")
+            return False
         
     def _exponential_backoff(self, attempt: int) -> float:
         """Calculate backoff time with jitter.

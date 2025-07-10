@@ -100,7 +100,7 @@ except ImportError as e:
 
 try:
     from trading.agents import (
-        PromptRouterAgent, ModelBuilderAgent
+        get_prompt_router_agent, get_model_builder_agent
     )
     AGENTS_AVAILABLE = True
 except ImportError as e:
@@ -272,7 +272,7 @@ if PORTFOLIO_AVAILABLE:
     __all__.extend(['PortfolioManager'])
 
 if AGENTS_AVAILABLE:
-    __all__.extend(['PromptRouterAgent', 'ExecutionAgent', 'ModelBuilderAgent', 'StrategySelectorAgent', 'MarketRegimeAgent', 'AgentRegistry'])
+    __all__.extend(['get_prompt_router_agent', 'get_model_builder_agent', 'get_strategy_selector_agent', 'get_market_regime_agent', 'get_agent_registry'])
 
 if UTILS_AVAILABLE:
     __all__.extend(['LoggingManager', 'log_event', 'setup_logging', 'get_logging_stats', 'cleanup_logs', 'DataValidator', 'DataTransformer', 'FeatureEngineer', 'ConfigManager', 'ConfigValidator', 'ConfigLoader', 'PerformanceMetrics', 'RiskMetrics', 'TradingMetrics', 'ModelEvaluator', 'ModelValidator', 'ModelMonitor'])

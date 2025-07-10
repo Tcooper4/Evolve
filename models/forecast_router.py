@@ -28,6 +28,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from pathlib import Path
+import importlib
 
 from trading.models.arima_model import ARIMAModel
 from trading.models.lstm_model import LSTMModel
@@ -40,10 +41,17 @@ except ImportError:
     PROPHET_AVAILABLE = False
     ProphetModel = None
 from trading.models.autoformer_model import AutoformerModel
-from trading.utils.data_utils import prepare_forecast_data
-from trading.utils.logging import setup_logging
 
-logger = setup_logging(__name__)
+# Try to import Transformer model
+try:
+    from trading.models.advanced.transformer.time_series_transformer import TimeSeriesTransformer
+    TRANSFORMER_AVAILABLE = True
+except ImportError:
+    TRANSFORMER_AVAILABLE = False
+    TimeSeriesTransformer = None
+from trading.utils.data_utils import prepare_forecast_data
+
+logger = logging.getLogger(__name__)
 
 class ForecastRouter:
     """Router for managing and selecting forecasting models.
@@ -65,20 +73,135 @@ class ForecastRouter:
             config: Optional configuration dictionary
         """
         self.config = config or {}
-        self.model_registry = {
+        self.model_registry = {}
+        self._load_model_registry()
+        
+        # Add Prophet only if available
+        if PROPHET_AVAILABLE:
+            self.model_registry['prophet'] = ProphetModel
+            
+        # Add Transformer only if available
+        if TRANSFORMER_AVAILABLE:
+            self.model_registry['transformer'] = TimeSeriesTransformer
+            
+        self.performance_history = pd.DataFrame()
+        self.model_weights = self._initialize_weights()
+
+    def _load_model_registry(self):
+        """Dynamically load model registry from config or discovery."""
+        try:
+            # Try to load from config first
+            config_models = self.config.get('models', {})
+            if config_models:
+                self._load_models_from_config(config_models)
+            else:
+                # Fallback to default models
+                self._load_default_models()
+            
+            # Try to discover additional models
+            self._discover_available_models()
+            
+        except Exception as e:
+            logger.warning(f"Error loading model registry: {e}")
+            self._load_default_models()
+
+    def _load_models_from_config(self, config_models: Dict[str, Any]):
+        """Load models from configuration."""
+        for model_name, model_config in config_models.items():
+            try:
+                if model_config.get('enabled', True):
+                    model_class = self._get_model_class(model_config.get('class_path'))
+                    if model_class:
+                        self.model_registry[model_name] = model_class
+                        logger.info(f"Loaded model {model_name} from config")
+            except Exception as e:
+                logger.warning(f"Failed to load model {model_name} from config: {e}")
+
+    def _load_default_models(self):
+        """Load default models as fallback."""
+        default_models = {
             'arima': ARIMAModel,
             'lstm': LSTMModel,
             'xgboost': XGBoostModel,
             'autoformer': AutoformerModel
         }
         
-        # Add Prophet only if available
-        if PROPHET_AVAILABLE:
-            self.model_registry['prophet'] = ProphetModel
-            
-        self.performance_history = pd.DataFrame()
-        self.model_weights = self._initialize_weights()
+        # Add Transformer if available
+        if TRANSFORMER_AVAILABLE:
+            default_models['transformer'] = TimeSeriesTransformer
+        
+        for model_name, model_class in default_models.items():
+            try:
+                self.model_registry[model_name] = model_class
+                logger.info(f"Loaded default model {model_name}")
+            except Exception as e:
+                logger.warning(f"Failed to load default model {model_name}: {e}")
 
+    def _discover_available_models(self):
+        """Discover additional models dynamically."""
+        try:
+            # Look for model plugins in models directory
+            models_dir = Path(__file__).parent
+            for model_file in models_dir.glob("*_model.py"):
+                model_name = model_file.stem.replace('_model', '')
+                if model_name not in self.model_registry:
+                    try:
+                        model_class = self._get_model_class(f"models.{model_name}_model.{model_name.title()}Model")
+                        if model_class:
+                            self.model_registry[model_name] = model_class
+                            logger.info(f"Discovered model {model_name}")
+                    except Exception as e:
+                        logger.debug(f"Failed to discover model {model_name}: {e}")
+        except Exception as e:
+            logger.warning(f"Error discovering models: {e}")
+
+    def _get_model_class(self, class_path: str):
+        """Get model class from class path string."""
+        try:
+            if not class_path:
+                return None
+            
+            module_path, class_name = class_path.rsplit('.', 1)
+            module = importlib.import_module(module_path)
+            return getattr(module, class_name)
+        except Exception as e:
+            logger.warning(f"Failed to load model class {class_path}: {e}")
+            return None
+
+    def register_model(self, name: str, model_class, config: Optional[Dict[str, Any]] = None):
+        """Register a new model dynamically.
+        
+        Args:
+            name: Model name
+            model_class: Model class
+            config: Optional model configuration
+        """
+        try:
+            self.model_registry[name] = model_class
+            if config:
+                # Store model-specific config
+                if not hasattr(self, 'model_configs'):
+                    self.model_configs = {}
+                self.model_configs[name] = config
+            logger.info(f"Registered model {name}")
+        except Exception as e:
+            logger.error(f"Failed to register model {name}: {e}")
+
+    def unregister_model(self, name: str):
+        """Unregister a model.
+        
+        Args:
+            name: Model name to unregister
+        """
+        try:
+            if name in self.model_registry:
+                del self.model_registry[name]
+                if hasattr(self, 'model_configs') and name in self.model_configs:
+                    del self.model_configs[name]
+                logger.info(f"Unregistered model {name}")
+        except Exception as e:
+            logger.error(f"Failed to unregister model {name}: {e}")
+        
     def _initialize_weights(self) -> Dict[str, float]:
         """Initialize model selection weights.
         
