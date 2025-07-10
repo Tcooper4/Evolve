@@ -37,7 +37,9 @@ class MultimodalService(BaseService):
         self.agent = MultimodalAgent()
         self.memory = AgentMemory()
         
-        logger.info("MultimodalService initialized")def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        logger.info("MultimodalService initialized")
+        
+    def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming multimodal requests.
         

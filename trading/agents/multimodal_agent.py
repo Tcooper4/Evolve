@@ -7,12 +7,13 @@ MultimodalAgent: Visual reasoning agent for trading analytics.
 
 import io
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Union
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 from .base_agent_interface import BaseAgent, AgentConfig, AgentResult
 from .prompt_templates import format_template
+from dataclasses import dataclass
 
 try:
     import plotly.graph_objs as go
@@ -34,7 +35,30 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+@dataclass
+class MultimodalRequest:
+    """Request for multimodal processing."""
+    text_input: Optional[str] = None
+    image_input: Optional[bytes] = None
+    audio_input: Optional[bytes] = None
+    data_input: Optional[Dict[str, Any]] = None
+    processing_type: str = "analysis"
+    output_format: str = "text"
+    context: Optional[Dict[str, Any]] = None
+
+@dataclass
+class MultimodalResult:
+    """Result of multimodal processing."""
+    success: bool
+    output: Any
+    confidence: float
+    processing_time: float
+    metadata: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+
 class MultimodalAgent(BaseAgent):
+    """Agent for processing multimodal inputs (text, images, audio, data)."""
+    
     def __init__(self, config: Optional[AgentConfig] = None):
         if config is None:
             config = AgentConfig(

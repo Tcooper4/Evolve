@@ -23,11 +23,11 @@ import pandas as pd
 import numpy as np
 
 # Local imports
-from .trade_models import Trade, TradeType
-from .position_sizing import PositionSizing, PositionSizingEngine
-from .risk_metrics import RiskMetric, RiskMetricsEngine
-from .performance_analysis import PerformanceAnalyzer
-from .visualization import BacktestVisualizer
+from trading.backtesting.trade_models import Trade, TradeType
+from trading.backtesting.position_sizing import PositionSizing, PositionSizingEngine
+from trading.backtesting.risk_metrics import RiskMetric, RiskMetricsEngine
+from trading.backtesting.performance_analysis import PerformanceAnalyzer
+from trading.backtesting.visualization import BacktestVisualizer
 
 # Constants
 TRADING_DAYS_PER_YEAR = 252

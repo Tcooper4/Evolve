@@ -171,7 +171,7 @@ report = analyze_tail_risk(returns_data)
 
 **Usage**:
 ```python
-from strategies.gatekeeper import create_strategy_gatekeeper
+from trading.strategies.gatekeeper import create_strategy_gatekeeper
 
 # Create strategy gatekeeper
 gatekeeper = create_strategy_gatekeeper(strategies_config)

@@ -12,6 +12,16 @@ from trading.strategies.macd_strategy import MACDStrategy, MACDConfig
 from trading.strategies.sma_strategy import SMAStrategy, SMAConfig
 from trading.strategies.cci_strategy import CCIStrategy, CCIConfig, generate_cci_signals
 from trading.strategies.atr_strategy import ATRStrategy, ATRConfig, generate_atr_signals
+from trading.strategies.gatekeeper import (
+    StrategyGatekeeper, 
+    RegimeClassifier, 
+    MarketRegime, 
+    StrategyStatus, 
+    GatekeeperDecision,
+    RegimeMetrics,
+    StrategyPerformance,
+    create_strategy_gatekeeper
+)
 
 def get_signals(strategy_name: str, data: pd.DataFrame, **kwargs) -> Dict[str, Any]:
     """Get trading signals for a specific strategy.
@@ -99,5 +109,13 @@ __all__ = [
     'generate_cci_signals',
     'ATRStrategy',
     'ATRConfig',
-    'generate_atr_signals'
+    'generate_atr_signals',
+    'StrategyGatekeeper',
+    'RegimeClassifier',
+    'MarketRegime',
+    'StrategyStatus',
+    'GatekeeperDecision',
+    'RegimeMetrics',
+    'StrategyPerformance',
+    'create_strategy_gatekeeper'
 ] 

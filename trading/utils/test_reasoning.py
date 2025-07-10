@@ -15,11 +15,11 @@ import sys
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from utils.reasoning_logger import (
+from trading.utils.reasoning_logger import (
     ReasoningLogger, AgentDecision, DecisionType, ConfidenceLevel,
     DecisionContext, DecisionReasoning, log_forecast_decision, log_strategy_decision
 )
-from utils.reasoning_display import ReasoningDisplay
+from trading.utils.reasoning_display import ReasoningDisplay
 
 class TestReasoningLogger(unittest.TestCase):
     """Test the ReasoningLogger class."""

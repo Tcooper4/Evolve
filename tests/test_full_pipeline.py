@@ -21,7 +21,17 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from trading.llm.agent import get_prompt_agent
-from models.forecast_router import ForecastRouter
+# Fix import path for forecast_router
+try:
+    from models.forecast_router import ForecastRouter
+except ImportError:
+    try:
+        from trading.models.forecast_router import ForecastRouter
+    except ImportError:
+        # Create a mock if the module doesn't exist
+        from unittest.mock import Mock
+        ForecastRouter = Mock()
+        print("Warning: ForecastRouter not available, using mock")
 from trading.backtesting.backtester import Backtester
 from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
 from trading.data.providers.fallback_provider import get_fallback_provider

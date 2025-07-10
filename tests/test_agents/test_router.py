@@ -9,7 +9,7 @@ import numpy as np
 # Add project root to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from trading.agents.router import RouterAgent as Router
+from trading.agents.prompt_router_agent import PromptRouterAgent as Router
 
 class TestRouter:
     @pytest.fixture

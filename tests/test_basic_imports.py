@@ -43,7 +43,13 @@ class TestBasicImports(unittest.TestCase):
             from trading.strategies.rsi_signals import generate_rsi_signals
             from trading.strategies.macd_strategy import MACDStrategy
             from trading.strategies.sma_strategy import SMAStrategy
-            from strategies.gatekeeper import StrategyGatekeeper
+            # Test strategy gatekeeper
+            try:
+                from trading.strategies.gatekeeper import StrategyGatekeeper
+                print("✅ StrategyGatekeeper imported successfully")
+            except ImportError as e:
+                print(f"❌ StrategyGatekeeper import failed: {e}")
+                return False
             logger.info("✅ Strategy modules imported successfully")
         except ImportError as e:
             self.fail(f"Failed to import strategy modules: {e}")

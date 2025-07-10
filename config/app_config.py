@@ -191,7 +191,21 @@ class AppConfig:
         """Load configuration from environment variables."""
         # Server settings
         self.server.host = os.getenv("HOST", self.server.host)
-        self.server.port = int(os.getenv("PORT", self.server.port))
+        
+        # Fix PORT parsing to handle Docker-style variable substitution
+        port_env = os.getenv("PORT", str(self.server.port))
+        try:
+            # Handle Docker-style variable substitution like ${PORT:-8501}
+            if port_env.startswith("${") and ":-" in port_env:
+                # Extract the default value after :-
+                default_value = port_env.split(":-")[-1].rstrip("}")
+                port_env = default_value
+            
+            self.server.port = int(port_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid PORT value '{port_env}', using default {self.server.port}: {e}")
+            # Keep the default value
+        
         self.server.debug = os.getenv("DEBUG_MODE", "false").lower() == "true"
         
         # Logging settings
@@ -200,35 +214,120 @@ class AppConfig:
         
         # Database settings
         self.database.redis_host = os.getenv("REDIS_HOST", self.database.redis_host)
-        self.database.redis_port = int(os.getenv("REDIS_PORT", self.database.redis_port))
+        
+        # Fix Redis port parsing
+        redis_port_env = os.getenv("REDIS_PORT", str(self.database.redis_port))
+        try:
+            if redis_port_env.startswith("${") and ":-" in redis_port_env:
+                default_value = redis_port_env.split(":-")[-1].rstrip("}")
+                redis_port_env = default_value
+            self.database.redis_port = int(redis_port_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid REDIS_PORT value '{redis_port_env}', using default {self.database.redis_port}: {e}")
+        
         self.database.redis_password = os.getenv("REDIS_PASSWORD") or None
         
         # Market data settings
         self.market_data.default_timeframe = os.getenv("DEFAULT_TIMEFRAME", self.market_data.default_timeframe)
         
         # Model settings
-        self.models.forecast_horizon = int(os.getenv("FORECAST_HORIZON", self.models.forecast_horizon))
-        self.models.confidence_interval = float(os.getenv("CONFIDENCE_INTERVAL", self.models.confidence_interval))
+        forecast_horizon_env = os.getenv("FORECAST_HORIZON", str(self.models.forecast_horizon))
+        try:
+            if forecast_horizon_env.startswith("${") and ":-" in forecast_horizon_env:
+                default_value = forecast_horizon_env.split(":-")[-1].rstrip("}")
+                forecast_horizon_env = default_value
+            self.models.forecast_horizon = int(forecast_horizon_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid FORECAST_HORIZON value '{forecast_horizon_env}', using default {self.models.forecast_horizon}: {e}")
+        
+        confidence_interval_env = os.getenv("CONFIDENCE_INTERVAL", str(self.models.confidence_interval))
+        try:
+            if confidence_interval_env.startswith("${") and ":-" in confidence_interval_env:
+                default_value = confidence_interval_env.split(":-")[-1].rstrip("}")
+                confidence_interval_env = default_value
+            self.models.confidence_interval = float(confidence_interval_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid CONFIDENCE_INTERVAL value '{confidence_interval_env}', using default {self.models.confidence_interval}: {e}")
         
         # Strategy settings
-        self.strategies.position_size = float(os.getenv("POSITION_SIZE", self.strategies.position_size))
-        self.strategies.stop_loss = float(os.getenv("STOP_LOSS", self.strategies.stop_loss))
+        position_size_env = os.getenv("POSITION_SIZE", str(self.strategies.position_size))
+        try:
+            if position_size_env.startswith("${") and ":-" in position_size_env:
+                default_value = position_size_env.split(":-")[-1].rstrip("}")
+                position_size_env = default_value
+            self.strategies.position_size = float(position_size_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid POSITION_SIZE value '{position_size_env}', using default {self.strategies.position_size}: {e}")
+        
+        stop_loss_env = os.getenv("STOP_LOSS", str(self.strategies.stop_loss))
+        try:
+            if stop_loss_env.startswith("${") and ":-" in stop_loss_env:
+                default_value = stop_loss_env.split(":-")[-1].rstrip("}")
+                stop_loss_env = default_value
+            self.strategies.stop_loss = float(stop_loss_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid STOP_LOSS value '{stop_loss_env}', using default {self.strategies.stop_loss}: {e}")
         
         # Risk settings
-        self.risk.max_drawdown = float(os.getenv("MAX_DRAWDOWN", self.risk.max_drawdown))
-        self.risk.max_leverage = float(os.getenv("MAX_LEVERAGE", self.risk.max_leverage))
+        max_drawdown_env = os.getenv("MAX_DRAWDOWN", str(self.risk.max_drawdown))
+        try:
+            if max_drawdown_env.startswith("${") and ":-" in max_drawdown_env:
+                default_value = max_drawdown_env.split(":-")[-1].rstrip("}")
+                max_drawdown_env = default_value
+            self.risk.max_drawdown = float(max_drawdown_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid MAX_DRAWDOWN value '{max_drawdown_env}', using default {self.risk.max_drawdown}: {e}")
+        
+        max_leverage_env = os.getenv("MAX_LEVERAGE", str(self.risk.max_leverage))
+        try:
+            if max_leverage_env.startswith("${") and ":-" in max_leverage_env:
+                default_value = max_leverage_env.split(":-")[-1].rstrip("}")
+                max_leverage_env = default_value
+            self.risk.max_leverage = float(max_leverage_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid MAX_LEVERAGE value '{max_leverage_env}', using default {self.risk.max_leverage}: {e}")
         
         # Agent settings
         self.agents.goal_planner_enabled = os.getenv("GOAL_PLANNER_ENABLED", "true").lower() == "true"
         self.agents.router_enabled = os.getenv("ROUTER_ENABLED", "true").lower() == "true"
         
         # NLP settings
-        self.nlp.confidence_threshold = float(os.getenv("NLP_CONFIDENCE_THRESHOLD", self.nlp.confidence_threshold))
-        self.nlp.max_tokens = int(os.getenv("NLP_MAX_TOKENS", self.nlp.max_tokens))
+        nlp_confidence_env = os.getenv("NLP_CONFIDENCE_THRESHOLD", str(self.nlp.confidence_threshold))
+        try:
+            if nlp_confidence_env.startswith("${") and ":-" in nlp_confidence_env:
+                default_value = nlp_confidence_env.split(":-")[-1].rstrip("}")
+                nlp_confidence_env = default_value
+            self.nlp.confidence_threshold = float(nlp_confidence_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid NLP_CONFIDENCE_THRESHOLD value '{nlp_confidence_env}', using default {self.nlp.confidence_threshold}: {e}")
+        
+        nlp_tokens_env = os.getenv("NLP_MAX_TOKENS", str(self.nlp.max_tokens))
+        try:
+            if nlp_tokens_env.startswith("${") and ":-" in nlp_tokens_env:
+                default_value = nlp_tokens_env.split(":-")[-1].rstrip("}")
+                nlp_tokens_env = default_value
+            self.nlp.max_tokens = int(nlp_tokens_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid NLP_MAX_TOKENS value '{nlp_tokens_env}', using default {self.nlp.max_tokens}: {e}")
         
         # API settings
-        self.api.rate_limit = int(os.getenv("API_RATE_LIMIT", self.api.rate_limit))
-        self.api.timeout = int(os.getenv("API_TIMEOUT", self.api.timeout))
+        api_rate_limit_env = os.getenv("API_RATE_LIMIT", str(self.api.rate_limit))
+        try:
+            if api_rate_limit_env.startswith("${") and ":-" in api_rate_limit_env:
+                default_value = api_rate_limit_env.split(":-")[-1].rstrip("}")
+                api_rate_limit_env = default_value
+            self.api.rate_limit = int(api_rate_limit_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid API_RATE_LIMIT value '{api_rate_limit_env}', using default {self.api.rate_limit}: {e}")
+        
+        api_timeout_env = os.getenv("API_TIMEOUT", str(self.api.timeout))
+        try:
+            if api_timeout_env.startswith("${") and ":-" in api_timeout_env:
+                default_value = api_timeout_env.split(":-")[-1].rstrip("}")
+                api_timeout_env = default_value
+            self.api.timeout = int(api_timeout_env)
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Invalid API_TIMEOUT value '{api_timeout_env}', using default {self.api.timeout}: {e}")
         
         # Monitoring settings
         self.monitoring.enabled = os.getenv("MONITORING_ENABLED", "true").lower() == "true"

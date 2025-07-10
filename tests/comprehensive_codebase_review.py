@@ -121,7 +121,7 @@ def test_advanced_features():
     
     # Strategy Gatekeeper
     try:
-        from strategies.gatekeeper import create_strategy_gatekeeper
+        from trading.strategies.gatekeeper import create_strategy_gatekeeper
         results['strategy_gatekeeper'] = "✅ Available"
     except Exception as e:
         results['strategy_gatekeeper'] = f"⚠️ {e}"

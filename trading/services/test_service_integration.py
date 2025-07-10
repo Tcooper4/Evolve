@@ -20,7 +20,7 @@ from trading.services.agent_api_service import AgentAPIService
 from trading.services.service_manager import ServiceManager
 from trading.agents.agent_manager import AgentManager
 from trading.agents.agent_registry import AgentRegistry
-from trading.config.agent_config import AgentConfig
+from trading.agents.base_agent_interface import AgentConfig
 from trading.utils.logging_utils import log_manager
 
 logger = logging.getLogger(__name__)
