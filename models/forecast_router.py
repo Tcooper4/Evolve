@@ -215,13 +215,37 @@ class ForecastRouter:
             model_class = self.model_registry[selected_model]
             model_kwargs = self._get_model_defaults(selected_model)
             model_kwargs.update(kwargs)  # Override with user-provided kwargs
-            
+
+            # For LSTM, only pass valid constructor args
+            if selected_model == 'lstm':
+                # Determine input_dim and output_dim from data
+                input_dim = prepared_data.shape[1] if hasattr(prepared_data, 'shape') else 1
+                output_dim = 1
+                lstm_args = {
+                    'input_dim': input_dim,
+                    'hidden_dim': model_kwargs.get('hidden_dim', 64),
+                    'output_dim': output_dim,
+                    'num_layers': model_kwargs.get('num_layers', 2),
+                    'dropout': model_kwargs.get('dropout', 0.2)
+                }
+                model = model_class(**lstm_args)
+                fit_args = {
+                    'epochs': model_kwargs.get('epochs', 50),
+                    'batch_size': model_kwargs.get('batch_size', 32),
+                    'learning_rate': model_kwargs.get('learning_rate', 0.001)
+                }
+            else:
+                model = model_class(**model_kwargs)
+                fit_args = {}
+
             logger.info(f"Initializing {selected_model} with config: {model_kwargs}")
-            model = model_class(**model_kwargs)
-            
+
             # Fit model with error handling
             try:
-                model.fit(prepared_data)
+                if selected_model == 'lstm':
+                    model.train_model(prepared_data, prepared_data.iloc[:, 0], **fit_args)
+                else:
+                    model.fit(prepared_data)
                 logger.info(f"Successfully fitted {selected_model}")
             except Exception as e:
                 logger.error(f"Failed to fit {selected_model}: {e}")

@@ -92,7 +92,6 @@ The models module can be configured through:
 
 ## Dependencies
 
-- tensorflow
 - pytorch
 - scikit-learn
 - pandas

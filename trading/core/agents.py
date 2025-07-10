@@ -472,11 +472,61 @@ def handle_underperformance(status_report: Dict[str, Any]) -> None:
         # Trigger the event
         trigger_event(event_data)
         
+        # Implement agentic response actions
+        performance_metrics = status_report.get('metrics', {})
+        current_sharpe = performance_metrics.get('sharpe_ratio', 0)
+        current_drawdown = performance_metrics.get('max_drawdown', 0)
+        
+        # Action 1: Trigger model retraining if performance is poor
+        if current_sharpe < 0.5 or current_drawdown > 0.2:
+            logger.info("Performance below thresholds - triggering model retraining")
+            try:
+                # Trigger model retraining agent
+                from trading.agents.model_optimizer_agent import ModelOptimizerAgent
+                optimizer = ModelOptimizerAgent()
+                optimizer.execute(action='optimize_model', model_id='current')
+                logger.info("Model retraining triggered successfully")
+            except Exception as e:
+                logger.error(f"Failed to trigger model retraining: {e}")
+        
+        # Action 2: Switch to conservative strategy if drawdown is high
+        if current_drawdown > 0.15:
+            logger.info("High drawdown detected - switching to conservative strategy")
+            try:
+                # Switch to conservative strategy
+                from trading.strategies.gatekeeper import StrategyGatekeeper
+                gatekeeper = StrategyGatekeeper()
+                gatekeeper.switch_strategy('conservative')
+                logger.info("Switched to conservative strategy")
+            except Exception as e:
+                logger.error(f"Failed to switch strategy: {e}")
+        
+        # Action 3: Send alert notifications
+        if current_sharpe < 0.3 or current_drawdown > 0.25:
+            logger.info("Critical performance issues - sending alerts")
+            try:
+                # Send notification
+                from trading.meta_agents.notification_handlers import NotificationHandler
+                handler = NotificationHandler()
+                handler.send_alert(
+                    level="critical",
+                    message=f"Critical performance degradation: Sharpe={current_sharpe:.3f}, Drawdown={current_drawdown:.3f}",
+                    recipients=["admin"]
+                )
+                logger.info("Alert notifications sent")
+            except Exception as e:
+                logger.error(f"Failed to send alerts: {e}")
+        
+        # Action 4: Log detailed analysis
+        logger.info("[Agent Callback] Underperformance detected. Status report:")
+        logger.info(status_report)
+        logger.info(f"Actions taken: retraining={current_sharpe < 0.5}, strategy_switch={current_drawdown > 0.15}, alerts={current_sharpe < 0.3}")
+        
     except Exception as e:
         logger.error(f"Error in legacy handle_underperformance: {e}")
         logger.info("[Agent Callback] Underperformance detected. Status report:")
         logger.info(status_report)
-        logger.info("TODO: Implement agentic response (e.g., trigger retraining, alert, etc.)")
+        logger.info("Agentic response failed - manual intervention may be required")
 
 # --- Initialize Default Event Handlers ---
 def _initialize_default_handlers():

@@ -161,8 +161,7 @@ Historical Data → Strategy Backtesting → Performance Metrics → Visualizati
 - **scikit-learn**: Machine learning utilities
 
 ### Machine Learning
-- **TensorFlow**: Deep learning framework
-- **PyTorch**: Alternative deep learning framework
+- **PyTorch**: Deep learning framework
 - **XGBoost**: Gradient boosting
 - **Prophet**: Time series forecasting
 

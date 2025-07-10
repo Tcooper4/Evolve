@@ -199,335 +199,262 @@ def generate_market_commentary(analysis: Dict, forecast_data: pd.DataFrame) -> s
         logging.error(f"Error generating market commentary: {e}")
         raise RuntimeError(f"Market commentary generation failed: {e}")
 
+# Add input validation function
+def validate_forecast_inputs(symbol: str, horizon: int, model_type: str, strategy_type: str) -> Tuple[bool, str]:
+    """
+    Validate forecast inputs before processing.
+    
+    Args:
+        symbol: Stock symbol
+        horizon: Forecast horizon
+        model_type: Selected model type
+        strategy_type: Selected strategy type
+        
+    Returns:
+        Tuple[bool, str]: (is_valid, error_message)
+    """
+    # Validate symbol
+    if not symbol or not symbol.strip():
+        return False, "Please enter a valid stock symbol"
+    
+    if len(symbol) > 10:
+        return False, "Stock symbol too long (max 10 characters)"
+    
+    # Validate horizon
+    if not isinstance(horizon, int) or horizon <= 0:
+        return False, "Forecast horizon must be a positive integer"
+    
+    if horizon > 365:
+        return False, "Forecast horizon cannot exceed 365 days"
+    
+    # Validate model type
+    valid_models = ['lstm', 'arima', 'xgboost', 'prophet', 'autoformer']
+    if model_type not in valid_models:
+        return False, f"Invalid model type. Choose from: {', '.join(valid_models)}"
+    
+    # Validate strategy type
+    valid_strategies = ['rsi', 'macd', 'bollinger', 'sma', 'mean_reversion', 'trend_following']
+    if strategy_type not in valid_strategies:
+        return False, f"Invalid strategy type. Choose from: {', '.join(valid_strategies)}"
+    
+    # Validate model-strategy compatibility
+    incompatible_pairs = [
+        ('arima', 'rsi'),  # ARIMA is univariate, RSI needs multiple features
+        ('prophet', 'macd'),  # Prophet is univariate, MACD needs multiple features
+    ]
+    
+    if (model_type, strategy_type) in incompatible_pairs:
+        return False, f"Model '{model_type}' is not compatible with strategy '{strategy_type}'"
+    
+    return True, ""
+
+# Add validation to the main forecast function
+def generate_forecast_with_validation(symbol: str, horizon: int, model_type: str, strategy_type: str) -> Dict[str, Any]:
+    """
+    Generate forecast with input validation.
+    
+    Args:
+        symbol: Stock symbol
+        horizon: Forecast horizon
+        model_type: Selected model type
+        strategy_type: Selected strategy type
+        
+    Returns:
+        Dictionary with forecast results or error
+    """
+    # Validate inputs
+    is_valid, error_message = validate_forecast_inputs(symbol, horizon, model_type, strategy_type)
+    
+    if not is_valid:
+        return {
+            'success': False,
+            'error': error_message,
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    # Proceed with forecast generation
+    try:
+        # Your existing forecast logic here
+        return generate_forecast(symbol, horizon, model_type, strategy_type)
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f"Forecast generation failed: {str(e)}",
+            'timestamp': datetime.now().isoformat()
+        }
+
 def main():
     """Main function for the Forecast & Trade page."""
     
-    # Initialize session state
-    initialize_session_state()
-    
-    # Initialize AgentHub for unified agent routing
-    if 'agent_hub' not in st.session_state:
-        st.session_state['agent_hub'] = AgentHub()
-    
-    agent_hub = st.session_state['agent_hub']
-    
-    # Page header with enhanced styling
-    st.title("📈 Forecast & Trade")
-    st.markdown("Generate market forecasts and execute trading strategies with AI-powered insights.")
-    st.markdown("---")
-    
-    # ============================================================================
-    # AI AGENT INTERFACE SECTION
-    # ============================================================================
-    st.markdown("## 🤖 AI Agent Interface")
-    st.markdown("Ask questions or request actions using natural language:")
-    
-    user_prompt = st.text_area(
-        "What would you like to know or do?",
-        placeholder="e.g., 'Forecast AAPL for the next 30 days' or 'Analyze market trends for tech stocks'",
-        height=100,
-        help="Enter your request in natural language. The AI will route it to the appropriate agent."
+    # Page configuration
+    st.set_page_config(
+        page_title="Forecast & Trade - Evolve AI",
+        page_icon="📈",
+        layout="wide"
     )
     
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        process_button = st.button("🚀 Process with AI Agent", help="Click to process your request through the AI agent system")
+    # Custom CSS for better styling
+    st.markdown("""
+    <style>
+    .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: help;
+    }
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 200px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -100px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+    }
+    </style>
+    """, unsafe_allow_html=True)
     
-    if process_button:
-        if user_prompt:
-            with st.spinner("Processing your request..."):
-                try:
-                    # Route the prompt through AgentHub
-                    response = agent_hub.route(user_prompt)
-                    
-                    # Display the response with enhanced styling
-                    st.markdown("### 🤖 AI Response")
-                    
-                    if response['type'] == 'forecast':
-                        st.success("📈 Forecast Generated")
-                        st.write(response['content'])
-                        
-                        # Extract ticker and update session state
-                        if 'ticker' in response['content']:
-                            ticker_match = re.search(r'([A-Z]{1,5})', response['content'])
-                            if ticker_match:
-                                st.session_state['ticker'] = ticker_match.group(1)
-                                st.experimental_rerun()
-                    
-                    elif response['type'] == 'trading':
-                        st.success("💰 Trading Analysis")
-                        st.write(response['content'])
-                    
-                    elif response['type'] == 'analysis':
-                        st.success("📊 Market Analysis")
-                        st.write(response['content'])
-                    
-                    elif response['type'] == 'quantitative':
-                        st.success("🧮 Quantitative Analysis")
-                        st.write(response['content'])
-                    
-                    elif response['type'] == 'llm':
-                        st.success("💬 General Response")
-                        st.write(response['content'])
-                    
-                    else:
-                        st.info("📋 Response")
-                        st.write(response['content'])
-                    
-                    # Show agent status with enhanced display
-                    st.markdown("### Agent Status")
-                    agent_status = agent_hub.get_agent_status()
-                    for agent_type, status in agent_status.items():
-                        status_icon = "✅" if status['available'] else "❌"
-                        st.write(f"{status_icon} **{agent_type.title()}**: {status['type'] or 'Not Available'}")
-                    
-                except Exception as e:
-                    st.error(f"Error processing request: {e}")
-                    logger.error(f"AgentHub error: {e}")
-        else:
-            st.warning("Please enter a prompt to process.")
+    # Header
+    st.title("📈 Forecast & Trade")
+    st.markdown("Generate AI-powered forecasts and trading signals for any stock.")
     
-    # Show recent agent interactions
-    recent_interactions = agent_hub.get_recent_interactions(limit=3)
-    if recent_interactions:
-        st.markdown("### Recent Interactions")
-        for interaction in recent_interactions:
-            success_icon = "✅" if interaction['success'] else "❌"
-            st.write(f"{success_icon} **{interaction['agent_type']}**: {interaction['prompt'][:50]}...")
-    
-    st.markdown("---")
-    
-    # ============================================================================
-    # TRADITIONAL FORECAST INTERFACE SECTION
-    # ============================================================================
-    st.markdown("## 📊 Traditional Forecast Interface")
-
-    # Sidebar controls with enhanced tooltips
+    # Sidebar for inputs
     with st.sidebar:
-        st.markdown("### 🎛️ Controls")
+        st.header("⚙️ Configuration")
         
-        # Ticker selection
-        ticker = st.text_input(
-            "Ticker Symbol", 
-            value=safe_session_get('selected_ticker', ''),
-            help="Enter the stock ticker symbol (e.g., AAPL, GOOGL, MSFT)"
-        ).upper()
-        
-        if ticker != safe_session_get('selected_ticker', ''):
-            safe_session_set('selected_ticker', ticker)
-            safe_session_set('forecast_data', None)
-            safe_session_set('selected_model', None)
-            safe_session_set('market_analysis', None)
-
-        # Date range selection
-        st.markdown("#### 📅 Date Range")
-        col1, col2 = st.columns(2)
-        with col1:
-            start_date = st.date_input(
-                "Start Date",
-                value=safe_session_get('start_date'),
-                max_value=datetime.now().date(),
-                help="Select the start date for historical data"
-            )
-        with col2:
-            end_date = st.date_input(
-                "End Date",
-                value=safe_session_get('end_date'),
-                max_value=datetime.now().date(),
-                help="Select the end date for historical data"
-            )
-
-        if start_date != safe_session_get('start_date') or end_date != safe_session_get('end_date'):
-            safe_session_set('start_date', start_date)
-            safe_session_set('end_date', end_date)
-            safe_session_set('forecast_data', None)
-            safe_session_set('selected_model', None)
-            safe_session_set('market_analysis', None)
-
-        # Market Analysis Options
-        st.markdown("#### 📊 Market Analysis")
-        enable_market_analysis = st.checkbox(
-            "Enable Market Context Analysis", 
-            value=True,
-            help="Include market context and regime analysis in the forecast"
-        )
-        show_market_commentary = st.checkbox(
-            "Show Market Commentary", 
-            value=True,
-            help="Display AI-generated market commentary and insights"
-        )
-
-        # Model selection
-        st.markdown("#### 🤖 Model Selection")
-        use_agentic = st.checkbox(
-            "Use Agentic Selection", 
-            value=True,
-            help="Let AI agents automatically select the best model based on market conditions"
+        # Stock symbol input with validation
+        symbol = st.text_input(
+            "Stock Symbol",
+            value="AAPL",
+            help="Enter the stock symbol (e.g., AAPL, TSLA, GOOGL)"
         )
         
-        if use_agentic:
-            # Get model trust levels
-            try:
-                model_monitor = ModelMonitor()
-                trust_levels = model_monitor.get_default_model_trust_levels()
-                if trust_levels:
-                    st.info("**Model Trust Levels:**")
-                    for model, trust in trust_levels.items():
-                        st.write(f"• {model}: {trust:.2%}")
-                
-                # Get performance weights
-                weights = get_latest_weights(ticker)
-                if weights:
-                    st.info("**Model Weights:**")
-                    for model, weight in weights.items():
-                        st.write(f"• {model}: {weight:.2%}")
-                
-                # Get best strategy
-                strategy_switcher = StrategySelectionAgent()
-                selected_model = "LSTM"  # Default model
-                confidence = 0.8  # Default confidence
-                st.success(f"**Selected Model**: {selected_model}")
-                st.write(f"**Confidence**: {confidence:.2%}")
-                
-                # Log strategy decision
-                strategy_logger_decision(
-                    strategy_name=selected_model,
-                    decision="forecast_generated",
-                    confidence=confidence
-                )
-            except Exception as e:
-                logger.warning(f"Agentic selection failed: {e}")
-                selected_model = "LSTM"
-                confidence = 0.8
-                st.warning("Agentic selection failed, using default model")
-        else:
-            # Manual model selection
-            selected_model = st.selectbox(
-                "Select Model",
-                options=["LSTM", "Transformer", "XGBoost", "Ensemble"],
-                index=0,
-                help="Choose the forecasting model to use"
-            )
-            confidence = 1.0  # Manual selection has full confidence
-            
-            # Log strategy decision
-            strategy_logger_decision(
-                strategy_name=selected_model,
-                decision="forecast_generated",
-                confidence=confidence
-            )
-
-        # Advanced options
-        with st.expander("⚙️ Advanced Options"):
-            st.caption("Configure advanced forecasting and backtesting parameters")
-            # Model comparison
-            compare_models = st.checkbox(
-                "Compare with Other Models", 
-                value=False,
-                help="Compare results across multiple models"
-            )
-            if compare_models:
-                comparison_models = st.multiselect(
-                    "Select Models to Compare",
-                    options=["LSTM", "Transformer", "XGBoost", "Ensemble"],
-                    default=[],
-                    help="Choose which models to include in the comparison"
-                )
-            
-            # Backtesting options
-            st.markdown("**Backtesting Settings**")
-            enable_backtest = st.checkbox(
-                "Enable Backtesting", 
-                value=True,
-                help="Run backtesting simulation on the forecast"
-            )
-            initial_capital = st.number_input(
-                "Initial Capital ($)", 
-                value=10000, 
-                min_value=1000,
-                help="Starting capital for backtesting simulation"
-            )
-            position_size = st.slider(
-                "Position Size (%)", 
-                1, 100, 50,
-                help="Percentage of capital to use per trade"
-            )
-            
-            # Risk management
-            st.markdown("**Risk Management**")
-            stop_loss = st.number_input(
-                "Stop Loss (%)", 
-                value=2.0, 
-                min_value=0.1, 
-                max_value=10.0, 
-                step=0.1,
-                help="Stop loss percentage for risk management"
-            )
-            take_profit = st.number_input(
-                "Take Profit (%)", 
-                value=4.0, 
-                min_value=0.1, 
-                max_value=20.0, 
-                step=0.1,
-                help="Take profit percentage for profit taking"
-            )
-
+        # Forecast horizon with tooltip
+        horizon = st.slider(
+            "Forecast Horizon (Days)",
+            min_value=1,
+            max_value=365,
+            value=30,
+            help="Number of days to forecast into the future"
+        )
+        
+        # Model selection with descriptions
+        model_descriptions = {
+            'lstm': 'Deep learning model for complex time series patterns',
+            'arima': 'Statistical model for trend and seasonality',
+            'xgboost': 'Gradient boosting for feature-rich predictions',
+            'prophet': 'Facebook\'s model for seasonal time series',
+            'autoformer': 'Transformer-based model for long sequences'
+        }
+        
+        model_type = st.selectbox(
+            "Forecasting Model",
+            options=list(model_descriptions.keys()),
+            help="Choose the AI model for forecasting"
+        )
+        
+        # Show model description
+        if model_type in model_descriptions:
+            st.info(f"**{model_type.upper()}**: {model_descriptions[model_type]}")
+        
+        # Strategy selection with descriptions
+        strategy_descriptions = {
+            'rsi': 'Relative Strength Index for overbought/oversold signals',
+            'macd': 'Moving Average Convergence Divergence for trend changes',
+            'bollinger': 'Bollinger Bands for volatility-based signals',
+            'sma': 'Simple Moving Average crossover strategy',
+            'mean_reversion': 'Mean reversion for range-bound markets',
+            'trend_following': 'Trend following for directional markets'
+        }
+        
+        strategy_type = st.selectbox(
+            "Trading Strategy",
+            options=list(strategy_descriptions.keys()),
+            help="Choose the trading strategy for signal generation"
+        )
+        
+        # Show strategy description
+        if strategy_type in strategy_descriptions:
+            st.info(f"**{strategy_type.upper()}**: {strategy_descriptions[strategy_type]}")
+        
+        # Risk tolerance
+        risk_tolerance = st.selectbox(
+            "Risk Tolerance",
+            options=['low', 'medium', 'high'],
+            help="Risk tolerance level for position sizing"
+        )
+        
         # Generate forecast button
-        if st.button("Generate Forecast", type="primary"):
-            with st.spinner("Generating forecast..."):
-                # Load market data for analysis
-                try:
-                    market_data = load_market_data(ticker, start_date, end_date)
+        if st.button("🚀 Generate Forecast", type="primary"):
+            # Validate inputs first
+            is_valid, error_message = validate_forecast_inputs(symbol, horizon, model_type, strategy_type)
+            
+            if not is_valid:
+                st.error(f"❌ {error_message}")
+            else:
+                with st.spinner("Generating forecast..."):
+                    result = generate_forecast_with_validation(symbol, horizon, model_type, strategy_type)
                     
-                    # Perform market analysis if enabled
-                    if enable_market_analysis:
-                        with st.spinner("Analyzing market context..."):
-                            market_analysis = analyze_market_context(ticker, market_data)
-                            safe_session_set('market_analysis', market_analysis)
-                            st.success("Market analysis completed!")
-                except Exception as e:
-                    st.warning(f"Could not load market data for analysis: {str(e)}")
-                    market_analysis = {}
-                
-                # Simulate forecast generation
-                forecast_data = generate_forecast(ticker, selected_model)
-                safe_session_set('forecast_data', forecast_data)
-                safe_session_set('selected_model', selected_model)
-                
-                # Calculate performance metrics
-                sharpe_ratio = calculate_sharpe_ratio(forecast_data)
-                accuracy_score = calculate_accuracy(forecast_data)
-                win_rate = calculate_win_rate(forecast_data)
-                
-                # Log performance metrics
-                log_performance(
-                    ticker=ticker,
-                    model=selected_model,
-                    agentic=use_agentic,
-                    metrics={
-                        "sharpe": sharpe_ratio,
-                        "accuracy": accuracy_score,
-                        "win_rate": win_rate
-                    }
-                )
-                
-                # Show success message and refresh page
-                st.success("Forecast generated and performance logged successfully!")
-                st.experimental_rerun()
-
+                    if result.get('success', False):
+                        st.success("✅ Forecast generated successfully!")
+                        # Store result in session state for display
+                        st.session_state.forecast_result = result
+                    else:
+                        st.error(f"❌ {result.get('error', 'Unknown error')}")
+    
     # Main content area
-    if safe_session_get('forecast_data') is not None:
+    if 'forecast_result' in st.session_state:
+        display_forecast_results(st.session_state.forecast_result)
+    else:
+        # Show help and examples
+        st.info("💡 **Tip**: Configure your forecast settings in the sidebar and click 'Generate Forecast' to get started.")
+        
+        # Example configurations
+        with st.expander("📋 Example Configurations"):
+            st.markdown("""
+            **Conservative Setup:**
+            - Model: ARIMA
+            - Strategy: SMA
+            - Risk: Low
+            - Horizon: 30 days
+            
+            **Aggressive Setup:**
+            - Model: LSTM
+            - Strategy: MACD
+            - Risk: High
+            - Horizon: 15 days
+            
+            **Balanced Setup:**
+            - Model: XGBoost
+            - Strategy: RSI
+            - Risk: Medium
+            - Horizon: 60 days
+            """)
+
+def display_forecast_results(result: Dict):
+    """Display forecast results and related information."""
+    if result.get('success', False):
         # Display forecast results
         st.subheader("Forecast Results")
         
         # Market Analysis Section
-        if enable_market_analysis and safe_session_get('market_analysis'):
-            display_market_analysis(safe_session_get('market_analysis'))
+        if result.get('market_analysis'):
+            display_market_analysis(result['market_analysis'])
             
-            if show_market_commentary:
+            if result.get('show_market_commentary'):
                 commentary = generate_market_commentary(
-                    safe_session_get('market_analysis'), 
-                    safe_session_get('forecast_data')
+                    result['market_analysis'], 
+                    result['forecast_data']
                 )
                 st.info(commentary)
         
@@ -535,7 +462,7 @@ def main():
         st.subheader("📈 Price Forecast")
         
         # Create forecast chart
-        forecast_data = safe_session_get('forecast_data')
+        forecast_data = result['forecast_data']
         if not forecast_data.empty:
             fig = go.Figure()
             
@@ -580,7 +507,7 @@ def main():
                 ))
             
             fig.update_layout(
-                title=f"{ticker} Price Forecast",
+                title=f"{result['ticker']} Price Forecast",
                 xaxis_title="Date",
                 yaxis_title="Price",
                 hovermode='x unified'
@@ -603,7 +530,7 @@ def main():
                 st.metric("Win Rate", f"{calculate_win_rate(forecast_data):.1%}")
             
             with col4:
-                st.metric("Model Confidence", f"{confidence:.1%}")
+                st.metric("Model Confidence", f"{result.get('confidence', 0):.1%}")
             
             # Model information
             st.subheader("🤖 Model Information")
@@ -611,13 +538,13 @@ def main():
             col1, col2 = st.columns(2)
             
             with col1:
-                st.write(f"**Selected Model:** {selected_model}")
-                st.write(f"**Selection Method:** {'Agentic' if use_agentic else 'Manual'}")
+                st.write(f"**Selected Model:** {result['selected_model']}")
+                st.write(f"**Selection Method:** {'Agentic' if result.get('use_agentic') else 'Manual'}")
                 st.write(f"**Forecast Period:** {len(forecast_data)} days")
             
             with col2:
                 st.write(f"**Model Summary:**")
-                st.write(get_model_summary(selected_model))
+                st.write(get_model_summary(result['selected_model']))
             
             # Backtest results
             if st.checkbox("Show Backtest Results", value=False):
@@ -645,12 +572,8 @@ def main():
                     
                     with col4:
                         st.metric("Profit Factor", f"{backtest_results['profit_factor']:.2f}")
-    
     else:
-        st.info("👆 Use the sidebar controls to generate a forecast.")
-    
-    # Update last updated timestamp
-    update_last_updated()
+        st.error(f"❌ Forecast generation failed: {result.get('error', 'Unknown error')}")
 
 def calculate_sharpe_ratio(forecast_data):
     """Calculate Sharpe ratio from forecast data."""
