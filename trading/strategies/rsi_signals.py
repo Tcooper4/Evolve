@@ -60,9 +60,10 @@ def generate_rsi_signals(
     ticker: str = None,
     period: int = 14,
     buy_threshold: float = 30,
-    sell_threshold: float = 70
+    sell_threshold: float = 70,
+    user_config: dict = None
 ) -> pd.DataFrame:
-    """Generate RSI trading signals.
+    """Generate RSI trading signals with user-configurable thresholds.
     
     Args:
         df: Price data DataFrame with OHLCV columns
@@ -70,6 +71,7 @@ def generate_rsi_signals(
         period: RSI period
         buy_threshold: RSI level for buy signals
         sell_threshold: RSI level for sell signals
+        user_config: Optional user configuration dict with thresholds
         
     Returns:
         DataFrame with RSI signals and returns
@@ -79,8 +81,14 @@ def generate_rsi_signals(
         if 'Close' not in df.columns:
             raise ValueError("Missing 'Close' column in DataFrame")
         
-        # Load optimized settings if available
-        if ticker:
+        # Apply user configuration if provided
+        if user_config:
+            buy_threshold = user_config.get('buy_threshold', buy_threshold)
+            sell_threshold = user_config.get('sell_threshold', sell_threshold)
+            period = user_config.get('period', period)
+        
+        # Load optimized settings if available and no user config
+        if ticker and not user_config:
             optimized = load_optimized_settings(ticker)
             if optimized:
                 period = optimized["optimal_period"]

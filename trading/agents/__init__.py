@@ -15,7 +15,13 @@ This module provides autonomous agents for model management and centralized prom
 - Prompt Templates: Centralized source of truth for all prompt templates
 """
 
-# Base Agent Interface
+import importlib
+import logging
+from typing import Any, Dict, Optional
+
+logger = logging.getLogger(__name__)
+
+# Base Agent Interface - Import directly as it's lightweight
 from .base_agent_interface import (
     BaseAgent,
     AgentConfig,
@@ -23,73 +29,199 @@ from .base_agent_interface import (
     AgentResult
 )
 
-# Model Management Agents
-from .model_builder_agent import ModelBuilderAgent, ModelBuildRequest, ModelBuildResult
-from .model_selector_agent import ModelSelectorAgent, ModelPerformance, ModelCapability, ForecastingHorizon, MarketRegime, ModelType
-from .model_optimizer_agent import ModelOptimizerAgent, OptimizationResult, OptimizationConfig, OptimizationType, OptimizationStatus
-from .model_evaluator_agent import ModelEvaluatorAgent, ModelEvaluationRequest, ModelEvaluationResult
-from .model_improver_agent import ModelImproverAgent, ModelImprovementRequest, ModelImprovementResult
-from .model_synthesizer_agent import ModelSynthesizerAgent, SynthesisRequest, SynthesisResult, ModelArchitecture, ModelType as SynthesisModelType, SynthesisStatus
-from .performance_critic_agent import PerformanceCriticAgent, ModelEvaluationRequest, ModelEvaluationResult
+# Lazy loading functions to avoid circular imports
+def _lazy_import(module_name: str, class_name: str) -> Any:
+    """Lazy import a class from a module."""
+    try:
+        module = importlib.import_module(module_name)
+        return getattr(module, class_name)
+    except (ImportError, AttributeError) as e:
+        logger.warning(f"Could not import {class_name} from {module_name}: {e}")
+        return None
 
-# Strategy Agents
-from .strategy_selector_agent import StrategySelectorAgent, StrategyPerformance, StrategyRecommendation, StrategyType
-from .strategy_improver_agent import StrategyImproverAgent, StrategyImprovementRequest, StrategyImprovementResult
-from .meta_strategy_agent import MetaStrategyAgent, MetaStrategyRequest, MetaStrategyResult
+# Model Management Agents - Lazy loading
+def get_model_builder_agent():
+    """Get ModelBuilderAgent with lazy loading."""
+    return _lazy_import('.model_builder_agent', 'ModelBuilderAgent')
 
-# Market Analysis Agents
-from .market_regime_agent import MarketRegimeAgent, MarketRegimeRequest, MarketRegimeResult
-from .data_quality_agent import DataQualityAgent, DataQualityRequest, DataQualityResult
+def get_model_selector_agent():
+    """Get ModelSelectorAgent with lazy loading."""
+    return _lazy_import('.model_selector_agent', 'ModelSelectorAgent')
 
-# Execution and Risk Agents
-from .execution_agent import ExecutionAgent, ExecutionRequest, ExecutionResult
-from .execution_risk_agent import ExecutionRiskAgent, RiskAssessmentRequest, RiskAssessmentResult
-from .execution_risk_control_agent import ExecutionRiskControlAgent, RiskControlRequest, RiskControlResult
+def get_model_optimizer_agent():
+    """Get ModelOptimizerAgent with lazy loading."""
+    return _lazy_import('.model_optimizer_agent', 'ModelOptimizerAgent')
 
-# Optimization Agents
-from .optimizer_agent import OptimizerAgent, OptimizationRequest, OptimizationResult
-from .self_tuning_optimizer_agent import SelfTuningOptimizerAgent, SelfTuningRequest, SelfTuningResult
-from .meta_tuner_agent import MetaTunerAgent, MetaTuningRequest, MetaTuningResult
+def get_model_evaluator_agent():
+    """Get ModelEvaluatorAgent with lazy loading."""
+    return _lazy_import('.model_evaluator_agent', 'ModelEvaluatorAgent')
 
-# Learning and Research Agents
-from .meta_learner import MetaLearner, MetaLearningRequest, MetaLearningResult
-from .meta_research_agent import MetaResearchAgent, ResearchRequest, ResearchResult
-from .meta_learning_feedback_agent import MetaLearningFeedbackAgent, FeedbackRequest, FeedbackResult
-from .research_agent import ResearchAgent, ResearchRequest, ResearchResult
+def get_model_improver_agent():
+    """Get ModelImproverAgent with lazy loading."""
+    return _lazy_import('.model_improver_agent', 'ModelImproverAgent')
 
-# Management and Coordination Agents
-from .agent_manager import AgentManager, AgentManagementRequest, AgentManagementResult
-from .agent_loop_manager import AgentLoopManager, AgentLoopState, AgentCommunication
-from .task_delegation_agent import TaskDelegationAgent, TaskDelegationRequest, TaskDelegationResult
-from .agent_registry import AgentRegistry, AgentRegistrationRequest, AgentRegistrationResult
-from .agent_leaderboard import AgentLeaderboard, LeaderboardRequest, LeaderboardResult
+def get_model_synthesizer_agent():
+    """Get ModelSynthesizerAgent with lazy loading."""
+    return _lazy_import('.model_synthesizer_agent', 'ModelSynthesizerAgent')
 
-# Specialized Agents
-from .prompt_router_agent import PromptRouterAgent, ParsedIntent, create_prompt_router
-from .nlp_agent import NLPAgent, NLPRequest, NLPResult
-from .multimodal_agent import MultimodalAgent, MultimodalRequest, MultimodalResult
-from .rolling_retraining_agent import RollingRetrainingAgent, RetrainingRequest, RetrainingResult
-from .walk_forward_agent import WalkForwardAgent, WalkForwardRequest, WalkForwardResult
-from .updater_agent import UpdaterAgent, UpdateRequest, UpdateResult
-from .self_improving_agent import SelfImprovingAgent, SelfImprovementRequest, SelfImprovementResult
-from .intent_detector import IntentDetector, IntentDetectionRequest, IntentDetectionResult
-from .regime_detection_agent import RegimeDetectionAgent, create_regime_detection_agent
-from .commentary_agent import CommentaryAgent, create_commentary_agent
+def get_performance_critic_agent():
+    """Get PerformanceCriticAgent with lazy loading."""
+    return _lazy_import('.performance_critic_agent', 'PerformanceCriticAgent')
 
-# Prompt Templates
-from .prompt_templates import (
-    PROMPT_TEMPLATES,
-    get_template,
-    format_template,
-    get_templates_by_category,
-    list_templates,
-    list_categories,
-    TEMPLATE_CATEGORIES
-)
+# Strategy Agents - Lazy loading
+def get_strategy_selector_agent():
+    """Get StrategySelectorAgent with lazy loading."""
+    return _lazy_import('.strategy_selector_agent', 'StrategySelectorAgent')
 
-# Commentary Engine
-from trading.commentary import CommentaryEngine, create_commentary_engine
+def get_strategy_improver_agent():
+    """Get StrategyImproverAgent with lazy loading."""
+    return _lazy_import('.strategy_improver_agent', 'StrategyImproverAgent')
 
+def get_meta_strategy_agent():
+    """Get MetaStrategyAgent with lazy loading."""
+    return _lazy_import('.meta_strategy_agent', 'MetaStrategyAgent')
+
+# Market Analysis Agents - Lazy loading
+def get_market_regime_agent():
+    """Get MarketRegimeAgent with lazy loading."""
+    return _lazy_import('.market_regime_agent', 'MarketRegimeAgent')
+
+def get_data_quality_agent():
+    """Get DataQualityAgent with lazy loading."""
+    return _lazy_import('.data_quality_agent', 'DataQualityAgent')
+
+# Execution and Risk Agents - Lazy loading
+def get_execution_agent():
+    """Get ExecutionAgent with lazy loading."""
+    return _lazy_import('.execution_agent', 'ExecutionAgent')
+
+def get_execution_risk_agent():
+    """Get ExecutionRiskAgent with lazy loading."""
+    return _lazy_import('.execution_risk_agent', 'ExecutionRiskAgent')
+
+def get_execution_risk_control_agent():
+    """Get ExecutionRiskControlAgent with lazy loading."""
+    return _lazy_import('.execution_risk_control_agent', 'ExecutionRiskControlAgent')
+
+# Optimization Agents - Lazy loading
+def get_optimizer_agent():
+    """Get OptimizerAgent with lazy loading."""
+    return _lazy_import('.optimizer_agent', 'OptimizerAgent')
+
+def get_self_tuning_optimizer_agent():
+    """Get SelfTuningOptimizerAgent with lazy loading."""
+    return _lazy_import('.self_tuning_optimizer_agent', 'SelfTuningOptimizerAgent')
+
+def get_meta_tuner_agent():
+    """Get MetaTunerAgent with lazy loading."""
+    return _lazy_import('.meta_tuner_agent', 'MetaTunerAgent')
+
+# Learning and Research Agents - Lazy loading
+def get_meta_learner():
+    """Get MetaLearner with lazy loading."""
+    return _lazy_import('.meta_learner', 'MetaLearner')
+
+def get_meta_research_agent():
+    """Get MetaResearchAgent with lazy loading."""
+    return _lazy_import('.meta_research_agent', 'MetaResearchAgent')
+
+def get_meta_learning_feedback_agent():
+    """Get MetaLearningFeedbackAgent with lazy loading."""
+    return _lazy_import('.meta_learning_feedback_agent', 'MetaLearningFeedbackAgent')
+
+def get_research_agent():
+    """Get ResearchAgent with lazy loading."""
+    return _lazy_import('.research_agent', 'ResearchAgent')
+
+# Management and Coordination Agents - Lazy loading
+def get_agent_manager():
+    """Get AgentManager with lazy loading."""
+    return _lazy_import('.agent_manager', 'AgentManager')
+
+def get_agent_loop_manager():
+    """Get AgentLoopManager with lazy loading."""
+    return _lazy_import('.agent_loop_manager', 'AgentLoopManager')
+
+def get_task_delegation_agent():
+    """Get TaskDelegationAgent with lazy loading."""
+    return _lazy_import('.task_delegation_agent', 'TaskDelegationAgent')
+
+def get_agent_registry():
+    """Get AgentRegistry with lazy loading."""
+    return _lazy_import('.agent_registry', 'AgentRegistry')
+
+def get_agent_leaderboard():
+    """Get AgentLeaderboard with lazy loading."""
+    return _lazy_import('.agent_leaderboard', 'AgentLeaderboard')
+
+# Specialized Agents - Lazy loading
+def get_prompt_router_agent():
+    """Get PromptRouterAgent with lazy loading."""
+    return _lazy_import('.prompt_router_agent', 'PromptRouterAgent')
+
+def get_nlp_agent():
+    """Get NLPAgent with lazy loading."""
+    return _lazy_import('.nlp_agent', 'NLPAgent')
+
+def get_multimodal_agent():
+    """Get MultimodalAgent with lazy loading."""
+    return _lazy_import('.multimodal_agent', 'MultimodalAgent')
+
+def get_rolling_retraining_agent():
+    """Get RollingRetrainingAgent with lazy loading."""
+    return _lazy_import('.rolling_retraining_agent', 'RollingRetrainingAgent')
+
+def get_walk_forward_agent():
+    """Get WalkForwardAgent with lazy loading."""
+    return _lazy_import('.walk_forward_agent', 'WalkForwardAgent')
+
+def get_updater_agent():
+    """Get UpdaterAgent with lazy loading."""
+    return _lazy_import('.updater_agent', 'UpdaterAgent')
+
+def get_self_improving_agent():
+    """Get SelfImprovingAgent with lazy loading."""
+    return _lazy_import('.self_improving_agent', 'SelfImprovingAgent')
+
+def get_intent_detector():
+    """Get IntentDetector with lazy loading."""
+    return _lazy_import('.intent_detector', 'IntentDetector')
+
+def get_regime_detection_agent():
+    """Get RegimeDetectionAgent with lazy loading."""
+    return _lazy_import('.regime_detection_agent', 'RegimeDetectionAgent')
+
+def get_commentary_agent():
+    """Get CommentaryAgent with lazy loading."""
+    return _lazy_import('.commentary_agent', 'CommentaryAgent')
+
+# Prompt Templates - Import directly as it's lightweight
+try:
+    from .prompt_templates import (
+        PROMPT_TEMPLATES,
+        get_template,
+        format_template,
+        get_templates_by_category,
+        list_templates,
+        list_categories,
+        TEMPLATE_CATEGORIES
+    )
+    TEMPLATES_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Could not import prompt templates: {e}")
+    TEMPLATES_AVAILABLE = False
+
+# Commentary Engine - Lazy loading
+def get_commentary_engine():
+    """Get CommentaryEngine with lazy loading."""
+    try:
+        from trading.commentary import CommentaryEngine, create_commentary_engine
+        return CommentaryEngine, create_commentary_engine
+    except ImportError as e:
+        logger.warning(f"Could not import commentary engine: {e}")
+        return None, None
+
+# Export the lazy loading functions and base classes
 __all__ = [
     # Base Agent Interface
     'BaseAgent',
@@ -97,149 +229,58 @@ __all__ = [
     'AgentStatus',
     'AgentResult',
     
-    # Model Management Agents
-    'ModelBuilderAgent',
-    'ModelBuildRequest', 
-    'ModelBuildResult',
-    'ModelSelectorAgent',
-    'ModelPerformance',
-    'ModelCapability',
-    'ForecastingHorizon',
-    'MarketRegime',
-    'ModelType',
-    'ModelOptimizerAgent',
-    'OptimizationResult',
-    'OptimizationConfig',
-    'OptimizationType',
-    'OptimizationStatus',
-    'ModelEvaluatorAgent',
-    'ModelEvaluationRequest',
-    'ModelEvaluationResult',
-    'ModelImproverAgent',
-    'ModelImprovementRequest',
-    'ModelImprovementResult',
-    'PerformanceCriticAgent',
-    'ModelSynthesizerAgent',
-    'SynthesisRequest',
-    'SynthesisResult',
-    'ModelArchitecture',
-    'SynthesisModelType',
-    'SynthesisStatus',
-    
-    # Strategy Agents
-    'StrategySelectorAgent',
-    'StrategyPerformance',
-    'StrategyRecommendation',
-    'StrategyType',
-    'StrategyImproverAgent',
-    'StrategyImprovementRequest',
-    'StrategyImprovementResult',
-    'MetaStrategyAgent',
-    'MetaStrategyRequest',
-    'MetaStrategyResult',
-    
-    # Market Analysis Agents
-    'MarketRegimeAgent',
-    'MarketRegimeRequest',
-    'MarketRegimeResult',
-    'DataQualityAgent',
-    'DataQualityRequest',
-    'DataQualityResult',
-    
-    # Execution and Risk Agents
-    'ExecutionAgent',
-    'ExecutionRequest',
-    'ExecutionResult',
-    'ExecutionRiskAgent',
-    'RiskAssessmentRequest',
-    'RiskAssessmentResult',
-    'ExecutionRiskControlAgent',
-    'RiskControlRequest',
-    'RiskControlResult',
-    
-    # Optimization Agents
-    'OptimizerAgent',
-    'OptimizationRequest',
-    'OptimizationResult',
-    'SelfTuningOptimizerAgent',
-    'SelfTuningRequest',
-    'SelfTuningResult',
-    'MetaTunerAgent',
-    'MetaTuningRequest',
-    'MetaTuningResult',
-    
-    # Learning and Research Agents
-    'MetaLearner',
-    'MetaLearningRequest',
-    'MetaLearningResult',
-    'MetaResearchAgent',
-    'ResearchRequest',
-    'ResearchResult',
-    'MetaLearningFeedbackAgent',
-    'FeedbackRequest',
-    'FeedbackResult',
-    'ResearchAgent',
-    
-    # Management and Coordination Agents
-    'AgentManager',
-    'AgentManagementRequest',
-    'AgentManagementResult',
-    'AgentLoopManager',
-    'AgentLoopState',
-    'AgentCommunication',
-    'TaskDelegationAgent',
-    'TaskDelegationRequest',
-    'TaskDelegationResult',
-    'AgentRegistry',
-    'AgentRegistrationRequest',
-    'AgentRegistrationResult',
-    'AgentLeaderboard',
-    'LeaderboardRequest',
-    'LeaderboardResult',
-    
-    # Specialized Agents
-    'PromptRouterAgent',
-    'ParsedIntent',
-    'NLPAgent',
-    'NLPRequest',
-    'NLPResult',
-    'MultimodalAgent',
-    'MultimodalRequest',
-    'MultimodalResult',
-    'RollingRetrainingAgent',
-    'RetrainingRequest',
-    'RetrainingResult',
-    'WalkForwardAgent',
-    'WalkForwardRequest',
-    'WalkForwardResult',
-    'UpdaterAgent',
-    'UpdateRequest',
-    'UpdateResult',
-    'SelfImprovingAgent',
-    'SelfImprovementRequest',
-    'SelfImprovementResult',
-    'IntentDetector',
-    'IntentDetectionRequest',
-    'IntentDetectionResult',
-    'RegimeDetectionAgent',
-    'create_regime_detection_agent',
-    'CommentaryAgent',
-    'create_commentary_agent',
-    
-    # Prompt Templates
-    'PROMPT_TEMPLATES',
-    'get_template',
-    'format_template',
-    'get_templates_by_category',
-    'list_templates',
-    'list_categories',
-    'TEMPLATE_CATEGORIES',
-    'create_prompt_router',
-    
-    # Commentary Engine
-    'CommentaryEngine',
-    'create_commentary_engine'
+    # Lazy loading functions
+    'get_model_builder_agent',
+    'get_model_selector_agent',
+    'get_model_optimizer_agent',
+    'get_model_evaluator_agent',
+    'get_model_improver_agent',
+    'get_model_synthesizer_agent',
+    'get_performance_critic_agent',
+    'get_strategy_selector_agent',
+    'get_strategy_improver_agent',
+    'get_meta_strategy_agent',
+    'get_market_regime_agent',
+    'get_data_quality_agent',
+    'get_execution_agent',
+    'get_execution_risk_agent',
+    'get_execution_risk_control_agent',
+    'get_optimizer_agent',
+    'get_self_tuning_optimizer_agent',
+    'get_meta_tuner_agent',
+    'get_meta_learner',
+    'get_meta_research_agent',
+    'get_meta_learning_feedback_agent',
+    'get_research_agent',
+    'get_agent_manager',
+    'get_agent_loop_manager',
+    'get_task_delegation_agent',
+    'get_agent_registry',
+    'get_agent_leaderboard',
+    'get_prompt_router_agent',
+    'get_nlp_agent',
+    'get_multimodal_agent',
+    'get_rolling_retraining_agent',
+    'get_walk_forward_agent',
+    'get_updater_agent',
+    'get_self_improving_agent',
+    'get_intent_detector',
+    'get_regime_detection_agent',
+    'get_commentary_agent',
+    'get_commentary_engine',
 ]
+
+# Add prompt templates if available
+if TEMPLATES_AVAILABLE:
+    __all__.extend([
+        'PROMPT_TEMPLATES',
+        'get_template',
+        'format_template',
+        'get_templates_by_category',
+        'list_templates',
+        'list_categories',
+        'TEMPLATE_CATEGORIES'
+    ])
 
 __version__ = "1.0.0"
 __author__ = "Evolve Trading System"

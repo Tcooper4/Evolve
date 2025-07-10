@@ -132,6 +132,22 @@ def render_home_page(module_status: Dict[str, Any], agent_hub_available: bool = 
         if st.button("⚡ Strategy History", use_container_width=True):
             st.switch_page("pages/6_Strategy_History.py")
     
+    # AI Prompt Interface
+    st.subheader("🤖 AI Assistant")
+    
+    # Add tooltip and placeholder for the prompt UI
+    user_prompt = st.text_input(
+        "Ask the model...", 
+        placeholder="Ex: Forecast TSLA for next 30 days using LSTM", 
+        help="Ask anything about forecasts, strategies, or market analysis. Examples: 'Compare AAPL vs GOOGL performance', 'Generate RSI strategy for SPY', 'Explain the current market sentiment'"
+    )
+    
+    if user_prompt:
+        st.info("AI Assistant feature requires integration with LLM services. This will be implemented in the next update.")
+    
+    # Quick prompt suggestions
+    st.caption("💡 Quick suggestions: 'Forecast AAPL', 'RSI strategy', 'Market analysis', 'Portfolio optimization'")
+    
     # Recent Activity
     st.subheader("📋 Recent Activity")
     

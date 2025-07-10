@@ -328,7 +328,7 @@ def main():
     st.title("📈 Forecast & Trade")
     st.markdown("Generate AI-powered forecasts and trading signals for any stock.")
     
-    # Sidebar for inputs
+    # Sidebar for inputs - Improved layout
     with st.sidebar:
         st.header("⚙️ Configuration")
         
@@ -395,7 +395,7 @@ def main():
         )
         
         # Generate forecast button
-        if st.button("🚀 Generate Forecast", type="primary"):
+        if st.button("🚀 Generate Forecast", type="primary", use_container_width=True):
             # Validate inputs first
             is_valid, error_message = validate_forecast_inputs(symbol, horizon, model_type, strategy_type)
             
@@ -412,34 +412,67 @@ def main():
                     else:
                         st.error(f"❌ {result.get('error', 'Unknown error')}")
     
-    # Main content area
+    # Main content area - Improved layout with columns
     if 'forecast_result' in st.session_state:
         display_forecast_results(st.session_state.forecast_result)
     else:
-        # Show help and examples
-        st.info("💡 **Tip**: Configure your forecast settings in the sidebar and click 'Generate Forecast' to get started.")
+        # Show help and examples in a better layout
+        col1, col2 = st.columns([2, 1])
         
-        # Example configurations
-        with st.expander("📋 Example Configurations"):
+        with col1:
+            st.info("💡 **Tip**: Configure your forecast settings in the sidebar and click 'Generate Forecast' to get started.")
+            
+            # Quick start guide
+            st.subheader("🚀 Quick Start")
             st.markdown("""
-            **Conservative Setup:**
-            - Model: ARIMA
-            - Strategy: SMA
-            - Risk: Low
-            - Horizon: 30 days
-            
-            **Aggressive Setup:**
-            - Model: LSTM
-            - Strategy: MACD
-            - Risk: High
-            - Horizon: 15 days
-            
-            **Balanced Setup:**
-            - Model: XGBoost
-            - Strategy: RSI
-            - Risk: Medium
-            - Horizon: 60 days
+            1. **Enter a stock symbol** (e.g., AAPL, TSLA, GOOGL)
+            2. **Set forecast horizon** (1-365 days)
+            3. **Choose a model** (LSTM, ARIMA, XGBoost, etc.)
+            4. **Select a strategy** (RSI, MACD, Bollinger, etc.)
+            5. **Set risk tolerance** (low, medium, high)
+            6. **Click Generate Forecast**
             """)
+        
+        with col2:
+            # Example configurations in a compact format
+            st.subheader("📋 Examples")
+            
+            with st.expander("Conservative", expanded=False):
+                st.markdown("""
+                - **Model**: ARIMA
+                - **Strategy**: SMA
+                - **Risk**: Low
+                - **Horizon**: 30 days
+                """)
+            
+            with st.expander("Aggressive", expanded=False):
+                st.markdown("""
+                - **Model**: LSTM
+                - **Strategy**: MACD
+                - **Risk**: High
+                - **Horizon**: 15 days
+                """)
+            
+            with st.expander("Balanced", expanded=False):
+                st.markdown("""
+                - **Model**: XGBoost
+                - **Strategy**: RSI
+                - **Risk**: Medium
+                - **Horizon**: 60 days
+                """)
+        
+        # System status in a compact format
+        st.markdown("---")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("🤖 Models", "5 Available")
+        with col2:
+            st.metric("⚡ Strategies", "6 Available")
+        with col3:
+            st.metric("📊 Data Sources", "3 Active")
+        with col4:
+            st.metric("🟢 System", "Online")
 
 def display_forecast_results(result: Dict):
     """Display forecast results and related information."""

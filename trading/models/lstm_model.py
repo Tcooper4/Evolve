@@ -63,7 +63,7 @@ class LSTMModel(nn.Module):
     def train_model(self, data: pd.DataFrame, target: pd.Series, 
                    epochs: int, batch_size: int = 32, 
                    learning_rate: float = 0.001) -> Dict[str, List[float]]:
-        """Train the LSTM model.
+        """Train the LSTM model with data cleaning.
 
         Args:
             data (pd.DataFrame): Input features
@@ -75,13 +75,31 @@ class LSTMModel(nn.Module):
         Returns:
             Dict[str, List[float]]: Training history with loss values
         """
+        # Data cleaning: Handle NaN and infinite values
+        X = data.copy()
+        y = target.copy()
+        
+        # Replace infinite values with NaN
+        X = X.replace([np.inf, -np.inf], np.nan)
+        y = y.replace([np.inf, -np.inf], np.nan)
+        
+        # Remove rows with NaN values
+        valid_mask = ~(X.isnull().any(axis=1) | y.isnull())
+        X = X[valid_mask]
+        y = y[valid_mask]
+        
+        if len(X) < 10:
+            raise ValueError("Insufficient valid data after cleaning (need at least 10 samples)")
+        
+        self.logger.info(f"Data cleaned: {len(data)} -> {len(X)} samples after removing NaN/infinite values")
+        
         # Initialize optimizer and loss function
         optimizer = Adam(self.parameters(), lr=learning_rate)
         criterion = nn.MSELoss()
         
         # Scale the data
-        X_scaled = self.scaler.fit_transform(data)
-        y_scaled = self.scaler.fit_transform(target.values.reshape(-1, 1))
+        X_scaled = self.scaler.fit_transform(X)
+        y_scaled = self.scaler.fit_transform(y.values.reshape(-1, 1))
         
         # Convert to tensors
         X_tensor = torch.FloatTensor(X_scaled)

@@ -46,6 +46,14 @@ class BollingerStrategy:
         if not isinstance(data, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame")
             
+        # Add validation for Close column
+        if "Close" not in data.columns and "close" not in data.columns:
+            raise ValueError("Missing Close column for Bollinger Band strategy")
+        
+        # Normalize column names
+        if "Close" in data.columns:
+            data = data.rename(columns={"Close": "close"})
+            
         required_columns = ['close', 'volume']
         if not all(col in data.columns for col in required_columns):
             raise ValueError(f"Data must contain columns: {required_columns}")
