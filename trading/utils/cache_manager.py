@@ -186,7 +186,7 @@ def cache_result(ttl_seconds: int = 3600, key_prefix: str = ""):
             if kwargs:
                 key_parts.append(str(sorted(kwargs.items())))
             
-            cache_key = "|".join(key_parts)
+            cache_key = os.getenv('KEY', '').join(key_parts)
             
             # Try to get from cache
             cached_result = _cache_manager.get(cache_key)

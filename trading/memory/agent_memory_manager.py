@@ -21,6 +21,14 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 import os
 
+# Add Pinecone import
+try:
+    import pinecone
+    PINECONE_AVAILABLE = True
+except ImportError:
+    PINECONE_AVAILABLE = False
+    pinecone = None
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -60,7 +68,7 @@ class ModelMemory:
     execution_time: float
 
 class AgentMemoryManager:
-    """Agent memory manager with Redis fallback."""
+    """Agent memory manager with Redis, Pinecone, or fallback."""
     
     def __init__(self, redis_host: str = 'localhost', redis_port: int = 6379, 
                  redis_db: int = 0, fallback_storage: str = 'local'):
@@ -72,15 +80,20 @@ class AgentMemoryManager:
             redis_db: Redis database number
             fallback_storage: Fallback storage type ('local' or 'memory')
         """
+        self.memory_backend = os.getenv('MEMORY_BACKEND', 'redis').lower()
+        self.pinecone_index = None
         self.redis_client = None
         self.fallback_storage = fallback_storage
         self.local_storage_path = Path('memory/agent_memory')
         self.memory_cache = {}
         
         # Initialize storage
-        self._initialize_storage(redis_host, redis_port, redis_db)
+        if self.memory_backend == 'pinecone' and PINECONE_AVAILABLE:
+            self._initialize_pinecone()
+        else:
+            self._initialize_storage(redis_host, redis_port, redis_db)
         
-        logger.info("Agent Memory Manager initialized")
+        logger.info(f"Agent Memory Manager initialized with backend: {self.memory_backend}")
     
     def _initialize_storage(self, redis_host: str, redis_port: int, redis_db: int):
         """Initialize storage backend."""
@@ -129,18 +142,28 @@ class AgentMemoryManager:
             logger.error(f"Local storage setup failed: {e}")
             self.fallback_storage = 'memory'
     
+    def _initialize_pinecone(self):
+        """Initialize Pinecone backend."""
+        try:
+            pinecone_api_key = os.getenv('PINECONE_API_KEY')
+            pinecone_env = os.getenv('PINECONE_ENV', 'us-west1-gcp')
+            pinecone_index_name = os.getenv('PINECONE_INDEX', 'agent-memory')
+            pinecone.init(api_key=pinecone_api_key, environment=pinecone_env)
+            if pinecone_index_name not in pinecone.list_indexes():
+                pinecone.create_index(pinecone_index_name, dimension=512)
+            self.pinecone_index = pinecone.Index(pinecone_index_name)
+            logger.info(f"Pinecone index '{pinecone_index_name}' initialized")
+        except Exception as e:
+            logger.error(f"Pinecone initialization failed: {e}")
+            self.memory_backend = 'memory'
+
     def store_agent_interaction(self, interaction: AgentInteraction) -> dict:
-        """Store agent interaction in memory.
-        
-        Args:
-            interaction: Agent interaction record
-            
-        Returns:
-            Dictionary with storage status and details
-        """
+        """Store agent interaction in memory or Pinecone."""
         try:
             success = False
-            if self.redis_client:
+            if self.memory_backend == 'pinecone' and self.pinecone_index:
+                success = self._store_in_pinecone('interaction', interaction)
+            elif self.redis_client:
                 success = self._store_in_redis('interaction', interaction)
             elif self.fallback_storage == 'local':
                 success = self._store_in_local('interaction', interaction)
@@ -153,7 +176,7 @@ class AgentMemoryManager:
                     'message': f'Agent interaction stored successfully',
                     'agent_type': interaction.agent_type,
                     'timestamp': interaction.timestamp.isoformat(),
-                    'storage_type': 'redis' if self.redis_client else self.fallback_storage
+                    'storage_type': self.memory_backend
                 }
             else:
                 return {
@@ -162,7 +185,6 @@ class AgentMemoryManager:
                     'agent_type': interaction.agent_type,
                     'timestamp': interaction.timestamp.isoformat()
                 }
-                
         except Exception as e:
             logger.error(f"Failed to store agent interaction: {e}")
             return {
@@ -301,49 +323,38 @@ class AgentMemoryManager:
             logger.error(f"Memory storage failed: {e}")
             return False
     
+    def _store_in_pinecone(self, data_type: str, data: Any) -> bool:
+        """Store data in Pinecone index."""
+        try:
+            # Convert data to vector (simple hash or embedding; here, use dummy vector for demo)
+            import hashlib
+            import numpy as np
+            vector = np.random.rand(512).tolist()  # Replace with real embedding in production
+            meta = asdict(data)
+            meta['data_type'] = data_type
+            self.pinecone_index.upsert([(str(hashlib.md5(str(meta).encode()).hexdigest()), vector, meta)])
+            return True
+        except Exception as e:
+            logger.error(f"Failed to store in Pinecone: {e}")
+            return False
+
     def get_agent_interactions(self, agent_type: str = None, 
                              limit: int = 100, 
                              since: datetime = None) -> dict:
-        """Get agent interactions from memory.
-        
-        Args:
-            agent_type: Filter by agent type
-            limit: Maximum number of records to return
-            since: Get records since this timestamp
-            
-        Returns:
-            Dictionary with agent interactions and status
-        """
+        """Get agent interactions from memory or Pinecone."""
         try:
-            records = []
-            if self.redis_client:
-                records = self._get_from_redis('interaction', agent_type, limit, since)
+            if self.memory_backend == 'pinecone' and self.pinecone_index:
+                return self._get_from_pinecone('interaction', agent_type, limit, since)
+            elif self.redis_client:
+                return self._get_from_redis('interaction', agent_type, limit, since)
             elif self.fallback_storage == 'local':
-                records = self._get_from_local('interaction', agent_type, limit, since)
+                return self._get_from_local('interaction', agent_type, limit, since)
             else:
-                records = self._get_from_memory('interaction', agent_type, limit, since)
-            
-            return {
-                'success': True,
-                'result': records,
-                'message': f'Retrieved {len(records)} agent interactions',
-                'agent_type': agent_type,
-                'limit': limit,
-                'count': len(records),
-                'timestamp': datetime.now().isoformat()
-            }
+                return self._get_from_memory('interaction', agent_type, limit, since)
                 
         except Exception as e:
             logger.error(f"Failed to get agent interactions: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'result': [],
-                'agent_type': agent_type,
-                'limit': limit,
-                'count': 0,
-                'timestamp': datetime.now().isoformat()
-            }
+            return {'success': False, 'error': str(e)}
     
     def get_strategy_memory(self, strategy_name: str = None,
                           limit: int = 100,
@@ -555,6 +566,26 @@ class AgentMemoryManager:
         except Exception as e:
             logger.error(f"Memory retrieval failed: {e}")
             return []
+    
+    def _get_from_pinecone(self, data_type: str, filter_value: str = None, limit: int = 100, since: datetime = None) -> dict:
+        """Retrieve data from Pinecone index."""
+        try:
+            # Pinecone does not support filtering by metadata directly; fetch all and filter in memory
+            results = self.pinecone_index.fetch(ids=None)
+            items = []
+            for k, v in results['vectors'].items():
+                meta = v['metadata']
+                if meta.get('data_type') == data_type:
+                    if filter_value and meta.get('agent_type') != filter_value:
+                        continue
+                    if since and meta.get('timestamp') < since.isoformat():
+                        continue
+                    items.append(meta)
+            items = sorted(items, key=lambda x: x.get('timestamp', ''), reverse=True)[:limit]
+            return {'success': True, 'items': items}
+        except Exception as e:
+            logger.error(f"Failed to get from Pinecone: {e}")
+            return {'success': False, 'error': str(e)}
     
     def get_strategy_confidence_boost(self, strategy_name: str) -> dict:
         """Get confidence boost for a strategy based on recent success.

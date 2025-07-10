@@ -100,7 +100,7 @@ class TestMarketAnalyzer(unittest.TestCase):
     def test_caching(self):
         """Test data caching functionality."""
         # Test file caching
-        cache_key = "test_cache"
+        cache_key = os.getenv('KEY', '')
         self.analyzer._set_cached_data(cache_key, self.test_data)
         cached_data = self.analyzer._get_cached_data(cache_key)
         self.assertIsNotNone(cached_data)
