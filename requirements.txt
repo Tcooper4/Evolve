@@ -158,3 +158,5 @@ notebook>=7.0.0
 # whisper>=20231117
 # speechrecognition>=3.10.0
 # pyaudio>=0.2.11
+
+pinecone-client>=3.0.0

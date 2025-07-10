@@ -416,7 +416,7 @@ class ReportClient:
         """
         try:
             # Check if service is running
-            heartbeat_key = "service:report_service:heartbeat"
+            heartbeat_key = os.getenv('KEY', '')
             heartbeat = self.redis_client.get(heartbeat_key)
             
             status = {

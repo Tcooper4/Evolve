@@ -242,7 +242,7 @@ def create_forecast_export(
         export_format = st.radio(
             "Select Export Format",
             ["CSV", "JSON", "Excel"],
-            key="export_format"
+            key = os.getenv('KEY', '')
         )
         
         if st.button("Export"):

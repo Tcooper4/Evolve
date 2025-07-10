@@ -409,19 +409,19 @@ tab1, tab2, tab3 = st.tabs(["Equity Curve", "Rolling Metrics", "Strategy Perform
 with tab1:
     st.plotly_chart(plot_equity_curve(
         portfolio.state.closed_positions
-    ), key="equity_curve")
+    ), key = os.getenv('KEY', ''))
 
 with tab2:
     window = st.slider("Rolling Window", 5, 100, 20)
     st.plotly_chart(plot_rolling_metrics(
         portfolio.state.closed_positions,
         window=window
-    ), key="rolling_metrics")
+    ), key = os.getenv('KEY', ''))
 
 with tab3:
     st.plotly_chart(plot_strategy_performance(
         portfolio.state.closed_positions
-    ), key="strategy_performance")
+    ), key = os.getenv('KEY', ''))
 
 # Export Options
 st.sidebar.subheader("Export Options")

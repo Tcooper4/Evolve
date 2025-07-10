@@ -340,107 +340,123 @@ st.markdown("""
 with st.sidebar:
     st.markdown("""
     <div style="text-align: center; padding: 1.5rem 0;">
-        <h2 style="color: #2c3e50; margin-bottom: 0.5rem;">Evolve AI</h2>
-        <p style="color: #6c757d; font-size: 0.9rem; font-weight: 500;">Trading Intelligence</p>
+        <h2 style="color: #2c3e50; margin-bottom: 0.5rem;">🚀 Evolve AI</h2>
+        <p style="color: #6c757d; font-size: 0.9rem; font-weight: 500;">Autonomous Trading Intelligence</p>
         <div style="width: 50px; height: 3px; background: linear-gradient(90deg, #667eea, #764ba2); margin: 1rem auto; border-radius: 2px;"></div>
     </div>
     """, unsafe_allow_html=True)
     
-    # Main Navigation - Clean and Simple
-    st.markdown("### Navigation")
+    # Main Navigation - Professional Layout
+    st.markdown("### 📊 Main Features")
     
-    # Primary Actions - Grouped logically
+    # Primary Actions - Clean Icons
     primary_nav = st.radio(
-        "Main Features",
+        "",
         [
-            "Home & Chat",
-            "Forecasting",
-            "Strategy Lab", 
-            "Model Lab",
-            "Reports"
+            "🏠 Home & Chat",
+            "📈 Forecasting", 
+            "⚡ Strategy Lab",
+            "🧠 Model Lab",
+            "📋 Reports"
         ],
-        key="primary_nav"
+        key = os.getenv('KEY', '')
     )
     
     st.markdown("---")
     
     # Advanced Tools (Collapsible)
-    with st.expander("Advanced Tools", expanded=False):
+    with st.expander("🔧 Advanced Tools", expanded=False):
         advanced_nav = st.radio(
-            "Advanced Features",
+            "",
             [
-                "Settings",
-                "System Monitor",
-                "Performance Analytics",
-                "Risk Management"
+                "⚙️ Settings",
+                "📊 System Monitor", 
+                "📈 Performance Analytics",
+                "🛡️ Risk Management"
             ],
-            key="advanced_nav"
+            key = os.getenv('KEY', '')
         )
     
     # Developer Tools (Hidden by default)
     if os.environ.get('EVOLVE_DEV_MODE', '0') == '1':
         st.markdown("---")
-        with st.expander("Developer Tools", expanded=False):
-            st.markdown("- Debug Console")
-            st.markdown("- System Logs")
-            st.markdown("- Performance Monitor")
-            st.markdown("- API Testing")
+        with st.expander("🛠️ Developer Tools", expanded=False):
+            st.markdown("- 🐛 Debug Console")
+            st.markdown("- 📝 System Logs")
+            st.markdown("- ⚡ Performance Monitor")
+            st.markdown("- 🔌 API Testing")
     
     st.markdown("---")
     
-    # System Status - Simplified
-    st.markdown("### System Status")
+    # System Status - Enhanced
+    st.markdown("### 🟢 System Status")
     
     # Status indicators with better styling
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("""
         <div style="display: flex; align-items: center; margin: 0.5rem 0;">
-            <span class="status-indicator status-success"></span>
-            <span style="font-size: 0.9rem; font-weight: 500;">Core Systems</span>
+            <span style="color: #28a745; font-size: 1.2rem;">●</span>
+            <span style="font-size: 0.9rem; font-weight: 500; margin-left: 0.5rem;">Core Systems</span>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("""
         <div style="display: flex; align-items: center; margin: 0.5rem 0;">
-            <span class="status-indicator status-success"></span>
-            <span style="font-size: 0.9rem; font-weight: 500;">Data Feed</span>
+            <span style="color: #28a745; font-size: 1.2rem;">●</span>
+            <span style="font-size: 0.9rem; font-weight: 500; margin-left: 0.5rem;">Data Feed</span>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
         <div style="display: flex; align-items: center; margin: 0.5rem 0;">
-            <span class="status-indicator status-success"></span>
-            <span style="font-size: 0.9rem; font-weight: 500;">AI Models</span>
+            <span style="color: #28a745; font-size: 1.2rem;">●</span>
+            <span style="font-size: 0.9rem; font-weight: 500; margin-left: 0.5rem;">AI Models</span>
         </div>
         """, unsafe_allow_html=True)
         
         st.markdown("""
         <div style="display: flex; align-items: center; margin: 0.5rem 0;">
-            <span class="status-indicator status-success"></span>
-            <span style="font-size: 0.9rem; font-weight: 500;">Agents</span>
+            <span style="color: #28a745; font-size: 1.2rem;">●</span>
+            <span style="font-size: 0.9rem; font-weight: 500; margin-left: 0.5rem;">Agents</span>
         </div>
         """, unsafe_allow_html=True)
     
-    # Quick Stats - Simplified
+    # Quick Stats - Enhanced
     st.markdown("---")
-    st.markdown("### Quick Stats")
+    st.markdown("### 📊 Quick Stats")
     
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("Active Models", "12", "+2")
-        st.metric("Strategies", "8", "0")
+        st.metric("🤖 Active Models", "12", "+2")
+        st.metric("⚡ Strategies", "8", "0")
     
     with col2:
-        st.metric("Success Rate", "94.2%", "+1.2%")
-        st.metric("Avg Return", "2.8%", "+0.3%")
+        st.metric("📈 Success Rate", "94.2%", "+1.2%")
+        st.metric("💰 Avg Return", "2.8%", "+0.3%")
 
 # --- Main Layout ---
+# Top Navigation Bar
 st.markdown("""
-<div class="main-header">
-    <h1>Evolve AI Trading</h1>
-    <p>Natural Language Trading Intelligence</p>
+<div style="
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    padding: 1rem 2rem;
+    margin: -1rem -2rem 2rem -2rem;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+">
+    <div style="display: flex; justify-content: space-between; align-items: center; color: white;">
+        <div>
+            <h1 style="margin: 0; font-size: 1.8rem; font-weight: 600;">🚀 Evolve AI Trading</h1>
+            <p style="margin: 0.2rem 0 0 0; opacity: 0.9; font-size: 0.9rem;">Autonomous Financial Intelligence Platform</p>
+        </div>
+        <div style="text-align: right;">
+            <div style="font-size: 0.8rem; opacity: 0.8;">Current Model</div>
+            <div style="font-weight: 600; font-size: 1rem;">Hybrid Ensemble</div>
+            <div style="font-size: 0.8rem; opacity: 0.8;">Last Run: 2 min ago</div>
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -458,29 +474,81 @@ if 'agent_logger' not in st.session_state:
     except ImportError:
         st.session_state.agent_logger = None
 
-# Prompt input section
+# --- Voice Prompt Integration ---
+try:
+    import speech_recognition as sr
+    from scripts.voice_prompt_agent import VoicePromptAgent
+    VOICE_AGENT_AVAILABLE = True
+except ImportError:
+    VOICE_AGENT_AVAILABLE = False
+    VoicePromptAgent = None
+
+if 'voice_agent' not in st.session_state and VOICE_AGENT_AVAILABLE:
+    st.session_state.voice_agent = VoicePromptAgent()
+
+voice_mode = st.toggle('🎤 Voice Input', value=False, help='Enable voice prompt (Whisper or Google Speech)')
+
+if voice_mode and VOICE_AGENT_AVAILABLE:
+    st.markdown('**Click below and speak your trading command:**')
+    if st.button('🎙️ Record Voice Command'):
+        with st.spinner('Listening for command...'):
+            text = st.session_state.voice_agent.listen_for_command(timeout=5, phrase_time_limit=10)
+            if text:
+                st.session_state['voice_prompt_text'] = text
+                st.success(f'Voice recognized: "{text}"')
+            else:
+                st.warning('No voice command detected or could not transcribe.')
+else:
+    st.session_state['voice_prompt_text'] = ''
+
+# Enhanced Prompt Interface - ChatGPT Style
 st.markdown("""
-<div class="prompt-container">
-    <h3 style="text-align: center; margin-bottom: 1.5rem; color: #333;">
-        Ask me anything about trading
-    </h3>
-    <p style="text-align: center; color: #666; margin-bottom: 2rem;">
-        Examples: "Show me the best forecast for AAPL", "Switch to RSI strategy and optimize it", 
-        "Export my last report", "What's the current market sentiment?"
+<div style="
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 2rem;
+    margin: 2rem 0;
+    border: 1px solid #e9ecef;
+    text-align: center;
+">
+    <h2 style="color: #2c3e50; margin-bottom: 1rem; font-size: 1.5rem;">
+        💬 Ask Evolve AI Anything About Trading
+    </h2>
+    <p style="color: #6c757d; margin-bottom: 1.5rem; font-size: 1rem;">
+        Your autonomous financial intelligence assistant is ready to help
     </p>
+    <div style="
+        background: white;
+        border-radius: 10px;
+        padding: 1rem;
+        border: 2px solid #e9ecef;
+        margin-bottom: 1rem;
+    ">
+        <p style="color: #495057; font-size: 0.9rem; margin: 0;">
+            <strong>💡 Examples:</strong> "Forecast SPY using the most accurate model", 
+            "Create a new LSTM model for AAPL", "Show me RSI strategy with Bollinger Bands",
+            "What's the current market sentiment for TSLA?"
+        </p>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Prompt input
+# Professional Prompt Input
 prompt = st.text_input(
-    "Type your trading prompt here...",
-    key="main_prompt",
-    placeholder="e.g., 'Show me the best forecast for AAPL'"
+    "🚀 Type your trading prompt here...",
+    value=st.session_state.get('voice_prompt_text', ''),
+    key = os.getenv('KEY', ''),
+    placeholder="e.g., 'Forecast SPY using the most accurate model and RSI tuned to 10'",
+    help="Ask for forecasts, strategies, model creation, or market analysis"
 )
 
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
-    submit = st.button("Submit", use_container_width=True)
+    submit = st.button(
+        "🚀 Submit Query", 
+        use_container_width=True,
+        help="Send your prompt to Evolve AI for processing"
+    )
 
 # Process prompt
 if submit and prompt:
@@ -511,23 +579,37 @@ if submit and prompt:
                     elif 'setting' in message_lower:
                         st.session_state.main_nav = "Settings"
                 
-                st.success("Request processed successfully!")
+                st.success("✅ Request processed successfully! Evolve AI has analyzed your query.")
             else:
                 st.error("Core components not available. Please check system configuration.")
         except Exception as e:
             st.error(f"Error processing request: {str(e)}")
 
-# Display conversation history
+# Enhanced Conversation History Display
 if st.session_state.conversation_history:
-    st.markdown("### Recent Conversations")
+    st.markdown("### 💬 Recent Conversations")
     for i, conv in enumerate(reversed(st.session_state.conversation_history[-5:])):
-        with st.expander(f"{conv['prompt'][:50]}...", expanded=False):
+        with st.expander(f"💭 {conv['prompt'][:50]}...", expanded=False):
             st.markdown(f"""
-            <div class="conversation-item">
-                <div class="conversation-prompt">Your Question:</div>
-                <div style="margin-bottom: 1rem;">{conv['prompt']}</div>
-                <div class="conversation-prompt">AI Response:</div>
-                <div class="conversation-response">{getattr(conv['response'], 'message', 'No response available.')}</div>
+            <div style="
+                background: #f8f9fa;
+                border-radius: 10px;
+                padding: 1.5rem;
+                margin: 1rem 0;
+                border-left: 4px solid #667eea;
+            ">
+                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem;">
+                    🤔 Your Question:
+                </div>
+                <div style="margin-bottom: 1rem; color: #495057; font-style: italic;">
+                    "{conv['prompt']}"
+                </div>
+                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 0.5rem;">
+                    🤖 AI Response:
+                </div>
+                <div style="color: #495057; background: white; padding: 1rem; border-radius: 5px;">
+                    {getattr(conv['response'], 'message', 'No response available.')}
+                </div>
             </div>
             """, unsafe_allow_html=True)
             
