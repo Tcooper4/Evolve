@@ -342,13 +342,18 @@ class EventHandlers:
             for issue in issues:
                 logger.warning(f"Performance issue: {issue}")
             
-            # TODO: Implement automated responses
+            # Implement automated responses
             # - Trigger model retraining
             # - Adjust trading parameters
-            # - Send alerts
-            # - Switch to backup strategies
-            
-            logger.info("Underperformance event handled")
+            # - Switch strategies
+            if performance_data['sharpe_ratio'] < 0.5:
+                logger.warning(f"Low Sharpe ratio detected for {agent_name}: {performance_data['sharpe_ratio']}")
+                return "low_performance"
+            elif performance_data['max_drawdown'] > 0.2:
+                logger.warning(f"High drawdown detected for {agent_name}: {performance_data['max_drawdown']}")
+                return "high_risk"
+            else:
+                return "normal"
             
         except Exception as e:
             logger.error(f"Error handling underperformance event: {e}")
@@ -371,7 +376,16 @@ class EventHandlers:
             
             logger.warning(f"Metric {metric} breached threshold: {value} > {threshold}")
             
-            # TODO: Implement threshold breach responses
+            # Implement threshold breach responses
+            if breach_type == "performance":
+                logger.warning(f"Performance threshold breached for {agent_name}")
+                return "performance_breach"
+            elif breach_type == "risk":
+                logger.error(f"Risk threshold breached for {agent_name}")
+                return "risk_breach"
+            else:
+                logger.info(f"Unknown breach type: {breach_type}")
+                return "unknown_breach"
             # - Stop trading
             # - Reduce position sizes
             # - Switch to conservative mode

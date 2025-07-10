@@ -340,24 +340,24 @@ st.markdown("""
 with st.sidebar:
     st.markdown("""
     <div style="text-align: center; padding: 1.5rem 0;">
-        <h2 style="color: #2c3e50; margin-bottom: 0.5rem;">🚀 Evolve AI</h2>
-        <p style="color: #6c757d; font-size: 0.9rem; font-weight: 500;">Professional Trading Intelligence</p>
+        <h2 style="color: #2c3e50; margin-bottom: 0.5rem;">Evolve AI</h2>
+        <p style="color: #6c757d; font-size: 0.9rem; font-weight: 500;">Trading Intelligence</p>
         <div style="width: 50px; height: 3px; background: linear-gradient(90deg, #667eea, #764ba2); margin: 1rem auto; border-radius: 2px;"></div>
     </div>
     """, unsafe_allow_html=True)
     
-    # Main Navigation
-    st.markdown("### 🧭 Navigation")
+    # Main Navigation - Clean and Simple
+    st.markdown("### Navigation")
     
-    # Primary Actions
+    # Primary Actions - Grouped logically
     primary_nav = st.radio(
-        "Primary Actions",
+        "Main Features",
         [
-            "🏠 Home & Chat",
-            "📊 Forecasting",
-            "🧠 Strategy Lab",
-            "📈 Model Lab",
-            "📁 Reports"
+            "Home & Chat",
+            "Forecasting",
+            "Strategy Lab", 
+            "Model Lab",
+            "Reports"
         ],
         key="primary_nav"
     )
@@ -365,14 +365,14 @@ with st.sidebar:
     st.markdown("---")
     
     # Advanced Tools (Collapsible)
-    with st.expander("🔧 Advanced Tools", expanded=False):
+    with st.expander("Advanced Tools", expanded=False):
         advanced_nav = st.radio(
             "Advanced Features",
             [
-                "⚙️ Settings",
-                "🔍 System Monitor",
-                "📊 Performance Analytics",
-                "🛡️ Risk Management"
+                "Settings",
+                "System Monitor",
+                "Performance Analytics",
+                "Risk Management"
             ],
             key="advanced_nav"
         )
@@ -380,16 +380,16 @@ with st.sidebar:
     # Developer Tools (Hidden by default)
     if os.environ.get('EVOLVE_DEV_MODE', '0') == '1':
         st.markdown("---")
-        with st.expander("🛠️ Developer Tools", expanded=False):
-            st.markdown("- [Debug Console](#)")
-            st.markdown("- [System Logs](#)")
-            st.markdown("- [Performance Monitor](#)")
-            st.markdown("- [API Testing](#)")
+        with st.expander("Developer Tools", expanded=False):
+            st.markdown("- Debug Console")
+            st.markdown("- System Logs")
+            st.markdown("- Performance Monitor")
+            st.markdown("- API Testing")
     
     st.markdown("---")
     
-    # System Status
-    st.markdown("### 📊 System Status")
+    # System Status - Simplified
+    st.markdown("### System Status")
     
     # Status indicators with better styling
     col1, col2 = st.columns(2)
@@ -423,9 +423,9 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
     
-    # Quick Stats
+    # Quick Stats - Simplified
     st.markdown("---")
-    st.markdown("### 📈 Quick Stats")
+    st.markdown("### Quick Stats")
     
     col1, col2 = st.columns(2)
     with col1:

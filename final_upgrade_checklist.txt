@@ -1,0 +1,70 @@
+
+🧹 FINAL CLEANUP & AGENTIC UPGRADE CHECKLIST
+=============================================
+
+🔴 CRITICAL FIXES (BLOCKING ERRORS)
+-------------------------------------
+1. ❌ Remove all NULL byte corrupted files:
+   - These contain binary noise or corrupted pyc remnants. Files identified earlier MUST be deleted or regenerated.
+
+2. ❌ Fix broken import in:
+   - `trading/agents/__init__.py`
+     → `ModelImprovementRequest` cannot be imported — may be missing from `model_improver_agent.py`.
+   - Confirm all agent class interfaces are properly defined and imported.
+
+3. ❌ Delete legacy files:
+   - Remove or quarantine: `trading/optimization/legacy/`, all `__pycache__/` folders, and any `*.cpython-*.pyc` files.
+
+4. ❌ Consolidate `app.py` import routing:
+   - Ensure all `from trading.llm.agent import PromptAgent` calls resolve and don't break on page load.
+
+5. ❌ Remove placeholder or incomplete scripts:
+   - Scripts with only headers, no logic, or containing `raise NotImplementedError`.
+
+⚙️ MODULARITY / AGENT UPGRADE
+-----------------------------
+6. ✅ Refactor all strategy agents to share a unified interface.
+   - e.g., `run_strategy(data, config) -> signals, metadata`
+   - Ensure new strategies can be added without modifying main app logic.
+
+7. ✅ Enable LLM-based dynamic strategy/model selection.
+   - Prompt on homepage should trigger correct strategy/model agent autonomously.
+
+8. 🔄 Add fallback logic if an agent fails.
+   - e.g., if ModelEvaluator crashes, use last known good configuration.
+
+🎨 UI / UX CLEANUP
+-------------------
+9. 🧼 Restructure Sidebar:
+   - Collapse pages into sections:
+     - 📈 Forecasting
+     - ⚙️ Strategy Tuner
+     - 📊 Backtests & Reports
+     - 🧠 Agent Logs
+   - Remove any emoji or clutter.
+   - Only expose advanced views when a `debug` flag is true.
+
+10. ✅ Clean Home Page:
+   - Prompt-driven routing must feel like ChatGPT.
+   - Prompt should auto-fill all logic across pages.
+   - Add "Start Over" button for users to reset context.
+
+🧪 TESTING / DEPLOYMENT
+-------------------------
+11. ✅ Add a `tests/` folder with at least:
+    - `test_model_selection.py`
+    - `test_strategy_signals.py`
+    - `test_forecast_accuracy.py`
+
+12. 🛠 Add auto-repair + logging system for:
+    - Broken strategy configs
+    - Model forecast failures
+    - UI crashes on bad prompt input
+
+✅ DONE WHEN:
+-------------
+- All pages render without error
+- Forecasting, strategy, and backtesting work from just a prompt
+- Sidebar is minimal and clean
+- No legacy code remains
+- All core logic has test coverage
