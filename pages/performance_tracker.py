@@ -149,12 +149,12 @@ def main():
 
     with tab5:
         st.subheader("🔍 Detailed Drilldown")
-        selected_model = st.selectbox("🔎 Select Model", df["Model"].unique(), key="detail_model")
+        selected_model = st.selectbox("🔎 Select Model", df["Model"].unique(), key = os.getenv('KEY', ''))
         safe_session_set('selected_model', selected_model)
         ts = st.selectbox(
             "🕒 Select Timestamp", 
             df[df["Model"] == selected_model]["Timestamp"].dt.strftime('%Y-%m-%d %H:%M:%S').unique(),
-            key="detail_timestamp"
+            key = os.getenv('KEY', '')
         )
         row = df[(df["Model"] == selected_model) & 
                  (df["Timestamp"].dt.strftime('%Y-%m-%d %H:%M:%S') == ts)]

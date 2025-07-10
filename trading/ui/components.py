@@ -320,7 +320,7 @@ def create_prompt_input() -> Dict[str, Any]:
             "Enter your prompt",
             placeholder="Describe what you want to analyze or predict...",
             height=100,
-            key="prompt_input"
+            key = os.getenv('KEY', '')
         )
         
         if prompt:
@@ -361,7 +361,7 @@ def create_sidebar() -> Dict[str, Any]:
             page = st.selectbox(
                 "Navigation",
                 ["Dashboard", "Forecast", "Strategy", "Analysis", "Settings"],
-                key="nav_select"
+                key = os.getenv('KEY', '')
             )
             
             # Model settings
@@ -369,7 +369,7 @@ def create_sidebar() -> Dict[str, Any]:
             model_type = st.selectbox(
                 "Model Type",
                 ["LSTM", "Transformer", "Ensemble", "Custom"],
-                key="model_type"
+                key = os.getenv('KEY', '')
             )
             
             # Strategy settings
@@ -377,7 +377,7 @@ def create_sidebar() -> Dict[str, Any]:
             strategy_type = st.selectbox(
                 "Strategy Type",
                 ["Momentum", "Mean Reversion", "Breakout", "Custom"],
-                key="strategy_type"
+                key = os.getenv('KEY', '')
             )
             
             # Risk settings
@@ -387,7 +387,7 @@ def create_sidebar() -> Dict[str, Any]:
                 min_value=1,
                 max_value=100,
                 value=10,
-                key="max_position"
+                key = os.getenv('KEY', '')
             )
             
             stop_loss = st.slider(
@@ -395,13 +395,13 @@ def create_sidebar() -> Dict[str, Any]:
                 min_value=1,
                 max_value=50,
                 value=5,
-                key="stop_loss"
+                key = os.getenv('KEY', '')
             )
             
             # System settings
             st.subheader("System Settings")
-            auto_refresh = st.checkbox("Auto Refresh", value=True, key="auto_refresh")
-            debug_mode = st.checkbox("Debug Mode", value=False, key="debug_mode")
+            auto_refresh = st.checkbox("Auto Refresh", value=True, key = os.getenv('KEY', ''))
+            debug_mode = st.checkbox("Debug Mode", value=False, key = os.getenv('KEY', ''))
             
             return {
                 'success': True,

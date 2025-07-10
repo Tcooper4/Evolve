@@ -270,7 +270,7 @@ class TestBaseAgent:
         
         # Default implementation should return True
         assert agent.validate_input() is True
-        assert agent.validate_input(key="value") is True
+        assert agent.validate_input(key = os.getenv('KEY', '')) is True
     
     def test_base_agent_handle_error(self):
         """Test error handling."""

@@ -205,9 +205,9 @@ class InstitutionalDashboard:
             
             2. **Set Environment Variables**:
             ```bash
-            export FRED_API_KEY="your_fred_api_key"
-            export ALPHA_VANTAGE_API_KEY="your_alpha_vantage_key"
-            export OPENAI_API_KEY="your_openai_key"
+            export FRED_API_KEY = os.getenv('API_KEY', '')
+            export ALPHA_VANTAGE_API_KEY = os.getenv('API_KEY', '')
+            export OPENAI_API_KEY = os.getenv('API_KEY', '')
             ```
             
             3. **Configure System**:

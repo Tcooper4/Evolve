@@ -39,7 +39,7 @@ def main():
     
     with tab1:
         st.subheader("📊 Strategy Priorities")
-        if st.button("Generate Strategy Priorities", key="priority_btn"):
+        if st.button("Generate Strategy Priorities", key = os.getenv('KEY', '')):
             with st.spinner("Analyzing model priorities..."):
                 priorities = generate_strategy_priority(ticker)
                 if priorities:
@@ -70,7 +70,7 @@ def main():
         threshold = st.slider("Drift Threshold", 0.01, 0.3, 0.2, 
                             help="Threshold for detecting significant weight changes")
         
-        if st.button("Detect Model Drift", key="drift_btn"):
+        if st.button("Detect Model Drift", key = os.getenv('KEY', '')):
             with st.spinner("Analyzing model drift..."):
                 drift = detect_drift(ticker, threshold=threshold)
                 if drift:
