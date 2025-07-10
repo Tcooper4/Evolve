@@ -149,7 +149,8 @@ class StrategySelectorAgent(BaseAgent):
         # Load existing data
         self._load_strategy_performance()
 
-    def _setup(self):
+    def _setup(self) -> None:
+        """Setup the agent. Called by BaseAgent constructor."""
         pass
 
     async def execute(self, **kwargs) -> AgentResult:
@@ -660,7 +661,7 @@ class StrategySelectorAgent(BaseAgent):
         default_type = StrategyType.RSI
         default_params = self._get_default_parameters(default_type)
         
-        return {'success': True, 'result': StrategyRecommendation(
+        return StrategyRecommendation(
             strategy_name=f"{default_type.value}_strategy",
             strategy_type=default_type,
             parameters=default_params,
@@ -669,7 +670,7 @@ class StrategySelectorAgent(BaseAgent):
             expected_drawdown=0.0,
             market_regime=market_regime,
             reasoning=f"Using default {default_type.value} strategy"
-        ), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        )
     
     def _get_default_parameters(self, strategy_type: StrategyType) -> Dict[str, Any]:
         """Get default parameters for a strategy type."""

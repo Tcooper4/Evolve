@@ -111,7 +111,11 @@ except ImportError as e:
 
 try:
     from trading.utils import (
-        LogManager, ModelLogger, DataLogger, PerformanceLogger
+        LoggingManager, log_event, setup_logging, get_logging_stats, cleanup_logs,
+        DataValidator, DataTransformer, FeatureEngineer,
+        ConfigManager, ConfigValidator, ConfigLoader,
+        PerformanceMetrics, RiskMetrics, TradingMetrics,
+        ModelEvaluator, ModelValidator, ModelMonitor
     )
     UTILS_AVAILABLE = True
 except ImportError as e:
@@ -271,7 +275,7 @@ if AGENTS_AVAILABLE:
     __all__.extend(['PromptRouterAgent', 'ExecutionAgent', 'ModelBuilderAgent', 'StrategySelectorAgent', 'MarketRegimeAgent', 'AgentRegistry'])
 
 if UTILS_AVAILABLE:
-    __all__.extend(['LogManager', 'ModelLogger', 'DataLogger', 'PerformanceLogger'])
+    __all__.extend(['LoggingManager', 'log_event', 'setup_logging', 'get_logging_stats', 'cleanup_logs', 'DataValidator', 'DataTransformer', 'FeatureEngineer', 'ConfigManager', 'ConfigValidator', 'ConfigLoader', 'PerformanceMetrics', 'RiskMetrics', 'TradingMetrics', 'ModelEvaluator', 'ModelValidator', 'ModelMonitor'])
 
 if MARKET_AVAILABLE:
     __all__.extend(['MarketAnalyzer', 'MarketData', 'MarketIndicators'])

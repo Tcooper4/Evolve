@@ -121,7 +121,8 @@ class ModelOptimizerAgent(BaseAgent):
         # Load existing data
         self._load_optimization_history()
 
-    def _setup(self):
+    def _setup(self) -> None:
+        """Setup the agent. Called by BaseAgent constructor."""
         pass
 
     async def execute(self, **kwargs) -> AgentResult:

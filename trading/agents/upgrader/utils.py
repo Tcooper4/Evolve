@@ -12,6 +12,8 @@ from typing import Dict, List, Tuple, Optional
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import json
+import re
 
 logger = logging.getLogger("UpgraderUtils")
 
@@ -92,8 +94,32 @@ def detect_drift(model_id: str) -> bool:
         bool: True if drift is detected, False otherwise
     """
     try:
-        # TODO: Implement actual drift detection logic
-        # For now, return False as a placeholder
+        # Load model performance history
+        performance_file = f"logs/model_performance_{model_id}.json"
+        if not os.path.exists(performance_file):
+            logger.warning(f"No performance data found for model {model_id}")
+            return False
+        
+        with open(performance_file, 'r') as f:
+            performance_data = json.load(f)
+        
+        # Get recent performance metrics
+        recent_metrics = performance_data.get('recent_metrics', [])
+        if len(recent_metrics) < 10:
+            logger.warning(f"Insufficient recent metrics for drift detection: {len(recent_metrics)}")
+            return False
+        
+        # Calculate performance degradation
+        recent_mae = np.mean([m.get('mae', 0) for m in recent_metrics[-10:]])
+        historical_mae = np.mean([m.get('mae', 0) for m in recent_metrics[:-10]])
+        
+        if historical_mae > 0:
+            degradation_ratio = recent_mae / historical_mae
+            has_drifted = degradation_ratio > 1.2  # 20% degradation threshold
+            
+            logger.info(f"Drift detection for model {model_id}: degradation_ratio={degradation_ratio:.3f}, drifted={has_drifted}")
+            return has_drifted
+        
         return False
         
     except Exception as e:
@@ -111,9 +137,38 @@ def check_deprecated_logic(component: str) -> bool:
         bool: True if deprecated logic is found, False otherwise
     """
     try:
-        # TODO: Implement actual deprecated logic detection
-        # For now, return False as a placeholder
-        return False
+        if not os.path.exists(component):
+            logger.warning(f"Component not found: {component}")
+            return False
+        
+        # Read the component file
+        with open(component, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Check for deprecated patterns
+        deprecated_patterns = [
+            'DEPRECATED',
+            'deprecated',
+            'legacy',
+            'old_',
+            'TODO.*deprecated',
+            'FIXME.*deprecated',
+            'print\\(',  # print statements (should use logger)
+            'except:',   # bare except blocks
+            'import \\*',  # wildcard imports
+        ]
+        
+        deprecated_count = 0
+        for pattern in deprecated_patterns:
+            matches = re.findall(pattern, content)
+            deprecated_count += len(matches)
+        
+        has_deprecated = deprecated_count > 0
+        
+        if has_deprecated:
+            logger.warning(f"Deprecated logic found in {component}: {deprecated_count} patterns")
+        
+        return has_deprecated
         
     except Exception as e:
         logger.error(f"Error checking deprecated logic: {str(e)}")
@@ -130,9 +185,36 @@ def check_missing_parameters(component: str) -> bool:
         bool: True if missing parameters are found, False otherwise
     """
     try:
-        # TODO: Implement actual parameter checking
-        # For now, return False as a placeholder
-        return False
+        if not os.path.exists(component):
+            logger.warning(f"Component not found: {component}")
+            return False
+        
+        # Read the component file
+        with open(component, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Check for common missing parameter patterns
+        missing_patterns = [
+            'TODO.*parameter',
+            'FIXME.*parameter',
+            'raise NotImplementedError',
+            'pass  # TODO',
+            'return None  # TODO',
+            'placeholder',
+            'stub',
+        ]
+        
+        missing_count = 0
+        for pattern in missing_patterns:
+            matches = re.findall(pattern, content)
+            missing_count += len(matches)
+        
+        has_missing = missing_count > 0
+        
+        if has_missing:
+            logger.warning(f"Missing parameters found in {component}: {missing_count} patterns")
+        
+        return has_missing
         
     except Exception as e:
         logger.error(f"Error checking parameters: {str(e)}")

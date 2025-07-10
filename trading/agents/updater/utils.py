@@ -62,9 +62,86 @@ def detect_model_drift(model_id: str, recent_data: pd.DataFrame) -> Tuple[bool, 
             - drift_score: Numerical score indicating drift severity
     """
     try:
-        # TODO: Implement actual drift detection logic
-        # For now, return placeholder values
-        return False, 0.0
+        # Load historical performance data for comparison
+        historical_file = f"logs/model_performance_{model_id}.json"
+        if not os.path.exists(historical_file):
+            logger.warning(f"No historical data found for model {model_id}")
+            return False, 0.0
+        
+        with open(historical_file, 'r') as f:
+            historical_data = json.load(f)
+        
+        # Extract historical predictions and actual values
+        historical_predictions = historical_data.get('predictions', [])
+        historical_actuals = historical_data.get('actuals', [])
+        
+        if len(historical_predictions) < 50 or len(recent_data) < 10:
+            logger.warning(f"Insufficient data for drift detection: historical={len(historical_predictions)}, recent={len(recent_data)}")
+            return False, 0.0
+        
+        # Calculate drift metrics
+        drift_metrics = {}
+        
+        # 1. Performance drift (prediction accuracy)
+        if len(historical_predictions) > 0:
+            historical_mae = np.mean(np.abs(np.array(historical_predictions) - np.array(historical_actuals)))
+            recent_mae = np.mean(np.abs(recent_data['predictions'] - recent_data['actuals']))
+            performance_drift = abs(recent_mae - historical_mae) / (historical_mae + 1e-8)
+            drift_metrics['performance'] = performance_drift
+        
+        # 2. Distribution drift (if we have feature data)
+        if 'features' in recent_data.columns and len(historical_data.get('features', [])) > 0:
+            historical_features = np.array(historical_data['features'])
+            recent_features = recent_data['features'].values
+            
+            # Calculate KL divergence for distribution comparison
+            try:
+                from scipy.stats import entropy
+                from sklearn.preprocessing import StandardScaler
+                
+                # Normalize features for comparison
+                scaler = StandardScaler()
+                historical_norm = scaler.fit_transform(historical_features)
+                recent_norm = scaler.transform(recent_features)
+                
+                # Calculate distribution drift using histogram comparison
+                hist_old, _ = np.histogram(historical_norm.flatten(), bins=20, density=True)
+                hist_new, _ = np.histogram(recent_norm.flatten(), bins=20, density=True)
+                
+                # Add small epsilon to avoid division by zero
+                hist_old = hist_old + 1e-10
+                hist_new = hist_new + 1e-10
+                
+                kl_divergence = entropy(hist_new, hist_old)
+                drift_metrics['distribution'] = kl_divergence
+                
+            except ImportError:
+                logger.warning("scipy not available, skipping distribution drift")
+        
+        # 3. Statistical drift (mean, variance changes)
+        if len(historical_predictions) > 0:
+            hist_mean = np.mean(historical_predictions)
+            hist_std = np.std(historical_predictions)
+            recent_mean = np.mean(recent_data['predictions'])
+            recent_std = np.std(recent_data['predictions'])
+            
+            mean_drift = abs(recent_mean - hist_mean) / (hist_std + 1e-8)
+            std_drift = abs(recent_std - hist_std) / (hist_std + 1e-8)
+            
+            drift_metrics['mean_drift'] = mean_drift
+            drift_metrics['std_drift'] = std_drift
+        
+        # Calculate overall drift score
+        if drift_metrics:
+            drift_score = np.mean(list(drift_metrics.values()))
+            has_drifted = drift_score > 0.5  # Threshold for drift detection
+            
+            logger.info(f"Drift detection for model {model_id}: score={drift_score:.3f}, drifted={has_drifted}")
+            logger.debug(f"Drift metrics: {drift_metrics}")
+            
+            return has_drifted, drift_score
+        else:
+            return False, 0.0
         
     except Exception as e:
         logger.error(f"Error detecting model drift: {str(e)}")
