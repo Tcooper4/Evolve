@@ -245,7 +245,7 @@ def apply_signal_filters(signals: pd.Series, data: pd.DataFrame, config: SignalC
     return filtered_signals
 
 def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, SignalResult]:
-    """Generate trading signals using multiple strategies with validation and confidence.
+    """Generate trading signals using multiple strategies with validation, confidence, and safeguards.
     
     Args:
         data: DataFrame containing market data
@@ -254,22 +254,49 @@ def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, Sign
     Returns:
         Dictionary containing SignalResult for each strategy
     """
-    # Validate data
+    # Enhanced data validation with safeguards
     validation_errors = validate_market_data(data)
     if validation_errors:
         logger.error(f"Market data validation failed: {validation_errors}")
         raise ValueError(f"Market data validation failed: {validation_errors}")
     
-    # Calculate indicators
-    data = calculate_technical_indicators(data, config)
+    # Guard against missing or short price series
+    if data.empty:
+        logger.error("Empty data provided for signal generation")
+        raise ValueError("Empty data provided for signal generation")
+    
+    if len(data) < 3:
+        logger.error(f"Insufficient data for signal generation: {len(data)} rows (minimum 3 required)")
+        raise ValueError(f"Insufficient data for signal generation: {len(data)} rows (minimum 3 required)")
+    
+    # Validate Close column exists
+    if "Close" not in data.columns:
+        logger.error("Close column not found in data")
+        raise ValueError("Close column not found in data")
+    
+    # Handle missing values in Close column
+    data = data.dropna(subset=["Close"])
+    if len(data) < 3:
+        logger.error("Insufficient data after removing NaN values")
+        raise ValueError("Insufficient data after removing NaN values")
+    
+    # Calculate indicators with error handling
+    try:
+        data = calculate_technical_indicators(data, config)
+    except Exception as e:
+        logger.error(f"Error calculating technical indicators: {e}")
+        raise ValueError(f"Error calculating technical indicators: {e}")
     
     # Initialize results dictionary
     signal_results = {}
     
-    # RSI strategy
+    # RSI strategy with safeguards
     rsi_signals = pd.Series(0, index=data.index)
-    rsi_signals[data["rsi"] < 30] = 1  # Oversold
-    rsi_signals[data["rsi"] > 70] = -1  # Overbought
+    if "rsi" in data.columns and not data["rsi"].isna().all():
+        rsi_signals[data["rsi"] < 30] = 1  # Oversold
+        rsi_signals[data["rsi"] > 70] = -1  # Overbought
+    else:
+        logger.warning("RSI column missing or all NaN, skipping RSI signals")
     filtered_rsi = apply_signal_filters(rsi_signals, data, config)
     
     # Validate RSI signals
@@ -285,10 +312,13 @@ def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, Sign
         timestamp=datetime.now()
     )
     
-    # MACD strategy
+    # MACD strategy with safeguards
     macd_signals = pd.Series(0, index=data.index)
-    macd_signals[data["macd"] > data["macd_signal"]] = 1  # Bullish crossover
-    macd_signals[data["macd"] < data["macd_signal"]] = -1  # Bearish crossover
+    if "macd" in data.columns and "macd_signal" in data.columns and not data["macd"].isna().all():
+        macd_signals[data["macd"] > data["macd_signal"]] = 1  # Bullish crossover
+        macd_signals[data["macd"] < data["macd_signal"]] = -1  # Bearish crossover
+    else:
+        logger.warning("MACD columns missing or all NaN, skipping MACD signals")
     filtered_macd = apply_signal_filters(macd_signals, data, config)
     
     # Validate MACD signals
@@ -304,10 +334,13 @@ def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, Sign
         timestamp=datetime.now()
     )
     
-    # Bollinger Bands strategy
+    # Bollinger Bands strategy with safeguards
     bb_signals = pd.Series(0, index=data.index)
-    bb_signals[data["close"] < data["bb_lower"]] = 1  # Price below lower band
-    bb_signals[data["close"] > data["bb_upper"]] = -1  # Price above upper band
+    if all(col in data.columns for col in ["close", "bb_lower", "bb_upper"]) and not data["close"].isna().all():
+        bb_signals[data["close"] < data["bb_lower"]] = 1  # Price below lower band
+        bb_signals[data["close"] > data["bb_upper"]] = -1  # Price above upper band
+    else:
+        logger.warning("Bollinger Bands columns missing or all NaN, skipping BB signals")
     filtered_bb = apply_signal_filters(bb_signals, data, config)
     
     # Validate BB signals
@@ -323,10 +356,13 @@ def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, Sign
         timestamp=datetime.now()
     )
     
-    # Moving Average Crossover strategy
+    # Moving Average Crossover strategy with safeguards
     ma_signals = pd.Series(0, index=data.index)
-    ma_signals[data["sma_short"] > data["sma_long"]] = 1  # Bullish crossover
-    ma_signals[data["sma_short"] < data["sma_long"]] = -1  # Bearish crossover
+    if all(col in data.columns for col in ["sma_short", "sma_long"]) and not data["sma_short"].isna().all():
+        ma_signals[data["sma_short"] > data["sma_long"]] = 1  # Bullish crossover
+        ma_signals[data["sma_short"] < data["sma_long"]] = -1  # Bearish crossover
+    else:
+        logger.warning("Moving Average columns missing or all NaN, skipping MA signals")
     filtered_ma = apply_signal_filters(ma_signals, data, config)
     
     # Validate MA signals
