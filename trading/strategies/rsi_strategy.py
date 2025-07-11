@@ -142,6 +142,11 @@ class RSIStrategy:
         Returns:
             List of trading signals
         """
+        # Edge case fallback logic
+        if data is None or data.empty or 'Close' not in data.columns:
+            logger.warning("Invalid data provided to RSI strategy: data is None, empty, or missing 'Close' column")
+            return []  # Return empty signals list
+        
         try:
             # Calculate RSI
             data = data.copy()
@@ -199,12 +204,8 @@ class RSIStrategy:
                         'parameters': {
                             'rsi_value': current_rsi,
                             'rsi_period': self.rsi_period,
-                            'oversold_threshold': self.oversold_threshold,
-                            'enable_range_filter': self.enable_range_filter,
-                            'min_rsi_range': self.min_rsi_range,
-                            'max_rsi_range': self.max_rsi_range
-                        },
-                        'reasoning': f'RSI oversold ({current_rsi:.2f} < {self.oversold_threshold})'
+                            'oversold_threshold': self.oversold_threshold
+                        }
                     })
                     
                 elif current_rsi > self.overbought_threshold and prev_rsi <= self.overbought_threshold:
@@ -227,23 +228,16 @@ class RSIStrategy:
                         'parameters': {
                             'rsi_value': current_rsi,
                             'rsi_period': self.rsi_period,
-                            'overbought_threshold': self.overbought_threshold,
-                            'enable_range_filter': self.enable_range_filter,
-                            'min_rsi_range': self.min_rsi_range,
-                            'max_rsi_range': self.max_rsi_range
-                        },
-                        'reasoning': f'RSI overbought ({current_rsi:.2f} > {self.overbought_threshold})'
+                            'overbought_threshold': self.overbought_threshold
+                        }
                     })
             
-            logger.info(f"Generated {len(signals)} RSI signals with {crossover_count} crossovers")
-            logger.info(f"RSI range filter: {'enabled' if self.enable_range_filter else 'disabled'} "
-                       f"({self.min_rsi_range:.1f} - {self.max_rsi_range:.1f})")
-            
+            logger.info(f"RSI Strategy generated {len(signals)} signals with {crossover_count} crossovers")
             return signals
             
         except Exception as e:
             logger.error(f"Error generating RSI signals: {e}")
-            return []
+            return []  # Return empty signals list on error
     
     def get_parameters(self) -> Dict[str, Any]:
         """Get strategy parameters including range filter settings.
