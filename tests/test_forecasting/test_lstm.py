@@ -249,4 +249,48 @@ class TestLSTMModel:
             
             # Check that losses are finite
             assert all(np.isfinite(loss) for loss in history.history['loss']), "Training loss contains non-finite values"
-            assert all(np.isfinite(loss) for loss in history.history['val_loss']), "Validation loss contains non-finite values" 
+            assert all(np.isfinite(loss) for loss in history.history['val_loss']), "Validation loss contains non-finite values"
+
+    def test_nan_handling(self, model):
+        """Test that model handles NaN values correctly."""
+        # Create data with NaN values
+        nan_data = pd.Series([100, np.nan, 101, 102, np.nan, 103])
+        
+        # Should handle NaN values gracefully
+        try:
+            X, y = model.preprocess_data(nan_data)
+            # If preprocessing succeeds, check that NaN values are handled
+            assert not np.isnan(X).any()
+            assert not np.isnan(y).any()
+        except ValueError:
+            # It's also acceptable to raise ValueError for NaN data
+            pass
+
+    def test_short_input(self, model):
+        """Test that model handles short input sequences correctly."""
+        # Create very short data
+        short_data = pd.Series([100, 101])
+        
+        # Should handle short data gracefully
+        try:
+            X, y = model.preprocess_data(short_data)
+            # If preprocessing succeeds, check output
+            assert isinstance(X, np.ndarray)
+            assert isinstance(y, np.ndarray)
+        except ValueError:
+            # It's acceptable to raise ValueError for insufficient data
+            pass
+
+    def test_error_handling(self, model):
+        """Test that model handles errors correctly with pytest.raises."""
+        # Test with None input
+        with pytest.raises((ValueError, TypeError)):
+            model.predict(None)
+        
+        # Test with invalid data type
+        with pytest.raises((ValueError, TypeError)):
+            model.predict("invalid_data")
+        
+        # Test with negative forecast steps
+        with pytest.raises(ValueError):
+            model.forecast(steps=-1) 
