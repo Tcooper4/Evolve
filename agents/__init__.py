@@ -6,7 +6,7 @@ This module contains various autonomous trading agents and a centralized registr
 from .model_generator_agent import (
     AutoEvolutionaryModelGenerator,
     ArxivResearchFetcher,
-    ModelImplementationGenerator,
+    ModelImplementationGenerator as MIGenerator,
     ModelBenchmarker,
     ResearchPaper,
     ModelCandidate,
@@ -31,7 +31,7 @@ __all__ = [
     # Legacy agents
     'AutoEvolutionaryModelGenerator',
     'ArxivResearchFetcher',
-    'ModelImplementationGenerator', 
+    'MIGenerator',  # Alias for ModelImplementationGenerator
     'ModelBenchmarker',
     'ResearchPaper',
     'ModelCandidate',

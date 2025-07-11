@@ -411,6 +411,9 @@ class DataProviderManager:
             try:
                 logger.info(f"Attempting to fetch data from {provider_name} for {request.symbol}")
                 
+                # Log fetch latency per provider call
+                provider_start_time = datetime.now()
+                
                 provider = self.providers[provider_name]
                 data = provider.fetch(
                     request.symbol,
@@ -418,6 +421,10 @@ class DataProviderManager:
                     start_date=request.start_date,
                     end_date=request.end_date
                 )
+                
+                # Calculate and log latency
+                provider_latency = (datetime.now() - provider_start_time).total_seconds()
+                logger.info(f"Provider {provider_name} fetch latency for {request.symbol}: {provider_latency:.3f}s")
                 
                 # Validate data
                 is_valid, error_msg = self.validator.validate(data, request.symbol)

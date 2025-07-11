@@ -5,7 +5,7 @@ This module provides the base classes and interfaces that all agents must implem
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 from datetime import datetime
 
@@ -17,9 +17,9 @@ class Task:
     status: str
     agent: str
     notes: Optional[str] = None
-    created_at: datetime = datetime.now()
-    updated_at: datetime = datetime.now()
-    metadata: Optional[Dict[str, Any]] = None
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
+    metadata: Optional[Dict[str, Any]] = field(default_factory=dict)
 
 @dataclass
 class AgentResult:
@@ -27,7 +27,7 @@ class AgentResult:
     success: bool
     message: str
     data: Optional[Dict[str, Any]] = None
-    timestamp: datetime = datetime.now()
+    timestamp: datetime = field(default_factory=datetime.now)
     error: Optional[Exception] = None
 
 class BaseAgent(ABC):
@@ -44,6 +44,33 @@ class BaseAgent(ABC):
         self.name = name
         self.config = config or {}
         self._setup()
+    
+    def __str__(self) -> str:
+        """
+        String representation for easier logging/debugging of agent identity.
+        
+        Returns:
+            str: Human-readable representation of the agent
+        """
+        config_summary = ""
+        if self.config:
+            # Include key config items for identification
+            key_configs = ['model_type', 'strategy', 'risk_level', 'enabled']
+            config_items = [f"{k}={v}" for k, v in self.config.items() 
+                          if k in key_configs and v is not None]
+            if config_items:
+                config_summary = f" ({', '.join(config_items)})"
+        
+        return f"{self.__class__.__name__}[{self.name}]{config_summary}"
+    
+    def __repr__(self) -> str:
+        """
+        Detailed string representation for debugging.
+        
+        Returns:
+            str: Detailed representation of the agent
+        """
+        return f"{self.__class__.__name__}(name='{self.name}', config={self.config})"
         
     def _setup(self):
         """Setup method to be overridden by subclasses."""

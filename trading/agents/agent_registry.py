@@ -381,38 +381,286 @@ class AgentRegistry:
         return AgentCategory.UTILITY
         
     def register_agent(self, agent_info: AgentInfo) -> bool:
-        """
-        Register an agent in the registry.
+        """Register an agent in the registry.
         
         Args:
-            agent_info: Information about the agent to register
+            agent_info: Agent information to register
             
         Returns:
             True if registration was successful
         """
         try:
+            # Validate agent info
+            validation_result = self._validate_agent_info(agent_info)
+            if not validation_result['valid']:
+                logger.error(f"Agent validation failed: {validation_result['errors']}")
+                return False
+            
+            # Validate agent class
+            agent_class = self._get_agent_class_from_info(agent_info)
+            if agent_class:
+                class_validation = self._validate_agent_class(agent_class)
+                if not class_validation['valid']:
+                    logger.error(f"Agent class validation failed: {class_validation['errors']}")
+                    return False
+            
+            # Check for conflicts
+            if agent_info.name in self.agents:
+                existing_agent = self.agents[agent_info.name]
+                if existing_agent.version == agent_info.version:
+                    logger.warning(f"Agent {agent_info.name} version {agent_info.version} already registered")
+                    return False
+            
+            # Register the agent
             self.agents[agent_info.name] = agent_info
             
-            # Update capability index
-            for capability in agent_info.capabilities:
-                if capability.name not in self.capabilities:
-                    self.capabilities[capability.name] = set()
-                self.capabilities[capability.name].add(agent_info.name)
+            # Update indexes
+            self._update_capability_index(agent_info)
+            self._update_category_index(agent_info)
             
-            # Update category index
-            if agent_info.category not in self.categories:
-                self.categories[agent_info.category] = set()
-            self.categories[agent_info.category].add(agent_info.name)
+            # Update stats
+            self._update_stats()
             
-            # Update timestamp
-            agent_info.updated_at = datetime.now()
+            # Save registry
+            self._save_registry()
             
-            logger.info(f"Registered agent: {agent_info.name} ({agent_info.category.value})")
+            logger.info(f"Registered agent: {agent_info.name} (version {agent_info.version})")
             return True
             
         except Exception as e:
             logger.error(f"Error registering agent {agent_info.name}: {e}")
             return False
+    
+    def _validate_agent_info(self, agent_info: AgentInfo) -> Dict[str, Any]:
+        """Validate agent information before registration.
+        
+        Args:
+            agent_info: Agent information to validate
+            
+        Returns:
+            Validation result with 'valid' boolean and 'errors' list
+        """
+        errors = []
+        
+        # Required fields validation
+        if not agent_info.name or not agent_info.name.strip():
+            errors.append("Agent name is required and cannot be empty")
+        
+        if not agent_info.class_name or not agent_info.class_name.strip():
+            errors.append("Class name is required and cannot be empty")
+        
+        if not agent_info.module_path or not agent_info.module_path.strip():
+            errors.append("Module path is required and cannot be empty")
+        
+        if not agent_info.description or not agent_info.description.strip():
+            errors.append("Description is required and cannot be empty")
+        
+        # Name format validation
+        if agent_info.name and not self._is_valid_agent_name(agent_info.name):
+            errors.append("Agent name must be alphanumeric with underscores only")
+        
+        # Version validation
+        if agent_info.version and not self._is_valid_version(agent_info.version):
+            errors.append("Version must be in semantic versioning format (e.g., 1.0.0)")
+        
+        # Capabilities validation
+        if not agent_info.capabilities:
+            errors.append("At least one capability must be defined")
+        else:
+            for i, capability in enumerate(agent_info.capabilities):
+                cap_errors = self._validate_capability(capability)
+                for error in cap_errors:
+                    errors.append(f"Capability {i+1}: {error}")
+        
+        # Dependencies validation
+        if agent_info.dependencies:
+            for dep in agent_info.dependencies:
+                if not self._is_valid_dependency(dep):
+                    errors.append(f"Invalid dependency format: {dep}")
+        
+        # Config schema validation
+        if agent_info.config_schema:
+            schema_errors = self._validate_config_schema(agent_info.config_schema)
+            errors.extend(schema_errors)
+        
+        return {
+            'valid': len(errors) == 0,
+            'errors': errors
+        }
+    
+    def _validate_agent_class(self, agent_class: Type[BaseAgent]) -> Dict[str, Any]:
+        """Validate agent class structure and implementation.
+        
+        Args:
+            agent_class: Agent class to validate
+            
+        Returns:
+            Validation result with 'valid' boolean and 'errors' list
+        """
+        errors = []
+        
+        try:
+            # Check if class inherits from BaseAgent
+            if not issubclass(agent_class, BaseAgent):
+                errors.append("Agent class must inherit from BaseAgent")
+            
+            # Check for required methods
+            required_methods = ['run', 'validate_input', 'handle_error']
+            for method_name in required_methods:
+                if not hasattr(agent_class, method_name):
+                    errors.append(f"Required method '{method_name}' not found")
+            
+            # Check for proper method signatures
+            if hasattr(agent_class, 'run'):
+                run_method = getattr(agent_class, 'run')
+                if not callable(run_method):
+                    errors.append("'run' method must be callable")
+                else:
+                    # Check if it's an abstract method
+                    if hasattr(run_method, '__isabstractmethod__') and run_method.__isabstractmethod__:
+                        errors.append("'run' method must be implemented (not abstract)")
+            
+            # Check for proper constructor
+            if hasattr(agent_class, '__init__'):
+                init_method = getattr(agent_class, '__init__')
+                if not callable(init_method):
+                    errors.append("Constructor must be callable")
+            
+            # Check for proper string representation
+            if not hasattr(agent_class, '__str__') and not hasattr(agent_class, '__repr__'):
+                errors.append("Agent class should have __str__ or __repr__ method for debugging")
+            
+        except Exception as e:
+            errors.append(f"Error validating agent class: {str(e)}")
+        
+        return {
+            'valid': len(errors) == 0,
+            'errors': errors
+        }
+    
+    def _validate_capability(self, capability: AgentCapability) -> List[str]:
+        """Validate a single capability definition.
+        
+        Args:
+            capability: Capability to validate
+            
+        Returns:
+            List of validation errors
+        """
+        errors = []
+        
+        if not capability.name or not capability.name.strip():
+            errors.append("Capability name is required")
+        
+        if not capability.description or not capability.description.strip():
+            errors.append("Capability description is required")
+        
+        if not isinstance(capability.required_params, list):
+            errors.append("Required parameters must be a list")
+        
+        if not isinstance(capability.optional_params, list):
+            errors.append("Optional parameters must be a list")
+        
+        if not capability.return_type or not capability.return_type.strip():
+            errors.append("Return type is required")
+        
+        if capability.version and not self._is_valid_version(capability.version):
+            errors.append("Capability version must be in semantic versioning format")
+        
+        return errors
+    
+    def _validate_config_schema(self, schema: Dict[str, Any]) -> List[str]:
+        """Validate configuration schema structure.
+        
+        Args:
+            schema: Configuration schema to validate
+            
+        Returns:
+            List of validation errors
+        """
+        errors = []
+        
+        if not isinstance(schema, dict):
+            errors.append("Config schema must be a dictionary")
+            return errors
+        
+        # Check for required schema fields
+        required_fields = ['type', 'properties']
+        for field in required_fields:
+            if field not in schema:
+                errors.append(f"Config schema missing required field: {field}")
+        
+        # Validate schema type
+        if 'type' in schema and schema['type'] not in ['object', 'array', 'string', 'number', 'boolean']:
+            errors.append("Invalid schema type")
+        
+        # Validate properties if present
+        if 'properties' in schema and isinstance(schema['properties'], dict):
+            for prop_name, prop_schema in schema['properties'].items():
+                if not isinstance(prop_schema, dict):
+                    errors.append(f"Property '{prop_name}' schema must be a dictionary")
+                elif 'type' not in prop_schema:
+                    errors.append(f"Property '{prop_name}' missing type definition")
+        
+        return errors
+    
+    def _is_valid_agent_name(self, name: str) -> bool:
+        """Check if agent name follows naming conventions.
+        
+        Args:
+            name: Agent name to validate
+            
+        Returns:
+            True if name is valid
+        """
+        import re
+        # Allow alphanumeric characters and underscores, must start with letter
+        pattern = r'^[a-zA-Z][a-zA-Z0-9_]*$'
+        return bool(re.match(pattern, name))
+    
+    def _is_valid_version(self, version: str) -> bool:
+        """Check if version follows semantic versioning.
+        
+        Args:
+            version: Version string to validate
+            
+        Returns:
+            True if version is valid
+        """
+        import re
+        # Basic semantic versioning pattern (major.minor.patch)
+        pattern = r'^\d+\.\d+\.\d+$'
+        return bool(re.match(pattern, version))
+    
+    def _is_valid_dependency(self, dependency: str) -> bool:
+        """Check if dependency string is valid.
+        
+        Args:
+            dependency: Dependency string to validate
+            
+        Returns:
+            True if dependency is valid
+        """
+        import re
+        pattern = r'^[a-zA-Z][a-zA-Z0-9_-]*(\s*[<>=!]+\s*\d+\.\d+\.\d+)?$'
+        return bool(re.match(pattern, dependency))
+    
+    def _get_agent_class_from_info(self, agent_info: AgentInfo) -> Optional[Type[BaseAgent]]:
+        """Get agent class from agent info.
+        
+        Args:
+            agent_info: Agent information
+            
+        Returns:
+            Agent class or None if not found
+        """
+        try:
+            module = importlib.import_module(agent_info.module_path)
+            agent_class = getattr(module, agent_info.class_name, None)
+            return agent_class if agent_class else None
+        except Exception as e:
+            logger.debug(f"Could not load agent class {agent_info.class_name} from {agent_info.module_path}: {e}")
+            return None
 
     def unregister_agent(self, name: str) -> bool:
         """
@@ -708,6 +956,19 @@ class AgentRegistry:
         self.stats['total_agents'] = len(self.agents)
         self.stats['active_agents'] = len(self.get_agents_by_status(AgentStatus.ACTIVE))
         self.stats['total_capabilities'] = len(self.capabilities)
+
+    def _update_capability_index(self, agent_info: AgentInfo) -> None:
+        """Update the capability index for an agent."""
+        for capability in agent_info.capabilities:
+            if capability.name not in self.capabilities:
+                self.capabilities[capability.name] = set()
+            self.capabilities[capability.name].add(agent_info.name)
+
+    def _update_category_index(self, agent_info: AgentInfo) -> None:
+        """Update the category index for an agent."""
+        if agent_info.category not in self.categories:
+            self.categories[agent_info.category] = set()
+        self.categories[agent_info.category].add(agent_info.name)
 
 # Global registry instance
 _registry: Optional[AgentRegistry] = None

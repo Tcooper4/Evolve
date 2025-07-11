@@ -53,6 +53,10 @@ class ModelBuildResult:
     feature_importance: Optional[Dict[str, float]] = None
     build_status: str = "success"
     error_message: Optional[str] = None
+    # --- Added metadata fields ---
+    source: str = "Evolve Trading System"
+    version: str = "1.0.0"
+    framework: str = "unknown"
 
 class ModelBuilderAgent(BaseAgent):
     """Agent responsible for building ML models from scratch."""
@@ -200,10 +204,13 @@ class ModelBuilderAgent(BaseAgent):
             # Build model based on type
             if request.model_type.lower() == 'lstm':
                 result = self._build_lstm_model(request, data, request_id)
+                result.framework = "PyTorch"
             elif request.model_type.lower() == 'xgboost':
                 result = self._build_xgboost_model(request, data, request_id)
+                result.framework = "XGBoost"
             elif request.model_type.lower() == 'ensemble':
                 result = self._build_ensemble_model(request, data, request_id)
+                result.framework = "Ensemble"
             else:
                 raise ValueError(f"Unsupported model type: {request.model_type}")
             
@@ -254,7 +261,10 @@ class ModelBuilderAgent(BaseAgent):
                 training_metrics={},
                 model_config={},
                 build_status="failed",
-                error_message=str(e)
+                error_message=str(e),
+                source=self.author if hasattr(self, 'author') else "Evolve Trading System",
+                version=self.version if hasattr(self, 'version') else "1.0.0",
+                framework="unknown"
             )
     
     def _load_and_preprocess_data(self, request: ModelBuildRequest) -> Tuple[pd.DataFrame, pd.Series]:
@@ -353,7 +363,8 @@ class ModelBuilderAgent(BaseAgent):
             model_id=model_id,
             build_timestamp=datetime.now().isoformat(),
             training_metrics=training_metrics,
-            model_config=hyperparams
+            model_config=hyperparams,
+            framework="PyTorch"
         )
     
     @timer
@@ -420,7 +431,7 @@ class ModelBuilderAgent(BaseAgent):
             build_timestamp=datetime.now().isoformat(),
             training_metrics=training_metrics,
             model_config=hyperparams,
-            feature_importance=feature_importance
+            framework="XGBoost"
         )
     
     @timer
@@ -496,7 +507,8 @@ class ModelBuilderAgent(BaseAgent):
             model_id=model_id,
             build_timestamp=datetime.now().isoformat(),
             training_metrics=training_metrics,
-            model_config=ensemble_config
+            model_config=ensemble_config,
+            framework="Ensemble"
         )
     
     def _save_model_metadata(self, result: ModelBuildResult) -> None:
@@ -511,7 +523,10 @@ class ModelBuilderAgent(BaseAgent):
             'build_timestamp': result.build_timestamp,
             'training_metrics': result.training_metrics,
             'model_config': result.model_config,
-            'status': result.build_status
+            'status': result.build_status,
+            'source': result.source,
+            'version': result.version,
+            'framework': result.framework
         }
         
         self.memory.store_model_metadata(result.model_id, metadata)

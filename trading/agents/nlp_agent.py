@@ -182,12 +182,25 @@ class NLPAgent:
             if not prompt or not prompt.strip():
                 return {'error': 'Empty prompt provided'}
             
+            # Log token count to monitor cost/performance tradeoffs
+            if TRANSFORMERS_AVAILABLE:
+                try:
+                    tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+                    token_count = len(tokenizer.tokenize(prompt))
+                    logger.info(f"Token count for input: {token_count}")
+                except Exception as e:
+                    logger.warning(f"Could not count tokens: {e}")
+            
             prompt = prompt.strip().lower()
+            
+            # Detect if prompt contains financial jargon
+            jargon_detection = self._detect_financial_jargon(prompt)
             
             # Extract basic information
             result = {
                 'original_prompt': prompt,
                 'timestamp': datetime.now().isoformat(),
+                'jargon_detection': jargon_detection,
                 'intent': self._classify_intent(prompt),
                 'sentiment': self._analyze_sentiment(prompt),
                 'entities': self._extract_entities(prompt),
@@ -195,21 +208,21 @@ class NLPAgent:
                 'market_regime': self._classify_market_regime(prompt),
                 'timeframe': self._extract_timeframe(prompt),
                 'tickers': self._extract_tickers(prompt),
-                'confidence': self._calculate_confidence(prompt)
+                'confidence': self._calculate_confidence(prompt),
+                'routing': self._generate_routing_recommendations({
+                    'prompt': prompt,
+                    'jargon_detection': jargon_detection
+                })
             }
-            
-            # Add routing recommendations
-            result['routing'] = self._generate_routing_recommendations(result)
             
             # Cache the result
             self._cache_parsing_result(prompt, result)
             
-            logger.info(f"Successfully parsed prompt: {prompt[:50]}...")
             return result
             
         except Exception as e:
             logger.error(f"Error parsing prompt: {e}")
-            return {'error': str(e), 'original_prompt': prompt}
+            return {'error': str(e)}
     
     def _classify_intent(self, prompt: str) -> Dict[str, Any]:
         """Classify the intent of the prompt."""
@@ -570,6 +583,353 @@ class NLPAgent:
             logger.warning(f"Failed to load cached result: {e}")
         
         return None
+
+    def _detect_financial_jargon(self, prompt: str) -> Dict[str, Any]:
+        """
+        Detect financial jargon vs. general NLP to route appropriately.
+        
+        Args:
+            prompt: Input prompt text
+            
+        Returns:
+            Dictionary with jargon detection results
+        """
+        try:
+            # Define financial jargon patterns
+            financial_jargon_patterns = {
+                'technical_analysis': [
+                    r'\b(ma|sma|ema|rsi|macd|bollinger|stochastic|fibonacci|support|resistance|trendline|breakout|breakdown)\b',
+                    r'\b(oversold|overbought|divergence|convergence|momentum|volume|volatility)\b',
+                    r'\b(candlestick|doji|hammer|shooting star|engulfing|pivot|swing)\b'
+                ],
+                'fundamental_analysis': [
+                    r'\b(pe ratio|pb ratio|eps|dividend yield|payout ratio|roe|roa|debt to equity)\b',
+                    r'\b(earnings|revenue|profit margin|gross margin|operating margin|net margin)\b',
+                    r'\b(cash flow|free cash flow|ebitda|ebit|net income|balance sheet|income statement)\b'
+                ],
+                'trading_terms': [
+                    r'\b(long|short|position|entry|exit|stop loss|take profit|risk reward)\b',
+                    r'\b(leverage|margin|options|futures|derivatives|hedge|arbitrage)\b',
+                    r'\b(portfolio|allocation|diversification|rebalancing|alpha|beta|sharpe ratio)\b'
+                ],
+                'market_structure': [
+                    r'\b(bull market|bear market|correction|rally|crash|bubble|recession)\b',
+                    r'\b(secular|cyclical|sector rotation|market breadth|advance decline)\b',
+                    r'\b(liquidity|bid ask|spread|volume|market cap|float|short interest)\b'
+                ],
+                'economic_indicators': [
+                    r'\b(gdp|inflation|cpi|ppi|unemployment|fed funds rate|yield curve)\b',
+                    r'\b(consumer confidence|pmi|ism|housing starts|retail sales)\b',
+                    r'\b(monetary policy|fiscal policy|quantitative easing|tapering)\b'
+                ]
+            }
+            
+            # Define general NLP patterns (non-financial)
+            general_nlp_patterns = {
+                'general_questions': [
+                    r'\b(what is|how does|why|when|where|who)\b',
+                    r'\b(explain|describe|tell me about|help me understand)\b'
+                ],
+                'conversational': [
+                    r'\b(hello|hi|hey|good morning|good afternoon|good evening)\b',
+                    r'\b(thank you|thanks|please|sorry|excuse me)\b'
+                ],
+                'general_analysis': [
+                    r'\b(analyze|study|research|investigate|examine|review)\b',
+                    r'\b(compare|contrast|similar|different|better|worse)\b'
+                ]
+            }
+            
+            # Count matches for each category
+            jargon_scores = {}
+            general_scores = {}
+            
+            # Check financial jargon patterns
+            for category, patterns in financial_jargon_patterns.items():
+                score = 0
+                for pattern in patterns:
+                    matches = re.findall(pattern, prompt, re.IGNORECASE)
+                    score += len(matches)
+                jargon_scores[category] = score
+            
+            # Check general NLP patterns
+            for category, patterns in general_nlp_patterns.items():
+                score = 0
+                for pattern in patterns:
+                    matches = re.findall(pattern, prompt, re.IGNORECASE)
+                    score += len(matches)
+                general_scores[category] = score
+            
+            # Calculate overall scores
+            total_jargon_score = sum(jargon_scores.values())
+            total_general_score = sum(general_scores.values())
+            
+            # Determine primary classification
+            if total_jargon_score > total_general_score:
+                primary_classification = 'financial'
+                confidence = min(total_jargon_score / (total_jargon_score + total_general_score + 1), 1.0)
+            elif total_general_score > total_jargon_score:
+                primary_classification = 'general'
+                confidence = min(total_general_score / (total_jargon_score + total_general_score + 1), 1.0)
+            else:
+                primary_classification = 'mixed'
+                confidence = 0.5
+            
+            # Identify specific jargon categories
+            dominant_jargon_categories = [
+                category for category, score in jargon_scores.items() 
+                if score > 0
+            ]
+            
+            # Determine routing recommendation
+            routing_recommendation = self._get_routing_recommendation(
+                primary_classification, dominant_jargon_categories, total_jargon_score
+            )
+            
+            return {
+                'primary_classification': primary_classification,
+                'confidence': confidence,
+                'jargon_scores': jargon_scores,
+                'general_scores': general_scores,
+                'total_jargon_score': total_jargon_score,
+                'total_general_score': total_general_score,
+                'dominant_jargon_categories': dominant_jargon_categories,
+                'routing_recommendation': routing_recommendation,
+                'requires_specialized_processing': total_jargon_score > 2
+            }
+            
+        except Exception as e:
+            logger.error(f"Error detecting financial jargon: {e}")
+            return {
+                'primary_classification': 'unknown',
+                'confidence': 0.0,
+                'error': str(e)
+            }
+    
+    def _get_routing_recommendation(self, classification: str, jargon_categories: List[str], 
+                                  jargon_score: int) -> Dict[str, Any]:
+        """
+        Get routing recommendation based on jargon detection.
+        
+        Args:
+            classification: Primary classification (financial/general/mixed)
+            jargon_categories: List of dominant jargon categories
+            jargon_score: Total jargon score
+            
+        Returns:
+            Routing recommendation dictionary
+        """
+        try:
+            routing = {
+                'primary_agent': None,
+                'fallback_agent': None,
+                'processing_pipeline': [],
+                'confidence_threshold': 0.7,
+                'requires_validation': False
+            }
+            
+            if classification == 'financial':
+                if jargon_score >= 5:
+                    # High financial jargon - use specialized financial agents
+                    routing['primary_agent'] = 'financial_analysis_agent'
+                    routing['fallback_agent'] = 'technical_analysis_agent'
+                    routing['processing_pipeline'] = [
+                        'financial_entity_extraction',
+                        'technical_analysis_parsing',
+                        'strategy_matching',
+                        'risk_assessment'
+                    ]
+                    routing['requires_validation'] = True
+                    
+                elif jargon_score >= 3:
+                    # Medium financial jargon - use mixed approach
+                    routing['primary_agent'] = 'mixed_analysis_agent'
+                    routing['fallback_agent'] = 'general_nlp_agent'
+                    routing['processing_pipeline'] = [
+                        'basic_entity_extraction',
+                        'financial_keyword_matching',
+                        'general_analysis'
+                    ]
+                    
+                else:
+                    # Low financial jargon - use general NLP with financial awareness
+                    routing['primary_agent'] = 'general_nlp_agent'
+                    routing['fallback_agent'] = 'financial_analysis_agent'
+                    routing['processing_pipeline'] = [
+                        'general_entity_extraction',
+                        'financial_keyword_detection',
+                        'context_aware_analysis'
+                    ]
+            
+            elif classification == 'general':
+                # General NLP - use standard processing
+                routing['primary_agent'] = 'general_nlp_agent'
+                routing['fallback_agent'] = 'conversational_agent'
+                routing['processing_pipeline'] = [
+                    'general_entity_extraction',
+                    'intent_classification',
+                    'sentiment_analysis',
+                    'response_generation'
+                ]
+            
+            else:  # mixed
+                # Mixed content - use adaptive processing
+                routing['primary_agent'] = 'adaptive_nlp_agent'
+                routing['fallback_agent'] = 'general_nlp_agent'
+                routing['processing_pipeline'] = [
+                    'multi_domain_entity_extraction',
+                    'context_classification',
+                    'adaptive_analysis',
+                    'hybrid_response_generation'
+                ]
+                routing['requires_validation'] = True
+            
+            # Add specific category-based routing
+            if 'technical_analysis' in jargon_categories:
+                routing['technical_agent'] = 'technical_analysis_agent'
+            if 'fundamental_analysis' in jargon_categories:
+                routing['fundamental_agent'] = 'fundamental_analysis_agent'
+            if 'trading_terms' in jargon_categories:
+                routing['trading_agent'] = 'trading_strategy_agent'
+            
+            return routing
+            
+        except Exception as e:
+            logger.error(f"Error generating routing recommendation: {e}")
+            return {
+                'primary_agent': 'general_nlp_agent',
+                'fallback_agent': 'error_handler_agent',
+                'processing_pipeline': ['error_handling'],
+                'confidence_threshold': 0.5,
+                'requires_validation': True
+            }
+    
+    def route_to_appropriate_agent(self, prompt: str) -> Dict[str, Any]:
+        """
+        Route prompt to appropriate agent based on jargon detection.
+        
+        Args:
+            prompt: Input prompt
+            
+        Returns:
+            Routing decision dictionary
+        """
+        try:
+            # Parse prompt and detect jargon
+            parsed_result = self.parse_prompt(prompt)
+            
+            if 'error' in parsed_result:
+                return {
+                    'success': False,
+                    'error': parsed_result['error'],
+                    'fallback_agent': 'error_handler_agent'
+                }
+            
+            jargon_detection = parsed_result.get('jargon_detection', {})
+            routing_recommendation = jargon_detection.get('routing_recommendation', {})
+            
+            # Determine final routing decision
+            confidence = jargon_detection.get('confidence', 0.0)
+            confidence_threshold = routing_recommendation.get('confidence_threshold', 0.7)
+            
+            if confidence >= confidence_threshold:
+                primary_agent = routing_recommendation.get('primary_agent', 'general_nlp_agent')
+                fallback_agent = routing_recommendation.get('fallback_agent', 'error_handler_agent')
+            else:
+                # Low confidence - use fallback
+                primary_agent = routing_recommendation.get('fallback_agent', 'general_nlp_agent')
+                fallback_agent = 'error_handler_agent'
+            
+            return {
+                'success': True,
+                'primary_agent': primary_agent,
+                'fallback_agent': fallback_agent,
+                'confidence': confidence,
+                'classification': jargon_detection.get('primary_classification', 'unknown'),
+                'jargon_categories': jargon_detection.get('dominant_jargon_categories', []),
+                'processing_pipeline': routing_recommendation.get('processing_pipeline', []),
+                'requires_validation': routing_recommendation.get('requires_validation', False),
+                'parsed_result': parsed_result
+            }
+            
+        except Exception as e:
+            logger.error(f"Error routing to appropriate agent: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'fallback_agent': 'error_handler_agent'
+            }
+    
+    def validate_financial_entities(self, entities: List[str]) -> Dict[str, Any]:
+        """
+        Validate extracted financial entities against known financial terms.
+        
+        Args:
+            entities: List of extracted entities
+            
+        Returns:
+            Validation result dictionary
+        """
+        try:
+            # Define known financial terms for validation
+            known_financial_terms = {
+                'technical_indicators': [
+                    'rsi', 'macd', 'bollinger bands', 'moving average', 'sma', 'ema',
+                    'stochastic', 'fibonacci', 'support', 'resistance', 'trendline'
+                ],
+                'fundamental_metrics': [
+                    'pe ratio', 'pb ratio', 'eps', 'dividend yield', 'roe', 'roa',
+                    'debt to equity', 'cash flow', 'ebitda', 'revenue', 'earnings'
+                ],
+                'trading_terms': [
+                    'long', 'short', 'position', 'entry', 'exit', 'stop loss',
+                    'take profit', 'leverage', 'margin', 'portfolio'
+                ],
+                'market_terms': [
+                    'bull market', 'bear market', 'volatility', 'liquidity',
+                    'volume', 'market cap', 'correlation', 'beta', 'alpha'
+                ]
+            }
+            
+            validation_results = {
+                'valid_entities': [],
+                'invalid_entities': [],
+                'category_matches': {},
+                'confidence': 0.0
+            }
+            
+            for entity in entities:
+                entity_lower = entity.lower()
+                matched = False
+                
+                for category, terms in known_financial_terms.items():
+                    if entity_lower in [term.lower() for term in terms]:
+                        validation_results['valid_entities'].append(entity)
+                        if category not in validation_results['category_matches']:
+                            validation_results['category_matches'][category] = []
+                        validation_results['category_matches'][category].append(entity)
+                        matched = True
+                        break
+                
+                if not matched:
+                    validation_results['invalid_entities'].append(entity)
+            
+            # Calculate confidence based on validation results
+            total_entities = len(entities)
+            if total_entities > 0:
+                validation_results['confidence'] = len(validation_results['valid_entities']) / total_entities
+            
+            return validation_results
+            
+        except Exception as e:
+            logger.error(f"Error validating financial entities: {e}")
+            return {
+                'valid_entities': [],
+                'invalid_entities': entities,
+                'category_matches': {},
+                'confidence': 0.0,
+                'error': str(e)
+            }
 
 # Global NLP agent instance
 _nlp_agent = None

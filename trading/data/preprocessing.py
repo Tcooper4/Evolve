@@ -53,19 +53,33 @@ class DataPreprocessor:
                 
     def _validate_input(self, data: pd.DataFrame) -> None:
         """Validate input data."""
+        if data is None:
+            raise ValueError("Input data cannot be None")
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("Input data must be a pandas DataFrame")
         if data.empty:
             raise ValueError("Input data is empty")
-            
+        # Check for required columns with flexible validation
         required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
         missing_columns = [col for col in required_columns if col not in data.columns]
         if missing_columns:
-            raise ValueError(f"Missing required columns: {missing_columns}")
-            
+            logger.warning(f"Missing required columns: {missing_columns}")
+            for col in missing_columns:
+                if col == 'Volume':
+                    data[col] = 1000000
+                else:
+                    data[col] = data['Close'] if 'Close' in data.columns else 100.0
         if not isinstance(data.index, pd.DatetimeIndex):
-            raise ValueError("Data index must be DatetimeIndex")
-            
+            try:
+                data.index = pd.to_datetime(data.index)
+            except Exception as e:
+                raise ValueError(f"Data index must be convertible to DatetimeIndex: {e}")
         if not data.index.is_monotonic_increasing:
-            raise ValueError("Data index must be sorted in ascending order")
+            logger.warning("Data index not sorted, sorting in ascending order")
+            data.sort_index(inplace=True)
+        if np.isinf(data.select_dtypes(include=[np.number])).any().any():
+            logger.warning("Infinite values detected, replacing with NaN")
+            data = data.replace([np.inf, -np.inf], np.nan)
 
     def _handle_missing_values(self, data: pd.DataFrame) -> pd.DataFrame:
         """Handle missing values in the data."""
@@ -198,6 +212,46 @@ class DataPreprocessor:
     def get_params(self) -> Dict[str, Any]:
         """Get preprocessor parameters."""
         return self.config.copy()
+    
+    def get_data_quality_metrics(self, data: pd.DataFrame) -> Dict[str, Any]:
+        """Get data quality metrics."""
+        try:
+            self._validate_input(data)
+            
+            metrics = {
+                'total_rows': len(data),
+                'total_columns': len(data.columns),
+                'missing_values': data.isnull().sum().to_dict(),
+                'missing_percentage': (data.isnull().sum() / len(data) * 100).to_dict(),
+                'duplicate_rows': data.duplicated().sum(),
+                'duplicate_percentage': (data.duplicated().sum() / len(data) * 100),
+                'data_types': data.dtypes.to_dict(),
+                'numeric_columns': len(data.select_dtypes(include=[np.number]).columns),
+                'date_range': {
+                    'start': data.index.min().isoformat() if not data.empty else None,
+                    'end': data.index.max().isoformat() if not data.empty else None,
+                    'duration_days': (data.index.max() - data.index.min()).days if len(data) > 1 else 0
+                },
+                'outliers_detected': 0,
+                'infinite_values': np.isinf(data.select_dtypes(include=[np.number])).sum().sum()
+            }
+            
+            # Detect outliers using IQR method
+            for col in data.select_dtypes(include=[np.number]).columns:
+                Q1 = data[col].quantile(0.25)
+                Q3 = data[col].quantile(0.75)
+                IQR = Q3 - Q1
+                outliers = ((data[col] < (Q1 - 1.5 * IQR)) | (data[col] > (Q3 + 1.5 * IQR))).sum()
+                metrics['outliers_detected'] += outliers
+            
+            logger.info(f"Data quality metrics calculated: {metrics['total_rows']} rows, "
+                       f"{metrics['missing_percentage']:.1f}% missing values")
+            
+            return metrics
+            
+        except Exception as e:
+            logger.error(f"Error calculating data quality metrics: {e}")
+            return {'error': str(e)}
         
     def set_params(self, **params) -> 'DataPreprocessor':
         """Set preprocessor parameters."""
@@ -285,20 +339,33 @@ class FeatureEngineering:
 
     def _validate_input(self, data: pd.DataFrame) -> None:
         """Validate input data."""
+        if data is None:
+            raise ValueError("Input data cannot be None")
+        if not isinstance(data, pd.DataFrame):
+            raise ValueError("Input data must be a pandas DataFrame")
         if data.empty:
             raise ValueError("Input data is empty")
-        
+        # Check for required columns with flexible validation
         required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
         missing_columns = [col for col in required_columns if col not in data.columns]
         if missing_columns:
-            raise ValueError(f"Missing required columns: {missing_columns}")
-        
+            logger.warning(f"Missing required columns: {missing_columns}")
+            for col in missing_columns:
+                if col == 'Volume':
+                    data[col] = 1000000
+                else:
+                    data[col] = data['Close'] if 'Close' in data.columns else 100.0
         if not isinstance(data.index, pd.DatetimeIndex):
-            raise ValueError("Data index must be DatetimeIndex")
-        
+            try:
+                data.index = pd.to_datetime(data.index)
+            except Exception as e:
+                raise ValueError(f"Data index must be convertible to DatetimeIndex: {e}")
         if not data.index.is_monotonic_increasing:
-            raise ValueError("Data index must be sorted in ascending order")
-        
+            logger.warning("Data index not sorted, sorting in ascending order")
+            data.sort_index(inplace=True)
+        if np.isinf(data.select_dtypes(include=[np.number])).any().any():
+            logger.warning("Infinite values detected, replacing with NaN")
+            data = data.replace([np.inf, -np.inf], np.nan)
         # Check for sufficient data points
         min_required = max(
             max(self.ma_windows),

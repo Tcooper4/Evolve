@@ -342,6 +342,11 @@ class RLTrainer:
                 json.dump(results, f, indent=2, default=str)
             
             logger.info(f"PPO training completed. Model saved to {model_path}")
+            
+            # Add learning curve plot after training complete
+            if hasattr(callback, 'episode_rewards') and callback.episode_rewards:
+                self.plot_rewards(callback.episode_rewards)
+            
             return results
             
         except Exception as e:
@@ -444,6 +449,11 @@ class RLTrainer:
                 json.dump(results, f, indent=2, default=str)
             
             logger.info(f"A2C training completed. Model saved to {model_path}")
+            
+            # Add learning curve plot after training complete
+            if hasattr(callback, 'episode_rewards') and callback.episode_rewards:
+                self.plot_rewards(callback.episode_rewards)
+            
             return results
             
         except Exception as e:
@@ -520,6 +530,30 @@ class RLTrainer:
             
             logger.info(f"Agent evaluation completed. Mean return: {results['mean_return']:.4f}")
             return results
+    
+    def plot_rewards(self, reward_log: List[float]):
+        """Plot learning curve from reward log."""
+        try:
+            import matplotlib.pyplot as plt
+            
+            plt.figure(figsize=(10, 6))
+            plt.plot(reward_log)
+            plt.title('Learning Curve - Episode Rewards')
+            plt.xlabel('Episode')
+            plt.ylabel('Reward')
+            plt.grid(True)
+            
+            # Save plot
+            plot_path = self.log_dir / f"learning_curve_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            plt.savefig(plot_path)
+            plt.close()
+            
+            logger.info(f"Learning curve plot saved to {plot_path}")
+            
+        except ImportError:
+            logger.warning("Matplotlib not available for plotting learning curve")
+        except Exception as e:
+            logger.error(f"Error plotting learning curve: {e}")
             
         except Exception as e:
             logger.error(f"Error evaluating agent: {e}")

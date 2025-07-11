@@ -353,5 +353,180 @@ def test_overfitting_detection(test_optimizer, test_strategy, test_data):
     assert metrics["win_rate"] < 0.9  # Unrealistic win rate
     assert metrics["max_drawdown"] > 0.1  # Reasonable drawdown
 
+def test_dynamic_strategy_crossover_grid_search(test_optimizer, test_strategy, test_data):
+    """Test dynamic strategy crossover tuning using grid search."""
+    print("\n🎯 Testing Dynamic Strategy Crossover Grid Search")
+    
+    # Define comprehensive parameter grid for crossover optimization
+    param_grid = {
+        'short_window': [5, 10, 15, 20, 25],
+        'long_window': [30, 40, 50, 60, 100],
+        'crossover_threshold': [0.0, 0.1, 0.2, 0.3],
+        'signal_strength': [0.5, 1.0, 1.5, 2.0]
+    }
+    
+    # Track all results for analysis
+    all_results = []
+    best_score = -np.inf
+    best_params = None
+    best_metrics = None
+    
+    print(f"  🔍 Testing {len(param_grid['short_window'])} x {len(param_grid['long_window'])} x {len(param_grid['crossover_threshold'])} x {len(param_grid['signal_strength'])} = {len(param_grid['short_window']) * len(param_grid['long_window']) * len(param_grid['crossover_threshold']) * len(param_grid['signal_strength'])} combinations")
+    
+    # Grid search with validation
+    for short in param_grid['short_window']:
+        for long in param_grid['long_window']:
+            if short >= long:
+                continue  # Skip invalid combinations
+                
+            for threshold in param_grid['crossover_threshold']:
+                for strength in param_grid['signal_strength']:
+                    params = {
+                        'short_window': short,
+                        'long_window': long,
+                        'crossover_threshold': threshold,
+                        'signal_strength': strength
+                    }
+                    
+                    # Evaluate strategy with current parameters
+                    metrics = test_optimizer.evaluate_strategy(test_strategy, params, test_data)
+                    
+                    # Calculate composite score
+                    sharpe = metrics.get('sharpe_ratio', 0)
+                    win_rate = metrics.get('win_rate', 0)
+                    max_dd = abs(metrics.get('max_drawdown', 0))
+                    
+                    # Multi-objective scoring
+                    score = (sharpe * 0.5 + win_rate * 0.3 - max_dd * 0.2)
+                    
+                    result = {
+                        'params': params,
+                        'metrics': metrics,
+                        'score': score
+                    }
+                    all_results.append(result)
+                    
+                    # Track best result
+                    if score > best_score:
+                        best_score = score
+                        best_params = params
+                        best_metrics = metrics
+    
+    # Verify grid search results
+    assert best_params is not None, "Should find best parameters"
+    assert best_score > -10, "Best score should be reasonable"
+    assert len(all_results) > 0, "Should have results"
+    
+    print(f"  🏆 Best crossover params: {best_params}")
+    print(f"  📊 Best score: {best_score:.3f}")
+    print(f"  📈 Best metrics: Sharpe={best_metrics['sharpe_ratio']:.3f}, Win Rate={best_metrics['win_rate']:.3f}, Max DD={best_metrics['max_drawdown']:.3f}")
+    
+    # Test parameter sensitivity analysis
+    print(f"\n  📊 Testing parameter sensitivity...")
+    
+    sensitivity_analysis = {}
+    for param_name in ['short_window', 'long_window', 'crossover_threshold', 'signal_strength']:
+        param_values = param_grid[param_name]
+        param_scores = []
+        
+        for value in param_values:
+            # Find results with this parameter value
+            relevant_results = [r for r in all_results if r['params'][param_name] == value]
+            if relevant_results:
+                avg_score = np.mean([r['score'] for r in relevant_results])
+                param_scores.append((value, avg_score))
+        
+        sensitivity_analysis[param_name] = param_scores
+    
+    # Verify sensitivity analysis
+    for param_name, scores in sensitivity_analysis.items():
+        assert len(scores) > 0, f"Should have sensitivity data for {param_name}"
+        print(f"    {param_name}: {len(scores)} values tested")
+    
+    # Test crossover threshold optimization
+    print(f"\n  🎯 Testing crossover threshold optimization...")
+    
+    threshold_results = sensitivity_analysis['crossover_threshold']
+    best_threshold = max(threshold_results, key=lambda x: x[1])
+    
+    print(f"  Best threshold: {best_threshold[0]} (score: {best_threshold[1]:.3f})")
+    
+    # Verify threshold optimization
+    assert best_threshold[1] > -5, "Best threshold should have reasonable score"
+    
+    # Test signal strength optimization
+    print(f"\n  💪 Testing signal strength optimization...")
+    
+    strength_results = sensitivity_analysis['signal_strength']
+    best_strength = max(strength_results, key=lambda x: x[1])
+    
+    print(f"  Best strength: {best_strength[0]} (score: {best_strength[1]:.3f})")
+    
+    # Verify strength optimization
+    assert best_strength[1] > -5, "Best strength should have reasonable score"
+    
+    # Test parameter interaction analysis
+    print(f"\n  🔗 Testing parameter interactions...")
+    
+    # Analyze short_window vs long_window interaction
+    interaction_results = {}
+    for short in [10, 20]:  # Test key values
+        for long in [40, 60]:  # Test key values
+            if short < long:
+                relevant_results = [r for r in all_results 
+                                  if r['params']['short_window'] == short 
+                                  and r['params']['long_window'] == long]
+                if relevant_results:
+                    avg_score = np.mean([r['score'] for r in relevant_results])
+                    interaction_results[f"{short}_{long}"] = avg_score
+    
+    print(f"  Window interaction scores: {interaction_results}")
+    
+    # Verify interaction analysis
+    assert len(interaction_results) > 0, "Should have interaction data"
+    
+    # Test optimization convergence
+    print(f"\n  📈 Testing optimization convergence...")
+    
+    # Sort results by score to analyze convergence
+    sorted_results = sorted(all_results, key=lambda x: x['score'], reverse=True)
+    top_10_scores = [r['score'] for r in sorted_results[:10]]
+    
+    print(f"  Top 10 scores: {[f'{s:.3f}' for s in top_10_scores]}")
+    
+    # Verify convergence
+    assert len(top_10_scores) > 0, "Should have top scores"
+    assert max(top_10_scores) > min(top_10_scores), "Should have score variation"
+    
+    # Test parameter validation
+    print(f"\n  ✅ Testing parameter validation...")
+    
+    # Verify best parameters are valid
+    assert best_params['short_window'] < best_params['long_window'], "Short window should be less than long window"
+    assert 0 <= best_params['crossover_threshold'] <= 1, "Crossover threshold should be between 0 and 1"
+    assert best_params['signal_strength'] > 0, "Signal strength should be positive"
+    
+    # Test performance consistency
+    print(f"\n  🔄 Testing performance consistency...")
+    
+    # Re-evaluate best parameters multiple times
+    consistency_scores = []
+    for _ in range(3):
+        metrics = test_optimizer.evaluate_strategy(test_strategy, best_params, test_data)
+        sharpe = metrics.get('sharpe_ratio', 0)
+        win_rate = metrics.get('win_rate', 0)
+        max_dd = abs(metrics.get('max_drawdown', 0))
+        score = (sharpe * 0.5 + win_rate * 0.3 - max_dd * 0.2)
+        consistency_scores.append(score)
+    
+    score_variance = np.var(consistency_scores)
+    print(f"  Consistency scores: {[f'{s:.3f}' for s in consistency_scores]}")
+    print(f"  Score variance: {score_variance:.6f}")
+    
+    # Verify consistency
+    assert score_variance < 1.0, "Performance should be consistent across runs"
+    
+    print("✅ Dynamic strategy crossover grid search test completed")
+
 if __name__ == "__main__":
     pytest.main([__file__]) 

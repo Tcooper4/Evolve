@@ -11,6 +11,9 @@ import logging
 import threading
 from typing import Callable, Optional, Dict, Any, List
 import time
+from datetime import datetime, timedelta
+from collections import deque
+import statistics
 
 import requests
 
@@ -21,16 +24,221 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+class DataFeedWatchdog:
+    """Monitors data feeds for stalls and timestamp gaps."""
+    
+    def __init__(self, 
+                 stall_threshold_seconds: float = 30.0,
+                 gap_threshold_seconds: float = 5.0,
+                 max_gap_count: int = 10,
+                 alert_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None):
+        """Initialize the watchdog.
+        
+        Args:
+            stall_threshold_seconds: Maximum time without data before considering stalled
+            gap_threshold_seconds: Maximum gap between timestamps before alerting
+            max_gap_count: Maximum number of gaps before considering feed unhealthy
+            alert_callback: Callback function for alerts
+        """
+        self.stall_threshold = stall_threshold_seconds
+        self.gap_threshold = gap_threshold_seconds
+        self.max_gap_count = max_gap_count
+        self.alert_callback = alert_callback
+        
+        # Monitoring state
+        self.last_data_times: Dict[str, float] = {}
+        self.gap_counts: Dict[str, int] = {}
+        self.feed_health: Dict[str, str] = {}  # 'healthy', 'warning', 'stalled'
+        self.timestamp_history: Dict[str, deque] = {}
+        self.max_history_size = 100
+        
+        # Statistics
+        self.stats = {
+            'total_alerts': 0,
+            'stall_alerts': 0,
+            'gap_alerts': 0,
+            'recovery_events': 0
+        }
+    
+    def register_feed(self, feed_name: str):
+        """Register a data feed for monitoring.
+        
+        Args:
+            feed_name: Name of the feed to monitor
+        """
+        self.last_data_times[feed_name] = time.time()
+        self.gap_counts[feed_name] = 0
+        self.feed_health[feed_name] = 'healthy'
+        self.timestamp_history[feed_name] = deque(maxlen=self.max_history_size)
+        logger.info(f"Registered feed for monitoring: {feed_name}")
+    
+    def update_feed(self, feed_name: str, timestamp: Optional[float] = None):
+        """Update feed with new data.
+        
+        Args:
+            feed_name: Name of the feed
+            timestamp: Optional timestamp (uses current time if None)
+        """
+        current_time = time.time()
+        self.last_data_times[feed_name] = current_time
+        
+        if timestamp is not None:
+            self.timestamp_history[feed_name].append(timestamp)
+            
+            # Check for timestamp gaps
+            if len(self.timestamp_history[feed_name]) > 1:
+                gaps = []
+                timestamps = list(self.timestamp_history[feed_name])
+                for i in range(1, len(timestamps)):
+                    gap = timestamps[i] - timestamps[i-1]
+                    if gap > self.gap_threshold:
+                        gaps.append(gap)
+                
+                if gaps:
+                    self.gap_counts[feed_name] += len(gaps)
+                    if self.gap_counts[feed_name] > self.max_gap_count:
+                        self._alert_gap(feed_name, gaps)
+        
+        # Check if feed recovered from stall
+        if self.feed_health.get(feed_name) == 'stalled':
+            self.feed_health[feed_name] = 'healthy'
+            self.stats['recovery_events'] += 1
+            logger.info(f"Feed {feed_name} recovered from stall")
+    
+    def check_feeds(self) -> Dict[str, Any]:
+        """Check all feeds for stalls and issues.
+        
+        Returns:
+            Dictionary with feed status information
+        """
+        current_time = time.time()
+        status = {
+            'timestamp': current_time,
+            'feeds': {},
+            'alerts': [],
+            'overall_health': 'healthy'
+        }
+        
+        for feed_name in self.last_data_times:
+            time_since_last = current_time - self.last_data_times[feed_name]
+            
+            feed_status = {
+                'name': feed_name,
+                'last_update': self.last_data_times[feed_name],
+                'time_since_last': time_since_last,
+                'gap_count': self.gap_counts[feed_name],
+                'health': self.feed_health[feed_name],
+                'data_points': len(self.timestamp_history[feed_name])
+            }
+            
+            # Check for stalls
+            if time_since_last > self.stall_threshold:
+                if self.feed_health[feed_name] != 'stalled':
+                    self._alert_stall(feed_name, time_since_last)
+                feed_status['health'] = 'stalled'
+                status['overall_health'] = 'warning'
+            
+            # Check for excessive gaps
+            elif self.gap_counts[feed_name] > self.max_gap_count:
+                feed_status['health'] = 'warning'
+                status['overall_health'] = 'warning'
+            
+            status['feeds'][feed_name] = feed_status
+        
+        return status
+    
+    def _alert_stall(self, feed_name: str, stall_duration: float):
+        """Alert about a stalled feed.
+        
+        Args:
+            feed_name: Name of the stalled feed
+            stall_duration: Duration of the stall in seconds
+        """
+        alert = {
+            'type': 'stall',
+            'feed_name': feed_name,
+            'duration': stall_duration,
+            'threshold': self.stall_threshold,
+            'timestamp': time.time(),
+            'message': f"Data feed '{feed_name}' stalled for {stall_duration:.1f} seconds"
+        }
+        
+        self.feed_health[feed_name] = 'stalled'
+        self.stats['stall_alerts'] += 1
+        self.stats['total_alerts'] += 1
+        
+        logger.warning(alert['message'])
+        
+        if self.alert_callback:
+            self.alert_callback('stall', alert)
+    
+    def _alert_gap(self, feed_name: str, gaps: List[float]):
+        """Alert about timestamp gaps.
+        
+        Args:
+            feed_name: Name of the feed with gaps
+            gaps: List of gap durations
+        """
+        avg_gap = statistics.mean(gaps)
+        max_gap = max(gaps)
+        
+        alert = {
+            'type': 'gap',
+            'feed_name': feed_name,
+            'gap_count': len(gaps),
+            'avg_gap': avg_gap,
+            'max_gap': max_gap,
+            'threshold': self.gap_threshold,
+            'timestamp': time.time(),
+            'message': f"Data feed '{feed_name}' has {len(gaps)} timestamp gaps (avg: {avg_gap:.1f}s, max: {max_gap:.1f}s)"
+        }
+        
+        self.stats['gap_alerts'] += 1
+        self.stats['total_alerts'] += 1
+        
+        logger.warning(alert['message'])
+        
+        if self.alert_callback:
+            self.alert_callback('gap', alert)
+    
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get watchdog statistics.
+        
+        Returns:
+            Dictionary with statistics
+        """
+        return {
+            'stats': self.stats.copy(),
+            'feed_count': len(self.last_data_times),
+            'healthy_feeds': sum(1 for health in self.feed_health.values() if health == 'healthy'),
+            'warning_feeds': sum(1 for health in self.feed_health.values() if health == 'warning'),
+            'stalled_feeds': sum(1 for health in self.feed_health.values() if health == 'stalled')
+        }
+    
+    def reset_statistics(self):
+        """Reset watchdog statistics."""
+        self.stats = {
+            'total_alerts': 0,
+            'stall_alerts': 0,
+            'gap_alerts': 0,
+            'recovery_events': 0
+        }
+        logger.info("Watchdog statistics reset")
+
 class DataListener:
     def __init__(self, 
                  on_price: Optional[Callable[[Dict[str, Any]], None]] = None,
                  on_news: Optional[Callable[[Dict[str, Any]], None]] = None,
-                 volatility_threshold: float = 0.05):
+                 volatility_threshold: float = 0.05,
+                 enable_watchdog: bool = True,
+                 watchdog_config: Optional[Dict[str, Any]] = None):
         """
         Args:
             on_price: Callback for price data
             on_news: Callback for news data
             volatility_threshold: Pause trading if volatility exceeds this (e.g., 0.05 = 5%)
+            enable_watchdog: Whether to enable data feed monitoring
+            watchdog_config: Configuration for the watchdog
         """
         self.on_price = on_price
         self.on_news = on_news
@@ -39,6 +247,37 @@ class DataListener:
         self.last_prices: List[float] = []
         self.price_window = 20  # Number of prices to track for volatility
         self._stop_event = threading.Event()
+        
+        # Watchdog setup
+        self.enable_watchdog = enable_watchdog
+        if enable_watchdog:
+            watchdog_config = watchdog_config or {}
+            self.watchdog = DataFeedWatchdog(
+                stall_threshold_seconds=watchdog_config.get('stall_threshold_seconds', 30.0),
+                gap_threshold_seconds=watchdog_config.get('gap_threshold_seconds', 5.0),
+                max_gap_count=watchdog_config.get('max_gap_count', 10),
+                alert_callback=watchdog_config.get('alert_callback')
+            )
+            self._start_watchdog_monitoring()
+        else:
+            self.watchdog = None
+    
+    def _start_watchdog_monitoring(self):
+        """Start the watchdog monitoring thread."""
+        if self.watchdog:
+            def watchdog_worker():
+                while not self._stop_event.is_set():
+                    try:
+                        status = self.watchdog.check_feeds()
+                        if status['overall_health'] != 'healthy':
+                            logger.warning(f"Data feed health issues detected: {status['overall_health']}")
+                        time.sleep(5)  # Check every 5 seconds
+                    except Exception as e:
+                        logger.error(f"Error in watchdog monitoring: {e}")
+                        time.sleep(10)  # Wait longer on error
+            
+            threading.Thread(target=watchdog_worker, daemon=True).start()
+            logger.info("Started data feed watchdog monitoring")
 
     def start(self, symbols: List[str], news_keywords: List[str],
               binance: bool = True, polygon: bool = False, news: bool = True) -> Dict[str, Any]:
@@ -49,6 +288,15 @@ class DataListener:
         """
         try:
             started_listeners = []
+            
+            # Register feeds with watchdog
+            if self.watchdog:
+                if binance:
+                    self.watchdog.register_feed('binance_price')
+                if polygon:
+                    self.watchdog.register_feed('polygon_price')
+                if news:
+                    self.watchdog.register_feed('news_feed')
             
             if binance:
                 threading.Thread(target=self._run_binance_ws, args=(symbols,), daemon=True).start()
@@ -68,6 +316,7 @@ class DataListener:
                 'started_listeners': started_listeners,
                 'symbols': symbols,
                 'news_keywords': news_keywords,
+                'watchdog_enabled': self.enable_watchdog,
                 'timestamp': time.time()
             }
             
@@ -89,11 +338,18 @@ class DataListener:
         """
         try:
             self._stop_event.set()
+            
+            # Get watchdog statistics if available
+            watchdog_stats = None
+            if self.watchdog:
+                watchdog_stats = self.watchdog.get_statistics()
+            
             return {
                 'success': True,
                 'message': 'Data listeners stopped successfully',
                 'paused': self.paused,
                 'price_count': len(self.last_prices),
+                'watchdog_stats': watchdog_stats,
                 'timestamp': time.time()
             }
             
@@ -126,10 +382,25 @@ class DataListener:
         try:
             async with websockets.connect(url) as ws:
                 while not self._stop_event.is_set():
-                    msg = await ws.recv()
-                    data = json.loads(msg)
-                    price = float(data['data']['p'])
-                    self._handle_price(price)
+                    try:
+                        msg = await ws.recv()
+                        data = json.loads(msg)
+                        price = float(data['data']['p'])
+                        timestamp = data['data'].get('T', time.time() * 1000) / 1000  # Convert to seconds
+                        
+                        # Update watchdog
+                        if self.watchdog:
+                            self.watchdog.update_feed('binance_price', timestamp)
+                        
+                        self._handle_price(price)
+                    except ConnectionError:
+                        logger.warning("Data stream disconnected")
+                        # Attempt to reconnect
+                        await asyncio.sleep(5)
+                        break
+                    except Exception as e:
+                        logger.error(f"Error processing message: {e}")
+                        continue
             
             return {'success': True, 'message': 'Binance WebSocket loop completed', 'timestamp': time.time()}
             
@@ -142,6 +413,12 @@ class DataListener:
         try:
             # Placeholder: Polygon.io WebSocket implementation
             logger.info("Polygon WebSocket streaming not implemented in this template.")
+            
+            # Simulate data updates for watchdog testing
+            if self.watchdog:
+                while not self._stop_event.is_set():
+                    self.watchdog.update_feed('polygon_price', time.time())
+                    time.sleep(1)
             
             return {'success': True, 'message': 'Polygon WebSocket listener placeholder', 'timestamp': time.time()}
             
@@ -183,6 +460,10 @@ class DataListener:
                 news = self._fetch_news(keywords)
                 
                 if news.get('success'):
+                    # Update watchdog
+                    if self.watchdog:
+                        self.watchdog.update_feed('news_feed', time.time())
+                    
                     for item in news.get('news_items', []):
                         if self.on_news:
                             self.on_news(item)
@@ -190,16 +471,39 @@ class DataListener:
                         # Pause trading on significant news
                         if self._is_significant_news(item):
                             self.paused = True
-                            logger.warning(f"Significant news detected: {item.get('title')}. Pausing trading.")
+                            logger.warning(f"Significant news detected: {item.get('title', 'Unknown')}. Pausing trading.")
                 
-                time.sleep(60)  # Poll every minute
+                time.sleep(60)  # Check news every minute
             
             return {'success': True, 'message': 'News listener completed', 'timestamp': time.time()}
             
         except Exception as e:
             logger.error(f"Error in news listener: {e}")
             return {'success': False, 'error': str(e), 'timestamp': time.time()}
-
+    
+    def get_watchdog_status(self) -> Optional[Dict[str, Any]]:
+        """Get watchdog status and statistics.
+        
+        Returns:
+            Watchdog status dictionary or None if watchdog is disabled
+        """
+        if not self.watchdog:
+            return None
+        
+        return {
+            'enabled': True,
+            'status': self.watchdog.check_feeds(),
+            'statistics': self.watchdog.get_statistics()
+        }
+    
+    def reset_watchdog_statistics(self):
+        """Reset watchdog statistics."""
+        if self.watchdog:
+            self.watchdog.reset_statistics()
+            logger.info("Watchdog statistics reset")
+        else:
+            logger.warning("Watchdog is not enabled")
+    
     def _fetch_news(self, keywords: List[str]) -> Dict[str, Any]:
         """Fetch news data from various sources.
         
@@ -295,8 +599,13 @@ class DataListener:
                 'price_count': len(self.last_prices),
                 'volatility_threshold': self.volatility_threshold,
                 'stopped': self._stop_event.is_set(),
+                'watchdog_enabled': self.enable_watchdog,
                 'timestamp': time.time()
             }
+            
+            # Add watchdog status if enabled
+            if self.watchdog:
+                status['watchdog_status'] = self.get_watchdog_status()
             
             # Calculate current volatility if we have enough prices
             if len(self.last_prices) >= 2:

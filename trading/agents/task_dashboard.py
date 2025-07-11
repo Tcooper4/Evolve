@@ -119,6 +119,12 @@ class TaskDashboard:
             st.progress(completion_rate / 100)
             st.text(f"Completion Rate: {completion_rate:.1f}%")
             
+            # Display real-time task completion progress with Streamlit
+            for task in self.task_memory.tasks.values():
+                if hasattr(task, 'completion_pct'):
+                    st.progress(task.completion_pct)
+                    st.text(f"Task {task.task_id}: {task.completion_pct:.1f}% complete")
+            
         return {
             "success": True,
             "message": "Operation completed successfully",

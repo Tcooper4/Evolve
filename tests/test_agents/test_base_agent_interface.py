@@ -507,3 +507,63 @@ class TestBaseAgentErrorRecovery:
         result2 = await agent.run(message="Test 2")
         assert result2.success is True
         assert agent.status.current_error is None 
+
+    def test_abstract_methods_not_implemented_error(self):
+        """Ensure base agent properly raises NotImplementedError when abstract methods are called."""
+        print("\n🚫 Testing Abstract Methods NotImplementedError")
+        
+        # Create a minimal agent that doesn't implement abstract methods
+        class MinimalAgent(BaseAgent):
+            """Minimal agent that doesn't implement abstract methods."""
+            version = "1.0.0"
+            description = "Minimal test agent"
+            author = "Test Author"
+            tags = ["test", "minimal"]
+            capabilities = ["test"]
+            dependencies = []
+            
+            def __init__(self, config: AgentConfig):
+                super().__init__(config)
+        
+        config = AgentConfig(name="minimal_agent")
+        agent = MinimalAgent(config)
+        
+        # Test that calling execute raises NotImplementedError
+        print("  Testing execute method...")
+        with pytest.raises(NotImplementedError) as exc_info:
+            asyncio.run(agent.execute())
+        assert "execute" in str(exc_info.value), "NotImplementedError should mention execute method"
+        print("  ✅ execute method properly raises NotImplementedError")
+        
+        # Test that calling validate_input raises NotImplementedError
+        print("  Testing validate_input method...")
+        with pytest.raises(NotImplementedError) as exc_info:
+            agent.validate_input()
+        assert "validate_input" in str(exc_info.value), "NotImplementedError should mention validate_input method"
+        print("  ✅ validate_input method properly raises NotImplementedError")
+        
+        # Test that calling abstract methods from base class raises NotImplementedError
+        print("  Testing other abstract methods...")
+        
+        # Test get_metadata if it's abstract
+        try:
+            metadata = agent.get_metadata()
+            print("  ⚠️ get_metadata is not abstract")
+        except NotImplementedError as e:
+            print("  ✅ get_metadata properly raises NotImplementedError")
+        
+        # Test that agent can still access base functionality
+        print("  Testing base functionality still works...")
+        assert agent.config == config
+        assert agent.status.name == "minimal_agent"
+        assert agent.is_enabled() is True
+        
+        # Test that agent can be enabled/disabled
+        agent.disable()
+        assert agent.is_enabled() is False
+        agent.enable()
+        assert agent.is_enabled() is True
+        
+        print("  ✅ Base functionality works despite abstract methods")
+        
+        print("✅ Abstract methods NotImplementedError test completed") 

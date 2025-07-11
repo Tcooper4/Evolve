@@ -46,6 +46,183 @@ class SignalData:
     metadata: Dict[str, Any]
     raw_data: Optional[Dict[str, Any]] = None
 
+class SignalValidator:
+    """Validation layer to ensure incoming signal schema matches expected format."""
+    
+    @staticmethod
+    def validate_signal_data(data: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+        """Validate incoming signal data against expected schema.
+        
+        Args:
+            data: Incoming signal data dictionary
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            # Required fields
+            required_fields = ['source', 'symbol', 'timestamp', 'signal_type', 'value', 'confidence']
+            for field in required_fields:
+                if field not in data:
+                    return False, f"Missing required field: {field}"
+            
+            # Type validation
+            if not isinstance(data['source'], str):
+                return False, "source must be a string"
+            
+            if not isinstance(data['symbol'], str):
+                return False, "symbol must be a string"
+            
+            if not isinstance(data['signal_type'], str):
+                return False, "signal_type must be a string"
+            
+            if not isinstance(data['value'], (int, float)):
+                return False, "value must be a number"
+            
+            if not isinstance(data['confidence'], (int, float)):
+                return False, "confidence must be a number"
+            
+            # Value range validation
+            if not (0 <= data['confidence'] <= 1):
+                return False, "confidence must be between 0 and 1"
+            
+            # Timestamp validation
+            try:
+                if isinstance(data['timestamp'], str):
+                    datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
+                elif not isinstance(data['timestamp'], datetime):
+                    return False, "timestamp must be a datetime object or ISO string"
+            except ValueError:
+                return False, "Invalid timestamp format"
+            
+            # Optional metadata validation
+            if 'metadata' in data and not isinstance(data['metadata'], dict):
+                return False, "metadata must be a dictionary"
+            
+            return True, None
+            
+        except Exception as e:
+            return False, f"Validation error: {str(e)}"
+    
+    @staticmethod
+    def validate_sentiment_data(data: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+        """Validate sentiment data against expected schema.
+        
+        Args:
+            data: Incoming sentiment data dictionary
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            # Required fields for sentiment data
+            required_fields = ['symbol', 'timestamp', 'sentiment_score', 'sentiment_label', 'source']
+            for field in required_fields:
+                if field not in data:
+                    return False, f"Missing required field: {field}"
+            
+            # Type validation
+            if not isinstance(data['symbol'], str):
+                return False, "symbol must be a string"
+            
+            if not isinstance(data['sentiment_score'], (int, float)):
+                return False, "sentiment_score must be a number"
+            
+            if not isinstance(data['sentiment_label'], str):
+                return False, "sentiment_label must be a string"
+            
+            if not isinstance(data['source'], str):
+                return False, "source must be a string"
+            
+            # Value range validation
+            if not (-1 <= data['sentiment_score'] <= 1):
+                return False, "sentiment_score must be between -1 and 1"
+            
+            # Valid sentiment labels
+            valid_labels = ['positive', 'negative', 'neutral']
+            if data['sentiment_label'] not in valid_labels:
+                return False, f"sentiment_label must be one of: {valid_labels}"
+            
+            # Timestamp validation
+            try:
+                if isinstance(data['timestamp'], str):
+                    datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
+                elif not isinstance(data['timestamp'], datetime):
+                    return False, "timestamp must be a datetime object or ISO string"
+            except ValueError:
+                return False, "Invalid timestamp format"
+            
+            return True, None
+            
+        except Exception as e:
+            return False, f"Validation error: {str(e)}"
+
+    @staticmethod
+    def validate_options_flow_data(data: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+        """Validate options flow data against expected schema."""
+        try:
+            required_fields = ['symbol', 'timestamp', 'option_type', 'strike', 'expiry', 'side', 'volume', 'open_interest', 'source']
+            for field in required_fields:
+                if field not in data:
+                    return False, f"Missing required field: {field}"
+            if not isinstance(data['symbol'], str):
+                return False, "symbol must be a string"
+            if not isinstance(data['option_type'], str) or data['option_type'] not in ['call', 'put']:
+                return False, "option_type must be 'call' or 'put'"
+            if not isinstance(data['strike'], (int, float)) or data['strike'] <= 0:
+                return False, "strike must be a positive number"
+            if not isinstance(data['expiry'], str):
+                return False, "expiry must be a string (date)"
+            if not isinstance(data['side'], str) or data['side'] not in ['buy', 'sell']:
+                return False, "side must be 'buy' or 'sell'"
+            if not isinstance(data['volume'], int) or data['volume'] < 0:
+                return False, "volume must be a non-negative integer"
+            if not isinstance(data['open_interest'], int) or data['open_interest'] < 0:
+                return False, "open_interest must be a non-negative integer"
+            if not isinstance(data['source'], str):
+                return False, "source must be a string"
+            # Timestamp validation
+            try:
+                if isinstance(data['timestamp'], str):
+                    datetime.fromisoformat(data['timestamp'].replace('Z', '+00:00'))
+                elif not isinstance(data['timestamp'], datetime):
+                    return False, "timestamp must be a datetime object or ISO string"
+            except ValueError:
+                return False, "Invalid timestamp format"
+            return True, None
+        except Exception as e:
+            return False, f"Validation error: {str(e)}"
+
+    @staticmethod
+    def validate_macro_indicator_data(data: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+        """Validate macro indicator data against expected schema."""
+        try:
+            required_fields = ['name', 'value', 'unit', 'frequency', 'last_updated', 'source']
+            for field in required_fields:
+                if field not in data:
+                    return False, f"Missing required field: {field}"
+            if not isinstance(data['name'], str):
+                return False, "name must be a string"
+            if not isinstance(data['value'], (int, float)):
+                return False, "value must be a number"
+            if not isinstance(data['unit'], str):
+                return False, "unit must be a string"
+            if not isinstance(data['frequency'], str):
+                return False, "frequency must be a string"
+            if not isinstance(data['source'], str):
+                return False, "source must be a string"
+            # Timestamp validation
+            try:
+                if isinstance(data['last_updated'], str):
+                    datetime.fromisoformat(data['last_updated'].replace('Z', '+00:00'))
+                elif not isinstance(data['last_updated'], datetime):
+                    return False, "last_updated must be a datetime object or ISO string"
+            except ValueError:
+                return False, "Invalid last_updated format"
+            return True, None
+        except Exception as e:
+            return False, f"Validation error: {str(e)}"
+
 @dataclass
 class SentimentData:
     """Sentiment analysis results."""
@@ -97,8 +274,17 @@ class NewsSentimentCollector:
             gnews_data = self._get_gnews_sentiment(symbol, days_back)
             sentiment_data.extend(gnews_data)
         
+        # Validate and filter
+        validated = []
+        for record in sentiment_data:
+            is_valid, err = SignalValidator.validate_sentiment_data(asdict(record))
+            if is_valid:
+                validated.append(record)
+            else:
+                logger.warning(f"Invalid news sentiment record for {symbol}: {err} | Data: {record}")
+        
         # Aggregate and normalize sentiment
-        aggregated_data = self._aggregate_sentiment(sentiment_data)
+        aggregated_data = self._aggregate_sentiment(validated)
         
         return aggregated_data
     
@@ -328,8 +514,17 @@ class TwitterSentimentCollector:
                     confidence=0.6
                 ))
             
+            # Validate and filter
+            validated = []
+            for record in sentiment_data:
+                is_valid, err = SignalValidator.validate_sentiment_data(asdict(record))
+                if is_valid:
+                    validated.append(record)
+                else:
+                    logger.warning(f"Invalid twitter sentiment record for {symbol}: {err} | Data: {record}")
+            
             # Aggregate sentiment
-            aggregated_data = self._aggregate_sentiment(sentiment_data)
+            aggregated_data = self._aggregate_sentiment(validated)
             
             return aggregated_data
             
@@ -476,8 +671,17 @@ class RedditSentimentCollector:
                     logger.error(f"Error getting posts from r/{subreddit_name}: {e}")
                     continue
             
+            # Validate and filter
+            validated = []
+            for record in sentiment_data:
+                is_valid, err = SignalValidator.validate_sentiment_data(asdict(record))
+                if is_valid:
+                    validated.append(record)
+                else:
+                    logger.warning(f"Invalid reddit sentiment record for {symbol}: {err} | Data: {record}")
+            
             # Aggregate sentiment
-            aggregated_data = self._aggregate_sentiment(sentiment_data)
+            aggregated_data = self._aggregate_sentiment(validated)
             
             return aggregated_data
             
@@ -595,7 +799,20 @@ class MacroIndicatorCollector:
                 try:
                     data = self._get_fred_series(series_id, days_back)
                     if data is not None:
-                        indicator_data[indicator_name] = data
+                        # Validate macro indicator meta
+                        meta = {
+                            'name': indicator_name,
+                            'value': float(data.iloc[-1]) if not data.empty else None,
+                            'unit': 'unknown',
+                            'frequency': 'unknown',
+                            'last_updated': data.index[-1] if not data.empty else None,
+                            'source': 'FRED'
+                        }
+                        is_valid, err = SignalValidator.validate_macro_indicator_data(meta)
+                        if is_valid:
+                            indicator_data[indicator_name] = data
+                        else:
+                            logger.warning(f"Invalid macro indicator meta for {indicator_name}: {err} | Meta: {meta}")
                 except Exception as e:
                     logger.error(f"Error getting {indicator_name}: {e}")
                     continue
@@ -683,7 +900,15 @@ class OptionsFlowCollector:
         simulated_data = self._generate_simulated_options_flow(symbol, days_back)
         options_data.extend(simulated_data)
         
-        return options_data
+        # Validate and filter
+        validated = []
+        for record in options_data:
+            is_valid, err = SignalValidator.validate_options_flow_data(record)
+            if is_valid:
+                validated.append(record)
+            else:
+                logger.warning(f"Invalid options flow record for {symbol}: {err} | Data: {record}")
+        return validated
     
     def _get_tradier_options_flow(self, symbol: str, days_back: int) -> List[Dict[str, Any]]:
         """Get options flow from Tradier API."""
@@ -772,7 +997,6 @@ class ExternalSignalsManager:
                 cache_time, cached_data = self.signal_cache[cache_key]
                 if datetime.now() - cache_time < self.cache_duration:
                     return cached_data
-            
             # Collect all signals
             signals = {
                 'news_sentiment': self.news_collector.get_news_sentiment(symbol, days_back),
@@ -781,12 +1005,46 @@ class ExternalSignalsManager:
                 'macro_indicators': self.macro_collector.get_macro_indicators(days_back),
                 'options_flow': self.options_collector.get_options_flow(symbol, days_back)
             }
-            
+            # Final validation and filtering
+            for key in ['news_sentiment', 'twitter_sentiment', 'reddit_sentiment']:
+                valid = []
+                for record in signals.get(key, []):
+                    is_valid, err = SignalValidator.validate_sentiment_data(asdict(record))
+                    if is_valid:
+                        valid.append(record)
+                    else:
+                        logger.warning(f"Manager: Invalid {key} record for {symbol}: {err} | Data: {record}")
+                signals[key] = valid
+            # Macro indicators: validate meta only (series already validated in collector)
+            macro_valid = {}
+            for name, series in signals.get('macro_indicators', {}).items():
+                if not series.empty:
+                    meta = {
+                        'name': name,
+                        'value': float(series.iloc[-1]),
+                        'unit': 'unknown',
+                        'frequency': 'unknown',
+                        'last_updated': series.index[-1],
+                        'source': 'FRED'
+                    }
+                    is_valid, err = SignalValidator.validate_macro_indicator_data(meta)
+                    if is_valid:
+                        macro_valid[name] = series
+                    else:
+                        logger.warning(f"Manager: Invalid macro indicator meta for {name}: {err} | Meta: {meta}")
+            signals['macro_indicators'] = macro_valid
+            # Options flow
+            options_valid = []
+            for record in signals.get('options_flow', []):
+                is_valid, err = SignalValidator.validate_options_flow_data(record)
+                if is_valid:
+                    options_valid.append(record)
+                else:
+                    logger.warning(f"Manager: Invalid options flow record for {symbol}: {err} | Data: {record}")
+            signals['options_flow'] = options_valid
             # Cache the results
             self.signal_cache[cache_key] = (datetime.now(), signals)
-            
             return signals
-            
         except Exception as e:
             logger.error(f"Error getting all signals for {symbol}: {e}")
             return {}

@@ -81,13 +81,14 @@ class ScheduledTask:
 class TaskScheduler:
     """Advanced task scheduler with comprehensive features."""
     
-    def __init__(self, max_workers: int = 4, task_queue_size: int = 100):
+    def __init__(self, max_workers: int = 4, task_queue_size: int = 100, test_mode: bool = False):
         """
         Initialize the task scheduler.
         
         Args:
             max_workers: Maximum number of worker threads
             task_queue_size: Size of the task queue
+            test_mode: If True, simulate scheduling without running jobs
         """
         self.max_workers = max_workers
         self.task_queue = queue.PriorityQueue(maxsize=task_queue_size)
@@ -96,6 +97,7 @@ class TaskScheduler:
         self.workers: List[threading.Thread] = []
         self.scheduler_thread: Optional[threading.Thread] = None
         self.logger = logging.getLogger(__name__)
+        self.test_mode = test_mode
         
         # Performance tracking
         self.stats = {
@@ -103,14 +105,16 @@ class TaskScheduler:
             'successful_tasks': 0,
             'failed_tasks': 0,
             'total_runtime': 0.0,
-            'start_time': None
+            'start_time': None,
+            'test_mode_executions': 0
         }
         
         # Setup signal handlers for graceful shutdown
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
         
-        self.logger.info(f"TaskScheduler initialized with {max_workers} workers")
+        mode_str = "TEST MODE" if test_mode else "NORMAL MODE"
+        self.logger.info(f"TaskScheduler initialized with {max_workers} workers in {mode_str}")
     
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals."""
@@ -504,6 +508,28 @@ class TaskScheduler:
             self.logger.error(f"Error loading scheduler state: {e}")
             return False
 
+    def enable_test_mode(self) -> None:
+        """Enable test mode to simulate scheduling without running jobs."""
+        self.test_mode = True
+        self.logger.info("Test mode enabled - tasks will be simulated without execution")
+    
+    def disable_test_mode(self) -> None:
+        """Disable test mode to allow normal task execution."""
+        self.test_mode = False
+        self.logger.info("Test mode disabled - tasks will execute normally")
+    
+    def is_test_mode(self) -> bool:
+        """Check if test mode is enabled."""
+        return self.test_mode
+    
+    def get_test_mode_stats(self) -> Dict[str, Any]:
+        """Get statistics specific to test mode."""
+        return {
+            'test_mode_enabled': self.test_mode,
+            'test_mode_executions': self.stats.get('test_mode_executions', 0),
+            'simulated_tasks': len([t for t in self.tasks.values() if t.status == TaskStatus.COMPLETED and self.test_mode])
+        }
+
 # Global scheduler instance
 _scheduler: Optional[TaskScheduler] = None
 
@@ -520,6 +546,13 @@ def schedule_task(task_id: str, name: str, func: Callable,
                  **kwargs) -> bool:
     """Schedule a task using the global scheduler."""
     return get_scheduler().add_task(task_id, name, func, schedule_type, schedule_config, **kwargs)
+
+async def schedule_task_async(task_id: str, name: str, func: Callable, 
+                             schedule_type: ScheduleType, schedule_config: Dict[str, Any],
+                             **kwargs) -> bool:
+    """Async convenience function to schedule a task."""
+    scheduler = get_scheduler()
+    return scheduler.add_task(task_id, name, func, schedule_type, schedule_config, **kwargs)
 
 def start_scheduler() -> None:
     """Start the global scheduler."""

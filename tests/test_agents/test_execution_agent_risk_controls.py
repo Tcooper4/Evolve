@@ -463,6 +463,164 @@ class TestRiskControlsIntegration:
         with pytest.raises(ValueError):
             RiskThreshold("invalid_type", 0.02)
 
+    def test_stop_loss_and_max_drawdown_triggers(self, execution_agent, sample_market_data):
+        """Test that stop-loss and max drawdown rules trigger correctly."""
+        print("\n🛑 Testing Stop-Loss and Max Drawdown Triggers")
+        
+        # Create a mock position
+        position = type('Position', (), {
+            'symbol': 'AAPL',
+            'direction': TradeDirection.LONG,
+            'entry_price': 150.00,
+            'entry_time': datetime.now(),
+            'size': 100,
+            'current_price': 150.00
+        })()
+        
+        # Set up risk controls
+        risk_controls = RiskControls(
+            stop_loss=RiskThreshold(RiskThresholdType.PERCENTAGE, 0.02),  # 2% stop loss
+            take_profit=RiskThreshold(RiskThresholdType.PERCENTAGE, 0.06),  # 6% take profit
+            max_position_size=0.15,
+            max_daily_loss=0.03,  # 3% max daily loss
+            volatility_limit=0.4
+        )
+        
+        # Test stop-loss trigger
+        print("  Testing stop-loss trigger...")
+        
+        # Simulate price dropping below stop loss
+        stop_loss_price = 150.00 * (1 - 0.02)  # 147.00
+        current_price = 146.50  # Below stop loss
+        
+        should_exit_stop_loss = execution_agent._should_exit_position(
+            position, current_price, stop_loss_price, "stop_loss"
+        )
+        
+        assert should_exit_stop_loss, "Should exit when price drops below stop loss"
+        print(f"  ✅ Stop-loss triggered at {current_price} (below {stop_loss_price})")
+        
+        # Test max drawdown trigger
+        print("  Testing max drawdown trigger...")
+        
+        # Set up portfolio state with significant drawdown
+        execution_agent.portfolio_state = {
+            'total_value': 100000,
+            'daily_pnl': -2500,  # -2.5% daily loss
+            'max_daily_loss': 3000,  # 3% max daily loss
+            'current_drawdown': -0.08,  # -8% drawdown
+            'max_drawdown': -0.05  # 5% max drawdown limit
+        }
+        
+        # Test max drawdown trigger
+        should_exit_drawdown = execution_agent._check_max_drawdown_trigger(
+            position, risk_controls
+        )
+        
+        assert should_exit_drawdown, "Should exit when max drawdown is exceeded"
+        print(f"  ✅ Max drawdown triggered: current={execution_agent.portfolio_state['current_drawdown']:.1%}, max={execution_agent.portfolio_state['max_drawdown']:.1%}")
+        
+        # Test daily loss limit trigger
+        print("  Testing daily loss limit trigger...")
+        
+        should_exit_daily_loss = execution_agent._check_daily_loss_limit(
+            position, risk_controls
+        )
+        
+        assert should_exit_daily_loss, "Should exit when daily loss limit is exceeded"
+        print(f"  ✅ Daily loss limit triggered: daily_pnl={execution_agent.portfolio_state['daily_pnl']}, max_daily_loss={execution_agent.portfolio_state['max_daily_loss']}")
+        
+        # Test take-profit trigger
+        print("  Testing take-profit trigger...")
+        
+        # Simulate price rising above take profit
+        take_profit_price = 150.00 * (1 + 0.06)  # 159.00
+        current_price = 160.00  # Above take profit
+        
+        should_exit_take_profit = execution_agent._should_exit_position(
+            position, current_price, take_profit_price, "take_profit"
+        )
+        
+        assert should_exit_take_profit, "Should exit when price rises above take profit"
+        print(f"  ✅ Take-profit triggered at {current_price} (above {take_profit_price})")
+        
+        # Test that triggers work for short positions
+        print("  Testing triggers for short positions...")
+        
+        short_position = type('Position', (), {
+            'symbol': 'AAPL',
+            'direction': TradeDirection.SHORT,
+            'entry_price': 150.00,
+            'entry_time': datetime.now(),
+            'size': 100,
+            'current_price': 150.00
+        })()
+        
+        # For short position, stop loss is above entry price
+        short_stop_loss_price = 150.00 * (1 + 0.02)  # 153.00
+        short_current_price = 154.00  # Above stop loss for short
+        
+        should_exit_short_stop_loss = execution_agent._should_exit_position(
+            short_position, short_current_price, short_stop_loss_price, "stop_loss"
+        )
+        
+        assert should_exit_short_stop_loss, "Should exit short when price rises above stop loss"
+        print(f"  ✅ Short stop-loss triggered at {short_current_price} (above {short_stop_loss_price})")
+        
+        # Test trigger priority
+        print("  Testing trigger priority...")
+        
+        # Create a scenario where multiple triggers could fire
+        execution_agent.portfolio_state = {
+            'total_value': 100000,
+            'daily_pnl': -2500,
+            'max_daily_loss': 3000,
+            'current_drawdown': -0.08,
+            'max_drawdown': -0.05
+        }
+        
+        # Check which trigger has highest priority
+        exit_reason = execution_agent._determine_exit_reason(
+            position, 146.50, stop_loss_price, risk_controls
+        )
+        
+        assert exit_reason is not None, "Should determine an exit reason"
+        print(f"  ✅ Exit reason determined: {exit_reason}")
+        
+        # Test trigger thresholds are respected
+        print("  Testing trigger thresholds are respected...")
+        
+        # Test price just above stop loss (should not trigger)
+        current_price_above_stop = 147.50  # Just above stop loss
+        should_not_exit = execution_agent._should_exit_position(
+            position, current_price_above_stop, stop_loss_price, "stop_loss"
+        )
+        
+        assert not should_not_exit, "Should not exit when price is above stop loss"
+        print(f"  ✅ Stop-loss not triggered at {current_price_above_stop} (above {stop_loss_price})")
+        
+        # Test portfolio state just below limits (should not trigger)
+        execution_agent.portfolio_state = {
+            'total_value': 100000,
+            'daily_pnl': -2000,  # Just below daily loss limit
+            'max_daily_loss': 3000,
+            'current_drawdown': -0.04,  # Just below max drawdown
+            'max_drawdown': -0.05
+        }
+        
+        should_not_exit_daily = execution_agent._check_daily_loss_limit(
+            position, risk_controls
+        )
+        should_not_exit_drawdown = execution_agent._check_max_drawdown_trigger(
+            position, risk_controls
+        )
+        
+        assert not should_not_exit_daily, "Should not exit when daily loss is below limit"
+        assert not should_not_exit_drawdown, "Should not exit when drawdown is below limit"
+        print(f"  ✅ Limits respected: daily_pnl={execution_agent.portfolio_state['daily_pnl']}, drawdown={execution_agent.portfolio_state['current_drawdown']:.1%}")
+        
+        print("✅ Stop-loss and max drawdown triggers test completed")
+
 
 if __name__ == "__main__":
     pytest.main([__file__]) 

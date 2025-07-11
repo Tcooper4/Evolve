@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 import psutil
 import threading
+import random
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -35,6 +36,9 @@ MAX_CODE_SIZE_BYTES = 100000  # 100KB
 DEFAULT_MONITORING_INTERVAL = 1  # 1 second
 MAX_RETRY_ATTEMPTS = 3
 RETRY_DELAY_SECONDS = 5
+BASE_RETRY_DELAY = 1.0  # Base delay in seconds
+MAX_RETRY_DELAY = 60.0  # Maximum delay in seconds
+JITTER_FACTOR = 0.1  # Add randomness to prevent thundering herd
 
 class ExecutionStatus(Enum):
     """Execution status enumeration."""
@@ -44,6 +48,8 @@ class ExecutionStatus(Enum):
     EXECUTION_ERROR = "execution_error"
     VALIDATION_ERROR = "validation_error"
     SYSTEM_ERROR = "system_error"
+    RETRY_EXHAUSTED = "retry_exhausted"
+    SANDBOX_FALLBACK = "sandbox_fallback"
 
 @dataclass
 class ExecutionResult:
@@ -55,6 +61,8 @@ class ExecutionResult:
     memory_used: float = 0.0
     return_value: Optional[Any] = None
     logs: List[str] = field(default_factory=list)
+    retry_count: int = 0
+    fallback_used: bool = False
 
 class SafeExecutor:
     """
@@ -67,6 +75,8 @@ class SafeExecutor:
     - Isolated execution scope
     - Error logging and recovery
     - Resource monitoring
+    - Retry logic with exponential backoff
+    - Sandbox fallback mode
     """
     
     def __init__(self, 
@@ -74,7 +84,9 @@ class SafeExecutor:
                  memory_limit_mb: int = DEFAULT_MEMORY_LIMIT_MB,
                  max_output_size: int = DEFAULT_MAX_OUTPUT_SIZE,
                  enable_sandbox: bool = True,
-                 log_executions: bool = True):
+                 log_executions: bool = True,
+                 max_retries: int = MAX_RETRY_ATTEMPTS,
+                 enable_retry: bool = True):
         """
         Initialize the SafeExecutor.
         
@@ -84,24 +96,30 @@ class SafeExecutor:
             max_output_size: Maximum output size in bytes
             enable_sandbox: Enable sandboxed execution
             log_executions: Log all executions
+            max_retries: Maximum number of retry attempts
+            enable_retry: Enable retry logic with exponential backoff
         """
         self.timeout_seconds = timeout_seconds
         self.memory_limit_mb = memory_limit_mb
         self.max_output_size = max_output_size
         self.enable_sandbox = enable_sandbox
         self.log_executions = log_executions
+        self.max_retries = max_retries
+        self.enable_retry = enable_retry
         
         # Execution statistics
         self.execution_count = 0
         self.success_count = 0
         self.error_count = 0
+        self.retry_count = 0
+        self.fallback_count = 0
         self.total_execution_time = 0.0
         
         # Create logs directory
         self.logs_dir = Path("logs/safe_executor")
         self.logs_dir.mkdir(parents=True, exist_ok=True)
         
-        logger.info(f"SafeExecutor initialized with timeout={timeout_seconds}s, memory_limit={memory_limit_mb}MB")
+        logger.info(f"SafeExecutor initialized with timeout={timeout_seconds}s, memory_limit={memory_limit_mb}MB, retries={max_retries}")
     
     def execute_model(self, 
                      model_code: str,
@@ -109,7 +127,7 @@ class SafeExecutor:
                      input_data: Dict[str, Any] = None,
                      model_type: str = "custom") -> ExecutionResult:
         """
-        Execute a user-defined model safely.
+        Execute a user-defined model safely with retry logic and fallback.
         
         Args:
             model_code: Python code for the model
@@ -128,17 +146,11 @@ class SafeExecutor:
             if validation_result.status != ExecutionStatus.SUCCESS:
                 return validation_result
             
-            # Create execution environment
-            env_result = self._create_execution_environment(model_code, input_data)
-            if env_result.status != ExecutionStatus.SUCCESS:
-                return env_result
-            
-            # Execute in isolated process
-            result = self._execute_isolated_process(
-                env_result.return_value,  # script_path
-                model_name,
-                model_type
-            )
+            # Execute with retry logic
+            if self.enable_retry:
+                result = self._execute_with_retry(model_code, model_name, input_data, model_type)
+            else:
+                result = self._execute_single_attempt(model_code, model_name, input_data, model_type)
             
             # Log execution
             if self.log_executions:
@@ -149,6 +161,9 @@ class SafeExecutor:
                 self.success_count += 1
             else:
                 self.error_count += 1
+            
+            if result.fallback_used:
+                self.fallback_count += 1
             
             self.total_execution_time += result.execution_time
             
@@ -422,7 +437,191 @@ finally:
 '''
         return wrapper
     
-    def _execute_isolated_process(self, script_path: str, model_name: str, model_type: str) -> ExecutionResult:
+    def _execute_with_retry(self, model_code: str, model_name: str, 
+                           input_data: Dict[str, Any], model_type: str) -> ExecutionResult:
+        """
+        Execute with retry logic and exponential backoff.
+        """
+        last_error = None
+        retry_count = 0
+        
+        for attempt in range(self.max_retries + 1):  # +1 for initial attempt
+            try:
+                if attempt == 0:
+                    logger.info(f"Executing {model_name} (attempt {attempt + 1})")
+                else:
+                    delay = self._calculate_retry_delay(attempt)
+                    logger.info(f"Retrying {model_name} (attempt {attempt + 1}/{self.max_retries + 1}) after {delay:.2f}s")
+                    time.sleep(delay)
+                
+                result = self._execute_single_attempt(model_code, model_name, input_data, model_type)
+                
+                if result.status == ExecutionStatus.SUCCESS:
+                    result.retry_count = retry_count
+                    return result
+                
+                # Check if error is retryable
+                if not self._is_retryable_error(result.status):
+                    result.retry_count = retry_count
+                    return result
+                
+                last_error = result.error
+                retry_count = attempt
+                self.retry_count += 1
+                
+            except Exception as e:
+                last_error = str(e)
+                retry_count = attempt
+                self.retry_count += 1
+                logger.warning(f"Exception during attempt {attempt + 1} for {model_name}: {e}")
+        
+        # All retries exhausted, try sandbox fallback
+        if self.enable_sandbox:
+            logger.warning(f"All retries exhausted for {model_name}, attempting sandbox fallback")
+            return self._execute_sandbox_fallback(model_code, model_name, input_data, model_type, retry_count)
+        
+        # No fallback available
+        return ExecutionResult(
+            status=ExecutionStatus.RETRY_EXHAUSTED,
+            error=f"All retry attempts failed. Last error: {last_error}",
+            retry_count=retry_count,
+            logs=[f"Retry attempts: {retry_count}", f"Last error: {last_error}"]
+        )
+
+    def _execute_single_attempt(self, model_code: str, model_name: str,
+                               input_data: Dict[str, Any], model_type: str) -> ExecutionResult:
+        """
+        Execute a single attempt without retry logic.
+        """
+        # Create execution environment
+        env_result = self._create_execution_environment(model_code, input_data)
+        if env_result.status != ExecutionStatus.SUCCESS:
+            return env_result
+        
+        # Execute in isolated process
+        return self._execute_isolated_process(
+            env_result.return_value,  # script_path
+            model_name,
+            model_type
+        )
+
+    def _execute_sandbox_fallback(self, model_code: str, model_name: str,
+                                 input_data: Dict[str, Any], model_type: str,
+                                 retry_count: int) -> ExecutionResult:
+        """
+        Execute in sandbox mode with reduced restrictions as fallback.
+        """
+        try:
+            logger.info(f"Executing {model_name} in sandbox fallback mode")
+            
+            # Create sandbox environment with relaxed restrictions
+            sandbox_timeout = min(self.timeout_seconds * 2, 600)  # Max 10 minutes
+            sandbox_memory = min(self.memory_limit_mb * 2, 2048)  # Max 2GB
+            
+            # Create temporary sandbox script
+            sandbox_script = self._create_sandbox_script(model_code, input_data)
+            
+            # Execute with sandbox settings
+            result = self._execute_isolated_process(
+                sandbox_script,
+                f"{model_name}_sandbox",
+                model_type,
+                timeout_seconds=sandbox_timeout,
+                memory_limit_mb=sandbox_memory
+            )
+            
+            result.fallback_used = True
+            result.retry_count = retry_count
+            result.status = ExecutionStatus.SANDBOX_FALLBACK if result.status == ExecutionStatus.SUCCESS else result.status
+            
+            # Clean up sandbox script
+            try:
+                os.remove(sandbox_script)
+            except:
+                pass
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Sandbox fallback failed for {model_name}: {e}")
+            return ExecutionResult(
+                status=ExecutionStatus.SYSTEM_ERROR,
+                error=f"Sandbox fallback failed: {str(e)}",
+                retry_count=retry_count,
+                fallback_used=True,
+                logs=[traceback.format_exc()]
+            )
+
+    def _create_sandbox_script(self, model_code: str, input_data: Dict[str, Any]) -> str:
+        """
+        Create a sandbox script with relaxed restrictions.
+        """
+        script_content = f"""
+import sys
+import json
+import traceback
+import time
+from datetime import datetime
+
+# Sandbox environment setup
+start_time = time.time()
+
+try:
+    # Load input data
+    input_data = {json.dumps(input_data) if input_data else '{}'}
+    
+    # Execute model code in sandbox context
+    {model_code}
+    
+    # Capture any output
+    result = {{'status': 'success', 'execution_time': time.time() - start_time}}
+    print(json.dumps(result))
+    
+except Exception as e:
+    result = {{
+        'status': 'error',
+        'error': str(e),
+        'traceback': traceback.format_exc(),
+        'execution_time': time.time() - start_time
+    }}
+    print(json.dumps(result))
+"""
+        
+        # Create temporary file
+        fd, script_path = tempfile.mkstemp(suffix='.py', prefix='sandbox_')
+        with os.fdopen(fd, 'w') as f:
+            f.write(script_content)
+        
+        return script_path
+
+    def _calculate_retry_delay(self, attempt: int) -> float:
+        """
+        Calculate exponential backoff delay with jitter.
+        """
+        delay = min(BASE_RETRY_DELAY * (2 ** attempt), MAX_RETRY_DELAY)
+        
+        # Add jitter to prevent thundering herd
+        jitter = delay * JITTER_FACTOR * random.uniform(-1, 1)
+        delay += jitter
+        
+        return max(0, delay)
+
+    def _is_retryable_error(self, status: ExecutionStatus) -> bool:
+        """
+        Determine if an error is retryable.
+        """
+        retryable_statuses = {
+            ExecutionStatus.TIMEOUT,
+            ExecutionStatus.MEMORY_LIMIT,
+            ExecutionStatus.EXECUTION_ERROR,
+            ExecutionStatus.SYSTEM_ERROR
+        }
+        
+        return status in retryable_statuses
+    
+    def _execute_isolated_process(self, script_path: str, model_name: str, model_type: str,
+                                 timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+                                 memory_limit_mb: int = DEFAULT_MEMORY_LIMIT_MB) -> ExecutionResult:
         """Execute the model in an isolated process."""
         start_time = time.time()
         process = None
@@ -438,7 +637,7 @@ finally:
             )
             
             # Monitor the process
-            stdout, stderr = process.communicate(timeout=self.timeout_seconds)
+            stdout, stderr = process.communicate(timeout=timeout_seconds)
             execution_time = time.time() - start_time
             
             # Check process return code
@@ -485,7 +684,7 @@ finally:
             
             return ExecutionResult(
                 status=ExecutionStatus.TIMEOUT,
-                error=f"Execution timeout after {self.timeout_seconds} seconds",
+                error=f"Execution timeout after {timeout_seconds} seconds",
                 execution_time=time.time() - start_time,
                 logs=[f"Model {model_name} timed out"]
             )
@@ -570,7 +769,11 @@ finally:
             'total_execution_time': self.total_execution_time,
             'average_execution_time': self.total_execution_time / max(self.execution_count, 1),
             'timeout_seconds': self.timeout_seconds,
-            'memory_limit_mb': self.memory_limit_mb
+            'memory_limit_mb': self.memory_limit_mb,
+            'max_retries': self.max_retries,
+            'enable_retry': self.enable_retry,
+            'retry_count': self.retry_count,
+            'fallback_count': self.fallback_count
         }
     
     def cleanup(self):

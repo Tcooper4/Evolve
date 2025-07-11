@@ -13,6 +13,10 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
+import logging
+import warnings
+
+logger = logging.getLogger(__name__)
 
 class TimeSeriesPlotter:
     """Class for plotting time series data with performance metrics."""
@@ -43,9 +47,13 @@ class TimeSeriesPlotter:
         xlabel: str = 'Time',
         ylabel: str = 'Value',
         figsize: Optional[tuple] = None,
-        show: bool = True
+        show: bool = True,
+        overlays: Optional[Dict[str, pd.Series]] = None,
+        confidence_bands: Optional[Tuple[pd.Series, pd.Series]] = None,
+        show_overlays: bool = True,
+        show_confidence: bool = True
     ) -> Union[plt.Figure, go.Figure]:
-        """Plot a single time series.
+        """Plot a single time series with optional overlays and confidence bands.
         
         Args:
             data: Time series data
@@ -54,36 +62,172 @@ class TimeSeriesPlotter:
             ylabel: Y-axis label
             figsize: Figure size (matplotlib only)
             show: Whether to display the plot
+            overlays: Dictionary of overlay series to plot
+            confidence_bands: Tuple of (lower, upper) confidence bands
+            show_overlays: Whether to show overlays
+            show_confidence: Whether to show confidence bands
             
         Returns:
             Matplotlib or Plotly figure
         """
+        # Check for empty series
+        if data.empty:
+            warnings.warn("Input data series is empty")
+            return self._create_empty_plot(title, "No data available")
+        
         if self.backend == 'matplotlib':
-            fig, ax = plt.subplots(figsize=figsize or self.figsize)
-            data.plot(ax=ax)
+            return self._plot_time_series_matplotlib(
+                data, title, xlabel, ylabel, figsize, show,
+                overlays, confidence_bands, show_overlays, show_confidence
+            )
+        else:
+            return self._plot_time_series_plotly(
+                data, title, xlabel, ylabel, show,
+                overlays, confidence_bands, show_overlays, show_confidence
+            )
+    
+    def _plot_time_series_matplotlib(
+        self,
+        data: pd.Series,
+        title: str,
+        xlabel: str,
+        ylabel: str,
+        figsize: Optional[tuple],
+        show: bool,
+        overlays: Optional[Dict[str, pd.Series]],
+        confidence_bands: Optional[Tuple[pd.Series, pd.Series]],
+        show_overlays: bool,
+        show_confidence: bool
+    ) -> plt.Figure:
+        """Plot time series using Matplotlib."""
+        fig, ax = plt.subplots(figsize=figsize or self.figsize)
+        
+        # Plot main data
+        data.plot(ax=ax, label='Main Series', linewidth=2)
+        
+        # Plot overlays if requested
+        if show_overlays and overlays:
+            for name, overlay_data in overlays.items():
+                if not overlay_data.empty:
+                    overlay_data.plot(ax=ax, label=name, alpha=0.7, linestyle='--')
+                else:
+                    logger.warning(f"Overlay '{name}' is empty, skipping")
+        
+        # Plot confidence bands if requested
+        if show_confidence and confidence_bands:
+            lower, upper = confidence_bands
+            if not lower.empty and not upper.empty:
+                ax.fill_between(data.index, lower, upper, alpha=0.3, 
+                              color='gray', label='Confidence Band')
+            else:
+                logger.warning("Confidence bands are empty, skipping")
+        
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        
+        if show:
+            plt.show()
+        return fig
+    
+    def _plot_time_series_plotly(
+        self,
+        data: pd.Series,
+        title: str,
+        xlabel: str,
+        ylabel: str,
+        show: bool,
+        overlays: Optional[Dict[str, pd.Series]],
+        confidence_bands: Optional[Tuple[pd.Series, pd.Series]],
+        show_overlays: bool,
+        show_confidence: bool
+    ) -> go.Figure:
+        """Plot time series using Plotly."""
+        fig = go.Figure()
+        
+        # Plot main data
+        fig.add_trace(go.Scatter(
+            x=data.index,
+            y=data.values,
+            mode='lines',
+            name=data.name or 'Main Series',
+            line=dict(width=2)
+        ))
+        
+        # Plot overlays if requested
+        if show_overlays and overlays:
+            for name, overlay_data in overlays.items():
+                if not overlay_data.empty:
+                    fig.add_trace(go.Scatter(
+                        x=overlay_data.index,
+                        y=overlay_data.values,
+                        mode='lines',
+                        name=name,
+                        line=dict(dash='dash', width=1),
+                        opacity=0.7
+                    ))
+                else:
+                    logger.warning(f"Overlay '{name}' is empty, skipping")
+        
+        # Plot confidence bands if requested
+        if show_confidence and confidence_bands:
+            lower, upper = confidence_bands
+            if not lower.empty and not upper.empty:
+                fig.add_trace(go.Scatter(
+                    x=data.index,
+                    y=upper,
+                    fill=None,
+                    mode='lines',
+                    line_color='rgba(0,0,0,0)',
+                    name='Upper Bound'
+                ))
+                fig.add_trace(go.Scatter(
+                    x=data.index,
+                    y=lower,
+                    fill='tonexty',
+                    mode='lines',
+                    line_color='rgba(0,0,0,0)',
+                    name='Lower Bound'
+                ))
+            else:
+                logger.warning("Confidence bands are empty, skipping")
+        
+        fig.update_layout(
+            title=title,
+            xaxis_title=xlabel,
+            yaxis_title=ylabel,
+            showlegend=True
+        )
+        
+        if show:
+            fig.show()
+        return fig
+    
+    def _create_empty_plot(self, title: str, message: str) -> Union[plt.Figure, go.Figure]:
+        """Create an empty plot with a message."""
+        if self.backend == 'matplotlib':
+            fig, ax = plt.subplots(figsize=self.figsize)
+            ax.text(0.5, 0.5, message, ha='center', va='center', transform=ax.transAxes)
             ax.set_title(title)
-            ax.set_xlabel(xlabel)
-            ax.set_ylabel(ylabel)
-            ax.grid(True)
-            if show:
-                plt.show()
+            ax.set_xlim(0, 1)
+            ax.set_ylim(0, 1)
+            ax.axis('off')
             return fig
         else:
             fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=data.index,
-                y=data.values,
-                mode='lines',
-                name=data.name or 'Value'
-            ))
+            fig.add_annotation(
+                text=message,
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, showarrow=False,
+                font=dict(size=16, color="red")
+            )
             fig.update_layout(
                 title=title,
-                xaxis_title=xlabel,
-                yaxis_title=ylabel,
-                showlegend=True
+                height=400,
+                showlegend=False
             )
-            if show:
-                fig.show()
             return fig
     
     def plot_performance(
@@ -93,7 +237,11 @@ class TimeSeriesPlotter:
         drawdown: Optional[pd.Series] = None,
         title: str = 'Performance Analysis',
         figsize: Optional[tuple] = None,
-        show: bool = True
+        show: bool = True,
+        show_benchmark: bool = True,
+        show_drawdown: bool = True,
+        confidence_bands: Optional[Tuple[pd.Series, pd.Series]] = None,
+        show_confidence: bool = True
     ) -> Union[plt.Figure, go.Figure]:
         """Plot performance metrics including returns, benchmark, and drawdown.
         
@@ -104,77 +252,168 @@ class TimeSeriesPlotter:
             title: Plot title
             figsize: Figure size (matplotlib only)
             show: Whether to display the plot
+            show_benchmark: Whether to show benchmark
+            show_drawdown: Whether to show drawdown
+            confidence_bands: Optional confidence bands for returns
+            show_confidence: Whether to show confidence bands
             
         Returns:
             Matplotlib or Plotly figure
         """
+        # Check for empty series
+        if returns.empty:
+            warnings.warn("Returns series is empty")
+            return self._create_empty_plot(title, "No returns data available")
+        
         if self.backend == 'matplotlib':
-            fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize or self.figsize)
-            
-            # Plot returns
-            returns.cumsum().plot(ax=ax1, label='Strategy')
-            if benchmark is not None:
-                benchmark.cumsum().plot(ax=ax1, label='Benchmark', linestyle='--')
-            ax1.set_title('Cumulative Returns')
-            ax1.grid(True)
-            ax1.legend()
-            
-            # Plot drawdown
-            if drawdown is not None:
-                drawdown.plot(ax=ax2, color='red')
-                ax2.set_title('Drawdown')
-                ax2.grid(True)
-            
-            plt.tight_layout()
-            if show:
-                plt.show()
-            return fig
+            return self._plot_performance_matplotlib(
+                returns, benchmark, drawdown, title, figsize, show,
+                show_benchmark, show_drawdown, confidence_bands, show_confidence
+            )
         else:
-            fig = make_subplots(rows=2, cols=1, subplot_titles=('Cumulative Returns', 'Drawdown'))
-            
-            # Plot returns
+            return self._plot_performance_plotly(
+                returns, benchmark, drawdown, title, show,
+                show_benchmark, show_drawdown, confidence_bands, show_confidence
+            )
+    
+    def _plot_performance_matplotlib(
+        self,
+        returns: pd.Series,
+        benchmark: Optional[pd.Series],
+        drawdown: Optional[pd.Series],
+        title: str,
+        figsize: Optional[tuple],
+        show: bool,
+        show_benchmark: bool,
+        show_drawdown: bool,
+        confidence_bands: Optional[Tuple[pd.Series, pd.Series]],
+        show_confidence: bool
+    ) -> plt.Figure:
+        """Plot performance using Matplotlib."""
+        num_subplots = 1 + (1 if show_drawdown and drawdown is not None else 0)
+        fig, axes = plt.subplots(num_subplots, 1, figsize=figsize or self.figsize)
+        if num_subplots == 1:
+            axes = [axes]
+        
+        # Plot returns
+        returns.cumsum().plot(ax=axes[0], label='Strategy', linewidth=2)
+        
+        if show_benchmark and benchmark is not None and not benchmark.empty:
+            benchmark.cumsum().plot(ax=axes[0], label='Benchmark', linestyle='--', alpha=0.7)
+        
+        # Add confidence bands if requested
+        if show_confidence and confidence_bands:
+            lower, upper = confidence_bands
+            if not lower.empty and not upper.empty:
+                axes[0].fill_between(returns.index, lower.cumsum(), upper.cumsum(), 
+                                   alpha=0.3, color='gray', label='Confidence Band')
+        
+        axes[0].set_title('Cumulative Returns')
+        axes[0].grid(True, alpha=0.3)
+        axes[0].legend()
+        
+        # Plot drawdown
+        if show_drawdown and drawdown is not None and not drawdown.empty:
+            drawdown.plot(ax=axes[1], color='red', linewidth=2)
+            axes[1].set_title('Drawdown')
+            axes[1].grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        if show:
+            plt.show()
+        return fig
+    
+    def _plot_performance_plotly(
+        self,
+        returns: pd.Series,
+        benchmark: Optional[pd.Series],
+        drawdown: Optional[pd.Series],
+        title: str,
+        show: bool,
+        show_benchmark: bool,
+        show_drawdown: bool,
+        confidence_bands: Optional[Tuple[pd.Series, pd.Series]],
+        show_confidence: bool
+    ) -> go.Figure:
+        """Plot performance using Plotly."""
+        num_subplots = 1 + (1 if show_drawdown and drawdown is not None else 0)
+        subplot_titles = ['Cumulative Returns']
+        if show_drawdown and drawdown is not None:
+            subplot_titles.append('Drawdown')
+        
+        fig = make_subplots(rows=num_subplots, cols=1, subplot_titles=subplot_titles)
+        
+        # Plot returns
+        fig.add_trace(
+            go.Scatter(
+                x=returns.index,
+                y=returns.cumsum(),
+                name='Strategy',
+                line=dict(color='blue', width=2)
+            ),
+            row=1, col=1
+        )
+        
+        if show_benchmark and benchmark is not None and not benchmark.empty:
             fig.add_trace(
                 go.Scatter(
-                    x=returns.index,
-                    y=returns.cumsum(),
-                    name='Strategy',
-                    line=dict(color='blue')
+                    x=benchmark.index,
+                    y=benchmark.cumsum(),
+                    name='Benchmark',
+                    line=dict(color='gray', dash='dash', width=1),
+                    opacity=0.7
                 ),
                 row=1, col=1
             )
-            
-            if benchmark is not None:
+        
+        # Add confidence bands if requested
+        if show_confidence and confidence_bands:
+            lower, upper = confidence_bands
+            if not lower.empty and not upper.empty:
                 fig.add_trace(
                     go.Scatter(
-                        x=benchmark.index,
-                        y=benchmark.cumsum(),
-                        name='Benchmark',
-                        line=dict(color='gray', dash='dash')
+                        x=returns.index,
+                        y=upper.cumsum(),
+                        fill=None,
+                        mode='lines',
+                        line_color='rgba(0,0,0,0)',
+                        name='Upper Bound'
                     ),
                     row=1, col=1
                 )
-            
-            # Plot drawdown
-            if drawdown is not None:
                 fig.add_trace(
                     go.Scatter(
-                        x=drawdown.index,
-                        y=drawdown,
-                        name='Drawdown',
-                        line=dict(color='red')
+                        x=returns.index,
+                        y=lower.cumsum(),
+                        fill='tonexty',
+                        mode='lines',
+                        line_color='rgba(0,0,0,0)',
+                        name='Lower Bound'
                     ),
-                    row=2, col=1
+                    row=1, col=1
                 )
-            
-            fig.update_layout(
-                title=title,
-                height=800,
-                showlegend=True
+        
+        # Plot drawdown
+        if show_drawdown and drawdown is not None and not drawdown.empty:
+            fig.add_trace(
+                go.Scatter(
+                    x=drawdown.index,
+                    y=drawdown,
+                    name='Drawdown',
+                    line=dict(color='red', width=2)
+                ),
+                row=2, col=1
             )
-            
-            if show:
-                fig.show()
-            return fig
+        
+        fig.update_layout(
+            title=title,
+            height=400 * num_subplots,
+            showlegend=True
+        )
+        
+        if show:
+            fig.show()
+        return fig
     
     def plot_multiple_series(
         self,
@@ -184,7 +423,9 @@ class TimeSeriesPlotter:
         xlabel: str = 'Time',
         ylabel: str = 'Value',
         figsize: Optional[tuple] = None,
-        show: bool = True
+        show: bool = True,
+        overlays: Optional[Dict[str, pd.Series]] = None,
+        show_overlays: bool = True
     ) -> Union[plt.Figure, go.Figure]:
         """Plot multiple time series on the same plot.
         
@@ -196,30 +437,86 @@ class TimeSeriesPlotter:
             ylabel: Y-axis label
             figsize: Figure size (matplotlib only)
             show: Whether to display the plot
+            overlays: Dictionary of overlay series to plot
+            show_overlays: Whether to show overlays
             
         Returns:
             Matplotlib or Plotly figure
         """
+        # Check for empty series
+        if not series_list:
+            warnings.warn("No series provided for plotting")
+            return self._create_empty_plot(title, "No series data available")
+        
+        empty_series = [i for i, series in enumerate(series_list) if series.empty]
+        if empty_series:
+            warnings.warn(f"Series at indices {empty_series} are empty")
+        
         if self.backend == 'matplotlib':
-            fig, ax = plt.subplots(figsize=figsize or self.figsize)
-            
-            for i, series in enumerate(series_list):
+            return self._plot_multiple_series_matplotlib(
+                series_list, labels, title, xlabel, ylabel, figsize, show,
+                overlays, show_overlays
+            )
+        else:
+            return self._plot_multiple_series_plotly(
+                series_list, labels, title, xlabel, ylabel, show,
+                overlays, show_overlays
+            )
+    
+    def _plot_multiple_series_matplotlib(
+        self,
+        series_list: List[pd.Series],
+        labels: Optional[List[str]],
+        title: str,
+        xlabel: str,
+        ylabel: str,
+        figsize: Optional[tuple],
+        show: bool,
+        overlays: Optional[Dict[str, pd.Series]],
+        show_overlays: bool
+    ) -> plt.Figure:
+        """Plot multiple series using Matplotlib."""
+        fig, ax = plt.subplots(figsize=figsize or self.figsize)
+        
+        for i, series in enumerate(series_list):
+            if not series.empty:
                 label = labels[i] if labels and i < len(labels) else f'Series {i+1}'
                 series.plot(ax=ax, label=label)
-            
-            ax.set_title(title)
-            ax.set_xlabel(xlabel)
-            ax.set_ylabel(ylabel)
-            ax.grid(True)
-            ax.legend()
-            
-            if show:
-                plt.show()
-            return fig
-        else:
-            fig = go.Figure()
-            
-            for i, series in enumerate(series_list):
+        
+        # Plot overlays if requested
+        if show_overlays and overlays:
+            for name, overlay_data in overlays.items():
+                if not overlay_data.empty:
+                    overlay_data.plot(ax=ax, label=f"{name} (Overlay)", alpha=0.7, linestyle='--')
+                else:
+                    logger.warning(f"Overlay '{name}' is empty, skipping")
+        
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        
+        if show:
+            plt.show()
+        return fig
+    
+    def _plot_multiple_series_plotly(
+        self,
+        series_list: List[pd.Series],
+        labels: Optional[List[str]],
+        title: str,
+        xlabel: str,
+        ylabel: str,
+        show: bool,
+        overlays: Optional[Dict[str, pd.Series]],
+        show_overlays: bool
+    ) -> go.Figure:
+        """Plot multiple series using Plotly."""
+        fig = go.Figure()
+        
+        for i, series in enumerate(series_list):
+            if not series.empty:
                 label = labels[i] if labels and i < len(labels) else f'Series {i+1}'
                 fig.add_trace(go.Scatter(
                     x=series.index,
@@ -227,17 +524,32 @@ class TimeSeriesPlotter:
                     mode='lines',
                     name=label
                 ))
-            
-            fig.update_layout(
-                title=title,
-                xaxis_title=xlabel,
-                yaxis_title=ylabel,
-                showlegend=True
-            )
-            
-            if show:
-                fig.show()
-            return fig
+        
+        # Plot overlays if requested
+        if show_overlays and overlays:
+            for name, overlay_data in overlays.items():
+                if not overlay_data.empty:
+                    fig.add_trace(go.Scatter(
+                        x=overlay_data.index,
+                        y=overlay_data.values,
+                        mode='lines',
+                        name=f"{name} (Overlay)",
+                        line=dict(dash='dash', width=1),
+                        opacity=0.7
+                    ))
+                else:
+                    logger.warning(f"Overlay '{name}' is empty, skipping")
+        
+        fig.update_layout(
+            title=title,
+            xaxis_title=xlabel,
+            yaxis_title=ylabel,
+            showlegend=True
+        )
+        
+        if show:
+            fig.show()
+        return fig
     
     def plot_with_confidence(
         self,
