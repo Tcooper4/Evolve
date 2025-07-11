@@ -401,6 +401,7 @@ class MarketRegimeAgent(BaseAgent):
                 correlation=0.5,
                 regime_confidence=0.5
             )
+        # TODO: Specify exception type instead of using bare except
     
     def classify_regime(self, metrics: RegimeMetrics) -> Tuple[MarketRegime, float]:
         """Classify market regime based on metrics."""
