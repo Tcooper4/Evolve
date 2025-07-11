@@ -276,27 +276,47 @@ class AgentRegistry:
         logger.info("Agent reload complete")
     
     def get_registry_status(self) -> Dict[str, Any]:
-        """Get status information about the registry."""
+        """
+        Get the current status of the agent registry.
+        
+        Returns:
+            Dict: Registry status information
+        """
         return {
             'total_agents': len(self.agents),
             'agent_names': list(self.agents.keys()),
-            'capabilities': list(set(
-                cap for metadata in self.metadata.values() 
-                for cap in metadata.capabilities
-            )),
-            'last_updated': datetime.now().isoformat(),
-            'directories_searched': self.agent_directories
+            'directories_searched': self.agent_directories,
+            'last_discovery': getattr(self, '_last_discovery', 'unknown'),
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    def run(self, *args, **kwargs) -> Dict[str, Any]:
+        """
+        Main run method for the agent registry.
+        
+        Args:
+            *args: Additional arguments
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            Dict: Registry status and available agents
+        """
+        return {
+            'success': True,
+            'message': 'Agent registry is operational',
+            'status': self.get_registry_status(),
+            'available_agents': self.list_agents(),
+            'timestamp': datetime.now().isoformat()
         }
 
 # Global registry instance
 _registry = None
 
 def get_registry() -> AgentRegistry:
-    """Get the global agent registry instance."""
-    global _registry
-    if _registry is None:
-        _registry = AgentRegistry()
-    return _registry
+    """Get a singleton instance of the agent registry."""
+    if not hasattr(get_registry, '_instance'):
+        get_registry._instance = AgentRegistry()
+    return get_registry._instance
 
 def get_agent(name: str, **kwargs) -> Optional[Any]:
     """

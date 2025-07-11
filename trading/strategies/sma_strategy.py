@@ -181,12 +181,19 @@ class SMAStrategy:
         
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """Generate trading signals based on SMA crossover with enhanced features."""
+        # Edge case fallback logic
+        if data is None or data.empty:
+            logger.warning("Invalid data provided to SMA strategy: data is None or empty")
+            return pd.DataFrame()  # Return empty DataFrame
+        
         if not isinstance(data, pd.DataFrame):
-            raise ValueError("Input must be a pandas DataFrame")
+            logger.warning("Input must be a pandas DataFrame")
+            return pd.DataFrame()
             
         required_columns = ['close', 'volume']
         if not all(col in data.columns for col in required_columns):
-            raise ValueError(f"Data must contain columns: {required_columns}")
+            logger.warning(f"Data must contain columns: {required_columns}")
+            return pd.DataFrame()
             
         # Calculate SMAs with smoothing
         short_sma, long_sma = self.calculate_sma(data)

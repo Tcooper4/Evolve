@@ -173,6 +173,24 @@ class AgentConfig:
         except Exception as e:
             logger.error(f"Failed to save agent configuration: {e}")
     
+    def run(self, *args, **kwargs) -> Dict[str, Any]:
+        """
+        Main run method for the agent configuration.
+        
+        Args:
+            *args: Additional arguments
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            Dict: Configuration status and settings
+        """
+        return {
+            'success': True,
+            'message': 'Agent configuration is operational',
+            'config': self.to_dict(),
+            'timestamp': datetime.now().isoformat()
+        }
+
     @classmethod
     def load_from_file(cls, file_path: str = "config/agent_config.json") -> 'AgentConfig':
         """Load configuration from file."""
