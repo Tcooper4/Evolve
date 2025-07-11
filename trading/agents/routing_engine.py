@@ -98,6 +98,11 @@ class RoutingEngine:
                 best_confidence = confidence
                 
         if best_handler and best_confidence >= self.config.get("min_confidence", 0.5):
+            # Log routing path for traceability
+            intent = task.get('type', 'unknown')
+            selected_agent = best_handler.__name__
+            logger.info(f"Routing {intent} → {selected_agent}")
+            
             return RouteResult(
                 success=True,
                 route_type=route_type,

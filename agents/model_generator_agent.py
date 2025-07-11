@@ -881,6 +881,11 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
         self.candidates = []
         self.benchmark_results = []
         self.deployed_models = []
+        self.existing_models = []  # Track model signatures to prevent duplicates
+        
+        # Persist discovered models across sessions
+        self.storage_path = "models/discovered_models.json"
+        self._load_previous_models()
         
         # Create output directory
         self.output_dir = Path("agents/evolutionary_models")
@@ -891,6 +896,39 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
     def _setup(self):
         """Setup method called during initialization."""
         pass
+    
+    def _load_previous_models(self):
+        """Load previously discovered models from storage."""
+        try:
+            storage_file = Path(self.storage_path)
+            if storage_file.exists():
+                with open(storage_file, 'r') as f:
+                    data = json.load(f)
+                    self.candidates = data.get('candidates', [])
+                    self.benchmark_results = data.get('benchmark_results', [])
+                    self.deployed_models = data.get('deployed_models', [])
+                logger.info(f"Loaded {len(self.candidates)} previous models from storage")
+        except Exception as e:
+            logger.warning(f"Could not load previous models: {e}")
+    
+    def _save_models_to_storage(self):
+        """Save discovered models to storage."""
+        try:
+            storage_file = Path(self.storage_path)
+            storage_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            data = {
+                'candidates': self.candidates,
+                'benchmark_results': self.benchmark_results,
+                'deployed_models': self.deployed_models,
+                'last_updated': datetime.now().isoformat()
+            }
+            
+            with open(storage_file, 'w') as f:
+                json.dump(data, f, indent=2, default=str)
+            logger.info(f"Saved {len(self.candidates)} models to storage")
+        except Exception as e:
+            logger.error(f"Could not save models to storage: {e}")
 
     def run(self, prompt: str, **kwargs) -> AgentResult:
         """Execute the model evolution cycle.
@@ -938,7 +976,13 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
             for paper in papers[:self.max_candidates]:
                 candidate = self.model_generator.generate_implementation(paper)
                 if candidate:
-                    candidates.append(candidate)
+                    # Prevent duplicate model registration
+                    model_signature = f"{candidate.name}_{candidate.model_type}"
+                    if model_signature not in self.existing_models:
+                        self.existing_models.append(model_signature)
+                        candidates.append(candidate)
+                    else:
+                        logger.info(f"Skipping duplicate model: {candidate.name}")
             
             self.candidates = candidates
             logger.info(f"Generated {len(candidates)} model candidates")

@@ -77,6 +77,66 @@ def test_unified_interface():
     except Exception as e:
         print(f"❌ Unexpected error: {e}")
 
+def test_prompt_to_strategy_mapping():
+    """Test prompt-to-strategy mapping and model execution via natural language."""
+    print("\n🧠 Testing Prompt-to-Strategy Mapping")
+    print("=" * 50)
+    
+    try:
+        # Import required modules
+        from trading.llm.llm_processor import LLMProcessor
+        from trading.strategies.strategy_factory import StrategyFactory
+        from trading.models.forecast_engine import ForecastEngine
+        
+        print("✅ Successfully imported required modules")
+        
+        # Initialize components
+        llm_processor = LLMProcessor()
+        strategy_factory = StrategyFactory()
+        forecast_engine = ForecastEngine()
+        
+        # Test natural language prompts
+        test_prompts = [
+            "I want to buy when the price is oversold and sell when overbought",
+            "Use moving average crossover strategy for AAPL",
+            "Apply Bollinger Bands strategy with 20-period lookback",
+            "Implement momentum strategy with RSI filter",
+            "Create a mean reversion strategy for volatile stocks"
+        ]
+        
+        for prompt in test_prompts:
+            print(f"\n📝 Testing prompt: '{prompt}'")
+            
+            # Process natural language to strategy mapping
+            strategy_config = llm_processor.extract_strategy_from_prompt(prompt)
+            assert strategy_config is not None, f"Failed to extract strategy from prompt: {prompt}"
+            print(f"✅ Extracted strategy config: {strategy_config.get('strategy_type', 'Unknown')}")
+            
+            # Create strategy instance
+            strategy = strategy_factory.create_strategy(strategy_config)
+            assert strategy is not None, f"Failed to create strategy from config: {strategy_config}"
+            print(f"✅ Created strategy: {type(strategy).__name__}")
+            
+            # Test model execution
+            if hasattr(strategy, 'generate_signals'):
+                signals = strategy.generate_signals()
+                assert signals is not None, f"Strategy {type(strategy).__name__} failed to generate signals"
+                print(f"✅ Generated signals: {len(signals) if hasattr(signals, '__len__') else 'N/A'}")
+            
+            # Test forecast integration
+            if hasattr(forecast_engine, 'forecast'):
+                forecast = forecast_engine.forecast('AAPL', strategy=strategy)
+                assert forecast is not None, f"Failed to generate forecast with strategy {type(strategy).__name__}"
+                print(f"✅ Generated forecast with strategy integration")
+        
+        print("\n🎉 All prompt-to-strategy mapping tests passed!")
+        
+    except ImportError as e:
+        print(f"❌ Import error: {e}")
+        print("Make sure required modules are available")
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+
 def test_streamlit_import():
     """Test Streamlit import."""
     print("\n🌐 Testing Streamlit import...")
@@ -96,6 +156,7 @@ def test_streamlit_import():
 def main():
     """Main test function."""
     test_unified_interface()
+    test_prompt_to_strategy_mapping()
     test_streamlit_import()
     
     print("\n📋 Test Summary:")

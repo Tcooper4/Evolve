@@ -6,12 +6,13 @@ handlers for performance monitoring and automated responses to trading events.
 """
 
 import logging
-from typing import Dict, Any, Optional, List, Callable
+from typing import Dict, Any, Optional, List, Callable, Tuple
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 import json
 from pathlib import Path
+from collections import defaultdict, Counter
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -71,6 +72,20 @@ class AgentMetrics:
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
 @dataclass
+class AgentTask:
+    """Task information for an agent."""
+    task_id: str
+    agent_id: str
+    task_type: str
+    status: str = "pending"
+    priority: int = 1
+    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    result: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+@dataclass
 class EventData:
     """Data structure for agent events."""
     event_id: str
@@ -81,6 +96,20 @@ class EventData:
     severity: str = "medium"
     handled: bool = False
 
+@dataclass
+class UIAgentInfo:
+    """UI-friendly agent information."""
+    agent_id: str
+    name: str
+    agent_type: str
+    status: str
+    task_count: int
+    success_rate: float
+    last_action: Optional[str]
+    uptime: str
+    priority: int
+    enabled: bool
+
 # --- Agent Manager ---
 class AgentManager:
     """Manages agent registration, status tracking, and event handling."""
@@ -89,10 +118,12 @@ class AgentManager:
         """Initialize the agent manager."""
         self.agents: Dict[str, AgentConfig] = {}
         self.metrics: Dict[str, AgentMetrics] = {}
+        self.tasks: Dict[str, AgentTask] = {}
         self.callbacks: Dict[EventType, List[Callable]] = {
             event_type: [] for event_type in EventType
         }
         self.event_history: List[EventData] = []
+        self.agent_status_log: Dict[str, Dict[str, Any]] = {}  # Track agent status with timestamps
         self._load_agents()
     
     def register_agent(self, agent_config: AgentConfig) -> bool:
@@ -128,6 +159,9 @@ class AgentManager:
                 del self.agents[agent_id]
                 if agent_id in self.metrics:
                     del self.metrics[agent_id]
+                # Remove associated tasks
+                self.tasks = {task_id: task for task_id, task in self.tasks.items() 
+                            if task.agent_id != agent_id}
                 self._save_agents()
                 logger.info(f"Unregistered agent: {agent_id}")
                 return True
@@ -148,10 +182,21 @@ class AgentManager:
         """
         try:
             if agent_id in self.agents:
+                old_status = self.agents[agent_id].status
                 self.agents[agent_id].status = status
                 self.agents[agent_id].updated_at = datetime.now().isoformat()
+                
+                # Track agent status with timestamps and log transitions
+                self.agent_status_log[agent_id] = {
+                    "status": status.value, 
+                    "timestamp": datetime.now().isoformat(),
+                    "previous_status": old_status.value
+                }
+                
+                # Log status transition
+                logger.info(f"Agent {agent_id} status transition: {old_status.value} → {status.value}")
+                
                 self._save_agents()
-                logger.info(f"Updated agent {agent_id} status to {status.value}")
                 return True
             return False
         except Exception as e:
@@ -188,84 +233,215 @@ class AgentManager:
         
         return active_agents
     
-    def register_callback(self, event_type: EventType, callback: Callable) -> None:
-        """Register a callback function for an event type.
+    def get_active_agent_names_and_task_counts(self) -> List[Tuple[str, str, int]]:
+        """Get active agent names and their task counts for UI display.
         
-        Args:
-            event_type: Type of event to register callback for
-            callback: Function to call when event occurs
+        Returns:
+            List of tuples containing (agent_id, agent_name, task_count)
         """
-        if event_type not in self.callbacks:
-            self.callbacks[event_type] = []
-        self.callbacks[event_type].append(callback)
-        logger.info(f"Registered callback for event type: {event_type.value}")
+        active_agents = self.get_active_agents()
+        result = []
+        
+        for agent in active_agents:
+            # Count tasks for this agent
+            task_count = sum(1 for task in self.tasks.values() 
+                           if task.agent_id == agent.agent_id and task.status != "completed")
+            result.append((agent.agent_id, agent.name, task_count))
+        
+        return result
     
-    def trigger_event(self, event_data: EventData) -> bool:
-        """Trigger an event and execute registered callbacks.
+    def get_ui_agent_info(self, agent_id: Optional[str] = None) -> List[UIAgentInfo]:
+        """Get UI-friendly agent information.
         
         Args:
-            event_data: Event data to trigger
+            agent_id: Optional specific agent ID to get info for
+            
+        Returns:
+            List of UI agent information objects
+        """
+        agents_to_process = [self.agents[agent_id]] if agent_id and agent_id in self.agents else self.agents.values()
+        result = []
+        
+        for agent in agents_to_process:
+            # Count tasks for this agent
+            task_count = sum(1 for task in self.tasks.values() 
+                           if task.agent_id == agent.agent_id and task.status != "completed")
+            
+            # Get metrics
+            metrics = self.metrics.get(agent.agent_id, AgentMetrics(agent_id=agent.agent_id))
+            
+            # Calculate uptime
+            created_time = datetime.fromisoformat(agent.created_at.replace('Z', '+00:00'))
+            uptime = datetime.now(created_time.tzinfo) - created_time
+            uptime_str = str(uptime).split('.')[0]  # Remove microseconds
+            
+            # Get last action time
+            last_action = None
+            if metrics.last_action:
+                last_action = metrics.last_action
+            
+            ui_info = UIAgentInfo(
+                agent_id=agent.agent_id,
+                name=agent.name,
+                agent_type=agent.agent_type.value,
+                status=agent.status.value,
+                task_count=task_count,
+                success_rate=metrics.success_rate,
+                last_action=last_action,
+                uptime=uptime_str,
+                priority=agent.priority,
+                enabled=agent.enabled
+            )
+            result.append(ui_info)
+        
+        return result
+    
+    def get_agent_task_summary(self) -> Dict[str, Any]:
+        """Get summary of agent tasks for UI display.
+        
+        Returns:
+            Dictionary containing task summary information
+        """
+        task_summary = {
+            'total_tasks': len(self.tasks),
+            'pending_tasks': 0,
+            'running_tasks': 0,
+            'completed_tasks': 0,
+            'failed_tasks': 0,
+            'tasks_by_agent': defaultdict(int),
+            'tasks_by_type': defaultdict(int),
+            'recent_tasks': []
+        }
+        
+        # Count tasks by status
+        for task in self.tasks.values():
+            if task.status == "pending":
+                task_summary['pending_tasks'] += 1
+            elif task.status == "running":
+                task_summary['running_tasks'] += 1
+            elif task.status == "completed":
+                task_summary['completed_tasks'] += 1
+            elif task.status == "failed":
+                task_summary['failed_tasks'] += 1
+            
+            task_summary['tasks_by_agent'][task.agent_id] += 1
+            task_summary['tasks_by_type'][task.task_type] += 1
+        
+        # Get recent tasks (last 10)
+        recent_tasks = sorted(self.tasks.values(), 
+                            key=lambda x: x.created_at, reverse=True)[:10]
+        task_summary['recent_tasks'] = [
+            {
+                'task_id': task.task_id,
+                'agent_id': task.agent_id,
+                'task_type': task.task_type,
+                'status': task.status,
+                'created_at': task.created_at
+            }
+            for task in recent_tasks
+        ]
+        
+        return task_summary
+    
+    def add_task(self, agent_id: str, task_type: str, priority: int = 1, 
+                task_data: Optional[Dict[str, Any]] = None) -> str:
+        """Add a new task for an agent.
+        
+        Args:
+            agent_id: ID of the agent to assign the task to
+            task_type: Type of task
+            priority: Task priority (1-10, higher is more important)
+            task_data: Optional task-specific data
+            
+        Returns:
+            Task ID
+        """
+        task_id = f"{agent_id}_{task_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        task = AgentTask(
+            task_id=task_id,
+            agent_id=agent_id,
+            task_type=task_type,
+            priority=priority
+        )
+        
+        self.tasks[task_id] = task
+        logger.info(f"Added task {task_id} for agent {agent_id}")
+        return task_id
+    
+    def update_task_status(self, task_id: str, status: str, 
+                          result: Optional[Dict[str, Any]] = None,
+                          error: Optional[str] = None) -> bool:
+        """Update task status.
+        
+        Args:
+            task_id: ID of the task
+            status: New status
+            result: Optional task result
+            error: Optional error message
             
         Returns:
             True if successful, False otherwise
         """
-        try:
-            # Add to event history
-            self.event_history.append(event_data)
+        if task_id in self.tasks:
+            task = self.tasks[task_id]
+            task.status = status
             
-            # Execute callbacks
-            if event_data.event_type in self.callbacks:
-                for callback in self.callbacks[event_data.event_type]:
-                    try:
-                        callback(event_data)
-                    except Exception as e:
-                        logger.error(f"Error executing callback for event {event_data.event_id}: {e}")
+            if status == "running" and not task.started_at:
+                task.started_at = datetime.now().isoformat()
+            elif status in ["completed", "failed"]:
+                task.completed_at = datetime.now().isoformat()
             
-            # Update agent metrics if applicable
-            if event_data.agent_id in self.metrics:
-                self.metrics[event_data.agent_id].total_actions += 1
-                self.metrics[event_data.agent_id].last_action = event_data.timestamp
-                self.metrics[event_data.agent_id].updated_at = datetime.now().isoformat()
+            if result is not None:
+                task.result = result
+            if error is not None:
+                task.error = error
             
-            logger.info(f"Triggered event: {event_data.event_type.value} for agent {event_data.agent_id}")
+            logger.info(f"Updated task {task_id} status to {status}")
             return True
-            
-        except Exception as e:
-            logger.error(f"Error triggering event {event_data.event_id}: {e}")
-            return False
+        
+        return False
     
-    def get_agent_metrics(self, agent_id: str) -> Optional[AgentMetrics]:
-        """Get metrics for a specific agent.
+    def get_agent_tasks(self, agent_id: str, status: Optional[str] = None) -> List[AgentTask]:
+        """Get tasks for a specific agent.
         
         Args:
             agent_id: ID of the agent
+            status: Optional status filter
             
         Returns:
-            Agent metrics or None if not found
+            List of tasks for the agent
         """
-        return self.metrics.get(agent_id)
+        tasks = [task for task in self.tasks.values() if task.agent_id == agent_id]
+        
+        if status:
+            tasks = [task for task in tasks if task.status == status]
+        
+        return sorted(tasks, key=lambda x: x.created_at, reverse=True)
     
-    def update_agent_metrics(self, agent_id: str, **kwargs) -> bool:
-        """Update metrics for a specific agent.
+    def cleanup_completed_tasks(self, days_old: int = 7) -> int:
+        """Clean up completed tasks older than specified days.
         
         Args:
-            agent_id: ID of the agent
-            **kwargs: Metrics to update
+            days_old: Number of days after which to remove completed tasks
             
         Returns:
-            True if successful, False otherwise
+            Number of tasks removed
         """
-        try:
-            if agent_id in self.metrics:
-                for key, value in kwargs.items():
-                    if hasattr(self.metrics[agent_id], key):
-                        setattr(self.metrics[agent_id], key, value)
-                self.metrics[agent_id].updated_at = datetime.now().isoformat()
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"Error updating metrics for agent {agent_id}: {e}")
-            return False
+        cutoff_date = datetime.now() - timedelta(days=days_old)
+        tasks_to_remove = []
+        
+        for task_id, task in self.tasks.items():
+            if (task.status in ["completed", "failed"] and 
+                task.completed_at and 
+                datetime.fromisoformat(task.completed_at.replace('Z', '+00:00')) < cutoff_date):
+                tasks_to_remove.append(task_id)
+        
+        for task_id in tasks_to_remove:
+            del self.tasks[task_id]
+        
+        logger.info(f"Cleaned up {len(tasks_to_remove)} old completed tasks")
+        return len(tasks_to_remove)
     
     def _load_agents(self) -> None:
         """Load agent configurations from file."""

@@ -354,7 +354,7 @@ class TestSHAPExplainer:
                 result = explainer._calculate_feature_importance(tree_model, sample_data, method="shap")
                 results.append(result)
             except Exception as e:
-                errors.append(str(e))
+                errors.append(e)
         
         # Run multiple threads
         threads = []
@@ -368,13 +368,82 @@ class TestSHAPExplainer:
             thread.join()
         
         # Check results
-        assert len(errors) == 0, f"Errors occurred: {errors}"
         assert len(results) == 3
+        assert len(errors) == 0
         
-        # All results should have same structure
+        # All results should be similar
         for result in results:
             assert isinstance(result, dict)
             assert len(result) == len(sample_data.columns)
+    
+    def test_feature_importance_bounds_validation(self, explainer, tree_model, sample_data):
+        """Test that feature importances are within expected bounds and flag values exceeding 1.0."""
+        # Get SHAP feature importance
+        result = explainer._calculate_feature_importance(tree_model, sample_data, method="shap")
+        
+        # Check structure
+        assert isinstance(result, dict)
+        assert len(result) == len(sample_data.columns)
+        
+        # Validate each feature importance value
+        for feature_name, importance in result.items():
+            # Basic type and value checks
+            assert isinstance(importance, (int, float)), f"Feature {feature_name} importance should be numeric"
+            assert not np.isnan(importance), f"Feature {feature_name} importance should not be NaN"
+            assert not np.isinf(importance), f"Feature {feature_name} importance should not be infinite"
+            
+            # Check for values exceeding 1.0 (potential bug indicator)
+            if abs(importance) > 1.0:
+                # Log warning for values exceeding 1.0
+                print(f"WARNING: Feature {feature_name} has importance {importance} exceeding 1.0")
+                # This could indicate a bug in the SHAP calculation or data normalization
+                # In a real implementation, you might want to raise a warning or error
+                assert False, f"Feature importance {importance} for {feature_name} exceeds 1.0 - potential bug"
+            
+            # Check for reasonable bounds (SHAP values should typically be in reasonable range)
+            assert abs(importance) <= 10.0, f"Feature {feature_name} importance {importance} seems unreasonably high"
+        
+        # Test with different model types to ensure bounds validation works
+        lstm_model = Mock()
+        lstm_model.__class__.__name__ = 'Sequential'
+        lstm_model.predict = Mock(return_value=np.random.random(10))
+        
+        lstm_result = explainer._calculate_feature_importance(lstm_model, sample_data, method="shap")
+        
+        for feature_name, importance in lstm_result.items():
+            assert isinstance(importance, (int, float))
+            assert not np.isnan(importance)
+            assert not np.isinf(importance)
+            
+            # Check for values exceeding 1.0
+            if abs(importance) > 1.0:
+                assert False, f"LSTM model feature importance {importance} for {feature_name} exceeds 1.0"
+        
+        # Test with normalized data to ensure bounds are still respected
+        normalized_data = (sample_data - sample_data.mean()) / sample_data.std()
+        normalized_result = explainer._calculate_feature_importance(tree_model, normalized_data, method="shap")
+        
+        for feature_name, importance in normalized_result.items():
+            assert isinstance(importance, (int, float))
+            assert not np.isnan(importance)
+            assert not np.isinf(importance)
+            
+            # Even with normalized data, SHAP values should not exceed reasonable bounds
+            if abs(importance) > 1.0:
+                assert False, f"Normalized data feature importance {importance} for {feature_name} exceeds 1.0"
+        
+        # Test edge case with very small dataset
+        small_data = sample_data.head(5)
+        small_result = explainer._calculate_feature_importance(tree_model, small_data, method="shap")
+        
+        for feature_name, importance in small_result.items():
+            assert isinstance(importance, (int, float))
+            assert not np.isnan(importance)
+            assert not np.isinf(importance)
+            
+            # Small datasets might have more variance, but still check bounds
+            if abs(importance) > 1.0:
+                assert False, f"Small dataset feature importance {importance} for {feature_name} exceeds 1.0"
 
 if __name__ == "__main__":
     pytest.main([__file__]) 

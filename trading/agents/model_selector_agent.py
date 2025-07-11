@@ -380,55 +380,211 @@ class ModelSelectorAgent(BaseAgent):
                     performance_weight: float = 0.6,
                     capability_weight: float = 0.4) -> Tuple[str, float]:
         """
-        Select the best model for given requirements.
+        Select the best model for given criteria.
         
         Args:
             horizon: Forecasting horizon
-            market_regime: Current market regime
-            data_length: Available data points
-            required_features: Required features for the model
-            performance_weight: Weight for performance-based selection
-            capability_weight: Weight for capability-based selection
+            market_regime: Market regime
+            data_length: Available data length
+            required_features: Required features
+            performance_weight: Weight for performance score
+            capability_weight: Weight for capability score
             
         Returns:
             Tuple of (selected_model_id, confidence_score)
         """
         try:
-            # Filter models by basic requirements
-            candidate_models = self._filter_candidates(
-                horizon, market_regime, data_length, required_features
-            )
+            # Filter candidate models
+            candidates = self._filter_candidates(horizon, market_regime, data_length, required_features)
             
-            if not candidate_models:
-                logger.warning("No models match the requirements")
-                return None, 0.0
+            if not candidates:
+                self.logger.warning(f"No models meet strict criteria for horizon={horizon.value}, regime={market_regime.value}")
+                # Fallback: relax criteria and try again
+                candidates = self._filter_candidates_fallback(horizon, market_regime, data_length, required_features)
                 
-            # Calculate scores for each candidate
-            model_scores = {}
-            for model_id in candidate_models:
-                capability_score = self._calculate_capability_score(
-                    model_id, horizon, market_regime, data_length
-                )
+                if not candidates:
+                    self.logger.error("No models available even with relaxed criteria")
+                    return self._get_fallback_model(), 0.0
+            
+            # Calculate scores for all candidates
+            model_scores = []
+            for model_id in candidates:
+                capability_score = self._calculate_capability_score(model_id, horizon, market_regime, data_length)
                 performance_score = self._calculate_performance_score(model_id)
                 
                 # Combined score
-                total_score = (capability_weight * capability_score + 
-                             performance_weight * performance_score)
-                model_scores[model_id] = total_score
+                combined_score = (capability_score * capability_weight + 
+                                performance_score * performance_weight)
                 
+                model_scores.append({
+                    'model_id': model_id,
+                    'capability_score': capability_score,
+                    'performance_score': performance_score,
+                    'combined_score': combined_score,
+                    'model_type': self.model_registry.get(model_id, {}).get('model_type', 'unknown')
+                })
+            
+            # Sort by combined score
+            model_scores.sort(key=lambda x: x['combined_score'], reverse=True)
+            
+            # Log top N models with scores
+            self._log_top_models(model_scores, horizon, market_regime, top_n=5)
+            
             # Select best model
-            best_model = max(model_scores, key=model_scores.get)
-            confidence = model_scores[best_model]
+            best_model = model_scores[0]
+            selected_model_id = best_model['model_id']
+            confidence = best_model['combined_score']
             
             # Log selection
-            self._log_selection(best_model, horizon, market_regime, confidence)
+            self._log_selection(selected_model_id, horizon, market_regime, confidence)
             
-            return best_model, confidence
+            return selected_model_id, confidence
             
         except Exception as e:
-            logger.error(f"Error in model selection: {e}")
-            return None, 0.0
+            self.logger.error(f"Error in model selection: {e}")
+            return self._get_fallback_model(), 0.0
+    
+    def _filter_candidates_fallback(self, 
+                                  horizon: ForecastingHorizon,
+                                  market_regime: MarketRegime,
+                                  data_length: int,
+                                  required_features: List[str]) -> List[str]:
+        """
+        Filter candidates with relaxed criteria when strict filtering fails.
+        
+        Args:
+            horizon: Forecasting horizon
+            market_regime: Market regime
+            data_length: Available data length
+            required_features: Required features
             
+        Returns:
+            List of candidate model IDs
+        """
+        candidates = []
+        
+        for model_id, model_info in self.model_registry.items():
+            capability = self.capability_profiles.get(model_id)
+            if not capability:
+                continue
+            
+            # Relaxed criteria checks
+            meets_criteria = True
+            
+            # Check horizon support (relaxed)
+            if horizon not in capability.supported_horizons:
+                # Try to find similar horizons
+                if not self._has_similar_horizon_support(capability, horizon):
+                    meets_criteria = False
+            
+            # Check regime support (relaxed)
+            if market_regime not in capability.supported_regimes:
+                # Allow models that support any regime
+                if not capability.supported_regimes:
+                    meets_criteria = False
+            
+            # Check data length (relaxed - allow models with higher requirements)
+            if data_length < capability.min_data_points * 0.5:  # Allow 50% less data
+                meets_criteria = False
+            
+            # Check feature requirements (relaxed)
+            if required_features and capability.feature_requirements:
+                missing_features = set(required_features) - set(capability.feature_requirements)
+                if len(missing_features) > len(required_features) * 0.3:  # Allow 30% missing features
+                    meets_criteria = False
+            
+            if meets_criteria:
+                candidates.append(model_id)
+        
+        self.logger.info(f"Fallback filtering found {len(candidates)} candidates with relaxed criteria")
+        return candidates
+    
+    def _has_similar_horizon_support(self, capability: ModelCapability, target_horizon: ForecastingHorizon) -> bool:
+        """
+        Check if model supports similar horizons to the target.
+        
+        Args:
+            capability: Model capability profile
+            target_horizon: Target forecasting horizon
+            
+        Returns:
+            True if model supports similar horizons
+        """
+        # Define horizon similarity mapping
+        horizon_similarity = {
+            ForecastingHorizon.SHORT_TERM: [ForecastingHorizon.SHORT_TERM, ForecastingHorizon.MEDIUM_TERM],
+            ForecastingHorizon.MEDIUM_TERM: [ForecastingHorizon.SHORT_TERM, ForecastingHorizon.MEDIUM_TERM, ForecastingHorizon.LONG_TERM],
+            ForecastingHorizon.LONG_TERM: [ForecastingHorizon.MEDIUM_TERM, ForecastingHorizon.LONG_TERM]
+        }
+        
+        similar_horizons = horizon_similarity.get(target_horizon, [])
+        return any(horizon in capability.supported_horizons for horizon in similar_horizons)
+    
+    def _get_fallback_model(self) -> str:
+        """
+        Get a fallback model when no models meet criteria.
+        
+        Returns:
+            Fallback model ID
+        """
+        # Try to find any available model
+        if self.model_registry:
+            # Return the first available model
+            fallback_id = list(self.model_registry.keys())[0]
+            self.logger.warning(f"Using fallback model: {fallback_id}")
+            return fallback_id
+        
+        # If no models in registry, return a default
+        self.logger.error("No models available in registry")
+        return "default_model"
+    
+    def _log_top_models(self, model_scores: List[Dict], horizon: ForecastingHorizon, 
+                       market_regime: MarketRegime, top_n: int = 5):
+        """
+        Log top N models with their scores for debugging and analysis.
+        
+        Args:
+            model_scores: List of model scores
+            horizon: Forecasting horizon
+            market_regime: Market regime
+            top_n: Number of top models to log
+        """
+        top_models = model_scores[:top_n]
+        
+        self.logger.info(f"Top {len(top_models)} models for horizon={horizon.value}, regime={market_regime.value}:")
+        
+        for i, model in enumerate(top_models, 1):
+            self.logger.info(
+                f"  {i}. {model['model_id']} ({model['model_type']}) - "
+                f"Combined: {model['combined_score']:.3f}, "
+                f"Capability: {model['capability_score']:.3f}, "
+                f"Performance: {model['performance_score']:.3f}"
+            )
+        
+        # Log selection statistics
+        if model_scores:
+            scores = [m['combined_score'] for m in model_scores]
+            self.logger.info(
+                f"Score statistics - Mean: {np.mean(scores):.3f}, "
+                f"Std: {np.std(scores):.3f}, "
+                f"Min: {np.min(scores):.3f}, "
+                f"Max: {np.max(scores):.3f}"
+            )
+        
+        # Store in selection history for analysis
+        selection_record = {
+            'timestamp': datetime.now().isoformat(),
+            'horizon': horizon.value,
+            'market_regime': market_regime.value,
+            'top_models': top_models,
+            'total_candidates': len(model_scores)
+        }
+        self.selection_history.append(selection_record)
+        
+        # Keep only last 1000 selections
+        if len(self.selection_history) > 1000:
+            self.selection_history = self.selection_history[-1000:]
+        
     def _filter_candidates(self, 
                           horizon: ForecastingHorizon,
                           market_regime: MarketRegime,

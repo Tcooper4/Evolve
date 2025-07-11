@@ -6,35 +6,627 @@ including trading strategies, agents, risk management, and performance monitorin
 """
 
 import os
+import re
 from pathlib import Path
-from typing import Any, Optional, Dict, Union, List
+from typing import Any, Optional, Dict, Union, List, Type, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from dotenv import load_dotenv
+import logging
 
 # Load environment variables from .env file
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class ValidationSchema:
+    """Schema for validating environment variables."""
+    name: str
+    required: bool = True
+    default: Any = None
+    type: Type = str
+    validator: Optional[Callable] = None
+    pattern: Optional[str] = None
+    min_value: Optional[Union[int, float]] = None
+    max_value: Optional[Union[int, float]] = None
+    allowed_values: Optional[List[Any]] = None
+    description: str = ""
+
+class ConfigurationValidator:
+    """Validator for configuration settings."""
+    
+    def __init__(self):
+        self.validation_errors = []
+        self.validation_warnings = []
+    
+    def validate_env_var(self, schema: ValidationSchema, value: Any) -> bool:
+        """
+        Validate a single environment variable against its schema.
+        
+        Args:
+            schema: Validation schema
+            value: Value to validate
+            
+        Returns:
+            True if valid, False otherwise
+        """
+        try:
+            # Check if required
+            if schema.required and (value is None or value == ""):
+                self.validation_errors.append(f"Required environment variable '{schema.name}' is missing")
+                return False
+            
+            # Apply default if not required and missing
+            if not schema.required and (value is None or value == ""):
+                value = schema.default
+            
+            # Type conversion
+            if value is not None and value != "":
+                try:
+                    if schema.type == bool:
+                        if isinstance(value, str):
+                            value = value.lower() in ('true', '1', 'yes', 'on')
+                    elif schema.type == int:
+                        value = int(value)
+                    elif schema.type == float:
+                        value = float(value)
+                    elif schema.type == list:
+                        if isinstance(value, str):
+                            value = [item.strip() for item in value.split(',') if item.strip()]
+                except (ValueError, TypeError) as e:
+                    self.validation_errors.append(f"Invalid type for '{schema.name}': expected {schema.type.__name__}, got {type(value).__name__}")
+                    return False
+            
+            # Pattern validation
+            if schema.pattern and value:
+                if not re.match(schema.pattern, str(value)):
+                    self.validation_errors.append(f"Value for '{schema.name}' does not match pattern: {schema.pattern}")
+                    return False
+            
+            # Range validation
+            if schema.min_value is not None and value is not None:
+                if value < schema.min_value:
+                    self.validation_errors.append(f"Value for '{schema.name}' ({value}) is below minimum ({schema.min_value})")
+                    return False
+            
+            if schema.max_value is not None and value is not None:
+                if value > schema.max_value:
+                    self.validation_errors.append(f"Value for '{schema.name}' ({value}) is above maximum ({schema.max_value})")
+                    return False
+            
+            # Allowed values validation
+            if schema.allowed_values and value not in schema.allowed_values:
+                self.validation_errors.append(f"Value for '{schema.name}' ({value}) is not in allowed values: {schema.allowed_values}")
+                return False
+            
+            # Custom validator
+            if schema.validator and value is not None:
+                if not schema.validator(value):
+                    self.validation_errors.append(f"Custom validation failed for '{schema.name}'")
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            self.validation_errors.append(f"Validation error for '{schema.name}': {str(e)}")
+            return False
+    
+    def validate_schemas(self, schemas: List[ValidationSchema]) -> Dict[str, Any]:
+        """
+        Validate multiple environment variables against their schemas.
+        
+        Args:
+            schemas: List of validation schemas
+            
+        Returns:
+            Dictionary of validated values
+        """
+        validated_values = {}
+        
+        for schema in schemas:
+            value = os.getenv(schema.name, schema.default)
+            if self.validate_env_var(schema, value):
+                validated_values[schema.name] = value
+            else:
+                # Use default for non-required fields
+                if not schema.required:
+                    validated_values[schema.name] = schema.default
+                    self.validation_warnings.append(f"Using default value for '{schema.name}': {schema.default}")
+        
+        return validated_values
+    
+    def get_errors(self) -> List[str]:
+        """Get validation errors."""
+        return self.validation_errors
+    
+    def get_warnings(self) -> List[str]:
+        """Get validation warnings."""
+        return self.validation_warnings
+    
+    def has_errors(self) -> bool:
+        """Check if there are validation errors."""
+        return len(self.validation_errors) > 0
+
+# Define validation schemas for environment variables
+ENVIRONMENT_SCHEMAS = [
+    ValidationSchema(
+        name="TRADING_ENV",
+        required=False,
+        default="development",
+        allowed_values=["development", "staging", "production"],
+        description="Trading environment"
+    ),
+    ValidationSchema(
+        name="LOG_LEVEL",
+        required=False,
+        default="INFO",
+        allowed_values=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        description="Logging level"
+    ),
+    ValidationSchema(
+        name="LOG_DIR",
+        required=False,
+        default="logs",
+        description="Log directory path"
+    ),
+    ValidationSchema(
+        name="ALPHA_VANTAGE_API_KEY",
+        required=False,
+        pattern=r"^[A-Z0-9]{16}$",
+        description="Alpha Vantage API key"
+    ),
+    ValidationSchema(
+        name="POLYGON_API_KEY",
+        required=False,
+        pattern=r"^[A-Za-z0-9_-]+$",
+        description="Polygon API key"
+    ),
+    ValidationSchema(
+        name="OPENAI_API_KEY",
+        required=False,
+        pattern=r"^sk-[A-Za-z0-9]{32,}$",
+        description="OpenAI API key"
+    ),
+    ValidationSchema(
+        name="JWT_SECRET_KEY",
+        required=False,
+        min_value=32,
+        description="JWT secret key (minimum 32 characters)"
+    ),
+    ValidationSchema(
+        name="WEB_SECRET_KEY",
+        required=False,
+        min_value=32,
+        description="Web secret key (minimum 32 characters)"
+    ),
+    ValidationSchema(
+        name="DEFAULT_STRATEGY",
+        required=False,
+        default="momentum",
+        allowed_values=["momentum", "mean_reversion", "arbitrage", "fundamental"],
+        description="Default trading strategy"
+    ),
+    ValidationSchema(
+        name="STRATEGY_DIR",
+        required=False,
+        default="strategies",
+        description="Strategy directory path"
+    ),
+    ValidationSchema(
+        name="BACKTEST_DAYS",
+        required=False,
+        default=365,
+        type=int,
+        min_value=30,
+        max_value=3650,
+        description="Number of days for backtesting"
+    ),
+    ValidationSchema(
+        name="SLIPPAGE",
+        required=False,
+        default=0.001,
+        type=float,
+        min_value=0.0,
+        max_value=0.1,
+        description="Slippage percentage"
+    ),
+    ValidationSchema(
+        name="TRANSACTION_COST",
+        required=False,
+        default=0.001,
+        type=float,
+        min_value=0.0,
+        max_value=0.1,
+        description="Transaction cost percentage"
+    ),
+    ValidationSchema(
+        name="MAX_POSITION_SIZE",
+        required=False,
+        default=0.25,
+        type=float,
+        min_value=0.01,
+        max_value=1.0,
+        description="Maximum position size"
+    ),
+    ValidationSchema(
+        name="MIN_POSITION_SIZE",
+        required=False,
+        default=0.01,
+        type=float,
+        min_value=0.001,
+        max_value=0.5,
+        description="Minimum position size"
+    ),
+    ValidationSchema(
+        name="MAX_LEVERAGE",
+        required=False,
+        default=1.0,
+        type=float,
+        min_value=0.1,
+        max_value=10.0,
+        description="Maximum leverage"
+    ),
+    ValidationSchema(
+        name="RISK_PER_TRADE",
+        required=False,
+        default=0.02,
+        type=float,
+        min_value=0.001,
+        max_value=0.1,
+        description="Risk per trade percentage"
+    ),
+    ValidationSchema(
+        name="STOP_LOSS",
+        required=False,
+        default=0.05,
+        type=float,
+        min_value=0.01,
+        max_value=0.5,
+        description="Stop loss percentage"
+    ),
+    ValidationSchema(
+        name="TAKE_PROFIT",
+        required=False,
+        default=0.10,
+        type=float,
+        min_value=0.01,
+        max_value=1.0,
+        description="Take profit percentage"
+    ),
+    ValidationSchema(
+        name="DEFAULT_TICKERS",
+        required=False,
+        default="AAPL,MSFT,GOOGL",
+        description="Default ticker symbols"
+    ),
+    ValidationSchema(
+        name="DATA_PROVIDER",
+        required=False,
+        default="yahoo",
+        allowed_values=["yahoo", "alpha_vantage", "polygon", "quandl"],
+        description="Data provider"
+    ),
+    ValidationSchema(
+        name="AGENT_TIMEOUT",
+        required=False,
+        default=300,
+        type=int,
+        min_value=30,
+        max_value=3600,
+        description="Agent timeout in seconds"
+    ),
+    ValidationSchema(
+        name="MAX_CONCURRENT_AGENTS",
+        required=False,
+        default=5,
+        type=int,
+        min_value=1,
+        max_value=50,
+        description="Maximum concurrent agents"
+    ),
+    ValidationSchema(
+        name="AGENT_MEMORY_SIZE",
+        required=False,
+        default=1000,
+        type=int,
+        min_value=100,
+        max_value=10000,
+        description="Agent memory size"
+    ),
+    ValidationSchema(
+        name="DEFAULT_LLM_PROVIDER",
+        required=False,
+        default="openai",
+        allowed_values=["openai", "huggingface", "anthropic"],
+        description="Default LLM provider"
+    ),
+    ValidationSchema(
+        name="HUGGINGFACE_API_KEY",
+        required=False,
+        description="Hugging Face API key"
+    ),
+    ValidationSchema(
+        name="HUGGINGFACE_MODEL",
+        required=False,
+        default="gpt2",
+        description="Hugging Face model name"
+    ),
+    ValidationSchema(
+        name="MEMORY_DIR",
+        required=False,
+        default="memory",
+        description="Memory directory path"
+    ),
+    ValidationSchema(
+        name="MEMORY_BACKEND",
+        required=False,
+        default="json",
+        allowed_values=["json", "sqlite", "redis"],
+        description="Memory backend"
+    ),
+    ValidationSchema(
+        name="PERFORMANCE_THRESHOLD",
+        required=False,
+        default=0.05,
+        type=float,
+        min_value=0.001,
+        max_value=1.0,
+        description="Performance threshold"
+    ),
+    ValidationSchema(
+        name="IMPROVEMENT_THRESHOLD",
+        required=False,
+        default=0.02,
+        type=float,
+        min_value=0.001,
+        max_value=1.0,
+        description="Improvement threshold"
+    ),
+    ValidationSchema(
+        name="MAX_DRAWDOWN",
+        required=False,
+        default=0.20,
+        type=float,
+        min_value=0.01,
+        max_value=1.0,
+        description="Maximum drawdown"
+    ),
+    ValidationSchema(
+        name="MAX_CORRELATION",
+        required=False,
+        default=0.70,
+        type=float,
+        min_value=0.0,
+        max_value=1.0,
+        description="Maximum correlation"
+    ),
+    ValidationSchema(
+        name="MAX_CONCENTRATION",
+        required=False,
+        default=0.30,
+        type=float,
+        min_value=0.01,
+        max_value=1.0,
+        description="Maximum concentration"
+    ),
+    ValidationSchema(
+        name="VOLATILITY_WINDOW",
+        required=False,
+        default=20,
+        type=int,
+        min_value=5,
+        max_value=252,
+        description="Volatility calculation window"
+    ),
+    ValidationSchema(
+        name="VOLATILITY_THRESHOLD",
+        required=False,
+        default=0.30,
+        type=float,
+        min_value=0.01,
+        max_value=2.0,
+        description="Volatility threshold"
+    ),
+    ValidationSchema(
+        name="VAR_CONFIDENCE",
+        required=False,
+        default=0.95,
+        type=float,
+        min_value=0.90,
+        max_value=0.99,
+        description="Value at Risk confidence level"
+    ),
+    ValidationSchema(
+        name="VAR_WINDOW",
+        required=False,
+        default=252,
+        type=int,
+        min_value=30,
+        max_value=1000,
+        description="Value at Risk calculation window"
+    ),
+    ValidationSchema(
+        name="STRESS_TEST_ENABLED",
+        required=False,
+        default=True,
+        type=bool,
+        description="Enable stress testing"
+    ),
+    ValidationSchema(
+        name="STRESS_SCENARIOS",
+        required=False,
+        default="market_crash,recession,volatility_spike",
+        description="Stress test scenarios"
+    ),
+    ValidationSchema(
+        name="METRICS_ENABLED",
+        required=False,
+        default=True,
+        type=bool,
+        description="Enable metrics collection"
+    ),
+    ValidationSchema(
+        name="METRICS_PATH",
+        required=False,
+        default="logs/metrics.log",
+        description="Metrics log file path"
+    ),
+    ValidationSchema(
+        name="EVALUATION_WINDOW",
+        required=False,
+        default=252,
+        type=int,
+        min_value=30,
+        max_value=1000,
+        description="Evaluation window in days"
+    ),
+    ValidationSchema(
+        name="BENCHMARK_SYMBOL",
+        required=False,
+        default="SPY",
+        description="Benchmark symbol"
+    ),
+    ValidationSchema(
+        name="RISK_FREE_RATE",
+        required=False,
+        default=0.02,
+        type=float,
+        min_value=0.0,
+        max_value=0.1,
+        description="Risk-free rate"
+    ),
+    ValidationSchema(
+        name="REPORT_FREQUENCY",
+        required=False,
+        default="daily",
+        allowed_values=["daily", "weekly", "monthly"],
+        description="Report frequency"
+    ),
+    ValidationSchema(
+        name="REPORT_DIR",
+        required=False,
+        default="reports",
+        description="Report directory path"
+    ),
+    ValidationSchema(
+        name="ALERT_ENABLED",
+        required=False,
+        default=True,
+        type=bool,
+        description="Enable alerts"
+    ),
+    ValidationSchema(
+        name="ALERT_EMAIL",
+        required=False,
+        pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
+        description="Alert email address"
+    ),
+    ValidationSchema(
+        name="ALERT_WEBHOOK",
+        required=False,
+        pattern=r"^https?://.+",
+        description="Alert webhook URL"
+    ),
+    ValidationSchema(
+        name="SHARPE_THRESHOLD",
+        required=False,
+        default=1.0,
+        type=float,
+        min_value=0.0,
+        max_value=5.0,
+        description="Sharpe ratio threshold"
+    ),
+    ValidationSchema(
+        name="SORTINO_THRESHOLD",
+        required=False,
+        default=1.0,
+        type=float,
+        min_value=0.0,
+        max_value=5.0,
+        description="Sortino ratio threshold"
+    ),
+    ValidationSchema(
+        name="MAX_DRAWDOWN_THRESHOLD",
+        required=False,
+        default=0.15,
+        type=float,
+        min_value=0.01,
+        max_value=1.0,
+        description="Maximum drawdown threshold"
+    )
+]
 
 @dataclass
 class EnhancedSettings:
     """Enhanced settings container for the trading system."""
     
+    def __post_init__(self):
+        """Validate settings after initialization."""
+        self._validate_required_env_vars()
+    
+    def _validate_required_env_vars(self):
+        """Validate required environment variables."""
+        validator = ConfigurationValidator()
+        validated_values = validator.validate_schemas(ENVIRONMENT_SCHEMAS)
+        
+        # Log validation results
+        if validator.has_errors():
+            logger.error("Configuration validation errors:")
+            for error in validator.get_errors():
+                logger.error(f"  - {error}")
+            raise ValueError("Configuration validation failed")
+        
+        if validator.get_warnings():
+            logger.warning("Configuration validation warnings:")
+            for warning in validator.get_warnings():
+                logger.warning(f"  - {warning}")
+        
+        # Set validated values
+        for name, value in validated_values.items():
+            setattr(self, name.lower(), value)
+        
+        logger.info("Configuration validation completed successfully")
+    
     # Environment settings
-    env: str = field(default_factory=lambda: os.getenv('TRADING_ENV', 'development'))
-    debug: bool = field(default_factory=lambda: os.getenv('TRADING_ENV', 'development') == 'development')
+    @property
+    def env(self) -> str:
+        return getattr(self, 'trading_env', 'development')
+    
+    @property
+    def debug(self) -> bool:
+        return self.env == 'development'
     
     # Logging settings
-    log_dir: Path = field(default_factory=lambda: Path(os.getenv('LOG_DIR', 'logs')))
-    log_level: str = field(default_factory=lambda: os.getenv('LOG_LEVEL', 'INFO'))
+    @property
+    def log_dir(self) -> Path:
+        return Path(getattr(self, 'log_dir', 'logs'))
+    
+    @property
+    def log_level(self) -> str:
+        return getattr(self, 'log_level', 'INFO')
     
     # API Keys
-    alpha_vantage_api_key: str = field(default_factory=lambda: os.getenv('ALPHA_VANTAGE_API_KEY', ''))
-    polygon_api_key: str = field(default_factory=lambda: os.getenv('POLYGON_API_KEY', ''))
-    openai_api_key: str = field(default_factory=lambda: os.getenv('OPENAI_API_KEY', ''))
+    @property
+    def alpha_vantage_api_key(self) -> str:
+        return getattr(self, 'alpha_vantage_api_key', '')
+    
+    @property
+    def polygon_api_key(self) -> str:
+        return getattr(self, 'polygon_api_key', '')
+    
+    @property
+    def openai_api_key(self) -> str:
+        return getattr(self, 'openai_api_key', '')
     
     # Security
-    jwt_secret_key: str = field(default_factory=lambda: os.getenv('JWT_SECRET_KEY', ''))
-    web_secret_key: str = field(default_factory=lambda: os.getenv('WEB_SECRET_KEY', ''))
+    @property
+    def jwt_secret_key(self) -> str:
+        return getattr(self, 'jwt_secret_key', '')
+    
+    @property
+    def web_secret_key(self) -> str:
+        return getattr(self, 'web_secret_key', '')
     
     def validate(self) -> bool:
         """Validate enhanced settings."""

@@ -630,3 +630,266 @@ class TestUpdaterAgentIntegration:
         assert result.update_status == "success"
         assert result.performance_improvement is not None
         assert isinstance(result.performance_improvement, float) 
+
+    def test_rollback_to_previous_model_versions_on_degradation(self, updater_agent, mock_old_model, sample_new_data):
+        """Test that the agent can rollback to previous model versions if performance degrades."""
+        print("\n🔄 Testing Model Rollback on Performance Degradation")
+        
+        # Create multiple model versions for rollback testing
+        model_versions = {
+            'v1.0': {
+                'model_id': 'model_v1_0',
+                'performance_metrics': {
+                    'sharpe_ratio': 1.8,
+                    'total_return': 0.25,
+                    'max_drawdown': -0.10,
+                    'win_rate': 0.65,
+                    'profit_factor': 2.0
+                },
+                'timestamp': '2024-01-01T10:00:00',
+                'is_current': False
+            },
+            'v1.1': {
+                'model_id': 'model_v1_1',
+                'performance_metrics': {
+                    'sharpe_ratio': 1.9,
+                    'total_return': 0.28,
+                    'max_drawdown': -0.09,
+                    'win_rate': 0.67,
+                    'profit_factor': 2.1
+                },
+                'timestamp': '2024-01-15T10:00:00',
+                'is_current': False
+            },
+            'v1.2': {
+                'model_id': 'model_v1_2',
+                'performance_metrics': {
+                    'sharpe_ratio': 1.7,
+                    'total_return': 0.22,
+                    'max_drawdown': -0.12,
+                    'win_rate': 0.63,
+                    'profit_factor': 1.8
+                },
+                'timestamp': '2024-02-01T10:00:00',
+                'is_current': True
+            },
+            'v1.3': {
+                'model_id': 'model_v1_3',
+                'performance_metrics': {
+                    'sharpe_ratio': 1.2,  # Degraded performance
+                    'total_return': 0.15,
+                    'max_drawdown': -0.18,
+                    'win_rate': 0.55,
+                    'profit_factor': 1.4
+                },
+                'timestamp': '2024-02-15T10:00:00',
+                'is_current': False
+            }
+        }
+        
+        # Register model versions
+        for version, model_info in model_versions.items():
+            updater_agent.register_model_version(model_info)
+            print(f"  📝 Registered model version: {version}")
+        
+        # Test performance degradation detection
+        print(f"\n  📉 Testing performance degradation detection...")
+        
+        # Simulate performance degradation
+        current_performance = {
+            'sharpe_ratio': 1.0,  # Below threshold
+            'total_return': 0.10,
+            'max_drawdown': -0.20,
+            'win_rate': 0.50,
+            'profit_factor': 1.2
+        }
+        
+        degradation_detected = updater_agent.detect_performance_degradation(current_performance)
+        
+        # Verify degradation detection
+        self.assertTrue(degradation_detected['is_degraded'], "Should detect performance degradation")
+        self.assertIn('degradation_score', degradation_detected, "Should have degradation score")
+        self.assertIn('affected_metrics', degradation_detected, "Should have affected metrics")
+        self.assertIn('severity', degradation_detected, "Should have severity level")
+        
+        print(f"  Degradation detected: {degradation_detected['is_degraded']}")
+        print(f"  Degradation score: {degradation_detected['degradation_score']:.3f}")
+        print(f"  Severity: {degradation_detected['severity']}")
+        print(f"  Affected metrics: {degradation_detected['affected_metrics']}")
+        
+        # Test rollback decision logic
+        print(f"\n  🤔 Testing rollback decision logic...")
+        
+        rollback_decision = updater_agent.evaluate_rollback_necessity(degradation_detected)
+        
+        # Verify rollback decision
+        self.assertIsNotNone(rollback_decision, "Rollback decision should not be None")
+        self.assertIn('should_rollback', rollback_decision, "Should indicate if rollback needed")
+        self.assertIn('recommended_version', rollback_decision, "Should recommend version")
+        self.assertIn('rollback_reason', rollback_decision, "Should have rollback reason")
+        self.assertIn('expected_improvement', rollback_decision, "Should have expected improvement")
+        
+        print(f"  Should rollback: {rollback_decision['should_rollback']}")
+        print(f"  Recommended version: {rollback_decision['recommended_version']}")
+        print(f"  Rollback reason: {rollback_decision['rollback_reason']}")
+        print(f"  Expected improvement: {rollback_decision['expected_improvement']:.3f}")
+        
+        # Verify rollback is recommended for significant degradation
+        self.assertTrue(rollback_decision['should_rollback'], 
+                       "Should recommend rollback for significant degradation")
+        
+        # Test rollback execution
+        print(f"\n  🔄 Testing rollback execution...")
+        
+        rollback_result = updater_agent.execute_model_rollback(rollback_decision['recommended_version'])
+        
+        # Verify rollback result
+        self.assertIsNotNone(rollback_result, "Rollback result should not be None")
+        self.assertIn('rollback_id', rollback_result, "Should have rollback ID")
+        self.assertIn('from_version', rollback_result, "Should have from version")
+        self.assertIn('to_version', rollback_result, "Should have to version")
+        self.assertIn('rollback_timestamp', rollback_result, "Should have rollback timestamp")
+        self.assertIn('rollback_status', rollback_result, "Should have rollback status")
+        self.assertIn('backup_created', rollback_result, "Should indicate backup creation")
+        
+        print(f"  Rollback ID: {rollback_result['rollback_id']}")
+        print(f"  From version: {rollback_result['from_version']}")
+        print(f"  To version: {rollback_result['to_version']}")
+        print(f"  Rollback status: {rollback_result['rollback_status']}")
+        print(f"  Backup created: {rollback_result['backup_created']}")
+        
+        # Verify rollback was successful
+        self.assertEqual(rollback_result['rollback_status'], 'success',
+                        "Rollback should be successful")
+        self.assertTrue(rollback_result['backup_created'], "Backup should be created")
+        
+        # Test rollback validation
+        print(f"\n  ✅ Testing rollback validation...")
+        
+        validation_result = updater_agent.validate_rollback_success(rollback_result)
+        
+        # Verify validation result
+        self.assertIsNotNone(validation_result, "Validation result should not be None")
+        self.assertIn('is_valid', validation_result, "Should indicate if rollback is valid")
+        self.assertIn('current_version', validation_result, "Should show current version")
+        self.assertIn('performance_check', validation_result, "Should have performance check")
+        self.assertIn('stability_check', validation_result, "Should have stability check")
+        
+        print(f"  Rollback valid: {validation_result['is_valid']}")
+        print(f"  Current version: {validation_result['current_version']}")
+        print(f"  Performance check: {validation_result['performance_check']}")
+        print(f"  Stability check: {validation_result['stability_check']}")
+        
+        # Verify rollback validation
+        self.assertTrue(validation_result['is_valid'], "Rollback should be valid")
+        self.assertEqual(validation_result['current_version'], rollback_decision['recommended_version'],
+                        "Current version should match recommended version")
+        
+        # Test rollback history tracking
+        print(f"\n  📚 Testing rollback history tracking...")
+        
+        rollback_history = updater_agent.get_rollback_history()
+        
+        # Verify rollback history
+        self.assertIsNotNone(rollback_history, "Rollback history should not be None")
+        self.assertIn('total_rollbacks', rollback_history, "Should have total rollbacks")
+        self.assertIn('rollback_events', rollback_history, "Should have rollback events")
+        self.assertIn('success_rate', rollback_history, "Should have success rate")
+        self.assertIn('average_improvement', rollback_history, "Should have average improvement")
+        
+        print(f"  Total rollbacks: {rollback_history['total_rollbacks']}")
+        print(f"  Success rate: {rollback_history['success_rate']:.2f}")
+        print(f"  Average improvement: {rollback_history['average_improvement']:.3f}")
+        
+        # Verify history contains the recent rollback
+        self.assertGreater(rollback_history['total_rollbacks'], 0, "Should have rollback history")
+        self.assertEqual(rollback_history['success_rate'], 1.0, "Success rate should be 100%")
+        
+        # Test automatic rollback triggers
+        print(f"\n  🚨 Testing automatic rollback triggers...")
+        
+        # Set up automatic rollback triggers
+        rollback_triggers = {
+            'sharpe_ratio_threshold': 1.5,
+            'max_drawdown_threshold': -0.15,
+            'win_rate_threshold': 0.60,
+            'consecutive_failures': 3,
+            'performance_decay_rate': 0.1
+        }
+        
+        # Test trigger evaluation
+        trigger_evaluation = updater_agent.evaluate_rollback_triggers(current_performance, rollback_triggers)
+        
+        # Verify trigger evaluation
+        self.assertIsNotNone(trigger_evaluation, "Trigger evaluation should not be None")
+        self.assertIn('triggers_activated', trigger_evaluation, "Should have activated triggers")
+        self.assertIn('trigger_reasons', trigger_evaluation, "Should have trigger reasons")
+        self.assertIn('automatic_rollback_needed', trigger_evaluation, "Should indicate if auto-rollback needed")
+        
+        print(f"  Triggers activated: {trigger_evaluation['triggers_activated']}")
+        print(f"  Trigger reasons: {trigger_evaluation['trigger_reasons']}")
+        print(f"  Automatic rollback needed: {trigger_evaluation['automatic_rollback_needed']}")
+        
+        # Test rollback point selection
+        print(f"\n  🎯 Testing rollback point selection...")
+        
+        # Create multiple rollback candidates
+        rollback_candidates = updater_agent.get_rollback_candidates()
+        
+        # Verify rollback candidates
+        self.assertIsNotNone(rollback_candidates, "Rollback candidates should not be None")
+        self.assertIsInstance(rollback_candidates, list, "Rollback candidates should be a list")
+        
+        print(f"  Available rollback candidates: {len(rollback_candidates)}")
+        
+        for candidate in rollback_candidates:
+            print(f"    Version: {candidate['version']}, Performance: {candidate['performance_score']:.3f}")
+        
+        # Test optimal rollback point selection
+        optimal_rollback = updater_agent.select_optimal_rollback_point(rollback_candidates)
+        
+        # Verify optimal rollback selection
+        self.assertIsNotNone(optimal_rollback, "Optimal rollback should not be None")
+        self.assertIn('selected_version', optimal_rollback, "Should have selected version")
+        self.assertIn('selection_reason', optimal_rollback, "Should have selection reason")
+        self.assertIn('expected_performance', optimal_rollback, "Should have expected performance")
+        
+        print(f"  Optimal rollback version: {optimal_rollback['selected_version']}")
+        print(f"  Selection reason: {optimal_rollback['selection_reason']}")
+        print(f"  Expected performance: {optimal_rollback['expected_performance']:.3f}")
+        
+        # Test rollback with performance monitoring
+        print(f"\n  📊 Testing rollback with performance monitoring...")
+        
+        # Simulate post-rollback performance monitoring
+        monitoring_result = updater_agent.monitor_post_rollback_performance(rollback_result['rollback_id'])
+        
+        # Verify monitoring result
+        self.assertIsNotNone(monitoring_result, "Monitoring result should not be None")
+        self.assertIn('monitoring_period', monitoring_result, "Should have monitoring period")
+        self.assertIn('performance_trend', monitoring_result, "Should have performance trend")
+        self.assertIn('stability_metrics', monitoring_result, "Should have stability metrics")
+        self.assertIn('recommendations', monitoring_result, "Should have recommendations")
+        
+        print(f"  Monitoring period: {monitoring_result['monitoring_period']}")
+        print(f"  Performance trend: {monitoring_result['performance_trend']}")
+        print(f"  Stability metrics: {monitoring_result['stability_metrics']}")
+        
+        # Test rollback recovery validation
+        print(f"\n  🔍 Testing rollback recovery validation...")
+        
+        recovery_validation = updater_agent.validate_rollback_recovery(rollback_result['rollback_id'])
+        
+        # Verify recovery validation
+        self.assertIsNotNone(recovery_validation, "Recovery validation should not be None")
+        self.assertIn('recovery_successful', recovery_validation, "Should indicate recovery success")
+        self.assertIn('performance_restored', recovery_validation, "Should indicate performance restoration")
+        self.assertIn('stability_achieved', recovery_validation, "Should indicate stability")
+        self.assertIn('next_actions', recovery_validation, "Should have next actions")
+        
+        print(f"  Recovery successful: {recovery_validation['recovery_successful']}")
+        print(f"  Performance restored: {recovery_validation['performance_restored']}")
+        print(f"  Stability achieved: {recovery_validation['stability_achieved']}")
+        print(f"  Next actions: {recovery_validation['next_actions']}")
+        
+        print("✅ Model rollback on performance degradation test completed") 

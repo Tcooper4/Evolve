@@ -715,6 +715,15 @@ class SelfTuningOptimizerAgent(BaseAgent):
                 'result': result.__dict__,
                 'timestamp': datetime.now()
             })
+            
+            # Save each successful tuning configuration to disk
+            if result.performance_improvement > 0:
+                best_config = result.new_parameters
+                config_path = Path("configs/last_best.json")
+                config_path.parent.mkdir(exist_ok=True)
+                json.dump(best_config, open(config_path, "w"))
+                self.logger.info(f"Saved best configuration to {config_path}")
+                
         except Exception as e:
             self.logger.error(f"Error storing optimization result: {str(e)}")
     

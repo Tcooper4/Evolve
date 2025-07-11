@@ -192,6 +192,14 @@ class ResearchAgent(BaseAgent):
 
     def search_arxiv(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
         """Search arXiv for papers related to the query."""
+        # Use vector search instead of keyword for paper matching
+        try:
+            # First try vector search if available
+            if hasattr(self, '_vector_search'):
+                return self._vector_search(query, max_results)
+        except Exception as e:
+            logger.warning(f"Vector search failed, falling back to keyword search: {e}")
+        
         url = f"http://export.arxiv.org/api/query?search_query=all:{query}&start=0&max_results={max_results}"
         resp = requests.get(url)
         if resp.status_code == 200:

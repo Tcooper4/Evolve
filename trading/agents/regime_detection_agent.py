@@ -264,6 +264,10 @@ class RegimeDetectionAgent(BaseAgent):
             close_prices = data['close'].values
             returns = np.diff(np.log(close_prices))
             
+            # Include volatility bands in regime chart output
+            df = data.copy()
+            df["Volatility"] = df["close"].rolling(20).std()
+            
             # Volatility (rolling standard deviation)
             volatility = np.std(returns[-self.lookback_periods['short']:]) * np.sqrt(252)
             

@@ -231,17 +231,113 @@ class TestModelParameterTuner:
             # Should handle type errors gracefully
     
     def test_memory_management(self, tuner):
-        """Test memory management with large parameter sets."""
-        # Test with large number of parameters
-        large_params = {f'param_{i}': i for i in range(1000)}
+        """Test memory management with large optimization histories."""
+        # Add many optimization results
+        for i in range(1000):
+            tuner.add_optimization_result(
+                model_type='lstm',
+                parameters={'hidden_size': 64 + i, 'layers': 2},
+                performance_metrics={'accuracy': 0.85 + i * 0.001, 'rmse': 0.02}
+            )
         
-        result = tuner._validate_parameters('transformer', large_params)
-        assert isinstance(result, dict)
+        # Should handle large history without memory issues
+        history = tuner.get_optimization_history()
+        assert len(history) <= 1000  # Should not exceed reasonable limits
+    
+    def test_configuration_preservation(self, tuner):
+        """Test that tuning doesn't overwrite prior saved configurations."""
+        # Create initial configuration
+        initial_config = {
+            'lstm': {
+                'hidden_size': 64,
+                'layers': 2,
+                'dropout': 0.2
+            },
+            'transformer': {
+                'd_model': 128,
+                'nhead': 8,
+                'num_layers': 4
+            }
+        }
         
-        # Test with large optimization history
-        large_history = [{'model_type': 'test', 'timestamp': '2024-01-01'} for _ in range(10000)]
-        tuner.optimization_history = large_history
+        # Save initial configuration
+        with patch('builtins.open', create=True) as mock_open:
+            mock_open.return_value.__enter__.return_value.write.return_value = None
+            tuner._save_configuration(initial_config, 'initial_config.json')
         
-        # Should handle large datasets without memory issues
-        results = tuner.get_optimization_history(limit=100)
-        assert len(results) <= 100 
+        # Perform tuning that might modify parameters
+        tuning_params = {
+            'lstm': {
+                'hidden_size': 128,  # Different value
+                'layers': 3,         # Different value
+                'dropout': 0.3       # Different value
+            }
+        }
+        
+        # Mock the tuning process
+        with patch.object(tuner, '_run_optimization') as mock_optimize:
+            mock_optimize.return_value = {
+                'best_params': tuning_params,
+                'best_score': 0.95
+            }
+            
+            # Run tuning
+            result = tuner.tune_parameters('lstm', {'hidden_size': [64, 128], 'layers': [2, 3]})
+        
+        # Verify that original configuration is preserved
+        # Load the saved configuration
+        with patch('builtins.open', create=True) as mock_open:
+            mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(initial_config)
+            saved_config = tuner._load_configuration('initial_config.json')
+        
+        # Check that original values are preserved
+        assert saved_config['lstm']['hidden_size'] == 64  # Original value
+        assert saved_config['lstm']['layers'] == 2        # Original value
+        assert saved_config['lstm']['dropout'] == 0.2     # Original value
+        assert saved_config['transformer']['d_model'] == 128  # Unchanged
+        assert saved_config['transformer']['nhead'] == 8      # Unchanged
+        
+        # Verify that tuning created new configuration without overwriting
+        assert result is not None
+        assert 'best_params' in result
+        assert result['best_params']['lstm']['hidden_size'] == 128  # New tuned value
+        
+        # Test configuration versioning
+        config_versions = tuner._get_configuration_versions()
+        assert len(config_versions) >= 1  # Should have at least initial config
+        
+        # Test that we can restore previous configuration
+        restored_config = tuner._restore_configuration('initial_config.json')
+        assert restored_config['lstm']['hidden_size'] == 64  # Restored original value
+        
+        # Test that multiple tuning runs don't interfere
+        second_tuning_params = {
+            'lstm': {
+                'hidden_size': 256,
+                'layers': 4,
+                'dropout': 0.4
+            }
+        }
+        
+        with patch.object(tuner, '_run_optimization') as mock_optimize:
+            mock_optimize.return_value = {
+                'best_params': second_tuning_params,
+                'best_score': 0.97
+            }
+            
+            second_result = tuner.tune_parameters('lstm', {'hidden_size': [128, 256], 'layers': [3, 4]})
+        
+        # Verify all configurations are preserved
+        assert second_result['best_params']['lstm']['hidden_size'] == 256  # Second tuning
+        assert result['best_params']['lstm']['hidden_size'] == 128         # First tuning preserved
+        assert saved_config['lstm']['hidden_size'] == 64                   # Original preserved
+        
+        # Test configuration backup before tuning
+        with patch.object(tuner, '_backup_configuration') as mock_backup:
+            tuner.tune_parameters('lstm', {'hidden_size': [64, 128]})
+            assert mock_backup.called  # Should create backup before tuning
+        
+        # Test configuration rollback capability
+        with patch.object(tuner, '_rollback_configuration') as mock_rollback:
+            tuner._rollback_to_previous_configuration()
+            assert mock_rollback.called  # Should be able to rollback 

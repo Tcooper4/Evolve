@@ -597,3 +597,238 @@ class TestPerformanceCriticAgentIntegration:
         # The recommendations should be based on the thresholds
         # (actual content depends on the metrics calculated)
         assert len(result.recommendations) >= 0 
+
+    def test_underperforming_models_flagged_and_scheduled(self, performance_critic_agent, mock_model, sample_test_data):
+        """Test that underperforming models get flagged and scheduled for update."""
+        print("\n🚨 Testing Underperforming Models Flagging and Scheduling")
+        
+        # Create different model performance scenarios
+        performance_scenarios = [
+            {
+                'name': 'High Performer',
+                'metrics': {
+                    'sharpe_ratio': 2.0,
+                    'total_return': 0.35,
+                    'max_drawdown': -0.08,
+                    'win_rate': 0.75,
+                    'profit_factor': 2.2
+                },
+                'expected_flag': False,
+                'expected_action': 'maintain'
+            },
+            {
+                'name': 'Moderate Performer',
+                'metrics': {
+                    'sharpe_ratio': 1.2,
+                    'total_return': 0.20,
+                    'max_drawdown': -0.12,
+                    'win_rate': 0.60,
+                    'profit_factor': 1.5
+                },
+                'expected_flag': False,
+                'expected_action': 'monitor'
+            },
+            {
+                'name': 'Underperformer - Low Sharpe',
+                'metrics': {
+                    'sharpe_ratio': 0.3,  # Below threshold of 0.5
+                    'total_return': 0.05,
+                    'max_drawdown': -0.15,
+                    'win_rate': 0.55,
+                    'profit_factor': 1.2
+                },
+                'expected_flag': True,
+                'expected_action': 'retrain'
+            },
+            {
+                'name': 'Underperformer - High Drawdown',
+                'metrics': {
+                    'sharpe_ratio': 1.0,
+                    'total_return': 0.15,
+                    'max_drawdown': -0.25,  # Above threshold of -0.15
+                    'win_rate': 0.65,
+                    'profit_factor': 1.8
+                },
+                'expected_flag': True,
+                'expected_action': 'optimize'
+            },
+            {
+                'name': 'Underperformer - Low Win Rate',
+                'metrics': {
+                    'sharpe_ratio': 0.8,
+                    'total_return': 0.10,
+                    'max_drawdown': -0.12,
+                    'win_rate': 0.40,  # Below threshold of 0.45
+                    'profit_factor': 1.1
+                },
+                'expected_flag': True,
+                'expected_action': 'retrain'
+            },
+            {
+                'name': 'Critical Underperformer',
+                'metrics': {
+                    'sharpe_ratio': -0.5,  # Negative Sharpe
+                    'total_return': -0.10,  # Negative return
+                    'max_drawdown': -0.30,  # Very high drawdown
+                    'win_rate': 0.35,  # Very low win rate
+                    'profit_factor': 0.8  # Below 1.0
+                },
+                'expected_flag': True,
+                'expected_action': 'replace'
+            }
+        ]
+        
+        for scenario in performance_scenarios:
+            print(f"\n  📊 Testing scenario: {scenario['name']}")
+            
+            # Create evaluation result with scenario metrics
+            evaluation_result = ModelEvaluationResult(
+                request_id="test_eval",
+                model_id="test_model",
+                evaluation_timestamp="2024-01-01T12:00:00",
+                performance_metrics={
+                    'sharpe_ratio': scenario['metrics']['sharpe_ratio'],
+                    'total_return': scenario['metrics']['total_return']
+                },
+                risk_metrics={
+                    'max_drawdown': scenario['metrics']['max_drawdown'],
+                    'volatility': 0.20
+                },
+                trading_metrics={
+                    'win_rate': scenario['metrics']['win_rate'],
+                    'profit_factor': scenario['metrics']['profit_factor']
+                },
+                evaluation_status="success"
+            )
+            
+            # Check if model should be flagged
+            should_flag = performance_critic_agent.should_flag_model(evaluation_result)
+            print(f"    Should flag: {should_flag} (expected: {scenario['expected_flag']})")
+            
+            # Verify flagging logic
+            assert should_flag == scenario['expected_flag'], 
+                           f"Flagging logic failed for {scenario['name']}"
+            
+            if should_flag:
+                # Test flagging and scheduling
+                flag_result = performance_critic_agent.flag_underperforming_model(evaluation_result)
+                
+                # Verify flag result
+                assert flag_result is not None, "Flag result should not be None"
+                assert 'model_id' in flag_result, "Flag result should contain model_id"
+                assert 'flag_reason' in flag_result, "Flag result should contain flag_reason"
+                assert 'recommended_action' in flag_result, "Flag result should contain recommended_action"
+                assert 'priority' in flag_result, "Flag result should contain priority"
+                
+                print(f"    Flag reason: {flag_result['flag_reason']}")
+                print(f"    Recommended action: {flag_result['recommended_action']}")
+                print(f"    Priority: {flag_result['priority']}")
+                
+                # Verify recommended action matches expected
+                assert flag_result['recommended_action'] == scenario['expected_action'],
+                               f"Recommended action should be {scenario['expected_action']} for {scenario['name']}"
+                
+                # Test scheduling for update
+                schedule_result = performance_critic_agent.schedule_model_update(flag_result)
+                
+                # Verify scheduling result
+                assert schedule_result is not None, "Schedule result should not be None"
+                assert 'update_id' in schedule_result, "Schedule result should contain update_id"
+                assert 'scheduled_time' in schedule_result, "Schedule result should contain scheduled_time"
+                assert 'update_type' in schedule_result, "Schedule result should contain update_type"
+                
+                print(f"    Update scheduled: {schedule_result['update_id']}")
+                print(f"    Update type: {schedule_result['update_type']}")
+                
+                # Verify update type based on performance
+                if scenario['name'] == 'Critical Underperformer':
+                    assert schedule_result['update_type'] == 'replace', \
+                                   "Critical underperformer should be scheduled for replacement"
+                elif 'High Drawdown' in scenario['name']:
+                    assert schedule_result['update_type'] == 'optimize', \
+                                   "High drawdown should be scheduled for optimization"
+                else:
+                    assert schedule_result['update_type'] == 'retrain', \
+                                   "Other underperformers should be scheduled for retraining"
+        
+        # Test batch flagging and scheduling
+        print(f"\n  📋 Testing batch flagging and scheduling...")
+        
+        # Create multiple evaluation results
+        batch_evaluations = []
+        for i, scenario in enumerate(performance_scenarios[:3]):  # Test first 3 scenarios
+            evaluation_result = ModelEvaluationResult(
+                request_id=f"batch_eval_{i}",
+                model_id=f"model_{i}",
+                evaluation_timestamp="2024-01-01T12:00:00",
+                performance_metrics={
+                    'sharpe_ratio': scenario['metrics']['sharpe_ratio'],
+                    'total_return': scenario['metrics']['total_return']
+                },
+                risk_metrics={
+                    'max_drawdown': scenario['metrics']['max_drawdown'],
+                    'volatility': 0.20
+                },
+                trading_metrics={
+                    'win_rate': scenario['metrics']['win_rate'],
+                    'profit_factor': scenario['metrics']['profit_factor']
+                },
+                evaluation_status="success"
+            )
+            batch_evaluations.append(evaluation_result)
+        
+        # Process batch evaluations
+        batch_flags = performance_critic_agent.flag_batch_models(batch_evaluations)
+        batch_schedules = performance_critic_agent.schedule_batch_updates(batch_flags)
+        
+        # Verify batch processing
+        assert isinstance(batch_flags, list, "Batch flags should be a list")
+        assert isinstance(batch_schedules, list, "Batch schedules should be a list")
+        
+        flagged_count = sum(1 for flag in batch_flags if flag is not None)
+        scheduled_count = sum(1 for schedule in batch_schedules if schedule is not None)
+        
+        print(f"    Models flagged: {flagged_count}/{len(batch_evaluations)}")
+        print(f"    Updates scheduled: {scheduled_count}/{flagged_count}")
+        
+        # Verify that only underperforming models are flagged
+        expected_flags = sum(1 for scenario in performance_scenarios[:3] if scenario['expected_flag'])
+        assert flagged_count == expected_flags, 
+                        f"Should flag {expected_flags} underperforming models"
+        
+        # Test priority ordering
+        print(f"\n  🎯 Testing priority ordering...")
+        
+        if batch_flags:
+            # Sort by priority
+            sorted_flags = sorted(batch_flags, key=lambda x: x['priority'] if x else 0, reverse=True)
+            
+            # Verify priority ordering (higher priority first)
+            priorities = [flag['priority'] for flag in sorted_flags if flag]
+            print(f"    Priority order: {priorities}")
+            
+            # Verify descending order
+            assert priorities == sorted(priorities, reverse=True),
+                           "Flags should be ordered by priority (descending)"
+        
+        # Test flag history tracking
+        print(f"\n  📈 Testing flag history tracking...")
+        
+        # Get flag history
+        flag_history = performance_critic_agent.get_flag_history()
+        
+        # Verify history tracking
+        assert isinstance(flag_history, dict, "Flag history should be a dictionary")
+        assert 'total_flags' in flag_history, "History should contain total_flags"
+        assert 'flagged_models' in flag_history, "History should contain flagged_models"
+        assert 'update_schedule' in flag_history, "History should contain update_schedule"
+        
+        print(f"    Total flags: {flag_history['total_flags']}")
+        print(f"    Flagged models: {len(flag_history['flagged_models'])}")
+        print(f"    Scheduled updates: {len(flag_history['update_schedule'])}")
+        
+        # Verify history consistency
+        assert flag_history['total_flags'] >= flagged_count,
+                               "History should reflect all flagged models"
+        
+        print("✅ Underperforming models flagging and scheduling test completed") 

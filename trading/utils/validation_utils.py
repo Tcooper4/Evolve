@@ -19,6 +19,175 @@ class ValidationError(Exception):
     """Exception raised for validation errors."""
     pass
 
+def ensure_array_compatible(data: Any, name: str = "data") -> np.ndarray:
+    """Ensure data is numpy or pandas compatible and convert to numpy array.
+    
+    Args:
+        data: Input data to convert
+        name: Name of the data for error messages
+        
+    Returns:
+        Numpy array
+        
+    Raises:
+        ValidationError: If data cannot be converted to numpy array
+    """
+    try:
+        if isinstance(data, np.ndarray):
+            return data
+        elif isinstance(data, pd.Series):
+            return data.to_numpy()
+        elif isinstance(data, pd.DataFrame):
+            if data.shape[1] == 1:
+                return data.iloc[:, 0].to_numpy()
+            else:
+                raise ValidationError(f"{name} is a DataFrame with multiple columns, cannot convert to 1D array")
+        elif isinstance(data, (list, tuple)):
+            return np.array(data)
+        elif hasattr(data, '__array__'):
+            return np.array(data)
+        else:
+            raise ValidationError(f"{name} is not numpy or pandas compatible: {type(data)}")
+    except Exception as e:
+        raise ValidationError(f"Failed to convert {name} to numpy array: {str(e)}")
+
+def validate_array_shape(
+    array: np.ndarray,
+    expected_shape: Optional[Tuple[int, ...]] = None,
+    min_dims: Optional[int] = None,
+    max_dims: Optional[int] = None,
+    name: str = "array"
+) -> bool:
+    """Validate array shape integrity.
+    
+    Args:
+        array: Numpy array to validate
+        expected_shape: Expected shape tuple
+        min_dims: Minimum number of dimensions
+        max_dims: Maximum number of dimensions
+        name: Name of the array for error messages
+        
+    Returns:
+        Whether shape is valid
+        
+    Raises:
+        ValidationError: If shape validation fails
+    """
+    if not isinstance(array, np.ndarray):
+        raise ValidationError(f"{name} is not a numpy array: {type(array)}")
+    
+    # Check for NaN or infinite values
+    if np.any(np.isnan(array)):
+        raise ValidationError(f"{name} contains NaN values")
+    
+    if np.any(np.isinf(array)):
+        raise ValidationError(f"{name} contains infinite values")
+    
+    # Check dimensions
+    if min_dims is not None and array.ndim < min_dims:
+        raise ValidationError(f"{name} has {array.ndim} dimensions, expected at least {min_dims}")
+    
+    if max_dims is not None and array.ndim > max_dims:
+        raise ValidationError(f"{name} has {array.ndim} dimensions, expected at most {max_dims}")
+    
+    # Check expected shape
+    if expected_shape is not None:
+        if array.shape != expected_shape:
+            raise ValidationError(f"{name} has shape {array.shape}, expected {expected_shape}")
+    
+    return True
+
+def validate_dataframe_integrity(
+    df: pd.DataFrame,
+    required_columns: Optional[List[str]] = None,
+    numeric_columns: Optional[List[str]] = None,
+    categorical_columns: Optional[List[str]] = None,
+    datetime_columns: Optional[List[str]] = None,
+    min_rows: int = 1,
+    max_rows: Optional[int] = None,
+    allow_missing: bool = False,
+    allow_duplicates: bool = False,
+    check_shape: bool = True
+) -> Tuple[bool, List[str]]:
+    """Validate DataFrame integrity with comprehensive checks.
+    
+    Args:
+        df: DataFrame to validate
+        required_columns: List of required column names
+        numeric_columns: List of numeric column names
+        categorical_columns: List of categorical column names
+        datetime_columns: List of datetime column names
+        min_rows: Minimum number of rows required
+        max_rows: Maximum number of rows allowed
+        allow_missing: Whether to allow missing values
+        allow_duplicates: Whether to allow duplicate rows
+        check_shape: Whether to check shape integrity
+        
+    Returns:
+        Tuple of (is_valid, list of issues)
+    """
+    issues = []
+    
+    # Ensure DataFrame is pandas DataFrame
+    if not isinstance(df, pd.DataFrame):
+        issues.append(f"Input is not a pandas DataFrame: {type(df)}")
+        return False, issues
+    
+    # Check shape integrity
+    if check_shape:
+        if df.shape[0] == 0:
+            issues.append("DataFrame is empty (0 rows)")
+        if df.shape[1] == 0:
+            issues.append("DataFrame has no columns")
+    
+    # Check required columns
+    if required_columns:
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        if missing_cols:
+            issues.append(f"Missing required columns: {missing_cols}")
+    
+    # Check row count
+    if len(df) < min_rows:
+        issues.append(f"Insufficient rows: {len(df)} < {min_rows}")
+    if max_rows and len(df) > max_rows:
+        issues.append(f"Too many rows: {len(df)} > {max_rows}")
+    
+    # Check missing values
+    if not allow_missing:
+        missing = df.isnull().sum()
+        if missing.any():
+            issues.append(f"Missing values found: {missing[missing > 0].to_dict()}")
+    
+    # Check duplicates
+    if not allow_duplicates:
+        duplicates = df.duplicated().sum()
+        if duplicates > 0:
+            issues.append(f"Found {duplicates} duplicate rows")
+    
+    # Check column types and convert to numpy arrays for validation
+    for col in numeric_columns or []:
+        if col in df.columns:
+            try:
+                array = ensure_array_compatible(df[col], f"column '{col}'")
+                validate_array_shape(array, min_dims=1, max_dims=1, name=f"column '{col}'")
+                
+                if not pd.api.types.is_numeric_dtype(df[col]):
+                    issues.append(f"Column {col} is not numeric")
+            except ValidationError as e:
+                issues.append(f"Column {col} validation failed: {str(e)}")
+    
+    for col in categorical_columns or []:
+        if col in df.columns:
+            if not pd.api.types.is_categorical_dtype(df[col]):
+                issues.append(f"Column {col} is not categorical")
+    
+    for col in datetime_columns or []:
+        if col in df.columns:
+            if not pd.api.types.is_datetime64_dtype(df[col]):
+                issues.append(f"Column {col} is not datetime")
+    
+    return len(issues) == 0, issues
+
 class DataValidator:
     """Validator for data quality and structure."""
     
@@ -62,48 +231,57 @@ class DataValidator:
         Returns:
             Tuple of (is_valid, list of issues)
         """
-        issues = []
+        return validate_dataframe_integrity(
+            df,
+            required_columns=self.required_columns,
+            numeric_columns=self.numeric_columns,
+            categorical_columns=self.categorical_columns,
+            datetime_columns=self.datetime_columns,
+            min_rows=self.min_rows,
+            max_rows=self.max_rows,
+            allow_missing=self.allow_missing,
+            allow_duplicates=self.allow_duplicates
+        )
+    
+    def validate_array(self, data: Any, name: str = "data") -> np.ndarray:
+        """Validate and convert data to numpy array.
         
-        # Check required columns
-        missing_cols = [col for col in self.required_columns if col not in df.columns]
-        if missing_cols:
-            issues.append(f"Missing required columns: {missing_cols}")
+        Args:
+            data: Input data to validate
+            name: Name of the data for error messages
+            
+        Returns:
+            Validated numpy array
+            
+        Raises:
+            ValidationError: If validation fails
+        """
+        return ensure_array_compatible(data, name)
+    
+    def validate_array_shape(
+        self,
+        array: np.ndarray,
+        expected_shape: Optional[Tuple[int, ...]] = None,
+        min_dims: Optional[int] = None,
+        max_dims: Optional[int] = None,
+        name: str = "array"
+    ) -> bool:
+        """Validate array shape integrity.
         
-        # Check row count
-        if len(df) < self.min_rows:
-            issues.append(f"Insufficient rows: {len(df)} < {self.min_rows}")
-        if self.max_rows and len(df) > self.max_rows:
-            issues.append(f"Too many rows: {len(df)} > {self.max_rows}")
-        
-        # Check missing values
-        if not self.allow_missing:
-            missing = df.isnull().sum()
-            if missing.any():
-                issues.append(f"Missing values found: {missing[missing > 0].to_dict()}")
-        
-        # Check duplicates
-        if not self.allow_duplicates:
-            duplicates = df.duplicated().sum()
-            if duplicates > 0:
-                issues.append(f"Found {duplicates} duplicate rows")
-        
-        # Check column types
-        for col in self.numeric_columns:
-            if col in df.columns:
-                if not pd.api.types.is_numeric_dtype(df[col]):
-                    issues.append(f"Column {col} is not numeric")
-        
-        for col in self.categorical_columns:
-            if col in df.columns:
-                if not pd.api.types.is_categorical_dtype(df[col]):
-                    issues.append(f"Column {col} is not categorical")
-        
-        for col in self.datetime_columns:
-            if col in df.columns:
-                if not pd.api.types.is_datetime64_dtype(df[col]):
-                    issues.append(f"Column {col} is not datetime")
-        
-        return len(issues) == 0, issues
+        Args:
+            array: Numpy array to validate
+            expected_shape: Expected shape tuple
+            min_dims: Minimum number of dimensions
+            max_dims: Maximum number of dimensions
+            name: Name of the array for error messages
+            
+        Returns:
+            Whether shape is valid
+            
+        Raises:
+            ValidationError: If shape validation fails
+        """
+        return validate_array_shape(array, expected_shape, min_dims, max_dims, name)
 
 class ParameterValidator:
     """Validator for parameter values and types."""
@@ -249,25 +427,18 @@ class ConfigValidator:
             Tuple of (is_valid, list of issues)
         """
         try:
-            with open(file_path) as f:
-                if str(file_path).endswith('.json'):
-                    config = json.load(f)
-                elif str(file_path).endswith(('.yaml', '.yml')):
-                    import yaml
-                    config = yaml.safe_load(f)
-                else:
-                    raise ValueError(f"Unsupported config file format: {file_path}")
-            
+            with open(file_path, 'r') as f:
+                config = json.load(f)
             return self.validate_config(config)
         except Exception as e:
-            return False, [f"Error loading config file: {e}"]
+            return False, [f"Failed to load config file: {str(e)}"]
 
 def validate_numeric_range(
     value: Union[int, float],
     min_value: Optional[Union[int, float]] = None,
     max_value: Optional[Union[int, float]] = None
 ) -> bool:
-    """Validate numeric value is in range.
+    """Validate numeric value is within range.
     
     Args:
         value: Value to validate
@@ -275,7 +446,7 @@ def validate_numeric_range(
         max_value: Maximum allowed value
         
     Returns:
-        Whether value is valid
+        Whether value is within range
     """
     if min_value is not None and value < min_value:
         return False
@@ -288,7 +459,7 @@ def validate_string_length(
     min_length: Optional[int] = None,
     max_length: Optional[int] = None
 ) -> bool:
-    """Validate string length is in range.
+    """Validate string length is within range.
     
     Args:
         value: String to validate
@@ -296,7 +467,7 @@ def validate_string_length(
         max_length: Maximum allowed length
         
     Returns:
-        Whether string is valid
+        Whether string length is within range
     """
     if min_length is not None and len(value) < min_length:
         return False
@@ -309,7 +480,7 @@ def validate_datetime_range(
     min_date: Optional[datetime] = None,
     max_date: Optional[datetime] = None
 ) -> bool:
-    """Validate datetime is in range.
+    """Validate datetime is within range.
     
     Args:
         value: Datetime to validate
@@ -317,7 +488,7 @@ def validate_datetime_range(
         max_date: Maximum allowed date
         
     Returns:
-        Whether datetime is valid
+        Whether datetime is within range
     """
     if min_date is not None and value < min_date:
         return False
@@ -346,3 +517,42 @@ def validate_directory_exists(dir_path: Union[str, Path]) -> bool:
         Whether directory exists
     """
     return Path(dir_path).is_dir()
+
+def validate_array_compatibility(data: Any, name: str = "data") -> np.ndarray:
+    """Validate and convert data to numpy array with comprehensive checks.
+    
+    Args:
+        data: Input data to validate
+        name: Name of the data for error messages
+        
+    Returns:
+        Validated numpy array
+        
+    Raises:
+        ValidationError: If validation fails
+    """
+    return ensure_array_compatible(data, name)
+
+def validate_shape_integrity(
+    array: np.ndarray,
+    expected_shape: Optional[Tuple[int, ...]] = None,
+    min_dims: Optional[int] = None,
+    max_dims: Optional[int] = None,
+    name: str = "array"
+) -> bool:
+    """Validate array shape integrity with comprehensive checks.
+    
+    Args:
+        array: Numpy array to validate
+        expected_shape: Expected shape tuple
+        min_dims: Minimum number of dimensions
+        max_dims: Maximum number of dimensions
+        name: Name of the array for error messages
+        
+    Returns:
+        Whether shape is valid
+        
+    Raises:
+        ValidationError: If shape validation fails
+    """
+    return validate_array_shape(array, expected_shape, min_dims, max_dims, name)

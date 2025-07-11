@@ -104,8 +104,13 @@ class MetaTunerService(BaseService):
                 n_trials=n_trials,
                 cv_folds=cv_folds
             )
-            
-            # Log to memory
+
+            # Extract sensitivity/importance info if present
+            param_importances = result.get('param_importances')
+            sensitivity_report = result.get('sensitivity_report')
+            trial_stats = result.get('trial_stats')
+
+            # Log to memory with tuning metadata
             self.memory.log_decision(
                 agent_name='meta_tuner',
                 decision_type='tune_hyperparameters',
@@ -115,16 +120,26 @@ class MetaTunerService(BaseService):
                     'n_trials': n_trials,
                     'cv_folds': cv_folds,
                     'best_score': result.get('best_score', 0),
-                    'best_params': result.get('best_params', {})
+                    'best_params': result.get('best_params', {}),
+                    'param_importances': param_importances,
+                    'sensitivity_report': sensitivity_report,
+                    'trial_stats': trial_stats
                 }
             )
-            
-            return {
+
+            response = {
                 'type': 'hyperparameters_tuned',
                 'result': result,
                 'status': 'success'
             }
-            
+            # Attach sensitivity/importance info to response if present
+            if param_importances:
+                response['param_importances'] = param_importances
+            if sensitivity_report:
+                response['sensitivity_report'] = sensitivity_report
+            if trial_stats:
+                response['trial_stats'] = trial_stats
+            return response
         except Exception as e:
             logger.error(f"Error tuning hyperparameters: {e}")
             return {

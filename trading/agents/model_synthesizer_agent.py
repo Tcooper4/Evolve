@@ -234,40 +234,105 @@ class ModelSynthesizerAgent:
     
     def synthesize_model(self, request: SynthesisRequest, 
                         training_data: pd.DataFrame) -> SynthesisResult:
-        """Synthesize a new model based on requirements.
+        """
+        Synthesize a new model based on the request and training data.
         
         Args:
             request: Synthesis request with requirements
             training_data: Training data for the model
             
         Returns:
-            SynthesisResult with model details and performance
+            SynthesisResult: Result of the synthesis process
         """
+        start_time = datetime.now()
+        synthesis_id = f"synthesis_{start_time.strftime('%Y%m%d_%H%M%S')}"
+        
         try:
-            logger.info(f"Starting model synthesis for request: {request}")
+            logger.info(f"Starting model synthesis {synthesis_id}")
+            
+            # Validate input data
+            if not self._validate_synthesis_input(request, training_data):
+                return self._create_failed_result("Invalid synthesis input")
             
             # Generate candidate architectures
             candidates = self._generate_candidate_architectures(request)
             
-            # Evaluate and select best architecture
+            if not candidates:
+                logger.warning("No candidate architectures generated, trying fallback")
+                candidates = self._generate_fallback_architectures(request)
+                
+                if not candidates:
+                    return self._create_failed_result("No suitable architectures found")
+            
+            # Select best architecture
             best_architecture = self._select_best_architecture(candidates, request)
             
-            # Build and train the model
-            model_id = f"synth_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            synthesis_result = self._build_and_train_model(
-                model_id, best_architecture, training_data, request
+            if not best_architecture:
+                return self._create_failed_result("Failed to select architecture")
+            
+            # Build and train model
+            result = self._build_and_train_model(
+                synthesis_id, best_architecture, training_data, request
             )
             
-            # Update registry and history
-            self.model_registry[model_id] = synthesis_result
-            self.synthesis_history.append(synthesis_result)
+            # Add synthesis metadata
+            result.synthesis_time = (datetime.now() - start_time).total_seconds()
+            result.timestamp = datetime.now()
             
-            logger.info(f"Model synthesis completed: {model_id}")
-            return synthesis_result
+            # Store in registry
+            self.model_registry[synthesis_id] = result
+            self.synthesis_history.append(result)
+            
+            logger.info(f"Model synthesis {synthesis_id} completed successfully")
+            return result
             
         except Exception as e:
             logger.error(f"Model synthesis failed: {e}")
-            return self._create_failed_result(str(e))
+            return self._create_failed_result(f"Synthesis failed: {str(e)}")
+    
+    def _validate_synthesis_input(self, request: SynthesisRequest, 
+                                 training_data: pd.DataFrame) -> bool:
+        """
+        Validate synthesis input parameters.
+        
+        Args:
+            request: Synthesis request
+            training_data: Training data
+            
+        Returns:
+            True if input is valid
+        """
+        try:
+            # Check request parameters
+            if request.target_performance <= 0 or request.target_performance > 1:
+                logger.error("Invalid target performance")
+                return False
+            
+            if request.max_complexity <= 0 or request.max_complexity > 1:
+                logger.error("Invalid max complexity")
+                return False
+            
+            # Check training data
+            if training_data.empty:
+                logger.error("Empty training data")
+                return False
+            
+            if len(training_data) < 100:  # Minimum data requirement
+                logger.error("Insufficient training data")
+                return False
+            
+            # Check for required columns
+            required_columns = ['price', 'volume']
+            missing_columns = [col for col in required_columns if col not in training_data.columns]
+            if missing_columns:
+                logger.error(f"Missing required columns: {missing_columns}")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error validating synthesis input: {e}")
+            return False
     
     def _generate_candidate_architectures(self, request: SynthesisRequest) -> List[ModelArchitecture]:
         """Generate candidate architectures based on requirements."""
@@ -681,6 +746,407 @@ class ModelSynthesizerAgent:
             
         except Exception as e:
             logger.error(f"Error loading synthesis state: {e}")
+
+    def _generate_fallback_architectures(self, request: SynthesisRequest) -> List[ModelArchitecture]:
+        """
+        Generate fallback architectures when primary generation fails.
+        
+        Args:
+            request: Synthesis request
+            
+        Returns:
+            List of fallback architectures
+        """
+        fallback_architectures = []
+        
+        try:
+            # Use simple, proven architectures as fallback
+            fallback_templates = [
+                'simple_lstm',
+                'basic_ensemble',
+                'linear_regression'
+            ]
+            
+            for template_name in fallback_templates:
+                if template_name in self.architecture_templates:
+                    template = self.architecture_templates[template_name]
+                    
+                    # Create fallback architecture with relaxed constraints
+                    fallback_arch = ModelArchitecture(
+                        model_type=template.model_type,
+                        layers=template.layers.copy(),
+                        hyperparameters=template.hyperparameters.copy(),
+                        input_features=template.input_features,
+                        output_features=template.output_features,
+                        complexity_score=min(template.complexity_score, 0.5),
+                        expected_performance=max(template.expected_performance * 0.8, 0.5),
+                        training_time_estimate=template.training_time_estimate * 0.5,
+                        memory_requirements=template.memory_requirements * 0.5
+                    )
+                    
+                    fallback_architectures.append(fallback_arch)
+            
+            logger.info(f"Generated {len(fallback_architectures)} fallback architectures")
+            
+        except Exception as e:
+            logger.error(f"Error generating fallback architectures: {e}")
+        
+        return fallback_architectures
+    
+    def test_synthetic_model(self, model_id: str, test_data: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Test a synthetic model with validation data.
+        
+        Args:
+            model_id: ID of the model to test
+            test_data: Test data
+            
+        Returns:
+            Test results dictionary
+        """
+        try:
+            if model_id not in self.model_registry:
+                return {"error": "Model not found in registry"}
+            
+            model_result = self.model_registry[model_id]
+            
+            if model_result.status != SynthesisStatus.COMPLETED:
+                return {"error": "Model synthesis not completed"}
+            
+            # Load the trained model
+            model = self._load_trained_model(model_id)
+            if model is None:
+                return {"error": "Failed to load trained model"}
+            
+            # Prepare test data
+            X_test, y_test = self._prepare_test_data(test_data, model_result.architecture)
+            
+            # Make predictions
+            predictions = self._make_predictions(model, X_test)
+            
+            # Calculate test metrics
+            test_metrics = self._calculate_test_metrics(y_test, predictions)
+            
+            # Validate model performance
+            validation_result = self._validate_model_performance(
+                test_metrics, model_result.architecture
+            )
+            
+            return {
+                "model_id": model_id,
+                "test_metrics": test_metrics,
+                "validation_result": validation_result,
+                "predictions": predictions.tolist() if hasattr(predictions, 'tolist') else predictions,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error testing synthetic model {model_id}: {e}")
+            return {"error": f"Test failed: {str(e)}"}
+    
+    def _load_trained_model(self, model_id: str) -> Any:
+        """
+        Load a trained model from storage.
+        
+        Args:
+            model_id: Model ID
+            
+        Returns:
+            Trained model object
+        """
+        try:
+            # This would typically load from model storage
+            # For now, return None as placeholder
+            logger.info(f"Loading trained model {model_id}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error loading trained model {model_id}: {e}")
+            return None
+    
+    def _prepare_test_data(self, test_data: pd.DataFrame, 
+                          architecture: ModelArchitecture) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Prepare test data for model evaluation.
+        
+        Args:
+            test_data: Raw test data
+            architecture: Model architecture
+            
+        Returns:
+            Tuple of (X_test, y_test)
+        """
+        try:
+            # Select required features
+            available_features = [col for col in architecture.input_features if col in test_data.columns]
+            
+            if not available_features:
+                raise ValueError("No required features found in test data")
+            
+            X_test = test_data[available_features].values
+            
+            # Prepare target variable
+            if architecture.output_features[0] in test_data.columns:
+                y_test = test_data[architecture.output_features[0]].values
+            else:
+                # Use price as default target
+                y_test = test_data['price'].values
+            
+            return X_test, y_test
+            
+        except Exception as e:
+            logger.error(f"Error preparing test data: {e}")
+            raise
+    
+    def _make_predictions(self, model: Any, X_test: np.ndarray) -> np.ndarray:
+        """
+        Make predictions using the trained model.
+        
+        Args:
+            model: Trained model
+            X_test: Test features
+            
+        Returns:
+            Predictions array
+        """
+        try:
+            # This would use the actual model to make predictions
+            # For now, return random predictions as placeholder
+            logger.info("Making predictions with trained model")
+            return np.random.random(len(X_test))
+            
+        except Exception as e:
+            logger.error(f"Error making predictions: {e}")
+            raise
+    
+    def _calculate_test_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+        """
+        Calculate test metrics for model evaluation.
+        
+        Args:
+            y_true: True values
+            y_pred: Predicted values
+            
+        Returns:
+            Dictionary of test metrics
+        """
+        try:
+            from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+            
+            metrics = {
+                'mse': mean_squared_error(y_true, y_pred),
+                'mae': mean_absolute_error(y_true, y_pred),
+                'r2': r2_score(y_true, y_pred),
+                'rmse': np.sqrt(mean_squared_error(y_true, y_pred))
+            }
+            
+            # Calculate directional accuracy
+            if len(y_true) > 1:
+                direction_true = np.diff(y_true) > 0
+                direction_pred = np.diff(y_pred) > 0
+                metrics['directional_accuracy'] = np.mean(direction_true == direction_pred)
+            
+            return metrics
+            
+        except Exception as e:
+            logger.error(f"Error calculating test metrics: {e}")
+            return {}
+    
+    def _validate_model_performance(self, test_metrics: Dict[str, float], 
+                                  architecture: ModelArchitecture) -> Dict[str, Any]:
+        """
+        Validate model performance against requirements.
+        
+        Args:
+            test_metrics: Test metrics
+            architecture: Model architecture
+            
+        Returns:
+            Validation result
+        """
+        try:
+            validation_result = {
+                "passed": True,
+                "issues": [],
+                "recommendations": []
+            }
+            
+            # Check R² score
+            if 'r2' in test_metrics:
+                if test_metrics['r2'] < 0.3:
+                    validation_result["passed"] = False
+                    validation_result["issues"].append("Low R² score")
+                    validation_result["recommendations"].append("Consider feature engineering or different model type")
+            
+            # Check directional accuracy
+            if 'directional_accuracy' in test_metrics:
+                if test_metrics['directional_accuracy'] < 0.5:
+                    validation_result["issues"].append("Poor directional accuracy")
+                    validation_result["recommendations"].append("Model may not capture market direction well")
+            
+            # Check RMSE
+            if 'rmse' in test_metrics:
+                # This would be compared against a baseline
+                validation_result["rmse_acceptable"] = test_metrics['rmse'] < 0.1
+            
+            return validation_result
+            
+        except Exception as e:
+            logger.error(f"Error validating model performance: {e}")
+            return {"passed": False, "issues": [f"Validation error: {str(e)}"]}
+    
+    def run_comprehensive_tests(self, model_id: str, test_data: pd.DataFrame) -> Dict[str, Any]:
+        """
+        Run comprehensive tests on a synthetic model.
+        
+        Args:
+            model_id: Model ID to test
+            test_data: Test data
+            
+        Returns:
+            Comprehensive test results
+        """
+        try:
+            logger.info(f"Running comprehensive tests for model {model_id}")
+            
+            # Basic model test
+            basic_test = self.test_synthetic_model(model_id, test_data)
+            
+            if "error" in basic_test:
+                return basic_test
+            
+            # Stress test with different data sizes
+            stress_test = self._run_stress_tests(model_id, test_data)
+            
+            # Robustness test with noise
+            robustness_test = self._run_robustness_tests(model_id, test_data)
+            
+            # Performance test
+            performance_test = self._run_performance_tests(model_id, test_data)
+            
+            comprehensive_results = {
+                "model_id": model_id,
+                "basic_test": basic_test,
+                "stress_test": stress_test,
+                "robustness_test": robustness_test,
+                "performance_test": performance_test,
+                "overall_score": self._calculate_overall_test_score(
+                    basic_test, stress_test, robustness_test, performance_test
+                ),
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            logger.info(f"Comprehensive tests completed for model {model_id}")
+            return comprehensive_results
+            
+        except Exception as e:
+            logger.error(f"Error running comprehensive tests for model {model_id}: {e}")
+            return {"error": f"Comprehensive tests failed: {str(e)}"}
+    
+    def _run_stress_tests(self, model_id: str, test_data: pd.DataFrame) -> Dict[str, Any]:
+        """Run stress tests with different data sizes."""
+        try:
+            stress_results = {}
+            
+            # Test with different data sizes
+            for size_ratio in [0.1, 0.5, 1.0, 2.0]:
+                sample_size = int(len(test_data) * size_ratio)
+                if sample_size > 0:
+                    sample_data = test_data.sample(n=min(sample_size, len(test_data)))
+                    test_result = self.test_synthetic_model(model_id, sample_data)
+                    stress_results[f"size_ratio_{size_ratio}"] = test_result
+            
+            return stress_results
+            
+        except Exception as e:
+            logger.error(f"Error in stress tests: {e}")
+            return {"error": str(e)}
+    
+    def _run_robustness_tests(self, model_id: str, test_data: pd.DataFrame) -> Dict[str, Any]:
+        """Run robustness tests with added noise."""
+        try:
+            robustness_results = {}
+            
+            # Test with different noise levels
+            for noise_level in [0.01, 0.05, 0.1]:
+                noisy_data = test_data.copy()
+                for col in noisy_data.select_dtypes(include=[np.number]).columns:
+                    noise = np.random.normal(0, noise_level * noisy_data[col].std(), len(noisy_data))
+                    noisy_data[col] += noise
+                
+                test_result = self.test_synthetic_model(model_id, noisy_data)
+                robustness_results[f"noise_level_{noise_level}"] = test_result
+            
+            return robustness_results
+            
+        except Exception as e:
+            logger.error(f"Error in robustness tests: {e}")
+            return {"error": str(e)}
+    
+    def _run_performance_tests(self, model_id: str, test_data: pd.DataFrame) -> Dict[str, Any]:
+        """Run performance tests to measure inference speed."""
+        try:
+            import time
+            
+            performance_results = {}
+            
+            # Measure inference time
+            start_time = time.time()
+            test_result = self.test_synthetic_model(model_id, test_data)
+            inference_time = time.time() - start_time
+            
+            performance_results["inference_time"] = inference_time
+            performance_results["samples_per_second"] = len(test_data) / inference_time if inference_time > 0 else 0
+            performance_results["test_result"] = test_result
+            
+            return performance_results
+            
+        except Exception as e:
+            logger.error(f"Error in performance tests: {e}")
+            return {"error": str(e)}
+    
+    def _calculate_overall_test_score(self, basic_test: Dict, stress_test: Dict, 
+                                    robustness_test: Dict, performance_test: Dict) -> float:
+        """Calculate overall test score from all test results."""
+        try:
+            score = 0.0
+            weights = {"basic": 0.4, "stress": 0.2, "robustness": 0.2, "performance": 0.2}
+            
+            # Basic test score
+            if "test_metrics" in basic_test:
+                metrics = basic_test["test_metrics"]
+                basic_score = metrics.get("r2", 0.0) * 0.6 + metrics.get("directional_accuracy", 0.0) * 0.4
+                score += basic_score * weights["basic"]
+            
+            # Stress test score
+            if "error" not in stress_test:
+                stress_score = 0.0
+                for test_name, test_result in stress_test.items():
+                    if "test_metrics" in test_result:
+                        stress_score += test_result["test_metrics"].get("r2", 0.0)
+                stress_score /= len(stress_test) if stress_test else 1
+                score += stress_score * weights["stress"]
+            
+            # Robustness test score
+            if "error" not in robustness_test:
+                robustness_score = 0.0
+                for test_name, test_result in robustness_test.items():
+                    if "test_metrics" in test_result:
+                        robustness_score += test_result["test_metrics"].get("r2", 0.0)
+                robustness_score /= len(robustness_test) if robustness_test else 1
+                score += robustness_score * weights["robustness"]
+            
+            # Performance test score
+            if "error" not in performance_test:
+                inference_time = performance_test.get("inference_time", float('inf'))
+                performance_score = 1.0 / (1.0 + inference_time)  # Higher score for faster inference
+                score += performance_score * weights["performance"]
+            
+            return min(score, 1.0)  # Cap at 1.0
+            
+        except Exception as e:
+            logger.error(f"Error calculating overall test score: {e}")
+            return 0.0
 
 def create_model_synthesizer(config: Optional[Dict[str, Any]] = None) -> ModelSynthesizerAgent:
     """Factory function to create a model synthesizer agent.

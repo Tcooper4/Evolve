@@ -431,17 +431,93 @@ class TestOptionsForecaster:
     
     def test_error_handling(self, forecaster):
         """Test error handling in various scenarios."""
-        # Test with invalid parameters
-        with pytest.raises(Exception):
-            forecaster._black_scholes_price(-100, 100, 0.5, 0.3, 'call')
-        
         # Test with invalid option type
-        with pytest.raises(Exception):
-            forecaster._black_scholes_price(100, 100, 0.5, 0.3, 'invalid')
+        with pytest.raises(ValueError):
+            forecaster._black_scholes_price(100.0, 100.0, 0.5, 0.3, 'invalid')
         
-        # Test with negative time
-        greeks = forecaster.calculate_greeks(100, 100, -0.5, 0.3, 'call')
-        assert all(v == 0.0 for v in greeks.values())
+        # Test with negative parameters
+        with pytest.raises(ValueError):
+            forecaster._black_scholes_price(-100.0, 100.0, 0.5, 0.3, 'call')
+        
+        # Test with None values
+        with pytest.raises(TypeError):
+            forecaster._black_scholes_price(None, 100.0, 0.5, 0.3, 'call')
+    
+    def test_edge_cases_zero_volatility_deep_otm(self, forecaster):
+        """Test edge cases like zero volatility or deep out-of-the-money options."""
+        # Test zero volatility
+        zero_vol_price_call = forecaster._black_scholes_price(100.0, 100.0, 0.5, 0.0, 'call')
+        zero_vol_price_put = forecaster._black_scholes_price(100.0, 100.0, 0.5, 0.0, 'put')
+        
+        # With zero volatility, options should have intrinsic value only
+        assert zero_vol_price_call >= 0
+        assert zero_vol_price_put >= 0
+        
+        # Test deep out-of-the-money call (S << K)
+        deep_otm_call = forecaster._black_scholes_price(50.0, 200.0, 0.5, 0.3, 'call')
+        assert deep_otm_call >= 0
+        assert deep_otm_call < 1.0  # Should be very small
+        
+        # Test deep out-of-the-money put (S >> K)
+        deep_otm_put = forecaster._black_scholes_price(200.0, 50.0, 0.5, 0.3, 'put')
+        assert deep_otm_put >= 0
+        assert deep_otm_put < 1.0  # Should be very small
+        
+        # Test deep in-the-money call (S >> K)
+        deep_itm_call = forecaster._black_scholes_price(200.0, 50.0, 0.5, 0.3, 'call')
+        assert deep_itm_call > 0
+        assert deep_itm_call > 100.0  # Should be close to intrinsic value
+        
+        # Test deep in-the-money put (S << K)
+        deep_itm_put = forecaster._black_scholes_price(50.0, 200.0, 0.5, 0.3, 'put')
+        assert deep_itm_put > 0
+        assert deep_itm_put > 100.0  # Should be close to intrinsic value
+        
+        # Test extremely high volatility
+        high_vol_price = forecaster._black_scholes_price(100.0, 100.0, 0.5, 5.0, 'call')
+        assert high_vol_price > 0
+        assert isinstance(high_vol_price, float)
+        
+        # Test extremely low time to expiration
+        low_time_price = forecaster._black_scholes_price(100.0, 100.0, 0.001, 0.3, 'call')
+        assert low_time_price >= 0
+        assert isinstance(low_time_price, float)
+        
+        # Test zero time to expiration
+        zero_time_price = forecaster._black_scholes_price(100.0, 100.0, 0.0, 0.3, 'call')
+        assert zero_time_price == 0.0  # ATM option at expiration
+        
+        # Test zero time with ITM option
+        zero_time_itm = forecaster._black_scholes_price(110.0, 100.0, 0.0, 0.3, 'call')
+        assert zero_time_itm == 10.0  # Intrinsic value only
+        
+        # Test zero time with OTM option
+        zero_time_otm = forecaster._black_scholes_price(90.0, 100.0, 0.0, 0.3, 'call')
+        assert zero_time_otm == 0.0  # No intrinsic value
+        
+        # Test Greeks with zero volatility
+        zero_vol_greeks = forecaster.calculate_greeks(100.0, 100.0, 0.5, 0.0, 'call')
+        assert 'delta' in zero_vol_greeks
+        assert 'gamma' in zero_vol_greeks
+        assert 'theta' in zero_vol_greeks
+        assert 'vega' in zero_vol_greeks
+        assert 'rho' in zero_vol_greeks
+        
+        # Test Greeks with deep OTM options
+        deep_otm_greeks = forecaster.calculate_greeks(50.0, 200.0, 0.5, 0.3, 'call')
+        assert deep_otm_greeks['delta'] < 0.1  # Very low delta for deep OTM
+        assert deep_otm_greeks['gamma'] > 0
+        assert deep_otm_greeks['vega'] > 0
+        
+        # Test implied volatility calculation with zero price
+        zero_price_iv = forecaster.calculate_implied_volatility(0.0, 100.0, 100.0, 0.5, 'call')
+        assert zero_price_iv >= 0
+        assert isinstance(zero_price_iv, float)
+        
+        # Test implied volatility with deep OTM option
+        deep_otm_iv = forecaster.calculate_implied_volatility(0.01, 50.0, 200.0, 0.5, 'call')
+        assert deep_otm_iv >= 0
+        assert isinstance(deep_otm_iv, float)
 
 if __name__ == "__main__":
     pytest.main([__file__]) 
