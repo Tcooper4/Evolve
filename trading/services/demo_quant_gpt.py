@@ -3,21 +3,143 @@
 QuantGPT Demonstration
 
 A simple demonstration of the QuantGPT natural language interface.
+Enhanced with safe LLM response parsing and proper routing.
 """
 
 import sys
 import os
 import time
+import json
+import re
 from pathlib import Path
 import datetime
 import logging
+from typing import Dict, Any, Optional, Union
 
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from services.quant_gpt import QuantGPT
+from services.exceptions import AgentExecutionError, QueryParsingError
 
 logger = logging.getLogger(__name__)
+
+class SafeLLMResponseParser:
+    """Safely parses and validates LLM responses."""
+    
+    def __init__(self):
+        self.max_response_length = 10000  # Maximum response length
+        self.sensitive_patterns = [
+            r'password\s*[:=]\s*\S+',
+            r'api_key\s*[:=]\s*\S+',
+            r'token\s*[:=]\s*\S+',
+            r'secret\s*[:=]\s*\S+'
+        ]
+    
+    def parse_llm_response(self, response: str, response_type: str = "general") -> Dict[str, Any]:
+        """Safely parse LLM response with validation and sanitization."""
+        try:
+            # Validate input
+            if not response or not isinstance(response, str):
+                return {
+                    'success': False,
+                    'error': 'Invalid response format',
+                    'parsed_data': None
+                }
+            
+            # Check response length
+            if len(response) > self.max_response_length:
+                logger.warning(f"LLM response too long ({len(response)} chars), truncating")
+                response = response[:self.max_response_length] + "..."
+            
+            # Sanitize sensitive information
+            sanitized = self._sanitize_response(response)
+            
+            # Parse based on response type
+            if response_type == "json":
+                parsed_data = self._parse_json_response(sanitized)
+            elif response_type == "structured":
+                parsed_data = self._parse_structured_response(sanitized)
+            else:
+                parsed_data = self._parse_general_response(sanitized)
+            
+            return {
+                'success': True,
+                'parsed_data': parsed_data,
+                'original_length': len(response),
+                'sanitized': sanitized != response
+            }
+            
+        except Exception as e:
+            logger.error(f"Error parsing LLM response: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'parsed_data': None
+            }
+    
+    def _sanitize_response(self, response: str) -> str:
+        """Remove sensitive information from response."""
+        sanitized = response
+        for pattern in self.sensitive_patterns:
+            sanitized = re.sub(pattern, '[REDACTED]', sanitized, flags=re.IGNORECASE)
+        return sanitized
+    
+    def _parse_json_response(self, response: str) -> Dict[str, Any]:
+        """Parse JSON-formatted LLM response."""
+        try:
+            # Try to extract JSON from response
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                json_str = json_match.group()
+                return json.loads(json_str)
+            else:
+                # If no JSON found, return as text
+                return {'text': response.strip()}
+        except json.JSONDecodeError as e:
+            logger.warning(f"JSON parsing failed: {e}")
+            return {'text': response.strip(), 'parse_error': str(e)}
+    
+    def _parse_structured_response(self, response: str) -> Dict[str, Any]:
+        """Parse structured (key-value) LLM response."""
+        result = {}
+        lines = response.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if ':' in line and not line.startswith('#'):
+                key, value = line.split(':', 1)
+                key = key.strip().lower().replace(' ', '_')
+                value = value.strip()
+                if value:
+                    result[key] = value
+        
+        return result if result else {'text': response.strip()}
+    
+    def _parse_general_response(self, response: str) -> Dict[str, Any]:
+        """Parse general text response."""
+        return {
+            'text': response.strip(),
+            'word_count': len(response.split()),
+            'has_code': '```' in response,
+            'has_links': 'http' in response.lower()
+        }
+    
+    def validate_parsed_data(self, data: Dict[str, Any], expected_fields: list = None) -> Dict[str, Any]:
+        """Validate parsed data against expected fields."""
+        if not data:
+            return {'valid': False, 'error': 'No data to validate'}
+        
+        if expected_fields:
+            missing_fields = [field for field in expected_fields if field not in data]
+            if missing_fields:
+                return {
+                    'valid': False,
+                    'error': f'Missing required fields: {missing_fields}',
+                    'missing_fields': missing_fields
+                }
+        
+        return {'valid': True, 'data': data}
 
 def demo_quant_gpt() -> dict:
     """Demonstrate QuantGPT functionality."""
@@ -37,6 +159,9 @@ def demo_quant_gpt() -> dict:
         )
         
         logger.info("✅ QuantGPT initialized successfully!")
+        
+        # Initialize safe response parser
+        response_parser = SafeLLMResponseParser()
         
         # Demo queries
         demo_queries = [
@@ -75,6 +200,16 @@ def demo_quant_gpt() -> dict:
                 result = quant_gpt.process_query(query)
                 processing_time = time.time() - start_time
                 
+                # Safely parse and validate the result
+                parsed_result = response_parser.parse_llm_response(
+                    str(result), 
+                    response_type="structured"
+                )
+                
+                if not parsed_result['success']:
+                    logger.error(f"❌ Failed to parse response: {parsed_result['error']}")
+                    continue
+                
                 # Display results
                 if result.get('status') == 'success':
                     parsed = result.get('parsed_intent', {})
@@ -89,7 +224,7 @@ def demo_quant_gpt() -> dict:
                     
                     # Display action-specific results
                     action = results.get('action', 'unknown')
-                    logger.info(f"�� Action: {action}")
+                    logger.info(f"🎯 Action: {action}")
                     
                     if action == 'model_recommendation':
                         best_model = results.get('best_model')
@@ -113,11 +248,16 @@ def demo_quant_gpt() -> dict:
                         logger.info(f"📈 Plots Generated: {len(results.get('plots', []))}")
                         logger.info(f"🤖 Model Analysis: {'Available' if results.get('model_analysis') else 'Not available'}")
                     
-                    # Display GPT commentary
+                    # Safely parse and display GPT commentary
                     if commentary:
-                        logger.info(f"\n🤖 GPT Commentary:")
-                        logger.info("-" * 30)
-                        logger.info(commentary)
+                        parsed_commentary = response_parser.parse_llm_response(commentary, "general")
+                        if parsed_commentary['success']:
+                            safe_commentary = parsed_commentary['parsed_data']['text']
+                            logger.info(f"\n🤖 GPT Commentary:")
+                            logger.info("-" * 30)
+                            logger.info(safe_commentary)
+                        else:
+                            logger.warning(f"⚠️  Could not parse commentary: {parsed_commentary['error']}")
                     
                     logger.info("✅ Query processed successfully!")
                 
@@ -126,6 +266,12 @@ def demo_quant_gpt() -> dict:
                     logger.error(f"❌ Error: {error}")
                     logger.error("💡 This might be due to missing services or data.")
                 
+            except QueryParsingError as e:
+                logger.error(f"❌ Query parsing error: {e}")
+                logger.error("💡 Please rephrase your query with more specific details.")
+            except AgentExecutionError as e:
+                logger.error(f"❌ Agent execution error: {e}")
+                logger.error(f"💡 Context: {e.get_context_summary()}")
             except Exception as e:
                 logger.error(f"❌ Exception: {e}")
                 logger.error("💡 This might be due to missing dependencies or services.")
@@ -191,6 +337,26 @@ def main() -> dict:
             'error': str(e),
             'timestamp': datetime.datetime.now().isoformat()
         }
+
+# Comment out test code to prevent accidental execution
+"""
+# Test functions - commented out to prevent accidental execution
+def test_llm_response_parsing():
+    parser = SafeLLMResponseParser()
+    test_response = "Here is the analysis: {'signal': 'buy', 'confidence': 0.8}"
+    result = parser.parse_llm_response(test_response, "json")
+    print(f"Test result: {result}")
+
+def test_query_processing():
+    # Test query processing without full system initialization
+    pass
+
+if __name__ == "__main__":
+    # Uncomment to run tests
+    # test_llm_response_parsing()
+    # test_query_processing()
+    main()
+"""
 
 if __name__ == "__main__":
     main() 

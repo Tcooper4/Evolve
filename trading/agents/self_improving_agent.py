@@ -45,6 +45,7 @@ class SelfImprovingAgent(BaseAgent):
         
         self.performance_history = []
         self.improvement_metrics = {}
+        self.confidence = 0.5  # Initial confidence score
 
     def _setup(self):
         pass
@@ -100,6 +101,9 @@ class SelfImprovingAgent(BaseAgent):
             Dict[str, Any]: Task results and learning outcomes
         """
         try:
+            # Log confidence score and self-evaluation result
+            logger.info(f"Confidence before improvement: {self.confidence}")
+            
             # Process the task
             results = self._execute_task(task_data)
             

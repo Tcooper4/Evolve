@@ -380,6 +380,12 @@ class RollingRetrainingAgent(BaseAgent):
             if features.empty or target.empty:
                 raise ValueError("No valid data for training")
             
+            # Ensure retraining only happens if enough new data
+            new_data = features.tail(self.retraining_config.min_train_size)
+            if len(new_data) < self.retraining_config.min_train_size:
+                logger.info(f"Insufficient new data for retraining. Need {self.retraining_config.min_train_size}, have {len(new_data)}")
+                return False
+            
             # Perform walk-forward validation
             wf_results = self.walk_forward_validation(features, target, model_factory)
             

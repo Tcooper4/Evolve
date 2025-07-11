@@ -65,9 +65,13 @@ async def run_agent_loop():
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
         
+        # Track number of loops completed per agent
+        loop_counts = {'execution_agent': 0}
+        
         # Main loop
         while running:
             # Agent logic here
+            loop_counts['execution_agent'] += 1
             await asyncio.sleep(1)
             
     except Exception as e:

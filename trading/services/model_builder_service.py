@@ -116,7 +116,10 @@ class ModelBuilderService(BaseService):
             return {
                 'type': 'model_built',
                 'model_info': model_info,
-                'status': 'success'
+                'status': 'success',
+                'source': model_info.get('source', 'Evolve Trading System'),
+                'version': model_info.get('version', '1.0.0'),
+                'framework': model_info.get('framework', 'unknown')
             }
             
         except Exception as e:

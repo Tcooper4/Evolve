@@ -199,88 +199,185 @@ def get_commentary_agent():
 try:
     from .prompt_templates import (
         PROMPT_TEMPLATES,
-        get_template,
-        format_template,
-        get_templates_by_category,
-        list_templates,
-        list_categories,
-        TEMPLATE_CATEGORIES
+        get_prompt_template,
+        register_prompt_template,
+        list_prompt_templates
     )
-    TEMPLATES_AVAILABLE = True
 except ImportError as e:
     logger.warning(f"Could not import prompt templates: {e}")
-    TEMPLATES_AVAILABLE = False
+    PROMPT_TEMPLATES = {}
+    get_prompt_template = lambda x: None
+    register_prompt_template = lambda x, y: None
+    list_prompt_templates = lambda: []
 
-# Commentary Engine - Lazy loading
-def get_commentary_engine():
-    """Get CommentaryEngine with lazy loading."""
-    try:
-        from trading.commentary import CommentaryEngine, create_commentary_engine
-        return CommentaryEngine, create_commentary_engine
-    except ImportError as e:
-        logger.warning(f"Could not import commentary engine: {e}")
-        return None, None
-
-# Export the lazy loading functions and base classes
-__all__ = [
-    # Base Agent Interface
-    'BaseAgent',
-    'AgentConfig',
-    'AgentStatus',
-    'AgentResult',
+# Wildcard imports for core agents to improve usability during testing
+def _import_core_agents():
+    """Import core agents for wildcard access during testing."""
+    core_agents = {}
     
-    # Lazy loading functions
-    'get_model_builder_agent',
-    'get_model_selector_agent',
-    'get_model_optimizer_agent',
-    'get_model_evaluator_agent',
-    'get_model_improver_agent',
-    'get_model_synthesizer_agent',
-    'get_performance_critic_agent',
-    'get_strategy_selector_agent',
-    'get_strategy_improver_agent',
-    'get_meta_strategy_agent',
-    'get_market_regime_agent',
-    'get_data_quality_agent',
-    'get_execution_agent',
-    'get_execution_risk_agent',
-    'get_execution_risk_control_agent',
-    'get_optimizer_agent',
-    'get_self_tuning_optimizer_agent',
-    'get_meta_tuner_agent',
-    'get_meta_learner',
-    'get_meta_research_agent',
-    'get_meta_learning_feedback_agent',
-    'get_research_agent',
-    'get_agent_manager',
-    'get_agent_loop_manager',
-    'get_task_delegation_agent',
-    'get_agent_registry',
-    'get_agent_leaderboard',
-    'get_prompt_router_agent',
-    'get_nlp_agent',
-    'get_multimodal_agent',
-    'get_rolling_retraining_agent',
-    'get_walk_forward_agent',
-    'get_updater_agent',
-    'get_self_improving_agent',
-    'get_intent_detector',
-    'get_regime_detection_agent',
-    'get_commentary_agent',
-    'get_commentary_engine',
-]
+    # Core agent classes to import
+    core_agent_classes = [
+        'BaseAgent',
+        'AgentConfig', 
+        'AgentStatus',
+        'AgentResult',
+        'ModelBuilderAgent',
+        'PerformanceCriticAgent',
+        'ExecutionAgent',
+        'AgentManager',
+        'AgentLoopManager',
+        'PromptRouterAgent',
+        'MarketRegimeAgent',
+        'StrategySelectorAgent',
+        'CommentaryAgent',
+        'AgentLeaderboard',
+        'AgentRegistry'
+    ]
+    
+    for class_name in core_agent_classes:
+        try:
+            if class_name in ['BaseAgent', 'AgentConfig', 'AgentStatus', 'AgentResult']:
+                # These are already imported
+                if class_name in globals():
+                    core_agents[class_name] = globals()[class_name]
+            else:
+                # Try to import from specific modules
+                module_mapping = {
+                    'ModelBuilderAgent': '.model_builder_agent',
+                    'PerformanceCriticAgent': '.performance_critic_agent',
+                    'ExecutionAgent': '.execution_agent',
+                    'AgentManager': '.agent_manager',
+                    'AgentLoopManager': '.agent_loop_manager',
+                    'PromptRouterAgent': '.prompt_router_agent',
+                    'MarketRegimeAgent': '.market_regime_agent',
+                    'StrategySelectorAgent': '.strategy_selector_agent',
+                    'CommentaryAgent': '.commentary_agent',
+                    'AgentLeaderboard': '.agent_leaderboard',
+                    'AgentRegistry': '.agent_registry'
+                }
+                
+                if class_name in module_mapping:
+                    module_name = module_mapping[class_name]
+                    agent_class = _lazy_import(module_name, class_name)
+                    if agent_class:
+                        core_agents[class_name] = agent_class
+                        
+        except Exception as e:
+            logger.debug(f"Could not import {class_name}: {e}")
+    
+    return core_agents
 
-# Add prompt templates if available
-if TEMPLATES_AVAILABLE:
-    __all__.extend([
-        'PROMPT_TEMPLATES',
-        'get_template',
-        'format_template',
-        'get_templates_by_category',
-        'list_templates',
-        'list_categories',
-        'TEMPLATE_CATEGORIES'
-    ])
+# Import core agents for wildcard access
+CORE_AGENTS = _import_core_agents()
+
+def get_core_agent(agent_name: str):
+    """Get a core agent by name for easy access during testing.
+    
+    Args:
+        agent_name: Name of the core agent
+        
+    Returns:
+        Agent class or None if not found
+    """
+    return CORE_AGENTS.get(agent_name)
+
+def list_core_agents() -> list:
+    """List all available core agents.
+    
+    Returns:
+        List of core agent names
+    """
+    return list(CORE_AGENTS.keys())
+
+def import_all_agents():
+    """Import all available agents for comprehensive testing.
+    
+    Returns:
+        Dictionary of all available agents
+    """
+    all_agents = {}
+    
+    # Add core agents
+    all_agents.update(CORE_AGENTS)
+    
+    # Add all lazy-loaded agents
+    agent_functions = [
+        get_model_builder_agent,
+        get_model_selector_agent,
+        get_model_optimizer_agent,
+        get_model_evaluator_agent,
+        get_model_improver_agent,
+        get_model_synthesizer_agent,
+        get_performance_critic_agent,
+        get_strategy_selector_agent,
+        get_strategy_improver_agent,
+        get_meta_strategy_agent,
+        get_market_regime_agent,
+        get_data_quality_agent,
+        get_execution_agent,
+        get_execution_risk_agent,
+        get_execution_risk_control_agent,
+        get_optimizer_agent,
+        get_self_tuning_optimizer_agent,
+        get_meta_tuner_agent,
+        get_meta_learner,
+        get_meta_research_agent,
+        get_meta_learning_feedback_agent,
+        get_research_agent,
+        get_agent_manager,
+        get_agent_loop_manager,
+        get_task_delegation_agent,
+        get_agent_registry,
+        get_agent_leaderboard,
+        get_prompt_router_agent,
+        get_nlp_agent,
+        get_multimodal_agent,
+        get_rolling_retraining_agent,
+        get_walk_forward_agent,
+        get_updater_agent,
+        get_self_improving_agent,
+        get_intent_detector,
+        get_regime_detection_agent,
+        get_commentary_agent
+    ]
+    
+    for func in agent_functions:
+        try:
+            agent_class = func()
+            if agent_class:
+                # Extract class name from function name
+                class_name = func.__name__.replace('get_', '').replace('_agent', 'Agent').replace('_', '')
+                all_agents[class_name] = agent_class
+        except Exception as e:
+            logger.debug(f"Could not import agent from {func.__name__}: {e}")
+    
+    return all_agents
+
+# Convenience function for testing
+def get_test_agents():
+    """Get a subset of agents commonly used in testing.
+    
+    Returns:
+        Dictionary of test agents
+    """
+    test_agents = {}
+    
+    # Essential agents for testing
+    essential_agents = [
+        'BaseAgent',
+        'ModelBuilderAgent', 
+        'PerformanceCriticAgent',
+        'ExecutionAgent',
+        'AgentManager',
+        'AgentLoopManager'
+    ]
+    
+    for agent_name in essential_agents:
+        agent_class = get_core_agent(agent_name)
+        if agent_class:
+            test_agents[agent_name] = agent_class
+    
+    return test_agents
 
 __version__ = "1.0.0"
 __author__ = "Evolve Trading System"

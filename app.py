@@ -528,34 +528,35 @@ with col2:
 if submit and prompt:
     with st.spinner("Processing your request..."):
         try:
-            if st.session_state.prompt_agent:
-                response = st.session_state.prompt_agent.process_prompt(prompt)
-                st.session_state.last_response = response
-                
-                # Add to conversation history
-                st.session_state.conversation_history.append({
-                    'prompt': prompt,
-                    'response': response,
-                    'timestamp': datetime.now()
-                })
-                
-                # Route navigation based on intent
-                if hasattr(response, 'message'):
-                    message_lower = response.message.lower()
-                    if 'forecast' in message_lower:
-                        st.session_state.main_nav = "Forecasting"
-                    elif 'strategy' in message_lower:
-                        st.session_state.main_nav = "Strategy Lab"
-                    elif 'report' in message_lower or 'export' in message_lower:
-                        st.session_state.main_nav = "Reports"
-                    elif 'tune' in message_lower or 'optimize' in message_lower:
-                        st.session_state.main_nav = "Model Lab"
-                    elif 'setting' in message_lower:
-                        st.session_state.main_nav = "Settings"
-                
-                st.success("✅ Request processed successfully! Evolve AI has analyzed your query.")
-            else:
-                st.error("Core components not available. Please check system configuration.")
+            # Route through PromptRouterAgent and show result
+            from agents.registry import get_prompt_router_agent
+            result = get_prompt_router_agent().handle_prompt(prompt)
+            st.write(result.message)
+            
+            st.session_state.last_response = result
+            
+            # Add to conversation history
+            st.session_state.conversation_history.append({
+                'prompt': prompt,
+                'response': result,
+                'timestamp': datetime.now()
+            })
+            
+            # Route navigation based on intent
+            if hasattr(result, 'message'):
+                message_lower = result.message.lower()
+                if 'forecast' in message_lower:
+                    st.session_state.main_nav = "Forecasting"
+                elif 'strategy' in message_lower:
+                    st.session_state.main_nav = "Strategy Lab"
+                elif 'report' in message_lower or 'export' in message_lower:
+                    st.session_state.main_nav = "Reports"
+                elif 'tune' in message_lower or 'optimize' in message_lower:
+                    st.session_state.main_nav = "Model Lab"
+                elif 'setting' in message_lower:
+                    st.session_state.main_nav = "Settings"
+            
+            st.success("✅ Request processed successfully! Evolve AI has analyzed your query.")
         except Exception as e:
             st.error(f"Error processing request: {str(e)}")
 

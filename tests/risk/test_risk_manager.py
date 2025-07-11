@@ -173,5 +173,211 @@ class TestRiskManager(unittest.TestCase):
         metrics = self.risk_manager.current_metrics
         self.assertEqual(metrics.beta, 1.0)
 
+    def test_large_drawdown_and_recovery(self):
+        """Include scenario with large drawdown followed by recovery to test reset logic."""
+        print("\n📉 Testing Large Drawdown and Recovery Scenarios")
+        
+        # Test multiple drawdown and recovery scenarios
+        scenarios = [
+            {
+                'name': 'Single Large Drawdown',
+                'returns': [0.01]*30 + [-0.5]*5 + [0.02]*65,
+                'expected_max_dd': -0.3,
+                'expected_recovery': True
+            },
+            {
+                'name': 'Multiple Drawdowns',
+                'returns': [0.01]*20 + [-0.3]*3 + [0.02]*20 + [-0.4]*3 + [0.02]*54,
+                'expected_max_dd': -0.4,
+                'expected_recovery': True
+            },
+            {
+                'name': 'Gradual Recovery',
+                'returns': [0.01]*25 + [-0.6]*5 + [0.005]*70,
+                'expected_max_dd': -0.4,
+                'expected_recovery': True
+            },
+            {
+                'name': 'No Recovery',
+                'returns': [0.01]*30 + [-0.5]*5 + [-0.01]*65,
+                'expected_max_dd': -0.5,
+                'expected_recovery': False
+            }
+        ]
+        
+        for scenario in scenarios:
+            print(f"\n  📊 Testing scenario: {scenario['name']}")
+            
+            # Create returns series
+            dates = pd.date_range(start='2023-01-01', periods=len(scenario['returns']))
+            returns = pd.Series(scenario['returns'], index=dates)
+            
+            # Update risk manager
+            self.risk_manager.update_returns(returns)
+            metrics = self.risk_manager.current_metrics
+            
+            # Verify metrics exist
+            self.assertIsNotNone(metrics, "Metrics should be calculated")
+            
+            # Verify max drawdown is as expected
+            print(f"    Max drawdown: {metrics.max_drawdown:.3f} (expected < {scenario['expected_max_dd']:.1f})")
+            self.assertLess(metrics.max_drawdown, scenario['expected_max_dd'], 
+                           f"Max drawdown should be less than {scenario['expected_max_dd']}")
+            
+            # Test rolling metrics calculation
+            rolling_metrics = self.risk_manager.calculate_rolling_metrics(returns, window=20)
+            
+            # Verify rolling metrics structure
+            self.assertIsNotNone(rolling_metrics, "Rolling metrics should be calculated")
+            self.assertIn('max_drawdown', rolling_metrics.columns, "Should have max_drawdown column")
+            self.assertIn('volatility', rolling_metrics.columns, "Should have volatility column")
+            self.assertIn('sharpe_ratio', rolling_metrics.columns, "Should have sharpe_ratio column")
+            
+            # Test drawdown reset logic
+            drawdowns = rolling_metrics['max_drawdown']
+            
+            if scenario['expected_recovery']:
+                # After recovery, drawdown should reset (close to 0)
+                final_drawdown = drawdowns.iloc[-1]
+                print(f"    Final drawdown: {final_drawdown:.3f}")
+                self.assertGreater(final_drawdown, -0.1, 
+                                 "Drawdown should reset after recovery")
+            else:
+                # No recovery scenario - drawdown should remain large
+                final_drawdown = drawdowns.iloc[-1]
+                print(f"    Final drawdown: {final_drawdown:.3f}")
+                self.assertLess(final_drawdown, -0.2, 
+                              "Drawdown should remain large without recovery")
+        
+        # Test risk management behavior during drawdown
+        print(f"\n  🛡️ Testing risk management during drawdown...")
+        
+        # Create severe drawdown scenario
+        dates = pd.date_range(start='2023-01-01', periods=100)
+        severe_returns = pd.Series([0.01]*20 + [-0.7]*5 + [0.02]*75, index=dates)
+        
+        # Update risk manager
+        self.risk_manager.update_returns(severe_returns)
+        
+        # Test position limits during drawdown
+        limits = self.risk_manager.get_position_limits()
+        
+        # Verify limits are calculated
+        self.assertIsNotNone(limits, "Position limits should be calculated")
+        self.assertIn('position_limit', limits, "Should have position_limit")
+        self.assertIn('leverage_limit', limits, "Should have leverage_limit")
+        self.assertIn('kelly_fraction', limits, "Should have kelly_fraction")
+        
+        # Verify limits are conservative during drawdown
+        self.assertLess(limits['position_limit'], 0.5, "Position limit should be conservative during drawdown")
+        self.assertLess(limits['leverage_limit'], 1.0, "Leverage limit should be conservative during drawdown")
+        
+        print(f"    Position limit: {limits['position_limit']:.3f}")
+        print(f"    Leverage limit: {limits['leverage_limit']:.3f}")
+        print(f"    Kelly fraction: {limits['kelly_fraction']:.3f}")
+        
+        # Test risk alerts during drawdown
+        alerts = self.risk_manager.get_risk_alerts()
+        
+        # Verify alerts are generated
+        self.assertIsNotNone(alerts, "Risk alerts should be generated")
+        self.assertIsInstance(alerts, list, "Alerts should be a list")
+        
+        if alerts:
+            print(f"    Risk alerts: {len(alerts)} alerts generated")
+            for alert in alerts:
+                print(f"      - {alert}")
+        
+        # Test recovery detection
+        print(f"\n  🔍 Testing recovery detection...")
+        
+        # Create recovery scenario with monitoring
+        recovery_dates = pd.date_range(start='2023-01-01', periods=150)
+        recovery_returns = pd.Series([0.01]*30 + [-0.5]*5 + [0.02]*115, index=recovery_dates)
+        
+        # Monitor recovery progress
+        recovery_metrics = []
+        for i in range(30, len(recovery_returns), 10):
+            window_returns = recovery_returns.iloc[:i]
+            self.risk_manager.update_returns(window_returns)
+            metrics = self.risk_manager.current_metrics
+            recovery_metrics.append({
+                'period': i,
+                'max_drawdown': metrics.max_drawdown,
+                'sharpe_ratio': metrics.sharpe_ratio,
+                'volatility': metrics.volatility
+            })
+        
+        # Verify recovery progression
+        initial_dd = recovery_metrics[0]['max_drawdown']
+        final_dd = recovery_metrics[-1]['max_drawdown']
+        
+        print(f"    Initial drawdown: {initial_dd:.3f}")
+        print(f"    Final drawdown: {final_dd:.3f}")
+        print(f"    Recovery improvement: {final_dd - initial_dd:.3f}")
+        
+        # Verify recovery occurred
+        self.assertGreater(final_dd, initial_dd, "Drawdown should improve during recovery")
+        
+        # Test risk reset after recovery
+        print(f"\n  🔄 Testing risk reset after recovery...")
+        
+        # Get position limits after recovery
+        final_limits = self.risk_manager.get_position_limits()
+        
+        # Verify limits are more permissive after recovery
+        self.assertGreater(final_limits['position_limit'], limits['position_limit'], 
+                          "Position limit should increase after recovery")
+        self.assertGreater(final_limits['leverage_limit'], limits['leverage_limit'], 
+                          "Leverage limit should increase after recovery")
+        
+        print(f"    Post-recovery position limit: {final_limits['position_limit']:.3f}")
+        print(f"    Post-recovery leverage limit: {final_limits['leverage_limit']:.3f}")
+        
+        # Test drawdown persistence
+        print(f"\n  📈 Testing drawdown persistence...")
+        
+        # Create scenario with persistent drawdown
+        persistent_dates = pd.date_range(start='2023-01-01', periods=200)
+        persistent_returns = pd.Series([0.01]*50 + [-0.4]*10 + [-0.005]*140, index=persistent_dates)
+        
+        # Update risk manager
+        self.risk_manager.update_returns(persistent_returns)
+        
+        # Calculate rolling drawdown
+        rolling_dd = self.risk_manager.calculate_rolling_metrics(persistent_returns, window=30)
+        
+        # Verify drawdown persists
+        final_persistent_dd = rolling_dd['max_drawdown'].iloc[-1]
+        print(f"    Persistent drawdown: {final_persistent_dd:.3f}")
+        
+        self.assertLess(final_persistent_dd, -0.2, "Drawdown should persist without recovery")
+        
+        # Test risk management adaptation
+        print(f"\n  🎯 Testing risk management adaptation...")
+        
+        # Get adaptive limits
+        adaptive_limits = self.risk_manager.get_adaptive_position_limits()
+        
+        # Verify adaptive limits are calculated
+        self.assertIsNotNone(adaptive_limits, "Adaptive limits should be calculated")
+        self.assertIn('conservative_limit', adaptive_limits, "Should have conservative limit")
+        self.assertIn('aggressive_limit', adaptive_limits, "Should have aggressive limit")
+        self.assertIn('recommended_limit', adaptive_limits, "Should have recommended limit")
+        
+        print(f"    Conservative limit: {adaptive_limits['conservative_limit']:.3f}")
+        print(f"    Aggressive limit: {adaptive_limits['aggressive_limit']:.3f}")
+        print(f"    Recommended limit: {adaptive_limits['recommended_limit']:.3f}")
+        
+        # Verify limits are reasonable
+        self.assertLess(adaptive_limits['conservative_limit'], adaptive_limits['aggressive_limit'],
+                       "Conservative limit should be less than aggressive limit")
+        self.assertGreaterEqual(adaptive_limits['recommended_limit'], adaptive_limits['conservative_limit'],
+                               "Recommended limit should be >= conservative limit")
+        self.assertLessEqual(adaptive_limits['recommended_limit'], adaptive_limits['aggressive_limit'],
+                            "Recommended limit should be <= aggressive limit")
+        
+        print("✅ Large drawdown and recovery test completed")
+
 if __name__ == '__main__':
     unittest.main() 

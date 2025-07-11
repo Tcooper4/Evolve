@@ -3,11 +3,18 @@ Strategy Registry
 
 This module provides a unified registry for all trading strategies.
 It allows for easy strategy discovery, registration, and execution.
+Enhanced with dynamic discovery of strategy modules via introspection and file globbing.
 """
 
 import logging
+import os
+import sys
+import importlib
+import inspect
+import glob
+from pathlib import Path
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union, Type
 from dataclasses import dataclass
 from datetime import datetime
 import pandas as pd
@@ -55,6 +62,168 @@ class BaseStrategy(ABC):
         """Validate input data."""
         required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
         return all(col in data.columns for col in required_columns)
+
+class StrategyDiscovery:
+    """Handles dynamic discovery of strategy modules."""
+    
+    def __init__(self, strategies_dir: str = None):
+        """Initialize strategy discovery."""
+        if strategies_dir is None:
+            # Default to the directory containing this file
+            strategies_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        self.strategies_dir = Path(strategies_dir)
+        self.discovered_strategies: Dict[str, Type[BaseStrategy]] = {}
+        self.discovery_log: List[Dict[str, Any]] = []
+    
+    def discover_strategies(self, recursive: bool = True, pattern: str = "*_strategy.py") -> Dict[str, Type[BaseStrategy]]:
+        """Discover strategy modules using file globbing and introspection."""
+        logger.info(f"🔍 Discovering strategies in: {self.strategies_dir}")
+        
+        # Find strategy files
+        if recursive:
+            strategy_files = list(self.strategies_dir.rglob(pattern))
+        else:
+            strategy_files = list(self.strategies_dir.glob(pattern))
+        
+        logger.info(f"📁 Found {len(strategy_files)} potential strategy files")
+        
+        for file_path in strategy_files:
+            try:
+                self._discover_strategies_from_file(file_path)
+            except Exception as e:
+                logger.error(f"❌ Failed to discover strategies from {file_path}: {e}")
+                self.discovery_log.append({
+                    'file': str(file_path),
+                    'status': 'error',
+                    'error': str(e),
+                    'timestamp': datetime.now().isoformat()
+                })
+        
+        logger.info(f"✅ Discovered {len(self.discovered_strategies)} strategy classes")
+        return self.discovered_strategies.copy()
+    
+    def _discover_strategies_from_file(self, file_path: Path):
+        """Discover strategy classes from a single file."""
+        try:
+            # Convert file path to module path
+            relative_path = file_path.relative_to(self.strategies_dir)
+            module_path = str(relative_path).replace(os.sep, '.').replace('.py', '')
+            
+            # Import the module
+            module_name = f"trading.strategies.{module_path}"
+            module = importlib.import_module(module_name)
+            
+            # Find strategy classes in the module
+            strategy_classes = self._find_strategy_classes(module)
+            
+            for class_name, strategy_class in strategy_classes.items():
+                if class_name not in self.discovered_strategies:
+                    self.discovered_strategies[class_name] = strategy_class
+                    logger.info(f"📦 Discovered strategy: {class_name} from {module_name}")
+                    
+                    self.discovery_log.append({
+                        'file': str(file_path),
+                        'module': module_name,
+                        'class': class_name,
+                        'status': 'success',
+                        'timestamp': datetime.now().isoformat()
+                    })
+                else:
+                    logger.warning(f"⚠️  Strategy {class_name} already discovered, skipping duplicate")
+                    
+        except ImportError as e:
+            logger.error(f"❌ Failed to import module {file_path}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"❌ Error discovering strategies from {file_path}: {e}")
+            raise
+    
+    def _find_strategy_classes(self, module) -> Dict[str, Type[BaseStrategy]]:
+        """Find strategy classes in a module using introspection."""
+        strategy_classes = {}
+        
+        for name, obj in inspect.getmembers(module):
+            # Check if it's a class that inherits from BaseStrategy
+            if (inspect.isclass(obj) and 
+                issubclass(obj, BaseStrategy) and 
+                obj != BaseStrategy):
+                
+                strategy_classes[name] = obj
+        
+        return strategy_classes
+    
+    def discover_strategies_by_pattern(self, patterns: List[str] = None) -> Dict[str, Type[BaseStrategy]]:
+        """Discover strategies using multiple file patterns."""
+        if patterns is None:
+            patterns = [
+                "*_strategy.py",
+                "*_signals.py", 
+                "*_indicator.py",
+                "strategy_*.py"
+            ]
+        
+        all_strategies = {}
+        
+        for pattern in patterns:
+            logger.info(f"🔍 Searching with pattern: {pattern}")
+            strategies = self.discover_strategies(pattern=pattern)
+            all_strategies.update(strategies)
+        
+        return all_strategies
+    
+    def get_discovery_log(self) -> List[Dict[str, Any]]:
+        """Get the discovery log."""
+        return self.discovery_log.copy()
+    
+    def clear_discovery_log(self):
+        """Clear the discovery log."""
+        self.discovery_log.clear()
+    
+    def validate_discovered_strategies(self) -> Dict[str, Dict[str, Any]]:
+        """Validate discovered strategies for completeness."""
+        validation_results = {}
+        
+        for class_name, strategy_class in self.discovered_strategies.items():
+            validation_result = {
+                'valid': True,
+                'errors': [],
+                'warnings': []
+            }
+            
+            try:
+                # Check if class can be instantiated
+                instance = strategy_class()
+                
+                # Check required methods
+                required_methods = ['generate_signals', 'get_parameter_space']
+                for method in required_methods:
+                    if not hasattr(instance, method):
+                        validation_result['errors'].append(f"Missing required method: {method}")
+                        validation_result['valid'] = False
+                
+                # Check if methods are callable
+                if hasattr(instance, 'generate_signals'):
+                    if not callable(instance.generate_signals):
+                        validation_result['errors'].append("generate_signals is not callable")
+                        validation_result['valid'] = False
+                
+                if hasattr(instance, 'get_parameter_space'):
+                    if not callable(instance.get_parameter_space):
+                        validation_result['errors'].append("get_parameter_space is not callable")
+                        validation_result['valid'] = False
+                
+                # Check for description
+                if not hasattr(instance, 'description') or not instance.description:
+                    validation_result['warnings'].append("No description provided")
+                
+            except Exception as e:
+                validation_result['errors'].append(f"Instantiation failed: {str(e)}")
+                validation_result['valid'] = False
+            
+            validation_results[class_name] = validation_result
+        
+        return validation_results
 
 class RSIStrategy(BaseStrategy):
     """Relative Strength Index strategy."""
@@ -299,44 +468,65 @@ class StrategyRegistry:
     """Registry for managing trading strategies."""
     
     def __init__(self):
-        """Initialize strategy registry."""
-        self._strategies: Dict[str, BaseStrategy] = {}
+        """Initialize the strategy registry."""
+        self.strategies: Dict[str, BaseStrategy] = {}
+        self.discovery = StrategyDiscovery()
         self._register_default_strategies()
+        self._discover_strategies()
     
     def _register_default_strategies(self):
         """Register default strategies."""
-        self.register_strategy(RSIStrategy())
-        self.register_strategy(MACDStrategy())
-        self.register_strategy(BollingerBandsStrategy())
-        self.register_strategy(CCIStrategy())
-        self.register_strategy(ATRStrategy())
+        default_strategies = [
+            RSIStrategy(),
+            MACDStrategy(),
+            BollingerBandsStrategy(),
+            CCIStrategy(),
+            ATRStrategy()
+        ]
+        
+        for strategy in default_strategies:
+            self.register_strategy(strategy)
+    
+    def _discover_strategies(self):
+        """Discover and register additional strategies."""
+        try:
+            discovered_strategies = self.discovery.discover_strategies()
+            
+            for class_name, strategy_class in discovered_strategies.items():
+                try:
+                    # Create instance and register
+                    strategy_instance = strategy_class()
+                    self.register_strategy(strategy_instance)
+                    logger.info(f"✅ Auto-registered discovered strategy: {class_name}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to register discovered strategy {class_name}: {e}")
+                    
+        except Exception as e:
+            logger.error(f"❌ Strategy discovery failed: {e}")
     
     def register_strategy(self, strategy: BaseStrategy):
         """Register a strategy."""
-        if not isinstance(strategy, BaseStrategy):
-            raise ValueError("Strategy must inherit from BaseStrategy")
-        
-        self._strategies[strategy.name] = strategy
-        logger.info(f"Registered strategy: {strategy.name}")
+        self.strategies[strategy.name] = strategy
+        logger.info(f"📝 Registered strategy: {strategy.name}")
     
     def get_strategy(self, name: str) -> Optional[BaseStrategy]:
         """Get a strategy by name."""
-        return self._strategies.get(name)
+        return self.strategies.get(name)
     
     def get_all_strategies(self) -> Dict[str, BaseStrategy]:
         """Get all registered strategies."""
-        return self._strategies.copy()
+        return self.strategies.copy()
     
     def get_strategy_names(self) -> List[str]:
-        """Get list of all strategy names."""
-        return list(self._strategies.keys())
+        """Get names of all registered strategies."""
+        return list(self.strategies.keys())
     
     def execute_strategy(self, strategy_name: str, data: pd.DataFrame, 
                         parameters: Optional[Dict[str, Any]] = None) -> StrategyResult:
-        """Execute a strategy with given data and parameters."""
+        """Execute a strategy."""
         strategy = self.get_strategy(strategy_name)
         if not strategy:
-            raise ValueError(f"Strategy not found: {strategy_name}")
+            raise ValueError(f"Strategy '{strategy_name}' not found")
         
         # Set parameters if provided
         if parameters:
@@ -355,7 +545,7 @@ class StrategyRegistry:
             metadata={
                 'strategy_name': strategy_name,
                 'parameters': strategy.get_parameters(),
-                'data_shape': data.shape
+                'description': strategy.description
             },
             timestamp=datetime.now(),
             strategy_name=strategy_name
@@ -365,42 +555,51 @@ class StrategyRegistry:
     
     def _calculate_performance_metrics(self, data: pd.DataFrame, 
                                      signals: pd.DataFrame) -> Dict[str, float]:
-        """Calculate performance metrics for strategy signals."""
-        try:
-            # Calculate returns
-            returns = data['Close'].pct_change()
-            strategy_returns = signals['signal'].shift(1) * returns
-            
-            # Calculate metrics
-            total_return = (1 + strategy_returns).prod() - 1
-            sharpe_ratio = strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0
-            max_drawdown = (strategy_returns.cumsum() - strategy_returns.cumsum().expanding().max()).min()
-            win_rate = (strategy_returns > 0).mean()
-            
-            return {
-                'total_return': total_return,
-                'sharpe_ratio': sharpe_ratio,
-                'max_drawdown': max_drawdown,
-                'win_rate': win_rate,
-                'volatility': strategy_returns.std()
-            }
-        except Exception as e:
-            logger.error(f"Error calculating performance metrics: {e}")
-            return {
-                'total_return': 0.0,
-                'sharpe_ratio': 0.0,
-                'max_drawdown': 0.0,
-                'win_rate': 0.0,
-                'volatility': 0.0
-            }
+        """Calculate performance metrics for strategy results."""
+        # Simple performance calculation
+        if 'signal' not in signals.columns:
+            return {}
+        
+        # Calculate returns
+        data_returns = data['Close'].pct_change()
+        strategy_returns = signals['signal'].shift(1) * data_returns
+        
+        # Calculate metrics
+        total_return = strategy_returns.sum()
+        sharpe_ratio = strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0
+        max_drawdown = (strategy_returns.cumsum() - strategy_returns.cumsum().expanding().max()).min()
+        
+        return {
+            'total_return': total_return,
+            'sharpe_ratio': sharpe_ratio,
+            'max_drawdown': max_drawdown,
+            'volatility': strategy_returns.std(),
+            'win_rate': (strategy_returns > 0).mean()
+        }
     
     def get_strategy_parameter_space(self, strategy_name: str) -> Dict[str, Any]:
         """Get parameter space for a strategy."""
         strategy = self.get_strategy(strategy_name)
         if not strategy:
-            raise ValueError(f"Strategy not found: {strategy_name}")
+            raise ValueError(f"Strategy '{strategy_name}' not found")
         
         return strategy.get_parameter_space()
+    
+    def get_discovery_info(self) -> Dict[str, Any]:
+        """Get information about strategy discovery."""
+        return {
+            'discovered_strategies': len(self.discovery.discovered_strategies),
+            'registered_strategies': len(self.strategies),
+            'discovery_log': self.discovery.get_discovery_log(),
+            'validation_results': self.discovery.validate_discovered_strategies()
+        }
+    
+    def refresh_discovery(self):
+        """Refresh strategy discovery."""
+        logger.info("🔄 Refreshing strategy discovery...")
+        self.discovery.clear_discovery_log()
+        self.discovery.discover_strategies()
+        logger.info("✅ Strategy discovery refreshed")
 
 # Global registry instance
 _strategy_registry = None

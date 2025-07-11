@@ -13,36 +13,66 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
 import shutil
 import glob
+import sqlite3
+import threading
+import time
+from dataclasses import dataclass
+from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+class RetentionPolicy(Enum):
+    """Retention policy types."""
+    BY_AGE = "by_age"
+    BY_SIZE = "by_size"
+    BY_COUNT = "by_count"
+    HYBRID = "hybrid"
+
+@dataclass
+class RetentionConfig:
+    """Configuration for log retention."""
+    policy: RetentionPolicy = RetentionPolicy.HYBRID
+    max_age_days: int = 30
+    max_size_mb: int = 1000
+    max_file_count: int = 1000
+    cleanup_interval_hours: int = 24
+    compress_old_logs: bool = True
+    archive_old_logs: bool = False
+    archive_dir: Optional[str] = None
 
 class HistoryLogger:
     """History logger with automatic cleanup and rotation."""
     
     def __init__(self, 
                  log_dir: str = "logs/history",
-                 max_logs: int = 100,
-                 max_size_mb: int = 100,
-                 retention_days: int = 30):
+                 retention_config: Optional[RetentionConfig] = None,
+                 enable_auto_cleanup: bool = True):
         """Initialize the history logger.
         
         Args:
             log_dir: Directory to store log files
-            max_logs: Maximum number of log files to keep
-            max_size_mb: Maximum total size of logs in MB
-            retention_days: Number of days to retain logs
+            retention_config: Retention configuration
+            enable_auto_cleanup: Whether to enable automatic cleanup
         """
         self.log_dir = Path(log_dir)
-        self.max_logs = max_logs
-        self.max_size_bytes = max_size_mb * 1024 * 1024
-        self.retention_days = retention_days
+        self.retention_config = retention_config or RetentionConfig()
+        self.enable_auto_cleanup = enable_auto_cleanup
         
         # Ensure log directory exists
         self.log_dir.mkdir(parents=True, exist_ok=True)
         
+        # Initialize database connection
+        self.db_path = self.log_dir / "history.db"
+        self._init_database()
+        
         # Initialize cleanup
         self._cleanup_old_logs()
         self._cleanup_by_size()
+        
+        # Start auto-cleanup thread if enabled
+        self._cleanup_thread = None
+        if self.enable_auto_cleanup:
+            self._start_auto_cleanup()
     
     def log_event(self, event_type: str, data: Dict[str, Any], 
                   timestamp: Optional[datetime] = None) -> str:
@@ -155,22 +185,87 @@ class HistoryLogger:
             logger.error(f"Error getting events by date range: {e}")
             return []
     
-    def _should_cleanup(self) -> bool:
-        """Check if cleanup should be performed."""
-        # Cleanup every 10 log entries or when directory is large
-        log_count = len(list(self.log_dir.glob("*.json")))
-        total_size = sum(f.stat().st_size for f in self.log_dir.glob("*.json") if f.is_file())
+    def log_to_db(self, data: Dict[str, Any]) -> bool:
+        """Add ability to log to database (SQLite or DuckDB).
         
-        return (log_count > self.max_logs or 
-                total_size > self.max_size_bytes or
-                log_count % 10 == 0)  # Periodic cleanup
-    
-    def _cleanup_old_logs(self):
-        """Remove logs older than retention period."""
-        try:
-            cutoff_date = datetime.now() - timedelta(days=self.retention_days)
-            removed_count = 0
+        Args:
+            data: Data to log to database
             
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            
+            # Insert data into events table
+            cursor.execute("""
+                INSERT INTO events (timestamp, event_type, data_json, created_at)
+                VALUES (?, ?, ?, ?)
+            """, (
+                data.get('timestamp', datetime.now().isoformat()),
+                data.get('event_type', 'unknown'),
+                json.dumps(data.get('data', {})),
+                datetime.now().isoformat()
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+            logger.debug(f"Logged data to database: {data.get('event_type', 'unknown')}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error logging to database: {e}")
+            return False
+    
+    def cleanup_logs_by_retention_policy(self) -> Dict[str, int]:
+        """Clean up logs based on retention policy.
+        
+        Returns:
+            Dictionary with cleanup statistics
+        """
+        stats = {
+            'files_removed': 0,
+            'files_compressed': 0,
+            'files_archived': 0,
+            'bytes_freed': 0
+        }
+        
+        try:
+            if self.retention_config.policy == RetentionPolicy.BY_AGE:
+                stats.update(self._cleanup_by_age())
+            elif self.retention_config.policy == RetentionPolicy.BY_SIZE:
+                stats.update(self._cleanup_by_size())
+            elif self.retention_config.policy == RetentionPolicy.BY_COUNT:
+                stats.update(self._cleanup_by_count())
+            elif self.retention_config.policy == RetentionPolicy.HYBRID:
+                # Apply all policies in order
+                age_stats = self._cleanup_by_age()
+                size_stats = self._cleanup_by_size()
+                count_stats = self._cleanup_by_count()
+                
+                # Combine statistics
+                for key in stats:
+                    stats[key] = age_stats.get(key, 0) + size_stats.get(key, 0) + count_stats.get(key, 0)
+            
+            logger.info(f"Cleanup completed: {stats}")
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")
+            return stats
+    
+    def _cleanup_by_age(self) -> Dict[str, int]:
+        """Clean up logs older than retention period.
+        
+        Returns:
+            Dictionary with cleanup statistics
+        """
+        stats = {'files_removed': 0, 'bytes_freed': 0}
+        cutoff_date = datetime.now() - timedelta(days=self.retention_config.max_age_days)
+        
+        try:
             for filepath in self.log_dir.glob("*.json"):
                 try:
                     # Extract timestamp from filename
@@ -180,118 +275,333 @@ class HistoryLogger:
                         file_timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S_%f')
                         
                         if file_timestamp < cutoff_date:
-                            filepath.unlink()
-                            removed_count += 1
-                            
+                            # Archive if enabled
+                            if self.retention_config.archive_old_logs and self.retention_config.archive_dir:
+                                self._archive_file(filepath)
+                                stats['files_archived'] = stats.get('files_archived', 0) + 1
+                            else:
+                                # Compress if enabled
+                                if self.retention_config.compress_old_logs:
+                                    self._compress_file(filepath)
+                                    stats['files_compressed'] = stats.get('files_compressed', 0) + 1
+                                else:
+                                    # Remove file
+                                    file_size = filepath.stat().st_size
+                                    filepath.unlink()
+                                    stats['files_removed'] += 1
+                                    stats['bytes_freed'] += file_size
+                                    
                 except Exception as e:
-                    logger.warning(f"Error processing file {filepath} for cleanup: {e}")
+                    logger.warning(f"Error processing file {filepath}: {e}")
                     continue
             
-            if removed_count > 0:
-                logger.info(f"Cleaned up {removed_count} old log files")
-                
+            logger.info(f"Age-based cleanup: removed {stats['files_removed']} files, "
+                       f"freed {stats['bytes_freed']} bytes")
+            return stats
+            
         except Exception as e:
-            logger.error(f"Error during old log cleanup: {e}")
+            logger.error(f"Error in age-based cleanup: {e}")
+            return stats
     
-    def _cleanup_by_size(self):
-        """Remove oldest logs when total size exceeds limit."""
+    def _cleanup_by_size(self) -> Dict[str, int]:
+        """Clean up logs based on total size limit.
+        
+        Returns:
+            Dictionary with cleanup statistics
+        """
+        stats = {'files_removed': 0, 'bytes_freed': 0}
+        max_size_bytes = self.retention_config.max_size_mb * 1024 * 1024
+        
         try:
             # Get all log files with their sizes and timestamps
-            log_files = []
+            files_info = []
+            total_size = 0
+            
+            for filepath in self.log_dir.glob("*.json"):
+                try:
+                    file_size = filepath.stat().st_size
+                    filename = filepath.stem
+                    
+                    if '_' in filename:
+                        timestamp_str = filename.split('_', 1)[1]
+                        file_timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S_%f')
+                        
+                        files_info.append((filepath, file_size, file_timestamp))
+                        total_size += file_size
+                        
+                except Exception as e:
+                    logger.warning(f"Error processing file {filepath}: {e}")
+                    continue
+            
+            # Sort by timestamp (oldest first)
+            files_info.sort(key=lambda x: x[2])
+            
+            # Remove oldest files until under size limit
+            for filepath, file_size, _ in files_info:
+                if total_size <= max_size_bytes:
+                    break
+                    
+                try:
+                    filepath.unlink()
+                    total_size -= file_size
+                    stats['files_removed'] += 1
+                    stats['bytes_freed'] += file_size
+                except Exception as e:
+                    logger.warning(f"Error removing file {filepath}: {e}")
+            
+            logger.info(f"Size-based cleanup: removed {stats['files_removed']} files, "
+                       f"freed {stats['bytes_freed']} bytes")
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Error in size-based cleanup: {e}")
+            return stats
+    
+    def _cleanup_by_count(self) -> Dict[str, int]:
+        """Clean up logs based on file count limit.
+        
+        Returns:
+            Dictionary with cleanup statistics
+        """
+        stats = {'files_removed': 0, 'bytes_freed': 0}
+        
+        try:
+            # Get all log files with their timestamps
+            files_info = []
+            
             for filepath in self.log_dir.glob("*.json"):
                 try:
                     filename = filepath.stem
                     if '_' in filename:
                         timestamp_str = filename.split('_', 1)[1]
                         file_timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S_%f')
+                        files_info.append((filepath, file_timestamp))
                         
-                        log_files.append({
-                            'path': filepath,
-                            'size': filepath.stat().st_size,
-                            'timestamp': file_timestamp
-                        })
                 except Exception as e:
                     logger.warning(f"Error processing file {filepath}: {e}")
                     continue
             
             # Sort by timestamp (oldest first)
-            log_files.sort(key=lambda x: x['timestamp'])
+            files_info.sort(key=lambda x: x[1])
             
-            # Calculate total size
-            total_size = sum(f['size'] for f in log_files)
-            
-            # Remove oldest files until under size limit
-            removed_count = 0
-            for log_file in log_files:
-                if total_size <= self.max_size_bytes:
-                    break
-                    
-                try:
-                    log_file['path'].unlink()
-                    total_size -= log_file['size']
-                    removed_count += 1
-                except Exception as e:
-                    logger.warning(f"Error removing file {log_file['path']}: {e}")
-                    continue
-            
-            if removed_count > 0:
-                logger.info(f"Cleaned up {removed_count} log files due to size limit")
+            # Remove oldest files if over limit
+            if len(files_info) > self.retention_config.max_file_count:
+                files_to_remove = len(files_info) - self.retention_config.max_file_count
                 
+                for filepath, _ in files_info[:files_to_remove]:
+                    try:
+                        file_size = filepath.stat().st_size
+                        filepath.unlink()
+                        stats['files_removed'] += 1
+                        stats['bytes_freed'] += file_size
+                    except Exception as e:
+                        logger.warning(f"Error removing file {filepath}: {e}")
+            
+            logger.info(f"Count-based cleanup: removed {stats['files_removed']} files, "
+                       f"freed {stats['bytes_freed']} bytes")
+            return stats
+            
         except Exception as e:
-            logger.error(f"Error during size-based cleanup: {e}")
+            logger.error(f"Error in count-based cleanup: {e}")
+            return stats
+    
+    def _compress_file(self, filepath: Path) -> bool:
+        """Compress a log file.
+        
+        Args:
+            filepath: Path to the file to compress
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            import gzip
+            
+            compressed_path = filepath.with_suffix('.json.gz')
+            with open(filepath, 'rb') as f_in:
+                with gzip.open(compressed_path, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+            
+            filepath.unlink()  # Remove original file
+            logger.debug(f"Compressed {filepath} to {compressed_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error compressing file {filepath}: {e}")
+            return False
+    
+    def _archive_file(self, filepath: Path) -> bool:
+        """Archive a log file.
+        
+        Args:
+            filepath: Path to the file to archive
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            if not self.retention_config.archive_dir:
+                return False
+            
+            archive_dir = Path(self.retention_config.archive_dir)
+            archive_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Create year/month subdirectories
+            file_timestamp = datetime.fromtimestamp(filepath.stat().st_mtime)
+            archive_subdir = archive_dir / str(file_timestamp.year) / f"{file_timestamp.month:02d}"
+            archive_subdir.mkdir(parents=True, exist_ok=True)
+            
+            # Move file to archive
+            archive_path = archive_subdir / filepath.name
+            shutil.move(str(filepath), str(archive_path))
+            
+            logger.debug(f"Archived {filepath} to {archive_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error archiving file {filepath}: {e}")
+            return False
+    
+    def _start_auto_cleanup(self):
+        """Start automatic cleanup thread."""
+        def cleanup_worker():
+            while True:
+                try:
+                    time.sleep(self.retention_config.cleanup_interval_hours * 3600)
+                    self.cleanup_logs_by_retention_policy()
+                except Exception as e:
+                    logger.error(f"Error in auto-cleanup worker: {e}")
+        
+        self._cleanup_thread = threading.Thread(target=cleanup_worker, daemon=True)
+        self._cleanup_thread.start()
+        logger.info("Started automatic cleanup thread")
+    
+    def stop_auto_cleanup(self):
+        """Stop automatic cleanup thread."""
+        if self._cleanup_thread and self._cleanup_thread.is_alive():
+            # The thread will stop when the main program exits
+            logger.info("Auto-cleanup thread will stop on program exit")
+    
+    def _init_database(self):
+        """Initialize the SQLite database."""
+        try:
+            conn = sqlite3.connect(str(self.db_path))
+            cursor = conn.cursor()
+            
+            # Create events table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    data_json TEXT,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            
+            # Create index for faster queries
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_events_timestamp 
+                ON events(timestamp)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_events_type 
+                ON events(event_type)
+            """)
+            
+            conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            logger.error(f"Error initializing database: {e}")
+    
+    def _should_cleanup(self) -> bool:
+        """Check if cleanup should be performed."""
+        # Simple heuristic: cleanup every 100 events
+        try:
+            event_count = len(list(self.log_dir.glob("*.json")))
+            return event_count % 100 == 0
+        except Exception:
+            return False
+    
+    def _cleanup_old_logs(self):
+        """Legacy method - now calls the new retention policy cleanup."""
+        self._cleanup_by_age()
+    
+    def _cleanup_by_size(self):
+        """Legacy method - now calls the new retention policy cleanup."""
+        self._cleanup_by_size()
     
     def get_log_statistics(self) -> Dict[str, Any]:
-        """Get statistics about the log directory.
+        """Get statistics about the log files.
         
         Returns:
             Dictionary with log statistics
         """
         try:
-            log_files = list(self.log_dir.glob("*.json"))
-            total_size = sum(f.stat().st_size for f in log_files if f.is_file())
+            stats = {
+                'total_files': 0,
+                'total_size_bytes': 0,
+                'oldest_file': None,
+                'newest_file': None,
+                'files_by_type': {},
+                'compressed_files': 0,
+                'archived_files': 0
+            }
             
-            # Count by event type
-            event_counts = {}
-            for filepath in log_files:
-                try:
+            for filepath in self.log_dir.glob("*"):
+                if filepath.is_file():
+                    stats['total_files'] += 1
+                    stats['total_size_bytes'] += filepath.stat().st_size
+                    
+                    # Check if compressed
+                    if filepath.suffix == '.gz':
+                        stats['compressed_files'] += 1
+                    
+                    # Extract event type and timestamp
                     filename = filepath.stem
                     if '_' in filename:
                         event_type = filename.split('_')[0]
-                        event_counts[event_type] = event_counts.get(event_type, 0) + 1
-                except Exception:
-                    continue
+                        stats['files_by_type'][event_type] = stats['files_by_type'].get(event_type, 0) + 1
+                        
+                        timestamp_str = filename.split('_', 1)[1]
+                        try:
+                            file_timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S_%f')
+                            
+                            if not stats['oldest_file'] or file_timestamp < stats['oldest_file']:
+                                stats['oldest_file'] = file_timestamp
+                            if not stats['newest_file'] or file_timestamp > stats['newest_file']:
+                                stats['newest_file'] = file_timestamp
+                        except ValueError:
+                            pass
             
-            return {
-                'total_files': len(log_files),
-                'total_size_mb': total_size / (1024 * 1024),
-                'event_counts': event_counts,
-                'max_logs': self.max_logs,
-                'max_size_mb': self.max_size_bytes / (1024 * 1024),
-                'retention_days': self.retention_days
-            }
+            # Convert timestamps to strings
+            if stats['oldest_file']:
+                stats['oldest_file'] = stats['oldest_file'].isoformat()
+            if stats['newest_file']:
+                stats['newest_file'] = stats['newest_file'].isoformat()
+            
+            return stats
             
         except Exception as e:
             logger.error(f"Error getting log statistics: {e}")
             return {}
     
     def clear_all_logs(self):
-        """Clear all log files (use with caution)."""
+        """Clear all log files."""
         try:
             for filepath in self.log_dir.glob("*.json"):
                 filepath.unlink()
-            logger.info("All log files cleared")
+            logger.info("Cleared all log files")
         except Exception as e:
             logger.error(f"Error clearing logs: {e}")
 
-# Global instance
-_history_logger = None
-
 def get_history_logger() -> HistoryLogger:
-    """Get the global history logger instance."""
-    global _history_logger
-    if _history_logger is None:
-        _history_logger = HistoryLogger()
-    return _history_logger
+    """Get a singleton instance of the history logger."""
+    if not hasattr(get_history_logger, '_instance'):
+        get_history_logger._instance = HistoryLogger()
+    return get_history_logger._instance
 
 def log_event(event_type: str, data: Dict[str, Any], 
               timestamp: Optional[datetime] = None) -> str:

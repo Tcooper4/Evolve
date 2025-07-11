@@ -212,6 +212,138 @@ class TimeUtils:
             dt = pytz.UTC.localize(dt)
         return dt.astimezone(pytz.timezone(timezone))
     
+    def format_datetime(
+        self,
+        dt: datetime,
+        format_str: str = "%Y-%m-%d %H:%M:%S",
+        timezone: Optional[str] = None,
+        include_timezone: bool = True
+    ) -> str:
+        """Format datetime with timezone awareness.
+        
+        Args:
+            dt: Datetime to format
+            format_str: Format string
+            timezone: Target timezone for formatting
+            include_timezone: Whether to include timezone info
+            
+        Returns:
+            Formatted datetime string
+        """
+        if timezone:
+            dt = self.to_timezone(dt, timezone)
+        
+        formatted = dt.strftime(format_str)
+        
+        if include_timezone and dt.tzinfo:
+            tz_name = dt.strftime('%Z')
+            tz_offset = dt.strftime('%z')
+            formatted += f" {tz_name} ({tz_offset})"
+        
+        return formatted
+    
+    def round_to_granularity(
+        self,
+        dt: datetime,
+        granularity: str,
+        timezone: Optional[str] = None
+    ) -> datetime:
+        """Round datetime to specified granularity.
+        
+        Args:
+            dt: Datetime to round
+            granularity: Granularity ('minute', 'hour', 'day', 'week', 'month')
+            timezone: Timezone to use for rounding
+            
+        Returns:
+            Rounded datetime
+        """
+        if timezone:
+            dt = self.to_timezone(dt, timezone)
+        
+        if granularity == 'minute':
+            return dt.replace(second=0, microsecond=0)
+        elif granularity == 'hour':
+            return dt.replace(minute=0, second=0, microsecond=0)
+        elif granularity == 'day':
+            return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif granularity == 'week':
+            # Round to Monday of the week
+            days_since_monday = dt.weekday()
+            return dt.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days_since_monday)
+        elif granularity == 'month':
+            return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        else:
+            raise ValueError(f"Unsupported granularity: {granularity}")
+    
+    def get_logging_timestamp(
+        self,
+        dt: Optional[datetime] = None,
+        timezone: str = 'UTC',
+        include_milliseconds: bool = True,
+        format_type: str = 'iso'
+    ) -> str:
+        """Get formatted timestamp for logging.
+        
+        Args:
+            dt: Datetime to format (defaults to current time)
+            timezone: Timezone for formatting
+            include_milliseconds: Whether to include milliseconds
+            format_type: Format type ('iso', 'readable', 'compact')
+            
+        Returns:
+            Formatted timestamp string
+        """
+        if dt is None:
+            dt = datetime.now(pytz.timezone(timezone))
+        else:
+            dt = self.to_timezone(dt, timezone)
+        
+        if format_type == 'iso':
+            if include_milliseconds:
+                return dt.isoformat()
+            else:
+                return dt.replace(microsecond=0).isoformat()
+        elif format_type == 'readable':
+            if include_milliseconds:
+                return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + f" {dt.strftime('%Z')}"
+            else:
+                return dt.strftime("%Y-%m-%d %H:%M:%S %Z")
+        elif format_type == 'compact':
+            if include_milliseconds:
+                return dt.strftime("%Y%m%d_%H%M%S_%f")[:-3]
+            else:
+                return dt.strftime("%Y%m%d_%H%M%S")
+        else:
+            raise ValueError(f"Unsupported format type: {format_type}")
+    
+    def get_time_granularity_for_logging(
+        self,
+        time_range: timedelta,
+        max_points: int = 1000
+    ) -> str:
+        """Determine appropriate time granularity for logging based on time range.
+        
+        Args:
+            time_range: Time range to analyze
+            max_points: Maximum number of data points desired
+            
+        Returns:
+            Recommended granularity string
+        """
+        total_seconds = time_range.total_seconds()
+        
+        if total_seconds <= 3600:  # 1 hour
+            return 'minute'
+        elif total_seconds <= 86400:  # 1 day
+            return 'hour'
+        elif total_seconds <= 604800:  # 1 week
+            return 'day'
+        elif total_seconds <= 2592000:  # 1 month
+            return 'week'
+        else:
+            return 'month'
+    
     def get_market_sessions(
         self,
         start_date: datetime,
@@ -271,7 +403,7 @@ class TimeUtils:
             
             current_date += timedelta(days=1)
         
-        return sorted(sessions)
+        return sessions
     
     def resample_market_data(
         self,
@@ -282,7 +414,7 @@ class TimeUtils:
         """Resample market data to specified frequency.
         
         Args:
-            df: DataFrame to resample
+            df: DataFrame with datetime index
             freq: Resampling frequency
             session: Market session to use
             
@@ -290,32 +422,120 @@ class TimeUtils:
             Resampled DataFrame
         """
         if session == 'regular':
-            start_time = self.market_hours.regular_start
-            end_time = self.market_hours.regular_end
-        elif session == 'pre':
-            start_time = self.market_hours.pre_market_start
-            end_time = self.market_hours.pre_market_end
-        elif session == 'post':
-            start_time = self.market_hours.post_market_start
-            end_time = self.market_hours.post_market_end
+            # Filter to regular market hours
+            mask = df.index.map(lambda x: self.market_hours.is_market_open(x))
+            df_filtered = df[mask]
         else:
-            raise ValueError(f"Invalid session: {session}")
+            df_filtered = df
         
-        if not start_time or not end_time:
-            raise ValueError(f"Session {session} not configured")
-        
-        # Filter data to session
-        mask = (df.index.time >= start_time) & (df.index.time <= end_time)
-        df = df[mask]
-        
-        # Resample
-        return df.resample(freq).agg({
+        return df_filtered.resample(freq).agg({
             'open': 'first',
             'high': 'max',
             'low': 'min',
             'close': 'last',
             'volume': 'sum'
-        })
+        }).dropna()
 
-# Create singleton instance
-time_utils = TimeUtils() 
+    def get_timezone_info(self, timezone: str) -> Dict[str, Any]:
+        """Get detailed timezone information.
+        
+        Args:
+            timezone: Timezone name
+            
+        Returns:
+            Dictionary with timezone information
+        """
+        tz = pytz.timezone(timezone)
+        now = datetime.now(tz)
+        
+        return {
+            'name': timezone,
+            'utc_offset': now.strftime('%z'),
+            'dst_active': now.dst() != timedelta(0),
+            'current_time': now.isoformat(),
+            'abbreviation': now.strftime('%Z')
+        }
+
+    def validate_timezone(self, timezone: str) -> bool:
+        """Validate if a timezone string is valid.
+        
+        Args:
+            timezone: Timezone string to validate
+            
+        Returns:
+            Whether timezone is valid
+        """
+        try:
+            pytz.timezone(timezone)
+            return True
+        except pytz.exceptions.UnknownTimeZoneError:
+            return False
+
+    def get_common_timezones(self) -> List[str]:
+        """Get list of common timezones for trading.
+        
+        Returns:
+            List of common timezone names
+        """
+        return [
+            'UTC',
+            'America/New_York',
+            'America/Chicago',
+            'America/Denver',
+            'America/Los_Angeles',
+            'Europe/London',
+            'Europe/Paris',
+            'Europe/Berlin',
+            'Asia/Tokyo',
+            'Asia/Shanghai',
+            'Asia/Hong_Kong',
+            'Australia/Sydney'
+        ]
+
+# Global time utils instance
+time_utils = TimeUtils()
+
+def get_current_time(timezone: str = 'UTC') -> datetime:
+    """Get current time in specified timezone.
+    
+    Args:
+        timezone: Timezone for current time
+        
+    Returns:
+        Current datetime in specified timezone
+    """
+    return time_utils.to_timezone(datetime.now(), timezone)
+
+def format_timestamp(
+    dt: datetime,
+    format_str: str = "%Y-%m-%d %H:%M:%S",
+    timezone: str = 'UTC'
+) -> str:
+    """Format timestamp with timezone awareness.
+    
+    Args:
+        dt: Datetime to format
+        format_str: Format string
+        timezone: Target timezone
+        
+    Returns:
+        Formatted timestamp string
+    """
+    return time_utils.format_datetime(dt, format_str, timezone)
+
+def round_timestamp(
+    dt: datetime,
+    granularity: str,
+    timezone: str = 'UTC'
+) -> datetime:
+    """Round timestamp to specified granularity.
+    
+    Args:
+        dt: Datetime to round
+        granularity: Granularity ('minute', 'hour', 'day', 'week', 'month')
+        timezone: Timezone for rounding
+        
+    Returns:
+        Rounded datetime
+    """
+    return time_utils.round_to_granularity(dt, granularity, timezone) 

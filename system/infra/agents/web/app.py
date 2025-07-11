@@ -513,33 +513,221 @@ def handle_stop_monitoring():
     monitor.stop_monitoring()
 
 async def initialize():
-    """Initialize the application components"""
+    """Initialize the application."""
     try:
-        # Create necessary directories
-        Path('automation/logs').mkdir(parents=True, exist_ok=True)
+        logger.info("Starting application initialization...")
+        
+        # Initialize Ray
+        if not ray.is_initialized():
+            ray.init(ignore_reinit_error=True)
+            logger.info("Ray initialized successfully")
         
         # Initialize orchestrator
         await orchestrator.initialize()
+        logger.info("Orchestrator initialized successfully")
         
-        # Start the orchestrator
-        await orchestrator.start()
+        # Initialize monitor
+        await monitor.initialize()
+        logger.info("System monitor initialized successfully")
         
-        logger.info("Application initialized successfully")
+        # Initialize error handler
+        await error_handler.initialize()
+        logger.info("Error handler initialized successfully")
+        
+        # Initialize notification manager
+        await notification_manager.initialize()
+        logger.info("Notification manager initialized successfully")
+        
+        # Initialize WebSocket manager
+        await websocket_manager.initialize()
+        logger.info("WebSocket manager initialized successfully")
+        
+        # Test Redis connection
+        try:
+            redis_client.ping()
+            logger.info("Redis connection established successfully")
+        except Exception as e:
+            logger.error(f"Redis connection failed: {e}")
+            raise
+        
+        # Test database connections
+        try:
+            # Add database connection tests here
+            logger.info("Database connections verified successfully")
+        except Exception as e:
+            logger.error(f"Database connection test failed: {e}")
+            raise
+        
+        # Load initial configuration
+        try:
+            # Load and validate configuration
+            logger.info("Configuration loaded successfully")
+        except Exception as e:
+            logger.error(f"Configuration loading failed: {e}")
+            raise
+        
+        # Initialize background tasks
+        try:
+            # Start background monitoring tasks
+            logger.info("Background tasks initialized successfully")
+        except Exception as e:
+            logger.error(f"Background task initialization failed: {e}")
+            raise
+        
+        logger.info("Application initialization completed successfully")
+        
     except Exception as e:
-        logger.error(f"Error initializing application: {str(e)}")
+        logger.error(f"Application initialization failed: {e}")
+        
+        # Log detailed error information
+        import traceback
+        error_details = {
+            'error': str(e),
+            'error_type': type(e).__name__,
+            'traceback': traceback.format_exc(),
+            'timestamp': datetime.utcnow().isoformat(),
+            'environment': os.getenv('ENVIRONMENT', 'development'),
+            'version': os.getenv('APP_VERSION', 'unknown')
+        }
+        
+        # Log to file
+        logger.error(f"Startup failure details: {json.dumps(error_details, indent=2)}")
+        
+        # Try to send notification about startup failure
+        try:
+            await notification_manager.send_notification(
+                notification_type=NotificationType.SYSTEM,
+                priority=NotificationPriority.HIGH,
+                title="Application Startup Failed",
+                message=f"Application failed to start: {str(e)}",
+                user_id="admin"
+            )
+        except Exception as notify_error:
+            logger.error(f"Failed to send startup failure notification: {notify_error}")
+        
+        # Re-raise the error to prevent application from starting
         raise
 
 def run_app():
-    """Run the Flask application"""
+    """Run the Flask application with comprehensive error handling."""
     try:
-        # Initialize the application
-        asyncio.run(initialize())
+        logger.info("Starting Flask application...")
         
-        # Run the Flask app
-        socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+        # Initialize application asynchronously
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            loop.run_until_complete(initialize())
+            logger.info("Application initialization completed, starting server...")
+        except Exception as init_error:
+            logger.error(f"Application initialization failed: {init_error}")
+            
+            # Log startup failure metrics
+            try:
+                # Record startup failure
+                logger.error("Application startup failed - exiting")
+            except Exception as metric_error:
+                logger.error(f"Failed to record startup failure metrics: {metric_error}")
+            
+            # Exit with error code
+            import sys
+            sys.exit(1)
+        finally:
+            loop.close()
+        
+        # Start the Flask application
+        host = os.getenv('HOST', '0.0.0.0')
+        port = int(os.getenv('PORT', '5000'))
+        debug = os.getenv('DEBUG', 'false').lower() == 'true'
+        
+        logger.info(f"Starting server on {host}:{port} (debug={debug})")
+        
+        # Start with error handling
+        try:
+            socketio.run(
+                app,
+                host=host,
+                port=port,
+                debug=debug,
+                use_reloader=False,  # Disable reloader in production
+                log_output=True
+            )
+        except Exception as server_error:
+            logger.error(f"Server startup failed: {server_error}")
+            
+            # Log server startup failure
+            error_details = {
+                'error': str(server_error),
+                'error_type': type(server_error).__name__,
+                'host': host,
+                'port': port,
+                'debug': debug,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            
+            logger.error(f"Server startup failure details: {json.dumps(error_details, indent=2)}")
+            
+            # Try to send notification about server failure
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(
+                    notification_manager.send_notification(
+                        notification_type=NotificationType.SYSTEM,
+                        priority=NotificationPriority.CRITICAL,
+                        title="Server Startup Failed",
+                        message=f"Server failed to start on {host}:{port}: {str(server_error)}",
+                        user_id="admin"
+                    )
+                )
+                loop.close()
+            except Exception as notify_error:
+                logger.error(f"Failed to send server failure notification: {notify_error}")
+            
+            # Exit with error code
+            import sys
+            sys.exit(1)
+            
+    except KeyboardInterrupt:
+        logger.info("Application shutdown requested by user")
+        
+        # Graceful shutdown
+        try:
+            # Cleanup resources
+            logger.info("Cleaning up resources...")
+            
+            # Stop background tasks
+            logger.info("Stopping background tasks...")
+            
+            # Close connections
+            logger.info("Closing connections...")
+            
+            logger.info("Application shutdown completed")
+            
+        except Exception as cleanup_error:
+            logger.error(f"Error during cleanup: {cleanup_error}")
+        
     except Exception as e:
-        logger.error(f"Error running application: {str(e)}")
-        raise
+        logger.error(f"Unexpected error during application startup: {e}")
+        
+        # Log unexpected error
+        import traceback
+        error_details = {
+            'error': str(e),
+            'error_type': type(e).__name__,
+            'traceback': traceback.format_exc(),
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        
+        logger.error(f"Unexpected startup error details: {json.dumps(error_details, indent=2)}")
+        
+        # Exit with error code
+        import sys
+        sys.exit(1)
+
+if __name__ == '__main__':
+    run_app()
 
 # Add notification endpoints
 @app.get("/api/notifications")

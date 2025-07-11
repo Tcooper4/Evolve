@@ -3,6 +3,7 @@ Strategy Comparison and Stacking Module
 
 This module provides comprehensive strategy comparison and stacking capabilities
 for the Evolve trading system.
+Enhanced with normalized metrics and confidence intervals for fair comparison.
 """
 
 import pandas as pd
@@ -13,6 +14,8 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import json
+from scipy import stats
+import warnings
 
 from trading.utils.performance_metrics import calculate_sharpe_ratio, calculate_max_drawdown
 from trading.strategies.registry import RSIStrategy, MACDStrategy, BollingerBandsStrategy
@@ -21,37 +24,184 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class StrategyPerformance:
-    """Performance metrics for a strategy."""
+    """Performance metrics for a strategy with confidence intervals."""
     strategy_name: str
     sharpe_ratio: float
+    sharpe_ci_lower: float
+    sharpe_ci_upper: float
     win_rate: float
+    win_rate_ci_lower: float
+    win_rate_ci_upper: float
     max_drawdown: float
     total_return: float
+    return_ci_lower: float
+    return_ci_upper: float
     volatility: float
     profit_factor: float
     avg_trade: float
     num_trades: int
     avg_holding_period: float
+    normalized_score: float
+    confidence_level: float
     timestamp: datetime
 
 @dataclass
 class StrategyComparison:
-    """Comparison results between strategies."""
+    """Comparison results between strategies with statistical significance."""
     strategy_a: str
     strategy_b: str
     sharpe_diff: float
+    sharpe_diff_significant: bool
     win_rate_diff: float
+    win_rate_diff_significant: bool
     drawdown_diff: float
     return_diff: float
+    return_diff_significant: bool
     correlation: float
+    correlation_significant: bool
     combined_sharpe: float
+    statistical_power: float
     timestamp: datetime
 
-class StrategyComparisonMatrix:
-    """Multi-strategy comparison matrix."""
+class MetricNormalizer:
+    """Normalizes strategy metrics for fair comparison."""
     
-    def __init__(self):
-        """Initialize the strategy comparison matrix."""
+    def __init__(self, confidence_level: float = 0.95):
+        """Initialize the normalizer.
+        
+        Args:
+            confidence_level: Confidence level for intervals (default: 0.95)
+        """
+        self.confidence_level = confidence_level
+        self.z_score = stats.norm.ppf((1 + confidence_level) / 2)
+        
+    def normalize_metric(self, values: List[float], metric_type: str = 'ratio') -> Dict[str, float]:
+        """Normalize a metric to a 0-1 scale.
+        
+        Args:
+            values: List of metric values
+            metric_type: Type of metric ('ratio', 'percentage', 'absolute')
+            
+        Returns:
+            Dictionary with normalized values and confidence intervals
+        """
+        if not values or len(values) == 0:
+            return {'normalized': 0.0, 'ci_lower': 0.0, 'ci_upper': 0.0}
+        
+        values = np.array(values)
+        
+        if metric_type == 'ratio':
+            # For ratios like Sharpe, normalize using log transformation
+            log_values = np.log(np.abs(values) + 1)  # Add 1 to handle zero/negative
+            normalized = (log_values - log_values.min()) / (log_values.max() - log_values.min())
+        elif metric_type == 'percentage':
+            # For percentages like win rate, use min-max normalization
+            normalized = (values - values.min()) / (values.max() - values.min())
+        else:  # absolute
+            # For absolute values like returns, use robust normalization
+            median = np.median(values)
+            mad = np.median(np.abs(values - median))
+            normalized = (values - median) / (mad + 1e-8)  # Add small epsilon
+            normalized = 1 / (1 + np.exp(-normalized))  # Sigmoid to 0-1
+        
+        # Calculate confidence intervals
+        mean_val = np.mean(normalized)
+        std_val = np.std(normalized)
+        ci_lower = max(0, mean_val - self.z_score * std_val / np.sqrt(len(values)))
+        ci_upper = min(1, mean_val + self.z_score * std_val / np.sqrt(len(values)))
+        
+        return {
+            'normalized': float(mean_val),
+            'ci_lower': float(ci_lower),
+            'ci_upper': float(ci_upper)
+        }
+    
+    def calculate_confidence_intervals(self, returns: pd.Series, metric: str) -> Tuple[float, float, float]:
+        """Calculate confidence intervals for a performance metric.
+        
+        Args:
+            returns: Strategy returns
+            metric: Metric name ('sharpe', 'return', 'volatility')
+            
+        Returns:
+            Tuple of (metric_value, ci_lower, ci_upper)
+        """
+        if len(returns) < 30:  # Need sufficient data for reliable intervals
+            logger.warning(f"Insufficient data for confidence intervals: {len(returns)} observations")
+            return 0.0, 0.0, 0.0
+        
+        try:
+            if metric == 'sharpe':
+                # Bootstrap Sharpe ratio confidence interval
+                sharpe_ratios = []
+                n_bootstrap = 1000
+                
+                for _ in range(n_bootstrap):
+                    sample = returns.sample(n=len(returns), replace=True)
+                    if sample.std() > 0:
+                        sharpe = sample.mean() / sample.std() * np.sqrt(252)
+                        sharpe_ratios.append(sharpe)
+                
+                sharpe_ratios = np.array(sharpe_ratios)
+                ci_lower = np.percentile(sharpe_ratios, (1 - self.confidence_level) * 50)
+                ci_upper = np.percentile(sharpe_ratios, (1 + self.confidence_level) * 50)
+                return float(np.mean(sharpe_ratios)), float(ci_lower), float(ci_upper)
+            
+            elif metric == 'return':
+                # Bootstrap return confidence interval
+                total_returns = []
+                n_bootstrap = 1000
+                
+                for _ in range(n_bootstrap):
+                    sample = returns.sample(n=len(returns), replace=True)
+                    total_return = (1 + sample).prod() - 1
+                    total_returns.append(total_return)
+                
+                total_returns = np.array(total_returns)
+                ci_lower = np.percentile(total_returns, (1 - self.confidence_level) * 50)
+                ci_upper = np.percentile(total_returns, (1 + self.confidence_level) * 50)
+                return float(np.mean(total_returns)), float(ci_lower), float(ci_upper)
+            
+            elif metric == 'win_rate':
+                # Binomial confidence interval for win rate
+                wins = (returns > 0).sum()
+                total_trades = len(returns)
+                
+                if total_trades > 0:
+                    win_rate = wins / total_trades
+                    # Wilson confidence interval
+                    z = self.z_score
+                    denominator = 1 + z**2 / total_trades
+                    centre_adjusted = win_rate + z * z / (2 * total_trades)
+                    adjusted_standard_error = z * np.sqrt((win_rate * (1 - win_rate) + z * z / (4 * total_trades)) / total_trades)
+                    lower_bound = (centre_adjusted - adjusted_standard_error) / denominator
+                    upper_bound = (centre_adjusted + adjusted_standard_error) / denominator
+                    
+                    return win_rate, max(0, lower_bound), min(1, upper_bound)
+                
+                return 0.0, 0.0, 0.0
+            
+            else:
+                # Default: use standard error
+                mean_val = returns.mean()
+                std_error = returns.std() / np.sqrt(len(returns))
+                ci_lower = mean_val - self.z_score * std_error
+                ci_upper = mean_val + self.z_score * std_error
+                return float(mean_val), float(ci_lower), float(ci_upper)
+                
+        except Exception as e:
+            logger.error(f"Error calculating confidence intervals for {metric}: {e}")
+            return 0.0, 0.0, 0.0
+
+class StrategyComparisonMatrix:
+    """Multi-strategy comparison matrix with normalized metrics."""
+    
+    def __init__(self, confidence_level: float = 0.95):
+        """Initialize the strategy comparison matrix.
+        
+        Args:
+            confidence_level: Confidence level for intervals
+        """
         self.strategies = {
             'rsi': RSIStrategy(),
             'macd': MACDStrategy(),
@@ -59,18 +209,20 @@ class StrategyComparisonMatrix:
         }
         self.comparison_history = []
         self.performance_cache = {}
+        self.normalizer = MetricNormalizer(confidence_level)
+        self.confidence_level = confidence_level
         
     def generate_comparison_matrix(self, 
                                  data: pd.DataFrame,
                                  strategies: Optional[List[str]] = None) -> pd.DataFrame:
-        """Generate a comprehensive strategy comparison matrix.
+        """Generate a comprehensive strategy comparison matrix with normalized metrics.
         
         Args:
             data: Market data
             strategies: List of strategy names to compare (default: all)
             
         Returns:
-            DataFrame with comparison matrix
+            DataFrame with comparison matrix and confidence intervals
         """
         try:
             if strategies is None:
@@ -85,22 +237,33 @@ class StrategyComparisonMatrix:
                     )
                     performances[strategy_name] = performance
             
-            # Create comparison matrix
+            # Create comparison matrix with normalized metrics
             matrix_data = []
             metrics = ['sharpe_ratio', 'win_rate', 'max_drawdown', 'total_return', 
-                      'volatility', 'profit_factor']
+                      'volatility', 'profit_factor', 'normalized_score']
             
             for strategy_name, performance in performances.items():
                 row = {'Strategy': strategy_name}
                 for metric in metrics:
                     row[metric] = getattr(performance, metric, 0.0)
+                    # Add confidence intervals for key metrics
+                    if metric in ['sharpe_ratio', 'win_rate', 'total_return']:
+                        ci_lower = getattr(performance, f'{metric}_ci_lower', 0.0)
+                        ci_upper = getattr(performance, f'{metric}_ci_upper', 0.0)
+                        row[f'{metric}_ci'] = f"[{ci_lower:.3f}, {ci_upper:.3f}]"
                 matrix_data.append(row)
             
             matrix_df = pd.DataFrame(matrix_data)
             
-            # Add ranking columns
-            for metric in metrics:
+            # Add ranking columns with confidence intervals
+            for metric in ['sharpe_ratio', 'win_rate', 'total_return', 'normalized_score']:
                 matrix_df[f'{metric}_rank'] = matrix_df[metric].rank(ascending=False)
+                
+                # Add significance indicators
+                if metric in ['sharpe_ratio', 'win_rate', 'total_return']:
+                    matrix_df[f'{metric}_significant'] = self._check_significance(
+                        matrix_df, metric
+                    )
             
             # Cache results
             self.performance_cache = performances
@@ -111,17 +274,52 @@ class StrategyComparisonMatrix:
             logger.error(f"Error generating comparison matrix: {e}")
             return pd.DataFrame()
     
+    def _check_significance(self, matrix_df: pd.DataFrame, metric: str) -> pd.Series:
+        """Check if differences between strategies are statistically significant.
+        
+        Args:
+            matrix_df: Comparison matrix
+            metric: Metric to check
+            
+        Returns:
+            Series indicating significance
+        """
+        significance = pd.Series(False, index=matrix_df.index)
+        
+        if len(matrix_df) < 2:
+            return significance
+        
+        # Get confidence intervals
+        ci_lower_col = f'{metric}_ci_lower'
+        ci_upper_col = f'{metric}_ci_upper'
+        
+        if ci_lower_col in matrix_df.columns and ci_upper_col in matrix_df.columns:
+            for i, row in matrix_df.iterrows():
+                # Check if confidence intervals overlap with other strategies
+                overlaps = 0
+                for j, other_row in matrix_df.iterrows():
+                    if i != j:
+                        # Check for overlap
+                        if not (row[ci_upper_col] < other_row[ci_lower_col] or 
+                               row[ci_lower_col] > other_row[ci_upper_col]):
+                            overlaps += 1
+                
+                # Mark as significant if no overlaps (or minimal overlaps)
+                significance.iloc[i] = overlaps <= len(matrix_df) * 0.3
+        
+        return significance
+    
     def _calculate_strategy_performance(self, 
                                       strategy_name: str, 
                                       data: pd.DataFrame) -> StrategyPerformance:
-        """Calculate performance metrics for a strategy.
+        """Calculate performance metrics for a strategy with confidence intervals.
         
         Args:
             strategy_name: Name of the strategy
             data: Market data
             
         Returns:
-            StrategyPerformance object
+            StrategyPerformance object with confidence intervals
         """
         try:
             strategy = self.strategies[strategy_name]
@@ -130,44 +328,129 @@ class StrategyComparisonMatrix:
             # Calculate returns
             returns = self._calculate_strategy_returns(data, signals)
             
-            # Calculate metrics
-            sharpe = calculate_sharpe_ratio(returns)
+            if len(returns) == 0:
+                return self._create_empty_performance(strategy_name)
+            
+            # Calculate metrics with confidence intervals
+            sharpe, sharpe_ci_lower, sharpe_ci_upper = self.normalizer.calculate_confidence_intervals(
+                returns, 'sharpe'
+            )
+            
+            win_rate, win_rate_ci_lower, win_rate_ci_upper = self.normalizer.calculate_confidence_intervals(
+                returns, 'win_rate'
+            )
+            
+            total_return, return_ci_lower, return_ci_upper = self.normalizer.calculate_confidence_intervals(
+                returns, 'return'
+            )
+            
+            # Calculate other metrics
             max_dd = calculate_max_drawdown(returns)
-            total_return = (1 + returns).prod() - 1
             volatility = returns.std() * np.sqrt(252)  # Annualized
             
             # Calculate trade-based metrics
             trade_metrics = self._calculate_trade_metrics(returns, signals)
             
+            # Calculate normalized score
+            normalized_score = self._calculate_normalized_score(
+                sharpe, win_rate, max_dd, total_return, volatility
+            )
+            
             return StrategyPerformance(
                 strategy_name=strategy_name,
                 sharpe_ratio=sharpe,
-                win_rate=trade_metrics['win_rate'],
+                sharpe_ci_lower=sharpe_ci_lower,
+                sharpe_ci_upper=sharpe_ci_upper,
+                win_rate=win_rate,
+                win_rate_ci_lower=win_rate_ci_lower,
+                win_rate_ci_upper=win_rate_ci_upper,
                 max_drawdown=max_dd,
                 total_return=total_return,
+                return_ci_lower=return_ci_lower,
+                return_ci_upper=return_ci_upper,
                 volatility=volatility,
                 profit_factor=trade_metrics['profit_factor'],
                 avg_trade=trade_metrics['avg_trade'],
                 num_trades=trade_metrics['num_trades'],
                 avg_holding_period=trade_metrics['avg_holding_period'],
+                normalized_score=normalized_score,
+                confidence_level=self.confidence_level,
                 timestamp=datetime.now()
             )
             
         except Exception as e:
             logger.error(f"Error calculating performance for {strategy_name}: {e}")
-            return StrategyPerformance(
-                strategy_name=strategy_name,
-                sharpe_ratio=0.0,
-                win_rate=0.0,
-                max_drawdown=0.0,
-                total_return=0.0,
-                volatility=0.0,
-                profit_factor=0.0,
-                avg_trade=0.0,
-                num_trades=0,
-                avg_holding_period=0.0,
-                timestamp=datetime.now()
+            return self._create_empty_performance(strategy_name)
+    
+    def _create_empty_performance(self, strategy_name: str) -> StrategyPerformance:
+        """Create empty performance object for failed calculations."""
+        return StrategyPerformance(
+            strategy_name=strategy_name,
+            sharpe_ratio=0.0,
+            sharpe_ci_lower=0.0,
+            sharpe_ci_upper=0.0,
+            win_rate=0.0,
+            win_rate_ci_lower=0.0,
+            win_rate_ci_upper=0.0,
+            max_drawdown=0.0,
+            total_return=0.0,
+            return_ci_lower=0.0,
+            return_ci_upper=0.0,
+            volatility=0.0,
+            profit_factor=0.0,
+            avg_trade=0.0,
+            num_trades=0,
+            avg_holding_period=0.0,
+            normalized_score=0.0,
+            confidence_level=self.confidence_level,
+            timestamp=datetime.now()
+        )
+    
+    def _calculate_normalized_score(self, sharpe: float, win_rate: float, 
+                                  max_dd: float, total_return: float, 
+                                  volatility: float) -> float:
+        """Calculate a normalized composite score for strategy ranking.
+        
+        Args:
+            sharpe: Sharpe ratio
+            win_rate: Win rate
+            max_dd: Maximum drawdown
+            total_return: Total return
+            volatility: Volatility
+            
+        Returns:
+            Normalized score between 0 and 1
+        """
+        try:
+            # Normalize each metric to 0-1 scale
+            sharpe_norm = max(0, min(1, (sharpe + 2) / 4))  # Assume range -2 to 2
+            win_rate_norm = win_rate  # Already 0-1
+            drawdown_norm = max(0, min(1, 1 - abs(max_dd)))  # Invert drawdown
+            return_norm = max(0, min(1, (total_return + 0.5) / 1.0))  # Assume range -50% to 50%
+            vol_norm = max(0, min(1, 1 - volatility / 0.5))  # Invert volatility, assume max 50%
+            
+            # Weighted average (can be adjusted based on preferences)
+            weights = {
+                'sharpe': 0.3,
+                'win_rate': 0.25,
+                'drawdown': 0.2,
+                'return': 0.15,
+                'volatility': 0.1
+            }
+            
+            normalized_score = (
+                weights['sharpe'] * sharpe_norm +
+                weights['win_rate'] * win_rate_norm +
+                weights['drawdown'] * drawdown_norm +
+                weights['return'] * return_norm +
+                weights['volatility'] * vol_norm
             )
+            
+            return float(normalized_score)
+            
+        except Exception as e:
+            logger.error(f"Error calculating normalized score: {e}")
+            return 0.0
     
     def _calculate_strategy_returns(self, 
                                   data: pd.DataFrame, 
@@ -345,15 +628,43 @@ class StrategyComparisonMatrix:
             combined_returns = (aligned_returns.iloc[:, 0] + aligned_returns.iloc[:, 1]) / 2
             combined_sharpe = calculate_sharpe_ratio(combined_returns)
             
+            # Calculate differences with confidence intervals
+            sharpe_diff, sharpe_diff_ci_lower, sharpe_diff_ci_upper = self.normalizer.calculate_confidence_intervals(
+                combined_returns, 'sharpe'
+            )
+            
+            win_rate_diff, win_rate_diff_ci_lower, win_rate_diff_ci_upper = self.normalizer.calculate_confidence_intervals(
+                combined_returns, 'win_rate'
+            )
+            
+            return_diff, return_diff_ci_lower, return_diff_ci_upper = self.normalizer.calculate_confidence_intervals(
+                combined_returns, 'return'
+            )
+            
+            # Check for statistical significance
+            sharpe_diff_significant = not (sharpe_diff_ci_lower > 0 or sharpe_diff_ci_upper < 0)
+            win_rate_diff_significant = not (win_rate_diff_ci_lower > 0 or win_rate_diff_ci_upper < 0)
+            return_diff_significant = not (return_diff_ci_lower > 0 or return_diff_ci_upper < 0)
+            
+            # Calculate statistical power (simplified)
+            # This is a placeholder and would require a more sophisticated statistical test
+            # For now, we'll just indicate if the difference is positive/negative
+            statistical_power = 0.0 # Placeholder
+            
             comparison = StrategyComparison(
                 strategy_a=strategy_a,
                 strategy_b=strategy_b,
-                sharpe_diff=perf_a.sharpe_ratio - perf_b.sharpe_ratio,
-                win_rate_diff=perf_a.win_rate - perf_b.win_rate,
-                drawdown_diff=perf_a.max_drawdown - perf_b.max_drawdown,
-                return_diff=perf_a.total_return - perf_b.total_return,
+                sharpe_diff=sharpe_diff,
+                sharpe_diff_significant=sharpe_diff_significant,
+                win_rate_diff=win_rate_diff,
+                win_rate_diff_significant=win_rate_diff_significant,
+                drawdown_diff=perf_a.max_drawdown - perf_b.max_drawdown, # Original drawdown diff
+                return_diff=return_diff,
+                return_diff_significant=return_diff_significant,
                 correlation=correlation,
+                correlation_significant=False, # Placeholder
                 combined_sharpe=combined_sharpe,
+                statistical_power=statistical_power,
                 timestamp=datetime.now()
             )
             

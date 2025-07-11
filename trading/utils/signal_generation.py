@@ -1,9 +1,13 @@
 """Signal generation utilities for trading strategies."""
 
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union, Tuple
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
+import logging
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class SignalConfig:
@@ -13,34 +17,156 @@ class SignalConfig:
     smoothing: int = 3
     min_volume: float = 1000
     max_spread: float = 0.02
+    confidence_threshold: float = 0.6  # Minimum confidence for valid signals
+    validate_completeness: bool = True  # Whether to validate signal completeness
 
-def validate_market_data(data: pd.DataFrame) -> None:
+@dataclass
+class SignalResult:
+    """Result of signal generation with validation and confidence."""
+    signals: pd.Series
+    confidence: pd.Series
+    is_valid: bool
+    validation_errors: List[str]
+    completeness_score: float
+    timestamp: datetime
+
+def validate_market_data(data: pd.DataFrame) -> List[str]:
     """Validate market data for signal generation.
     
     Args:
         data: DataFrame containing market data
         
-    Raises:
-        ValueError: If required columns are missing or data is invalid
+    Returns:
+        List of validation errors (empty if valid)
     """
+    errors = []
     required_columns = ["open", "high", "low", "close", "volume"]
     
     # Check for required columns
     missing_columns = [col for col in required_columns if col not in data.columns]
     if missing_columns:
-        raise ValueError(f"Missing required columns: {missing_columns}")
+        errors.append(f"Missing required columns: {missing_columns}")
     
     # Check for null values
     if data[required_columns].isnull().any().any():
-        raise ValueError("Market data contains null values")
+        errors.append("Market data contains null values")
     
     # Check for negative values
     if (data[["open", "high", "low", "close", "volume"]] < 0).any().any():
-        raise ValueError("Market data contains negative values")
+        errors.append("Market data contains negative values")
     
     # Check for high-low consistency
     if not (data["high"] >= data["low"]).all():
-        raise ValueError("High prices must be greater than or equal to low prices")
+        errors.append("High prices must be greater than or equal to low prices")
+    
+    # Check for sufficient data points
+    if len(data) < 50:
+        errors.append("Insufficient data points for reliable signal generation")
+    
+    return errors
+
+def validate_signals(signals: pd.Series, data: pd.DataFrame, config: SignalConfig) -> Tuple[bool, List[str], float]:
+    """
+    Validate generated signals for completeness and quality.
+    
+    Args:
+        signals: Series containing trading signals
+        data: DataFrame containing market data
+        config: Signal generation configuration
+        
+    Returns:
+        Tuple of (is_valid, validation_errors, completeness_score)
+    """
+    errors = []
+    
+    # Check for NaN values
+    if signals.isnull().any():
+        errors.append(f"Signals contain {signals.isnull().sum()} NaN values")
+    
+    # Check for infinite values
+    if np.isinf(signals).any():
+        errors.append("Signals contain infinite values")
+    
+    # Check signal completeness (non-zero signals)
+    total_signals = len(signals)
+    non_zero_signals = (signals != 0).sum()
+    completeness_score = non_zero_signals / total_signals if total_signals > 0 else 0.0
+    
+    if config.validate_completeness and completeness_score < 0.01:
+        errors.append(f"Signal completeness too low: {completeness_score:.3f} (minimum 0.01)")
+    
+    # Check for signal clustering (too many consecutive signals)
+    consecutive_signals = 0
+    max_consecutive = 0
+    for signal in signals:
+        if signal != 0:
+            consecutive_signals += 1
+            max_consecutive = max(max_consecutive, consecutive_signals)
+        else:
+            consecutive_signals = 0
+    
+    if max_consecutive > len(signals) * 0.3:  # More than 30% consecutive signals
+        errors.append(f"Too many consecutive signals: {max_consecutive}")
+    
+    # Check signal magnitude consistency
+    unique_signals = signals.unique()
+    if len(unique_signals) > 10:  # Too many unique signal values
+        errors.append(f"Too many unique signal values: {len(unique_signals)}")
+    
+    is_valid = len(errors) == 0
+    return is_valid, errors, completeness_score
+
+def calculate_signal_confidence(signals: pd.Series, data: pd.DataFrame, config: SignalConfig) -> pd.Series:
+    """
+    Calculate confidence level for each signal based on multiple factors.
+    
+    Args:
+        signals: Series containing trading signals
+        data: DataFrame containing market data
+        config: Signal generation configuration
+        
+    Returns:
+        Series containing confidence scores (0-1)
+    """
+    confidence = pd.Series(0.5, index=signals.index)  # Base confidence
+    
+    # Volume-based confidence
+    if 'volume' in data.columns:
+        volume_ratio = data['volume'] / data['volume'].rolling(window=20).mean()
+        volume_confidence = np.clip(volume_ratio, 0.5, 2.0) / 2.0
+        confidence *= volume_confidence
+    
+    # Volatility-based confidence (lower volatility = higher confidence)
+    if 'volatility' in data.columns:
+        vol_confidence = 1.0 - np.clip(data['volatility'], 0, 0.5) / 0.5
+        confidence *= vol_confidence
+    
+    # Signal strength confidence
+    signal_strength = abs(signals)
+    strength_confidence = np.clip(signal_strength, 0.1, 1.0)
+    confidence *= strength_confidence
+    
+    # Trend consistency confidence
+    if 'sma_short' in data.columns and 'sma_long' in data.columns:
+        trend_alignment = np.where(
+            (signals > 0) & (data['sma_short'] > data['sma_long']), 1.2,
+            np.where((signals < 0) & (data['sma_short'] < data['sma_long']), 1.2, 0.8)
+        )
+        confidence *= trend_alignment
+    
+    # RSI-based confidence
+    if 'rsi' in data.columns:
+        rsi_confidence = np.where(
+            (signals > 0) & (data['rsi'] < 30), 1.3,  # Strong oversold buy signal
+            np.where((signals < 0) & (data['rsi'] > 70), 1.3,  # Strong overbought sell signal
+            np.where((data['rsi'] >= 30) & (data['rsi'] <= 70), 0.7, 1.0))  # Neutral zone
+        )
+        confidence *= rsi_confidence
+    
+    # Ensure confidence is within bounds
+    confidence = np.clip(confidence, 0.1, 1.0)
+    
+    return confidence
 
 def calculate_technical_indicators(data: pd.DataFrame, config: SignalConfig) -> pd.DataFrame:
     """Calculate technical indicators for signal generation.
@@ -118,53 +244,115 @@ def apply_signal_filters(signals: pd.Series, data: pd.DataFrame, config: SignalC
     
     return filtered_signals
 
-def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, pd.Series]:
-    """Generate trading signals using multiple strategies.
+def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, SignalResult]:
+    """Generate trading signals using multiple strategies with validation and confidence.
     
     Args:
         data: DataFrame containing market data
         config: Signal generation configuration
         
     Returns:
-        Dictionary containing signals for each strategy
+        Dictionary containing SignalResult for each strategy
     """
     # Validate data
-    validate_market_data(data)
+    validation_errors = validate_market_data(data)
+    if validation_errors:
+        logger.error(f"Market data validation failed: {validation_errors}")
+        raise ValueError(f"Market data validation failed: {validation_errors}")
     
     # Calculate indicators
     data = calculate_technical_indicators(data, config)
     
-    # Initialize signals dictionary
-    signals = {}
+    # Initialize results dictionary
+    signal_results = {}
     
     # RSI strategy
     rsi_signals = pd.Series(0, index=data.index)
     rsi_signals[data["rsi"] < 30] = 1  # Oversold
     rsi_signals[data["rsi"] > 70] = -1  # Overbought
-    signals["rsi"] = apply_signal_filters(rsi_signals, data, config)
+    filtered_rsi = apply_signal_filters(rsi_signals, data, config)
+    
+    # Validate RSI signals
+    is_valid, errors, completeness = validate_signals(filtered_rsi, data, config)
+    confidence = calculate_signal_confidence(filtered_rsi, data, config)
+    
+    signal_results["rsi"] = SignalResult(
+        signals=filtered_rsi,
+        confidence=confidence,
+        is_valid=is_valid,
+        validation_errors=errors,
+        completeness_score=completeness,
+        timestamp=datetime.now()
+    )
     
     # MACD strategy
     macd_signals = pd.Series(0, index=data.index)
     macd_signals[data["macd"] > data["macd_signal"]] = 1  # Bullish crossover
     macd_signals[data["macd"] < data["macd_signal"]] = -1  # Bearish crossover
-    signals["macd"] = apply_signal_filters(macd_signals, data, config)
+    filtered_macd = apply_signal_filters(macd_signals, data, config)
+    
+    # Validate MACD signals
+    is_valid, errors, completeness = validate_signals(filtered_macd, data, config)
+    confidence = calculate_signal_confidence(filtered_macd, data, config)
+    
+    signal_results["macd"] = SignalResult(
+        signals=filtered_macd,
+        confidence=confidence,
+        is_valid=is_valid,
+        validation_errors=errors,
+        completeness_score=completeness,
+        timestamp=datetime.now()
+    )
     
     # Bollinger Bands strategy
     bb_signals = pd.Series(0, index=data.index)
     bb_signals[data["close"] < data["bb_lower"]] = 1  # Price below lower band
     bb_signals[data["close"] > data["bb_upper"]] = -1  # Price above upper band
-    signals["bollinger"] = apply_signal_filters(bb_signals, data, config)
+    filtered_bb = apply_signal_filters(bb_signals, data, config)
+    
+    # Validate BB signals
+    is_valid, errors, completeness = validate_signals(filtered_bb, data, config)
+    confidence = calculate_signal_confidence(filtered_bb, data, config)
+    
+    signal_results["bollinger"] = SignalResult(
+        signals=filtered_bb,
+        confidence=confidence,
+        is_valid=is_valid,
+        validation_errors=errors,
+        completeness_score=completeness,
+        timestamp=datetime.now()
+    )
     
     # Moving Average Crossover strategy
     ma_signals = pd.Series(0, index=data.index)
     ma_signals[data["sma_short"] > data["sma_long"]] = 1  # Bullish crossover
     ma_signals[data["sma_short"] < data["sma_long"]] = -1  # Bearish crossover
-    signals["ma_crossover"] = apply_signal_filters(ma_signals, data, config)
+    filtered_ma = apply_signal_filters(ma_signals, data, config)
     
-    return signals
+    # Validate MA signals
+    is_valid, errors, completeness = validate_signals(filtered_ma, data, config)
+    confidence = calculate_signal_confidence(filtered_ma, data, config)
+    
+    signal_results["ma_crossover"] = SignalResult(
+        signals=filtered_ma,
+        confidence=confidence,
+        is_valid=is_valid,
+        validation_errors=errors,
+        completeness_score=completeness,
+        timestamp=datetime.now()
+    )
+    
+    # Log validation results
+    for strategy, result in signal_results.items():
+        if not result.is_valid:
+            logger.warning(f"{strategy} signals validation failed: {result.validation_errors}")
+        else:
+            logger.info(f"{strategy} signals generated successfully (completeness: {result.completeness_score:.3f})")
+    
+    return signal_results
 
-def generate_custom_signals(data: pd.DataFrame, rules: List[Dict[str, Any]], config: SignalConfig) -> pd.Series:
-    """Generate custom trading signals based on user-defined rules.
+def generate_custom_signals(data: pd.DataFrame, rules: List[Dict[str, Any]], config: SignalConfig) -> SignalResult:
+    """Generate custom trading signals based on user-defined rules with validation.
     
     Args:
         data: DataFrame containing market data
@@ -172,10 +360,13 @@ def generate_custom_signals(data: pd.DataFrame, rules: List[Dict[str, Any]], con
         config: Signal generation configuration
         
     Returns:
-        Series containing custom trading signals
+        SignalResult containing custom trading signals with validation
     """
     # Validate data
-    validate_market_data(data)
+    validation_errors = validate_market_data(data)
+    if validation_errors:
+        logger.error(f"Market data validation failed: {validation_errors}")
+        raise ValueError(f"Market data validation failed: {validation_errors}")
     
     # Calculate indicators
     data = calculate_technical_indicators(data, config)
@@ -205,4 +396,53 @@ def generate_custom_signals(data: pd.DataFrame, rules: List[Dict[str, Any]], con
         signals[mask] = signal
     
     # Apply filters
-    return {'success': True, 'result': apply_signal_filters(signals, data, config), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    filtered_signals = apply_signal_filters(signals, data, config)
+    
+    # Validate signals
+    is_valid, errors, completeness = validate_signals(filtered_signals, data, config)
+    confidence = calculate_signal_confidence(filtered_signals, data, config)
+    
+    result = SignalResult(
+        signals=filtered_signals,
+        confidence=confidence,
+        is_valid=is_valid,
+        validation_errors=errors,
+        completeness_score=completeness,
+        timestamp=datetime.now()
+    )
+    
+    if not result.is_valid:
+        logger.warning(f"Custom signals validation failed: {result.validation_errors}")
+    else:
+        logger.info(f"Custom signals generated successfully (completeness: {result.completeness_score:.3f})")
+    
+    return result
+
+def get_signal_summary(signal_results: Dict[str, SignalResult]) -> Dict[str, Any]:
+    """
+    Generate summary statistics for all signal strategies.
+    
+    Args:
+        signal_results: Dictionary of SignalResult objects
+        
+    Returns:
+        Dictionary containing summary statistics
+    """
+    summary = {
+        'total_strategies': len(signal_results),
+        'valid_strategies': sum(1 for r in signal_results.values() if r.is_valid),
+        'average_completeness': np.mean([r.completeness_score for r in signal_results.values()]),
+        'average_confidence': np.mean([r.confidence.mean() for r in signal_results.values()]),
+        'strategy_details': {}
+    }
+    
+    for strategy, result in signal_results.items():
+        summary['strategy_details'][strategy] = {
+            'is_valid': result.is_valid,
+            'completeness_score': result.completeness_score,
+            'average_confidence': result.confidence.mean(),
+            'signal_count': (result.signals != 0).sum(),
+            'validation_errors': result.validation_errors
+        }
+    
+    return summary

@@ -89,7 +89,14 @@ class PromptRouterService(BaseService):
             if not user_prompt:
                 return {
                     'type': 'error',
-                    'error': 'user_prompt is required'
+                    'error': 'user_prompt is required',
+                    'suggestions': [
+                        'Show me the latest trades for AAPL',
+                        'What is the Sharpe ratio of my portfolio?',
+                        'Switch to momentum strategy',
+                        'Summarize today\'s market news',
+                        'Plot the equity curve for TSLA'
+                    ]
                 }
             
             logger.info(f"Routing prompt: {user_prompt[:50]}...")
@@ -137,7 +144,14 @@ class PromptRouterService(BaseService):
             if not user_prompt:
                 return {
                     'type': 'error',
-                    'error': 'user_prompt is required'
+                    'error': 'user_prompt is required',
+                    'suggestions': [
+                        'Show me the latest trades for AAPL',
+                        'What is the Sharpe ratio of my portfolio?',
+                        'Switch to momentum strategy',
+                        'Summarize today\'s market news',
+                        'Plot the equity curve for TSLA'
+                    ]
                 }
             
             logger.info(f"Detecting intent for: {user_prompt[:50]}...")
@@ -185,7 +199,14 @@ class PromptRouterService(BaseService):
             if not user_prompt or not intent:
                 return {
                     'type': 'error',
-                    'error': 'user_prompt and intent are required'
+                    'error': 'user_prompt and intent are required',
+                    'suggestions': [
+                        'Show me the latest trades for AAPL',
+                        'What is the Sharpe ratio of my portfolio?',
+                        'Switch to momentum strategy',
+                        'Summarize today\'s market news',
+                        'Plot the equity curve for TSLA'
+                    ]
                 }
             
             logger.info(f"Parsing arguments for intent: {intent}")

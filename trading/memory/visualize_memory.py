@@ -8,10 +8,241 @@ stored in the PerformanceMemory system.
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import time
+import threading
+import queue
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional
 from trading.memory.performance_memory import PerformanceMemory
+
+class TaskProgressTracker:
+    """Tracks and displays real-time task progress."""
+    
+    def __init__(self):
+        self.tasks = {}
+        self.progress_queue = queue.Queue()
+        self.running = True
+        
+        # Start progress update thread
+        self.update_thread = threading.Thread(target=self._update_progress, daemon=True)
+        self.update_thread.start()
+    
+    def add_task(self, task_id: str, task_name: str, total_steps: int = 100) -> None:
+        """Add a new task to track.
+        
+        Args:
+            task_id: Unique task identifier
+            task_name: Human-readable task name
+            total_steps: Total number of steps for the task
+        """
+        self.tasks[task_id] = {
+            'name': task_name,
+            'current_step': 0,
+            'total_steps': total_steps,
+            'status': 'running',
+            'start_time': datetime.now(),
+            'last_update': datetime.now(),
+            'progress': 0.0,
+            'message': 'Initializing...'
+        }
+    
+    def update_task_progress(self, task_id: str, current_step: int, 
+                           message: str = None, status: str = None) -> None:
+        """Update task progress.
+        
+        Args:
+            task_id: Task identifier
+            current_step: Current step number
+            message: Optional status message
+            status: Task status ('running', 'completed', 'failed', 'paused')
+        """
+        if task_id in self.tasks:
+            task = self.tasks[task_id]
+            task['current_step'] = current_step
+            task['progress'] = (current_step / task['total_steps']) * 100
+            task['last_update'] = datetime.now()
+            
+            if message:
+                task['message'] = message
+            if status:
+                task['status'] = status
+            
+            # Put update in queue for real-time display
+            self.progress_queue.put({
+                'task_id': task_id,
+                'update': task.copy()
+            })
+    
+    def complete_task(self, task_id: str, message: str = "Task completed successfully") -> None:
+        """Mark task as completed.
+        
+        Args:
+            task_id: Task identifier
+            message: Completion message
+        """
+        self.update_task_progress(task_id, self.tasks[task_id]['total_steps'], 
+                                message, 'completed')
+    
+    def fail_task(self, task_id: str, error_message: str) -> None:
+        """Mark task as failed.
+        
+        Args:
+            task_id: Task identifier
+            error_message: Error description
+        """
+        self.update_task_progress(task_id, self.tasks[task_id]['current_step'], 
+                                f"Failed: {error_message}", 'failed')
+    
+    def _update_progress(self) -> None:
+        """Background thread for updating progress."""
+        while self.running:
+            try:
+                # Process queue updates
+                while not self.progress_queue.empty():
+                    update = self.progress_queue.get_nowait()
+                    task_id = update['task_id']
+                    task_update = update['update']
+                    self.tasks[task_id] = task_update
+                
+                time.sleep(0.1)  # Update every 100ms
+            except Exception as e:
+                print(f"Error in progress update thread: {e}")
+                time.sleep(1)
+    
+    def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
+        """Get current status of a task.
+        
+        Args:
+            task_id: Task identifier
+            
+        Returns:
+            Task status dictionary or None if not found
+        """
+        return self.tasks.get(task_id)
+    
+    def get_all_tasks(self) -> Dict[str, Dict[str, Any]]:
+        """Get all tracked tasks.
+        
+        Returns:
+            Dictionary of all tasks
+        """
+        return self.tasks.copy()
+    
+    def cleanup_completed_tasks(self, max_age_hours: int = 24) -> None:
+        """Remove old completed tasks.
+        
+        Args:
+            max_age_hours: Maximum age in hours for completed tasks
+        """
+        cutoff_time = datetime.now() - timedelta(hours=max_age_hours)
+        tasks_to_remove = []
+        
+        for task_id, task in self.tasks.items():
+            if (task['status'] in ['completed', 'failed'] and 
+                task['last_update'] < cutoff_time):
+                tasks_to_remove.append(task_id)
+        
+        for task_id in tasks_to_remove:
+            del self.tasks[task_id]
+
+# Global progress tracker
+progress_tracker = TaskProgressTracker()
+
+def display_task_progress():
+    """Display real-time task progress in Streamlit."""
+    st.subheader("🔄 Active Tasks")
+    
+    tasks = progress_tracker.get_all_tasks()
+    
+    if not tasks:
+        st.info("No active tasks")
+        return
+    
+    # Clean up old tasks
+    progress_tracker.cleanup_completed_tasks()
+    
+    for task_id, task in tasks.items():
+        with st.container():
+            col1, col2, col3 = st.columns([3, 1, 1])
+            
+            with col1:
+                st.write(f"**{task['name']}**")
+                st.write(task['message'])
+            
+            with col2:
+                # Progress bar
+                progress_bar = st.progress(task['progress'] / 100)
+                
+                # Update progress bar based on status
+                if task['status'] == 'completed':
+                    progress_bar.progress(1.0)
+                    st.success("✅")
+                elif task['status'] == 'failed':
+                    progress_bar.progress(task['progress'] / 100)
+                    st.error("❌")
+                elif task['status'] == 'paused':
+                    progress_bar.progress(task['progress'] / 100)
+                    st.warning("⏸️")
+                else:
+                    progress_bar.progress(task['progress'] / 100)
+                    st.info("🔄")
+            
+            with col3:
+                # Show elapsed time
+                elapsed = datetime.now() - task['start_time']
+                st.write(f"⏱️ {elapsed.total_seconds():.1f}s")
+                
+                # Show progress percentage
+                st.write(f"{task['progress']:.1f}%")
+            
+            st.divider()
+
+def simulate_task_progress(task_name: str, duration_seconds: int = 10):
+    """Simulate a task with progress updates.
+    
+    Args:
+        task_name: Name of the task
+        duration_seconds: Duration of the task in seconds
+    """
+    task_id = f"task_{int(time.time())}"
+    progress_tracker.add_task(task_id, task_name, 100)
+    
+    def run_task():
+        for i in range(101):
+            if i == 0:
+                message = "Initializing..."
+            elif i < 25:
+                message = "Loading data..."
+            elif i < 50:
+                message = "Processing..."
+            elif i < 75:
+                message = "Analyzing results..."
+            elif i < 100:
+                message = "Finalizing..."
+            else:
+                message = "Task completed!"
+            
+            progress_tracker.update_task_progress(task_id, i, message)
+            time.sleep(duration_seconds / 100)
+        
+        progress_tracker.complete_task(task_id)
+    
+    # Run task in background thread
+    thread = threading.Thread(target=run_task, daemon=True)
+    thread.start()
 
 def main():
     st.title("📈 Agentic Model Performance Dashboard")
+    
+    # Add task progress display
+    display_task_progress()
+    
+    # Add task simulation button
+    if st.button("🚀 Simulate Task"):
+        simulate_task_progress("Model Training", 15)
+        st.rerun()
+    
+    st.divider()
     
     # Initialize memory
     memory = PerformanceMemory()

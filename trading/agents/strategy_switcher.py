@@ -85,6 +85,9 @@ class StrategySwitcher:
         # Load last known working strategy
         self.last_working_strategy = self._load_last_working_strategy()
         
+        # Strategy mapping for persistence
+        self.strategy_map = {}
+        
     def _init_backend(self):
         """Initialize the selected logging backend."""
         if self.backend == StrategySwitchBackend.SQLITE:
@@ -417,6 +420,14 @@ class StrategySwitcher:
             # Save updated switches
             self._save_switches(switches)
             
+            # Persist selected strategy and regime mapping to config
+            self.strategy_map[switch.to_strategy] = {
+                'regime': switch.metrics.get('market_regime', 'unknown'),
+                'timestamp': switch.timestamp.isoformat(),
+                'confidence': switch.confidence
+            }
+            self._save_strategy_map()
+            
             logger.info(
                 f"Strategy switch logged: {switch.from_strategy} -> {switch.to_strategy} "
                 f"(confidence: {switch.confidence:.2f})"
@@ -424,6 +435,20 @@ class StrategySwitcher:
             
         except Exception as e:
             logger.error(f"Error logging strategy switch: {e}")
+    
+    def _save_strategy_map(self):
+        """Save strategy regime mapping to config file."""
+        try:
+            config_path = Path("configs/strategy_regime_map.json")
+            config_path.parent.mkdir(exist_ok=True)
+            
+            with open(config_path, 'w') as f:
+                json.dump(self.strategy_map, f, indent=2)
+                
+            logger.info(f"Strategy regime mapping saved to {config_path}")
+            
+        except Exception as e:
+            logger.error(f"Error saving strategy regime mapping: {e}")
             
     def __del__(self):
         """Cleanup on deletion."""

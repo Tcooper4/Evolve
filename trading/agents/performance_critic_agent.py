@@ -79,6 +79,9 @@ class PerformanceCriticAgent(BaseAgent):
             'min_calmar_ratio': 0.5
         }
         
+        # Baseline score for comparison
+        self.baseline_score = 0.0
+        
         # Evaluation history
         self.evaluation_history: Dict[str, List[ModelEvaluationResult]] = {}
         
@@ -197,6 +200,15 @@ class PerformanceCriticAgent(BaseAgent):
             
             # Calculate trading metrics
             trading_metrics = self._calculate_trading_metrics(predictions, test_data)
+            
+            # Compare latest result to baseline and log delta
+            latest_score = performance_metrics.get('sharpe_ratio', 0.0)
+            performance_delta = latest_score - self.baseline_score
+            logger.info(f"Performance delta from baseline: {performance_delta:.4f}")
+            
+            # Update baseline if this is better
+            if latest_score > self.baseline_score:
+                self.baseline_score = latest_score
             
             # Compare with benchmark if provided
             benchmark_comparison = None
@@ -573,7 +585,7 @@ class PerformanceCriticAgent(BaseAgent):
     def _generate_recommendations(self, performance_metrics: Dict[str, float], 
                                 risk_metrics: Dict[str, float], 
                                 trading_metrics: Dict[str, Any]) -> List[str]:
-        """Generate recommendations based on evaluation results.
+        """Generate recommendations based on performance analysis.
         
         Args:
             performance_metrics: Performance metrics
@@ -585,35 +597,436 @@ class PerformanceCriticAgent(BaseAgent):
         """
         recommendations = []
         
-        # Performance recommendations
-        if performance_metrics.get('sharpe_ratio', 0) < self.thresholds['min_sharpe_ratio']:
-            recommendations.append("Sharpe ratio below threshold - consider model retraining or hyperparameter tuning")
+        try:
+            # Performance-based recommendations
+            sharpe_ratio = performance_metrics.get('sharpe_ratio', 0)
+            total_return = performance_metrics.get('total_return', 0)
+            win_rate = trading_metrics.get('win_rate', 0)
+            
+            if sharpe_ratio < self.thresholds['min_sharpe_ratio']:
+                recommendations.append("Sharpe ratio below threshold - consider risk management improvements")
+            
+            if total_return < 0:
+                recommendations.append("Negative total return - review strategy logic and market conditions")
+            
+            if win_rate < self.thresholds['min_win_rate']:
+                recommendations.append("Low win rate - consider improving entry/exit criteria")
+            
+            # Risk-based recommendations
+            max_drawdown = risk_metrics.get('max_drawdown', 0)
+            volatility = risk_metrics.get('volatility', 0)
+            
+            if max_drawdown < self.thresholds['max_drawdown']:
+                recommendations.append("High drawdown - implement stricter risk controls")
+            
+            if volatility > self.thresholds['max_volatility']:
+                recommendations.append("High volatility - consider position sizing adjustments")
+            
+            # Add qualitative feedback for model health
+            qualitative_feedback = self._generate_qualitative_feedback(
+                performance_metrics, risk_metrics, trading_metrics
+            )
+            recommendations.extend(qualitative_feedback)
+            
+            return recommendations
+            
+        except Exception as e:
+            self.logger.error(f"Error generating recommendations: {e}")
+            return ["Error generating recommendations"]
+    
+    def _generate_qualitative_feedback(self, performance_metrics: Dict[str, float], 
+                                     risk_metrics: Dict[str, float], 
+                                     trading_metrics: Dict[str, Any]) -> List[str]:
+        """
+        Generate qualitative feedback for model instability or overfitting signals.
         
-        if performance_metrics.get('total_return', 0) < 0:
-            recommendations.append("Negative total return - model may need fundamental changes")
+        Args:
+            performance_metrics: Performance metrics
+            risk_metrics: Risk metrics
+            trading_metrics: Trading metrics
+            
+        Returns:
+            List of qualitative feedback items
+        """
+        qualitative_feedback = []
         
-        # Risk recommendations
-        if risk_metrics.get('max_drawdown', 0) < self.thresholds['max_drawdown']:
-            recommendations.append("Maximum drawdown exceeds threshold - implement better risk management")
+        try:
+            # Check for overfitting signals
+            overfitting_signals = self._detect_overfitting_signals(
+                performance_metrics, risk_metrics, trading_metrics
+            )
+            qualitative_feedback.extend(overfitting_signals)
+            
+            # Check for model instability
+            instability_signals = self._detect_instability_signals(
+                performance_metrics, risk_metrics, trading_metrics
+            )
+            qualitative_feedback.extend(instability_signals)
+            
+            # Check for data quality issues
+            data_quality_signals = self._detect_data_quality_issues(
+                performance_metrics, risk_metrics, trading_metrics
+            )
+            qualitative_feedback.extend(data_quality_signals)
+            
+            # Check for market regime issues
+            market_regime_signals = self._detect_market_regime_issues(
+                performance_metrics, risk_metrics, trading_metrics
+            )
+            qualitative_feedback.extend(market_regime_signals)
+            
+            # Check for strategy robustness
+            robustness_signals = self._assess_strategy_robustness(
+                performance_metrics, risk_metrics, trading_metrics
+            )
+            qualitative_feedback.extend(robustness_signals)
+            
+            return qualitative_feedback
+            
+        except Exception as e:
+            self.logger.error(f"Error generating qualitative feedback: {e}")
+            return ["Error in qualitative analysis"]
+    
+    def _detect_overfitting_signals(self, performance_metrics: Dict[str, float], 
+                                   risk_metrics: Dict[str, float], 
+                                   trading_metrics: Dict[str, Any]) -> List[str]:
+        """
+        Detect overfitting signals in model performance.
         
-        if risk_metrics.get('sortino_ratio', 0) < 0.5:
-            recommendations.append("Low Sortino ratio - focus on reducing downside risk")
+        Args:
+            performance_metrics: Performance metrics
+            risk_metrics: Risk metrics
+            trading_metrics: Trading metrics
+            
+        Returns:
+            List of overfitting signals
+        """
+        overfitting_signals = []
         
-        # Trading recommendations
-        if trading_metrics.get('win_rate', 0) < self.thresholds['min_win_rate']:
-            recommendations.append("Win rate below threshold - review signal generation logic")
+        try:
+            # Check for suspiciously high performance metrics
+            sharpe_ratio = performance_metrics.get('sharpe_ratio', 0)
+            total_return = performance_metrics.get('total_return', 0)
+            win_rate = trading_metrics.get('win_rate', 0)
+            profit_factor = trading_metrics.get('profit_factor', 0)
+            
+            # Extremely high Sharpe ratio (>3.0) might indicate overfitting
+            if sharpe_ratio > 3.0:
+                overfitting_signals.append(
+                    "WARNING: Extremely high Sharpe ratio ({:.2f}) may indicate overfitting. "
+                    "Consider cross-validation and out-of-sample testing."
+                )
+            
+            # Very high win rate (>80%) with high profit factor
+            if win_rate > 0.8 and profit_factor > 3.0:
+                overfitting_signals.append(
+                    "WARNING: Unusually high win rate ({:.1%}) with high profit factor ({:.2f}) "
+                    "suggests potential overfitting. Review strategy complexity."
+                )
+            
+            # Check for unrealistic returns
+            if total_return > 2.0:  # >200% return
+                overfitting_signals.append(
+                    "WARNING: Extremely high total return ({:.1%}) may indicate overfitting "
+                    "or data snooping bias."
+                )
+            
+            # Check for too many trades (potential over-optimization)
+            total_trades = trading_metrics.get('total_trades', 0)
+            if total_trades > 1000:
+                overfitting_signals.append(
+                    "WARNING: High number of trades ({}) may indicate over-optimization. "
+                    "Consider reducing strategy complexity."
+                )
+            
+            # Check for perfect or near-perfect metrics
+            if win_rate > 0.95:
+                overfitting_signals.append(
+                    "CRITICAL: Near-perfect win rate ({:.1%}) strongly suggests overfitting. "
+                    "Immediate strategy review required."
+                )
+            
+            return overfitting_signals
+            
+        except Exception as e:
+            self.logger.error(f"Error detecting overfitting signals: {e}")
+            return ["Error in overfitting detection"]
+    
+    def _detect_instability_signals(self, performance_metrics: Dict[str, float], 
+                                   risk_metrics: Dict[str, float], 
+                                   trading_metrics: Dict[str, Any]) -> List[str]:
+        """
+        Detect model instability signals.
         
-        if trading_metrics.get('profit_factor', 0) < 1.2:
-            recommendations.append("Low profit factor - optimize entry/exit strategies")
+        Args:
+            performance_metrics: Performance metrics
+            risk_metrics: Risk metrics
+            trading_metrics: Trading metrics
+            
+        Returns:
+            List of instability signals
+        """
+        instability_signals = []
         
-        # Positive feedback
-        if performance_metrics.get('sharpe_ratio', 0) > 1.0:
-            recommendations.append("Excellent Sharpe ratio - consider increasing position sizes")
+        try:
+            # Check for high volatility relative to returns
+            volatility = risk_metrics.get('volatility', 0)
+            total_return = performance_metrics.get('total_return', 0)
+            
+            if volatility > 0.3 and total_return < 0.1:
+                instability_signals.append(
+                    "WARNING: High volatility ({:.1%}) with low returns ({:.1%}) indicates "
+                    "model instability. Consider smoothing parameters."
+                )
+            
+            # Check for inconsistent performance
+            sharpe_ratio = performance_metrics.get('sharpe_ratio', 0)
+            if sharpe_ratio < 0:
+                instability_signals.append(
+                    "WARNING: Negative Sharpe ratio indicates poor risk-adjusted returns. "
+                    "Model may be unstable or poorly calibrated."
+                )
+            
+            # Check for extreme drawdowns
+            max_drawdown = risk_metrics.get('max_drawdown', 0)
+            if max_drawdown < -0.3:
+                instability_signals.append(
+                    "CRITICAL: Extreme drawdown ({:.1%}) indicates severe model instability. "
+                    "Immediate intervention required."
+                )
+            
+            # Check for inconsistent win/loss patterns
+            avg_win = trading_metrics.get('avg_win', 0)
+            avg_loss = trading_metrics.get('avg_loss', 0)
+            
+            if avg_win > 0 and avg_loss > 0:
+                win_loss_ratio = abs(avg_win / avg_loss)
+                if win_loss_ratio < 0.5:
+                    instability_signals.append(
+                        "WARNING: Poor win/loss ratio ({:.2f}) suggests inconsistent "
+                        "strategy execution or poor risk management."
+                    )
+            
+            return instability_signals
+            
+        except Exception as e:
+            self.logger.error(f"Error detecting instability signals: {e}")
+            return ["Error in instability detection"]
+    
+    def _detect_data_quality_issues(self, performance_metrics: Dict[str, float], 
+                                   risk_metrics: Dict[str, float], 
+                                   trading_metrics: Dict[str, Any]) -> List[str]:
+        """
+        Detect data quality issues that might affect model performance.
         
-        if risk_metrics.get('calmar_ratio', 0) > 1.0:
-            recommendations.append("Strong Calmar ratio - model shows good risk-adjusted returns")
+        Args:
+            performance_metrics: Performance metrics
+            risk_metrics: Risk metrics
+            trading_metrics: Trading metrics
+            
+        Returns:
+            List of data quality issues
+        """
+        data_quality_signals = []
         
-        return recommendations
+        try:
+            # Check for insufficient data
+            total_trades = trading_metrics.get('total_trades', 0)
+            if total_trades < 10:
+                data_quality_signals.append(
+                    "WARNING: Very few trades ({}) - insufficient data for reliable evaluation. "
+                    "Consider longer testing period."
+                )
+            
+            # Check for unrealistic price movements
+            volatility = risk_metrics.get('volatility', 0)
+            if volatility > 0.5:
+                data_quality_signals.append(
+                    "WARNING: Extremely high volatility ({:.1%}) may indicate data quality issues "
+                    "or market anomalies."
+                )
+            
+            # Check for zero or negative returns
+            total_return = performance_metrics.get('total_return', 0)
+            if total_return == 0:
+                data_quality_signals.append(
+                    "WARNING: Zero total return may indicate data issues or strategy not generating signals."
+                )
+            
+            return data_quality_signals
+            
+        except Exception as e:
+            self.logger.error(f"Error detecting data quality issues: {e}")
+            return ["Error in data quality detection"]
+    
+    def _detect_market_regime_issues(self, performance_metrics: Dict[str, float], 
+                                    risk_metrics: Dict[str, float], 
+                                    trading_metrics: Dict[str, Any]) -> List[str]:
+        """
+        Detect market regime issues that might affect model performance.
+        
+        Args:
+            performance_metrics: Performance metrics
+            risk_metrics: Risk metrics
+            trading_metrics: Trading metrics
+            
+        Returns:
+            List of market regime issues
+        """
+        market_regime_signals = []
+        
+        try:
+            # Check for bear market conditions
+            total_return = performance_metrics.get('total_return', 0)
+            if total_return < -0.2:
+                market_regime_signals.append(
+                    "INFO: Poor performance ({:.1%} return) may be due to bear market conditions. "
+                    "Consider market regime adaptation."
+                )
+            
+            # Check for high volatility periods
+            volatility = risk_metrics.get('volatility', 0)
+            if volatility > 0.25:
+                market_regime_signals.append(
+                    "INFO: High volatility period ({:.1%}) detected. Model may need "
+                    "volatility regime adjustments."
+                )
+            
+            # Check for low volume conditions
+            # This would require volume data in the metrics
+            
+            return market_regime_signals
+            
+        except Exception as e:
+            self.logger.error(f"Error detecting market regime issues: {e}")
+            return ["Error in market regime detection"]
+    
+    def _assess_strategy_robustness(self, performance_metrics: Dict[str, float], 
+                                   risk_metrics: Dict[str, float], 
+                                   trading_metrics: Dict[str, Any]) -> List[str]:
+        """
+        Assess strategy robustness and provide recommendations.
+        
+        Args:
+            performance_metrics: Performance metrics
+            risk_metrics: Risk metrics
+            trading_metrics: Trading metrics
+            
+        Returns:
+            List of robustness assessments
+        """
+        robustness_signals = []
+        
+        try:
+            # Check for balanced performance
+            sharpe_ratio = performance_metrics.get('sharpe_ratio', 0)
+            max_drawdown = risk_metrics.get('max_drawdown', 0)
+            win_rate = trading_metrics.get('win_rate', 0)
+            
+            # Good balance indicators
+            if 0.5 <= sharpe_ratio <= 2.0 and max_drawdown > -0.15 and 0.4 <= win_rate <= 0.7:
+                robustness_signals.append(
+                    "POSITIVE: Well-balanced performance metrics suggest robust strategy design."
+                )
+            
+            # Check for sustainable performance
+            if sharpe_ratio > 1.0 and max_drawdown > -0.1:
+                robustness_signals.append(
+                    "POSITIVE: High Sharpe ratio with controlled drawdown indicates sustainable strategy."
+                )
+            
+            # Check for risk management effectiveness
+            if max_drawdown > -0.1 and win_rate > 0.5:
+                robustness_signals.append(
+                    "POSITIVE: Effective risk management with good win rate suggests robust execution."
+                )
+            
+            # Areas for improvement
+            if sharpe_ratio < 0.5:
+                robustness_signals.append(
+                    "IMPROVEMENT: Low Sharpe ratio suggests need for better risk-adjusted returns."
+                )
+            
+            if max_drawdown < -0.2:
+                robustness_signals.append(
+                    "IMPROVEMENT: High drawdown indicates need for better risk controls."
+                )
+            
+            return robustness_signals
+            
+        except Exception as e:
+            self.logger.error(f"Error assessing strategy robustness: {e}")
+            return ["Error in robustness assessment"]
+    
+    def _calculate_model_health_score(self, performance_metrics: Dict[str, float], 
+                                     risk_metrics: Dict[str, float], 
+                                     trading_metrics: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Calculate a comprehensive model health score.
+        
+        Args:
+            performance_metrics: Performance metrics
+            risk_metrics: Risk metrics
+            trading_metrics: Trading metrics
+            
+        Returns:
+            Model health score and breakdown
+        """
+        try:
+            health_score = 0.0
+            score_breakdown = {}
+            
+            # Performance component (30%)
+            sharpe_ratio = performance_metrics.get('sharpe_ratio', 0)
+            performance_score = min(max(sharpe_ratio / 2.0, 0), 1)  # Normalize to 0-1
+            health_score += performance_score * 0.3
+            score_breakdown['performance'] = performance_score
+            
+            # Risk component (25%)
+            max_drawdown = abs(risk_metrics.get('max_drawdown', 0))
+            risk_score = max(0, 1 - max_drawdown / 0.2)  # Penalize high drawdowns
+            health_score += risk_score * 0.25
+            score_breakdown['risk'] = risk_score
+            
+            # Consistency component (25%)
+            win_rate = trading_metrics.get('win_rate', 0)
+            consistency_score = 1 - abs(win_rate - 0.5) * 2  # Prefer balanced win rates
+            health_score += consistency_score * 0.25
+            score_breakdown['consistency'] = consistency_score
+            
+            # Stability component (20%)
+            volatility = risk_metrics.get('volatility', 0)
+            stability_score = max(0, 1 - volatility / 0.3)  # Penalize high volatility
+            health_score += stability_score * 0.2
+            score_breakdown['stability'] = stability_score
+            
+            # Determine health status
+            if health_score >= 0.8:
+                health_status = "EXCELLENT"
+            elif health_score >= 0.6:
+                health_status = "GOOD"
+            elif health_score >= 0.4:
+                health_status = "FAIR"
+            elif health_score >= 0.2:
+                health_status = "POOR"
+            else:
+                health_status = "CRITICAL"
+            
+            return {
+                'overall_score': health_score,
+                'health_status': health_status,
+                'score_breakdown': score_breakdown,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Error calculating model health score: {e}")
+            return {
+                'overall_score': 0.0,
+                'health_status': 'ERROR',
+                'score_breakdown': {},
+                'error': str(e)
+            }
     
     def _store_evaluation_result(self, result: ModelEvaluationResult) -> None:
         """Store evaluation result in memory.

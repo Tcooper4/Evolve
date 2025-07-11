@@ -97,6 +97,19 @@ class AgentLoopManager:
         self.running = False
         self.paused = False
         
+        # Async execution safety
+        self._state_lock = asyncio.Lock()
+        self._execution_lock = asyncio.Lock()
+        self._communication_lock = asyncio.Lock()
+        self._concurrent_operations = 0
+        self._max_concurrent_operations = self.config.get('max_concurrent_operations', 3)
+        self._operation_semaphore = asyncio.Semaphore(self._max_concurrent_operations)
+        
+        # State consistency tracking
+        self._state_version = 0
+        self._last_state_check = datetime.now()
+        self._state_consistency_checks = 0
+        
         # Configuration
         self.cycle_interval = self.config.get('cycle_interval', 3600)  # 1 hour
         self.max_models = self.config.get('max_models', 10)

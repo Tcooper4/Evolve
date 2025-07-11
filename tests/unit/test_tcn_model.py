@@ -229,4 +229,112 @@ class TestTCNModel:
         # Verify parameter counts
         assert total_params > 0
         assert trainable_params > 0
-        assert trainable_params <= total_params 
+        assert trainable_params <= total_params
+    
+    def test_missing_timesteps_handling(self, model_path, model_config):
+        """Test that TCN handles missing timesteps gracefully and does not propagate NaNs."""
+        # Create and load model
+        model = TCNModel(**model_config)
+        state_dict = load_model_state(model_path)
+        model.load_state_dict(state_dict)
+        
+        # Test with input containing NaN values
+        sample_input_with_nans = torch.randn(32, 10, 100)
+        sample_input_with_nans[0, 0, 50:60] = float('nan')  # Insert NaNs in middle
+        
+        # Forward pass should handle NaNs gracefully
+        try:
+            output = model(sample_input_with_nans)
+            
+            # Check that output doesn't contain NaNs
+            assert not torch.isnan(output).any(), "Output should not contain NaN values"
+            assert not torch.isinf(output).any(), "Output should not contain infinite values"
+            
+            # Check output shape is correct
+            assert output.shape == (32, 1, 100)
+            
+        except Exception as e:
+            # If model can't handle NaNs, it should raise a clear error
+            assert "nan" in str(e).lower() or "invalid" in str(e).lower()
+        
+        # Test with input containing missing timesteps (zeros)
+        sample_input_missing = torch.randn(32, 10, 100)
+        sample_input_missing[0, :, 50:60] = 0.0  # Zero out some timesteps
+        
+        output = model(sample_input_missing)
+        
+        # Check that output doesn't contain NaNs
+        assert not torch.isnan(output).any(), "Output should not contain NaN values with missing timesteps"
+        assert not torch.isinf(output).any(), "Output should not contain infinite values with missing timesteps"
+        
+        # Test with very short sequences
+        short_input = torch.randn(32, 10, 5)  # Very short sequence
+        
+        output = model(short_input)
+        
+        # Check output shape and values
+        assert output.shape == (32, 1, 5)
+        assert not torch.isnan(output).any(), "Output should not contain NaN values with short sequences"
+        assert not torch.isinf(output).any(), "Output should not contain infinite values with short sequences"
+        
+        # Test with single timestep
+        single_timestep_input = torch.randn(32, 10, 1)
+        
+        output = model(single_timestep_input)
+        
+        # Check output shape and values
+        assert output.shape == (32, 1, 1)
+        assert not torch.isnan(output).any(), "Output should not contain NaN values with single timestep"
+        assert not torch.isinf(output).any(), "Output should not contain infinite values with single timestep"
+        
+        # Test with irregular sequence lengths (if model supports it)
+        try:
+            # Create input with different sequence lengths
+            irregular_input = torch.randn(32, 10, 100)
+            irregular_input[0, :, 80:] = 0.0  # Shorter effective sequence for first batch
+            
+            output = model(irregular_input)
+            
+            # Check output
+            assert not torch.isnan(output).any(), "Output should not contain NaN values with irregular sequences"
+            assert not torch.isinf(output).any(), "Output should not contain infinite values with irregular sequences"
+            
+        except Exception as e:
+            # Some models might not support irregular sequences
+            print(f"Model does not support irregular sequences: {e}")
+        
+        # Test with extreme values
+        extreme_input = torch.randn(32, 10, 100) * 1000  # Very large values
+        
+        output = model(extreme_input)
+        
+        # Check output doesn't explode
+        assert not torch.isnan(output).any(), "Output should not contain NaN values with extreme input"
+        assert not torch.isinf(output).any(), "Output should not contain infinite values with extreme input"
+        
+        # Test with all zeros input
+        zero_input = torch.zeros(32, 10, 100)
+        
+        output = model(zero_input)
+        
+        # Check output
+        assert not torch.isnan(output).any(), "Output should not contain NaN values with zero input"
+        assert not torch.isinf(output).any(), "Output should not contain infinite values with zero input"
+        
+        # Test gradient computation with missing timesteps
+        sample_input_grad = torch.randn(32, 10, 100)
+        sample_input_grad[0, 0, 50:60] = float('nan')  # Insert NaNs
+        sample_input_grad.requires_grad = True
+        
+        try:
+            output = model(sample_input_grad)
+            loss = output.mean()
+            loss.backward()
+            
+            # Check gradients don't contain NaNs
+            if sample_input_grad.grad is not None:
+                assert not torch.isnan(sample_input_grad.grad).any(), "Gradients should not contain NaN values"
+                
+        except Exception as e:
+            # If gradient computation fails with NaNs, that's acceptable
+            assert "nan" in str(e).lower() or "invalid" in str(e).lower() 

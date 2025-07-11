@@ -148,6 +148,9 @@ class StrategySelectorAgent(BaseAgent):
         
         # Load existing data
         self._load_strategy_performance()
+        
+        # Strategy metrics for visualization
+        self.strategy_metrics = {}
 
     def _setup(self) -> None:
         """Setup the agent. Called by BaseAgent constructor."""
@@ -827,3 +830,43 @@ class StrategySelectorAgent(BaseAgent):
                 
         except Exception as e:
             self.logger.error(f"Error saving strategy performance: {str(e)}")
+    
+    def plot_strategy_comparison(self, strategy_metrics: Dict[str, Any]):
+        """Add visualization of strategy performance comparison."""
+        try:
+            import matplotlib.pyplot as plt
+            
+            # Extract metrics for plotting
+            strategies = list(strategy_metrics.keys())
+            sharpe_ratios = [strategy_metrics[s].get('sharpe_ratio', 0) for s in strategies]
+            drawdowns = [strategy_metrics[s].get('max_drawdown', 0) for s in strategies]
+            
+            # Create comparison plot
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+            
+            # Sharpe ratio comparison
+            ax1.bar(strategies, sharpe_ratios)
+            ax1.set_title('Strategy Sharpe Ratio Comparison')
+            ax1.set_ylabel('Sharpe Ratio')
+            ax1.tick_params(axis='x', rotation=45)
+            
+            # Drawdown comparison
+            ax2.bar(strategies, drawdowns)
+            ax2.set_title('Strategy Max Drawdown Comparison')
+            ax2.set_ylabel('Max Drawdown')
+            ax2.tick_params(axis='x', rotation=45)
+            
+            plt.tight_layout()
+            
+            # Save plot
+            plot_path = Path("logs/strategy_comparison.png")
+            plot_path.parent.mkdir(exist_ok=True)
+            plt.savefig(plot_path)
+            plt.close()
+            
+            self.logger.info(f"Strategy comparison plot saved to {plot_path}")
+            
+        except ImportError:
+            self.logger.warning("Matplotlib not available for strategy comparison visualization")
+        except Exception as e:
+            self.logger.error(f"Error creating strategy comparison plot: {e}")

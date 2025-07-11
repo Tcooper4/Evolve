@@ -12,7 +12,7 @@ import re
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -33,20 +33,10 @@ class PromptContext:
     """Context information for prompt processing."""
     user_id: Optional[str] = None
     session_id: Optional[str] = None
-    timestamp: datetime = None
-    previous_requests: List[str] = None
-    user_preferences: Dict[str, Any] = None
-    system_state: Dict[str, Any] = None
-    
-    def __post_init__(self):
-        if self.timestamp is None:
-            self.timestamp = datetime.now()
-        if self.previous_requests is None:
-            self.previous_requests = []
-        if self.user_preferences is None:
-            self.user_preferences = {}
-        if self.system_state is None:
-            self.system_state = {}
+    timestamp: datetime = field(default_factory=datetime.now)
+    previous_requests: List[str] = field(default_factory=list)
+    user_preferences: Dict[str, Any] = field(default_factory=dict)
+    system_state: Dict[str, Any] = field(default_factory=dict)
 
 @dataclass
 class ProcessedPrompt:

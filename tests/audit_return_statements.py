@@ -24,6 +24,9 @@ class ReturnStatementAuditor:
         self.issues = []
         self.passing_functions = []
         self.exempt_functions = set()
+        self.return_value_usage = {}  # Track return value usage
+        self.unused_returns = []  # Track unused return values
+        self.pipeline_functions = set()  # Track pipeline functions
         
     def audit_codebase(self, root_dir: str = ".") -> Dict[str, Any]:
         """Audit the entire codebase for return statement compliance."""
@@ -32,8 +35,16 @@ class ReturnStatementAuditor:
         python_files = self._find_python_files(root_dir)
         logger.info(f"Found {len(python_files)} Python files to audit")
         
+        # First pass: identify all functions and their return values
         for file_path in python_files:
             self._audit_file(file_path)
+        
+        # Second pass: analyze return value usage
+        for file_path in python_files:
+            self._analyze_return_usage(file_path)
+        
+        # Third pass: identify pipeline functions and check their return usage
+        self._analyze_pipeline_return_usage(python_files)
         
         return self._generate_report()
     
@@ -95,6 +106,20 @@ class ReturnStatementAuditor:
         # Determine if function needs a return statement
         needs_return = self._function_needs_return(func_node, has_return, has_only_logging, has_side_effects)
         
+        # Track return values for usage analysis
+        if has_return:
+            return_values = self._extract_return_values(func_node)
+            self.return_value_usage[f"{file_path}:{func_name}"] = {
+                'line': func_line,
+                'return_values': return_values,
+                'is_pipeline': self._is_pipeline_function(func_node, file_path),
+                'usage_count': 0
+            }
+            
+            # Mark as pipeline function if applicable
+            if self._is_pipeline_function(func_node, file_path):
+                self.pipeline_functions.add(f"{file_path}:{func_name}")
+        
         if needs_return:
             self.issues.append({
                 'file': file_path,
@@ -106,6 +131,184 @@ class ReturnStatementAuditor:
         else:
             self.passing_functions.append(f"{file_path}:{func_name}")
     
+    def _extract_return_values(self, func_node: ast.FunctionDef) -> List[Dict[str, Any]]:
+        """Extract return values from function."""
+        return_values = []
+        
+        for node in ast.walk(func_node):
+            if isinstance(node, ast.Return):
+                return_info = {
+                    'line': node.lineno,
+                    'value': ast.unparse(node.value) if node.value else None,
+                    'type': type(node.value).__name__ if node.value else None
+                }
+                return_values.append(return_info)
+        
+        return return_values
+    
+    def _is_pipeline_function(self, func_node: ast.FunctionDef, file_path: str) -> bool:
+        """Check if function is part of a pipeline."""
+        pipeline_indicators = [
+            'pipeline', 'process', 'transform', 'filter', 'map', 'reduce',
+            'execute', 'run', 'step', 'stage', 'phase', 'workflow'
+        ]
+        
+        func_name = func_node.name.lower()
+        file_path_lower = file_path.lower()
+        
+        # Check function name
+        if any(indicator in func_name for indicator in pipeline_indicators):
+            return True
+        
+        # Check file path
+        if any(indicator in file_path_lower for indicator in ['pipeline', 'workflow', 'process']):
+            return True
+        
+        # Check function body for pipeline patterns
+        func_str = ast.unparse(func_node)
+        pipeline_patterns = [
+            r'\.execute\(', r'\.run\(', r'\.process\(', r'\.transform\(',
+            r'pipeline\.', r'workflow\.', r'step\.', r'stage\.'
+        ]
+        
+        return any(re.search(pattern, func_str) for pattern in pipeline_patterns)
+    
+    def _analyze_return_usage(self, file_path: str):
+        """Analyze how return values are used in a file."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            tree = ast.parse(content)
+            self._find_function_calls(file_path, tree, content)
+            
+        except Exception as e:
+            logger.error(f"Error analyzing return usage in {file_path}: {e}")
+    
+    def _find_function_calls(self, file_path: str, tree: ast.AST, content: str):
+        """Find function calls and track return value usage."""
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                self._analyze_function_call(file_path, node, content)
+    
+    def _analyze_function_call(self, file_path: str, call_node: ast.Call, content: str):
+        """Analyze a function call for return value usage."""
+        try:
+            # Get function name
+            if isinstance(call_node.func, ast.Name):
+                func_name = call_node.func.id
+            elif isinstance(call_node.func, ast.Attribute):
+                func_name = call_node.func.attr
+            else:
+                return
+            
+            # Check if this is a call to a tracked function
+            for tracked_func, info in self.return_value_usage.items():
+                if tracked_func.endswith(f":{func_name}"):
+                    # Check if return value is used
+                    parent = self._get_parent_node(call_node)
+                    is_used = self._is_return_value_used(call_node, parent)
+                    
+                    if not is_used:
+                        self.unused_returns.append({
+                            'file': file_path,
+                            'line': call_node.lineno,
+                            'function_call': func_name,
+                            'tracked_function': tracked_func,
+                            'return_values': info['return_values'],
+                            'is_pipeline': info['is_pipeline']
+                        })
+                    else:
+                        info['usage_count'] += 1
+                        
+        except Exception as e:
+            logger.error(f"Error analyzing function call: {e}")
+    
+    def _get_parent_node(self, node: ast.AST) -> ast.AST:
+        """Get parent node (simplified implementation)."""
+        # This is a simplified implementation
+        # In a full implementation, you'd need to track parent nodes during AST traversal
+        return node
+    
+    def _is_return_value_used(self, call_node: ast.Call, parent: ast.AST) -> bool:
+        """Check if return value from function call is used."""
+        # Check if call is part of an assignment
+        if isinstance(parent, ast.Assign):
+            return True
+        
+        # Check if call is part of a return statement
+        if isinstance(parent, ast.Return):
+            return True
+        
+        # Check if call is part of a conditional
+        if isinstance(parent, (ast.If, ast.While, ast.For)):
+            return True
+        
+        # Check if call is part of another function call
+        if isinstance(parent, ast.Call):
+            return True
+        
+        # Check if call is part of a list/dict comprehension
+        if isinstance(parent, (ast.ListComp, ast.DictComp, ast.SetComp)):
+            return True
+        
+        # Check if call is part of a yield statement
+        if isinstance(parent, ast.Yield):
+            return True
+        
+        # Check if call is part of an expression statement (unused)
+        if isinstance(parent, ast.Expr):
+            return False
+        
+        return False
+    
+    def _analyze_pipeline_return_usage(self, python_files: List[str]):
+        """Analyze return value usage specifically in pipeline functions."""
+        pipeline_issues = []
+        
+        for func_key, info in self.return_value_usage.items():
+            if info['is_pipeline']:
+                # Pipeline functions should have their return values used
+                if info['usage_count'] == 0:
+                    pipeline_issues.append({
+                        'function': func_key,
+                        'issue': 'Pipeline function return value not used',
+                        'return_values': info['return_values'],
+                        'recommendation': 'Consider using return values for pipeline continuation or remove unnecessary returns'
+                    })
+                
+                # Check if pipeline function returns meaningful data
+                meaningful_returns = self._check_meaningful_pipeline_returns(info['return_values'])
+                if not meaningful_returns:
+                    pipeline_issues.append({
+                        'function': func_key,
+                        'issue': 'Pipeline function returns non-meaningful data',
+                        'return_values': info['return_values'],
+                        'recommendation': 'Return meaningful data for pipeline continuation'
+                    })
+        
+        self.issues.extend(pipeline_issues)
+    
+    def _check_meaningful_pipeline_returns(self, return_values: List[Dict[str, Any]]) -> bool:
+        """Check if pipeline function returns meaningful data."""
+        for return_info in return_values:
+            value = return_info.get('value', '')
+            
+            # Check for meaningful return patterns
+            meaningful_patterns = [
+                r'result', r'data', r'output', r'processed', r'transformed',
+                r'status', r'success', r'error', r'info', r'metadata'
+            ]
+            
+            if any(re.search(pattern, value, re.IGNORECASE) for pattern in meaningful_patterns):
+                return True
+            
+            # Check for data structures
+            if any(keyword in value.lower() for keyword in ['dict', 'list', 'dataframe', 'series', 'array']):
+                return True
+        
+        return False
+
     def _has_return_statement(self, func_node: ast.FunctionDef) -> bool:
         """Check if function has any return statements."""
         for node in ast.walk(func_node):
@@ -199,80 +402,109 @@ class ReturnStatementAuditor:
         func_name = func_node.name.lower()
         return_indicators = ['get', 'fetch', 'load', 'read', 'calculate', 'compute', 'process', 'validate', 'check']
         
-        if any(indicator in func_name for indicator in return_indicators):
-            return True
-        
-        return False
+        return any(indicator in func_name for indicator in return_indicators)
     
     def _generate_report(self) -> Dict[str, Any]:
-        """Generate a comprehensive report of findings."""
-        total_issues = len(self.issues)
-        total_passing = len(self.passing_functions)
-        total_exempt = len(self.exempt_functions)
+        """Generate comprehensive audit report."""
+        total_functions = len(self.passing_functions) + len(self.issues)
+        pipeline_functions_count = len(self.pipeline_functions)
+        unused_returns_count = len(self.unused_returns)
         
-        # Group issues by file
-        issues_by_file = {}
-        for issue in self.issues:
-            file_path = issue['file']
-            if file_path not in issues_by_file:
-                issues_by_file[file_path] = []
-            issues_by_file[file_path].append(issue)
-        
-        # Sort files by number of issues
-        sorted_files = sorted(issues_by_file.items(), key=lambda x: len(x[1]), reverse=True)
-        
-        return {
+        report = {
+            'timestamp': datetime.now().isoformat(),
             'summary': {
-                'total_issues': total_issues,
-                'total_passing': total_passing,
-                'total_exempt': total_exempt,
-                'compliance_rate': f"{((total_passing + total_exempt) / (total_issues + total_passing + total_exempt) * 100):.1f}%"
+                'total_functions_audited': total_functions,
+                'passing_functions': len(self.passing_functions),
+                'functions_with_issues': len(self.issues),
+                'pipeline_functions': pipeline_functions_count,
+                'unused_return_values': unused_returns_count,
+                'coverage_percentage': (len(self.passing_functions) / total_functions * 100) if total_functions > 0 else 0
             },
-            'issues_by_file': sorted_files,
+            'issues': self.issues,
+            'unused_returns': self.unused_returns,
+            'pipeline_analysis': {
+                'pipeline_functions': list(self.pipeline_functions),
+                'pipeline_issues': [issue for issue in self.issues if 'pipeline' in str(issue)],
+                'recommendations': self._generate_pipeline_recommendations()
+            },
             'recommendations': self._generate_recommendations()
         }
+        
+        return report
+    
+    def _generate_pipeline_recommendations(self) -> List[str]:
+        """Generate recommendations for pipeline functions."""
+        recommendations = []
+        
+        # Check for unused pipeline returns
+        unused_pipeline_returns = [ur for ur in self.unused_returns if ur['is_pipeline']]
+        if unused_pipeline_returns:
+            recommendations.append(f"Found {len(unused_pipeline_returns)} pipeline functions with unused return values")
+            recommendations.append("Consider using return values for pipeline continuation or remove unnecessary returns")
+        
+        # Check for pipeline functions without meaningful returns
+        pipeline_functions_without_meaningful_returns = [
+            func for func, info in self.return_value_usage.items()
+            if info['is_pipeline'] and not self._check_meaningful_pipeline_returns(info['return_values'])
+        ]
+        
+        if pipeline_functions_without_meaningful_returns:
+            recommendations.append(f"Found {len(pipeline_functions_without_meaningful_returns)} pipeline functions without meaningful returns")
+            recommendations.append("Pipeline functions should return meaningful data for downstream processing")
+        
+        return recommendations
     
     def _generate_recommendations(self) -> List[str]:
-        """Generate recommendations for fixing issues."""
-        recommendations = [
-            "1. Add structured return statements to all functions with side effects",
-            "2. Implement consistent error handling with return status",
-            "3. Add return statements to logging functions for status reporting",
-            "4. Consider adding return statements to utility functions for better integration",
-            "5. Review and update function documentation to reflect return values"
-        ]
+        """Generate general recommendations."""
+        recommendations = []
+        
+        if self.issues:
+            recommendations.append(f"Found {len(self.issues)} functions with return statement issues")
+            recommendations.append("Review and fix functions that need return statements")
+        
+        if self.unused_returns:
+            recommendations.append(f"Found {len(self.unused_returns)} unused return values")
+            recommendations.append("Consider removing unused return statements or using return values")
+        
+        recommendations.append("Ensure all pipeline functions return meaningful data")
+        recommendations.append("Use return values for error handling and status reporting")
+        
         return recommendations
 
 def main():
     """Main function to run the audit."""
     auditor = ReturnStatementAuditor()
-    result = auditor.audit_codebase()
+    report = auditor.audit_codebase()
     
-    if result['success']:
-        report = result['result']
-        print("\n" + "="*80)
-        print("RETURN STATEMENT AUDIT REPORT")
-        print("="*80)
-        
-        summary = report['summary']
-        print(f"\nSUMMARY:")
-        print(f"  Total Issues: {summary['total_issues']}")
-        print(f"  Passing Functions: {summary['total_passing']}")
-        print(f"  Exempt Functions: {summary['total_exempt']}")
-        print(f"  Compliance Rate: {summary['compliance_rate']}")
-        
-        if summary['total_issues'] > 0:
-            print(f"\nTOP FILES WITH ISSUES:")
-            for file_path, issues in report['issues_by_file'][:10]:
-                print(f"  {file_path}: {len(issues)} issues")
-        
-        print(f"\nRECOMMENDATIONS:")
-        for rec in report['recommendations']:
-            print(f"  {rec}")
-        
-        print("\n" + "="*80)
-    else:
-        print(f"Audit failed: {result['message']}")
+    print("=== Return Statement Audit Report ===")
+    print(f"Timestamp: {report['timestamp']}")
+    print(f"Total functions audited: {report['summary']['total_functions_audited']}")
+    print(f"Passing functions: {report['summary']['passing_functions']}")
+    print(f"Functions with issues: {report['summary']['functions_with_issues']}")
+    print(f"Pipeline functions: {report['summary']['pipeline_functions']}")
+    print(f"Unused return values: {report['summary']['unused_return_values']}")
+    print(f"Coverage: {report['summary']['coverage_percentage']:.1f}%")
+    
+    if report['issues']:
+        print("\n=== Issues Found ===")
+        for issue in report['issues']:
+            print(f"- {issue['file']}:{issue['line']} - {issue['function']} - {issue['type']}")
+    
+    if report['unused_returns']:
+        print("\n=== Unused Return Values ===")
+        for unused in report['unused_returns']:
+            print(f"- {unused['file']}:{unused['line']} - {unused['function_call']} (from {unused['tracked_function']})")
+    
+    if report['pipeline_analysis']['recommendations']:
+        print("\n=== Pipeline Recommendations ===")
+        for rec in report['pipeline_analysis']['recommendations']:
+            print(f"- {rec}")
+    
+    print("\n=== General Recommendations ===")
+    for rec in report['recommendations']:
+        print(f"- {rec}")
+    
+    return report
 
 if __name__ == "__main__":
     main() 

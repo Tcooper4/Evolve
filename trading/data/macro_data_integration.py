@@ -184,6 +184,20 @@ class MacroDataIntegration:
                      end_date: Optional[str] = None) -> pd.DataFrame:
         """Get data from FRED API."""
         try:
+            # Validate inputs
+            if not series_id or not isinstance(series_id, str):
+                raise ValueError("series_id must be a non-empty string")
+            
+            if start_date and not isinstance(start_date, str):
+                raise ValueError("start_date must be a string")
+                
+            if end_date and not isinstance(end_date, str):
+                raise ValueError("end_date must be a string")
+            
+            # Log request
+            logger.info(f"Fetching FRED data for series: {series_id}")
+            start_time = datetime.now()
+            
             if not self.fred_api_key:
                 logger.warning("No FRED API key provided, using fallback data")
                 return self._get_fallback_fred_data(series_id)
@@ -191,6 +205,7 @@ class MacroDataIntegration:
             # Check cache first
             cache_key = f"fred_{series_id}"
             if self._is_cache_valid(cache_key):
+                logger.info(f"Using cached FRED data for {series_id}")
                 return self.data_cache[cache_key]
             
             # Build API URL
@@ -240,7 +255,9 @@ class MacroDataIntegration:
             # Cache data
             self._cache_data(cache_key, df)
             
-            logger.info(f"Retrieved FRED data for {series_id}: {len(df)} observations")
+            # Log fetch latency
+            fetch_time = (datetime.now() - start_time).total_seconds()
+            logger.info(f"FRED data fetch completed in {fetch_time:.2f}s for {series_id}: {len(df)} observations")
             return df
             
         except Exception as e:
@@ -365,9 +382,21 @@ class MacroDataIntegration:
     def get_earnings_data(self, symbol: str, lookback_days: int = 365) -> List[EarningsData]:
         """Get earnings data for a symbol."""
         try:
+            # Validate inputs
+            if not symbol or not isinstance(symbol, str):
+                raise ValueError("symbol must be a non-empty string")
+            
+            if not isinstance(lookback_days, int) or lookback_days <= 0:
+                raise ValueError("lookback_days must be a positive integer")
+            
+            # Log request
+            logger.info(f"Fetching earnings data for symbol: {symbol}")
+            start_time = datetime.now()
+            
             # Check cache first
             cache_key = f"earnings_{symbol}"
             if self._is_cache_valid(cache_key):
+                logger.info(f"Using cached earnings data for {symbol}")
                 return self.data_cache[cache_key]
             
             # Get earnings calendar from Yahoo Finance
@@ -413,7 +442,9 @@ class MacroDataIntegration:
             # Cache data
             self._cache_data(cache_key, earnings_data)
             
-            logger.info(f"Retrieved {len(earnings_data)} earnings records for {symbol}")
+            # Log fetch latency
+            fetch_time = (datetime.now() - start_time).total_seconds()
+            logger.info(f"Earnings data fetch completed in {fetch_time:.2f}s for {symbol}: {len(earnings_data)} records")
             return earnings_data
             
         except Exception as e:

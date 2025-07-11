@@ -86,6 +86,9 @@ class StrategyImproverAgent(BaseAgent):
             'macd': MACDStrategy
         }
         
+        # Strategy performance tracking for auto-pruning
+        self.strategy_metrics = {}
+        
         # Performance tracking
         self.improvement_history: List[Dict[str, Any]] = []
         self.last_improvement: Dict[str, datetime] = {}
@@ -144,6 +147,9 @@ class StrategyImproverAgent(BaseAgent):
                 return AgentResult(success=True, data={'performance': performance})
             else:
                 return AgentResult(success=False, error_message=f"Unknown action: {action}")
+        
+        # Auto-prune underperforming strategies
+        self._prune_underperforming_strategies()
                 
         except Exception as e:
             return self.handle_error(e)
@@ -609,4 +615,22 @@ class StrategyImproverAgent(BaseAgent):
             'improvement_summary': self.get_improvement_summary(),
             'strategies_tracked': len(self.strategies)
         })
-        return base_status 
+        return base_status
+    
+    def _prune_underperforming_strategies(self):
+        """Auto-prune underperforming strategies."""
+        try:
+            # Update strategy metrics
+            for strategy_name in list(self.strategies.keys()):
+                performance = self._get_strategy_performance(strategy_name)
+                if performance and 'sharpe' in performance:
+                    self.strategy_metrics[strategy_name] = performance['sharpe']
+            
+            # Prune strategies with Sharpe ratio below threshold
+            self.strategies = {name: strategy for name, strategy in self.strategies.items() 
+                             if self.strategy_metrics.get(name, 0) > 0.5}
+            
+            logger.info(f"Auto-pruned underperforming strategies. Remaining: {len(self.strategies)}")
+            
+        except Exception as e:
+            logger.error(f"Error pruning strategies: {e}") 

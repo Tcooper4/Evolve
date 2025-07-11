@@ -210,3 +210,156 @@ class TestGoalPlanner:
         
         assert isinstance(adjusted_plan, dict)
         assert 'strategies' in adjusted_plan 
+
+    def test_goal_re_prioritization_failure_conditions(self, agent, sample_data):
+        """Test that verifies goal re-prioritization logic under failure conditions."""
+        print("\n🎯 Testing Goal Re-prioritization Under Failure Conditions")
+        
+        # Set initial goals
+        initial_goals = agent.set_goals(
+            target_return=0.15,
+            max_drawdown=0.1,
+            min_sharpe=1.5
+        )
+        
+        print(f"  Initial goals: {initial_goals}")
+        
+        # Create initial plan
+        initial_plan = agent.create_plan(sample_data, initial_goals)
+        print(f"  Initial plan strategies: {initial_plan['strategies']}")
+        
+        # Simulate different failure scenarios
+        failure_scenarios = [
+            {
+                'name': 'Severe Underperformance',
+                'performance': pd.Series(np.random.normal(-0.005, 0.02, len(sample_data)), index=sample_data.index),
+                'expected_priority_change': 'risk_reduction'
+            },
+            {
+                'name': 'High Volatility',
+                'performance': pd.Series(np.random.normal(0.001, 0.05, len(sample_data)), index=sample_data.index),
+                'expected_priority_change': 'stability_focus'
+            },
+            {
+                'name': 'Consistent Losses',
+                'performance': pd.Series(np.random.normal(-0.002, 0.01, len(sample_data)), index=sample_data.index),
+                'expected_priority_change': 'capital_preservation'
+            },
+            {
+                'name': 'Drawdown Exceeded',
+                'performance': pd.Series(np.random.normal(-0.003, 0.03, len(sample_data)), index=sample_data.index),
+                'expected_priority_change': 'risk_management'
+            }
+        ]
+        
+        for scenario in failure_scenarios:
+            print(f"\n  📊 Testing scenario: {scenario['name']}")
+            
+            # Track goals before failure
+            goals_before = agent.get_current_goals()
+            
+            # Simulate failure performance
+            failure_performance = scenario['performance']
+            
+            # Trigger goal re-prioritization
+            adjusted_goals = agent.adjust_goals(failure_performance)
+            reprioritized_plan = agent.reprioritize_goals(failure_performance, adjusted_goals)
+            
+            print(f"    Goals before: {goals_before}")
+            print(f"    Goals after: {adjusted_goals}")
+            
+            # Verify goal adjustments based on failure type
+            if scenario['name'] == 'Severe Underperformance':
+                # Should reduce target return and increase risk tolerance
+                self.assertLess(adjusted_goals['target_return'], goals_before['target_return'],
+                               "Target return should be reduced under severe underperformance")
+                self.assertGreater(adjusted_goals['max_drawdown'], goals_before['max_drawdown'],
+                                  "Max drawdown should be increased to allow for recovery")
+                
+            elif scenario['name'] == 'High Volatility':
+                # Should focus on stability and reduce volatility
+                self.assertLess(adjusted_goals['max_drawdown'], goals_before['max_drawdown'],
+                               "Max drawdown should be reduced under high volatility")
+                self.assertGreater(adjusted_goals['min_sharpe'], goals_before['min_sharpe'],
+                                  "Minimum Sharpe should be increased for stability")
+                
+            elif scenario['name'] == 'Consistent Losses':
+                # Should prioritize capital preservation
+                self.assertLess(adjusted_goals['target_return'], goals_before['target_return'],
+                               "Target return should be reduced for capital preservation")
+                self.assertLess(adjusted_goals['max_drawdown'], goals_before['max_drawdown'],
+                               "Max drawdown should be reduced for capital preservation")
+                
+            elif scenario['name'] == 'Drawdown Exceeded':
+                # Should focus on risk management
+                self.assertLess(adjusted_goals['max_drawdown'], goals_before['max_drawdown'],
+                               "Max drawdown should be reduced when exceeded")
+                self.assertGreater(adjusted_goals['min_sharpe'], goals_before['min_sharpe'],
+                                  "Minimum Sharpe should be increased for risk management")
+            
+            # Verify reprioritized plan changes
+            self.assertIsNotNone(reprioritized_plan, "Should generate reprioritized plan")
+            self.assertIn('strategies', reprioritized_plan, "Plan should contain strategies")
+            self.assertIn('allocations', reprioritized_plan, "Plan should contain allocations")
+            
+            # Check if strategy priorities changed
+            if len(initial_plan['strategies']) > 0 and len(reprioritized_plan['strategies']) > 0:
+                strategy_changed = initial_plan['strategies'] != reprioritized_plan['strategies']
+                allocation_changed = initial_plan['allocations'] != reprioritized_plan['allocations']
+                
+                print(f"    Strategy priorities changed: {strategy_changed}")
+                print(f"    Allocation priorities changed: {allocation_changed}")
+                
+                # At least one aspect should change under failure conditions
+                self.assertTrue(strategy_changed or allocation_changed,
+                               "Priorities should change under failure conditions")
+        
+        # Test goal recovery logic
+        print(f"\n  🔄 Testing goal recovery logic...")
+        
+        # Simulate recovery after failure
+        recovery_performance = pd.Series(np.random.normal(0.003, 0.015, len(sample_data)), index=sample_data.index)
+        
+        # Get goals after failure
+        failure_goals = agent.get_current_goals()
+        
+        # Trigger recovery adjustment
+        recovery_goals = agent.adjust_goals(recovery_performance)
+        
+        print(f"    Goals during failure: {failure_goals}")
+        print(f"    Goals during recovery: {recovery_goals}")
+        
+        # Verify recovery logic
+        if failure_goals['target_return'] < initial_goals['target_return']:
+            # If target was reduced during failure, it should increase during recovery
+            self.assertGreaterEqual(recovery_goals['target_return'], failure_goals['target_return'],
+                                   "Target return should increase during recovery")
+        
+        if failure_goals['max_drawdown'] > initial_goals['max_drawdown']:
+            # If max drawdown was increased during failure, it should decrease during recovery
+            self.assertLessEqual(recovery_goals['max_drawdown'], failure_goals['max_drawdown'],
+                                "Max drawdown should decrease during recovery")
+        
+        # Test goal stability under consistent performance
+        print(f"\n  📈 Testing goal stability under consistent performance...")
+        
+        stable_performance = pd.Series(np.random.normal(0.001, 0.01, len(sample_data)), index=sample_data.index)
+        
+        # Multiple adjustments with stable performance should maintain goals
+        current_goals = agent.get_current_goals()
+        
+        for i in range(3):
+            adjusted_goals = agent.adjust_goals(stable_performance)
+            print(f"    Adjustment {i+1}: {adjusted_goals}")
+            
+            # Goals should remain relatively stable
+            if i > 0:
+                target_change = abs(adjusted_goals['target_return'] - current_goals['target_return'])
+                drawdown_change = abs(adjusted_goals['max_drawdown'] - current_goals['max_drawdown'])
+                
+                self.assertLess(target_change, 0.05, "Target return should remain stable under consistent performance")
+                self.assertLess(drawdown_change, 0.05, "Max drawdown should remain stable under consistent performance")
+            
+            current_goals = adjusted_goals
+        
+        print("✅ Goal re-prioritization under failure conditions test completed") 
