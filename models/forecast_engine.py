@@ -354,7 +354,7 @@ class ForecastEngine:
     def _calculate_forecast_metrics(self, forecast_values: List[float], 
                                   historical_data: pd.DataFrame) -> Dict[str, float]:
         """
-        Calculate forecast metrics.
+        Calculate forecast metrics with standardized evaluation.
         
         Args:
             forecast_values: Forecasted values
@@ -366,6 +366,7 @@ class ForecastEngine:
         if not forecast_values:
             return {}
         
+        # Basic forecast statistics
         metrics = {
             'forecast_mean': np.mean(forecast_values),
             'forecast_std': np.std(forecast_values),
@@ -374,6 +375,38 @@ class ForecastEngine:
             'forecast_range': np.max(forecast_values) - np.min(forecast_values),
             'forecast_trend': (forecast_values[-1] - forecast_values[0]) / forecast_values[0] if forecast_values[0] != 0 else 0
         }
+        
+        # Standardized evaluation metrics
+        try:
+            from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+            
+            # If we have historical data for comparison
+            if not historical_data.empty and len(historical_data) >= len(forecast_values):
+                # Use last n values from historical data for comparison
+                historical_values = historical_data['Close'].tail(len(forecast_values)).values
+                
+                # Calculate standardized metrics
+                mse = mean_squared_error(historical_values, forecast_values)
+                mae = mean_absolute_error(historical_values, forecast_values)
+                rmse = np.sqrt(mse)
+                r2 = r2_score(historical_values, forecast_values)
+                
+                # Add to metrics
+                metrics.update({
+                    'mse': mse,
+                    'mae': mae,
+                    'rmse': rmse,
+                    'r2_score': r2,
+                    'mape': np.mean(np.abs((historical_values - forecast_values) / historical_values)) * 100
+                })
+                
+                # Log standardized metrics
+                self.logger.info(f"Forecast evaluation - MSE: {mse:.4f}, MAE: {mae:.4f}, RMSE: {rmse:.4f}, R²: {r2:.4f}")
+                
+        except ImportError:
+            self.logger.warning("sklearn not available, skipping standardized metrics")
+        except Exception as e:
+            self.logger.warning(f"Error calculating standardized metrics: {e}")
         
         # Compare with historical metrics
         if not historical_data.empty:
@@ -487,6 +520,76 @@ class ForecastEngine:
             Dict: Performance metrics
         """
         return self.model_performance.get(model_type.value, {})
+
+    def detect_drift(self, y_true: List[float], y_pred: List[float], 
+                    model_id: str, threshold: float = 0.1) -> bool:
+        """
+        Detect model performance degradation (drift).
+        
+        Args:
+            y_true: True values
+            y_pred: Predicted values
+            model_id: Model identifier
+            threshold: Performance degradation threshold
+            
+        Returns:
+            bool: True if drift detected, False otherwise
+        """
+        try:
+            from sklearn.metrics import mean_squared_error
+            
+            if not y_true or not y_pred or len(y_true) != len(y_pred):
+                self.logger.warning(f"Invalid data for drift detection in model {model_id}")
+                return False
+            
+            # Calculate current MSE
+            current_mse = mean_squared_error(y_true, y_pred)
+            
+            # Get historical MSE for comparison
+            historical_mse = self.model_performance.get(model_id, {}).get('historical_mse', current_mse)
+            
+            # Calculate degradation ratio
+            degradation_ratio = current_mse / historical_mse if historical_mse > 0 else 1.0
+            
+            # Check if degradation exceeds threshold
+            if degradation_ratio > (1 + threshold):
+                self.logger.warning(f"Model drift detected for {model_id}: "
+                                  f"current MSE {current_mse:.4f}, historical MSE {historical_mse:.4f}, "
+                                  f"degradation ratio {degradation_ratio:.2f}")
+                
+                # Trigger retrain
+                self._trigger_retrain(model_id)
+                return True
+            
+            # Update historical performance
+            self.model_performance.setdefault(model_id, {})['historical_mse'] = current_mse
+            
+            return False
+            
+        except Exception as e:
+            self.logger.error(f"Error in drift detection for model {model_id}: {e}")
+            return False
+
+    def _trigger_retrain(self, model_id: str):
+        """
+        Trigger model retraining.
+        
+        Args:
+            model_id: Model identifier
+        """
+        try:
+            self.logger.info(f"Triggering retrain for model {model_id}")
+            
+            # Log retrain event
+            self.model_performance.setdefault(model_id, {})['last_retrain'] = datetime.now()
+            self.model_performance[model_id]['retrain_count'] = self.model_performance[model_id].get('retrain_count', 0) + 1
+            
+            # Here you would implement actual retraining logic
+            # For now, just log the event
+            self.logger.info(f"Retrain triggered for {model_id} - count: {self.model_performance[model_id]['retrain_count']}")
+            
+        except Exception as e:
+            self.logger.error(f"Error triggering retrain for model {model_id}: {e}")
 
 def get_forecast_engine(config: Optional[Dict[str, Any]] = None) -> ForecastEngine:
     """
