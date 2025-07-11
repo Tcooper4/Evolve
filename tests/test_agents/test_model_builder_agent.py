@@ -558,3 +558,161 @@ class TestModelBuilderAgentIntegration:
         assert result.build_status == "success"
         assert result.model_id is not None
         assert result.training_metrics is not None 
+    
+    @pytest.mark.asyncio
+    async def test_dynamic_model_generation_from_text_prompt(self, model_builder_agent, sample_data):
+        """Test dynamic model generation from text prompt (e.g., 'build an XGBoost forecaster')."""
+        print("\n🤖 Testing Dynamic Model Generation from Text Prompt")
+        
+        # Test different text prompts
+        text_prompts = [
+            "build an XGBoost forecaster for stock prediction",
+            "create a LSTM neural network for time series forecasting",
+            "generate an ensemble model combining multiple algorithms",
+            "build a random forest model for price prediction",
+            "create a deep learning model with attention mechanism"
+        ]
+        
+        for prompt in text_prompts:
+            print(f"\n  📝 Testing prompt: '{prompt}'")
+            
+            # Parse text prompt to extract model configuration
+            model_config = model_builder_agent.parse_text_prompt(prompt)
+            
+            # Verify model configuration extraction
+            assert model_config is not None, f"Should extract config from prompt: {prompt}"
+            assert 'model_type' in model_config, "Config should contain model_type"
+            assert 'hyperparameters' in model_config, "Config should contain hyperparameters"
+            
+            print(f"    Extracted model type: {model_config['model_type']}")
+            print(f"    Extracted hyperparameters: {model_config['hyperparameters']}")
+            
+            # Create model build request from extracted config
+            request = ModelBuildRequest(
+                model_type=model_config['model_type'],
+                data_path=sample_data,
+                target_column="close",
+                features=["open", "high", "low", "volume"],
+                hyperparameters=model_config['hyperparameters'],
+                validation_split=0.2,
+                random_state=42,
+                request_id=f"prompt_{hash(prompt) % 10000}"
+            )
+            
+            # Validate the generated request
+            is_valid = model_builder_agent.validate_input(request=request)
+            assert is_valid, f"Generated request should be valid for prompt: {prompt}"
+            
+            # Build the model
+            result = await model_builder_agent.execute(request=request)
+            
+            # Verify successful model generation
+            assert result.success, f"Model generation should succeed for prompt: {prompt}"
+            assert result.data is not None, "Result should contain model data"
+            assert 'model_id' in result.data, "Result should contain model_id"
+            assert 'model_path' in result.data, "Result should contain model_path"
+            
+            print(f"    ✅ Model generated successfully: {result.data['model_id']}")
+            
+            # Test model-specific validations
+            if 'xgboost' in prompt.lower():
+                assert model_config['model_type'] == 'xgboost', 
+                               "Should extract XGBoost for XGBoost prompt"
+                assert 'n_estimators' in model_config['hyperparameters'], 
+                             "XGBoost should have n_estimators parameter"
+                
+            elif 'lstm' in prompt.lower():
+                assert model_config['model_type'] == 'lstm', 
+                               "Should extract LSTM for LSTM prompt"
+                assert 'epochs' in model_config['hyperparameters'], 
+                             "LSTM should have epochs parameter"
+                
+            elif 'ensemble' in prompt.lower():
+                assert model_config['model_type'] == 'ensemble', 
+                               "Should extract ensemble for ensemble prompt"
+                assert 'models' in model_config['hyperparameters'], 
+                             "Ensemble should have models parameter"
+                
+            elif 'random' in prompt.lower() and 'forest' in prompt.lower():
+                assert model_config['model_type'] == 'random_forest', 
+                               "Should extract random_forest for random forest prompt"
+                assert 'n_estimators' in model_config['hyperparameters'], 
+                             "Random forest should have n_estimators parameter"
+        
+        # Test complex prompt with multiple requirements
+        print(f"\n  🔧 Testing complex prompt...")
+        complex_prompt = "build a deep learning model with LSTM layers, dropout regularization, and early stopping for predicting stock prices with high accuracy"
+        
+        complex_config = model_builder_agent.parse_text_prompt(complex_prompt)
+        
+        # Verify complex configuration extraction
+        assert complex_config['model_type'] == 'lstm', "Should extract LSTM for deep learning prompt"
+        assert 'dropout' in complex_config['hyperparameters'], "Should include dropout for regularization"
+        assert 'early_stopping' in complex_config['hyperparameters'], "Should include early stopping"
+        assert 'epochs' in complex_config['hyperparameters'], "Should include epochs parameter"
+        
+        print(f"    Complex config extracted: {complex_config['model_type']} with {len(complex_config['hyperparameters'])} parameters")
+        
+        # Test prompt with invalid model type
+        print(f"\n  ⚠️ Testing invalid model prompt...")
+        invalid_prompt = "build a quantum computer model for stock prediction"
+        
+        with pytest.raises(ValueError):
+            model_builder_agent.parse_text_prompt(invalid_prompt)
+        
+        print(f"    ✅ Invalid model type properly rejected")
+        
+        # Test prompt with missing information
+        print(f"\n  🔍 Testing incomplete prompt...")
+        incomplete_prompt = "build a model"
+        
+        incomplete_config = model_builder_agent.parse_text_prompt(incomplete_prompt)
+        
+        # Should use default configuration
+        assert incomplete_config is not None, "Should provide default config for incomplete prompt"
+        assert 'model_type' in incomplete_config, "Should have default model type"
+        assert 'hyperparameters' in incomplete_config, "Should have default hyperparameters"
+        
+        print(f"    ✅ Default config provided for incomplete prompt: {incomplete_config['model_type']}")
+        
+        # Test prompt with custom parameters
+        print(f"\n  ⚙️ Testing prompt with custom parameters...")
+        custom_prompt = "build an XGBoost model with 500 trees, max_depth 6, and learning_rate 0.1"
+        
+        custom_config = model_builder_agent.parse_text_prompt(custom_prompt)
+        
+        # Verify custom parameters are extracted
+        assert custom_config['model_type'] == 'xgboost', "Should extract XGBoost"
+        assert custom_config['hyperparameters']['n_estimators'] == 500, "Should extract n_estimators"
+        assert custom_config['hyperparameters']['max_depth'] == 6, "Should extract max_depth"
+        assert custom_config['hyperparameters']['learning_rate'] == 0.1, "Should extract learning_rate"
+        
+        print(f"    ✅ Custom parameters extracted: {custom_config['hyperparameters']}")
+        
+        # Test end-to-end model generation from text prompt
+        print(f"\n  🚀 Testing end-to-end model generation from text prompt...")
+        
+        final_prompt = "build a gradient boosting model for stock price prediction with 200 estimators"
+        final_config = model_builder_agent.parse_text_prompt(final_prompt)
+        
+        final_request = ModelBuildRequest(
+            model_type=final_config['model_type'],
+            data_path=sample_data,
+            target_column="close",
+            features=["open", "high", "low", "volume"],
+            hyperparameters=final_config['hyperparameters'],
+            validation_split=0.2,
+            random_state=42,
+            request_id="final_prompt_test"
+        )
+        
+        final_result = await model_builder_agent.execute(request=final_request)
+        
+        # Verify successful end-to-end generation
+        assert final_result.success, "End-to-end model generation should succeed"
+        assert 'model_id' in final_result.data, "Should have model_id in result"
+        assert 'training_metrics' in final_result.data, "Should have training metrics"
+        
+        print(f"    ✅ End-to-end model generation successful: {final_result.data['model_id']}")
+        
+        print("✅ Dynamic model generation from text prompt test completed") 

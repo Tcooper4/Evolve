@@ -357,6 +357,105 @@ class TestForecastRouter(unittest.TestCase):
         # Should return fallback result
         self.assertIsInstance(result, dict)
         self.assertIn('forecast', result)
+    
+    def test_invalid_input_prompts(self):
+        """Test handling of invalid input prompts and malformed requests."""
+        # Test with None prompt
+        result = self.router.get_forecast(
+            data=None,
+            horizon=30,
+            prompt=None
+        )
+        self.assertIsInstance(result, dict)
+        self.assertIn('forecast', result)
+        self.assertIn('error', result.get('metadata', {}))
+        
+        # Test with empty string prompt
+        result = self.router.get_forecast(
+            data=self.sample_data,
+            horizon=30,
+            prompt=""
+        )
+        self.assertIsInstance(result, dict)
+        self.assertIn('forecast', result)
+        
+        # Test with malformed prompt (non-string)
+        result = self.router.get_forecast(
+            data=self.sample_data,
+            horizon=30,
+            prompt=123
+        )
+        self.assertIsInstance(result, dict)
+        self.assertIn('forecast', result)
+        
+        # Test with extremely long prompt
+        long_prompt = "x" * 10000
+        result = self.router.get_forecast(
+            data=self.sample_data,
+            horizon=30,
+            prompt=long_prompt
+        )
+        self.assertIsInstance(result, dict)
+        self.assertIn('forecast', result)
+    
+    def test_default_fallback_behavior(self):
+        """Test default fallback behavior when primary methods fail."""
+        # Test fallback when model registry is empty
+        original_registry = self.router.model_registry.copy()
+        self.router.model_registry.clear()
+        
+        result = self.router.get_forecast(
+            data=self.sample_data,
+            horizon=30
+        )
+        
+        # Should use fallback forecast
+        self.assertIsInstance(result, dict)
+        self.assertIn('forecast', result)
+        self.assertIn('fallback', result.get('metadata', {}))
+        
+        # Restore registry
+        self.router.model_registry = original_registry
+        
+        # Test fallback when all models fail to load
+        with patch.object(self.router, '_load_default_models') as mock_load:
+            mock_load.side_effect = Exception("Model loading failed")
+            
+            result = self.router.get_forecast(
+                data=self.sample_data,
+                horizon=30
+            )
+            
+            self.assertIsInstance(result, dict)
+            self.assertIn('forecast', result)
+            self.assertIn('fallback', result.get('metadata', {}))
+        
+        # Test fallback when data preparation fails completely
+        with patch.object(self.router, '_prepare_data_safely') as mock_prepare:
+            mock_prepare.return_value = pd.DataFrame()  # Empty DataFrame
+            
+            result = self.router.get_forecast(
+                data=self.sample_data,
+                horizon=30
+            )
+            
+            self.assertIsInstance(result, dict)
+            self.assertIn('forecast', result)
+            self.assertIn('fallback', result.get('metadata', {}))
+        
+        # Test fallback when confidence calculation fails
+        with patch.object(self.router, '_get_confidence') as mock_confidence:
+            mock_confidence.side_effect = Exception("Confidence calculation failed")
+            
+            result = self.router.get_forecast(
+                data=self.sample_data,
+                horizon=30
+            )
+            
+            self.assertIsInstance(result, dict)
+            self.assertIn('forecast', result)
+            self.assertIn('confidence', result)
+            self.assertEqual(result['confidence'], 0.0)  # Default confidence
 
 
 if __name__ == '__main__':

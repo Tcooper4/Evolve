@@ -214,6 +214,7 @@ class OptimizerAgent(BaseAgent):
         self.optimization_results: List[OptimizationResult] = []
         self.best_results: Dict[str, OptimizationResult] = {}
         self.optimization_history: List[Dict[str, Any]] = []
+        self.trials: List[float] = []  # Track optimization scores for convergence
         
         # Strategy registry
         self.strategy_registry = {
@@ -315,6 +316,12 @@ class OptimizerAgent(BaseAgent):
                 result = await self._test_strategy_combination(combination, config)
                 if result:
                     results.append(result)
+                    self.trials.append(result.optimization_score)
+                
+                # Add convergence early stopping based on last N trials
+                if len(self.trials) > 10 and np.std(self.trials[-10:]) < 0.001:
+                    self.logger.info(f"Convergence detected, stopping optimization after {i + 1} trials")
+                    break
                 
                 # Log progress
                 if (i + 1) % 10 == 0:
@@ -458,7 +465,8 @@ class OptimizerAgent(BaseAgent):
         return combinations
     
     def _generate_parameter_combinations(self, parameters: List[OptimizationParameter]) -> List[Dict[str, Any]]:
-        """Generate parameter combinations to test.
+        """
+        Generate parameter combinations for optimization.
         
         Args:
             parameters: List of optimization parameters
@@ -466,79 +474,384 @@ class OptimizerAgent(BaseAgent):
         Returns:
             List of parameter combinations
         """
-        combinations = []
-        
-        # Generate parameter values for each parameter
-        param_values = {}
-        for param in parameters:
-            if param.parameter_type == 'categorical':
-                param_values[param.name] = param.categories or []
-            else:
-                values = []
-                current = param.min_value
-                while current <= param.max_value:
-                    values.append(current)
-                    current += param.step
-                param_values[param.name] = values
-        
-        # Generate all combinations
-        param_names = list(param_values.keys())
-        param_value_lists = [param_values[name] for name in param_names]
-        
-        for combo in itertools.product(*param_value_lists):
-            combination = dict(zip(param_names, combo))
-            combinations.append(combination)
-        
-        return combinations
+        try:
+            # Validate parameters before generating combinations
+            validated_parameters = self._validate_optimization_parameters(parameters)
+            
+            if not validated_parameters:
+                self.logger.warning("No valid parameters found after validation")
+                return []
+            
+            combinations = []
+            
+            # Generate parameter ranges
+            param_ranges = []
+            for param in validated_parameters:
+                if param.parameter_type == 'categorical':
+                    if param.categories:
+                        param_ranges.append(param.categories)
+                    else:
+                        self.logger.warning(f"Categorical parameter {param.name} has no categories")
+                        continue
+                else:
+                    # Generate range for numeric parameters
+                    param_range = self._generate_parameter_range(param)
+                    if param_range:
+                        param_ranges.append(param_range)
+                    else:
+                        self.logger.warning(f"Could not generate range for parameter {param.name}")
+                        continue
+            
+            if not param_ranges:
+                self.logger.warning("No valid parameter ranges generated")
+                return []
+            
+            # Generate all combinations
+            for combination in itertools.product(*param_ranges):
+                param_dict = {}
+                for i, param in enumerate(validated_parameters):
+                    param_dict[param.name] = combination[i]
+                
+                # Validate the combination
+                if self._validate_parameter_combination(param_dict, validated_parameters):
+                    combinations.append(param_dict)
+            
+            self.logger.info(f"Generated {len(combinations)} parameter combinations")
+            return combinations
+            
+        except Exception as e:
+            self.logger.error(f"Error generating parameter combinations: {e}")
+            return []
     
-    def _generate_indicator_combinations(self, parameters: List[OptimizationParameter]) -> List[Dict[str, Any]]:
-        """Generate indicator combinations to test.
+    def _validate_optimization_parameters(self, parameters: List[OptimizationParameter]) -> List[OptimizationParameter]:
+        """
+        Validate optimization parameters to ensure realistic bounds.
         
         Args:
             parameters: List of optimization parameters
             
         Returns:
-            List of indicator combinations
+            List of validated parameters
         """
-        # Similar to parameter combinations but focused on indicators
-        return self._generate_parameter_combinations(parameters)
+        validated_parameters = []
+        
+        for param in parameters:
+            try:
+                # Check parameter type
+                if param.parameter_type not in ['float', 'int', 'categorical']:
+                    self.logger.warning(f"Invalid parameter type for {param.name}: {param.parameter_type}")
+                    continue
+                
+                # Validate numeric parameters
+                if param.parameter_type in ['float', 'int']:
+                    if not self._validate_numeric_parameter(param):
+                        continue
+                
+                # Validate categorical parameters
+                elif param.parameter_type == 'categorical':
+                    if not self._validate_categorical_parameter(param):
+                        continue
+                
+                # Check for realistic bounds based on parameter name
+                if not self._check_realistic_bounds(param):
+                    continue
+                
+                validated_parameters.append(param)
+                self.logger.info(f"Validated parameter: {param.name} ({param.parameter_type})")
+                
+            except Exception as e:
+                self.logger.error(f"Error validating parameter {param.name}: {e}")
+                continue
+        
+        return validated_parameters
     
-    def _generate_hybrid_combinations(self, config: OptimizationConfig) -> List[Dict[str, Any]]:
-        """Generate hybrid combinations (strategies + parameters + indicators).
+    def _validate_numeric_parameter(self, param: OptimizationParameter) -> bool:
+        """
+        Validate numeric parameter bounds and step size.
         
         Args:
-            config: Optimization configuration
+            param: Optimization parameter
             
         Returns:
-            List of hybrid combinations
+            True if parameter is valid
         """
-        combinations = []
+        try:
+            # Check basic bounds
+            if param.min_value >= param.max_value:
+                self.logger.warning(f"Invalid bounds for {param.name}: min >= max")
+                return False
+            
+            # Check step size
+            if param.step <= 0:
+                self.logger.warning(f"Invalid step size for {param.name}: {param.step}")
+                return False
+            
+            # Check if step size is reasonable relative to range
+            range_size = param.max_value - param.min_value
+            if param.step > range_size:
+                self.logger.warning(f"Step size too large for {param.name}: {param.step} > {range_size}")
+                return False
+            
+            # Check for reasonable number of steps (avoid too many combinations)
+            num_steps = int(range_size / param.step) + 1
+            if num_steps > 100:
+                self.logger.warning(f"Too many steps for {param.name}: {num_steps} steps")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error validating numeric parameter {param.name}: {e}")
+            return False
+    
+    def _validate_categorical_parameter(self, param: OptimizationParameter) -> bool:
+        """
+        Validate categorical parameter.
         
-        # Generate strategy combinations
-        strategy_combinations = self._generate_strategy_combinations(config.strategy_configs)
+        Args:
+            param: Optimization parameter
+            
+        Returns:
+            True if parameter is valid
+        """
+        try:
+            if not param.categories:
+                self.logger.warning(f"No categories provided for categorical parameter {param.name}")
+                return False
+            
+            if len(param.categories) == 0:
+                self.logger.warning(f"Empty categories for parameter {param.name}")
+                return False
+            
+            if len(param.categories) > 20:
+                self.logger.warning(f"Too many categories for parameter {param.name}: {len(param.categories)}")
+                return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error validating categorical parameter {param.name}: {e}")
+            return False
+    
+    def _check_realistic_bounds(self, param: OptimizationParameter) -> bool:
+        """
+        Check if parameter bounds are realistic based on parameter name and type.
         
-        # Generate parameter combinations
-        parameter_combinations = self._generate_parameter_combinations(config.parameters_to_optimize)
-        
-        # Combine strategies and parameters (limit combinations to prevent explosion)
-        max_combinations = min(config.max_iterations, 1000)
-        strategy_count = min(len(strategy_combinations), max_combinations // 2)
-        parameter_count = min(len(parameter_combinations), max_combinations // strategy_count)
-        
-        for i, strategy_combo in enumerate(strategy_combinations[:strategy_count]):
-            for j, param_combo in enumerate(parameter_combinations[:parameter_count]):
-                combination = {
-                    'strategies': strategy_combo,
-                    'parameters': param_combo
-                }
-                combinations.append(combination)
+        Args:
+            param: Optimization parameter
+            
+        Returns:
+            True if bounds are realistic
+        """
+        try:
+            param_name_lower = param.name.lower()
+            
+            # Define realistic bounds for common parameters
+            realistic_bounds = {
+                # Technical indicators
+                'rsi_period': {'min': 5, 'max': 50, 'type': 'int'},
+                'rsi_oversold': {'min': 10, 'max': 40, 'type': 'int'},
+                'rsi_overbought': {'min': 60, 'max': 90, 'type': 'int'},
+                'macd_fast': {'min': 5, 'max': 20, 'type': 'int'},
+                'macd_slow': {'min': 15, 'max': 50, 'type': 'int'},
+                'macd_signal': {'min': 5, 'max': 20, 'type': 'int'},
+                'bollinger_period': {'min': 10, 'max': 50, 'type': 'int'},
+                'bollinger_std': {'min': 1.0, 'max': 3.0, 'type': 'float'},
                 
-                if len(combinations) >= max_combinations:
+                # Risk management
+                'stop_loss': {'min': 0.01, 'max': 0.20, 'type': 'float'},
+                'take_profit': {'min': 0.02, 'max': 0.50, 'type': 'float'},
+                'position_size': {'min': 0.01, 'max': 1.0, 'type': 'float'},
+                'max_positions': {'min': 1, 'max': 20, 'type': 'int'},
+                
+                # Time periods
+                'lookback_period': {'min': 5, 'max': 200, 'type': 'int'},
+                'holding_period': {'min': 1, 'max': 30, 'type': 'int'},
+                
+                # Thresholds
+                'threshold': {'min': 0.0, 'max': 1.0, 'type': 'float'},
+                'confidence': {'min': 0.1, 'max': 0.99, 'type': 'float'},
+                'sensitivity': {'min': 0.1, 'max': 2.0, 'type': 'float'}
+            }
+            
+            # Check if parameter name matches any known patterns
+            for pattern, bounds in realistic_bounds.items():
+                if pattern in param_name_lower:
+                    # Validate against realistic bounds
+                    if param.parameter_type == bounds['type']:
+                        if param.min_value < bounds['min']:
+                            self.logger.warning(f"Parameter {param.name} min value {param.min_value} below realistic minimum {bounds['min']}")
+                            return False
+                        if param.max_value > bounds['max']:
+                            self.logger.warning(f"Parameter {param.name} max value {param.max_value} above realistic maximum {bounds['max']}")
+                            return False
                     break
-            if len(combinations) >= max_combinations:
-                break
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error checking realistic bounds for {param.name}: {e}")
+            return True  # Default to allowing if check fails
+    
+    def _generate_parameter_range(self, param: OptimizationParameter) -> List[Union[float, int, str]]:
+        """
+        Generate parameter range with bounds checking.
         
-        return combinations
+        Args:
+            param: Optimization parameter
+            
+        Returns:
+            List of parameter values
+        """
+        try:
+            if param.parameter_type == 'categorical':
+                return param.categories or []
+            
+            # Generate range for numeric parameters
+            values = []
+            current_value = param.min_value
+            
+            while current_value <= param.max_value:
+                if param.parameter_type == 'int':
+                    values.append(int(current_value))
+                else:
+                    values.append(float(current_value))
+                
+                current_value += param.step
+            
+            # Ensure we don't exceed max_value due to floating point precision
+            if param.parameter_type == 'float' and param.max_value not in values:
+                values.append(float(param.max_value))
+            
+            return values
+            
+        except Exception as e:
+            self.logger.error(f"Error generating parameter range for {param.name}: {e}")
+            return []
+    
+    def _validate_parameter_combination(self, combination: Dict[str, Any], 
+                                      parameters: List[OptimizationParameter]) -> bool:
+        """
+        Validate a parameter combination for consistency and realism.
+        
+        Args:
+            combination: Parameter combination dictionary
+            parameters: List of optimization parameters
+            
+        Returns:
+            True if combination is valid
+        """
+        try:
+            # Check for required parameter dependencies
+            if not self._check_parameter_dependencies(combination):
+                return False
+            
+            # Check for parameter consistency
+            if not self._check_parameter_consistency(combination):
+                return False
+            
+            # Check for realistic parameter relationships
+            if not self._check_parameter_relationships(combination):
+                return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error validating parameter combination: {e}")
+            return False
+    
+    def _check_parameter_dependencies(self, combination: Dict[str, Any]) -> bool:
+        """
+        Check parameter dependencies (e.g., fast < slow for MACD).
+        
+        Args:
+            combination: Parameter combination
+            
+        Returns:
+            True if dependencies are satisfied
+        """
+        try:
+            # MACD dependencies
+            if 'macd_fast' in combination and 'macd_slow' in combination:
+                if combination['macd_fast'] >= combination['macd_slow']:
+                    return False
+            
+            # RSI dependencies
+            if 'rsi_oversold' in combination and 'rsi_overbought' in combination:
+                if combination['rsi_oversold'] >= combination['rsi_overbought']:
+                    return False
+            
+            # Time period dependencies
+            if 'lookback_period' in combination and 'holding_period' in combination:
+                if combination['holding_period'] > combination['lookback_period']:
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error checking parameter dependencies: {e}")
+            return True  # Default to allowing if check fails
+    
+    def _check_parameter_consistency(self, combination: Dict[str, Any]) -> bool:
+        """
+        Check parameter consistency (e.g., reasonable ratios).
+        
+        Args:
+            combination: Parameter combination
+            
+        Returns:
+            True if parameters are consistent
+        """
+        try:
+            # Check for extreme values that might cause issues
+            for param_name, value in combination.items():
+                if isinstance(value, (int, float)):
+                    # Check for zero or negative values where inappropriate
+                    if value <= 0 and param_name not in ['threshold', 'confidence']:
+                        return False
+                    
+                    # Check for extremely large values
+                    if value > 1000 and 'period' in param_name:
+                        return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error checking parameter consistency: {e}")
+            return True
+    
+    def _check_parameter_relationships(self, combination: Dict[str, Any]) -> bool:
+        """
+        Check relationships between parameters for realism.
+        
+        Args:
+            combination: Parameter combination
+            
+        Returns:
+            True if relationships are realistic
+        """
+        try:
+            # Check risk management parameters
+            if 'stop_loss' in combination and 'take_profit' in combination:
+                # Take profit should be greater than stop loss
+                if combination['take_profit'] <= combination['stop_loss']:
+                    return False
+                
+                # Risk-reward ratio should be reasonable
+                risk_reward_ratio = combination['take_profit'] / combination['stop_loss']
+                if risk_reward_ratio < 1.5 or risk_reward_ratio > 10:
+                    return False
+            
+            # Check position sizing
+            if 'position_size' in combination:
+                if combination['position_size'] > 1.0:
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error checking parameter relationships: {e}")
+            return True
     
     async def _test_strategy_combination(self, combination: List[StrategyConfig], 
                                        config: OptimizationConfig) -> Optional[OptimizationResult]:
@@ -595,57 +908,74 @@ class OptimizerAgent(BaseAgent):
     
     async def _test_parameter_combination(self, combination: Dict[str, Any], 
                                         config: OptimizationConfig) -> Optional[OptimizationResult]:
-        """Test a parameter combination.
+        """
+        Test a parameter combination with bounds checking.
         
         Args:
             combination: Parameter combination to test
             config: Optimization configuration
             
         Returns:
-            Optimization result or None if failed
+            Optimization result if successful, None otherwise
         """
         try:
-            # Create strategies with parameter combination
-            strategies = []
-            for strategy_config in config.strategy_configs:
-                if strategy_config.enabled:
-                    # Merge default parameters with optimization parameters
-                    parameters = strategy_config.parameters.copy()
-                    parameters.update(combination)
-                    
-                    strategy_class = self.strategy_registry.get(strategy_config.strategy_name)
-                    if strategy_class:
-                        strategy = strategy_class(**parameters)
-                        strategies.append(strategy)
-            
-            if not strategies:
+            # Validate combination before testing
+            if not self._validate_parameter_combination(combination, config.parameters_to_optimize):
+                self.logger.debug(f"Skipping invalid parameter combination: {combination}")
                 return None
             
-            # Run backtest for each symbol and time period
+            # Apply parameter bounds during testing
+            bounded_combination = self._apply_parameter_bounds(combination)
+            
+            # Run backtests for each symbol and time period
             all_results = []
+            
             for symbol in config.symbols:
                 for time_period in config.time_periods:
-                    result = await self._run_backtest(
-                        strategies, symbol, time_period, config
-                    )
-                    if result:
-                        all_results.append(result)
+                    try:
+                        # Create strategy instances with bounded parameters
+                        strategies = self._create_strategies_with_parameters(
+                            config.strategy_configs, bounded_combination
+                        )
+                        
+                        # Run backtest
+                        backtest_result = await self._run_backtest(
+                            strategies, symbol, time_period, config
+                        )
+                        
+                        if backtest_result:
+                            all_results.append(backtest_result)
+                            
+                    except Exception as e:
+                        self.logger.warning(f"Error testing {symbol} for time period {time_period}: {e}")
+                        continue
             
             if not all_results:
+                self.logger.warning("No valid backtest results for parameter combination")
                 return None
             
-            # Aggregate results
+            # Aggregate metrics
             aggregated_metrics = self._aggregate_metrics(all_results)
+            
+            # Check if results meet minimum requirements
+            if not self._meets_minimum_requirements(aggregated_metrics, config):
+                self.logger.debug(f"Parameter combination does not meet minimum requirements")
+                return None
+            
+            # Calculate optimization score
             optimization_score = self._calculate_optimization_score(
                 aggregated_metrics, config.target_metric
             )
             
-            return OptimizationResult(
-                parameter_combination=combination,
+            # Create result
+            result = OptimizationResult(
+                parameter_combination=bounded_combination,
                 performance_metrics=aggregated_metrics,
-                backtest_results={'individual_results': all_results},
+                backtest_results={'results': all_results},
                 optimization_score=optimization_score
             )
+            
+            return result
             
         except Exception as e:
             self.logger.error(f"Error testing parameter combination: {e}")

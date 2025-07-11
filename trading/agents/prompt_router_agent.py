@@ -353,14 +353,15 @@ class PromptRouterAgent(BaseAgent):
     
     def _classify_request(self, user_request: str) -> RequestType:
         """Classify the type of user request."""
-        user_request_lower = user_request.lower()
+        # Normalize prompt casing before classification
+        normalized = user_request.lower().strip()
         
         # Calculate scores for each request type
         type_scores = {}
         for request_type, patterns in self.classification_patterns.items():
             score = 0
             for pattern in patterns:
-                matches = re.findall(pattern, user_request_lower)
+                matches = re.findall(pattern, normalized)
                 score += len(matches)
             type_scores[request_type] = score
         
@@ -639,6 +640,50 @@ class PromptRouterAgent(BaseAgent):
             agent.last_used = datetime.now()
             
             self.logger.debug(f"Updated {agent_name} performance: success_rate={agent.success_rate:.3f}, avg_response_time={agent.avg_response_time:.2f}s")
+
+    def handle_prompt(self, prompt: str) -> AgentResult:
+        """
+        Handle a user prompt and return a response.
+        
+        Args:
+            prompt: User's input prompt
+            
+        Returns:
+            AgentResult: Response with message and data
+        """
+        try:
+            # Route the request
+            decision = self.route_request(prompt)
+            
+            # Create a response message based on the routing decision
+            message = f"Request routed to {decision.primary_agent} with {decision.confidence:.1%} confidence. "
+            message += f"Expected response time: {decision.expected_response_time:.1f}s. "
+            message += f"Reasoning: {decision.reasoning}"
+            
+            return AgentResult(
+                success=True,
+                message=message,
+                data={
+                    'routing_decision': decision,
+                    'primary_agent': decision.primary_agent,
+                    'fallback_agents': decision.fallback_agents,
+                    'confidence': decision.confidence,
+                    'expected_response_time': decision.expected_response_time
+                },
+                metadata={
+                    'request_type': decision.request_type.value,
+                    'reasoning': decision.reasoning,
+                    'priority': decision.priority
+                }
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Error handling prompt: {e}")
+            return AgentResult(
+                success=False,
+                error_message=f"Error processing prompt: {str(e)}",
+                error_type="PromptProcessingError"
+            )
 
 # Convenience function for creating router agent
 def create_prompt_router() -> PromptRouterAgent:

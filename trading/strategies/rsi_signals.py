@@ -1,4 +1,6 @@
-"""RSI strategy signal generator."""
+"""RSI strategy signal generator.
+Enhanced with proper index alignment and empty slice validation.
+"""
 
 import json
 import logging
@@ -21,6 +23,107 @@ from .rsi_utils import (
 # Configure logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+def validate_dataframe_index(df: pd.DataFrame) -> bool:
+    """Validate DataFrame index for proper alignment.
+    
+    Args:
+        df: DataFrame to validate
+        
+    Returns:
+        True if index is valid, False otherwise
+    """
+    if df is None or df.empty:
+        logger.error("DataFrame is None or empty")
+        return False
+    
+    if not isinstance(df.index, pd.DatetimeIndex):
+        logger.warning("DataFrame index is not DatetimeIndex, converting...")
+        try:
+            df.index = pd.to_datetime(df.index)
+        except Exception as e:
+            logger.error(f"Failed to convert index to DatetimeIndex: {e}")
+            return False
+    
+    # Check for duplicate indices
+    if df.index.duplicated().any():
+        logger.warning("Duplicate indices found, keeping first occurrence")
+        df = df[~df.index.duplicated(keep='first')]
+    
+    # Check for monotonic index
+    if not df.index.is_monotonic_increasing:
+        logger.warning("Index is not monotonic, sorting...")
+        df.sort_index(inplace=True)
+    
+    return True
+
+def align_signals_with_index(signals: pd.DataFrame, original_index: pd.DatetimeIndex) -> pd.DataFrame:
+    """Ensure signals DataFrame aligns with original index after transformations.
+    
+    Args:
+        signals: DataFrame with signals
+        original_index: Original DataFrame index
+        
+    Returns:
+        Aligned signals DataFrame
+    """
+    try:
+        # Create a template DataFrame with the original index
+        template = pd.DataFrame(index=original_index)
+        
+        # Reindex signals to match original index
+        aligned_signals = signals.reindex(original_index)
+        
+        # Fill NaN values appropriately
+        # For numeric columns, forward fill then backward fill
+        numeric_columns = aligned_signals.select_dtypes(include=[np.number]).columns
+        for col in numeric_columns:
+            aligned_signals[col] = aligned_signals[col].fillna(method='ffill').fillna(method='bfill').fillna(0)
+        
+        # For non-numeric columns, fill with appropriate defaults
+        non_numeric_columns = aligned_signals.select_dtypes(exclude=[np.number]).columns
+        for col in non_numeric_columns:
+            if col == 'signal':
+                aligned_signals[col] = aligned_signals[col].fillna(0)
+            else:
+                aligned_signals[col] = aligned_signals[col].fillna('')
+        
+        logger.debug(f"Aligned signals from {len(signals)} to {len(aligned_signals)} rows")
+        return aligned_signals
+        
+    except Exception as e:
+        logger.error(f"Error aligning signals with index: {e}")
+        # Return original signals if alignment fails
+        return signals
+
+def validate_empty_slices(df: pd.DataFrame, period: int) -> bool:
+    """Validate that data has sufficient length for the given period.
+    
+    Args:
+        df: DataFrame to validate
+        period: Period for calculations
+        
+    Returns:
+        True if data is sufficient, False otherwise
+    """
+    if df is None or df.empty:
+        logger.error("DataFrame is None or empty")
+        return False
+    
+    if len(df) < period:
+        logger.error(f"Insufficient data: {len(df)} rows, need at least {period} rows")
+        return False
+    
+    # Check for sufficient non-null values
+    required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+    for col in required_columns:
+        if col in df.columns:
+            non_null_count = df[col].notna().sum()
+            if non_null_count < period:
+                logger.error(f"Insufficient non-null values in {col}: {non_null_count}, need at least {period}")
+                return False
+    
+    return True
 
 def load_optimized_settings(ticker: str) -> Dict[str, Any]:
     """Load optimized RSI settings for a ticker if available.
@@ -50,6 +153,7 @@ def generate_rsi_signals(
     streamlit_session: dict = None
 ) -> pd.DataFrame:
     """Generate RSI trading signals with user-configurable thresholds.
+    Enhanced with index alignment and empty slice validation.
     
     Args:
         df: Price data DataFrame with OHLCV columns
@@ -63,6 +167,17 @@ def generate_rsi_signals(
         DataFrame with RSI signals and returns
     """
     try:
+        # Store original index for alignment
+        original_index = df.index.copy()
+        
+        # Validate DataFrame index
+        if not validate_dataframe_index(df):
+            raise ValueError("Invalid DataFrame index")
+        
+        # Validate against empty slices
+        if not validate_empty_slices(df, period):
+            raise ValueError(f"Insufficient data for RSI period {period}")
+        
         # Validate required columns
         if 'Close' not in df.columns:
             raise ValueError("Missing 'Close' column in DataFrame")
@@ -101,6 +216,16 @@ def generate_rsi_signals(
             sell_threshold=sell_threshold
         )
         
+        # Ensure signals align with original index
+        result_df = align_signals_with_index(result_df, original_index)
+        
+        # Validate final result
+        if result_df is None or result_df.empty:
+            raise ValueError("Generated signals DataFrame is empty")
+        
+        if len(result_df) != len(original_index):
+            logger.warning(f"Signal length mismatch: {len(result_df)} vs {len(original_index)}")
+        
         return result_df
         
     except Exception as e:
@@ -110,6 +235,7 @@ def generate_rsi_signals(
 
 def generate_signals(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
     """Generate trading signals using RSI strategy.
+    Enhanced with proper index alignment and validation.
     
     This function implements the shared strategy interface that returns a DataFrame
     with signal columns for consistent usage across the system.
@@ -141,6 +267,10 @@ def generate_signals(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         buy_threshold = kwargs.get('buy_threshold', 30)
         sell_threshold = kwargs.get('sell_threshold', 70)
         
+        # Validate input data
+        if df is None or df.empty:
+            raise ValueError("Input DataFrame is None or empty")
+        
         # Generate RSI signals
         result_df = generate_rsi_signals(
             df, 
@@ -166,6 +296,11 @@ def generate_signals(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
             'ticker': ticker
         })
         
+        # Final validation
+        if result_df.index.duplicated().any():
+            logger.warning("Duplicate indices in final result, removing duplicates")
+            result_df = result_df[~result_df.index.duplicated(keep='first')]
+        
         logger.info(f"Successfully generated RSI signals for {len(result_df)} data points")
         return result_df
         
@@ -176,6 +311,7 @@ def generate_signals(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
 
 def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
     """Calculate RSI using a fallback implementation when pandas_ta is not available.
+    Enhanced with index alignment and validation.
     
     Args:
         prices: Price series
@@ -185,6 +321,16 @@ def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
         RSI values
     """
     try:
+        # Validate input
+        if prices is None or prices.empty:
+            raise ValueError("Price series is None or empty")
+        
+        if len(prices) < period:
+            raise ValueError(f"Insufficient data: {len(prices)} points, need at least {period}")
+        
+        # Store original index
+        original_index = prices.index.copy()
+        
         # Calculate price changes
         delta = prices.diff()
         
@@ -200,8 +346,12 @@ def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
         rs = avg_gains / avg_losses
         rsi = 100 - (100 / (1 + rs))
         
+        # Ensure alignment with original index
+        rsi = rsi.reindex(original_index)
+        
         return rsi
         
     except Exception as e:
-        logger.error(f"Error calculating RSI fallback: {e}")
-        return pd.Series([np.nan] * len(prices), index=prices.index) 
+        logger.error(f"Error in RSI fallback calculation: {e}")
+        # Return NaN series with same index
+        return pd.Series(index=prices.index, dtype=float) 

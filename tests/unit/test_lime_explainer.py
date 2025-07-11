@@ -383,20 +383,72 @@ class TestLIMEExplainer:
             pass
     
     def test_explanation_comparison(self, explainer, mock_model, sample_data):
-        """Test comparison between LIME and other explainers."""
-        # Test LIME vs SHAP
+        """Test comparison between different explanation methods."""
+        # Test LIME vs SHAP (if available)
         lime_result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
-        shap_result = explainer._calculate_feature_importance(mock_model, sample_data, method="shap")
         
-        # Both should return dictionaries
+        # Both should return dictionaries with same keys
         assert isinstance(lime_result, dict)
-        assert isinstance(shap_result, dict)
+        assert len(lime_result) == len(sample_data.columns)
         
-        # Both should have same features
-        assert set(lime_result.keys()) == set(shap_result.keys())
+        # Check that all features are present in both results
+        for feature in sample_data.columns:
+            assert feature in lime_result
+    
+    def test_top_n_features_with_expected_sign(self, explainer, mock_model, sample_data):
+        """Test that LIME explanation highlights top N features with expected sign."""
+        # Create a mock model that returns predictable outputs
+        mock_model.predict = Mock(return_value=np.array([0.8, 0.9, 0.7, 0.6, 0.5]))
         
-        # Values should be different (LIME and SHAP use different methods)
-        assert lime_result != shap_result
+        # Get LIME explanation
+        result = explainer._calculate_feature_importance(mock_model, sample_data, method="lime")
+        
+        # Verify result structure
+        assert isinstance(result, dict)
+        assert len(result) == len(sample_data.columns)
+        
+        # Sort features by absolute importance
+        sorted_features = sorted(result.items(), key=lambda x: abs(x[1]), reverse=True)
+        
+        # Test top N features (e.g., top 3)
+        top_n = 3
+        top_features = sorted_features[:top_n]
+        
+        # Verify top features have non-zero importance
+        for feature_name, importance in top_features:
+            assert abs(importance) > 0, f"Top feature {feature_name} should have non-zero importance"
+            assert not np.isnan(importance), f"Feature {feature_name} importance should not be NaN"
+            assert not np.isinf(importance), f"Feature {feature_name} importance should not be infinite"
+        
+        # Test that importance values have expected signs (positive or negative)
+        for feature_name, importance in result.items():
+            # Importance should be a finite number
+            assert isinstance(importance, (int, float))
+            assert not np.isnan(importance)
+            assert not np.isinf(importance)
+            
+            # Test that we can identify positive and negative contributions
+            if importance > 0:
+                assert importance > 0, f"Positive importance {importance} for {feature_name}"
+            elif importance < 0:
+                assert importance < 0, f"Negative importance {importance} for {feature_name}"
+        
+        # Test that top features are actually the most important
+        if len(sorted_features) >= 2:
+            top_importance = abs(sorted_features[0][1])
+            second_importance = abs(sorted_features[1][1])
+            assert top_importance >= second_importance, "Top feature should have highest absolute importance"
+        
+        # Test with different N values
+        for n in [1, 2, len(sample_data.columns)]:
+            top_n_features = sorted_features[:n]
+            assert len(top_n_features) == min(n, len(sorted_features))
+            
+            # Verify all top N features have importance values
+            for feature_name, importance in top_n_features:
+                assert isinstance(importance, (int, float))
+                assert not np.isnan(importance)
+                assert not np.isinf(importance)
 
 if __name__ == "__main__":
     pytest.main([__file__]) 

@@ -10,6 +10,7 @@ import asyncio
 import json
 import signal
 import sys
+import argparse
 from datetime import datetime
 from typing import Dict, Any
 import logging
@@ -205,14 +206,190 @@ async def demo_agent_triggering():
     )
     logger.info(f"   Price move trigger: {should_trigger}")
 
+async def demo_simulated_trading():
+    """Demonstrate simulated trading with comprehensive logging."""
+    logger.info(f"\n💰 Simulated Trading Demo")
+    logger.info("=" * 40)
+    
+    import os
+    from pathlib import Path
+    
+    # Create logs directory if it doesn't exist
+    logs_dir = Path("trading/live/logs")
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Setup file logging for trade results
+    trade_log_file = logs_dir / "simulated_trades.log"
+    file_handler = logging.FileHandler(trade_log_file)
+    file_handler.setLevel(logging.INFO)
+    file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(file_formatter)
+    
+    # Add file handler to logger
+    trade_logger = logging.getLogger('simulated_trades')
+    trade_logger.addHandler(file_handler)
+    trade_logger.setLevel(logging.INFO)
+    
+    # Create runner
+    runner = create_live_market_runner()
+    
+    # Simulate trade execution
+    simulated_trades = [
+        {
+            'timestamp': datetime.utcnow(),
+            'symbol': 'AAPL',
+            'action': 'BUY',
+            'quantity': 100,
+            'price': 150.25,
+            'total_value': 15025.00,
+            'strategy': 'RSI_Strategy',
+            'confidence': 0.85,
+            'reason': 'RSI oversold condition detected'
+        },
+        {
+            'timestamp': datetime.utcnow(),
+            'symbol': 'TSLA',
+            'action': 'SELL',
+            'quantity': 50,
+            'price': 245.75,
+            'total_value': 12287.50,
+            'strategy': 'MACD_Strategy',
+            'confidence': 0.72,
+            'reason': 'MACD bearish crossover'
+        },
+        {
+            'timestamp': datetime.utcnow(),
+            'symbol': 'NVDA',
+            'action': 'BUY',
+            'quantity': 75,
+            'price': 485.50,
+            'total_value': 36412.50,
+            'strategy': 'Bollinger_Strategy',
+            'confidence': 0.91,
+            'reason': 'Price at lower Bollinger band'
+        }
+    ]
+    
+    # Log trades to both file and stdout
+    logger.info(f"📊 Simulated Trade Results:")
+    logger.info(f"   Log file: {trade_log_file}")
+    logger.info(f"   Total trades: {len(simulated_trades)}")
+    
+    total_buy_value = 0
+    total_sell_value = 0
+    
+    for i, trade in enumerate(simulated_trades, 1):
+        # Log to stdout
+        logger.info(f"\n💰 Trade #{i}:")
+        logger.info(f"   Symbol: {trade['symbol']}")
+        logger.info(f"   Action: {trade['action']}")
+        logger.info(f"   Quantity: {trade['quantity']}")
+        logger.info(f"   Price: ${trade['price']:.2f}")
+        logger.info(f"   Total Value: ${trade['total_value']:,.2f}")
+        logger.info(f"   Strategy: {trade['strategy']}")
+        logger.info(f"   Confidence: {trade['confidence']:.1%}")
+        logger.info(f"   Reason: {trade['reason']}")
+        
+        # Log to file
+        trade_logger.info(f"TRADE_EXECUTED: {trade['symbol']} {trade['action']} "
+                         f"{trade['quantity']} @ ${trade['price']:.2f} "
+                         f"Total: ${trade['total_value']:,.2f} "
+                         f"Strategy: {trade['strategy']} "
+                         f"Confidence: {trade['confidence']:.1%}")
+        
+        # Track totals
+        if trade['action'] == 'BUY':
+            total_buy_value += trade['total_value']
+        else:
+            total_sell_value += trade['total_value']
+    
+    # Calculate and log summary statistics
+    logger.info(f"\n📈 Trading Summary:")
+    logger.info(f"   Total Buy Value: ${total_buy_value:,.2f}")
+    logger.info(f"   Total Sell Value: ${total_sell_value:,.2f}")
+    logger.info(f"   Net Position: ${total_buy_value - total_sell_value:,.2f}")
+    
+    # Log summary to file
+    trade_logger.info(f"TRADING_SUMMARY: Buy=${total_buy_value:,.2f} "
+                     f"Sell=${total_sell_value:,.2f} "
+                     f"Net=${total_buy_value - total_sell_value:,.2f}")
+    
+    # Simulate trade performance tracking
+    logger.info(f"\n📊 Performance Tracking:")
+    
+    # Simulate price changes and calculate P&L
+    price_changes = {
+        'AAPL': 0.025,  # 2.5% increase
+        'TSLA': -0.015,  # 1.5% decrease
+        'NVDA': 0.035   # 3.5% increase
+    }
+    
+    total_pnl = 0
+    for trade in simulated_trades:
+        symbol = trade['symbol']
+        if symbol in price_changes:
+            price_change = price_changes[symbol]
+            if trade['action'] == 'BUY':
+                pnl = trade['total_value'] * price_change
+            else:  # SELL
+                pnl = trade['total_value'] * (-price_change)
+            
+            total_pnl += pnl
+            
+            logger.info(f"   {symbol} {trade['action']}: "
+                       f"${pnl:+,.2f} ({price_change:+.1%})")
+            
+            # Log P&L to file
+            trade_logger.info(f"P&L_UPDATE: {symbol} {trade['action']} "
+                            f"P&L=${pnl:+,.2f} Change={price_change:+.1%}")
+    
+    logger.info(f"   Total P&L: ${total_pnl:+,.2f}")
+    trade_logger.info(f"TOTAL_P&L: ${total_pnl:+,.2f}")
+    
+    # Log trade execution metrics
+    execution_metrics = {
+        'total_trades': len(simulated_trades),
+        'buy_trades': len([t for t in simulated_trades if t['action'] == 'BUY']),
+        'sell_trades': len([t for t in simulated_trades if t['action'] == 'SELL']),
+        'avg_confidence': sum(t['confidence'] for t in simulated_trades) / len(simulated_trades),
+        'total_volume': sum(t['quantity'] for t in simulated_trades),
+        'total_value': sum(t['total_value'] for t in simulated_trades)
+    }
+    
+    logger.info(f"\n📋 Execution Metrics:")
+    for metric, value in execution_metrics.items():
+        if isinstance(value, float):
+            logger.info(f"   {metric.replace('_', ' ').title()}: {value:.2f}")
+        else:
+            logger.info(f"   {metric.replace('_', ' ').title()}: {value}")
+    
+    # Log metrics to file
+    trade_logger.info(f"EXECUTION_METRICS: {json.dumps(execution_metrics)}")
+    
+    logger.info(f"\n✅ Simulated trading demo completed!")
+    logger.info(f"   Check {trade_log_file} for detailed trade logs")
+
 async def main():
     """Main demo function."""
+    # Add argparse to select agent from CLI
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--agent", type=str, help="Agent name to run")
+    
+    args = parser.parse_args()
+    
     logger.info("🎯 Live Market Runner Demo Suite")
     logger.info("=" * 60)
+    
+    if args.agent:
+        logger.info(f"🤖 Running agent: {args.agent}")
+        # Here you would add logic to run the specific agent
+        # For now, just log the agent name
+        logger.info(f"Agent '{args.agent}' selected for execution")
     
     # Run individual demos
     await demo_forecast_tracking()
     await demo_agent_triggering()
+    await demo_simulated_trading()
     
     # Run main demo (commented out to avoid long running)
     # await demo_live_market_runner()

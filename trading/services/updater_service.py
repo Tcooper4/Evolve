@@ -11,6 +11,8 @@ import os
 from typing import Dict, Any, Optional
 import json
 from pathlib import Path
+import traceback
+from datetime import datetime
 
 # Add the trading directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -123,10 +125,14 @@ class UpdaterService(BaseService):
             }
             
         except Exception as e:
-            logger.error(f"Error retraining model: {e}")
+            tb = traceback.format_exc()
+            ts = datetime.utcnow().isoformat() + 'Z'
+            logger.error(f"Error retraining model: {e}\nTraceback:\n{tb}\nTimestamp: {ts}")
             return {
                 'type': 'error',
                 'error': str(e),
+                'traceback': tb,
+                'timestamp': ts,
                 'status': 'failed'
             }
     

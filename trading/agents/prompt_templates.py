@@ -834,4 +834,45 @@ def get_legacy_template(name: str) -> str:
     if name in LEGACY_TEMPLATES:
         return PROMPT_TEMPLATES[LEGACY_TEMPLATES[name]]
     else:
-        return get_template(name) 
+        return get_template(name)
+
+# Add support for multilingual templates
+TEMPLATES = {
+    'en': PROMPT_TEMPLATES,
+    'es': {
+        "forecast": "¿Qué acciones deberían comprarse hoy?",
+        "analysis": "Analiza el rendimiento de {symbol}",
+        "strategy": "Genera una estrategia de trading para {symbol}",
+        "optimization": "Optimiza los parámetros de la estrategia",
+        "portfolio": "Gestiona el portafolio de inversiones",
+        "risk": "Evalúa el riesgo de la inversión",
+        "backtest": "Ejecuta un backtest de la estrategia",
+        "research": "Investiga las últimas tendencias del mercado",
+        "sentiment": "Analiza el sentimiento del mercado",
+        "system": "Verifica el estado del sistema"
+    },
+    'fr': {
+        "forecast": "Quelles actions devraient être achetées aujourd'hui?",
+        "analysis": "Analyser la performance de {symbol}",
+        "strategy": "Générer une stratégie de trading pour {symbol}",
+        "optimization": "Optimiser les paramètres de la stratégie",
+        "portfolio": "Gérer le portefeuille d'investissement",
+        "risk": "Évaluer le risque de l'investissement",
+        "backtest": "Exécuter un backtest de la stratégie",
+        "research": "Rechercher les dernières tendances du marché",
+        "sentiment": "Analyser le sentiment du marché",
+        "system": "Vérifier l'état du système"
+    },
+    'de': {
+        "forecast": "Welche Aktien sollten heute gekauft werden?",
+        "analysis": "Analysieren Sie die Performance von {symbol}",
+        "strategy": "Generieren Sie eine Trading-Strategie für {symbol}",
+        "optimization": "Optimieren Sie die Strategieparameter",
+        "portfolio": "Verwalten Sie das Anlageportfolio",
+        "risk": "Bewerten Sie das Anlagerisiko",
+        "backtest": "Führen Sie einen Backtest der Strategie durch",
+        "research": "Erforschen Sie die neuesten Markttrends",
+        "sentiment": "Analysieren Sie die Marktstimmung",
+        "system": "Überprüfen Sie den Systemstatus"
+    }
+} 

@@ -377,9 +377,389 @@ class PerformanceMemory:
             }
 
     def get_all_tickers(self) -> List[str]:
-        """Get list of all tickers with stored metrics.
+        """Get list of all tickers in the performance memory.
         
         Returns:
             List of ticker symbols
         """
-        return list(self.load().keys())
+        try:
+            data = self.load()
+            if data['success']:
+                return list(data['result'].keys())
+            else:
+                logger.error(f"Failed to load data: {data['error']}")
+                return []
+        except Exception as e:
+            logger.error(f"Error getting tickers: {e}")
+            return []
+
+    def detect_anomalies(self, ticker: str, model: str, current_metrics: Dict[str, float], 
+                        threshold_std: float = 2.0) -> Dict[str, Any]:
+        """Detect anomalies by comparing current metrics to historical performance.
+        
+        Args:
+            ticker: Stock ticker symbol
+            model: Model name
+            current_metrics: Current performance metrics
+            threshold_std: Number of standard deviations for anomaly detection
+            
+        Returns:
+            Dictionary containing anomaly detection results
+        """
+        try:
+            data = self.load()
+            if not data['success']:
+                return {
+                    'success': False,
+                    'error': 'Failed to load performance data',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            ticker_data = data['result'].get(ticker, {})
+            model_data = ticker_data.get(model, {})
+            
+            if not model_data:
+                return {
+                    'success': False,
+                    'error': f'No historical data found for {ticker}/{model}',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            anomalies = {}
+            historical_stats = {}
+            
+            for metric_name, current_value in current_metrics.items():
+                if metric_name in ['timestamp', 'last_updated']:
+                    continue
+                
+                # Get historical values for this metric
+                historical_values = []
+                for record in model_data.get('history', []):
+                    if metric_name in record.get('metrics', {}):
+                        historical_values.append(float(record['metrics'][metric_name]))
+                
+                if len(historical_values) < 5:
+                    # Need at least 5 data points for statistical analysis
+                    continue
+                
+                # Calculate statistics
+                mean_val = sum(historical_values) / len(historical_values)
+                variance = sum((x - mean_val) ** 2 for x in historical_values) / len(historical_values)
+                std_dev = variance ** 0.5
+                
+                historical_stats[metric_name] = {
+                    'mean': mean_val,
+                    'std_dev': std_dev,
+                    'min': min(historical_values),
+                    'max': max(historical_values),
+                    'count': len(historical_values)
+                }
+                
+                # Check for anomalies
+                if std_dev > 0:
+                    z_score = abs(current_value - mean_val) / std_dev
+                    
+                    if z_score > threshold_std:
+                        anomaly_type = 'high' if current_value > mean_val else 'low'
+                        
+                        # Determine if anomaly is good or bad based on metric type
+                        is_positive_metric = metric_name in ['r2', 'accuracy', 'sharpe_ratio', 'total_return', 'win_rate']
+                        
+                        if is_positive_metric:
+                            is_good_anomaly = current_value > mean_val
+                        else:
+                            is_good_anomaly = current_value < mean_val
+                        
+                        anomalies[metric_name] = {
+                            'current_value': current_value,
+                            'historical_mean': mean_val,
+                            'z_score': z_score,
+                            'anomaly_type': anomaly_type,
+                            'is_good_anomaly': is_good_anomaly,
+                            'percentile': self._calculate_percentile(current_value, historical_values),
+                            'severity': 'high' if z_score > 3.0 else 'medium' if z_score > 2.5 else 'low'
+                        }
+            
+            return {
+                'success': True,
+                'ticker': ticker,
+                'model': model,
+                'anomalies': anomalies,
+                'historical_stats': historical_stats,
+                'threshold_std': threshold_std,
+                'anomaly_count': len(anomalies),
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error detecting anomalies: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
+
+    def _calculate_percentile(self, value: float, historical_values: List[float]) -> float:
+        """Calculate percentile of current value in historical distribution.
+        
+        Args:
+            value: Current value
+            historical_values: List of historical values
+            
+        Returns:
+            Percentile (0-100)
+        """
+        try:
+            if not historical_values:
+                return 50.0
+            
+            sorted_values = sorted(historical_values)
+            position = 0
+            
+            for i, hist_val in enumerate(sorted_values):
+                if value <= hist_val:
+                    position = i
+                    break
+                position = i + 1
+            
+            percentile = (position / len(sorted_values)) * 100
+            return min(100.0, max(0.0, percentile))
+            
+        except Exception as e:
+            logger.error(f"Error calculating percentile: {e}")
+            return 50.0
+
+    def get_performance_trends(self, ticker: str, model: str, 
+                              metric: str, window_size: int = 10) -> Dict[str, Any]:
+        """Get performance trends for a specific metric.
+        
+        Args:
+            ticker: Stock ticker symbol
+            model: Model name
+            metric: Metric name to analyze
+            window_size: Number of recent records to analyze
+            
+        Returns:
+            Dictionary containing trend analysis
+        """
+        try:
+            data = self.load()
+            if not data['success']:
+                return {
+                    'success': False,
+                    'error': 'Failed to load performance data',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            ticker_data = data['result'].get(ticker, {})
+            model_data = ticker_data.get(model, {})
+            
+            if not model_data:
+                return {
+                    'success': False,
+                    'error': f'No data found for {ticker}/{model}',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            # Get recent history
+            history = model_data.get('history', [])
+            if len(history) < window_size:
+                window_size = len(history)
+            
+            recent_history = history[-window_size:]
+            
+            # Extract metric values
+            metric_values = []
+            timestamps = []
+            
+            for record in recent_history:
+                if metric in record.get('metrics', {}):
+                    metric_values.append(float(record['metrics'][metric]))
+                    timestamps.append(record.get('timestamp', ''))
+            
+            if len(metric_values) < 2:
+                return {
+                    'success': False,
+                    'error': f'Insufficient data for trend analysis of {metric}',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            # Calculate trend
+            x = list(range(len(metric_values)))
+            slope, intercept = self._linear_regression(x, metric_values)
+            
+            # Calculate trend strength (R-squared)
+            y_pred = [slope * xi + intercept for xi in x]
+            ss_res = sum((y - y_pred[i]) ** 2 for i, y in enumerate(metric_values))
+            ss_tot = sum((y - sum(metric_values) / len(metric_values)) ** 2 for y in metric_values)
+            r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+            
+            # Determine trend direction
+            if slope > 0.001:
+                trend_direction = 'improving'
+            elif slope < -0.001:
+                trend_direction = 'declining'
+            else:
+                trend_direction = 'stable'
+            
+            return {
+                'success': True,
+                'ticker': ticker,
+                'model': model,
+                'metric': metric,
+                'trend_direction': trend_direction,
+                'slope': slope,
+                'trend_strength': r_squared,
+                'current_value': metric_values[-1],
+                'average_value': sum(metric_values) / len(metric_values),
+                'volatility': self._calculate_volatility(metric_values),
+                'data_points': len(metric_values),
+                'window_size': window_size,
+                'timestamps': timestamps,
+                'values': metric_values,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting performance trends: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
+
+    def _linear_regression(self, x: List[float], y: List[float]) -> tuple[float, float]:
+        """Perform simple linear regression.
+        
+        Args:
+            x: X values
+            y: Y values
+            
+        Returns:
+            Tuple of (slope, intercept)
+        """
+        try:
+            n = len(x)
+            if n != len(y) or n < 2:
+                return 0.0, 0.0
+            
+            sum_x = sum(x)
+            sum_y = sum(y)
+            sum_xy = sum(x[i] * y[i] for i in range(n))
+            sum_x2 = sum(x[i] ** 2 for i in range(n))
+            
+            slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x ** 2)
+            intercept = (sum_y - slope * sum_x) / n
+            
+            return slope, intercept
+            
+        except Exception as e:
+            logger.error(f"Error in linear regression: {e}")
+            return 0.0, 0.0
+
+    def _calculate_volatility(self, values: List[float]) -> float:
+        """Calculate volatility (standard deviation) of values.
+        
+        Args:
+            values: List of values
+            
+        Returns:
+            Volatility measure
+        """
+        try:
+            if len(values) < 2:
+                return 0.0
+            
+            mean_val = sum(values) / len(values)
+            variance = sum((x - mean_val) ** 2 for x in values) / len(values)
+            return variance ** 0.5
+            
+        except Exception as e:
+            logger.error(f"Error calculating volatility: {e}")
+            return 0.0
+
+    def get_performance_summary(self, ticker: str) -> Dict[str, Any]:
+        """Get comprehensive performance summary for a ticker.
+        
+        Args:
+            ticker: Stock ticker symbol
+            
+        Returns:
+            Dictionary containing performance summary
+        """
+        try:
+            data = self.load()
+            if not data['success']:
+                return {
+                    'success': False,
+                    'error': 'Failed to load performance data',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            ticker_data = data['result'].get(ticker, {})
+            
+            if not ticker_data:
+                return {
+                    'success': False,
+                    'error': f'No data found for {ticker}',
+                    'timestamp': datetime.now().isoformat()
+                }
+            
+            summary = {
+                'ticker': ticker,
+                'models': list(ticker_data.keys()),
+                'total_models': len(ticker_data),
+                'best_models': {},
+                'recent_anomalies': [],
+                'performance_trends': {}
+            }
+            
+            # Find best model for each metric
+            metrics = ['mse', 'mae', 'r2', 'accuracy', 'sharpe_ratio', 'total_return']
+            
+            for metric in metrics:
+                best_model = self.get_best_model(ticker, metric)
+                if best_model['success']:
+                    summary['best_models'][metric] = best_model['result']
+            
+            # Get recent anomalies (last 7 days)
+            cutoff_date = datetime.now() - timedelta(days=7)
+            
+            for model_name, model_data in ticker_data.items():
+                # Check for recent anomalies
+                if 'history' in model_data:
+                    recent_records = [
+                        record for record in model_data['history']
+                        if datetime.fromisoformat(record.get('timestamp', '')) > cutoff_date
+                    ]
+                    
+                    if recent_records:
+                        latest_metrics = recent_records[-1].get('metrics', {})
+                        anomaly_result = self.detect_anomalies(ticker, model_name, latest_metrics)
+                        
+                        if anomaly_result['success'] and anomaly_result['anomalies']:
+                            summary['recent_anomalies'].append({
+                                'model': model_name,
+                                'anomalies': anomaly_result['anomalies']
+                            })
+                
+                # Get performance trends
+                for metric in metrics:
+                    trend_result = self.get_performance_trends(ticker, model_name, metric)
+                    if trend_result['success']:
+                        if model_name not in summary['performance_trends']:
+                            summary['performance_trends'][model_name] = {}
+                        summary['performance_trends'][model_name][metric] = trend_result
+            
+            summary['timestamp'] = datetime.now().isoformat()
+            summary['success'] = True
+            
+            return summary
+            
+        except Exception as e:
+            logger.error(f"Error getting performance summary: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }

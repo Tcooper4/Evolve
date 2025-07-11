@@ -464,6 +464,120 @@ class TestAgentLeaderboard:
         assert len(active) > 0  # Some should be active
         assert len(active) + len(deprecated) == 100
 
+    def test_leaderboard_re_ranking_after_evaluation(self):
+        """Test that leaderboard re-ranks after each evaluation."""
+        print("\n🏆 Testing Leaderboard Re-ranking After Each Evaluation")
+        
+        # Add multiple agents with different performance levels
+        agents_data = [
+            {"name": "agent_a", "sharpe": 1.0, "drawdown": 0.15, "win_rate": 0.60, "return": 0.20},
+            {"name": "agent_b", "sharpe": 1.5, "drawdown": 0.10, "win_rate": 0.65, "return": 0.25},
+            {"name": "agent_c", "sharpe": 0.8, "drawdown": 0.20, "win_rate": 0.55, "return": 0.15},
+            {"name": "agent_d", "sharpe": 2.0, "drawdown": 0.08, "win_rate": 0.70, "return": 0.30},
+        ]
+        
+        # Track rankings after each update
+        rankings_history = []
+        
+        for i, agent_data in enumerate(agents_data):
+            print(f"\n📊 Adding agent {agent_data['name']} (iteration {i+1})")
+            
+            # Update performance
+            self.leaderboard.update_performance(
+                agent_name=agent_data["name"],
+                sharpe_ratio=agent_data["sharpe"],
+                max_drawdown=agent_data["drawdown"],
+                win_rate=agent_data["win_rate"],
+                total_return=agent_data["return"]
+            )
+            
+            # Get current ranking
+            current_ranking = self.leaderboard.get_leaderboard(sort_by="sharpe_ratio")
+            current_ranks = [perf.agent_name for perf in current_ranking]
+            
+            print(f"  Current ranking: {current_ranks}")
+            rankings_history.append(current_ranks.copy())
+            
+            # Verify ranking changes after each addition
+            if i > 0:
+                previous_ranks = rankings_history[i-1]
+                if current_ranks != previous_ranks:
+                    print(f"  ✅ Ranking changed: {previous_ranks} -> {current_ranks}")
+                else:
+                    print(f"  ⚠️ Ranking unchanged: {current_ranks}")
+                
+                # Assert that rankings are properly ordered by Sharpe ratio
+                current_sharpes = [self.leaderboard.leaderboard[name].sharpe_ratio for name in current_ranks]
+                expected_sharpes = sorted(current_sharpes, reverse=True)
+                self.assertEqual(current_sharpes, expected_sharpes, 
+                               f"Rankings not properly ordered by Sharpe ratio: {current_sharpes}")
+        
+        # Test ranking by different metrics
+        print(f"\n📈 Testing different ranking metrics:")
+        
+        # Test ranking by total return
+        return_ranking = self.leaderboard.get_leaderboard(sort_by="total_return")
+        return_ranks = [perf.agent_name for perf in return_ranking]
+        return_values = [self.leaderboard.leaderboard[name].total_return for name in return_ranks]
+        expected_returns = sorted(return_values, reverse=True)
+        self.assertEqual(return_values, expected_returns, 
+                        f"Rankings not properly ordered by total return: {return_values}")
+        print(f"  Return ranking: {return_ranks}")
+        
+        # Test ranking by win rate
+        winrate_ranking = self.leaderboard.get_leaderboard(sort_by="win_rate")
+        winrate_ranks = [perf.agent_name for perf in winrate_ranking]
+        winrate_values = [self.leaderboard.leaderboard[name].win_rate for name in winrate_ranks]
+        expected_winrates = sorted(winrate_values, reverse=True)
+        self.assertEqual(winrate_values, expected_winrates, 
+                        f"Rankings not properly ordered by win rate: {winrate_values}")
+        print(f"  Win rate ranking: {winrate_ranks}")
+        
+        # Test ranking by max drawdown (ascending - lower is better)
+        drawdown_ranking = self.leaderboard.get_leaderboard(sort_by="max_drawdown")
+        drawdown_ranks = [perf.agent_name for perf in drawdown_ranking]
+        drawdown_values = [self.leaderboard.leaderboard[name].max_drawdown for name in drawdown_ranks]
+        expected_drawdowns = sorted(drawdown_values)  # Ascending order
+        self.assertEqual(drawdown_values, expected_drawdowns, 
+                        f"Rankings not properly ordered by max drawdown: {drawdown_values}")
+        print(f"  Drawdown ranking: {drawdown_ranks}")
+        
+        # Test that top agent is consistent across different metrics
+        top_sharpe = rankings_history[-1][0]  # Top by Sharpe
+        top_return = return_ranks[0]  # Top by return
+        top_winrate = winrate_ranks[0]  # Top by win rate
+        
+        print(f"  Top by Sharpe: {top_sharpe}")
+        print(f"  Top by Return: {top_return}")
+        print(f"  Top by Win Rate: {top_winrate}")
+        
+        # Verify that agent_d should be top by Sharpe (2.0)
+        self.assertEqual(top_sharpe, "agent_d", f"Expected agent_d to be top by Sharpe, got {top_sharpe}")
+        
+        # Test ranking stability after multiple updates
+        print(f"\n🔄 Testing ranking stability after multiple updates:")
+        
+        # Update the top agent multiple times with same performance
+        for i in range(3):
+            self.leaderboard.update_performance(
+                agent_name="agent_d",
+                sharpe_ratio=2.0,
+                max_drawdown=0.08,
+                win_rate=0.70,
+                total_return=0.30
+            )
+            
+            stable_ranking = self.leaderboard.get_leaderboard(sort_by="sharpe_ratio")
+            stable_ranks = [perf.agent_name for perf in stable_ranking]
+            
+            print(f"  Update {i+1}: {stable_ranks}")
+            
+            # Ranking should remain stable
+            self.assertEqual(stable_ranks[0], "agent_d", 
+                           f"Top agent should remain agent_d after update {i+1}")
+        
+        print("✅ Leaderboard re-ranking test completed")
+
 
 class TestAgentLeaderboardIntegration:
     """Integration tests for AgentLeaderboard."""

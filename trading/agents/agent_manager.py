@@ -83,6 +83,19 @@ class AgentManager:
         self.execution_history: List[Dict[str, Any]] = []
         self.agent_metrics: Dict[str, Dict[str, Any]] = {}
         
+        # Agent health monitoring and restart logic
+        self.agent_health: Dict[str, Dict[str, Any]] = {}
+        self.agent_restart_count: Dict[str, int] = {}
+        self.max_restart_attempts = self.config.max_concurrent_agents  # Use as max restarts
+        self.restart_delay = 30  # seconds
+        self.health_check_interval = 60  # seconds
+        self.agent_timeout_threshold = 300  # seconds
+        
+        # Restart monitoring
+        self._restart_monitor_running = False
+        self._restart_monitor_thread = None
+        self._agent_locks: Dict[str, asyncio.Lock] = {}
+        
         # Leaderboard
         self.leaderboard = AgentLeaderboard()
         
@@ -91,6 +104,209 @@ class AgentManager:
         self._register_default_agents()
         
         self.logger.info("AgentManager initialized")
+    
+    def start_restart_monitor(self) -> None:
+        """Start the agent restart monitoring system."""
+        if self._restart_monitor_running:
+            self.logger.warning("Restart monitor is already running")
+            return
+        
+        self._restart_monitor_running = True
+        self._restart_monitor_thread = threading.Thread(target=self._restart_monitor_loop, daemon=True)
+        self._restart_monitor_thread.start()
+        self.logger.info("Agent restart monitor started")
+    
+    def stop_restart_monitor(self) -> None:
+        """Stop the agent restart monitoring system."""
+        self._restart_monitor_running = False
+        if self._restart_monitor_thread:
+            self._restart_monitor_thread.join(timeout=5)
+        self.logger.info("Agent restart monitor stopped")
+    
+    def _restart_monitor_loop(self) -> None:
+        """Main loop for monitoring agent health and restarting failed agents."""
+        import time
+        
+        while self._restart_monitor_running:
+            try:
+                for agent_name in list(self.agent_registry.keys()):
+                    if not self._restart_monitor_running:
+                        break
+                    
+                    self._check_agent_health(agent_name)
+                
+                time.sleep(self.health_check_interval)
+                
+            except Exception as e:
+                self.logger.error(f"Error in restart monitor loop: {e}")
+                time.sleep(10)  # Brief pause on error
+    
+    def _check_agent_health(self, agent_name: str) -> None:
+        """Check the health of a specific agent and restart if needed."""
+        try:
+            if agent_name not in self.agent_registry:
+                return
+            
+            agent_entry = self.agent_registry[agent_name]
+            current_time = datetime.now()
+            
+            # Initialize health tracking if not exists
+            if agent_name not in self.agent_health:
+                self.agent_health[agent_name] = {
+                    'last_heartbeat': current_time,
+                    'last_execution': None,
+                    'error_count': 0,
+                    'status': 'unknown',
+                    'restart_count': 0
+                }
+            
+            health = self.agent_health[agent_name]
+            
+            # Check if agent is responsive
+            if agent_entry.instance:
+                is_responsive = self._is_agent_responsive(agent_entry.instance)
+                if not is_responsive:
+                    health['error_count'] += 1
+                    self.logger.warning(f"Agent {agent_name} is not responsive (error count: {health['error_count']})")
+                else:
+                    health['last_heartbeat'] = current_time
+                    health['error_count'] = 0
+            
+            # Check for timeout conditions
+            if health['last_execution']:
+                time_since_execution = (current_time - health['last_execution']).total_seconds()
+                if time_since_execution > self.agent_timeout_threshold:
+                    health['error_count'] += 1
+                    self.logger.warning(f"Agent {agent_name} has exceeded timeout threshold")
+            
+            # Determine if restart is needed
+            if health['error_count'] >= 3:  # 3 consecutive errors
+                if health['restart_count'] < self.max_restart_attempts:
+                    self._restart_agent(agent_name)
+                else:
+                    self.logger.error(f"Agent {agent_name} exceeded maximum restart attempts")
+                    health['status'] = 'failed'
+            
+        except Exception as e:
+            self.logger.error(f"Error checking health for agent {agent_name}: {e}")
+    
+    def _is_agent_responsive(self, agent_instance: BaseAgent) -> bool:
+        """Check if an agent instance is responsive."""
+        try:
+            # Try to call a simple method to check responsiveness
+            if hasattr(agent_instance, 'is_alive'):
+                return agent_instance.is_alive()
+            
+            if hasattr(agent_instance, 'get_status'):
+                status = agent_instance.get_status()
+                return status.get('running', False)
+            
+            if hasattr(agent_instance, 'health_check'):
+                return agent_instance.health_check()
+            
+            # Default: assume responsive if we can access the instance
+            return True
+            
+        except Exception as e:
+            self.logger.debug(f"Agent responsiveness check failed: {e}")
+            return False
+    
+    def _restart_agent(self, agent_name: str) -> bool:
+        """Restart a specific agent."""
+        try:
+            if agent_name not in self.agent_registry:
+                return False
+            
+            agent_entry = self.agent_registry[agent_name]
+            health = self.agent_health[agent_name]
+            
+            self.logger.info(f"Restarting agent {agent_name} (attempt {health['restart_count'] + 1})")
+            
+            # Stop current instance if running
+            if agent_entry.instance:
+                try:
+                    if hasattr(agent_entry.instance, 'stop'):
+                        agent_entry.instance.stop()
+                except Exception as e:
+                    self.logger.debug(f"Error stopping agent {agent_name}: {e}")
+            
+            # Create new instance
+            try:
+                new_instance = agent_entry.agent_class(agent_entry.config)
+                agent_entry.instance = new_instance
+                
+                # Update health tracking
+                health['restart_count'] += 1
+                health['error_count'] = 0
+                health['last_heartbeat'] = datetime.now()
+                health['status'] = 'restarted'
+                
+                self.logger.info(f"Successfully restarted agent {agent_name}")
+                return True
+                
+            except Exception as e:
+                self.logger.error(f"Failed to restart agent {agent_name}: {e}")
+                health['status'] = 'restart_failed'
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"Error in restart process for agent {agent_name}: {e}")
+            return False
+    
+    def force_restart_agent(self, agent_name: str) -> bool:
+        """Force restart an agent regardless of health status."""
+        try:
+            if agent_name not in self.agent_registry:
+                self.logger.warning(f"Agent {agent_name} not found in registry")
+                return False
+            
+            # Reset health tracking
+            if agent_name in self.agent_health:
+                self.agent_health[agent_name]['error_count'] = 0
+                self.agent_health[agent_name]['status'] = 'force_restart'
+            
+            return self._restart_agent(agent_name)
+            
+        except Exception as e:
+            self.logger.error(f"Error force restarting agent {agent_name}: {e}")
+            return False
+    
+    def get_agent_health_status(self, agent_name: str) -> Optional[Dict[str, Any]]:
+        """Get the health status of a specific agent."""
+        if agent_name not in self.agent_health:
+            return None
+        
+        health = self.agent_health[agent_name].copy()
+        health['agent_name'] = agent_name
+        health['last_heartbeat'] = health['last_heartbeat'].isoformat() if health['last_heartbeat'] else None
+        health['last_execution'] = health['last_execution'].isoformat() if health['last_execution'] else None
+        
+        return health
+    
+    def get_all_agent_health_statuses(self) -> Dict[str, Dict[str, Any]]:
+        """Get health status for all agents."""
+        return {
+            agent_name: self.get_agent_health_status(agent_name)
+            for agent_name in self.agent_registry.keys()
+        }
+    
+    def reset_agent_health_tracking(self, agent_name: str) -> bool:
+        """Reset health tracking for a specific agent."""
+        try:
+            if agent_name in self.agent_health:
+                self.agent_health[agent_name] = {
+                    'last_heartbeat': datetime.now(),
+                    'last_execution': None,
+                    'error_count': 0,
+                    'status': 'reset',
+                    'restart_count': 0
+                }
+                self.logger.info(f"Reset health tracking for agent {agent_name}")
+                return True
+            return False
+        except Exception as e:
+            self.logger.error(f"Error resetting health tracking for agent {agent_name}: {e}")
+            return False
     
     def _load_config(self) -> None:
         """Load agent configuration from file."""

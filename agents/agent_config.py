@@ -83,6 +83,8 @@ class AgentConfig:
     
     def _validate_config(self):
         """Validate configuration settings."""
+        if not self.openai_api_key:
+            raise ValueError("OpenAI API key is missing in AgentConfig.")
         if self.openai_timeout <= 0:
             raise ValueError("OpenAI timeout must be positive")
         if self.openai_max_tokens <= 0:

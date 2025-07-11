@@ -197,25 +197,103 @@ class BaseAgent(ABC):
         self._setup()
         
         self.logger.info(f"Agent {config.name} initialized successfully")
-
-    def _setup(self) -> None:
-        """
-        Setup method called during initialization.
-        
-        Override this method to perform any agent-specific setup.
-        """
-        pass
-
+    
     @abstractmethod
     async def execute(self, **kwargs) -> AgentResult:
         """
         Execute the agent's main logic.
         
+        This is the primary method that all agents must implement.
+        It should contain the core business logic of the agent.
+        
         Args:
-            **kwargs: Agent-specific parameters
+            **kwargs: Arguments specific to the agent's functionality
             
         Returns:
             AgentResult: Result of the execution
+        """
+        pass
+    
+    @abstractmethod
+    def validate_input(self, **kwargs) -> bool:
+        """
+        Validate input parameters before execution.
+        
+        This method should validate all input parameters to ensure
+        they meet the agent's requirements before execution begins.
+        
+        Args:
+            **kwargs: Input parameters to validate
+            
+        Returns:
+            bool: True if input is valid, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    def validate_config(self) -> bool:
+        """
+        Validate the agent's configuration.
+        
+        This method should validate the agent's configuration to ensure
+        all required settings are present and valid.
+        
+        Returns:
+            bool: True if configuration is valid, False otherwise
+        """
+        pass
+    
+    @abstractmethod
+    def handle_error(self, error: Exception) -> AgentResult:
+        """
+        Handle errors during execution.
+        
+        This method should provide consistent error handling for all agents.
+        It should log the error and return an appropriate AgentResult.
+        
+        Args:
+            error: Exception that occurred during execution
+            
+        Returns:
+            AgentResult: Error result with appropriate error information
+        """
+        pass
+    
+    @abstractmethod
+    def _setup(self) -> None:
+        """
+        Setup method called during initialization.
+        
+        This method should perform any necessary setup operations
+        such as loading models, connecting to services, etc.
+        
+        Subclasses must implement this method to ensure proper initialization.
+        """
+        pass
+    
+    @abstractmethod
+    def get_capabilities(self) -> List[str]:
+        """
+        Get the agent's capabilities.
+        
+        This method should return a list of capabilities that the agent provides.
+        These capabilities are used for agent discovery and routing.
+        
+        Returns:
+            List[str]: List of capability names
+        """
+        pass
+    
+    @abstractmethod
+    def get_requirements(self) -> Dict[str, Any]:
+        """
+        Get the agent's requirements.
+        
+        This method should return a dictionary describing the agent's requirements
+        such as dependencies, system requirements, etc.
+        
+        Returns:
+            Dict[str, Any]: Dictionary of requirements
         """
         pass
     
@@ -223,16 +301,14 @@ class BaseAgent(ABC):
         """Enable the agent."""
         self.config.enabled = True
         self.status.enabled = True
-        self.status.state = AgentState.IDLE
         self.logger.info(f"Agent {self.config.name} enabled")
-
+    
     def disable(self) -> None:
         """Disable the agent."""
         self.config.enabled = False
         self.status.enabled = False
-        self.status.state = AgentState.DISABLED
         self.logger.info(f"Agent {self.config.name} disabled")
-
+    
     def is_enabled(self) -> bool:
         """Check if the agent is enabled."""
         return self.config.enabled and self.status.enabled
@@ -246,12 +322,12 @@ class BaseAgent(ABC):
         return self.status
     
     def get_config(self) -> AgentConfig:
-        """Get the agent configuration."""
+        """Get the agent's configuration."""
         return self.config
     
     def update_config(self, new_config: Dict[str, Any]) -> bool:
         """
-        Update agent configuration.
+        Update the agent's configuration.
         
         Args:
             new_config: New configuration values
@@ -260,13 +336,23 @@ class BaseAgent(ABC):
             bool: True if update was successful
         """
         try:
+            # Validate new configuration
+            if not self._validate_new_config(new_config):
+                return False
+            
+            # Update configuration
             for key, value in new_config.items():
                 if hasattr(self.config, key):
                     setattr(self.config, key, value)
-                elif self.config.custom_config is not None:
-                    self.config.custom_config[key] = value
-                else:
-                    self.config.custom_config = {key: value}
+                elif key == 'custom_config':
+                    if self.config.custom_config is None:
+                        self.config.custom_config = {}
+                    self.config.custom_config.update(value)
+            
+            # Re-validate configuration
+            if not self.validate_config():
+                self.logger.error("Configuration validation failed after update")
+                return False
             
             self.logger.info(f"Updated configuration for agent {self.config.name}")
             return True
@@ -274,359 +360,48 @@ class BaseAgent(ABC):
         except Exception as e:
             self.logger.error(f"Error updating configuration: {e}")
             return False
-
-    def validate_input(self, **kwargs) -> bool:
+    
+    def _validate_new_config(self, new_config: Dict[str, Any]) -> bool:
         """
-        Validate input parameters.
+        Validate new configuration values.
         
         Args:
-            **kwargs: Parameters to validate
+            new_config: New configuration to validate
             
-        Returns:
-            bool: True if input is valid
-        """
-        return True
-    
-    def validate_config(self) -> bool:
-        """
-        Validate agent configuration.
-        
         Returns:
             bool: True if configuration is valid
         """
         try:
-            if not self.config.name:
-                return False
-            
-            if self.config.timeout_seconds <= 0:
-                return False
-            
-            if self.config.max_concurrent_runs <= 0:
-                return False
-            
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Configuration validation error: {e}")
-            return False
-    
-    def handle_error(self, error: Exception) -> AgentResult:
-        """
-        Handle errors during execution.
-        
-        Args:
-            error: Exception that occurred
-            
-        Returns:
-            AgentResult: Error result
-        """
-        error_type = type(error).__name__
-        error_message = str(error)
-        error_traceback = traceback.format_exc()
-        
-        self.logger.error(f"Agent {self.config.name} error: {error_message}")
-        self.logger.debug(f"Error traceback: {error_traceback}")
-        
-        self.status.failed_runs += 1
-        self.status.current_error = error_message
-        self.status.is_running = False
-        self.status.state = AgentState.ERROR
-        self.status.last_failure = datetime.now()
-        
-        return AgentResult(
-            success=False,
-            error_message=error_message,
-            error_type=error_type,
-            metadata={'traceback': error_traceback}
-        )
-    
-    def _update_status_on_start(self) -> None:
-        """Update status when execution starts."""
-        self.status.is_running = True
-        self.status.state = AgentState.RUNNING
-        self.status.last_run = datetime.now()
-        self.status.current_run_start = datetime.now()
-        self.status.total_runs += 1
-        self.status.current_error = None
-
-    def _update_status_on_success(self, execution_time: float) -> None:
-        """Update status when execution succeeds."""
-        self.status.is_running = False
-        self.status.state = AgentState.SUCCESS
-        self.status.last_success = datetime.now()
-        self.status.successful_runs += 1
-        self.status.current_error = None
-        self.status.current_run_start = None
-        
-        # Update execution time statistics
-        self.status.total_execution_time += execution_time
-        if self.status.total_runs > 0:
-            self.status.average_execution_time = self.status.total_execution_time / self.status.total_runs
-
-    def _update_status_on_failure(self, error: str, execution_time: float = 0.0) -> None:
-        """Update status when execution fails."""
-        self.status.is_running = False
-        self.status.state = AgentState.FAILED
-        self.status.failed_runs += 1
-        self.status.current_error = error
-        self.status.current_run_start = None
-        self.status.last_failure = datetime.now()
-        
-        # Update execution time statistics
-        if execution_time > 0:
-            self.status.total_execution_time += execution_time
-            if self.status.total_runs > 0:
-                self.status.average_execution_time = self.status.total_execution_time / self.status.total_runs
-
-    async def run(self, **kwargs) -> AgentResult:
-        """
-        Run the agent with error handling and status updates.
-        
-        Args:
-            **kwargs: Agent-specific parameters
-            
-        Returns:
-            AgentResult: Result of the execution
-        """
-        # Check if agent is enabled
-        if not self.is_enabled():
-            return AgentResult(
-                success=False,
-                error_message=f"Agent {self.config.name} is disabled",
-                error_type="AgentDisabled"
-            )
-        
-        # Check if agent is already running
-        if self.is_running():
-            return AgentResult(
-                success=False,
-                error_message=f"Agent {self.config.name} is already running",
-                error_type="AgentAlreadyRunning"
-            )
-        
-        # Validate configuration
-        if not self.validate_config():
-            return AgentResult(
-                success=False,
-                error_message=f"Invalid configuration for agent {self.config.name}",
-                error_type="InvalidConfiguration"
-            )
-        
-        # Validate input
-        if not self.validate_input(**kwargs):
-            return AgentResult(
-                success=False,
-                error_message=f"Invalid input for agent {self.config.name}",
-                error_type="InvalidInput"
-            )
-        
-        # Start execution
-        self._update_status_on_start()
-        start_time = datetime.now()
-        
-        try:
-            # Execute with timeout
-            if self.config.timeout_seconds > 0:
-                result = await asyncio.wait_for(
-                    self.execute(**kwargs),
-                    timeout=self.config.timeout_seconds
-                )
-            else:
-                result = await self.execute(**kwargs)
-            
-            execution_time = (datetime.now() - start_time).total_seconds()
-            result.execution_time = execution_time
-            
-            if result.success:
-                self._update_status_on_success(execution_time)
-            else:
-                self._update_status_on_failure(result.error_message or "Unknown error", execution_time)
-            
-            # Add to history
-            self._add_to_history(result)
-            
-            return result
-            
-        except asyncio.TimeoutError:
-            execution_time = (datetime.now() - start_time).total_seconds()
-            error_msg = f"Agent {self.config.name} execution timed out after {self.config.timeout_seconds} seconds"
-            self._update_status_on_failure(error_msg, execution_time)
-            
-            result = AgentResult(
-                success=False,
-                error_message=error_msg,
-                error_type="TimeoutError",
-                execution_time=execution_time
-            )
-            self._add_to_history(result)
-            return result
-            
-        except Exception as e:
-            execution_time = (datetime.now() - start_time).total_seconds()
-            result = self.handle_error(e)
-            result.execution_time = execution_time
-            self._add_to_history(result)
-            return result
-    
-    def _add_to_history(self, result: AgentResult) -> None:
-        """Add result to execution history."""
-        self.execution_history.append(result)
-        
-        # Keep only the last N results
-        if len(self.execution_history) > self.max_history_size:
-            self.execution_history = self.execution_history[-self.max_history_size:]
-    
-    def get_execution_history(self, limit: Optional[int] = None) -> List[AgentResult]:
-        """
-        Get execution history.
-        
-        Args:
-            limit: Maximum number of results to return
-            
-        Returns:
-            List of execution results
-        """
-        history = self.execution_history.copy()
-        if limit:
-            history = history[-limit:]
-        return history
-    
-    def get_performance_stats(self) -> Dict[str, Any]:
-        """
-        Get performance statistics.
-        
-        Returns:
-            Dictionary with performance statistics
-        """
-        if not self.execution_history:
-            return {
-                'total_executions': 0,
-                'success_rate': 0.0,
-                'average_execution_time': 0.0,
-                'min_execution_time': 0.0,
-                'max_execution_time': 0.0,
-                'total_execution_time': 0.0
-            }
-        
-        successful_runs = [r for r in self.execution_history if r.success]
-        execution_times = [r.execution_time for r in self.execution_history if r.execution_time > 0]
-        
-        return {
-            'total_executions': len(self.execution_history),
-            'successful_executions': len(successful_runs),
-            'failed_executions': len(self.execution_history) - len(successful_runs),
-            'success_rate': len(successful_runs) / len(self.execution_history) if self.execution_history else 0.0,
-            'average_execution_time': sum(execution_times) / len(execution_times) if execution_times else 0.0,
-            'min_execution_time': min(execution_times) if execution_times else 0.0,
-            'max_execution_time': max(execution_times) if execution_times else 0.0,
-            'total_execution_time': sum(execution_times),
-            'last_execution': self.execution_history[-1].timestamp.isoformat() if self.execution_history else None
-        }
-    
-    def get_metadata(self) -> Dict[str, Any]:
-        """
-        Get agent metadata for registration.
-        
-        Returns:
-            Dict containing agent metadata
-        """
-        return {
-            "name": self.config.name,
-            "version": getattr(self, '__version__', self.config.version),
-            "description": getattr(self, '__description__', self.config.description),
-            "author": getattr(self, '__author__', self.config.author),
-            "tags": getattr(self, '__tags__', self.config.tags),
-            "capabilities": getattr(self, '__capabilities__', []),
-            "dependencies": getattr(self, '__dependencies__', []),
-            "config_schema": getattr(self, '__config_schema__', None),
-            "priority": self.config.priority.value,
-            "enabled": self.config.enabled
-        }
-    
-    def save_state(self, filepath: str) -> bool:
-        """
-        Save agent state to file.
-        
-        Args:
-            filepath: Path to save state
-            
-        Returns:
-            bool: True if save was successful
-        """
-        try:
-            state = {
-                'config': self.config.to_dict(),
-                'status': self.status.to_dict(),
-                'execution_history': [r.to_dict() for r in self.execution_history],
-                'performance_stats': self.get_performance_stats(),
-                'timestamp': datetime.now().isoformat()
+            # Check for invalid keys
+            valid_keys = {
+                'enabled', 'priority', 'max_concurrent_runs', 'timeout_seconds',
+                'retry_attempts', 'retry_delay_seconds', 'custom_config',
+                'tags', 'description', 'version', 'author'
             }
             
-            with open(filepath, 'w') as f:
-                json.dump(state, f, indent=2)
+            for key in new_config.keys():
+                if key not in valid_keys:
+                    self.logger.warning(f"Invalid configuration key: {key}")
+                    return False
             
-            self.logger.info(f"Agent state saved to {filepath}")
+            # Validate specific fields
+            if 'max_concurrent_runs' in new_config:
+                if not isinstance(new_config['max_concurrent_runs'], int) or new_config['max_concurrent_runs'] < 1:
+                    self.logger.error("max_concurrent_runs must be a positive integer")
+                    return False
+            
+            if 'timeout_seconds' in new_config:
+                if not isinstance(new_config['timeout_seconds'], int) or new_config['timeout_seconds'] < 1:
+                    self.logger.error("timeout_seconds must be a positive integer")
+                    return False
+            
+            if 'retry_attempts' in new_config:
+                if not isinstance(new_config['retry_attempts'], int) or new_config['retry_attempts'] < 0:
+                    self.logger.error("retry_attempts must be a non-negative integer")
+                    return False
+            
             return True
             
         except Exception as e:
-            self.logger.error(f"Error saving agent state: {e}")
-            return False
-    
-    def load_state(self, filepath: str) -> bool:
-        """
-        Load agent state from file.
-        
-        Args:
-            filepath: Path to load state from
-            
-        Returns:
-            bool: True if load was successful
-        """
-        try:
-            if not Path(filepath).exists():
-                self.logger.warning(f"State file {filepath} not found")
-                return False
-            
-            with open(filepath, 'r') as f:
-                state = json.load(f)
-            
-            # Load configuration
-            if 'config' in state:
-                self.config = AgentConfig.from_dict(state['config'])
-            
-            # Load status
-            if 'status' in state:
-                self.status = AgentStatus.from_dict(state['status'])
-            
-            # Load execution history
-            if 'execution_history' in state:
-                self.execution_history = [
-                    AgentResult.from_dict(r) for r in state['execution_history']
-                ]
-            
-            self.logger.info(f"Agent state loaded from {filepath}")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Error loading agent state: {e}")
-            return False
-    
-    def reset(self) -> None:
-        """Reset agent state and statistics."""
-        self.status = AgentStatus(
-            name=self.config.name,
-            enabled=self.config.enabled,
-            state=AgentState.IDLE
-        )
-        self.execution_history.clear()
-        self.logger.info(f"Agent {self.config.name} state reset")
-    
-    def __str__(self) -> str:
-        """String representation of the agent."""
-        return f"Agent(name={self.config.name}, state={self.status.state.value}, enabled={self.config.enabled})"
-    
-    def __repr__(self) -> str:
-        """Detailed string representation of the agent."""
-        return (f"Agent(name={self.config.name}, state={self.status.state.value}, "
-                f"enabled={self.config.enabled}, total_runs={self.status.total_runs}, "
-                f"success_rate={self.get_performance_stats()['success_rate']:.2%})") 
+            self.logger.error(f"Error validating new configuration: {e}")
+            return False 

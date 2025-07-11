@@ -1749,41 +1749,310 @@ class NotificationService:
             raise
     
     async def notify_error(self, error_message: str, user_id: Optional[str] = None) -> str:
-        """Notify error with enhanced error handling."""
+        """Send error notification."""
         try:
-            # Validate inputs
-            if not error_message:
-                raise ValueError("Error message is required")
+            # Get template
+            template_id = "error_notification"
+            template = await self._get_template(template_id)
+            
+            if not template:
+                logger.error(f"Template {template_id} not found")
+                return ""
+            
+            # Get latest version
+            version = template.get_latest_version()
+            if not version:
+                logger.error(f"No version found for template {template_id}")
+                return ""
+            
+            # Prepare template variables
+            template_vars = {
+                "error_message": error_message,
+                "timestamp": datetime.utcnow().isoformat(),
+                "user_id": user_id or "system"
+            }
             
             # Send notification
-            return await self._send_notification(
-                template_id='error',
-                template_vars={
-                    'error_message': error_message,
-                    'timestamp': datetime.utcnow().isoformat()
-                },
-                user_id=user_id
+            notification_id = await self._send_notification(template_id, template_vars, user_id)
+            
+            # Log the error notification broadcast
+            await self._log_notification_broadcast(
+                notification_id=notification_id,
+                template_id=template_id,
+                template_version=version.version,
+                user_id=user_id,
+                notification_type="error",
+                priority=version.priority,
+                template_vars=template_vars,
+                broadcast_type="error_notification"
             )
+            
+            return notification_id
             
         except Exception as e:
-            logger.error(f"Error notifying error: {str(e)}")
+            logger.error(f"Error sending error notification: {str(e)}")
             
-            # Record metrics
-            self.metrics_service.record_error_notification_error()
-            
-            # Audit
-            await self.audit_service.record_audit(
-                'error_notification_error',
-                'error',
-                str(e),
-                details={
-                    'error_message': error_message,
-                    'user_id': user_id
-                }
+            # Log the failed broadcast attempt
+            await self._log_notification_broadcast(
+                notification_id="",
+                template_id="error_notification",
+                template_version=0,
+                user_id=user_id,
+                notification_type="error",
+                priority=NotificationPriority.HIGH,
+                template_vars={"error_message": error_message},
+                broadcast_type="error_notification",
+                success=False,
+                error=str(e)
             )
             
-            raise
-    
+            return ""
+
+    async def _log_notification_broadcast(
+        self,
+        notification_id: str,
+        template_id: str,
+        template_version: int,
+        user_id: Optional[str],
+        notification_type: str,
+        priority: NotificationPriority,
+        template_vars: Dict[str, Any],
+        broadcast_type: str,
+        success: bool = True,
+        error: Optional[str] = None,
+        session_id: Optional[str] = None,
+        correlation_id: Optional[str] = None
+    ) -> None:
+        """Log all broadcasted notifications with comprehensive metadata.
+        
+        Args:
+            notification_id: Unique notification ID
+            template_id: Template identifier
+            template_version: Template version number
+            user_id: Target user ID
+            notification_type: Type of notification
+            priority: Notification priority
+            template_vars: Template variables used
+            broadcast_type: Type of broadcast (task_created, error, etc.)
+            success: Whether broadcast was successful
+            error: Error message if failed
+            session_id: User session ID
+            correlation_id: Correlation ID for tracing
+        """
+        try:
+            # Generate session ID if not provided
+            if not session_id:
+                session_id = f"session_{uuid4().hex[:8]}"
+            
+            # Generate correlation ID if not provided
+            if not correlation_id:
+                correlation_id = f"corr_{uuid4().hex[:8]}"
+            
+            # Create broadcast log entry
+            broadcast_log = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "notification_id": notification_id,
+                "template_id": template_id,
+                "template_version": template_version,
+                "user_id": user_id,
+                "session_id": session_id,
+                "correlation_id": correlation_id,
+                "notification_type": notification_type,
+                "priority": priority.value if hasattr(priority, 'value') else str(priority),
+                "broadcast_type": broadcast_type,
+                "success": success,
+                "error": error,
+                "template_vars": template_vars,
+                "metadata": {
+                    "user_agent": "notification_service",
+                    "service_version": "1.0.0",
+                    "environment": "production",
+                    "log_level": "INFO" if success else "ERROR"
+                }
+            }
+            
+            # Log to structured logging service
+            await self.logging_service.log_structured(
+                "notification_broadcast",
+                broadcast_log,
+                level="INFO" if success else "ERROR"
+            )
+            
+            # Log to audit service
+            await self.audit_service.record_audit(
+                "notification_broadcast",
+                "success" if success else "error",
+                f"Notification broadcast: {broadcast_type} to user {user_id}",
+                metadata=broadcast_log
+            )
+            
+            # Record metrics
+            if success:
+                self.metrics_service.record_notification_broadcast_success(
+                    notification_type, priority, broadcast_type
+                )
+            else:
+                self.metrics_service.record_notification_broadcast_failure(
+                    notification_type, priority, broadcast_type, error
+                )
+            
+            # Log to console for debugging
+            if success:
+                logger.info(
+                    f"Notification broadcast logged: {broadcast_type} -> {user_id} "
+                    f"(ID: {notification_id}, Session: {session_id}, Corr: {correlation_id})"
+                )
+            else:
+                logger.error(
+                    f"Notification broadcast failed: {broadcast_type} -> {user_id} "
+                    f"(Error: {error}, Session: {session_id}, Corr: {correlation_id})"
+                )
+            
+        except Exception as e:
+            logger.error(f"Error logging notification broadcast: {e}")
+            
+            # Fallback logging
+            fallback_log = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "error": f"Failed to log notification broadcast: {e}",
+                "original_data": {
+                    "notification_id": notification_id,
+                    "user_id": user_id,
+                    "broadcast_type": broadcast_type
+                }
+            }
+            
+            # Try to log fallback entry
+            try:
+                await self.logging_service.log_structured(
+                    "notification_broadcast_fallback",
+                    fallback_log,
+                    level="ERROR"
+                )
+            except Exception as fallback_error:
+                logger.error(f"Failed to log fallback entry: {fallback_error}")
+
+    async def broadcast_system_notification(
+        self,
+        message: str,
+        title: str = "System Notification",
+        priority: NotificationPriority = NotificationPriority.MEDIUM,
+        user_ids: Optional[List[str]] = None,
+        session_ids: Optional[Dict[str, str]] = None
+    ) -> List[str]:
+        """Broadcast system notification to multiple users with comprehensive logging.
+        
+        Args:
+            message: Notification message
+            title: Notification title
+            priority: Notification priority
+            user_ids: List of user IDs to notify (None for all users)
+            session_ids: Mapping of user_id to session_id
+            
+        Returns:
+            List of notification IDs
+        """
+        try:
+            notification_ids = []
+            
+            # Get users to notify
+            if user_ids is None:
+                user_ids = await self.notification_manager.get_all_users()
+            
+            # Get template
+            template_id = "system_broadcast"
+            template = await self._get_template(template_id)
+            
+            if not template:
+                logger.error(f"Template {template_id} not found")
+                return []
+            
+            # Get latest version
+            version = template.get_latest_version()
+            if not version:
+                logger.error(f"No version found for template {template_id}")
+                return []
+            
+            # Prepare template variables
+            template_vars = {
+                "message": message,
+                "title": title,
+                "timestamp": datetime.utcnow().isoformat(),
+                "priority": priority.value if hasattr(priority, 'value') else str(priority)
+            }
+            
+            # Send to each user
+            for user_id in user_ids:
+                try:
+                    # Get session ID for this user
+                    session_id = session_ids.get(user_id) if session_ids else None
+                    
+                    # Send notification
+                    notification_id = await self._send_notification(
+                        template_id, template_vars, user_id
+                    )
+                    
+                    if notification_id:
+                        notification_ids.append(notification_id)
+                        
+                        # Log the broadcast
+                        await self._log_notification_broadcast(
+                            notification_id=notification_id,
+                            template_id=template_id,
+                            template_version=version.version,
+                            user_id=user_id,
+                            session_id=session_id,
+                            notification_type="system",
+                            priority=priority,
+                            template_vars=template_vars,
+                            broadcast_type="system_broadcast"
+                        )
+                    
+                except Exception as e:
+                    logger.error(f"Error broadcasting to user {user_id}: {e}")
+                    
+                    # Log the failed broadcast
+                    await self._log_notification_broadcast(
+                        notification_id="",
+                        template_id=template_id,
+                        template_version=version.version,
+                        user_id=user_id,
+                        session_id=session_ids.get(user_id) if session_ids else None,
+                        notification_type="system",
+                        priority=priority,
+                        template_vars=template_vars,
+                        broadcast_type="system_broadcast",
+                        success=False,
+                        error=str(e)
+                    )
+            
+            # Log summary
+            logger.info(
+                f"System broadcast completed: {len(notification_ids)}/{len(user_ids)} "
+                f"notifications sent successfully"
+            )
+            
+            return notification_ids
+            
+        except Exception as e:
+            logger.error(f"Error in system broadcast: {e}")
+            
+            # Log the failed broadcast attempt
+            await self._log_notification_broadcast(
+                notification_id="",
+                template_id="system_broadcast",
+                template_version=0,
+                user_id=None,
+                notification_type="system",
+                priority=priority,
+                template_vars={"message": message, "title": title},
+                broadcast_type="system_broadcast",
+                success=False,
+                error=str(e)
+            )
+            
+            return []
+
     async def get_delivery_status(self, notification_id: str) -> Optional[NotificationDelivery]:
         """Get delivery status with enhanced error handling."""
         try:

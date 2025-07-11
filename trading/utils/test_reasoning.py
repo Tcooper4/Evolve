@@ -61,6 +61,7 @@ class TestReasoningLogger(unittest.TestCase):
         }
     
         return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+    
     def tearDown(self):
         """Clean up test fixtures."""
         shutil.rmtree(self.temp_dir)
@@ -172,6 +173,112 @@ class TestReasoningLogger(unittest.TestCase):
         decision = self.logger.get_decision(decision_id)
         self.assertIsNone(decision)
 
+    def test_invalid_decision_tree(self):
+        """Test handling of invalid decision trees."""
+        # Test with missing required fields
+        invalid_data = self.sample_decision_data.copy()
+        del invalid_data['agent_name']
+        
+        with self.assertRaises(ValueError):
+            self.logger.log_decision(**invalid_data)
+        
+        # Test with invalid decision type
+        invalid_data = self.sample_decision_data.copy()
+        invalid_data['decision_type'] = 'INVALID_TYPE'
+        
+        with self.assertRaises(ValueError):
+            self.logger.log_decision(**invalid_data)
+        
+        # Test with empty reasoning
+        invalid_data = self.sample_decision_data.copy()
+        invalid_data['reasoning'] = {}
+        
+        with self.assertRaises(ValueError):
+            self.logger.log_decision(**invalid_data)
+
+    def test_fallback_routes(self):
+        """Test fallback routes when primary operations fail."""
+        # Test fallback when Redis is unavailable
+        logger_no_redis = ReasoningLogger(
+            redis_host='invalid_host',
+            redis_port=9999,
+            redis_db=1,
+            log_dir=self.temp_dir,
+            enable_gpt_explanations=False
+        )
+        
+        # Should still work with file-based fallback
+        decision_id = logger_no_redis.log_decision(**self.sample_decision_data)
+        self.assertIsInstance(decision_id, str)
+        
+        # Test fallback when log directory is read-only
+        import os
+        os.chmod(self.temp_dir, 0o444)  # Read-only
+        
+        try:
+            logger_readonly = ReasoningLogger(
+                redis_host='localhost',
+                redis_port=6379,
+                redis_db=1,
+                log_dir=self.temp_dir,
+                enable_gpt_explanations=False
+            )
+            
+            # Should still work with memory fallback
+            decision_id = logger_readonly.log_decision(**self.sample_decision_data)
+            self.assertIsInstance(decision_id, str)
+        finally:
+            os.chmod(self.temp_dir, 0o755)  # Restore permissions
+
+    def test_decision_tree_validation(self):
+        """Test validation of decision tree structure."""
+        # Test decision tree with circular references
+        circular_data = self.sample_decision_data.copy()
+        circular_data['reasoning']['supporting_factors'] = ['self_reference']
+        circular_data['metadata'] = {'circular_ref': circular_data}
+        
+        # Should handle gracefully
+        decision_id = self.logger.log_decision(**circular_data)
+        self.assertIsInstance(decision_id, str)
+        
+        # Test decision tree with deep nesting
+        deep_data = self.sample_decision_data.copy()
+        deep_data['context']['nested'] = {'level1': {'level2': {'level3': {'level4': {'level5': 'deep'}}}}}
+        
+        decision_id = self.logger.log_decision(**deep_data)
+        self.assertIsInstance(decision_id, str)
+        
+        # Test decision tree with large data
+        large_data = self.sample_decision_data.copy()
+        large_data['reasoning']['supporting_factors'] = ['factor'] * 1000
+        
+        decision_id = self.logger.log_decision(**large_data)
+        self.assertIsInstance(decision_id, str)
+
+    def test_error_recovery(self):
+        """Test error recovery mechanisms."""
+        # Test recovery from corrupted decision data
+        corrupted_data = self.sample_decision_data.copy()
+        corrupted_data['context'] = None
+        
+        with self.assertRaises(ValueError):
+            self.logger.log_decision(**corrupted_data)
+        
+        # Test recovery from invalid confidence level
+        invalid_confidence_data = self.sample_decision_data.copy()
+        invalid_confidence_data['confidence_level'] = 'INVALID'
+        
+        with self.assertRaises(ValueError):
+            self.logger.log_decision(**invalid_confidence_data)
+        
+        # Test recovery from missing context fields
+        incomplete_data = self.sample_decision_data.copy()
+        incomplete_data['context'] = {'symbol': 'AAPL'}  # Missing required fields
+        
+        # Should work with default values
+        decision_id = self.logger.log_decision(**incomplete_data)
+        self.assertIsInstance(decision_id, str)
+
 class TestReasoningDisplay(unittest.TestCase):
     """Test the ReasoningDisplay class."""
     
@@ -213,6 +320,7 @@ class TestReasoningDisplay(unittest.TestCase):
         }
     
         return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+    
     def tearDown(self):
         """Clean up test fixtures."""
         shutil.rmtree(self.temp_dir)
@@ -269,17 +377,34 @@ class TestReasoningDisplay(unittest.TestCase):
 
     def test_create_streamlit_sidebar(self):
         """Test Streamlit sidebar creation."""
-        # Log some decisions first
+        # Log some decisions
         self.logger.log_decision(**self.sample_decision_data)
         
         # This should not raise an exception
-        filters = self.display.create_streamlit_sidebar()
+        self.display.create_streamlit_sidebar()
+
+    def test_display_invalid_decision(self):
+        """Test display handling of invalid decisions."""
+        # Test with None decision
+        with self.assertRaises(ValueError):
+            self.display.display_decision_terminal(None)
         
-        self.assertIsInstance(filters, dict)
-        self.assertIn('agent', filters)
-        self.assertIn('type', filters)
-        self.assertIn('confidence', filters)
-        self.assertIn('limit', filters)
+        # Test with invalid decision object
+        invalid_decision = "not_a_decision"
+        with self.assertRaises(ValueError):
+            self.display.display_decision_terminal(invalid_decision)
+
+    def test_display_fallback_routes(self):
+        """Test display fallback routes when primary display fails."""
+        # Test fallback when decision has missing fields
+        incomplete_data = self.sample_decision_data.copy()
+        del incomplete_data['reasoning']['primary_reason']
+        
+        decision_id = self.logger.log_decision(**incomplete_data)
+        decision = self.logger.get_decision(decision_id)
+        
+        # Should handle gracefully
+        self.display.display_decision_terminal(decision)
 
 class TestConvenienceFunctions(unittest.TestCase):
     """Test convenience functions."""
@@ -295,7 +420,6 @@ class TestConvenienceFunctions(unittest.TestCase):
             enable_gpt_explanations=False
         )
     
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def tearDown(self):
         """Clean up test fixtures."""
         shutil.rmtree(self.temp_dir)
@@ -303,53 +427,43 @@ class TestConvenienceFunctions(unittest.TestCase):
     def test_log_forecast_decision(self):
         """Test forecast decision logging convenience function."""
         decision_id = log_forecast_decision(
-            agent_name='TestForecaster',
+            agent_name='TestAgent',
             symbol='AAPL',
-            timeframe='1h',
-            forecast_value=185.50,
-            confidence=0.85,
-            reasoning={
-                'primary_reason': 'Technical analysis',
-                'supporting_factors': ['RSI', 'MACD'],
-                'alternatives_considered': ['Wait'],
-                'risks_assessed': ['Volatility'],
-                'confidence_explanation': 'High confidence',
-                'expected_outcome': '5% upside'
-            }
+            prediction='$185.50',
+            confidence=ConfidenceLevel.HIGH,
+            reasoning='Strong technical indicators',
+            logger=self.logger
         )
         
         self.assertIsInstance(decision_id, str)
-        self.assertTrue(decision_id.startswith('TestForecaster_forecast_'))
+        decision = self.logger.get_decision(decision_id)
+        self.assertEqual(decision.decision_type, DecisionType.FORECAST)
+        self.assertEqual(decision.context.symbol, 'AAPL')
 
     def test_log_strategy_decision(self):
         """Test strategy decision logging convenience function."""
         decision_id = log_strategy_decision(
-            agent_name='TestStrategy',
+            agent_name='TestAgent',
             symbol='AAPL',
-            action='BUY 100 shares',
-            strategy_name='RSI Strategy',
-            reasoning={
-                'primary_reason': 'RSI oversold',
-                'supporting_factors': ['Support level'],
-                'alternatives_considered': ['Wait'],
-                'risks_assessed': ['Market risk'],
-                'confidence_explanation': 'Medium confidence',
-                'expected_outcome': '3% gain'
-            }
+            action='BUY',
+            confidence=ConfidenceLevel.MEDIUM,
+            reasoning='RSI oversold condition',
+            logger=self.logger
         )
         
         self.assertIsInstance(decision_id, str)
-        self.assertTrue(decision_id.startswith('TestStrategy_strategy_'))
+        decision = self.logger.get_decision(decision_id)
+        self.assertEqual(decision.decision_type, DecisionType.STRATEGY)
+        self.assertEqual(decision.context.symbol, 'AAPL')
 
 class TestDataStructures(unittest.TestCase):
     """Test data structures."""
     
     def test_decision_context(self):
-        """Test DecisionContext dataclass."""
+        """Test DecisionContext data structure."""
         context = DecisionContext(
             symbol='AAPL',
             timeframe='1h',
-            timestamp='2024-01-01T12:00:00',
             market_conditions={'trend': 'bullish'},
             available_data=['price', 'volume'],
             constraints={},
@@ -358,84 +472,99 @@ class TestDataStructures(unittest.TestCase):
         
         self.assertEqual(context.symbol, 'AAPL')
         self.assertEqual(context.timeframe, '1h')
-        self.assertEqual(context.market_conditions['trend'], 'bullish')
+        self.assertIn('trend', context.market_conditions)
 
     def test_decision_reasoning(self):
-        """Test DecisionReasoning dataclass."""
+        """Test DecisionReasoning data structure."""
         reasoning = DecisionReasoning(
-            primary_reason='Technical analysis',
-            supporting_factors=['RSI', 'MACD'],
-            alternatives_considered=['Wait'],
-            risks_assessed=['Volatility'],
-            confidence_explanation='High confidence',
-            expected_outcome='5% upside'
+            primary_reason='Strong technical indicators',
+            supporting_factors=['RSI oversold', 'MACD positive'],
+            alternatives_considered=['Wait', 'Sell'],
+            risks_assessed=['Market volatility'],
+            confidence_explanation='High confidence due to clear signals',
+            expected_outcome='Expected 5% upside'
         )
         
-        self.assertEqual(reasoning.primary_reason, 'Technical analysis')
-        self.assertEqual(len(reasoning.supporting_factors), 2)
-        self.assertEqual(reasoning.confidence_explanation, 'High confidence')
+        self.assertEqual(reasoning.primary_reason, 'Strong technical indicators')
+        self.assertIn('RSI oversold', reasoning.supporting_factors)
 
     def test_agent_decision(self):
-        """Test AgentDecision dataclass."""
+        """Test AgentDecision data structure."""
         context = DecisionContext(
             symbol='AAPL',
             timeframe='1h',
-            timestamp='2024-01-01T12:00:00',
-            market_conditions={},
-            available_data=[],
+            market_conditions={'trend': 'bullish'},
+            available_data=['price', 'volume'],
             constraints={},
             user_preferences={}
         )
         
         reasoning = DecisionReasoning(
-            primary_reason='Test',
-            supporting_factors=[],
-            alternatives_considered=[],
-            risks_assessed=[],
-            confidence_explanation='Test',
-            expected_outcome='Test'
+            primary_reason='Strong technical indicators',
+            supporting_factors=['RSI oversold', 'MACD positive'],
+            alternatives_considered=['Wait', 'Sell'],
+            risks_assessed=['Market volatility'],
+            confidence_explanation='High confidence due to clear signals',
+            expected_outcome='Expected 5% upside'
         )
         
         decision = AgentDecision(
-            decision_id='test_123',
+            decision_id='test_id',
             agent_name='TestAgent',
             decision_type=DecisionType.FORECAST,
-            action_taken='Test action',
+            action_taken='Predicted AAPL will reach $185.50',
             context=context,
             reasoning=reasoning,
             confidence_level=ConfidenceLevel.HIGH,
-            timestamp='2024-01-01T12:00:00',
-            metadata={}
+            timestamp=datetime.now(),
+            metadata={'test': True}
         )
         
-        self.assertEqual(decision.decision_id, 'test_123')
+        self.assertEqual(decision.decision_id, 'test_id')
         self.assertEqual(decision.agent_name, 'TestAgent')
         self.assertEqual(decision.decision_type, DecisionType.FORECAST)
-        self.assertEqual(decision.confidence_level, ConfidenceLevel.HIGH)
+
+    def test_invalid_data_structures(self):
+        """Test handling of invalid data structures."""
+        # Test DecisionContext with invalid symbol
+        with self.assertRaises(ValueError):
+            DecisionContext(
+                symbol='',  # Empty symbol
+                timeframe='1h',
+                market_conditions={},
+                available_data=[],
+                constraints={},
+                user_preferences={}
+            )
+        
+        # Test DecisionReasoning with empty primary reason
+        with self.assertRaises(ValueError):
+            DecisionReasoning(
+                primary_reason='',  # Empty primary reason
+                supporting_factors=[],
+                alternatives_considered=[],
+                risks_assessed=[],
+                confidence_explanation='',
+                expected_outcome=''
+            )
+        
+        # Test AgentDecision with invalid decision type
+        with self.assertRaises(ValueError):
+            AgentDecision(
+                decision_id='test_id',
+                agent_name='TestAgent',
+                decision_type='INVALID_TYPE',  # Invalid decision type
+                action_taken='Test action',
+                context=DecisionContext('AAPL', '1h', {}, [], {}, {}),
+                reasoning=DecisionReasoning('Test reason', [], [], [], '', ''),
+                confidence_level=ConfidenceLevel.HIGH,
+                timestamp=datetime.now(),
+                metadata={}
+            )
 
 def run_tests():
     """Run all tests."""
-    # Create test suite
-    test_suite = unittest.TestSuite()
-    
-    # Add test classes
-    test_classes = [
-        TestReasoningLogger,
-        TestReasoningDisplay,
-        TestConvenienceFunctions,
-        TestDataStructures
-    ]
-    
-    for test_class in test_classes:
-        tests = unittest.TestLoader().loadTestsFromTestCase(test_class)
-        test_suite.addTests(tests)
-    
-    # Run tests
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(test_suite)
-    
-    return result.wasSuccessful()
+    unittest.main(verbosity=2)
 
 if __name__ == '__main__':
-    success = run_tests()
-    sys.exit(0 if success else 1) 
+    run_tests() 

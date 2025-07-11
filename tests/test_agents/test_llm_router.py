@@ -311,25 +311,200 @@ class TestLLMRouter:
             with pytest.raises(Exception):
                 mock_router.route_intent("Buy AAPL")
 
-    def test_fallback_mechanism(self, mock_router):
-        """Test that the router has fallback mechanisms when primary methods fail."""
-        # Simulate primary method failure
-        with patch.object(mock_router, 'route_intent') as mock_route:
-            mock_route.side_effect = Exception("Primary method failed")
+    def test_fallback_llm_triggered_on_failure_or_overload(self, mock_router):
+        """Validate fallback LLM is triggered when primary route fails or is overloaded."""
+        print("\n🔄 Testing Fallback LLM Trigger on Failure/Overload")
+        
+        # Test fallback on primary route failure
+        print("  Testing fallback on primary route failure...")
+        
+        # Mock primary route failure
+        with patch.object(mock_router, 'route_intent') as mock_primary:
+            mock_primary.side_effect = Exception("Primary route failed")
             
-            # Should use fallback mechanism
-            with patch.object(mock_router, '_fallback_route') as mock_fallback:
+            # Mock fallback route
+            with patch.object(mock_router, 'route_fallback') as mock_fallback:
                 mock_fallback.return_value = {
                     'intent': 'buy',
-                    'confidence': 0.5,
+                    'confidence': 0.7,
                     'entities': ['AAPL'],
-                    'method': 'fallback'
+                    'fallback_used': True
                 }
                 
-                result = mock_router.route_intent("Buy AAPL")
+                # Test fallback activation
+                result = mock_router.route_with_fallback("Buy AAPL")
                 
-                assert result['method'] == 'fallback'
-                assert result['confidence'] > 0
+                # Verify fallback was used
+                self.assertTrue(result['fallback_used'], "Fallback should be used when primary fails")
+                self.assertEqual(result['intent'], 'buy', "Fallback should provide valid intent")
+                self.assertGreater(result['confidence'], 0.5, "Fallback should provide reasonable confidence")
+                
+                # Verify fallback was called
+                mock_fallback.assert_called_once()
+                print("  ✅ Fallback triggered on primary route failure")
+        
+        # Test fallback on overload (high latency)
+        print("  Testing fallback on overload (high latency)...")
+        
+        # Mock primary route with high latency
+        with patch.object(mock_router, 'route_intent') as mock_primary:
+            mock_primary.side_effect = TimeoutError("Primary route timeout")
+            
+            # Mock fallback route
+            with patch.object(mock_router, 'route_fallback') as mock_fallback:
+                mock_fallback.return_value = {
+                    'intent': 'analyze',
+                    'confidence': 0.6,
+                    'entities': ['TSLA'],
+                    'fallback_used': True
+                }
+                
+                # Test fallback activation
+                result = mock_router.route_with_fallback("Analyze TSLA")
+                
+                # Verify fallback was used
+                self.assertTrue(result['fallback_used'], "Fallback should be used when primary times out")
+                self.assertEqual(result['intent'], 'analyze', "Fallback should provide valid intent")
+                
+                # Verify fallback was called
+                mock_fallback.assert_called_once()
+                print("  ✅ Fallback triggered on primary route timeout")
+        
+        # Test fallback on low confidence
+        print("  Testing fallback on low confidence...")
+        
+        # Mock primary route with low confidence
+        with patch.object(mock_router, 'route_intent') as mock_primary:
+            mock_primary.return_value = {
+                'intent': 'buy',
+                'confidence': 0.3,  # Below threshold
+                'entities': ['GOOGL']
+            }
+            
+            # Mock fallback route
+            with patch.object(mock_router, 'route_fallback') as mock_fallback:
+                mock_fallback.return_value = {
+                    'intent': 'buy',
+                    'confidence': 0.8,  # Higher confidence
+                    'entities': ['GOOGL'],
+                    'fallback_used': True
+                }
+                
+                # Test fallback activation
+                result = mock_router.route_with_fallback("Buy GOOGL", confidence_threshold=0.5)
+                
+                # Verify fallback was used due to low confidence
+                self.assertTrue(result['fallback_used'], "Fallback should be used when confidence is low")
+                self.assertGreater(result['confidence'], 0.5, "Fallback should provide higher confidence")
+                
+                # Verify fallback was called
+                mock_fallback.assert_called_once()
+                print("  ✅ Fallback triggered on low confidence")
+        
+        # Test fallback on invalid response
+        print("  Testing fallback on invalid response...")
+        
+        # Mock primary route with invalid response
+        with patch.object(mock_router, 'route_intent') as mock_primary:
+            mock_primary.return_value = {
+                'intent': 'invalid_intent',  # Invalid intent
+                'confidence': 0.9,
+                'entities': ['MSFT']
+            }
+            
+            # Mock fallback route
+            with patch.object(mock_router, 'route_fallback') as mock_fallback:
+                mock_fallback.return_value = {
+                    'intent': 'buy',
+                    'confidence': 0.7,
+                    'entities': ['MSFT'],
+                    'fallback_used': True
+                }
+                
+                # Test fallback activation
+                result = mock_router.route_with_fallback("Buy MSFT")
+                
+                # Verify fallback was used due to invalid response
+                self.assertTrue(result['fallback_used'], "Fallback should be used when response is invalid")
+                self.assertIn(result['intent'], ['buy', 'sell', 'analyze', 'report', 'optimize'], 
+                             "Fallback should provide valid intent")
+                
+                # Verify fallback was called
+                mock_fallback.assert_called_once()
+                print("  ✅ Fallback triggered on invalid response")
+        
+        # Test fallback chain (multiple fallbacks)
+        print("  Testing fallback chain...")
+        
+        # Mock multiple fallback levels
+        with patch.object(mock_router, 'route_intent') as mock_primary:
+            mock_primary.side_effect = Exception("Primary failed")
+            
+            with patch.object(mock_router, 'route_fallback') as mock_fallback1:
+                mock_fallback1.side_effect = Exception("Fallback 1 failed")
+                
+                with patch.object(mock_router, 'route_fallback2') as mock_fallback2:
+                    mock_fallback2.return_value = {
+                        'intent': 'sell',
+                        'confidence': 0.5,
+                        'entities': ['NVDA'],
+                        'fallback_used': True,
+                        'fallback_level': 2
+                    }
+                    
+                    # Test fallback chain
+                    result = mock_router.route_with_fallback_chain("Sell NVDA")
+                    
+                    # Verify second fallback was used
+                    self.assertTrue(result['fallback_used'], "Fallback chain should be used")
+                    self.assertEqual(result['fallback_level'], 2, "Should use second fallback level")
+                    self.assertEqual(result['intent'], 'sell', "Should provide valid intent")
+                    
+                    # Verify fallback chain was called
+                    mock_fallback1.assert_called_once()
+                    mock_fallback2.assert_called_once()
+                    print("  ✅ Fallback chain triggered successfully")
+        
+        # Test fallback performance monitoring
+        print("  Testing fallback performance monitoring...")
+        
+        # Mock performance tracking
+        with patch.object(mock_router, 'track_fallback_performance') as mock_track:
+            mock_track.return_value = {
+                'fallback_usage_rate': 0.15,
+                'fallback_success_rate': 0.85,
+                'avg_fallback_latency': 0.5
+            }
+            
+            # Test fallback performance tracking
+            performance = mock_router.get_fallback_performance()
+            
+            # Verify performance metrics
+            self.assertIn('fallback_usage_rate', performance)
+            self.assertIn('fallback_success_rate', performance)
+            self.assertIn('avg_fallback_latency', performance)
+            
+            self.assertGreaterEqual(performance['fallback_success_rate'], 0.8, 
+                                   "Fallback success rate should be high")
+            self.assertLess(performance['avg_fallback_latency'], 1.0, 
+                           "Fallback latency should be reasonable")
+            
+            print("  ✅ Fallback performance monitoring working")
+        
+        # Test fallback circuit breaker
+        print("  Testing fallback circuit breaker...")
+        
+        # Mock circuit breaker logic
+        with patch.object(mock_router, 'check_circuit_breaker') as mock_circuit:
+            mock_circuit.return_value = True  # Circuit breaker open
+            
+            # Test circuit breaker activation
+            should_use_fallback = mock_router.should_use_fallback()
+            
+            self.assertTrue(should_use_fallback, "Should use fallback when circuit breaker is open")
+            print("  ✅ Circuit breaker logic working")
+        
+        print("✅ Fallback LLM trigger test completed")
 
     def test_input_sanitization(self, mock_router):
         """Test that the router sanitizes user input correctly."""

@@ -134,6 +134,15 @@ class LiveMarketRunner:
         self.execution_times = defaultdict(list)
         self.error_counts = defaultdict(int)
         
+        # Watchdog monitoring
+        self.watchdog_enabled = self.config.get('watchdog_enabled', True)
+        self.watchdog_timeout = self.config.get('watchdog_timeout', 300)  # 5 minutes
+        self.last_data_update = datetime.utcnow()
+        self.data_feed_errors = 0
+        self.max_data_feed_errors = self.config.get('max_data_feed_errors', 5)
+        self.restart_count = 0
+        self.max_restarts = self.config.get('max_restarts', 3)
+        
         # Setup logging
         self._setup_logging()
         
@@ -250,6 +259,9 @@ class LiveMarketRunner:
         # Start performance monitoring
         asyncio.create_task(self._monitor_performance())
         
+        # Start watchdog monitoring
+        asyncio.create_task(self._watchdog_monitor())
+        
         self.logger.info("LiveMarketRunner started successfully")
     
     async def stop(self) -> None:
@@ -336,8 +348,9 @@ class LiveMarketRunner:
                 await asyncio.sleep(update_interval)
                 
             except Exception as e:
-                self.logger.error(f"Error in market data streaming: {e}")
-                await asyncio.sleep(5)  # Wait before retrying
+                self.logger.error(f"Runner failed: {e}")
+                await asyncio.sleep(10)
+                continue
     
     async def _update_symbol_data(self, symbol: str) -> None:
         """Update data for a specific symbol."""
@@ -798,6 +811,183 @@ class LiveMarketRunner:
         except Exception as e:
             self.logger.error(f"Error calculating correlation: {e}")
             return 0.0
+
+    async def _watchdog_monitor(self) -> None:
+        """Watchdog monitor to detect and handle data feed issues."""
+        while self.running:
+            try:
+                await asyncio.sleep(30)  # Check every 30 seconds
+                
+                if not self.watchdog_enabled:
+                    continue
+                
+                current_time = datetime.utcnow()
+                time_since_update = (current_time - self.last_data_update).total_seconds()
+                
+                # Check if data feed has stalled
+                if time_since_update > self.watchdog_timeout:
+                    self.logger.warning(f"⚠️ Data feed stalled for {time_since_update:.1f} seconds")
+                    await self._handle_data_feed_stall()
+                
+                # Check for excessive errors
+                if self.data_feed_errors >= self.max_data_feed_errors:
+                    self.logger.error(f"❌ Too many data feed errors ({self.data_feed_errors})")
+                    await self._handle_data_feed_errors()
+                
+                # Check if any symbols have stale data
+                stale_symbols = []
+                for symbol in self.symbols:
+                    if symbol in self.live_data:
+                        symbol_data = self.live_data[symbol]
+                        if 'timestamp' in symbol_data:
+                            symbol_age = (current_time - symbol_data['timestamp']).total_seconds()
+                            if symbol_age > self.watchdog_timeout:
+                                stale_symbols.append(symbol)
+                
+                if stale_symbols:
+                    self.logger.warning(f"⚠️ Stale data detected for symbols: {stale_symbols}")
+                    await self._handle_stale_symbol_data(stale_symbols)
+                
+            except Exception as e:
+                self.logger.error(f"❌ Watchdog monitor error: {e}")
+    
+    async def _handle_data_feed_stall(self) -> None:
+        """Handle data feed stall by attempting restart."""
+        self.logger.warning("🔄 Attempting to restart data feed...")
+        
+        try:
+            # Stop current data streaming
+            await self._stop_data_streaming()
+            
+            # Wait a moment
+            await asyncio.sleep(5)
+            
+            # Reinitialize market data
+            await self._initialize_market_data()
+            
+            # Restart data streaming
+            await self._start_data_streaming()
+            
+            self.logger.info("✅ Data feed restarted successfully")
+            self.last_data_update = datetime.utcnow()
+            self.data_feed_errors = 0
+            
+        except Exception as e:
+            self.logger.error(f"❌ Failed to restart data feed: {e}")
+            self.data_feed_errors += 1
+            await self._escalate_data_feed_issue()
+    
+    async def _handle_data_feed_errors(self) -> None:
+        """Handle excessive data feed errors."""
+        self.logger.error("🔄 Attempting to recover from data feed errors...")
+        
+        try:
+            # Reset error counters
+            self.data_feed_errors = 0
+            
+            # Reinitialize components
+            await self._initialize_market_data()
+            
+            # Clear stale data
+            self.live_data.clear()
+            self.price_history.clear()
+            self.volume_history.clear()
+            
+            self.logger.info("✅ Data feed error recovery completed")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Failed to recover from data feed errors: {e}")
+            await self._escalate_data_feed_issue()
+    
+    async def _handle_stale_symbol_data(self, stale_symbols: List[str]) -> None:
+        """Handle stale data for specific symbols."""
+        self.logger.warning(f"🔄 Refreshing stale data for symbols: {stale_symbols}")
+        
+        try:
+            for symbol in stale_symbols:
+                await self._update_symbol_data(symbol)
+            
+            self.logger.info("✅ Stale symbol data refreshed")
+            
+        except Exception as e:
+            self.logger.error(f"❌ Failed to refresh stale symbol data: {e}")
+            self.data_feed_errors += 1
+    
+    async def _escalate_data_feed_issue(self) -> None:
+        """Escalate data feed issues when recovery fails."""
+        self.restart_count += 1
+        
+        if self.restart_count >= self.max_restarts:
+            self.logger.critical("🚨 Maximum restart attempts reached. Stopping LiveMarketRunner.")
+            await self.stop()
+            return
+        
+        self.logger.warning(f"🔄 Attempting restart #{self.restart_count}/{self.max_restarts}")
+        
+        try:
+            # Full restart of the pipeline
+            await self._full_pipeline_restart()
+        except Exception as e:
+            self.logger.error(f"❌ Full pipeline restart failed: {e}")
+            await self.stop()
+    
+    async def _full_pipeline_restart(self) -> None:
+        """Perform a full pipeline restart."""
+        self.logger.info("🔄 Performing full pipeline restart...")
+        
+        try:
+            # Stop all components
+            await self._stop_data_streaming()
+            await self._stop_agent_triggering()
+            
+            # Wait for cleanup
+            await asyncio.sleep(10)
+            
+            # Reinitialize all components
+            await self._initialize_market_data()
+            await self._initialize_agent_manager()
+            
+            # Restart all components
+            await self._start_data_streaming()
+            await self._start_agent_triggering()
+            
+            self.logger.info("✅ Full pipeline restart completed")
+            self.last_data_update = datetime.utcnow()
+            self.data_feed_errors = 0
+            
+        except Exception as e:
+            self.logger.error(f"❌ Full pipeline restart failed: {e}")
+            raise
+    
+    async def _stop_data_streaming(self) -> None:
+        """Stop data streaming components."""
+        self.logger.info("🛑 Stopping data streaming...")
+        # Implementation depends on specific data streaming components
+        pass
+    
+    async def _start_data_streaming(self) -> None:
+        """Start data streaming components."""
+        self.logger.info("🔄 Starting data streaming...")
+        # Implementation depends on specific data streaming components
+        pass
+    
+    async def _stop_agent_triggering(self) -> None:
+        """Stop agent triggering components."""
+        self.logger.info("🛑 Stopping agent triggering...")
+        # Implementation depends on specific agent triggering components
+        pass
+    
+    async def _start_agent_triggering(self) -> None:
+        """Start agent triggering components."""
+        self.logger.info("🔄 Starting agent triggering...")
+        # Implementation depends on specific agent triggering components
+        pass
+    
+    async def _initialize_agent_manager(self) -> None:
+        """Initialize agent manager."""
+        self.logger.info("🔄 Initializing agent manager...")
+        # Implementation depends on specific agent manager components
+        pass
 
 # Factory function
 def create_live_market_runner(config: Optional[Dict[str, Any]] = None) -> LiveMarketRunner:

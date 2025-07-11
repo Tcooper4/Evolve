@@ -61,6 +61,19 @@ class SystemResilience:
         self.system_health = {}
         self.last_health_check = None
         
+        # Crash loop detection
+        self.crash_count = 0
+        self.crash_history = []
+        self.last_crash_time = None
+        
+        # Agent monitoring and self-healing
+        self.agent_monitors = {}
+        self.agent_health = {}
+        self.agent_restart_count = {}
+        self.max_agent_restarts = self.config.get('max_agent_restarts', 5)
+        self.agent_restart_delay = self.config.get('agent_restart_delay', 30)  # seconds
+        self.agent_health_check_interval = self.config.get('agent_health_check_interval', 60)  # seconds
+        
         # Initialize resilience components
         self._initialize_resilience()
         
@@ -512,6 +525,332 @@ class SystemResilience:
         self.fallback_history = []
         self._save_fallback_history()
         logger.info("Fallback history cleared")
+    
+    def detect_crash_loop(self, error: Exception, context: str = "") -> bool:
+        """Detect and block crash loops.
+        
+        Args:
+            error: The error that occurred
+            context: Context where the error occurred
+            
+        Returns:
+            True if crash loop detected
+        """
+        current_time = datetime.now()
+        
+        # Record crash
+        crash_record = {
+            'timestamp': current_time.isoformat(),
+            'error': str(error),
+            'error_type': type(error).__name__,
+            'context': context
+        }
+        
+        self.crash_history.append(crash_record)
+        self.crash_count += 1
+        
+        # Check for crash loop (3 crashes in 5 minutes)
+        recent_crashes = [
+            crash for crash in self.crash_history 
+            if (current_time - datetime.fromisoformat(crash['timestamp'])).total_seconds() < 300
+        ]
+        
+        if len(recent_crashes) > 3:
+            logger.critical(f"Crash loop detected: {len(recent_crashes)} crashes in 5 minutes")
+            raise SystemError("System entering crash loop.")
+        
+        self.last_crash_time = current_time
+        return False
+
+    def register_agent_for_monitoring(self, agent_id: str, agent_instance: Any, 
+                                     restart_callback: Optional[callable] = None) -> bool:
+        """Register an agent for health monitoring and self-healing.
+        
+        Args:
+            agent_id: Unique identifier for the agent
+            agent_instance: The agent instance to monitor
+            restart_callback: Optional callback function to restart the agent
+            
+        Returns:
+            True if agent was registered successfully
+        """
+        try:
+            self.agent_monitors[agent_id] = {
+                'instance': agent_instance,
+                'restart_callback': restart_callback,
+                'last_health_check': datetime.now(),
+                'last_restart': None,
+                'status': 'running',
+                'start_time': datetime.now()
+            }
+            
+            self.agent_health[agent_id] = {
+                'status': 'healthy',
+                'last_check': datetime.now().isoformat(),
+                'restart_count': 0,
+                'total_uptime': 0,
+                'last_error': None
+            }
+            
+            self.agent_restart_count[agent_id] = 0
+            
+            logger.info(f"Agent {agent_id} registered for monitoring")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to register agent {agent_id} for monitoring: {e}")
+            return False
+    
+    def unregister_agent_monitoring(self, agent_id: str) -> bool:
+        """Unregister an agent from health monitoring.
+        
+        Args:
+            agent_id: Unique identifier for the agent
+            
+        Returns:
+            True if agent was unregistered successfully
+        """
+        try:
+            if agent_id in self.agent_monitors:
+                del self.agent_monitors[agent_id]
+            
+            if agent_id in self.agent_health:
+                del self.agent_health[agent_id]
+            
+            if agent_id in self.agent_restart_count:
+                del self.agent_restart_count[agent_id]
+            
+            logger.info(f"Agent {agent_id} unregistered from monitoring")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to unregister agent {agent_id} from monitoring: {e}")
+            return False
+    
+    def check_agent_health(self, agent_id: str) -> Dict[str, Any]:
+        """Check the health of a specific agent.
+        
+        Args:
+            agent_id: Unique identifier for the agent
+            
+        Returns:
+            Health status dictionary
+        """
+        if agent_id not in self.agent_monitors:
+            return {'status': 'not_monitored', 'error': 'Agent not registered for monitoring'}
+        
+        try:
+            monitor = self.agent_monitors[agent_id]
+            agent_instance = monitor['instance']
+            
+            # Check if agent is still running
+            is_alive = self._check_agent_alive(agent_instance)
+            
+            # Update health status
+            health_status = 'healthy' if is_alive else 'unhealthy'
+            self.agent_health[agent_id]['status'] = health_status
+            self.agent_health[agent_id]['last_check'] = datetime.now().isoformat()
+            
+            # Update monitor
+            monitor['last_health_check'] = datetime.now()
+            monitor['status'] = 'running' if is_alive else 'stopped'
+            
+            # If agent is unhealthy, attempt recovery
+            if not is_alive:
+                self._attempt_agent_recovery(agent_id)
+            
+            return {
+                'agent_id': agent_id,
+                'status': health_status,
+                'is_alive': is_alive,
+                'restart_count': self.agent_restart_count.get(agent_id, 0),
+                'last_health_check': monitor['last_health_check'].isoformat(),
+                'uptime': self._calculate_agent_uptime(agent_id)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error checking health for agent {agent_id}: {e}")
+            return {
+                'agent_id': agent_id,
+                'status': 'error',
+                'error': str(e),
+                'is_alive': False
+            }
+    
+    def _check_agent_alive(self, agent_instance: Any) -> bool:
+        """Check if an agent instance is still alive and responsive.
+        
+        Args:
+            agent_instance: The agent instance to check
+            
+        Returns:
+            True if agent is alive and responsive
+        """
+        try:
+            # Try to call a simple method to check if agent is responsive
+            if hasattr(agent_instance, 'is_alive'):
+                return agent_instance.is_alive()
+            
+            # Check if agent has a status method
+            if hasattr(agent_instance, 'get_status'):
+                status = agent_instance.get_status()
+                return status.get('running', False)
+            
+            # Check if agent has a health check method
+            if hasattr(agent_instance, 'health_check'):
+                return agent_instance.health_check()
+            
+            # Default: assume agent is alive if we can access it
+            return True
+            
+        except Exception as e:
+            logger.debug(f"Agent health check failed: {e}")
+            return False
+    
+    def _attempt_agent_recovery(self, agent_id: str) -> bool:
+        """Attempt to recover an unhealthy agent.
+        
+        Args:
+            agent_id: Unique identifier for the agent
+            
+        Returns:
+            True if recovery was successful
+        """
+        try:
+            if agent_id not in self.agent_monitors:
+                return False
+            
+            restart_count = self.agent_restart_count.get(agent_id, 0)
+            
+            # Check if we've exceeded max restarts
+            if restart_count >= self.max_agent_restarts:
+                logger.error(f"Agent {agent_id} exceeded maximum restart attempts ({self.max_agent_restarts})")
+                self.agent_health[agent_id]['status'] = 'failed'
+                return False
+            
+            monitor = self.agent_monitors[agent_id]
+            restart_callback = monitor.get('restart_callback')
+            
+            if restart_callback:
+                logger.info(f"Attempting to restart agent {agent_id} (attempt {restart_count + 1})")
+                
+                # Call restart callback
+                success = restart_callback(agent_id)
+                
+                if success:
+                    # Update restart count and timestamp
+                    self.agent_restart_count[agent_id] = restart_count + 1
+                    monitor['last_restart'] = datetime.now()
+                    monitor['status'] = 'running'
+                    
+                    # Update health status
+                    self.agent_health[agent_id]['status'] = 'recovered'
+                    self.agent_health[agent_id]['restart_count'] = restart_count + 1
+                    
+                    logger.info(f"Successfully restarted agent {agent_id}")
+                    return True
+                else:
+                    logger.error(f"Failed to restart agent {agent_id}")
+                    return False
+            else:
+                logger.warning(f"No restart callback available for agent {agent_id}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error during agent recovery for {agent_id}: {e}")
+            return False
+    
+    def _calculate_agent_uptime(self, agent_id: str) -> float:
+        """Calculate the uptime for an agent.
+        
+        Args:
+            agent_id: Unique identifier for the agent
+            
+        Returns:
+            Uptime in seconds
+        """
+        try:
+            if agent_id in self.agent_monitors:
+                start_time = self.agent_monitors[agent_id]['start_time']
+                return (datetime.now() - start_time).total_seconds()
+            return 0.0
+        except Exception:
+            return 0.0
+    
+    def get_agent_health_summary(self) -> Dict[str, Any]:
+        """Get a summary of all monitored agents' health.
+        
+        Returns:
+            Summary of agent health status
+        """
+        summary = {
+            'total_agents': len(self.agent_monitors),
+            'healthy_agents': 0,
+            'unhealthy_agents': 0,
+            'failed_agents': 0,
+            'agents': {}
+        }
+        
+        for agent_id in self.agent_monitors.keys():
+            health = self.check_agent_health(agent_id)
+            summary['agents'][agent_id] = health
+            
+            if health['status'] == 'healthy':
+                summary['healthy_agents'] += 1
+            elif health['status'] == 'failed':
+                summary['failed_agents'] += 1
+            else:
+                summary['unhealthy_agents'] += 1
+        
+        return summary
+    
+    def start_agent_monitoring(self) -> None:
+        """Start the agent monitoring loop."""
+        import threading
+        import time
+        
+        def monitoring_loop():
+            while True:
+                try:
+                    # Check health of all monitored agents
+                    for agent_id in list(self.agent_monitors.keys()):
+                        self.check_agent_health(agent_id)
+                    
+                    # Sleep for the configured interval
+                    time.sleep(self.agent_health_check_interval)
+                    
+                except Exception as e:
+                    logger.error(f"Error in agent monitoring loop: {e}")
+                    time.sleep(10)  # Brief pause on error
+        
+        # Start monitoring in a separate thread
+        monitoring_thread = threading.Thread(target=monitoring_loop, daemon=True)
+        monitoring_thread.start()
+        
+        logger.info("Agent monitoring started")
+    
+    def stop_agent_monitoring(self) -> None:
+        """Stop the agent monitoring loop."""
+        # This would need to be implemented with proper thread management
+        logger.info("Agent monitoring stopped")
+    
+    def get_agent_recovery_stats(self) -> Dict[str, Any]:
+        """Get statistics about agent recovery attempts.
+        
+        Returns:
+            Recovery statistics
+        """
+        total_restarts = sum(self.agent_restart_count.values())
+        failed_agents = len([aid for aid, health in self.agent_health.items() 
+                           if health['status'] == 'failed'])
+        
+        return {
+            'total_restarts': total_restarts,
+            'failed_agents': failed_agents,
+            'max_restarts': self.max_agent_restarts,
+            'restart_delay': self.agent_restart_delay,
+            'agent_restart_counts': dict(self.agent_restart_count)
+        }
 
 # Global instance
 system_resilience = SystemResilience()
