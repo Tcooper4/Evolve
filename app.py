@@ -37,11 +37,11 @@ logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(loggin
 try:
     from dotenv import load_dotenv
     load_dotenv()
-    print("✅ Environment variables loaded from .env file")
+    logger.info("✅ Environment variables loaded from .env file")
 except ImportError:
-    print("⚠️ python-dotenv not available, using system environment variables")
+    logger.warning("⚠️ python-dotenv not available, using system environment variables")
 except Exception as e:
-    print(f"⚠️ Error loading .env file: {e}")
+    logger.error(f"⚠️ Error loading .env file: {e}")
 
 # Debug: Check if API keys are loaded
 alpha_vantage_key = os.getenv('ALPHA_VANTAGE_API_KEY')
@@ -49,19 +49,19 @@ finnhub_key = os.getenv('FINNHUB_API_KEY')
 polygon_key = os.getenv('POLYGON_API_KEY')
 
 if alpha_vantage_key:
-    print(f"✅ ALPHA_VANTAGE_API_KEY loaded: {alpha_vantage_key[:10]}...")
+    logger.info(f"✅ ALPHA_VANTAGE_API_KEY loaded: {alpha_vantage_key[:10]}...")
 else:
-    print("❌ ALPHA_VANTAGE_API_KEY not found")
+    logger.warning("❌ ALPHA_VANTAGE_API_KEY not found")
 
 if finnhub_key:
-    print(f"✅ FINNHUB_API_KEY loaded: {finnhub_key[:10]}...")
+    logger.info(f"✅ FINNHUB_API_KEY loaded: {finnhub_key[:10]}...")
 else:
-    print("❌ FINNHUB_API_KEY not found")
+    logger.warning("❌ FINNHUB_API_KEY not found")
 
 if polygon_key:
-    print(f"✅ POLYGON_API_KEY loaded: {polygon_key[:10]}...")
+    logger.info(f"✅ POLYGON_API_KEY loaded: {polygon_key[:10]}...")
 else:
-    print("❌ POLYGON_API_KEY not found")
+    logger.warning("❌ POLYGON_API_KEY not found")
 
 # Configure page
 st.set_page_config(
@@ -434,19 +434,51 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Initialize session state with concurrency safeguards
+def initialize_session_state():
+    """Initialize session state with proper concurrency handling."""
+    # Prompt agent initialization
+    if 'prompt_agent' not in st.session_state:
+        try:
+            st.session_state.prompt_agent = PromptAgent() if CORE_COMPONENTS_AVAILABLE else None
+            logger.info("✅ Prompt agent initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize prompt agent: {e}")
+            st.session_state.prompt_agent = None
+
+    # Conversation history initialization
+    if 'conversation_history' not in st.session_state:
+        st.session_state.conversation_history = []
+        logger.info("✅ Conversation history initialized")
+
+    # Agent logger initialization
+    if 'agent_logger' not in st.session_state:
+        try:
+            from trading.memory.agent_logger import get_agent_logger
+            st.session_state.agent_logger = get_agent_logger()
+            logger.info("✅ Agent logger initialized successfully")
+        except ImportError as e:
+            logger.warning(f"⚠️ Agent logger not available: {e}")
+            st.session_state.agent_logger = None
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize agent logger: {e}")
+            st.session_state.agent_logger = None
+
+    # Voice agent initialization
+    if 'voice_agent' not in st.session_state and VOICE_AGENT_AVAILABLE:
+        try:
+            st.session_state.voice_agent = VoicePromptAgent()
+            logger.info("✅ Voice agent initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize voice agent: {e}")
+            st.session_state.voice_agent = None
+
+    # Navigation state initialization
+    if 'main_nav' not in st.session_state:
+        st.session_state.main_nav = "Home & Chat"
+
 # Initialize session state
-if 'prompt_agent' not in st.session_state:
-    st.session_state.prompt_agent = PromptAgent() if CORE_COMPONENTS_AVAILABLE else None
-
-if 'conversation_history' not in st.session_state:
-    st.session_state.conversation_history = []
-
-if 'agent_logger' not in st.session_state:
-    try:
-        from trading.memory.agent_logger import get_agent_logger
-        st.session_state.agent_logger = get_agent_logger()
-    except ImportError:
-        st.session_state.agent_logger = None
+initialize_session_state()
 
 # --- Voice Prompt Integration ---
 try:
@@ -528,37 +560,77 @@ with col2:
 if submit and prompt:
     with st.spinner("Processing your request..."):
         try:
-            # Route through PromptRouterAgent and show result
+            # Enhanced prompt routing with proper error handling
             from agents.registry import get_prompt_router_agent
-            result = get_prompt_router_agent().handle_prompt(prompt)
-            st.write(result.message)
             
+            # Get prompt router agent with error handling
+            router_agent = get_prompt_router_agent()
+            if router_agent is None:
+                st.error("❌ Prompt router agent not available. Please check system configuration.")
+                return
+                
+            # Handle prompt with comprehensive routing
+            result = router_agent.handle_prompt(prompt)
+            
+            # Display result with enhanced formatting
+            if hasattr(result, 'message') and result.message:
+                st.markdown(f"""
+                <div class="result-card">
+                    <h3>🤖 AI Response</h3>
+                    <p>{result.message}</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Display strategy and model information if available
+                if hasattr(result, 'strategy_name') and result.strategy_name:
+                    st.metric("📊 Strategy Used", result.strategy_name)
+                if hasattr(result, 'model_used') and result.model_used:
+                    st.metric("🧠 Model Used", result.model_used)
+                if hasattr(result, 'confidence') and result.confidence:
+                    st.metric("🎯 Confidence", f"{result.confidence:.2%}")
+                if hasattr(result, 'signal') and result.signal:
+                    signal_color = "🟢" if result.signal.lower() in ['buy', 'long'] else "🔴" if result.signal.lower() in ['sell', 'short'] else "🟡"
+                    st.metric("📈 Signal", f"{signal_color} {result.signal}")
+            else:
+                st.warning("⚠️ No response received from AI agent")
+            
+            # Store response in session state
+            if 'last_response' not in st.session_state:
+                st.session_state.last_response = None
             st.session_state.last_response = result
             
-            # Add to conversation history
+            # Add to conversation history with proper state management
+            if 'conversation_history' not in st.session_state:
+                st.session_state.conversation_history = []
+            
             st.session_state.conversation_history.append({
                 'prompt': prompt,
                 'response': result,
                 'timestamp': datetime.now()
             })
             
-            # Route navigation based on intent
+            # Enhanced navigation routing based on intent
             if hasattr(result, 'message'):
                 message_lower = result.message.lower()
-                if 'forecast' in message_lower:
+                if 'forecast' in message_lower or 'prediction' in message_lower:
                     st.session_state.main_nav = "Forecasting"
-                elif 'strategy' in message_lower:
+                elif 'strategy' in message_lower or 'signal' in message_lower:
                     st.session_state.main_nav = "Strategy Lab"
-                elif 'report' in message_lower or 'export' in message_lower:
+                elif 'report' in message_lower or 'export' in message_lower or 'analysis' in message_lower:
                     st.session_state.main_nav = "Reports"
-                elif 'tune' in message_lower or 'optimize' in message_lower:
+                elif 'tune' in message_lower or 'optimize' in message_lower or 'model' in message_lower:
                     st.session_state.main_nav = "Model Lab"
-                elif 'setting' in message_lower:
+                elif 'setting' in message_lower or 'config' in message_lower:
                     st.session_state.main_nav = "Settings"
             
             st.success("✅ Request processed successfully! Evolve AI has analyzed your query.")
+            
+        except ImportError as e:
+            st.error(f"❌ System configuration error: {str(e)}")
+            st.info("Please ensure all required modules are properly installed.")
         except Exception as e:
-            st.error(f"Error processing request: {str(e)}")
+            st.error(f"❌ Error processing request: {str(e)}")
+            logger.error(f"Prompt processing error: {str(e)}", exc_info=True)
 
 # Enhanced Conversation History Display
 if st.session_state.conversation_history:
