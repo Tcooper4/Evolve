@@ -394,6 +394,7 @@ class WalkForwardAgent(BaseAgent):
         except Exception as e:
             logger.error(f"Error calculating performance: {e}")
             return {}
+        # TODO: Specify exception type instead of using bare except
     
     def _calculate_max_drawdown(self, returns: pd.Series) -> float:
         """Calculate maximum drawdown.
