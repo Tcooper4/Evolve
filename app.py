@@ -25,11 +25,14 @@ import warnings
 import os
 from pathlib import Path
 
+# Configure logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Suppress warnings
 warnings.filterwarnings('ignore')
 
 # Suppress Streamlit warnings when importing
-import logging
 logging.getLogger('streamlit.runtime.scriptrunner_utils.script_run_context').setLevel(logging.ERROR)
 logging.getLogger('streamlit.runtime.state.session_state_proxy').setLevel(logging.ERROR)
 
@@ -69,10 +72,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Import core components with error handling
 try:
@@ -477,9 +476,6 @@ def initialize_session_state():
     if 'main_nav' not in st.session_state:
         st.session_state.main_nav = "Home & Chat"
 
-# Initialize session state
-initialize_session_state()
-
 # --- Voice Prompt Integration ---
 try:
     import speech_recognition as sr
@@ -488,6 +484,9 @@ try:
 except ImportError:
     VOICE_AGENT_AVAILABLE = False
     VoicePromptAgent = None
+
+# Initialize session state
+initialize_session_state()
 
 if 'voice_agent' not in st.session_state and VOICE_AGENT_AVAILABLE:
     st.session_state.voice_agent = VoicePromptAgent()
@@ -567,7 +566,7 @@ if submit and prompt:
             router_agent = get_prompt_router_agent()
             if router_agent is None:
                 st.error("❌ Prompt router agent not available. Please check system configuration.")
-                return
+                st.stop()
                 
             # Handle prompt with comprehensive routing
             result = router_agent.handle_prompt(prompt)

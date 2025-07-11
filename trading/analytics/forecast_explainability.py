@@ -465,6 +465,7 @@ class IntelligentForecastExplainability:
         except Exception as e:
             logger.error(f"Error getting model predictions: {e}")
             return np.array([0.0] * 10)
+        # TODO: Specify exception type instead of using bare except
     
     def _calculate_model_confidence(self, predictions: np.ndarray, forecast_value: float) -> float:
         """Calculate model confidence based on prediction consistency."""

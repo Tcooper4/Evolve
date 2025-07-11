@@ -627,6 +627,7 @@ class AlphaAttributionEngine:
         except Exception as e:
             self.logger.error(f"Error calculating rolling alpha: {str(e)}")
             return pd.Series(dtype=float)
+        # TODO: Specify exception type instead of using bare except
     
     def _calculate_decay_score(self, rolling_alpha: pd.Series) -> float:
         """Calculate decay score from rolling alpha series."""
