@@ -14,6 +14,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 from dataclasses import dataclass, field
 from enum import Enum
+from difflib import SequenceMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class RequestType(Enum):
     PORTFOLIO = "portfolio"
     SYSTEM = "system"
     GENERAL = "general"
+    INVESTMENT = "investment"  # New type for investment-related queries
     UNKNOWN = "unknown"
 
 @dataclass
@@ -87,6 +89,13 @@ class PromptProcessor:
                 r'\b(system|status|health|monitor|check|diagnose)\b',
                 r'\b(error|problem|issue|bug|fix|repair)\b',
                 r'\b(restart|stop|start|configure|setup)\b'
+            ],
+            RequestType.INVESTMENT: [
+                r'\b(invest|investment|buy|purchase|acquire)\b',
+                r'\b(top stocks|best stocks|recommended|suggest)\b',
+                r'\b(what should|which stocks|what to buy|where to invest)\b',
+                r'\b(opportunity|potential|growth|returns)\b',
+                r'\b(today|now|current|market)\b'
             ]
         }
         
@@ -99,6 +108,15 @@ class PromptProcessor:
             'strategy': r'\b(rsi|macd|bollinger|sma|ema|custom)\b',
             'risk_level': r'\b(low|medium|high|conservative|aggressive)\b'
         }
+        
+        # Investment-related keywords for fuzzy matching
+        self.investment_keywords = [
+            'invest', 'investment', 'buy', 'purchase', 'acquire',
+            'top stocks', 'best stocks', 'recommended', 'suggest',
+            'what should', 'which stocks', 'what to buy', 'where to invest',
+            'opportunity', 'potential', 'growth', 'returns',
+            'today', 'now', 'current', 'market'
+        ]
     
     def process_prompt(self, prompt: str, context: Optional[PromptContext] = None) -> ProcessedPrompt:
         """
@@ -116,14 +134,20 @@ class PromptProcessor:
         if context is None:
             context = PromptContext()
         
-        # Classify request type
-        request_type = self._classify_request(prompt)
+        # Normalize prompt (lowercase, strip whitespace)
+        normalized_prompt = self._normalize_prompt(prompt)
+        
+        # Check for investment-related queries first
+        if self._is_investment_query(normalized_prompt):
+            request_type = RequestType.INVESTMENT
+            confidence = 0.9  # High confidence for investment queries
+        else:
+            # Classify request type
+            request_type = self._classify_request(normalized_prompt)
+            confidence = self._calculate_confidence(normalized_prompt, request_type)
         
         # Extract parameters
-        extracted_parameters = self._extract_parameters(prompt)
-        
-        # Calculate confidence
-        confidence = self._calculate_confidence(prompt, request_type)
+        extracted_parameters = self._extract_parameters(normalized_prompt)
         
         # Generate routing suggestions
         routing_suggestions = self._generate_routing_suggestions(request_type, extracted_parameters)
@@ -142,6 +166,77 @@ class PromptProcessor:
         
         self.logger.info(f"Processed prompt: {request_type.value} (confidence: {confidence:.2f})")
         return processed_prompt
+    
+    def _normalize_prompt(self, prompt: str) -> str:
+        """
+        Normalize prompt for consistent processing.
+        
+        Args:
+            prompt: Original prompt
+            
+        Returns:
+            str: Normalized prompt
+        """
+        # Convert to lowercase and strip whitespace
+        normalized = prompt.lower().strip()
+        
+        # Remove extra whitespace
+        normalized = re.sub(r'\s+', ' ', normalized)
+        
+        return normalized
+    
+    def _is_investment_query(self, normalized_prompt: str) -> bool:
+        """
+        Check if the prompt is an investment-related query.
+        
+        Args:
+            normalized_prompt: Normalized prompt
+            
+        Returns:
+            bool: True if investment query, False otherwise
+        """
+        # Check for exact keyword matches
+        for keyword in self.investment_keywords:
+            if keyword in normalized_prompt:
+                return True
+        
+        # Check for fuzzy matches
+        for keyword in self.investment_keywords:
+            if self._fuzzy_match(normalized_prompt, keyword, threshold=0.8):
+                return True
+        
+        # Check for common investment question patterns
+        investment_patterns = [
+            r'\bwhat\s+(stocks?|should|to)\s+(invest|buy|purchase)\b',
+            r'\bwhich\s+(stocks?|companies?)\s+(to|should)\s+(invest|buy)\b',
+            r'\b(top|best)\s+(stocks?|investments?)\b',
+            r'\b(recommend|suggest)\s+(stocks?|investments?)\b'
+        ]
+        
+        for pattern in investment_patterns:
+            if re.search(pattern, normalized_prompt):
+                return True
+        
+        return False
+    
+    def _fuzzy_match(self, text: str, keyword: str, threshold: float = 0.8) -> bool:
+        """
+        Perform fuzzy matching between text and keyword.
+        
+        Args:
+            text: Text to search in
+            keyword: Keyword to search for
+            threshold: Similarity threshold (0.0 to 1.0)
+            
+        Returns:
+            bool: True if match found, False otherwise
+        """
+        words = text.split()
+        for word in words:
+            similarity = SequenceMatcher(None, word, keyword).ratio()
+            if similarity >= threshold:
+                return True
+        return False
     
     def _classify_request(self, prompt: str) -> RequestType:
         """
@@ -248,22 +343,27 @@ class PromptProcessor:
             if 'strategy' in parameters:
                 suggestions.append(f"{parameters['strategy'].title()}Strategy")
         
+        elif request_type == RequestType.INVESTMENT:
+            # Route investment queries to TopRankedForecastAgent
+            suggestions.extend(['TopRankedForecastAgent', 'PortfolioManager', 'RiskManager'])
+        
         elif request_type == RequestType.ANALYSIS:
-            suggestions.extend(['MarketAnalyzerAgent', 'AnalysisEngine'])
+            suggestions.extend(['AnalysisEngine', 'DataAnalyzer'])
         
         elif request_type == RequestType.OPTIMIZATION:
-            suggestions.extend(['MetaTunerAgent', 'OptimizationEngine'])
+            suggestions.extend(['OptimizationEngine', 'HyperparameterTuner'])
         
         elif request_type == RequestType.PORTFOLIO:
-            suggestions.extend(['PortfolioManagerAgent', 'PortfolioEngine'])
+            suggestions.extend(['PortfolioManager', 'AssetAllocator'])
         
         elif request_type == RequestType.SYSTEM:
-            suggestions.extend(['SystemMonitorAgent', 'SystemEngine'])
+            suggestions.extend(['SystemMonitor', 'HealthChecker'])
         
-        # Add general suggestions
-        suggestions.extend(['PromptRouterAgent', 'AgentHub'])
+        else:
+            # Fallback for unknown requests
+            suggestions.extend(['GeneralAssistant', 'HelpSystem'])
         
-        return list(set(suggestions))  # Remove duplicates
+        return suggestions
     
     def validate_prompt(self, prompt: str) -> Tuple[bool, List[str]]:
         """
@@ -326,10 +426,183 @@ class PromptProcessor:
         return enhanced_prompt
 
 def get_prompt_processor() -> PromptProcessor:
-    """
-    Get a prompt processor instance.
+    """Get a singleton instance of the prompt processor."""
+    if not hasattr(get_prompt_processor, '_instance'):
+        get_prompt_processor._instance = PromptProcessor()
+    return get_prompt_processor._instance
+
+class PromptRouterAgent:
+    """Agent for routing prompts to appropriate handlers."""
     
-    Returns:
-        PromptProcessor: Configured prompt processor
-    """
-    return PromptProcessor() 
+    def __init__(self):
+        """Initialize the prompt router agent."""
+        self.processor = get_prompt_processor()
+        self.logger = logging.getLogger(__name__)
+    
+    def handle_prompt(self, prompt: str, context: Optional[PromptContext] = None) -> Dict[str, Any]:
+        """
+        Handle a user prompt and route to appropriate agent.
+        
+        Args:
+            prompt: User's input prompt
+            context: Optional context information
+            
+        Returns:
+            Dict: Response with routing information and result
+        """
+        try:
+            # Process the prompt
+            processed = self.processor.process_prompt(prompt, context)
+            
+            # Route based on request type
+            if processed.request_type == RequestType.INVESTMENT:
+                return self._handle_investment_query(prompt, processed)
+            elif processed.request_type == RequestType.FORECAST:
+                return self._handle_forecast_query(prompt, processed)
+            elif processed.request_type == RequestType.STRATEGY:
+                return self._handle_strategy_query(prompt, processed)
+            else:
+                return self._handle_general_query(prompt, processed)
+                
+        except Exception as e:
+            self.logger.error(f"Error handling prompt: {e}")
+            return {
+                'success': False,
+                'message': f"Error processing prompt: {str(e)}",
+                'routing_suggestions': ['GeneralAssistant'],
+                'fallback_used': True
+            }
+    
+    def _handle_investment_query(self, prompt: str, processed: ProcessedPrompt) -> Dict[str, Any]:
+        """
+        Handle investment-related queries with fallback to TopRankedForecastAgent.
+        
+        Args:
+            prompt: Original prompt
+            processed: Processed prompt information
+            
+        Returns:
+            Dict: Response with investment recommendations
+        """
+        try:
+            # Try to route to TopRankedForecastAgent
+            from agents.top_ranked_forecast_agent import TopRankedForecastAgent
+            
+            agent = TopRankedForecastAgent()
+            result = agent.run(prompt)
+            
+            return {
+                'success': True,
+                'message': f"Investment analysis completed. {result.get('message', '')}",
+                'request_type': 'investment',
+                'confidence': processed.confidence,
+                'routing_suggestions': processed.routing_suggestions,
+                'result': result,
+                'agent_used': 'TopRankedForecastAgent'
+            }
+            
+        except ImportError:
+            self.logger.warning("TopRankedForecastAgent not available, using fallback")
+            return self._fallback_investment_response(prompt, processed)
+        except Exception as e:
+            self.logger.error(f"Error in TopRankedForecastAgent: {e}")
+            return self._fallback_investment_response(prompt, processed)
+    
+    def _fallback_investment_response(self, prompt: str, processed: ProcessedPrompt) -> Dict[str, Any]:
+        """
+        Fallback response for investment queries when TopRankedForecastAgent is unavailable.
+        
+        Args:
+            prompt: Original prompt
+            processed: Processed prompt information
+            
+        Returns:
+            Dict: Fallback response
+        """
+        return {
+            'success': True,
+            'message': "I can help you with investment decisions. Please try asking about specific stocks or use the forecast feature for detailed analysis.",
+            'request_type': 'investment',
+            'confidence': processed.confidence,
+            'routing_suggestions': processed.routing_suggestions,
+            'fallback_used': True,
+            'suggestions': [
+                "Try: 'Forecast AAPL for next week'",
+                "Try: 'Analyze TSLA performance'",
+                "Try: 'What's the best strategy for tech stocks?'"
+            ]
+        }
+    
+    def _handle_forecast_query(self, prompt: str, processed: ProcessedPrompt) -> Dict[str, Any]:
+        """
+        Handle forecast-related queries.
+        
+        Args:
+            prompt: Original prompt
+            processed: Processed prompt information
+            
+        Returns:
+            Dict: Response with forecast information
+        """
+        return {
+            'success': True,
+            'message': f"Forecast request processed. Routing to: {', '.join(processed.routing_suggestions)}",
+            'request_type': 'forecast',
+            'confidence': processed.confidence,
+            'routing_suggestions': processed.routing_suggestions,
+            'parameters': processed.extracted_parameters
+        }
+    
+    def _handle_strategy_query(self, prompt: str, processed: ProcessedPrompt) -> Dict[str, Any]:
+        """
+        Handle strategy-related queries.
+        
+        Args:
+            prompt: Original prompt
+            processed: Processed prompt information
+            
+        Returns:
+            Dict: Response with strategy information
+        """
+        return {
+            'success': True,
+            'message': f"Strategy request processed. Routing to: {', '.join(processed.routing_suggestions)}",
+            'request_type': 'strategy',
+            'confidence': processed.confidence,
+            'routing_suggestions': processed.routing_suggestions,
+            'parameters': processed.extracted_parameters
+        }
+    
+    def _handle_general_query(self, prompt: str, processed: ProcessedPrompt) -> Dict[str, Any]:
+        """
+        Handle general queries.
+        
+        Args:
+            prompt: Original prompt
+            processed: Processed prompt information
+            
+        Returns:
+            Dict: Response with general information
+        """
+        return {
+            'success': True,
+            'message': f"General request processed. Routing to: {', '.join(processed.routing_suggestions)}",
+            'request_type': processed.request_type.value,
+            'confidence': processed.confidence,
+            'routing_suggestions': processed.routing_suggestions,
+            'parameters': processed.extracted_parameters
+        }
+    
+    def run(self, prompt: str, *args, **kwargs) -> Dict[str, Any]:
+        """
+        Main run method for the agent.
+        
+        Args:
+            prompt: User's input prompt
+            *args: Additional arguments
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            Dict: Response from prompt handling
+        """
+        return self.handle_prompt(prompt) 
