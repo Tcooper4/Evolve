@@ -4,9 +4,9 @@ Refactored to use submodules for better organization.
 """
 
 # Import from submodules to reduce initial load time
-from .forecast_registry import *
-from .strategy_registry import *
-from .management_registry import *
+from .forecast_registry import ForecastRegistry
+from .strategy_registry import StrategyRegistry
+from .management_registry import ManagementRegistry
 
 # Legacy imports for backward compatibility
 try:
