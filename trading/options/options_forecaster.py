@@ -596,6 +596,12 @@ class OptionsForecaster:
 
 # Example usage
 if __name__ == "__main__":
+    import logging
+    
+    # Setup logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    
     # Initialize forecaster
     config = {
         'risk_free_rate': 0.02,
@@ -609,16 +615,16 @@ if __name__ == "__main__":
     
     # Get options chain
     options_chain = forecaster.get_options_chain('AAPL')
-    print(f"Retrieved {len(options_chain)} options contracts")
+    logger.info(f"Retrieved {len(options_chain)} options contracts")
     
     # Calculate implied volatility
     iv = forecaster.calculate_implied_volatility(5.0, 100.0, 50.0, 0.5, 'call')
-    print(f"Implied volatility: {iv:.2%}")
+    logger.info(f"Implied volatility: {iv:.2%}")
     
     # Calculate Greeks
     greeks = forecaster.calculate_greeks(100.0, 50.0, 0.5, 0.3, 'call')
-    print(f"Greeks: {greeks}")
+    logger.info(f"Greeks: {greeks}")
     
     # Forecast volatility
     forecast = forecaster.forecast_implied_volatility('AAPL', 30)
-    print(f"Volatility forecast: {forecast}") 
+    logger.info(f"Volatility forecast: {forecast}") 

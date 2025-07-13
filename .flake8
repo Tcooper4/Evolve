@@ -1,22 +1,21 @@
 [flake8]
-max-line-length = 100
-extend-ignore = E203, E266, E501, W503
-exclude = 
+exclude =
     .git,
     __pycache__,
     .venv,
-    venv,
     env,
-    .env,
-    build,
-    dist,
-    *.egg-info,
-    .pytest_cache,
-    .coverage,
-    htmlcov,
-    .tox,
-    .mypy_cache,
-    .ruff_cache
+    logs,
+    archive,
+    docs/*.md,
+    *.csv,
+    *.pkl,
+    *.pdf,
+    *.png,
+    *.zip,
+    deploy/Makefile,
+    notebooks
+max-line-length = 120
+extend-ignore = E203, E266, E501, W503
 per-file-ignores =
     __init__.py:F401
     tests/*:S101,S105,S106,S107
