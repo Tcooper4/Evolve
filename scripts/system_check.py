@@ -26,7 +26,6 @@ class SystemChecker:
             "streamlit",
             "plotly",
             "scikit-learn",
-            "tensorflow",
             "torch",
             "transformers",
         ]

@@ -169,7 +169,7 @@ class MLManager:
         """Train a machine learning model.
 
         Args:
-            model_type: Type of model to train (e.g., "pytorch", "tensorflow", "xgboost")
+            model_type: Type of model to train (e.g., "pytorch", "xgboost")
             data_path: Path to the training data
             params: Optional model parameters
 
@@ -197,7 +197,7 @@ class MLManager:
                 mlflow.log_params(params or {})
 
                 # Train model
-                if model_type in ["pytorch", "tensorflow", "keras"]:
+                if model_type in ["pytorch"]:
                     model = await self._train_deep_learning_model(model, X_train, y_train)
                 else:
                     model = await self._train_traditional_model(model, X_train, y_train)
@@ -252,7 +252,7 @@ class MLManager:
                 mlflow.log_params(param_grid)
 
                 # Optimize model
-                if model_type in ["pytorch", "tensorflow", "keras"]:
+                if model_type in ["pytorch"]:
                     model = await self._optimize_deep_learning_model(model, X_train, y_train, param_grid)
                 else:
                     model = await self._optimize_traditional_model(model, X_train, y_train, param_grid)
