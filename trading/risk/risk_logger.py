@@ -28,7 +28,8 @@ class RiskLogger:
     def __init__(
         self,
         log_path: str = 'trading/risk/logs/risk_metrics.jsonl',
-        update_interval: int = 900  # 15 minutes in seconds):
+        update_interval: int = 900  # 15 minutes in seconds
+    ):
         """Initialize risk logger.
 
         Args:

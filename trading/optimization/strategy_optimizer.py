@@ -76,7 +76,6 @@ class OptimizationMethod(ABC):
         self.config = config or {}
         self.logger = logging.getLogger(self.__class__.__name__)
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
 
     @abstractmethod
     def optimize(

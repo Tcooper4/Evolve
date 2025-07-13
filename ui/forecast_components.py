@@ -269,7 +269,7 @@ class DataInput:
         except Exception as e:
             logger.error(f"Error rendering date range: {e}")
             st.error("Error rendering date range")
-            return {'success': True, 'result': "2023-01-01", "2024-01-01", 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {'success': True, 'result': ["2023-01-01", "2024-01-01"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def render_forecast_horizon(self) -> int:
         """Render forecast horizon selection."""

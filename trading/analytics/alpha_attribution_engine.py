@@ -151,9 +151,10 @@ class AlphaAttributionEngine:
         self.alpha_decay_model = None
         self.factor_registry = self._initialize_factor_registry()
 
-        logger.info("Alpha Attribution Engine initialized")
+        self.logger.info("Alpha Attribution Engine initialized")
 
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     def _initialize_factor_registry(self) -> Dict[str, Dict[str, Any]]:
         """Initialize factor registry for attribution analysis."""
         return {
@@ -216,7 +217,7 @@ class AlphaAttributionEngine:
             momentum_factor = momentum_5 - momentum_20
             return momentum_factor
         except Exception as e:
-            logger.error(f"Error calculating momentum factor: {e}")
+            self.logger.error(f"Error calculating momentum factor: {e}")
             return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_volatility_factor(self, data: pd.DataFrame) -> pd.Series:
@@ -228,7 +229,7 @@ class AlphaAttributionEngine:
             volatility_factor = volatility_5 / volatility_20 - 1
             return volatility_factor
         except Exception as e:
-            logger.error(f"Error calculating volatility factor: {e}")
+            self.logger.error(f"Error calculating volatility factor: {e}")
             return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_volume_factor(self, data: pd.DataFrame) -> pd.Series:
@@ -241,7 +242,7 @@ class AlphaAttributionEngine:
             volume_factor = (data['Volume'] - volume_ma) / volume_ma
             return volume_factor
         except Exception as e:
-            logger.error(f"Error calculating volume factor: {e}")
+            self.logger.error(f"Error calculating volume factor: {e}")
             return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_mean_reversion_factor(self, data: pd.DataFrame) -> pd.Series:
@@ -257,7 +258,7 @@ class AlphaAttributionEngine:
             mean_reversion_factor = 0.5 - position  # Distance from center
             return mean_reversion_factor
         except Exception as e:
-            logger.error(f"Error calculating mean reversion factor: {e}")
+            self.logger.error(f"Error calculating mean reversion factor: {e}")
             return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_trend_factor(self, data: pd.DataFrame) -> pd.Series:
@@ -275,7 +276,7 @@ class AlphaAttributionEngine:
             trend_factor = (trend_short + trend_medium + trend_long) / 3
             return trend_factor
         except Exception as e:
-            logger.error(f"Error calculating trend factor: {e}")
+            self.logger.error(f"Error calculating trend factor: {e}")
             return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_correlation_factor(self, data: pd.DataFrame) -> pd.Series:
@@ -288,7 +289,7 @@ class AlphaAttributionEngine:
             correlation_factor = returns.rolling(20).corr(returns.shift(1))
             return correlation_factor
         except Exception as e:
-            logger.error(f"Error calculating correlation factor: {e}")
+            self.logger.error(f"Error calculating correlation factor: {e}")
             return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_liquidity_factor(self, data: pd.DataFrame) -> pd.Series:
@@ -305,7 +306,7 @@ class AlphaAttributionEngine:
             liquidity_factor = 1.0 / (1.0 + abs(returns) * volume_ratio)
             return liquidity_factor
         except Exception as e:
-            logger.error(f"Error calculating liquidity factor: {e}")
+            self.logger.error(f"Error calculating liquidity factor: {e}")
             return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def _calculate_sentiment_factor(self, data: pd.DataFrame) -> pd.Series:
@@ -322,7 +323,7 @@ class AlphaAttributionEngine:
             sentiment_factor = np.tanh(sentiment_factor)
             return sentiment_factor
         except Exception as e:
-            logger.error(f"Error calculating sentiment factor: {e}")
+            self.logger.error(f"Error calculating sentiment factor: {e}")
             return {'success': True, 'result': pd.Series(index=data.index, data=0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def perform_attribution_analysis(self,

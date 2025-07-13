@@ -117,6 +117,7 @@ class NotificationTemplate(BaseModel):
     def get_latest_version(self) -> Optional[TemplateVersion]:
         """Get the latest version of the template."""
         if not self.versions:
+            return None
 
         return self.versions[max(self.versions.keys())]
 
