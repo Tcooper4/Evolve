@@ -1,14 +1,17 @@
-from datetime import datetime
-from typing import Dict, List, Optional, Any, Callable
-from enum import Enum
-from pydantic import BaseModel, Field
 import uuid
+from datetime import datetime
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
+
+from pydantic import BaseModel, Field
+
 
 class TaskPriority(Enum):
     LOW = 0
     MEDIUM = 1
     HIGH = 2
     CRITICAL = 3
+
 
 class TaskStatus(Enum):
     PENDING = "pending"
@@ -18,6 +21,7 @@ class TaskStatus(Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+
 class TaskType(Enum):
     SYSTEM = "system"
     DATA_PROCESSING = "data_processing"
@@ -26,8 +30,10 @@ class TaskType(Enum):
     MAINTENANCE = "maintenance"
     CUSTOM = "custom"
 
+
 class Task(BaseModel):
     """Centralized task model for the automation system."""
+
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: str
@@ -80,11 +86,11 @@ class Task(BaseModel):
             "retries": self.retries,
             "max_retries": self.max_retries,
             "timeout": self.timeout,
-            "metadata": self.metadata
+            "metadata": self.metadata,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Task':
+    def from_dict(cls, data: Dict[str, Any]) -> "Task":
         """Create task from dictionary format."""
         # Convert string values to enums
         if isinstance(data.get("type"), str):
@@ -93,10 +99,10 @@ class Task(BaseModel):
             data["priority"] = TaskPriority(int(data["priority"]))
         if isinstance(data.get("status"), str):
             data["status"] = TaskStatus(data["status"])
-        
+
         # Convert string timestamps to datetime
         for field in ["created_at", "updated_at", "scheduled_for", "completed_at"]:
             if isinstance(data.get(field), str):
                 data[field] = datetime.fromisoformat(data[field])
-        
+
         return cls(**data)

@@ -1,3 +1,3 @@
 """
 Strategy tests module.
-""" 
+"""

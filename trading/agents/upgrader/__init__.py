@@ -7,4 +7,4 @@ The agent is responsible for detecting outdated components and triggering necess
 
 from trading.agents.upgrader.agent import UpgraderAgent
 
-__all__ = ['UpgraderAgent'] 
+__all__ = ["UpgraderAgent"]

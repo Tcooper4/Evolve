@@ -41,68 +41,54 @@ Examples:
     python manage_ml.py version --action list
 """
 
-import os
-import sys
 import argparse
+import asyncio
+import json
 import logging
 import logging.config
-import yaml
-import json
+import sys
 import time
+from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
-import asyncio
-import aiohttp
-import numpy as np
-import pandas as pd
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
-import sklearn
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-import mlflow
-import optuna
-import ray
-from ray import tune
-from ray.tune.schedulers import ASHAScheduler
-import tensorboard
-from tensorboard.backend.event_processing import event_accumulator
-import joblib
-import pickle
-import dill
-import cloudpickle
-import onnx
-import onnxruntime
-import tensorrt
-import openvino
-import tvm
-import ray.serve
+from typing import Any, Dict, List, Optional, Tuple
+
 import bentoml
-import seldon_core
+import joblib
 import kserve
-import triton
-import torchserve
-import mlflow.pyfunc
-import mlflow.pytorch
-import mlflow.sklearn
-import mlflow.xgboost
-import mlflow.lightgbm
+import mlflow
 import mlflow.catboost
-import mlflow.spark
-import mlflow.h2o
-import mlflow.statsmodels
-import mlflow.prophet
-import mlflow.pmdarima
-import mlflow.spacy
 import mlflow.fastai
 import mlflow.gluon
+import mlflow.h2o
+import mlflow.lightgbm
 import mlflow.mleap
 import mlflow.onnx
 import mlflow.paddle
+import mlflow.pmdarima
+import mlflow.prophet
+import mlflow.pyfunc
 import mlflow.pyspark.ml
+import mlflow.pytorch
+import mlflow.sklearn
+import mlflow.spacy
+import mlflow.spark
+import mlflow.statsmodels
+import mlflow.xgboost
+import numpy as np
+import optuna
+import pandas as pd
+import ray
+import ray.serve
+import seldon_core
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torchserve
+import triton
+import yaml
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.model_selection import GridSearchCV, train_test_split
+
 
 class MLManager:
     """Manager for machine learning pipeline operations.
@@ -159,7 +145,7 @@ class MLManager:
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
-        
+
         with open(config_path) as f:
             return yaml.safe_load(f)
 
@@ -173,10 +159,10 @@ class MLManager:
         if not log_config_path.exists():
             print("Error: logging_config.yaml not found")
             sys.exit(1)
-        
+
         with open(log_config_path) as f:
             log_config = yaml.safe_load(f)
-        
+
         logging.config.dictConfig(log_config)
 
     async def train_model(self, model_type: str, data_path: str, params: Optional[Dict[str, Any]] = None):
@@ -194,40 +180,40 @@ class MLManager:
             Exception: If model training fails
         """
         self.logger.info(f"Training {model_type} model with data from {data_path}")
-        
+
         try:
             # Load data
             data = self._load_data(data_path)
-            
+
             # Prepare data
             X_train, X_test, y_train, y_test = self._prepare_data(data)
-            
+
             # Initialize model
             model = self._initialize_model(model_type, params)
-            
+
             # Train model
             with mlflow.start_run():
                 # Log parameters
                 mlflow.log_params(params or {})
-                
+
                 # Train model
                 if model_type in ["pytorch", "tensorflow", "keras"]:
                     model = await self._train_deep_learning_model(model, X_train, y_train)
                 else:
                     model = await self._train_traditional_model(model, X_train, y_train)
-                
+
                 # Evaluate model
                 metrics = await self._evaluate_model(model, X_test, y_test)
-                
+
                 # Log metrics
                 mlflow.log_metrics(metrics)
-                
+
                 # Save model
                 model_path = self._save_model(model, model_type)
-                
+
                 # Log model
                 mlflow.log_artifacts(model_path)
-            
+
             self.logger.info(f"Model trained and saved to {model_path}")
             return model
         except Exception as e:
@@ -249,40 +235,40 @@ class MLManager:
             Exception: If model optimization fails
         """
         self.logger.info(f"Optimizing {model_type} model with data from {data_path}")
-        
+
         try:
             # Load data
             data = self._load_data(data_path)
-            
+
             # Prepare data
             X_train, X_test, y_train, y_test = self._prepare_data(data)
-            
+
             # Initialize model
             model = self._initialize_model(model_type)
-            
+
             # Optimize model
             with mlflow.start_run():
                 # Log parameters
                 mlflow.log_params(param_grid)
-                
+
                 # Optimize model
                 if model_type in ["pytorch", "tensorflow", "keras"]:
                     model = await self._optimize_deep_learning_model(model, X_train, y_train, param_grid)
                 else:
                     model = await self._optimize_traditional_model(model, X_train, y_train, param_grid)
-                
+
                 # Evaluate model
                 metrics = await self._evaluate_model(model, X_test, y_test)
-                
+
                 # Log metrics
                 mlflow.log_metrics(metrics)
-                
+
                 # Save model
                 model_path = self._save_model(model, model_type)
-                
+
                 # Log model
                 mlflow.log_artifacts(model_path)
-            
+
             self.logger.info(f"Model optimized and saved to {model_path}")
             return model
         except Exception as e:
@@ -292,23 +278,23 @@ class MLManager:
     async def evaluate_model(self, model_path: str, data_path: str):
         """Evaluate a trained model."""
         self.logger.info(f"Evaluating model from {model_path} with data from {data_path}")
-        
+
         try:
             # Load model
             model = self._load_model(model_path)
-            
+
             # Load data
             data = self._load_data(data_path)
-            
+
             # Prepare data
             X_test, y_test = self._prepare_evaluation_data(data)
-            
+
             # Evaluate model
             metrics = await self._evaluate_model(model, X_test, y_test)
-            
+
             # Print metrics
             self._print_metrics(metrics)
-            
+
             return metrics
         except Exception as e:
             self.logger.error(f"Failed to evaluate model: {e}")
@@ -317,11 +303,11 @@ class MLManager:
     async def deploy_model(self, model_path: str, deployment_type: str = "local"):
         """Deploy a trained model."""
         self.logger.info(f"Deploying model from {model_path} to {deployment_type}")
-        
+
         try:
             # Load model
             model = self._load_model(model_path)
-            
+
             # Deploy model
             if deployment_type == "local":
                 deployment = await self._deploy_local(model)
@@ -341,7 +327,7 @@ class MLManager:
                 deployment = await self._deploy_torchserve(model)
             else:
                 raise ValueError(f"Unsupported deployment type: {deployment_type}")
-            
+
             self.logger.info(f"Model deployed to {deployment_type}")
             return deployment
         except Exception as e:
@@ -351,38 +337,38 @@ class MLManager:
     async def monitor_model(self, model_path: str, data_path: str, duration: int = 300):
         """Monitor model performance."""
         self.logger.info(f"Monitoring model from {model_path} with data from {data_path}")
-        
+
         try:
             # Load model
             model = self._load_model(model_path)
-            
+
             # Load data
             data = self._load_data(data_path)
-            
+
             # Prepare data
             X_test, y_test = self._prepare_evaluation_data(data)
-            
+
             # Monitor model
             metrics = []
             start_time = time.time()
-            
+
             while time.time() - start_time < duration:
                 # Evaluate model
                 current_metrics = await self._evaluate_model(model, X_test, y_test)
                 metrics.append(current_metrics)
-                
+
                 # Log metrics
                 self._log_metrics(current_metrics)
-                
+
                 await asyncio.sleep(1)
-            
+
             # Save metrics
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             metrics_file = self.experiments_dir / f"metrics_{timestamp}.json"
-            
+
             with open(metrics_file, "w") as f:
                 json.dump(metrics, f, indent=2)
-            
+
             self.logger.info(f"Metrics saved to {metrics_file}")
             return metrics
         except Exception as e:
@@ -408,14 +394,10 @@ class MLManager:
             # Split features and target
             X = data.drop("target", axis=1)
             y = data["target"]
-            
+
             # Split data
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y,
-                test_size=0.2,
-                random_state=42
-            )
-            
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
             return X_train, X_test, y_train, y_test
         except Exception as e:
             self.logger.error(f"Failed to prepare data: {e}")
@@ -427,7 +409,7 @@ class MLManager:
             # Split features and target
             X = data.drop("target", axis=1)
             y = data["target"]
-            
+
             return X, y
         except Exception as e:
             self.logger.error(f"Failed to prepare evaluation data: {e}")
@@ -460,7 +442,7 @@ class MLManager:
                 nn.ReLU(),
                 nn.Dropout(params.get("dropout", 0.2)),
                 nn.Linear(params.get("hidden_size", 64), params.get("output_size", 1)),
-                nn.Sigmoid()
+                nn.Sigmoid(),
             )
             return model
         except Exception as e:
@@ -471,10 +453,9 @@ class MLManager:
         """Initialize a scikit-learn model."""
         try:
             from sklearn.ensemble import RandomForestClassifier
+
             model = RandomForestClassifier(
-                n_estimators=params.get("n_estimators", 100),
-                max_depth=params.get("max_depth", None),
-                random_state=42
+                n_estimators=params.get("n_estimators", 100), max_depth=params.get("max_depth", None), random_state=42
             )
             return model
         except Exception as e:
@@ -485,11 +466,12 @@ class MLManager:
         """Initialize an XGBoost model."""
         try:
             import xgboost as xgb
+
             model = xgb.XGBClassifier(
                 n_estimators=params.get("n_estimators", 100),
                 max_depth=params.get("max_depth", 3),
                 learning_rate=params.get("learning_rate", 0.1),
-                random_state=42
+                random_state=42,
             )
             return model
         except Exception as e:
@@ -500,11 +482,12 @@ class MLManager:
         """Initialize a LightGBM model."""
         try:
             import lightgbm as lgb
+
             model = lgb.LGBMClassifier(
                 n_estimators=params.get("n_estimators", 100),
                 max_depth=params.get("max_depth", -1),
                 learning_rate=params.get("learning_rate", 0.1),
-                random_state=42
+                random_state=42,
             )
             return model
         except Exception as e:
@@ -515,11 +498,12 @@ class MLManager:
         """Initialize a CatBoost model."""
         try:
             from catboost import CatBoostClassifier
+
             model = CatBoostClassifier(
                 iterations=params.get("iterations", 100),
                 depth=params.get("depth", 6),
                 learning_rate=params.get("learning_rate", 0.1),
-                random_state=42
+                random_state=42,
             )
             return model
         except Exception as e:
@@ -533,14 +517,14 @@ class MLManager:
                 # PyTorch model
                 criterion = nn.BCELoss()
                 optimizer = optim.Adam(model.parameters())
-                
+
                 for epoch in range(100):
                     optimizer.zero_grad()
                     outputs = model(torch.FloatTensor(X_train))
                     loss = criterion(outputs, torch.FloatTensor(y_train))
                     loss.backward()
                     optimizer.step()
-            
+
             return model
         except Exception as e:
             self.logger.error(f"Failed to train deep learning model: {e}")
@@ -555,50 +539,50 @@ class MLManager:
             self.logger.error(f"Failed to train traditional model: {e}")
             raise
 
-    async def _optimize_deep_learning_model(self, model: Any, X_train: np.ndarray, y_train: np.ndarray, param_grid: Dict[str, List[Any]]) -> Any:
+    async def _optimize_deep_learning_model(
+        self, model: Any, X_train: np.ndarray, y_train: np.ndarray, param_grid: Dict[str, List[Any]]
+    ) -> Any:
         """Optimize a deep learning model."""
         try:
             if isinstance(model, nn.Module):
                 # PyTorch model
                 def objective(trial):
-                    model = self._initialize_pytorch_model({
-                        "input_size": trial.suggest_int("input_size", 10, 100),
-                        "hidden_size": trial.suggest_int("hidden_size", 32, 256),
-                        "dropout": trial.suggest_float("dropout", 0.1, 0.5),
-                        "output_size": 1
-                    })
+                    model = self._initialize_pytorch_model(
+                        {
+                            "input_size": trial.suggest_int("input_size", 10, 100),
+                            "hidden_size": trial.suggest_int("hidden_size", 32, 256),
+                            "dropout": trial.suggest_float("dropout", 0.1, 0.5),
+                            "output_size": 1,
+                        }
+                    )
                     criterion = nn.BCELoss()
                     optimizer = optim.Adam(model.parameters())
-                    
+
                     for epoch in range(100):
                         optimizer.zero_grad()
                         outputs = model(torch.FloatTensor(X_train))
                         loss = criterion(outputs, torch.FloatTensor(y_train))
                         loss.backward()
                         optimizer.step()
-                    
+
                     return loss.item()
-                
+
                 study = optuna.create_study(direction="minimize")
                 study.optimize(objective, n_trials=100)
-                
+
                 return self._initialize_pytorch_model(study.best_params)
         except Exception as e:
             self.logger.error(f"Failed to optimize deep learning model: {e}")
             raise
 
-    async def _optimize_traditional_model(self, model: Any, X_train: np.ndarray, y_train: np.ndarray, param_grid: Dict[str, List[Any]]) -> Any:
+    async def _optimize_traditional_model(
+        self, model: Any, X_train: np.ndarray, y_train: np.ndarray, param_grid: Dict[str, List[Any]]
+    ) -> Any:
         """Optimize a traditional model."""
         try:
-            grid_search = GridSearchCV(
-                model,
-                param_grid,
-                cv=5,
-                scoring="accuracy",
-                n_jobs=-1
-            )
+            grid_search = GridSearchCV(model, param_grid, cv=5, scoring="accuracy", n_jobs=-1)
             grid_search.fit(X_train, y_train)
-            
+
             return grid_search.best_estimator_
         except Exception as e:
             self.logger.error(f"Failed to optimize traditional model: {e}")
@@ -616,14 +600,14 @@ class MLManager:
             else:
                 # Other models
                 y_pred = model.predict(X_test)
-            
+
             metrics = {
                 "accuracy": accuracy_score(y_test, y_pred),
                 "precision": precision_score(y_test, y_pred),
                 "recall": recall_score(y_test, y_pred),
-                "f1": f1_score(y_test, y_pred)
+                "f1": f1_score(y_test, y_pred),
             }
-            
+
             return metrics
         except Exception as e:
             self.logger.error(f"Failed to evaluate model: {e}")
@@ -634,12 +618,12 @@ class MLManager:
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             model_path = self.models_dir / f"model_{model_type}_{timestamp}"
-            
+
             if model_type == "pytorch":
                 torch.save(model.state_dict(), model_path)
             else:
                 joblib.dump(model, model_path)
-            
+
             return str(model_path)
         except Exception as e:
             self.logger.error(f"Failed to save model: {e}")
@@ -682,10 +666,7 @@ class MLManager:
     async def _deploy_mlflow(self, model: Any) -> Any:
         """Deploy model using MLflow."""
         try:
-            mlflow.pyfunc.log_model(
-                python_model=model,
-                artifact_path="model"
-            )
+            mlflow.pyfunc.log_model(python_model=model, artifact_path="model")
             return mlflow.pyfunc.load_model("model")
         except Exception as e:
             self.logger.error(f"Failed to deploy model using MLflow: {e}")
@@ -706,11 +687,7 @@ class MLManager:
     async def _deploy_bentoml(self, model: Any) -> Any:
         """Deploy model using BentoML."""
         try:
-            bento_model = bentoml.pytorch.save_model(
-                "model",
-                model,
-                signatures={"predict": {"batchable": True}}
-            )
+            bento_model = bentoml.pytorch.save_model("model", model, signatures={"predict": {"batchable": True}})
             return bento_model
         except Exception as e:
             self.logger.error(f"Failed to deploy model using BentoML: {e}")
@@ -752,54 +729,26 @@ class MLManager:
             self.logger.error(f"Failed to deploy model using TorchServe: {e}")
             raise
 
+
 def main():
     """Main entry point for the ML management script."""
     parser = argparse.ArgumentParser(description="ML Pipeline Manager")
     parser.add_argument(
-        "command",
-        choices=["train", "optimize", "evaluate", "deploy", "monitor", "version"],
-        help="Command to run"
+        "command", choices=["train", "optimize", "evaluate", "deploy", "monitor", "version"], help="Command to run"
     )
-    parser.add_argument(
-        "--model-type",
-        choices=["pytorch", "xgboost", "lightgbm", "catboost"],
-        help="Type of model"
-    )
-    parser.add_argument(
-        "--data-path",
-        help="Path to data file"
-    )
-    parser.add_argument(
-        "--model-path",
-        help="Path to model file"
-    )
-    parser.add_argument(
-        "--params",
-        type=json.loads,
-        help="Model parameters as JSON string"
-    )
-    parser.add_argument(
-        "--param-grid",
-        type=json.loads,
-        help="Parameter grid for optimization as JSON string"
-    )
+    parser.add_argument("--model-type", choices=["pytorch", "xgboost", "lightgbm", "catboost"], help="Type of model")
+    parser.add_argument("--data-path", help="Path to data file")
+    parser.add_argument("--model-path", help="Path to model file")
+    parser.add_argument("--params", type=json.loads, help="Model parameters as JSON string")
+    parser.add_argument("--param-grid", type=json.loads, help="Parameter grid for optimization as JSON string")
     parser.add_argument(
         "--deployment-type",
         choices=["local", "mlflow", "ray", "bentoml", "seldon", "kserve", "triton", "torchserve"],
         default="local",
-        help="Type of deployment"
+        help="Type of deployment",
     )
-    parser.add_argument(
-        "--duration",
-        type=int,
-        default=300,
-        help="Monitoring duration in seconds"
-    )
-    parser.add_argument(
-        "--help",
-        action="store_true",
-        help="Show usage examples"
-    )
+    parser.add_argument("--duration", type=int, default=300, help="Monitoring duration in seconds")
+    parser.add_argument("--help", action="store_true", help="Show usage examples")
     args = parser.parse_args()
 
     if args.help:
@@ -821,5 +770,6 @@ def main():
         # Implement version management
         pass
 
+
 if __name__ == "__main__":
-    main() 
+    main()

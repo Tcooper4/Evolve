@@ -2,4 +2,4 @@
 Documentation module for project documentation.
 """
 
-__all__ = [] 
+__all__ = []

@@ -27,34 +27,25 @@ Examples:
     python manage_backup.py list
 """
 
-import os
-import sys
 import argparse
+import asyncio
+import json
 import logging
 import logging.config
-import yaml
-import json
-import time
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
-import asyncio
-import aiohttp
-import boto3
-import docker
-import kubernetes
-from kubernetes import client, config
-import redis
-import requests
-import socket
-import subprocess
 import shutil
-import hashlib
+import socket
+import sys
 import tarfile
-import zipfile
-import schedule
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import boto3
 import croniter
-import pytz
+import redis
+import yaml
+
+
 
 class BackupManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
@@ -72,7 +63,7 @@ class BackupManager:
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
-        
+
         with open(config_path) as f:
             return yaml.safe_load(f)
 
@@ -82,16 +73,16 @@ class BackupManager:
         if not log_config_path.exists():
             print("Error: logging_config.yaml not found")
             sys.exit(1)
-        
+
         with open(log_config_path) as f:
             log_config = yaml.safe_load(f)
-        
+
         logging.config.dictConfig(log_config)
 
     async def create_backup(self, backup_type: str, target: str = "local"):
         """Create a backup of specified type."""
         self.logger.info(f"Creating {backup_type} backup to {target}")
-        
+
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_info = {
@@ -99,9 +90,9 @@ class BackupManager:
                 "type": backup_type,
                 "target": target,
                 "components": {},
-                "metadata": {}
+                "metadata": {},
             }
-            
+
             # Create backup based on type
             if backup_type == "full":
                 backup_info["components"] = await self._create_full_backup()
@@ -111,19 +102,19 @@ class BackupManager:
                 backup_info["components"] = await self._create_differential_backup()
             else:
                 raise ValueError(f"Unsupported backup type: {backup_type}")
-            
+
             # Add metadata
             backup_info["metadata"] = {
                 "hostname": socket.gethostname(),
                 "version": self.config["app"]["version"],
-                "size": await self._calculate_backup_size(backup_info["components"])
+                "size": await self._calculate_backup_size(backup_info["components"]),
             }
-            
+
             # Save backup info
             info_file = self.backup_dir / f"backup_info_{timestamp}.json"
             with open(info_file, "w") as f:
                 json.dump(backup_info, f, indent=2)
-            
+
             # Create backup archive
             archive_file = self.backup_dir / f"backup_{timestamp}.tar.gz"
             with tarfile.open(archive_file, "w:gz") as tar:
@@ -131,11 +122,11 @@ class BackupManager:
                 for component, paths in backup_info["components"].items():
                     for path in paths:
                         tar.add(path)
-            
+
             # Upload to target if not local
             if target != "local":
                 await self._upload_backup(archive_file, target)
-            
+
             self.logger.info(f"Backup created: {archive_file}")
             return backup_info
         except Exception as e:
@@ -145,21 +136,21 @@ class BackupManager:
     async def restore_backup(self, backup_file: str, target: str = "local"):
         """Restore from backup."""
         self.logger.info(f"Restoring from backup: {backup_file}")
-        
+
         try:
             # Download backup if not local
             if target != "local":
                 backup_file = await self._download_backup(backup_file, target)
-            
+
             # Extract backup
             with tarfile.open(backup_file, "r:gz") as tar:
                 tar.extractall(self.backup_dir)
-            
+
             # Load backup info
             info_file = next(self.backup_dir.glob("backup_info_*.json"))
             with open(info_file) as f:
                 backup_info = json.load(f)
-            
+
             # Restore components
             for component, paths in backup_info["components"].items():
                 if component == "config":
@@ -172,11 +163,11 @@ class BackupManager:
                     await self._restore_logs(paths)
                 elif component == "models":
                     await self._restore_models(paths)
-            
+
             # Verify restoration
             if not await self._verify_restoration(backup_info):
                 raise ValueError("Restoration verification failed")
-            
+
             self.logger.info("Backup restored successfully")
             return True
         except Exception as e:
@@ -186,40 +177,37 @@ class BackupManager:
     def schedule_backup(self, backup_type: str, schedule: str, target: str = "local"):
         """Schedule automated backups."""
         self.logger.info(f"Scheduling {backup_type} backups to {target}")
-        
+
         try:
             # Validate schedule
             if not croniter.is_valid(schedule):
                 raise ValueError(f"Invalid schedule format: {schedule}")
-            
+
             # Create schedule info
             schedule_info = {
                 "type": backup_type,
                 "schedule": schedule,
                 "target": target,
                 "last_run": None,
-                "next_run": croniter.croniter(schedule, datetime.now()).get_next(datetime).isoformat()
+                "next_run": croniter.croniter(schedule, datetime.now()).get_next(datetime).isoformat(),
             }
-            
+
             # Save schedule
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             schedule_file = self.schedule_dir / f"backup_schedule_{timestamp}.json"
-            
+
             with open(schedule_file, "w") as f:
                 json.dump(schedule_info, f, indent=2)
-            
+
             # Set up schedule
             def backup_job():
                 asyncio.run(self.create_backup(backup_type, target))
                 schedule_info["last_run"] = datetime.now().isoformat()
-                schedule_info["next_run"] = croniter.croniter(
-                    schedule,
-                    datetime.now()
-                ).get_next(datetime).isoformat()
-                
+                schedule_info["next_run"] = croniter.croniter(schedule, datetime.now()).get_next(datetime).isoformat()
+
                 with open(schedule_file, "w") as f:
                     json.dump(schedule_info, f, indent=2)
-            
+
             return self.logger.info(f"Backup scheduled: {schedule_file}")
             return schedule_info
         except Exception as e:
@@ -229,29 +217,29 @@ class BackupManager:
     def list_backups(self, backup_type: Optional[str] = None):
         """List available backups."""
         self.logger.info("Listing backups")
-        
+
         try:
             backups = []
-            
+
             # List local backups
             for info_file in self.backup_dir.glob("backup_info_*.json"):
                 with open(info_file) as f:
                     backup_info = json.load(f)
                     if backup_type is None or backup_info["type"] == backup_type:
                         backups.append(backup_info)
-            
+
             # List remote backups
             for target in ["s3", "gcs", "azure"]:
                 if target in self.config["backup"]["targets"]:
                     remote_backups = self._list_remote_backups(target)
                     backups.extend(remote_backups)
-            
+
             # Sort by timestamp
             backups.sort(key=lambda x: x["timestamp"], reverse=True)
-            
+
             # Print backup list
             self._print_backup_list(backups)
-            
+
             return backups
         except Exception as e:
             self.logger.error(f"Failed to list backups: {e}")
@@ -261,22 +249,22 @@ class BackupManager:
         """Create a full backup."""
         try:
             components = {}
-            
+
             # Backup config
             components["config"] = await self._backup_config()
-            
+
             # Backup data
             components["data"] = await self._backup_data()
-            
+
             # Backup database
             components["database"] = await self._backup_database()
-            
+
             # Backup logs
             components["logs"] = await self._backup_logs()
-            
+
             # Backup models
             components["models"] = await self._backup_models()
-            
+
             return components
         except Exception as e:
             self.logger.error(f"Failed to create full backup: {e}")
@@ -286,17 +274,17 @@ class BackupManager:
         """Create an incremental backup."""
         try:
             components = {}
-            
+
             # Get last backup timestamp
             last_backup = self._get_last_backup_time()
-            
+
             # Backup changed files since last backup
             components["config"] = await self._backup_changed_files("config", last_backup)
             components["data"] = await self._backup_changed_files("data", last_backup)
             components["database"] = await self._backup_database()  # Always backup database
             components["logs"] = await self._backup_changed_files("logs", last_backup)
             components["models"] = await self._backup_changed_files("models", last_backup)
-            
+
             return components
         except Exception as e:
             self.logger.error(f"Failed to create incremental backup: {e}")
@@ -306,17 +294,17 @@ class BackupManager:
         """Create a differential backup."""
         try:
             components = {}
-            
+
             # Get last full backup timestamp
             last_full_backup = self._get_last_full_backup_time()
-            
+
             # Backup all files changed since last full backup
             components["config"] = await self._backup_changed_files("config", last_full_backup)
             components["data"] = await self._backup_changed_files("data", last_full_backup)
             components["database"] = await self._backup_database()  # Always backup database
             components["logs"] = await self._backup_changed_files("logs", last_full_backup)
             components["models"] = await self._backup_changed_files("models", last_full_backup)
-            
+
             return components
         except Exception as e:
             self.logger.error(f"Failed to create differential backup: {e}")
@@ -327,12 +315,12 @@ class BackupManager:
         try:
             config_dir = Path("config")
             backup_paths = []
-            
+
             for file in config_dir.glob("*.yaml"):
                 backup_path = self.backup_dir / f"config_{file.name}"
                 shutil.copy2(file, backup_path)
                 backup_paths.append(str(backup_path))
-            
+
             return backup_paths
         except Exception as e:
             self.logger.error(f"Failed to backup config: {e}")
@@ -343,13 +331,13 @@ class BackupManager:
         try:
             data_dir = Path("data")
             backup_paths = []
-            
+
             for file in data_dir.glob("**/*"):
                 if file.is_file():
                     backup_path = self.backup_dir / f"data_{file.name}"
                     shutil.copy2(file, backup_path)
                     backup_paths.append(str(backup_path))
-            
+
             return backup_paths
         except Exception as e:
             self.logger.error(f"Failed to backup data: {e}")
@@ -363,17 +351,14 @@ class BackupManager:
                 host=self.config["database"]["host"],
                 port=self.config["database"]["port"],
                 db=self.config["database"]["db"],
-                password=self.config["database"]["password"]
+                password=self.config["database"]["password"],
             )
-            
+
             # Create backup
             backup_path = self.backup_dir / f"database_{datetime.now().strftime('%Y%m%d_%H%M%S')}.rdb"
             redis_client.save()
-            shutil.copy2(
-                Path(self.config["database"]["rdb_path"]),
-                backup_path
-            )
-            
+            shutil.copy2(Path(self.config["database"]["rdb_path"]), backup_path)
+
             return [str(backup_path)]
         except Exception as e:
             self.logger.error(f"Failed to backup database: {e}")
@@ -384,12 +369,12 @@ class BackupManager:
         try:
             logs_dir = Path("logs")
             backup_paths = []
-            
+
             for file in logs_dir.glob("*.log"):
                 backup_path = self.backup_dir / f"logs_{file.name}"
                 shutil.copy2(file, backup_path)
                 backup_paths.append(str(backup_path))
-            
+
             return backup_paths
         except Exception as e:
             self.logger.error(f"Failed to backup logs: {e}")
@@ -400,13 +385,13 @@ class BackupManager:
         try:
             models_dir = Path("models")
             backup_paths = []
-            
+
             for file in models_dir.glob("**/*"):
                 if file.is_file():
                     backup_path = self.backup_dir / f"models_{file.name}"
                     shutil.copy2(file, backup_path)
                     backup_paths.append(str(backup_path))
-            
+
             return backup_paths
         except Exception as e:
             self.logger.error(f"Failed to backup models: {e}")
@@ -417,13 +402,13 @@ class BackupManager:
         try:
             component_dir = Path(component)
             backup_paths = []
-            
+
             for file in component_dir.glob("**/*"):
                 if file.is_file() and file.stat().st_mtime > since.timestamp():
                     backup_path = self.backup_dir / f"{component}_{file.name}"
                     shutil.copy2(file, backup_path)
                     backup_paths.append(str(backup_path))
-            
+
             return backup_paths
         except Exception as e:
             self.logger.error(f"Failed to backup changed files: {e}")
@@ -435,7 +420,7 @@ class BackupManager:
             backup_files = list(self.backup_dir.glob("backup_info_*.json"))
             if not backup_files:
                 return datetime.min
-            
+
             latest_file = max(backup_files, key=lambda x: x.stat().st_mtime)
             with open(latest_file) as f:
                 backup_info = json.load(f)
@@ -450,16 +435,14 @@ class BackupManager:
             backup_files = list(self.backup_dir.glob("backup_info_*.json"))
             if not backup_files:
                 return datetime.min
-            
+
             full_backups = []
             for file in backup_files:
                 with open(file) as f:
                     backup_info = json.load(f)
                     if backup_info["type"] == "full":
-                        full_backups.append(
-                            datetime.fromisoformat(backup_info["timestamp"])
-                        )
-            
+                        full_backups.append(datetime.fromisoformat(backup_info["timestamp"]))
+
             return max(full_backups) if full_backups else datetime.min
         except Exception as e:
             self.logger.error(f"Failed to get last full backup time: {e}")
@@ -482,11 +465,7 @@ class BackupManager:
         try:
             if target == "s3":
                 s3 = boto3.client("s3")
-                s3.upload_file(
-                    str(backup_file),
-                    self.config["backup"]["s3"]["bucket"],
-                    f"backups/{backup_file.name}"
-                )
+                s3.upload_file(str(backup_file), self.config["backup"]["s3"]["bucket"], f"backups/{backup_file.name}")
             elif target == "gcs":
                 storage_client = storage.Client()
                 bucket = storage_client.bucket(self.config["backup"]["gcs"]["bucket"])
@@ -496,14 +475,9 @@ class BackupManager:
                 blob_service_client = BlobServiceClient.from_connection_string(
                     self.config["backup"]["azure"]["connection_string"]
                 )
-                container_client = blob_service_client.get_container_client(
-                    self.config["backup"]["azure"]["container"]
-                )
+                container_client = blob_service_client.get_container_client(self.config["backup"]["azure"]["container"])
                 with open(backup_file, "rb") as data:
-                    container_client.upload_blob(
-                        f"backups/{backup_file.name}",
-                        data
-                    )
+                    container_client.upload_blob(f"backups/{backup_file.name}", data)
             else:
                 raise ValueError(f"Unsupported target: {target}")
         except Exception as e:
@@ -514,14 +488,10 @@ class BackupManager:
         """Download backup from target storage."""
         try:
             local_path = self.backup_dir / Path(backup_file).name
-            
+
             if target == "s3":
                 s3 = boto3.client("s3")
-                s3.download_file(
-                    self.config["backup"]["s3"]["bucket"],
-                    f"backups/{backup_file}",
-                    str(local_path)
-                )
+                s3.download_file(self.config["backup"]["s3"]["bucket"], f"backups/{backup_file}", str(local_path))
             elif target == "gcs":
                 storage_client = storage.Client()
                 bucket = storage_client.bucket(self.config["backup"]["gcs"]["bucket"])
@@ -531,18 +501,12 @@ class BackupManager:
                 blob_service_client = BlobServiceClient.from_connection_string(
                     self.config["backup"]["azure"]["connection_string"]
                 )
-                container_client = blob_service_client.get_container_client(
-                    self.config["backup"]["azure"]["container"]
-                )
+                container_client = blob_service_client.get_container_client(self.config["backup"]["azure"]["container"])
                 with open(local_path, "wb") as data:
-                    data.write(
-                        container_client.download_blob(
-                            f"backups/{backup_file}"
-                        ).readall()
-                    )
+                    data.write(container_client.download_blob(f"backups/{backup_file}").readall())
             else:
                 raise ValueError(f"Unsupported target: {target}")
-            
+
             return str(local_path)
         except Exception as e:
             self.logger.error(f"Failed to download backup: {e}")
@@ -552,20 +516,16 @@ class BackupManager:
         """List backups in remote storage."""
         try:
             backups = []
-            
+
             if target == "s3":
                 s3 = boto3.client("s3")
                 response = s3.list_objects_v2(
-                    Bucket=self.config["backup"]["s3"]["bucket"],
-                    Prefix="backups/backup_info_"
+                    Bucket=self.config["backup"]["s3"]["bucket"], Prefix="backups/backup_info_"
                 )
                 for obj in response.get("Contents", []):
-                    info = s3.get_object(
-                        Bucket=self.config["backup"]["s3"]["bucket"],
-                        Key=obj["Key"]
-                    )
+                    info = s3.get_object(Bucket=self.config["backup"]["s3"]["bucket"], Key=obj["Key"])
                     backups.append(json.loads(info["Body"].read()))
-            
+
             elif target == "gcs":
                 storage_client = storage.Client()
                 bucket = storage_client.bucket(self.config["backup"]["gcs"]["bucket"])
@@ -573,19 +533,17 @@ class BackupManager:
                 for blob in blobs:
                     info = blob.download_as_string()
                     backups.append(json.loads(info))
-            
+
             elif target == "azure":
                 blob_service_client = BlobServiceClient.from_connection_string(
                     self.config["backup"]["azure"]["connection_string"]
                 )
-                container_client = blob_service_client.get_container_client(
-                    self.config["backup"]["azure"]["container"]
-                )
+                container_client = blob_service_client.get_container_client(self.config["backup"]["azure"]["container"])
                 blobs = container_client.list_blobs(name_starts_with="backups/backup_info_")
                 for blob in blobs:
                     info = container_client.download_blob(blob.name).readall()
                     backups.append(json.loads(info))
-            
+
             return backups
         except Exception as e:
             self.logger.error(f"Failed to list remote backups: {e}")
@@ -594,7 +552,7 @@ class BackupManager:
     def _print_backup_list(self, backups: List[Dict[str, Any]]):
         """Print list of backups."""
         print("\nAvailable Backups:")
-        
+
         for backup in backups:
             print(f"\nTimestamp: {backup['timestamp']}")
             print(f"Type: {backup['type']}")
@@ -604,52 +562,26 @@ class BackupManager:
             for component, paths in backup["components"].items():
                 print(f"  {component}: {len(paths)} files")
 
+
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Backup Manager")
-    parser.add_argument(
-        "command",
-        choices=["create", "restore", "schedule", "list"],
-        help="Command to execute"
-    )
-    parser.add_argument(
-        "--type",
-        choices=["full", "incremental", "differential"],
-        help="Backup type"
-    )
-    parser.add_argument(
-        "--target",
-        default="local",
-        choices=["local", "s3", "gcs", "azure"],
-        help="Backup target"
-    )
-    parser.add_argument(
-        "--schedule",
-        help="Cron schedule for automated backups"
-    )
-    parser.add_argument(
-        "--backup-file",
-        help="Backup file to restore from"
-    )
-    
+    parser.add_argument("command", choices=["create", "restore", "schedule", "list"], help="Command to execute")
+    parser.add_argument("--type", choices=["full", "incremental", "differential"], help="Backup type")
+    parser.add_argument("--target", default="local", choices=["local", "s3", "gcs", "azure"], help="Backup target")
+    parser.add_argument("--schedule", help="Cron schedule for automated backups")
+    parser.add_argument("--backup-file", help="Backup file to restore from")
+
     args = parser.parse_args()
     manager = BackupManager()
-    
+
     commands = {
-        "create": lambda: asyncio.run(
-            manager.create_backup(args.type, args.target)
-        ),
-        "restore": lambda: asyncio.run(
-            manager.restore_backup(args.backup_file, args.target)
-        ),
-        "schedule": lambda: manager.schedule_backup(
-            args.type,
-            args.schedule,
-            args.target
-        ),
-        "list": lambda: manager.list_backups(args.type)
+        "create": lambda: asyncio.run(manager.create_backup(args.type, args.target)),
+        "restore": lambda: asyncio.run(manager.restore_backup(args.backup_file, args.target)),
+        "schedule": lambda: manager.schedule_backup(args.type, args.schedule, args.target),
+        "list": lambda: manager.list_backups(args.type),
     }
-    
+
     if args.command in commands:
         success = commands[args.command]()
         sys.exit(0 if success else 1)
@@ -657,5 +589,6 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+
 if __name__ == "__main__":
-    main() 
+    main()

@@ -5,10 +5,10 @@ Research Service Launcher
 Launches the ResearchService as a standalone process.
 """
 
-import sys
+import logging
 import os
 import signal
-import logging
+import sys
 from pathlib import Path
 
 # Add the trading directory to the path
@@ -19,62 +19,59 @@ from services.research_service import ResearchService
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('logs/research_service.log'),
-        logging.StreamHandler()
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("logs/research_service.log"), logging.StreamHandler()],
 )
 
 logger = logging.getLogger(__name__)
 
+
 def signal_handler(signum, frame):
     """Handle shutdown signals."""
     logger.info(f"Received signal {signum}, shutting down...")
-    if hasattr(signal_handler, 'service'):
+    if hasattr(signal_handler, "service"):
         signal_handler.service.stop()
     sys.exit(0)
+
 
 def main():
     """Main function to launch the ResearchService."""
     try:
         # Create logs directory if it doesn't exist
-        os.makedirs('logs', exist_ok=True)
-        
+        os.makedirs("logs", exist_ok=True)
+
         logger.info("Starting ResearchService...")
-        
+
         # Initialize the service
-        service = ResearchService(
-            redis_host='localhost',
-            redis_port=6379,
-            redis_db=0
-        )
-        
+        service = ResearchService(redis_host="localhost", redis_port=6379, redis_db=0)
+
         # Store service reference for signal handler
         signal_handler.service = service
-        
+
         # Register signal handlers
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
-        
+
         # Start the service
         service.start()
-        
+
         logger.info("ResearchService started successfully")
         logger.info(f"Listening on channels: {service.input_channel}, {service.control_channel}")
-        
+
         # Keep the service running
         try:
             while service.is_running:
                 import time
+
                 time.sleep(1)
         except KeyboardInterrupt:
             logger.info("Received keyboard interrupt, shutting down...")
             service.stop()
-            
+
     except Exception as e:
         logger.error(f"Error starting ResearchService: {e}")
         sys.exit(1)
 
+
 if __name__ == "__main__":
-    main() 
+    main()

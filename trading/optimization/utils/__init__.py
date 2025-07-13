@@ -10,7 +10,4 @@ except ImportError:
     OptimizerConsolidator = None
     run_optimizer_consolidation = None
 
-__all__ = [
-    'OptimizerConsolidator',
-    'run_optimizer_consolidation'
-] 
+__all__ = ["OptimizerConsolidator", "run_optimizer_consolidation"]

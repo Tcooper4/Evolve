@@ -1,27 +1,30 @@
 """LLM utilities for trade rationale and commentary generation."""
 
-import os
 import json
 import logging
+import os
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Union
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 import openai
 from pydantic import BaseModel, Field
-import numpy as np
 
 # Setup logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Add file handler for debug logs
-debug_handler = logging.FileHandler('trading/portfolio/logs/portfolio_debug.log')
+debug_handler = logging.FileHandler("trading/portfolio/logs/portfolio_debug.log")
 debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 debug_handler.setFormatter(debug_formatter)
 logger.addHandler(debug_handler)
 
+
 class TradeRationale(BaseModel):
     """Trade rationale data model."""
+
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     symbol: str
     direction: str
@@ -30,29 +33,31 @@ class TradeRationale(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     market_context: Dict[str, Any]
     risk_factors: List[str]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
-            'timestamp': self.timestamp.isoformat(),
-            'symbol': self.symbol,
-            'direction': self.direction,
-            'strategy': self.strategy,
-            'rationale': self.rationale,
-            'confidence': self.confidence,
-            'market_context': self.market_context,
-            'risk_factors': self.risk_factors
+            "timestamp": self.timestamp.isoformat(),
+            "symbol": self.symbol,
+            "direction": self.direction,
+            "strategy": self.strategy,
+            "rationale": self.rationale,
+            "confidence": self.confidence,
+            "market_context": self.market_context,
+            "risk_factors": self.risk_factors,
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'TradeRationale':
+    def from_dict(cls, data: Dict[str, Any]) -> "TradeRationale":
         """Create from dictionary."""
-        if isinstance(data['timestamp'], str):
-            data['timestamp'] = datetime.fromisoformat(data['timestamp'])
+        if isinstance(data["timestamp"], str):
+            data["timestamp"] = datetime.fromisoformat(data["timestamp"])
         return cls(**data)
+
 
 class DailyCommentary(BaseModel):
     """Daily commentary data model."""
+
     date: datetime = Field(default_factory=datetime.utcnow)
     summary: str
     trades: List[Dict[str, Any]]
@@ -60,101 +65,104 @@ class DailyCommentary(BaseModel):
     strategy_shifts: List[Dict[str, Any]]
     market_conditions: Dict[str, Any]
     risk_assessment: Dict[str, Any]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
-            'date': self.date.isoformat(),
-            'summary': self.summary,
-            'trades': self.trades,
-            'pnl_summary': self.pnl_summary,
-            'strategy_shifts': self.strategy_shifts,
-            'market_conditions': self.market_conditions,
-            'risk_assessment': self.risk_assessment
+            "date": self.date.isoformat(),
+            "summary": self.summary,
+            "trades": self.trades,
+            "pnl_summary": self.pnl_summary,
+            "strategy_shifts": self.strategy_shifts,
+            "market_conditions": self.market_conditions,
+            "risk_assessment": self.risk_assessment,
         }
-    
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'DailyCommentary':
+    def from_dict(cls, data: Dict[str, Any]) -> "DailyCommentary":
         """Create from dictionary."""
-        if isinstance(data['date'], str):
-            data['date'] = datetime.fromisoformat(data['date'])
+        if isinstance(data["date"], str):
+            data["date"] = datetime.fromisoformat(data["date"])
         return cls(**data)
+
 
 class LLMInterface:
     """Interface for LLM-based trade rationale and commentary generation."""
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize LLM interface.
-        
+
         Args:
             config: Optional configuration dictionary
         """
         self.config = config or {}
-        
+
         # Initialize OpenAI client
-        openai.api_key = os.getenv('OPENAI_API_KEY')
+        openai.api_key = os.getenv("OPENAI_API_KEY")
         if not openai.api_key:
             logger.warning("OpenAI API key not found. LLM features will be disabled.")
             self.enabled = False
         else:
             self.enabled = True
-        
+
         # Create necessary directories
         try:
-            os.makedirs('trading/portfolio/logs', exist_ok=True)
+            os.makedirs("trading/portfolio/logs", exist_ok=True)
         except Exception as e:
             logger.error(f"Failed to create trading/portfolio/logs: {e}")
         try:
-            os.makedirs('trading/portfolio/data', exist_ok=True)
+            os.makedirs("trading/portfolio/data", exist_ok=True)
         except Exception as e:
             logger.error(f"Failed to create trading/portfolio/data: {e}")
-        
+
         logger.info("Initialized LLMInterface")
-    
-        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def generate_trade_rationale(self, symbol: str, direction: str, strategy: str,
-                               market_data: Dict[str, Any]) -> Optional[TradeRationale]:
+
+        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+
+    def generate_trade_rationale(
+        self, symbol: str, direction: str, strategy: str, market_data: Dict[str, Any]
+    ) -> Optional[TradeRationale]:
         """Generate trade rationale using LLM.
-        
+
         Args:
             symbol: Trading symbol
             direction: Trade direction
             strategy: Strategy name
             market_data: Market data and context
-            
+
         Returns:
             TradeRationale object or None if LLM is disabled
         """
         if not self.enabled:
             return None
-            
+
         try:
             # Prepare prompt
             prompt = self._create_trade_rationale_prompt(
-                symbol=symbol,
-                direction=direction,
-                strategy=strategy,
-                market_data=market_data
+                symbol=symbol, direction=direction, strategy=strategy, market_data=market_data
             )
-            
+
             # Call LLM
             response = openai.ChatCompletion.create(
-                model=self.config.get('model', 'gpt-4'),
+                model=self.config.get("model", "gpt-4"),
                 messages=[
-                    {"role": "system", "content": "You are a trading assistant that provides clear, concise rationales for trading decisions."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are a trading assistant that provides clear, concise rationales for trading decisions.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.7,
-                max_tokens=500
+                max_tokens=500,
             )
-            
+
             # Parse response
             rationale_text = response.choices[0].message.content
-            
+
             # Extract confidence and risk factors
             confidence = self._extract_confidence(rationale_text)
             risk_factors = self._extract_risk_factors(rationale_text)
-            
+
             # Create rationale object
             rationale = TradeRationale(
                 symbol=symbol,
@@ -163,55 +171,56 @@ class LLMInterface:
                 rationale=rationale_text,
                 confidence=confidence,
                 market_context=market_data,
-                risk_factors=risk_factors
+                risk_factors=risk_factors,
             )
-            
+
             # Log rationale
             self._log_rationale(rationale)
-            
+
             return rationale
-            
+
         except Exception as e:
             logger.error(f"Error generating trade rationale: {e}")
 
-    def generate_daily_commentary(self, portfolio_state: Dict[str, Any],
-                                trades: List[Dict[str, Any]],
-                                market_data: Dict[str, Any]) -> Optional[DailyCommentary]:
+    def generate_daily_commentary(
+        self, portfolio_state: Dict[str, Any], trades: List[Dict[str, Any]], market_data: Dict[str, Any]
+    ) -> Optional[DailyCommentary]:
         """Generate daily commentary using LLM.
-        
+
         Args:
             portfolio_state: Current portfolio state
             trades: List of trades for the day
             market_data: Market data and context
-            
+
         Returns:
             DailyCommentary object or None if LLM is disabled
         """
         if not self.enabled:
             return None
-            
+
         try:
             # Prepare prompt
             prompt = self._create_daily_commentary_prompt(
-                portfolio_state=portfolio_state,
-                trades=trades,
-                market_data=market_data
+                portfolio_state=portfolio_state, trades=trades, market_data=market_data
             )
-            
+
             # Call LLM
             response = openai.ChatCompletion.create(
-                model=self.config.get('model', 'gpt-4'),
+                model=self.config.get("model", "gpt-4"),
                 messages=[
-                    {"role": "system", "content": "You are a trading assistant that provides daily summaries of trading activity and market conditions."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are a trading assistant that provides daily summaries of trading activity and market conditions.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.7,
-                max_tokens=1000
+                max_tokens=1000,
             )
-            
+
             # Parse response
             commentary_text = response.choices[0].message.content
-            
+
             # Create commentary object
             commentary = DailyCommentary(
                 summary=commentary_text,
@@ -219,27 +228,28 @@ class LLMInterface:
                 pnl_summary=self._calculate_pnl_summary(trades),
                 strategy_shifts=self._identify_strategy_shifts(trades),
                 market_conditions=market_data,
-                risk_assessment=self._assess_risk(portfolio_state, market_data)
+                risk_assessment=self._assess_risk(portfolio_state, market_data),
             )
-            
+
             # Log commentary
             self._log_commentary(commentary)
-            
+
             return commentary
-            
+
         except Exception as e:
             logger.error(f"Error generating daily commentary: {e}")
 
-    def _create_trade_rationale_prompt(self, symbol: str, direction: str,
-                                     strategy: str, market_data: Dict[str, Any]) -> str:
+    def _create_trade_rationale_prompt(
+        self, symbol: str, direction: str, strategy: str, market_data: Dict[str, Any]
+    ) -> str:
         """Create prompt for trade rationale generation.
-        
+
         Args:
             symbol: Trading symbol
             direction: Trade direction
             strategy: Strategy name
             market_data: Market data and context
-            
+
         Returns:
             Prompt string
         """
@@ -259,17 +269,17 @@ Please provide:
 5. Potential exit scenarios
 
 Format the response as a structured analysis."""
-    
-    def _create_daily_commentary_prompt(self, portfolio_state: Dict[str, Any],
-                                      trades: List[Dict[str, Any]],
-                                      market_data: Dict[str, Any]) -> str:
+
+    def _create_daily_commentary_prompt(
+        self, portfolio_state: Dict[str, Any], trades: List[Dict[str, Any]], market_data: Dict[str, Any]
+    ) -> str:
         """Create prompt for daily commentary generation.
-        
+
         Args:
             portfolio_state: Current portfolio state
             trades: List of trades for the day
             market_data: Market data and context
-            
+
         Returns:
             Prompt string
         """
@@ -293,13 +303,13 @@ Please provide:
 5. Risk assessment and recommendations
 
 Format the response as a comprehensive daily report."""
-    
+
     def _extract_confidence(self, rationale: str) -> float:
         """Extract confidence from rationale text.
-        
+
         Args:
             rationale: Rationale text
-            
+
         Returns:
             Confidence value between 0 and 1
         """
@@ -309,193 +319,195 @@ Format the response as a comprehensive daily report."""
                 # Extract number after "confidence"
                 confidence_text = rationale.lower().split("confidence")[1]
                 confidence = float(confidence_text.split()[0])
-                return {'success': True, 'result': max(0.0, min(1.0, confidence)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+                return {
+                    "success": True,
+                    "result": max(0.0, min(1.0, confidence)),
+                    "message": "Operation completed successfully",
+                    "timestamp": datetime.now().isoformat(),
+                }
         except (ValueError, IndexError) as e:
             logger.warning(f"Could not extract confidence from rationale: {e}")
-        
+
         # Default to moderate confidence
         return 0.5
-    
+
     def _extract_risk_factors(self, rationale: str) -> List[str]:
         """Extract risk factors from rationale text.
-        
+
         Args:
             rationale: Rationale text
-            
+
         Returns:
             List of risk factors
         """
         risk_factors = []
-        
+
         # Look for risk factors in text
         if "risk factors" in rationale.lower():
             # Extract list after "risk factors"
             risk_text = rationale.lower().split("risk factors")[1]
             # Split by newlines or numbers
-            factors = [f.strip() for f in risk_text.split('\n') if f.strip()]
+            factors = [f.strip() for f in risk_text.split("\n") if f.strip()]
             risk_factors.extend(factors)
-        
-        return {'success': True, 'result': risk_factors or ["Market volatility", "Liquidity risk", "Execution risk"], 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+
+        return {
+            "success": True,
+            "result": risk_factors or ["Market volatility", "Liquidity risk", "Execution risk"],
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
+
     def _calculate_pnl_summary(self, trades: List[Dict[str, Any]]) -> Dict[str, float]:
         """Calculate PnL summary from trades.
-        
+
         Args:
             trades: List of trades
-            
+
         Returns:
             Dictionary with PnL summary
         """
-        total_pnl = sum(t.get('pnl', 0) for t in trades)
+        total_pnl = sum(t.get("pnl", 0) for t in trades)
         strategy_pnl = {}
-        
+
         for trade in trades:
-            strategy = trade.get('strategy', 'unknown')
-            strategy_pnl[strategy] = strategy_pnl.get(strategy, 0) + trade.get('pnl', 0)
-        
-        return {
-            'total_pnl': total_pnl,
-            'strategy_pnl': strategy_pnl
-        }
-    
+            strategy = trade.get("strategy", "unknown")
+            strategy_pnl[strategy] = strategy_pnl.get(strategy, 0) + trade.get("pnl", 0)
+
+        return {"total_pnl": total_pnl, "strategy_pnl": strategy_pnl}
+
     def _identify_strategy_shifts(self, trades: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Identify strategy shifts from trades.
-        
+
         Args:
             trades: List of trades
-            
+
         Returns:
             List of strategy shifts
         """
         shifts = []
-        
+
         # Group trades by strategy
         strategy_trades = {}
         for trade in trades:
-            strategy = trade.get('strategy', 'unknown')
+            strategy = trade.get("strategy", "unknown")
             if strategy not in strategy_trades:
                 strategy_trades[strategy] = []
             strategy_trades[strategy].append(trade)
-        
+
         # Analyze strategy performance
         for strategy, trades in strategy_trades.items():
-            pnl = sum(t.get('pnl', 0) for t in trades)
-            win_rate = sum(1 for t in trades if t.get('pnl', 0) > 0) / len(trades)
-            
+            pnl = sum(t.get("pnl", 0) for t in trades)
+            win_rate = sum(1 for t in trades if t.get("pnl", 0) > 0) / len(trades)
+
             if pnl > 0 and win_rate > 0.6:
-                shifts.append({
-                    'strategy': strategy,
-                    'type': 'increased',
-                    'reason': 'Strong performance',
-                    'metrics': {
-                        'pnl': pnl,
-                        'win_rate': win_rate
+                shifts.append(
+                    {
+                        "strategy": strategy,
+                        "type": "increased",
+                        "reason": "Strong performance",
+                        "metrics": {"pnl": pnl, "win_rate": win_rate},
                     }
-                })
+                )
             elif pnl < 0 and win_rate < 0.4:
-                shifts.append({
-                    'strategy': strategy,
-                    'type': 'decreased',
-                    'reason': 'Poor performance',
-                    'metrics': {
-                        'pnl': pnl,
-                        'win_rate': win_rate
+                shifts.append(
+                    {
+                        "strategy": strategy,
+                        "type": "decreased",
+                        "reason": "Poor performance",
+                        "metrics": {"pnl": pnl, "win_rate": win_rate},
                     }
-                })
-        
+                )
+
         return shifts
-    
-    def _assess_risk(self, portfolio_state: Dict[str, Any],
-                    market_data: Dict[str, Any]) -> Dict[str, Any]:
+
+    def _assess_risk(self, portfolio_state: Dict[str, Any], market_data: Dict[str, Any]) -> Dict[str, Any]:
         """Assess portfolio risk.
-        
+
         Args:
             portfolio_state: Current portfolio state
             market_data: Market data and context
-            
+
         Returns:
             Dictionary with risk assessment
         """
         return {
-            'portfolio_risk': {
-                'var_95': self._calculate_var(portfolio_state, 0.95),
-                'var_99': self._calculate_var(portfolio_state, 0.99),
-                'volatility': self._calculate_volatility(portfolio_state),
-                'correlation': self._calculate_correlation(portfolio_state)
+            "portfolio_risk": {
+                "var_95": self._calculate_var(portfolio_state, 0.95),
+                "var_99": self._calculate_var(portfolio_state, 0.99),
+                "volatility": self._calculate_volatility(portfolio_state),
+                "correlation": self._calculate_correlation(portfolio_state),
             },
-            'market_risk': {
-                'volatility': market_data.get('volatility', 0),
-                'trend': market_data.get('trend', 'neutral'),
-                'liquidity': market_data.get('liquidity', 'normal')
-            }
+            "market_risk": {
+                "volatility": market_data.get("volatility", 0),
+                "trend": market_data.get("trend", "neutral"),
+                "liquidity": market_data.get("liquidity", "normal"),
+            },
         }
-    
+
     def _calculate_var(self, portfolio_state: Dict[str, Any], confidence: float) -> float:
         """Calculate Value at Risk.
-        
+
         Args:
             portfolio_state: Current portfolio state
             confidence: Confidence level
-            
+
         Returns:
             VaR value
         """
         # Simple VaR calculation
-        returns = [p.get('pnl', 0) for p in portfolio_state.get('closed_positions', [])]
+        returns = [p.get("pnl", 0) for p in portfolio_state.get("closed_positions", [])]
         if not returns:
             return 0.0
-            
+
         return np.percentile(returns, (1 - confidence) * 100)
-    
+
     def _calculate_volatility(self, portfolio_state: Dict[str, Any]) -> float:
         """Calculate portfolio volatility.
-        
+
         Args:
             portfolio_state: Current portfolio state
-            
+
         Returns:
             Volatility value
         """
-        returns = [p.get('pnl', 0) for p in portfolio_state.get('closed_positions', [])]
+        returns = [p.get("pnl", 0) for p in portfolio_state.get("closed_positions", [])]
         if not returns:
             return 0.0
-            
+
         return np.std(returns) * np.sqrt(252)
-    
+
     def _calculate_correlation(self, portfolio_state: Dict[str, Any]) -> Dict[str, float]:
         """Calculate position correlations.
-        
+
         Args:
             portfolio_state: Current portfolio state
-            
+
         Returns:
             Dictionary of correlations
         """
-        positions = portfolio_state.get('open_positions', [])
+        positions = portfolio_state.get("open_positions", [])
         if len(positions) < 2:
             return {}
-            
+
         # Calculate returns for each position
         returns = {}
         for pos in positions:
-            symbol = pos.get('symbol')
+            symbol = pos.get("symbol")
             if symbol:
-                returns[symbol] = pos.get('pnl', 0)
-        
+                returns[symbol] = pos.get("pnl", 0)
+
         # Calculate correlations
         correlations = {}
         symbols = list(returns.keys())
         for i, sym1 in enumerate(symbols):
-            for sym2 in symbols[i+1:]:
-                correlations[f"{sym1}-{sym2}"] = np.corrcoef(
-                    [returns[sym1]], [returns[sym2]]
-                )[0, 1]
-        
+            for sym2 in symbols[i + 1 :]:
+                correlations[f"{sym1}-{sym2}"] = np.corrcoef([returns[sym1]], [returns[sym2]])[0, 1]
+
         return correlations
-    
+
     def _log_rationale(self, rationale: TradeRationale) -> None:
         """Log trade rationale.
-        
+
         Args:
             rationale: Trade rationale to log
         """
@@ -503,12 +515,12 @@ Format the response as a comprehensive daily report."""
         log_path = f"trading/portfolio/logs/trade_rationales_{datetime.utcnow().strftime('%Y%m%d')}.json"
         with open(log_path, "a") as f:
             f.write(json.dumps(rationale.to_dict()) + "\n")
-        
+
         logger.info(f"Logged trade rationale for {rationale.symbol}")
 
     def _log_commentary(self, commentary: DailyCommentary) -> None:
         """Log daily commentary.
-        
+
         Args:
             commentary: Daily commentary to log
         """
@@ -516,7 +528,8 @@ Format the response as a comprehensive daily report."""
         log_path = f"trading/portfolio/logs/daily_commentary_{commentary.date.strftime('%Y%m%d')}.json"
         with open(log_path, "w") as f:
             json.dump(commentary.to_dict(), f, indent=2)
-        
+
         logger.info(f"Logged daily commentary for {commentary.date.date()}")
 
-__all__ = ["LLMInterface", "TradeRationale", "DailyCommentary"] 
+
+__all__ = ["LLMInterface", "TradeRationale", "DailyCommentary"]

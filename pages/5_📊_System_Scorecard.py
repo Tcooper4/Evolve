@@ -10,6 +10,7 @@ import streamlit as st
 # Local imports
 from utils.system_status import get_system_scorecard
 
+
 def render_system_scorecard():
     """Render the system scorecard page."""
     st.set_page_config(page_title="📊 System Scorecard", page_icon="📊", layout="wide")
@@ -37,7 +38,7 @@ def render_system_scorecard():
             "mse_avg": 0.0,
             "goal_status": {},
             "last_10_entries": pd.DataFrame(),
-            "trades_per_day": pd.Series()
+            "trades_per_day": pd.Series(),
         }
 
     # Metrics columns
@@ -74,9 +75,11 @@ def render_system_scorecard():
     else:
         st.info("No recent runs to display.")
 
+
 def main():
     """Main function for the system scorecard page."""
     render_system_scorecard()
 
+
 if __name__ == "__main__":
-    main() 
+    main()
