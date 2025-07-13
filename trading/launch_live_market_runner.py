@@ -128,7 +128,7 @@ async def main():
             return
         
         # Add success log on launch
-        print(f"[{datetime.now()}] ✅ Live Market Runner initialized.")
+        logger.info(f"✅ Live Market Runner initialized.")
         
         logger.info(f"✅ Live Market Runner is running!")
         logger.info(f"   Press Ctrl+C to stop")
