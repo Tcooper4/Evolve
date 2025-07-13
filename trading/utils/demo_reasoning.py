@@ -202,7 +202,7 @@ def demo_basic_logging():
         decision_ids.append(decision_id)
         logger.info(f"✅ Logged decision: {decision_id}")
 
-    return {'success': True, 'result': reasoning_logger, decision_ids, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return {'success': True, 'result': reasoning_logger, 'decision_ids': decision_ids, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
 
 def demo_display_components():

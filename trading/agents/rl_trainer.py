@@ -534,6 +534,9 @@ class RLTrainer:
 
             logger.info(f"Agent evaluation completed. Mean return: {results['mean_return']:.4f}")
             return results
+        except Exception as e:
+            logger.error(f"Error evaluating agent: {e}")
+            return {'error': str(e)}
 
     def plot_rewards(self, reward_log: List[float]):
         """Plot learning curve from reward log."""
@@ -558,10 +561,6 @@ class RLTrainer:
             logger.warning("Matplotlib not available for plotting learning curve")
         except Exception as e:
             logger.error(f"Error plotting learning curve: {e}")
-
-        except Exception as e:
-            logger.error(f"Error evaluating agent: {e}")
-            return {'error': str(e)}
 
     def compare_agents(self,
                       model_paths: List[str],

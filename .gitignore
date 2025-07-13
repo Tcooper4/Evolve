@@ -90,6 +90,7 @@ Thumbs.db
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb
+dev/notebooks/
 
 # Cache
 .cache/
@@ -142,4 +143,12 @@ config/credentials/
 # Test configuration with sensitive data
 tests/config/
 tests/secrets/
-tests/credentials/ 
+tests/credentials/
+
+# Runtime artifacts
+*.pkl
+*.pdf
+*.db
+reports/*.html
+reports/*.pdf
+reports/*.pkl 

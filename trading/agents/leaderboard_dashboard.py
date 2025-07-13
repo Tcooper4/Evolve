@@ -34,7 +34,9 @@ class LeaderboardDashboard:
             page_icon="🏆",
             layout="wide",
             initial_sidebar_state="expanded"
-        )def run(self):
+        )
+
+    def run(self):
         """Run the dashboard."""
         st.title("🏆 Agent Performance Leaderboard")
         st.markdown("Track, analyze, and manage agent performance across the trading system.")
@@ -141,6 +143,8 @@ class LeaderboardDashboard:
 
         df = self._get_filtered_dataframe()
         if df.empty:
+            st.info("No data available for visualization.")
+            return
 
         # Create subplots
         fig = make_subplots(
@@ -213,6 +217,8 @@ class LeaderboardDashboard:
 
         df = self._get_filtered_dataframe()
         if df.empty:
+            st.info("No data available for summary metrics.")
+            return
 
         # Calculate summary metrics
         total_agents = len(df)
@@ -245,6 +251,8 @@ class LeaderboardDashboard:
 
         df = self._get_filtered_dataframe()
         if df.empty:
+            st.info("No data available for status analysis.")
+            return
 
         # Status breakdown
         status_counts = df['status'].value_counts()
@@ -345,6 +353,8 @@ class LeaderboardDashboard:
 
         df = self._get_filtered_dataframe()
         if df.empty:
+            st.info("No data available for export.")
+            return
 
         col1, col2, col3 = st.columns(3)
 

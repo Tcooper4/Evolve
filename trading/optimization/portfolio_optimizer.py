@@ -24,8 +24,7 @@ except ImportError:
     logging.warning("CVXPY not available. Install with: pip install cvxpy")
 
 try:
-    pass
-
+    import cvxopt
     CVXOPT_AVAILABLE = True
 except ImportError:
     CVXOPT_AVAILABLE = False

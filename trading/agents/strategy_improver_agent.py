@@ -121,32 +121,12 @@ class StrategyImproverAgent(BaseAgent):
         logger.info(f"Initialized StrategyImproverAgent with {self.optimization_method} optimization")
 
     async def execute(self, **kwargs) -> AgentResult:
-        """
-        Execute the strategy improvement logic.
-
-        Args:
-            **kwargs: action, strategy_name, performance_data, etc.
-
-        Returns:
-            AgentResult: Result of the improvement process
-        """
+        """Main entry point for the strategy improver agent."""
         try:
-            action = kwargs.get('action', 'improve_strategies')
-
-            if action == 'improve_strategies':
+            action = kwargs.get('action', 'improve_all')
+            if action == 'improve_all':
                 return await self._improve_all_strategies()
-            elif action == 'improve_specific_strategy':
-                strategy_name = kwargs.get('strategy_name')
-                if not strategy_name:
-                    return AgentResult(success=False, error_message="Missing strategy_name")
-                return await self._improve_specific_strategy(strategy_name)
-            elif action == 'get_improvement_history':
-                return AgentResult(success=True, data={
-                    'improvement_history': self.improvement_history[-10:]
-                })
-            elif action == 'force_improvement':
-                return await self._force_improvement()
-            elif action == 'get_strategy_performance':
+            elif action == 'improve_specific':
                 strategy_name = kwargs.get('strategy_name')
                 if not strategy_name:
                     return AgentResult(success=False, error_message="Missing strategy_name")
@@ -155,9 +135,8 @@ class StrategyImproverAgent(BaseAgent):
             else:
                 return AgentResult(success=False, error_message=f"Unknown action: {action}")
 
-        # Auto-prune underperforming strategies
-        self._prune_underperforming_strategies()
-
+            # Auto-prune underperforming strategies
+            self._prune_underperforming_strategies()
         except Exception as e:
             return self.handle_error(e)
 
