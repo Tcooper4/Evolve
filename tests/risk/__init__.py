@@ -1,1 +1,1 @@
-"""Tests for risk management components.""" 
+"""Tests for risk management components."""

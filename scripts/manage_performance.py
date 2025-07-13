@@ -40,30 +40,32 @@ Examples:
     python manage_performance.py report --profiles "profiles/*.prof" --format html
 """
 
-import os
-import sys
 import argparse
+import asyncio
+import cProfile
+import glob
+import json
 import logging
 import logging.config
-import yaml
-import json
-import cProfile
+import os
 import pstats
-import line_profiler
-import memory_profiler
-import psutil
+import sys
 import time
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
-import asyncio
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
 import aiohttp
+import line_profiler
+import matplotlib.pyplot as plt
+import memory_profiler
 import numpy as np
 import pandas as pd
-from scipy import stats
-import matplotlib.pyplot as plt
+import psutil
 import seaborn as sns
-import glob
+import yaml
+from scipy import stats
+
 
 class PerformanceManager:
     """Manager for application performance profiling and optimization.
@@ -114,7 +116,7 @@ class PerformanceManager:
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
-        
+
         with open(config_path) as f:
             return yaml.safe_load(f)
 
@@ -128,10 +130,10 @@ class PerformanceManager:
         if not log_config_path.exists():
             print("Error: logging_config.yaml not found")
             sys.exit(1)
-        
+
         with open(log_config_path) as f:
             log_config = yaml.safe_load(f)
-        
+
         logging.config.dictConfig(log_config)
 
     return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
@@ -150,33 +152,33 @@ class PerformanceManager:
             Exception: If profiling fails
         """
         self.logger.info(f"Profiling function: {func.__name__}")
-        
+
         try:
             # Create profiler
             profiler = cProfile.Profile()
-            
+
             # Run function with profiler
             profiler.enable()
             result = func(*args, **kwargs)
             profiler.disable()
-            
+
             # Save profile results
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             profile_file = self.prof_dir / f"profile_{func.__name__}_{timestamp}.prof"
-            
+
             # Save raw profile data
             profiler.dump_stats(str(profile_file))
-            
+
             # Generate and save statistics
             stats_file = self.prof_dir / f"stats_{func.__name__}_{timestamp}.txt"
             with open(stats_file, "w") as f:
                 stats = pstats.Stats(profiler, stream=f)
                 stats.sort_stats("cumulative")
                 stats.print_stats()
-            
+
             self.logger.info(f"Profile results saved to {profile_file}")
             self.logger.info(f"Statistics saved to {stats_file}")
-            
+
             return result
         except Exception as e:
             self.logger.error(f"Failed to profile function: {e}")
@@ -197,23 +199,23 @@ class PerformanceManager:
             Exception: If memory profiling fails
         """
         self.logger.info(f"Profiling memory usage for function: {func.__name__}")
-        
+
         try:
             # Create memory profiler
             profiled_func = memory_profiler.profile(func)
-            
+
             # Run function with profiler
             result = profiled_func(*args, **kwargs)
-            
+
             # Save memory profile
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             memory_file = self.prof_dir / f"memory_{func.__name__}_{timestamp}.txt"
-            
+
             with open(memory_file, "w") as f:
                 memory_profiler.show_results(profiled_func, stream=f)
-            
+
             self.logger.info(f"Memory profile saved to {memory_file}")
-            
+
             return result
         except Exception as e:
             self.logger.error(f"Failed to profile memory: {e}")
@@ -234,23 +236,23 @@ class PerformanceManager:
             Exception: If line profiling fails
         """
         self.logger.info(f"Profiling line-by-line performance for function: {func.__name__}")
-        
+
         try:
             # Create line profiler
             profiler = line_profiler.LineProfiler(func)
-            
+
             # Run function with profiler
             result = profiler(func)(*args, **kwargs)
-            
+
             # Save line profile
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             line_file = self.prof_dir / f"line_{func.__name__}_{timestamp}.txt"
-            
+
             with open(line_file, "w") as f:
                 profiler.print_stats(stream=f)
-            
+
             self.logger.info(f"Line profile saved to {line_file}")
-            
+
             return result
         except Exception as e:
             self.logger.error(f"Failed to profile line performance: {e}")
@@ -269,7 +271,7 @@ class PerformanceManager:
             Exception: If analysis fails
         """
         self.logger.info("Analyzing performance profiles")
-        
+
         try:
             # Load profile data
             profile_data = []
@@ -279,13 +281,13 @@ class PerformanceManager:
                     "file": file,
                     "stats": stats
                 })
-            
+
             # Analyze profiles
             analysis = {
                 "timestamp": datetime.now().isoformat(),
                 "profiles": []
             }
-            
+
             for data in profile_data:
                 stats = data["stats"]
                 profile_analysis = {
@@ -295,7 +297,7 @@ class PerformanceManager:
                     "primitive_calls": stats.prim_calls,
                     "top_functions": []
                 }
-                
+
                 # Get top functions by cumulative time
                 for func, (cc, nc, tt, ct, callers) in stats.stats.items():
                     if ct > 0:  # Only include functions that were called
@@ -305,24 +307,24 @@ class PerformanceManager:
                             "total_time": tt,
                             "cumulative_time": ct
                         })
-                
+
                 # Sort top functions by cumulative time
                 profile_analysis["top_functions"].sort(
                     key=lambda x: x["cumulative_time"],
                     reverse=True
                 )
-                
+
                 analysis["profiles"].append(profile_analysis)
-            
+
             # Save analysis
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             analysis_file = self.reports_dir / f"performance_analysis_{timestamp}.json"
-            
+
             with open(analysis_file, "w") as f:
                 json.dump(analysis, f, indent=2)
-            
+
             self.logger.info(f"Analysis saved to {analysis_file}")
-            
+
             return analysis
         except Exception as e:
             self.logger.error(f"Failed to analyze performance: {e}")
@@ -331,35 +333,35 @@ class PerformanceManager:
     def optimize_performance(self, func: callable, *args, **kwargs):
         """Optimize function performance."""
         self.logger.info(f"Optimizing function: {func.__name__}")
-        
+
         try:
             # Profile original function
             original_result = self.profile_function(func, *args, **kwargs)
-            
+
             # Get function source
             import inspect
             source = inspect.getsource(func)
-            
+
             # Analyze source code
             optimization_suggestions = self._analyze_source_code(source)
-            
+
             # Apply optimizations
             optimized_func = self._apply_optimizations(func, optimization_suggestions)
-            
+
             # Profile optimized function
             optimized_result = self.profile_function(optimized_func, *args, **kwargs)
-            
+
             # Compare results
             comparison = self._compare_performance(
                 original_result,
                 optimized_result,
                 func.__name__
             )
-            
+
             # Save optimization report
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             report_file = self.reports_dir / f"optimization_report_{func.__name__}_{timestamp}.json"
-            
+
             with open(report_file, "w") as f:
                 json.dump({
                     "timestamp": datetime.now().isoformat(),
@@ -367,9 +369,9 @@ class PerformanceManager:
                     "suggestions": optimization_suggestions,
                     "comparison": comparison
                 }, f, indent=2)
-            
+
             self.logger.info(f"Optimization report saved to {report_file}")
-            
+
             return optimized_func
         except Exception as e:
             self.logger.error(f"Failed to optimize performance: {e}")
@@ -378,7 +380,7 @@ class PerformanceManager:
     def _analyze_source_code(self, source: str) -> List[Dict[str, Any]]:
         """Analyze source code for optimization opportunities."""
         suggestions = []
-        
+
         try:
             # Check for list comprehensions
             if "for" in source and "[" in source and "]" in source:
@@ -387,7 +389,7 @@ class PerformanceManager:
                     "description": "Consider using list comprehension for better performance",
                     "severity": "medium"
                 })
-            
+
             # Check for nested loops
             if source.count("for") > 1:
                 suggestions.append({
@@ -395,7 +397,7 @@ class PerformanceManager:
                     "description": "Consider optimizing nested loops",
                     "severity": "high"
                 })
-            
+
             # Check for string concatenation
             if "+" in source and '"' in source:
                 suggestions.append({
@@ -403,7 +405,7 @@ class PerformanceManager:
                     "description": "Consider using f-strings or str.join()",
                     "severity": "low"
                 })
-            
+
             # Check for global variables
             if "global" in source:
                 suggestions.append({
@@ -411,7 +413,7 @@ class PerformanceManager:
                     "description": "Consider avoiding global variables",
                     "severity": "medium"
                 })
-            
+
             return suggestions
         except Exception as e:
             self.logger.error(f"Failed to analyze source code: {e}")
@@ -419,7 +421,7 @@ class PerformanceManager:
 
     def _apply_optimizations(self, func: callable, suggestions: List[Dict[str, Any]]) -> callable:
         """Apply optimizations to function.
-        
+
         Note: This is a simplified version that returns the original function
         for safety. In a production environment, consider using AST manipulation
         or other safe code transformation techniques.
@@ -428,19 +430,19 @@ class PerformanceManager:
             # For safety, we'll return the original function
             # In a production environment, you would implement safe code transformations
             # using AST manipulation or other techniques that don't require exec()
-            
+
             self.logger.warning(
                 "Dynamic code optimization disabled for security. "
                 "Consider using AST manipulation for safe code transformations."
             )
-            
+
             # Log the suggestions for manual review
             for suggestion in suggestions:
                 self.logger.info(f"Optimization suggestion: {suggestion}")
-            
+
             # Return the original function
             return func
-            
+
         except Exception as e:
             self.logger.error(f"Failed to apply optimizations: {e}")
             raise
@@ -451,14 +453,14 @@ class PerformanceManager:
             # Get performance metrics
             original_stats = pstats.Stats(self.prof_dir / f"profile_{func_name}_original.prof")
             optimized_stats = pstats.Stats(self.prof_dir / f"profile_{func_name}_optimized.prof")
-            
+
             # Calculate improvements
             improvement = {
                 "total_time": (original_stats.total_tt - optimized_stats.total_tt) / original_stats.total_tt * 100,
                 "function_calls": (original_stats.total_calls - optimized_stats.total_calls) / original_stats.total_calls * 100,
                 "primitive_calls": (original_stats.prim_calls - optimized_stats.prim_calls) / original_stats.prim_calls * 100
             }
-            
+
             return improvement
         except Exception as e:
             self.logger.error(f"Failed to compare performance: {e}")
@@ -469,11 +471,11 @@ class PerformanceManager:
         try:
             # Set style
             plt.style.use("seaborn")
-            
+
             # Create plots directory
             plots_dir = self.reports_dir / "plots"
             plots_dir.mkdir(parents=True, exist_ok=True)
-            
+
             # Generate plots for each profile
             for profile in analysis["profiles"]:
                 # Top functions by cumulative time
@@ -488,7 +490,7 @@ class PerformanceManager:
                 plt.tight_layout()
                 plt.savefig(plots_dir / f"top_functions_{Path(profile['file']).stem}.png")
                 plt.close()
-            
+
             # Generate comparison plots
             if len(analysis["profiles"]) > 1:
                 # Compare total times
@@ -503,7 +505,7 @@ class PerformanceManager:
                 plt.tight_layout()
                 plt.savefig(plots_dir / "total_time_comparison.png")
                 plt.close()
-                
+
                 # Compare function calls
                 plt.figure(figsize=(10, 6))
                 plt.bar(
@@ -516,11 +518,12 @@ class PerformanceManager:
                 plt.tight_layout()
                 plt.savefig(plots_dir / "function_calls_comparison.png")
                 plt.close()
-            
+
             self.logger.info(f"Performance plots saved to {plots_dir}")
         except Exception as e:
             self.logger.error(f"Failed to generate performance plots: {e}")
             raise
+
 
 def main():
     """Main entry point for the performance management script."""
@@ -602,4 +605,4 @@ def main():
         pass
 
 if __name__ == "__main__":
-    main() 
+    main()

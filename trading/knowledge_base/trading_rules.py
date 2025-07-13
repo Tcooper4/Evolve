@@ -1,31 +1,38 @@
-from typing import Dict, List, Optional, Any, Union, Literal
-from datetime import datetime, timedelta
-import pandas as pd
 import json
 import logging
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
 from enum import Enum
-from dataclasses import dataclass, asdict
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
+
+import pandas as pd
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class RuleStatus(Enum):
     """Enum for rule status."""
+
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
     SNOOZED = "SNOOZED"
     ARCHIVED = "ARCHIVED"
 
+
 class LogicalOperator(Enum):
     """Enum for logical operators in rule chaining."""
+
     AND = "AND"
     OR = "OR"
+
 
 @dataclass
 class RuleMetadata:
     """Metadata for a trading rule."""
+
     version: int = 1
     created_at: datetime = None
     updated_at: datetime = None
@@ -39,6 +46,7 @@ class RuleMetadata:
             self.created_at = datetime.now()
         if self.updated_at is None:
             self.updated_at = self.created_at
+
 
 class TradingRules:
     """A class to manage trading rules and strategies."""
@@ -60,7 +68,7 @@ class TradingRules:
         action: Optional[Dict[str, Any]] = None,
         agent_id: Optional[str] = None,
         agent_confidence: Optional[float] = None,
-        created_by: str = "system"
+        created_by: str = "system",
     ) -> str:
         """Add a new trading rule.
 
@@ -85,10 +93,7 @@ class TradingRules:
 
         rule_id = str(uuid4())
         metadata = RuleMetadata(
-            created_by=created_by,
-            modified_by=created_by,
-            agent_id=agent_id,
-            agent_confidence=agent_confidence
+            created_by=created_by, modified_by=created_by, agent_id=agent_id, agent_confidence=agent_confidence
         )
 
         self.rules[rule_id] = {
@@ -102,20 +107,14 @@ class TradingRules:
             "action": action,
             "status": RuleStatus.ACTIVE.value,
             "metadata": asdict(metadata),
-            "snooze_until": None
+            "snooze_until": None,
         }
 
         self._log_rule_change(rule_id, "created")
         logger.info(f"Added new rule: {rule_name} (ID: {rule_id})")
         return rule_id
 
-    def update_rule(
-        self,
-        rule_id: str,
-        updates: Dict[str, Any],
-        modified_by: str
-
-    ) -> None:
+    def update_rule(self, rule_id: str, updates: Dict[str, Any], modified_by: str) -> None:
         """Update an existing rule.
 
         Args:
@@ -150,11 +149,7 @@ class TradingRules:
         Returns:
             Dict[str, Dict[str, Any]]: Dictionary of rules with the specified tag.
         """
-        return {
-            rule_id: rule
-            for rule_id, rule in self.rules.items()
-            if tag in rule.get("tags", [])
-        }
+        return {rule_id: rule for rule_id, rule in self.rules.items() if tag in rule.get("tags", [])}
 
     def snooze_rule(self, rule_id: str, duration_minutes: int) -> None:
         """Snooze a rule for a specified duration.
@@ -199,7 +194,7 @@ class TradingRules:
             return False
 
         rule = self.rules[rule_id]
-        
+
         # Check basic status
         if rule["status"] != RuleStatus.ACTIVE.value:
             if rule["status"] == RuleStatus.SNOOZED.value:
@@ -210,11 +205,8 @@ class TradingRules:
 
         # Check dependencies if any
         if rule["dependencies"]:
-            dependency_results = [
-                self.is_rule_active(dep_id)
-                for dep_id in rule["dependencies"]
-            ]
-            
+            dependency_results = [self.is_rule_active(dep_id) for dep_id in rule["dependencies"]]
+
             if rule["logical_operator"] == LogicalOperator.AND.value:
                 return all(dependency_results)
             else:  # OR
@@ -231,11 +223,7 @@ class TradingRules:
         triggered_actions = []
         for rule_id, rule in self.rules.items():
             if self.is_rule_active(rule_id) and rule.get("action"):
-                triggered_actions.append({
-                    "rule_id": rule_id,
-                    "rule_name": rule["name"],
-                    "action": rule["action"]
-                })
+                triggered_actions.append({"rule_id": rule_id, "rule_name": rule["name"], "action": rule["action"]})
         return triggered_actions
 
     def test_rule(self, rule_id: str, df: pd.DataFrame) -> Dict[str, Any]:
@@ -260,10 +248,7 @@ class TradingRules:
             "hit_rate": 0.0,
             "total_signals": 0,
             "correct_signals": 0,
-            "test_period": {
-                "start": df.index[0],
-                "end": df.index[-1]
-            }
+            "test_period": {"start": df.index[0], "end": df.index[-1]},
         }
 
         logger.info(f"Tested rule: {self.rules[rule_id]['name']} (ID: {rule_id})")
@@ -275,7 +260,7 @@ class TradingRules:
         Args:
             path (str): Path to save the audit log.
         """
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             json.dump(self.rule_audit_log, f, default=str)
         logger.info(f"Exported rule audit log to {path}")
 
@@ -286,12 +271,9 @@ class TradingRules:
             rule_id (str): The ID of the rule that changed.
             action (str): The type of change.
         """
-        self.rule_audit_log.append({
-            "timestamp": datetime.now(),
-            "rule_id": rule_id,
-            "action": action,
-            "rule_state": self.rules[rule_id]
-        })
+        self.rule_audit_log.append(
+            {"timestamp": datetime.now(), "rule_id": rule_id, "action": action, "rule_state": self.rules[rule_id]}
+        )
 
     def __str__(self) -> str:
         """Return a string representation of the trading rules."""
@@ -348,7 +330,7 @@ class TradingRules:
         Args:
             filename (str): The name of the file to export rules to.
         """
-        with open(filename, 'w') as f:
+        with open(filename, "w") as f:
             json.dump(self.rules, f, default=str)
         logger.info(f"Exported rules to {filename}")
 
@@ -358,9 +340,9 @@ class TradingRules:
         Args:
             filename (str): The name of the file to import rules from.
         """
-        with open(filename, 'r') as f:
+        with open(filename, "r") as f:
             imported_rules = json.load(f)
-            
+
         # Convert imported rules to new format if needed
         for rule_id, rule in imported_rules.items():
             if "metadata" not in rule:
@@ -369,7 +351,7 @@ class TradingRules:
                     created_at=rule.get("created_at", datetime.now()),
                     updated_at=rule.get("modified_at", datetime.now()),
                     created_by=rule.get("created_by", "system"),
-                    modified_by=rule.get("modified_by", "system")
+                    modified_by=rule.get("modified_by", "system"),
                 )
                 rule["metadata"] = asdict(metadata)
                 rule["status"] = RuleStatus.ACTIVE.value if rule.get("active", True) else RuleStatus.INACTIVE.value
@@ -387,42 +369,42 @@ class TradingRules:
         Args:
             json_file (str): The path to the JSON file containing trading rules.
         """
-        with open(json_file, 'r') as f:
+        with open(json_file, "r") as f:
             rules_data = json.load(f)
-            
+
         def process_rules(data: Dict, prefix: str = "") -> None:
             """Process rules recursively."""
             for key, value in data.items():
                 if isinstance(value, dict):
-                    if 'description' in value:
+                    if "description" in value:
                         # This is a rule
                         rule_name = f"{prefix}{key}" if prefix else key
                         rule_id = self.add_rule(
                             rule_name=rule_name,
-                            rule_description=value['description'],
-                            category=value.get('category', 'General'),
-                            priority=value.get('priority', 0),
-                            dependencies=value.get('dependencies', []),
-                            tags=value.get('tags', []),
-                            logical_operator=LogicalOperator(value.get('logical_operator', LogicalOperator.AND.value)),
-                            action=value.get('action', None),
-                            agent_id=value.get('agent_id'),
-                            agent_confidence=value.get('agent_confidence'),
-                            created_by=value.get('created_by', 'system')
+                            rule_description=value["description"],
+                            category=value.get("category", "General"),
+                            priority=value.get("priority", 0),
+                            dependencies=value.get("dependencies", []),
+                            tags=value.get("tags", []),
+                            logical_operator=LogicalOperator(value.get("logical_operator", LogicalOperator.AND.value)),
+                            action=value.get("action", None),
+                            agent_id=value.get("agent_id"),
+                            agent_confidence=value.get("agent_confidence"),
+                            created_by=value.get("created_by", "system"),
                         )
                     # Process nested rules
                     process_rules(value, f"{prefix}{key}.")
-                elif isinstance(value, list) and key == 'rules':
+                elif isinstance(value, list) and key == "rules":
                     # Process list of rules
                     for i, rule in enumerate(value):
                         rule_name = f"{prefix}rule_{i+1}"
                         self.add_rule(
                             rule_name=rule_name,
                             rule_description=rule,
-                            category='General',
+                            category="General",
                             priority=0,
-                            created_by='system'
+                            created_by="system",
                         )
 
         process_rules(rules_data)
-        logger.info(f"Loaded rules from {json_file}") 
+        logger.info(f"Loaded rules from {json_file}")

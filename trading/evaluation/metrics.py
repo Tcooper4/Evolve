@@ -1,25 +1,48 @@
+from typing import Dict
+
 import numpy as np
-from typing import Union, List, Dict, Any
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
 
 class RegressionMetrics:
     """Metrics for regression models."""
 
     def mean_squared_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         """Return Mean Squared Error."""
-        return {'success': True, 'result': float(mean_squared_error(actuals, predictions)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "result": float(mean_squared_error(actuals, predictions)),
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def root_mean_squared_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         """Return Root Mean Squared Error."""
-        return {'success': True, 'result': float(np.sqrt(mean_squared_error(actuals, predictions))), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "result": float(np.sqrt(mean_squared_error(actuals, predictions))),
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def mean_absolute_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         """Return Mean Absolute Error."""
-        return {'success': True, 'result': float(mean_absolute_error(actuals, predictions)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "result": float(mean_absolute_error(actuals, predictions)),
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def r2_score(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
         """Return R squared score."""
-        return {'success': True, 'result': float(r2_score(actuals, predictions)), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "result": float(r2_score(actuals, predictions)),
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
+
 
 class ClassificationMetrics:
     """Metrics for classification models."""
@@ -52,9 +75,10 @@ class ClassificationMetrics:
         rec = self.recall(actuals, predictions)
         return 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
 
+
 class TimeSeriesMetrics:
     """Class for calculating time series specific metrics."""
-    
+
     def __init__(self):
         """Initialize the metrics calculator."""
         self.metrics = {}
@@ -81,36 +105,36 @@ class TimeSeriesMetrics:
         naive_forecast = actuals[:-1]
         denom = np.mean(np.abs(actuals[1:] - naive_forecast))
         if denom == 0:
-            return float('inf')
+            return float("inf")
         return float(np.mean(np.abs(actuals - predictions)) / denom)
-        
+
     def calculate_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
         """Calculate all time series metrics.
-        
+
         Args:
             y_true: True values
             y_pred: Predicted values
-            
+
         Returns:
             Dictionary of metric names and values
         """
         self.metrics = {
-            'mse': mean_squared_error(y_true, y_pred),
-            'rmse': np.sqrt(mean_squared_error(y_true, y_pred)),
-            'mae': mean_absolute_error(y_true, y_pred),
-            'r2': r2_score(y_true, y_pred),
-            'mape': self.mean_absolute_percentage_error(y_true, y_pred),
-            'smape': self.symmetric_mean_absolute_percentage_error(y_true, y_pred),
-            'mase': self.mean_absolute_scaled_error(y_true, y_pred)
+            "mse": mean_squared_error(y_true, y_pred),
+            "rmse": np.sqrt(mean_squared_error(y_true, y_pred)),
+            "mae": mean_absolute_error(y_true, y_pred),
+            "r2": r2_score(y_true, y_pred),
+            "mape": self.mean_absolute_percentage_error(y_true, y_pred),
+            "smape": self.symmetric_mean_absolute_percentage_error(y_true, y_pred),
+            "mase": self.mean_absolute_scaled_error(y_true, y_pred),
         }
         return self.metrics
 
     def get_metric(self, metric_name: str) -> float:
         """Get a specific metric value.
-        
+
         Args:
             metric_name: Name of the metric to retrieve
-            
+
         Returns:
             Metric value
         """
@@ -119,10 +143,10 @@ class TimeSeriesMetrics:
         if metric_name not in self.metrics:
             raise ValueError(f"Metric {metric_name} not found")
         return self.metrics[metric_name]
-        
+
     def get_all_metrics(self) -> Dict[str, float]:
         """Get all calculated metrics.
-        
+
         Returns:
             Dictionary of all metric names and values
         """
@@ -130,23 +154,24 @@ class TimeSeriesMetrics:
             raise ValueError("No metrics have been calculated yet")
         return self.metrics.copy()
 
+
 class RiskMetrics:
     """Class for calculating risk metrics."""
-    
+
     def __init__(self):
         """Initialize the risk metrics calculator."""
         self.metrics = {}
-        
-    def calculate_metrics(self, returns: np.ndarray, 
-                         risk_free_rate: float = 0.0,
-                         window: int = 252) -> Dict[str, float]:
+
+    def calculate_metrics(
+        self, returns: np.ndarray, risk_free_rate: float = 0.0, window: int = 252
+    ) -> Dict[str, float]:
         """Calculate risk metrics.
-        
+
         Args:
             returns: Array of returns
             risk_free_rate: Risk-free rate (annualized)
             window: Number of periods in a year (252 for daily data)
-            
+
         Returns:
             Dictionary of risk metrics
         """
@@ -158,17 +183,17 @@ class RiskMetrics:
         max_drawdown = self.maximum_drawdown(returns)
         var_95 = self.value_at_risk(returns)
         es_95 = np.mean(returns[returns <= var_95])
-        
+
         self.metrics = {
-            'annualized_return': annualized_return,
-            'annualized_volatility': annualized_volatility,
-            'sharpe_ratio': sharpe_ratio,
-            'sortino_ratio': sortino_ratio,
-            'max_drawdown': max_drawdown,
-            'var_95': var_95,
-            'expected_shortfall_95': es_95
+            "annualized_return": annualized_return,
+            "annualized_volatility": annualized_volatility,
+            "sharpe_ratio": sharpe_ratio,
+            "sortino_ratio": sortino_ratio,
+            "max_drawdown": max_drawdown,
+            "var_95": var_95,
+            "expected_shortfall_95": es_95,
         }
-        
+
         return self.metrics
 
     def sharpe_ratio(self, returns: np.ndarray, risk_free_rate: float = 0.0) -> float:
@@ -198,10 +223,10 @@ class RiskMetrics:
 
     def get_metric(self, metric_name: str) -> float:
         """Get a specific risk metric value.
-        
+
         Args:
             metric_name: Name of the metric to retrieve
-            
+
         Returns:
             Metric value
         """
@@ -210,10 +235,10 @@ class RiskMetrics:
         if metric_name not in self.metrics:
             raise ValueError(f"Metric {metric_name} not found")
         return self.metrics[metric_name]
-        
+
     def get_all_metrics(self) -> Dict[str, float]:
         """Get all calculated risk metrics.
-        
+
         Returns:
             Dictionary of all metric names and values
         """
@@ -221,13 +246,17 @@ class RiskMetrics:
             raise ValueError("No metrics have been calculated yet")
         return self.metrics.copy()
 
+
 # Standalone functions for compatibility with existing imports
+
+
 def calculate_sharpe_ratio(returns: np.ndarray, risk_free_rate: float = 0.0) -> float:
     """Calculate the Sharpe ratio for a series of returns."""
     if len(returns) == 0:
         return 0.0
     excess = returns - risk_free_rate / len(returns)
     return float(np.sqrt(252) * excess.mean() / excess.std()) if excess.std() != 0 else 0.0
+
 
 def calculate_max_drawdown(returns: np.ndarray) -> float:
     """Calculate maximum drawdown for a series of returns."""
@@ -237,6 +266,7 @@ def calculate_max_drawdown(returns: np.ndarray) -> float:
     running_max = np.maximum.accumulate(cumulative)
     drawdowns = cumulative / running_max - 1
     return float(drawdowns.min())
+
 
 def calculate_win_rate(returns: np.ndarray) -> float:
     """Calculate win rate (percentage of positive returns)."""

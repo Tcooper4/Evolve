@@ -1,3 +1,3 @@
 """
 Risk tests module.
-""" 
+"""

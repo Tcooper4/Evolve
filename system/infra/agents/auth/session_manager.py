@@ -8,19 +8,22 @@ This module provides functionality for:
 - Rate limiting
 """
 
+import logging
+import uuid
+from dataclasses import field
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+
 import jwt
 import redis
-import uuid
-from datetime import datetime, timedelta
-from typing import Dict, Optional, List
-import logging
 from pydantic import BaseModel
-from dataclasses import field
 
 logger = logging.getLogger(__name__)
 
+
 class Session(BaseModel):
     """Session model."""
+
     id: str
     user_id: str
     token: str
@@ -31,6 +34,7 @@ class Session(BaseModel):
     user_agent: str
     metadata: Dict = field(default_factory=dict)
 
+
 class SessionManager:
     def __init__(
         self,
@@ -38,7 +42,7 @@ class SessionManager:
         secret_key: str,
         token_expiry: int = 3600,  # 1 hour
         session_expiry: int = 86400,  # 24 hours
-        max_sessions_per_user: int = 5
+        max_sessions_per_user: int = 5,
     ):
         self.redis = redis_client
         self.secret_key = secret_key
@@ -48,11 +52,7 @@ class SessionManager:
         self.logger = logging.getLogger(__name__)
 
     async def create_session(
-        self,
-        user_id: str,
-        ip_address: str,
-        user_agent: str,
-        metadata: Optional[Dict] = None
+        self, user_id: str, ip_address: str, user_agent: str, metadata: Optional[Dict] = None
     ) -> Session:
         """Create a new session for a user."""
         try:
@@ -78,15 +78,11 @@ class SessionManager:
                 last_activity=now,
                 ip_address=ip_address,
                 user_agent=user_agent,
-                metadata=metadata or {}
+                metadata=metadata or {},
             )
 
             # Store in Redis
-            await self.redis.set(
-                f"session:{session_id}",
-                session.json(),
-                ex=self.session_expiry
-            )
+            await self.redis.set(f"session:{session_id}", session.json(), ex=self.session_expiry)
 
             # Add to user's sessions
             await self.redis.sadd(f"user:sessions:{user_id}", session_id)
@@ -141,11 +137,7 @@ class SessionManager:
 
             # Update last activity
             session.last_activity = datetime.now()
-            await self.redis.set(
-                f"session:{session_id}",
-                session.json(),
-                ex=self.session_expiry
-            )
+            await self.redis.set(f"session:{session_id}", session.json(), ex=self.session_expiry)
 
             return True
 
@@ -185,10 +177,7 @@ class SessionManager:
 
     def _generate_token(self, user_id: str) -> str:
         """Generate a JWT token."""
-        payload = {
-            "user_id": user_id,
-            "exp": datetime.utcnow() + timedelta(seconds=self.token_expiry)
-        }
+        payload = {"user_id": user_id, "exp": datetime.utcnow() + timedelta(seconds=self.token_expiry)}
         return jwt.encode(payload, self.secret_key, algorithm="HS256")
 
     def verify_token(self, token: str) -> Optional[Dict]:

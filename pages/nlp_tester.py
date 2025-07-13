@@ -5,11 +5,13 @@ NLP Tester: Streamlit page for PromptProcessor and LLMProcessor
 - Sidebar: Model, temperature, moderation, streaming toggles
 - Diagnostics: Log viewer, edge case simulation
 """
-import streamlit as st
 import json
 import os
-from trading.nlp.prompt_processor import PromptProcessor
+
+import streamlit as st
+
 from trading.nlp.llm_processor import LLMProcessor
+from trading.nlp.prompt_processor import PromptProcessor
 
 # Paths
 LOG_PATH = "trading/nlp/logs/nlp_debug.log"
@@ -27,7 +29,8 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("Diagnostics")
 show_log = st.sidebar.checkbox("Show Debug Log Viewer", value=False)
 edge_case = st.sidebar.selectbox(
-    "Simulate Edge Case", ["None", "Missing Ticker", "Ambiguous Timeframe", "Multiple Actions"])
+    "Simulate Edge Case", ["None", "Missing Ticker", "Ambiguous Timeframe", "Multiple Actions"]
+)
 
 # --- Main UI ---
 st.title("🧠 NLP Prompt & LLM Tester")
@@ -52,12 +55,7 @@ if st.button("Process Query"):
     if hasattr(processor, "classify_intent"):
         intent = processor.classify_intent(query)
     # --- LLMProcessor ---
-    llm = LLMProcessor({
-        "model": model,
-        "temperature": temperature,
-        "moderation": moderation,
-        "max_tokens": 512
-    })
+    llm = LLMProcessor({"model": model, "temperature": temperature, "moderation": moderation, "max_tokens": 512})
     # Standard response
     try:
         response = llm.process(query)
@@ -100,4 +98,4 @@ with st.expander("Show Entity Patterns (JSON)"):
             patterns = json.load(f)
         st.json(patterns)
     else:
-        st.warning(f"Entity patterns file not found: {ENTITY_PATTERNS_PATH}") 
+        st.warning(f"Entity patterns file not found: {ENTITY_PATTERNS_PATH}")
