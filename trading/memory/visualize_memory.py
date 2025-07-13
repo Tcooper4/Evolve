@@ -11,9 +11,12 @@ import matplotlib.pyplot as plt
 import time
 import threading
 import queue
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from trading.memory.performance_memory import PerformanceMemory
+
+logger = logging.getLogger(__name__)
 
 class TaskProgressTracker:
     """Tracks and displays real-time task progress."""
@@ -106,7 +109,7 @@ class TaskProgressTracker:
                 
                 time.sleep(0.1)  # Update every 100ms
             except Exception as e:
-                print(f"Error in progress update thread: {e}")
+                logger.error(f"Error in progress update thread: {e}")
                 time.sleep(1)
     
     def get_task_status(self, task_id: str) -> Optional[Dict[str, Any]]:
