@@ -7,4 +7,4 @@ The agent is responsible for detecting model drift and triggering necessary upda
 
 from trading.agents.updater.agent import UpdaterAgent
 
-__all__ = ['UpdaterAgent'] 
+__all__ = ["UpdaterAgent"]

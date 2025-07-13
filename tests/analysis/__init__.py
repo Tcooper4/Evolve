@@ -1,1 +1,1 @@
-"""Tests for market analysis components.""" 
+"""Tests for market analysis components."""

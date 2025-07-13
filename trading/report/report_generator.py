@@ -9,34 +9,37 @@ Generates comprehensive reports after forecast and strategy execution including:
 Supports PDF, Markdown, and integrations with Notion, Slack, and email.
 """
 
-import os
+import base64
 import json
 import logging
-import time
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
-from pathlib import Path
-import pandas as pd
-import numpy as np
-from dataclasses import dataclass
-import openai
+import os
 import smtplib
+import time
+from dataclasses import dataclass
+from datetime import datetime
+from email import encoders
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
-import requests
-from jinja2 import Template
-import matplotlib.pyplot as plt
-import seaborn as sns
 from io import BytesIO
-import base64
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import matplotlib.pyplot as plt
+import numpy as np
+import openai
+import pandas as pd
+import requests
+import seaborn as sns
+from jinja2 import Template
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class TradeMetrics:
     """Trade performance metrics."""
+
     total_trades: int
     winning_trades: int
     losing_trades: int
@@ -49,9 +52,11 @@ class TradeMetrics:
     profit_factor: float
     avg_trade_duration: float
 
+
 @dataclass
 class ModelMetrics:
     """Model performance metrics."""
+
     mse: float
     mae: float
     rmse: float
@@ -63,9 +68,11 @@ class ModelMetrics:
     recall: float
     f1_score: float
 
+
 @dataclass
 class StrategyReasoning:
     """Strategy reasoning and analysis."""
+
     summary: str
     key_factors: List[str]
     risk_assessment: str
@@ -73,24 +80,27 @@ class StrategyReasoning:
     recommendations: List[str]
     market_conditions: str
 
+
 class ReportGenerator:
     """
     Comprehensive report generator for trading system.
-    
+
     Generates trade reports, model reports, and strategy reasoning
     with support for multiple output formats and integrations.
     """
-    
-    def __init__(self, 
-                 openai_api_key: str = None,
-                 notion_token: str = None,
-                 slack_webhook: str = None,
-                 email_config: Dict[str, str] = None,
-                 output_dir: str = "reports",
-                 report_config: Optional[Dict[str, Any]] = None):
+
+    def __init__(
+        self,
+        openai_api_key: str = None,
+        notion_token: str = None,
+        slack_webhook: str = None,
+        email_config: Dict[str, str] = None,
+        output_dir: str = "reports",
+        report_config: Optional[Dict[str, Any]] = None,
+    ):
         """
         Initialize the ReportGenerator.
-        
+
         Args:
             openai_api_key: OpenAI API key for GPT reasoning
             notion_token: Notion API token for integration
@@ -99,43 +109,45 @@ class ReportGenerator:
             output_dir: Directory to save reports
             report_config: Dict to control chart types and features
         """
-        self.openai_api_key = openai_api_key or os.getenv('OPENAI_API_KEY')
-        self.notion_token = notion_token or os.getenv('NOTION_TOKEN')
-        self.slack_webhook = slack_webhook or os.getenv('SLACK_WEBHOOK')
+        self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        self.notion_token = notion_token or os.getenv("NOTION_TOKEN")
+        self.slack_webhook = slack_webhook or os.getenv("SLACK_WEBHOOK")
         self.email_config = email_config or {}
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.report_config = report_config or {
-            'equity_curve': True,
-            'predictions': True,
-            'pnl_distribution': True,
-            'heatmap': True,
-            'model_summary': True,
-            'trade_log': True
+            "equity_curve": True,
+            "predictions": True,
+            "pnl_distribution": True,
+            "heatmap": True,
+            "model_summary": True,
+            "trade_log": True,
         }
-        
+
         # Initialize OpenAI if available
         if self.openai_api_key:
             openai.api_key = self.openai_api_key
-        
+
         # Create subdirectories
         (self.output_dir / "pdf").mkdir(exist_ok=True)
         (self.output_dir / "markdown").mkdir(exist_ok=True)
         (self.output_dir / "html").mkdir(exist_ok=True)
-        
+
         logger.info("ReportGenerator initialized")
-    
-    def generate_comprehensive_report(self,
-                                    trade_data: Dict[str, Any],
-                                    model_data: Dict[str, Any],
-                                    strategy_data: Dict[str, Any],
-                                    symbol: str,
-                                    timeframe: str,
-                                    period: str,
-                                    report_id: str = None) -> Dict[str, Any]:
+
+    def generate_comprehensive_report(
+        self,
+        trade_data: Dict[str, Any],
+        model_data: Dict[str, Any],
+        strategy_data: Dict[str, Any],
+        symbol: str,
+        timeframe: str,
+        period: str,
+        report_id: str = None,
+    ) -> Dict[str, Any]:
         """
         Generate a comprehensive report combining all metrics.
-        
+
         Args:
             trade_data: Trade performance data
             model_data: Model performance data
@@ -144,100 +156,96 @@ class ReportGenerator:
             timeframe: Timeframe used
             period: Analysis period
             report_id: Unique report identifier
-            
+
         Returns:
             Dictionary containing all report data and file paths
         """
         try:
             report_id = report_id or f"report_{int(time.time())}"
             timestamp = datetime.now()
-            
+
             # Calculate metrics
             trade_metrics = self._calculate_trade_metrics(trade_data)
             model_metrics = self._calculate_model_metrics(model_data)
             strategy_reasoning = self._generate_strategy_reasoning(strategy_data)
-            
+
             # Generate visualizations
             charts = self._generate_charts(trade_data, model_data, symbol)
-            
+
             # Create report data
             report_data = {
-                'report_id': report_id,
-                'timestamp': timestamp.isoformat(),
-                'symbol': symbol,
-                'timeframe': timeframe,
-                'period': period,
-                'trade_metrics': trade_metrics,
-                'model_metrics': model_metrics,
-                'strategy_reasoning': strategy_reasoning,
-                'charts': charts
+                "report_id": report_id,
+                "timestamp": timestamp.isoformat(),
+                "symbol": symbol,
+                "timeframe": timeframe,
+                "period": period,
+                "trade_metrics": trade_metrics,
+                "model_metrics": model_metrics,
+                "strategy_reasoning": strategy_reasoning,
+                "charts": charts,
             }
-            
+
             # Generate different formats
             markdown_path = self._generate_markdown_report(report_data)
             html_path = self._generate_html_report(report_data)
             pdf_path = self._generate_pdf_report(report_data)
-            
+
             # Add file paths to report data
-            report_data['files'] = {
-                'markdown': str(markdown_path),
-                'html': str(html_path),
-                'pdf': str(pdf_path)
-            }
-            
+            report_data["files"] = {"markdown": str(markdown_path), "html": str(html_path), "pdf": str(pdf_path)}
+
             # Send integrations if configured
             self._send_integrations(report_data)
-            
+
             logger.info(f"Comprehensive report generated: {report_id}")
             return report_data
-            
+
         except Exception as e:
             logger.error(f"Error generating comprehensive report: {e}")
             raise
-    
+
     def _calculate_trade_metrics(self, trade_data: Dict[str, Any]) -> TradeMetrics:
         """Calculate trade performance metrics."""
         try:
-            trades = trade_data.get('trades', [])
+            trades = trade_data.get("trades", [])
             if not trades:
                 return TradeMetrics(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-            
+
             # Calculate basic metrics
             total_trades = len(trades)
-            winning_trades = len([t for t in trades if t.get('pnl', 0) > 0])
-            losing_trades = len([t for t in trades if t.get('pnl', 0) < 0])
+            winning_trades = len([t for t in trades if t.get("pnl", 0) > 0])
+            losing_trades = len([t for t in trades if t.get("pnl", 0) < 0])
             win_rate = winning_trades / total_trades if total_trades > 0 else 0.0
-            
+
             # Calculate PnL metrics
-            total_pnl = sum(t.get('pnl', 0) for t in trades)
-            gains = [t.get('pnl', 0) for t in trades if t.get('pnl', 0) > 0]
-            losses = [abs(t.get('pnl', 0)) for t in trades if t.get('pnl', 0) < 0]
-            
+            total_pnl = sum(t.get("pnl", 0) for t in trades)
+            gains = [t.get("pnl", 0) for t in trades if t.get("pnl", 0) > 0]
+            losses = [abs(t.get("pnl", 0)) for t in trades if t.get("pnl", 0) < 0]
+
             avg_gain = np.mean(gains) if gains else 0.0
             avg_loss = np.mean(losses) if losses else 0.0
-            
+
             # Calculate drawdown
-            cumulative_pnl = np.cumsum([t.get('pnl', 0) for t in trades])
+            cumulative_pnl = np.cumsum([t.get("pnl", 0) for t in trades])
             running_max = np.maximum.accumulate(cumulative_pnl)
             drawdown = running_max - cumulative_pnl
             max_drawdown = np.max(drawdown) if len(drawdown) > 0 else 0.0
-            
+
             # Calculate Sharpe ratio
-            returns = [t.get('pnl', 0) for t in trades]
+            returns = [t.get("pnl", 0) for t in trades]
             if len(returns) > 1:
                 sharpe_ratio = np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0.0
             else:
                 sharpe_ratio = 0.0
-            
+
             # Calculate profit factor
             total_gains = sum(gains) if gains else 0.0
             total_losses = sum(losses) if losses else 0.0
-            profit_factor = total_gains / total_losses if total_losses > 0 else float('inf')
-            
+            profit_factor = total_gains / total_losses if total_losses > 0 else float("inf")
+
             # Calculate average trade duration
-            durations = [t.get('duration', 0) for t in trades if t.get('duration')]
+            durations = [t.get("duration", 0) for t in trades if t.get("duration")]
             avg_trade_duration = np.mean(durations) if durations else 0.0
-            
+
             return TradeMetrics(
                 total_trades=total_trades,
                 winning_trades=winning_trades,
@@ -249,54 +257,57 @@ class ReportGenerator:
                 max_drawdown=max_drawdown,
                 sharpe_ratio=sharpe_ratio,
                 profit_factor=profit_factor,
-                avg_trade_duration=avg_trade_duration
+                avg_trade_duration=avg_trade_duration,
             )
-            
+
         except Exception as e:
             logger.error(f"Error calculating trade metrics: {e}")
-            return {'success': True, 'result': TradeMetrics(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+            return {
+                "success": True,
+                "result": TradeMetrics(0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
+
     def _calculate_model_metrics(self, model_data: Dict[str, Any]) -> ModelMetrics:
         """Calculate model performance metrics."""
         try:
-            predictions = model_data.get('predictions', [])
-            actuals = model_data.get('actuals', [])
-            
+            predictions = model_data.get("predictions", [])
+            actuals = model_data.get("actuals", [])
+
             if not predictions or not actuals or len(predictions) != len(actuals):
                 return ModelMetrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-            
+
             # Calculate error metrics
             errors = np.array(predictions) - np.array(actuals)
-            mse = np.mean(errors ** 2)
+            mse = np.mean(errors**2)
             mae = np.mean(np.abs(errors))
             rmse = np.sqrt(mse)
-            
+
             # Calculate returns and Sharpe ratio
             returns = np.diff(actuals) / actuals[:-1]
             sharpe_ratio = np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0.0
             volatility = np.std(returns) if len(returns) > 0 else 0.0
-            
+
             # Calculate drawdown
             cumulative_returns = np.cumprod(1 + returns)
             running_max = np.maximum.accumulate(cumulative_returns)
             drawdown = (running_max - cumulative_returns) / running_max
             max_drawdown = np.max(drawdown) if len(drawdown) > 0 else 0.0
-            
+
             # Calculate accuracy metrics
-            correct_predictions = sum(1 for p, a in zip(predictions, actuals) 
-                                    if (p > a and p > 0) or (p < a and p < 0))
+            correct_predictions = sum(1 for p, a in zip(predictions, actuals) if (p > a and p > 0) or (p < a and p < 0))
             accuracy = correct_predictions / len(predictions) if predictions else 0.0
-            
+
             # Calculate precision and recall (simplified)
             positive_predictions = sum(1 for p in predictions if p > 0)
             actual_positives = sum(1 for a in actuals if a > 0)
-            true_positives = sum(1 for p, a in zip(predictions, actuals) 
-                               if p > 0 and a > 0)
-            
+            true_positives = sum(1 for p, a in zip(predictions, actuals) if p > 0 and a > 0)
+
             precision = true_positives / positive_predictions if positive_predictions > 0 else 0.0
             recall = true_positives / actual_positives if actual_positives > 0 else 0.0
             f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
-            
+
             return ModelMetrics(
                 mse=mse,
                 mae=mae,
@@ -307,33 +318,38 @@ class ReportGenerator:
                 accuracy=accuracy,
                 precision=precision,
                 recall=recall,
-                f1_score=f1_score
+                f1_score=f1_score,
             )
-            
+
         except Exception as e:
             logger.error(f"Error calculating model metrics: {e}")
-            return {'success': True, 'result': ModelMetrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-    
+            return {
+                "success": True,
+                "result": ModelMetrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
+
     def _generate_strategy_reasoning(self, strategy_data: Dict[str, Any]) -> StrategyReasoning:
         """Generate strategy reasoning using GPT."""
         try:
             if not self.openai_api_key:
                 return self._generate_fallback_reasoning(strategy_data)
-            
+
             # Prepare context for GPT
             context = {
-                'strategy_name': strategy_data.get('strategy_name', 'Unknown'),
-                'symbol': strategy_data.get('symbol', 'Unknown'),
-                'timeframe': strategy_data.get('timeframe', 'Unknown'),
-                'signals': strategy_data.get('signals', []),
-                'market_conditions': strategy_data.get('market_conditions', {}),
-                'performance': strategy_data.get('performance', {}),
-                'parameters': strategy_data.get('parameters', {})
+                "strategy_name": strategy_data.get("strategy_name", "Unknown"),
+                "symbol": strategy_data.get("symbol", "Unknown"),
+                "timeframe": strategy_data.get("timeframe", "Unknown"),
+                "signals": strategy_data.get("signals", []),
+                "market_conditions": strategy_data.get("market_conditions", {}),
+                "performance": strategy_data.get("performance", {}),
+                "parameters": strategy_data.get("parameters", {}),
             }
-            
+
             prompt = f"""
             Analyze the following trading strategy execution and provide a comprehensive summary:
-            
+
             Strategy: {context['strategy_name']}
             Symbol: {context['symbol']}
             Timeframe: {context['timeframe']}
@@ -341,7 +357,7 @@ class ReportGenerator:
             Market Conditions: {context['market_conditions']}
             Performance: {context['performance']}
             Parameters: {context['parameters']}
-            
+
             Please provide:
             1. A summary of why actions were taken
             2. Key factors that influenced decisions
@@ -349,7 +365,7 @@ class ReportGenerator:
             4. Confidence level (0-1)
             5. Recommendations for future trades
             6. Market conditions analysis
-            
+
             Format your response as JSON with the following structure:
             {{
                 "summary": "Brief summary of strategy execution",
@@ -360,237 +376,233 @@ class ReportGenerator:
                 "market_conditions": "Market analysis"
             }}
             """
-            
+
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a quantitative trading analyst providing strategy analysis."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are a quantitative trading analyst providing strategy analysis.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 temperature=0.7,
-                max_tokens=500
+                max_tokens=500,
             )
-            
+
             try:
                 reasoning_data = json.loads(response.choices[0].message.content)
                 return StrategyReasoning(
-                    summary=reasoning_data.get('summary', ''),
-                    key_factors=reasoning_data.get('key_factors', []),
-                    risk_assessment=reasoning_data.get('risk_assessment', ''),
-                    confidence_level=reasoning_data.get('confidence_level', 0.5),
-                    recommendations=reasoning_data.get('recommendations', []),
-                    market_conditions=reasoning_data.get('market_conditions', '')
+                    summary=reasoning_data.get("summary", ""),
+                    key_factors=reasoning_data.get("key_factors", []),
+                    risk_assessment=reasoning_data.get("risk_assessment", ""),
+                    confidence_level=reasoning_data.get("confidence_level", 0.5),
+                    recommendations=reasoning_data.get("recommendations", []),
+                    market_conditions=reasoning_data.get("market_conditions", ""),
                 )
             except json.JSONDecodeError:
                 return self._generate_fallback_reasoning(strategy_data)
-                
+
         except Exception as e:
             logger.error(f"Error generating strategy reasoning: {e}")
             return self._generate_fallback_reasoning(strategy_data)
-    
+
     def _generate_fallback_reasoning(self, strategy_data: Dict[str, Any]) -> StrategyReasoning:
         """Generate fallback reasoning without GPT."""
-        strategy_name = strategy_data.get('strategy_name', 'Unknown')
-        symbol = strategy_data.get('symbol', 'Unknown')
-        signals = strategy_data.get('signals', [])
-        
+        strategy_name = strategy_data.get("strategy_name", "Unknown")
+        symbol = strategy_data.get("symbol", "Unknown")
+        signals = strategy_data.get("signals", [])
+
         summary = f"Strategy {strategy_name} executed on {symbol} with {len(signals)} signals"
-        
-        key_factors = [
-            f"Strategy type: {strategy_name}",
-            f"Symbol: {symbol}",
-            f"Number of signals: {len(signals)}"
-        ]
-        
+
+        key_factors = [f"Strategy type: {strategy_name}", f"Symbol: {symbol}", f"Number of signals: {len(signals)}"]
+
         risk_assessment = "Standard risk assessment based on strategy parameters"
         confidence_level = 0.7
-        recommendations = [
-            "Monitor strategy performance",
-            "Adjust parameters if needed",
-            "Consider market conditions"
-        ]
+        recommendations = ["Monitor strategy performance", "Adjust parameters if needed", "Consider market conditions"]
         market_conditions = "Market conditions analyzed based on available data"
-        
+
         return StrategyReasoning(
             summary=summary,
             key_factors=key_factors,
             risk_assessment=risk_assessment,
             confidence_level=confidence_level,
             recommendations=recommendations,
-            market_conditions=market_conditions
+            market_conditions=market_conditions,
         )
-    
-    def _generate_charts(self, trade_data: Dict[str, Any], 
-                        model_data: Dict[str, Any], 
-                        symbol: str) -> Dict[str, str]:
+
+    def _generate_charts(self, trade_data: Dict[str, Any], model_data: Dict[str, Any], symbol: str) -> Dict[str, str]:
         """Generate charts and return as base64 encoded images or HTML snippets."""
         charts = {}
         config = self.report_config
         try:
-            plt.style.use('seaborn-v0_8')
-            trades = trade_data.get('trades', [])
+            plt.style.use("seaborn-v0_8")
+            trades = trade_data.get("trades", [])
             # 1. Equity Curve
-            if config.get('equity_curve', True) and trades:
-                cumulative_pnl = np.cumsum([t.get('pnl', 0) for t in trades])
+            if config.get("equity_curve", True) and trades:
+                cumulative_pnl = np.cumsum([t.get("pnl", 0) for t in trades])
                 plt.figure(figsize=(10, 6))
-                plt.plot(cumulative_pnl, linewidth=2, color='blue')
-                plt.title(f'{symbol} - Equity Curve', fontsize=14, fontweight='bold')
-                plt.xlabel('Trade Number')
-                plt.ylabel('Cumulative PnL')
+                plt.plot(cumulative_pnl, linewidth=2, color="blue")
+                plt.title(f"{symbol} - Equity Curve", fontsize=14, fontweight="bold")
+                plt.xlabel("Trade Number")
+                plt.ylabel("Cumulative PnL")
                 plt.grid(True, alpha=0.3)
                 buffer = BytesIO()
-                plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+                plt.savefig(buffer, format="png", dpi=300, bbox_inches="tight")
                 buffer.seek(0)
-                charts['equity_curve'] = base64.b64encode(buffer.getvalue()).decode()
+                charts["equity_curve"] = base64.b64encode(buffer.getvalue()).decode()
                 plt.close()
             # 2. Model Predictions vs Actual
-            if config.get('predictions', True) and model_data.get('predictions') and model_data.get('actuals'):
-                predictions = model_data['predictions']
-                actuals = model_data['actuals']
+            if config.get("predictions", True) and model_data.get("predictions") and model_data.get("actuals"):
+                predictions = model_data["predictions"]
+                actuals = model_data["actuals"]
                 plt.figure(figsize=(10, 6))
-                plt.plot(actuals, label='Actual', linewidth=2, color='blue')
-                plt.plot(predictions, label='Predicted', linewidth=2, color='red', alpha=0.7)
-                plt.title(f'{symbol} - Model Predictions vs Actual', fontsize=14, fontweight='bold')
-                plt.xlabel('Time')
-                plt.ylabel('Price')
+                plt.plot(actuals, label="Actual", linewidth=2, color="blue")
+                plt.plot(predictions, label="Predicted", linewidth=2, color="red", alpha=0.7)
+                plt.title(f"{symbol} - Model Predictions vs Actual", fontsize=14, fontweight="bold")
+                plt.xlabel("Time")
+                plt.ylabel("Price")
                 plt.legend()
                 plt.grid(True, alpha=0.3)
                 buffer = BytesIO()
-                plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+                plt.savefig(buffer, format="png", dpi=300, bbox_inches="tight")
                 buffer.seek(0)
-                charts['predictions'] = base64.b64encode(buffer.getvalue()).decode()
+                charts["predictions"] = base64.b64encode(buffer.getvalue()).decode()
                 plt.close()
             # 3. Trade Distribution
-            if config.get('pnl_distribution', True) and trades:
-                pnls = [t.get('pnl', 0) for t in trades]
+            if config.get("pnl_distribution", True) and trades:
+                pnls = [t.get("pnl", 0) for t in trades]
                 plt.figure(figsize=(10, 6))
-                plt.hist(pnls, bins=20, alpha=0.7, color='green', edgecolor='black')
-                plt.title(f'{symbol} - Trade PnL Distribution', fontsize=14, fontweight='bold')
-                plt.xlabel('PnL')
-                plt.ylabel('Frequency')
+                plt.hist(pnls, bins=20, alpha=0.7, color="green", edgecolor="black")
+                plt.title(f"{symbol} - Trade PnL Distribution", fontsize=14, fontweight="bold")
+                plt.xlabel("PnL")
+                plt.ylabel("Frequency")
                 plt.grid(True, alpha=0.3)
                 buffer = BytesIO()
-                plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+                plt.savefig(buffer, format="png", dpi=300, bbox_inches="tight")
                 buffer.seek(0)
-                charts['pnl_distribution'] = base64.b64encode(buffer.getvalue()).decode()
+                charts["pnl_distribution"] = base64.b64encode(buffer.getvalue()).decode()
                 plt.close()
             # 4. Heatmap of trade profitability over time
-            if config.get('heatmap', True) and trades:
+            if config.get("heatmap", True) and trades:
                 # Example: day vs. hour heatmap (if timestamps available)
                 df = pd.DataFrame(trades)
-                if 'timestamp' in df.columns and 'pnl' in df.columns:
-                    df['timestamp'] = pd.to_datetime(df['timestamp'])
-                    df['day'] = df['timestamp'].dt.date
-                    df['hour'] = df['timestamp'].dt.hour
-                    heatmap_data = df.pivot_table(index='day', columns='hour', values='pnl', aggfunc='sum', fill_value=0)
+                if "timestamp" in df.columns and "pnl" in df.columns:
+                    df["timestamp"] = pd.to_datetime(df["timestamp"])
+                    df["day"] = df["timestamp"].dt.date
+                    df["hour"] = df["timestamp"].dt.hour
+                    heatmap_data = df.pivot_table(
+                        index="day", columns="hour", values="pnl", aggfunc="sum", fill_value=0
+                    )
                     plt.figure(figsize=(12, 6))
-                    sns.heatmap(heatmap_data, cmap='RdYlGn', annot=False, fmt='.0f')
-                    plt.title(f'{symbol} - Trade Profitability Heatmap (Day vs Hour)', fontsize=14, fontweight='bold')
-                    plt.xlabel('Hour of Day')
-                    plt.ylabel('Day')
+                    sns.heatmap(heatmap_data, cmap="RdYlGn", annot=False, fmt=".0f")
+                    plt.title(f"{symbol} - Trade Profitability Heatmap (Day vs Hour)", fontsize=14, fontweight="bold")
+                    plt.xlabel("Hour of Day")
+                    plt.ylabel("Day")
                     buffer = BytesIO()
-                    plt.savefig(buffer, format='png', dpi=300, bbox_inches='tight')
+                    plt.savefig(buffer, format="png", dpi=300, bbox_inches="tight")
                     buffer.seek(0)
-                    charts['profit_heatmap'] = base64.b64encode(buffer.getvalue()).decode()
+                    charts["profit_heatmap"] = base64.b64encode(buffer.getvalue()).decode()
                     plt.close()
             # 5. Model summary (most/least successful)
-            if config.get('model_summary', True):
+            if config.get("model_summary", True):
                 # Aggregate by model_id or model_name if available in trade_data
                 df = pd.DataFrame(trades)
-                if 'model_id' in df.columns and 'pnl' in df.columns:
-                    model_group = df.groupby('model_id')['pnl'].agg(['sum', 'count', 'mean']).reset_index()
-                    best = model_group.sort_values('sum', ascending=False).head(1)
-                    worst = model_group.sort_values('sum', ascending=True).head(1)
+                if "model_id" in df.columns and "pnl" in df.columns:
+                    model_group = df.groupby("model_id")["pnl"].agg(["sum", "count", "mean"]).reset_index()
+                    best = model_group.sort_values("sum", ascending=False).head(1)
+                    worst = model_group.sort_values("sum", ascending=True).head(1)
                     summary = {
-                        'most_successful': best.to_dict(orient='records')[0] if not best.empty else {},
-                        'least_successful': worst.to_dict(orient='records')[0] if not worst.empty else {}
+                        "most_successful": best.to_dict(orient="records")[0] if not best.empty else {},
+                        "least_successful": worst.to_dict(orient="records")[0] if not worst.empty else {},
                     }
-                    charts['model_summary'] = summary
+                    charts["model_summary"] = summary
             # 6. Per-trade execution log
-            if config.get('trade_log', True) and trades:
+            if config.get("trade_log", True) and trades:
                 # Prepare a log as a Markdown table and as a list for HTML
-                log_columns = ['timestamp', 'action', 'pnl', 'result', 'model_id']
+                log_columns = ["timestamp", "action", "pnl", "result", "model_id"]
                 df = pd.DataFrame(trades)
                 log_df = df[log_columns].copy() if all(col in df.columns for col in log_columns) else df.copy()
-                log_df = log_df.fillna('')
+                log_df = log_df.fillna("")
                 # Markdown table
-                md_table = '| Time | Action | PnL | Result | Model ID |\n|---|---|---|---|---|\n'
+                md_table = "| Time | Action | PnL | Result | Model ID |\n|---|---|---|---|---|\n"
                 for _, row in log_df.iterrows():
                     md_table += f"| {row.get('timestamp','')} | {row.get('action','')} | {row.get('pnl','')} | {row.get('result','')} | {row.get('model_id','')} |\n"
-                charts['trade_log_markdown'] = md_table
+                charts["trade_log_markdown"] = md_table
                 # For HTML, pass as list of dicts
-                charts['trade_log'] = log_df.to_dict(orient='records')
+                charts["trade_log"] = log_df.to_dict(orient="records")
         except Exception as e:
             logger.error(f"Error generating charts: {e}")
         return charts
-    
+
     def _generate_markdown_report(self, report_data: Dict[str, Any]) -> Path:
         """Generate Markdown report."""
         try:
             template = self._get_markdown_template()
             content = template.render(**report_data)
-            
+
             filename = f"{report_data['report_id']}.md"
             filepath = self.output_dir / "markdown" / filename
-            
-            with open(filepath, 'w', encoding='utf-8') as f:
+
+            with open(filepath, "w", encoding="utf-8") as f:
                 f.write(content)
-            
+
             return filepath
-            
+
         except Exception as e:
             logger.error(f"Error generating Markdown report: {e}")
             raise
-    
+
     def _generate_html_report(self, report_data: Dict[str, Any]) -> Path:
         """Generate HTML report."""
         try:
             template = self._get_html_template()
             content = template.render(**report_data)
-            
+
             filename = f"{report_data['report_id']}.html"
             filepath = self.output_dir / "html" / filename
-            
-            with open(filepath, 'w', encoding='utf-8') as f:
+
+            with open(filepath, "w", encoding="utf-8") as f:
                 f.write(content)
-            
+
             return filepath
-            
+
         except Exception as e:
             logger.error(f"Error generating HTML report: {e}")
             raise
-    
+
     def _generate_pdf_report(self, report_data: Dict[str, Any]) -> Path:
         """Generate PDF report."""
         try:
             # For now, we'll convert HTML to PDF
             # In production, you might want to use a proper PDF library like reportlab
             html_path = self._generate_html_report(report_data)
-            
+
             # Convert HTML to PDF (placeholder)
             filename = f"{report_data['report_id']}.pdf"
             filepath = self.output_dir / "pdf" / filename
-            
+
             # For now, just copy the HTML file and rename it
             # In production, use a proper HTML to PDF converter
             import shutil
+
             shutil.copy(html_path, filepath)
-            
+
             return filepath
-            
+
         except Exception as e:
             logger.error(f"Error generating PDF report: {e}")
             raise
-    
+
     def _get_markdown_template(self) -> Template:
         """Get Markdown template."""
         template_str = """
 # Trading Report - {{ symbol }}
 
-**Report ID:** {{ report_id }}  
-**Generated:** {{ timestamp }}  
-**Symbol:** {{ symbol }}  
-**Timeframe:** {{ timeframe }}  
+**Report ID:** {{ report_id }}
+**Generated:** {{ timestamp }}
+**Symbol:** {{ symbol }}
+**Timeframe:** {{ timeframe }}
 **Period:** {{ period }}
 
 ---
@@ -707,7 +719,7 @@ _No model summary available._
 *Report generated by Evolve Trading System*
 """
         return Template(template_str)
-    
+
     def _get_html_template(self) -> Template:
         """Get HTML template."""
         template_str = """
@@ -880,27 +892,27 @@ _No model summary available._
             <div class="reasoning">
                 <h3>Summary</h3>
                 <p>{{ strategy_reasoning.summary }}</p>
-                
+
                 <h3>Key Factors</h3>
                 <ul>
                 {% for factor in strategy_reasoning.key_factors %}
                     <li>{{ factor }}</li>
                 {% endfor %}
                 </ul>
-                
+
                 <h3>Risk Assessment</h3>
                 <p>{{ strategy_reasoning.risk_assessment }}</p>
-                
+
                 <h3>Confidence Level</h3>
                 <p>{{ "%.1f"|format(strategy_reasoning.confidence_level * 100) }}%</p>
-                
+
                 <h3>Recommendations</h3>
                 <ul>
                 {% for rec in strategy_reasoning.recommendations %}
                     <li>{{ rec }}</li>
                 {% endfor %}
                 </ul>
-                
+
                 <h3>Market Conditions</h3>
                 <p>{{ strategy_reasoning.market_conditions }}</p>
             </div>
@@ -915,14 +927,14 @@ _No model summary available._
                 <img src="data:image/png;base64,{{ charts.equity_curve }}" alt="Equity Curve">
             </div>
             {% endif %}
-            
+
             {% if charts.predictions %}
             <div class="chart-container">
                 <h3>Model Predictions vs Actual</h3>
                 <img src="data:image/png;base64,{{ charts.predictions }}" alt="Predictions">
             </div>
             {% endif %}
-            
+
             {% if charts.pnl_distribution %}
             <div class="chart-container">
                 <h3>PnL Distribution</h3>
@@ -940,22 +952,22 @@ _No model summary available._
 </html>
 """
         return Template(template_str)
-    
+
     def _send_integrations(self, report_data: Dict[str, Any]):
         """Send reports to configured integrations."""
         try:
             # Send to Notion
             if self.notion_token:
                 self._send_to_notion(report_data)
-            
+
             # Send to Slack
             if self.slack_webhook:
                 self._send_to_slack(report_data)
-            
+
             # Send email
             if self.email_config:
                 self._send_email(report_data)
-                
+
         except Exception as e:
             logger.error(f"Error sending integrations: {e}")
 
@@ -970,46 +982,38 @@ _No model summary available._
     def _send_to_slack(self, report_data: Dict[str, Any]):
         """Send report to Slack."""
         try:
-            symbol = report_data['symbol']
-            total_pnl = report_data['trade_metrics'].total_pnl
-            win_rate = report_data['trade_metrics'].win_rate
-            
+            symbol = report_data["symbol"]
+            total_pnl = report_data["trade_metrics"].total_pnl
+            win_rate = report_data["trade_metrics"].win_rate
+
             message = {
                 "text": f"📊 Trading Report - {symbol}",
                 "attachments": [
                     {
                         "color": "good" if total_pnl > 0 else "danger",
                         "fields": [
-                            {
-                                "title": "Total PnL",
-                                "value": f"${total_pnl:.2f}",
-                                "short": True
-                            },
-                            {
-                                "title": "Win Rate",
-                                "value": f"{win_rate:.1%}",
-                                "short": True
-                            },
+                            {"title": "Total PnL", "value": f"${total_pnl:.2f}", "short": True},
+                            {"title": "Win Rate", "value": f"{win_rate:.1%}", "short": True},
                             {
                                 "title": "Sharpe Ratio",
                                 "value": f"{report_data['trade_metrics'].sharpe_ratio:.2f}",
-                                "short": True
+                                "short": True,
                             },
                             {
                                 "title": "Total Trades",
-                                "value": str(report_data['trade_metrics'].total_trades),
-                                "short": True
-                            }
-                        ]
+                                "value": str(report_data["trade_metrics"].total_trades),
+                                "short": True,
+                            },
+                        ],
                     }
-                ]
+                ],
             }
-            
+
             response = requests.post(self.slack_webhook, json=message)
             response.raise_for_status()
-            
+
             logger.info("Report sent to Slack successfully")
-            
+
         except Exception as e:
             logger.error(f"Error sending to Slack: {e}")
 
@@ -1017,63 +1021,62 @@ _No model summary available._
         """Send report via email."""
         try:
             msg = MIMEMultipart()
-            msg['From'] = self.email_config.get('from_email', '')
-            msg['To'] = self.email_config.get('to_email', '')
-            msg['Subject'] = f"Trading Report - {report_data['symbol']}"
-            
+            msg["From"] = self.email_config.get("from_email", "")
+            msg["To"] = self.email_config.get("to_email", "")
+            msg["Subject"] = f"Trading Report - {report_data['symbol']}"
+
             # Create email body
             body = f"""
             Trading Report for {report_data['symbol']}
-            
+
             Summary:
             - Total PnL: ${report_data['trade_metrics'].total_pnl:.2f}
             - Win Rate: {report_data['trade_metrics'].win_rate:.1%}
             - Total Trades: {report_data['trade_metrics'].total_trades}
-            
+
             Please find the detailed report attached.
             """
-            
-            msg.attach(MIMEText(body, 'plain'))
-            
+
+            msg.attach(MIMEText(body, "plain"))
+
             # Attach PDF report
-            if 'files' in report_data and 'pdf' in report_data['files']:
-                with open(report_data['files']['pdf'], "rb") as attachment:
-                    part = MIMEBase('application', 'octet-stream')
+            if "files" in report_data and "pdf" in report_data["files"]:
+                with open(report_data["files"]["pdf"], "rb") as attachment:
+                    part = MIMEBase("application", "octet-stream")
                     part.set_payload(attachment.read())
-                
+
                 encoders.encode_base64(part)
                 part.add_header(
-                    'Content-Disposition',
-                    f'attachment; filename= {Path(report_data["files"]["pdf"]).name}'
+                    "Content-Disposition", f'attachment; filename= {Path(report_data["files"]["pdf"]).name}'
                 )
                 msg.attach(part)
-            
+
             # Send email
-            server = smtplib.SMTP(self.email_config.get('smtp_server', ''), 
-                                self.email_config.get('smtp_port', 587))
+            server = smtplib.SMTP(self.email_config.get("smtp_server", ""), self.email_config.get("smtp_port", 587))
             server.starttls()
-            server.login(self.email_config.get('username', ''), 
-                        self.email_config.get('password', ''))
+            server.login(self.email_config.get("username", ""), self.email_config.get("password", ""))
             text = msg.as_string()
-            server.sendmail(self.email_config.get('from_email', ''), 
-                          self.email_config.get('to_email', ''), text)
+            server.sendmail(self.email_config.get("from_email", ""), self.email_config.get("to_email", ""), text)
             server.quit()
-            
+
             logger.info("Report sent via email successfully")
-            
+
         except Exception as e:
             logger.error(f"Error sending email: {e}")
 
+
 # Convenience functions
-def generate_trade_report(trade_data: Dict[str, Any], 
-                         model_data: Dict[str, Any],
-                         strategy_data: Dict[str, Any],
-                         symbol: str,
-                         timeframe: str,
-                         period: str,
-                         **kwargs) -> Dict[str, Any]:
+
+
+def generate_trade_report(
+    trade_data: Dict[str, Any],
+    model_data: Dict[str, Any],
+    strategy_data: Dict[str, Any],
+    symbol: str,
+    timeframe: str,
+    period: str,
+    **kwargs,
+) -> Dict[str, Any]:
     """Generate a comprehensive trading report."""
     generator = ReportGenerator(**kwargs)
-    return generator.generate_comprehensive_report(
-        trade_data, model_data, strategy_data, symbol, timeframe, period
-    ) 
+    return generator.generate_comprehensive_report(trade_data, model_data, strategy_data, symbol, timeframe, period)

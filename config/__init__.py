@@ -8,10 +8,4 @@ from .logging_config import LoggingConfig
 from .market_analysis_config import MarketAnalysisConfig
 from .settings import Settings
 
-__all__ = [
-    'AppConfig',
-    'Config', 
-    'LoggingConfig',
-    'MarketAnalysisConfig',
-    'Settings'
-] 
+__all__ = ["AppConfig", "Config", "LoggingConfig", "MarketAnalysisConfig", "Settings"]

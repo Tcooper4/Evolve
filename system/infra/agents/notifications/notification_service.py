@@ -1,18 +1,20 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Union
 from enum import Enum
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
 
 class NotificationPriority(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+
 
 class NotificationType(str, Enum):
     INFO = "info"
@@ -21,6 +23,7 @@ class NotificationType(str, Enum):
     SUCCESS = "success"
     ALERT = "alert"
 
+
 class NotificationChannel(str, Enum):
     EMAIL = "email"
     SMS = "sms"
@@ -28,6 +31,7 @@ class NotificationChannel(str, Enum):
     SLACK = "slack"
     DISCORD = "discord"
     TEAMS = "teams"
+
 
 class Notification(BaseModel):
     id: str = Field(..., description="Unique notification ID")
@@ -44,6 +48,7 @@ class Notification(BaseModel):
     retry_count: int = Field(default=0, description="Number of retry attempts")
     max_retries: int = Field(default=3, description="Maximum number of retry attempts")
 
+
 class NotificationService:
     def __init__(self):
         self._notifications: Dict[str, Notification] = {}
@@ -52,7 +57,8 @@ class NotificationService:
         self._worker_task: Optional[asyncio.Task] = None
         self._running: bool = False
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+    return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+
     async def start(self):
         """Start the notification service."""
         if self._running:
@@ -89,7 +95,7 @@ class NotificationService:
         priority: NotificationPriority,
         channel: NotificationChannel,
         recipient: str,
-        metadata: Optional[Dict] = None
+        metadata: Optional[Dict] = None,
     ) -> Notification:
         """Send a notification."""
         notification = Notification(
@@ -100,7 +106,7 @@ class NotificationService:
             priority=priority,
             channel=channel,
             recipient=recipient,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
 
         self._notifications[notification.id] = notification
@@ -116,25 +122,21 @@ class NotificationService:
         self,
         channel: Optional[NotificationChannel] = None,
         type: Optional[NotificationType] = None,
-        status: Optional[str] = None
+        status: Optional[str] = None,
     ) -> List[Notification]:
         """Get notifications with optional filtering."""
         notifications = list(self._notifications.values())
-        
+
         if channel:
             notifications = [n for n in notifications if n.channel == channel]
         if type:
             notifications = [n for n in notifications if n.type == type]
         if status:
             notifications = [n for n in notifications if n.status == status]
-            
+
         return notifications
 
-    async def update_notification(
-        self,
-        notification_id: str,
-        **kwargs
-    ) -> Optional[Notification]:
+    async def update_notification(self, notification_id: str, **kwargs) -> Optional[Notification]:
         """Update a notification."""
         notification = self._notifications.get(notification_id)
         if not notification:
@@ -185,10 +187,10 @@ class NotificationService:
         except Exception as e:
             logger.error(f"Error sending notification {notification.id}: {str(e)}")
             notification.retry_count += 1
-            
+
             if notification.retry_count >= notification.max_retries:
                 notification.status = "failed"
             else:
                 notification.status = "retrying"
                 await self._queue.put(notification)
-                logger.info(f"Requeued notification {notification.id} for retry") 
+                logger.info(f"Requeued notification {notification.id} for retry")

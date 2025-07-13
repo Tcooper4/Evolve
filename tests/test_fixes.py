@@ -3,44 +3,43 @@
 Simple test script to verify system fixes without Unicode encoding issues.
 """
 
-import sys
-import logging
 import json
+import logging
+import sys
 from datetime import datetime
 
 # Configure logging to avoid Unicode issues
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 
 # Create logger instance
 logger = logging.getLogger(__name__)
+
 
 def test_capability_router():
     """Test capability router fixes."""
     print("Testing CapabilityRouter...")
     try:
         from core.capability_router import CapabilityRouter
-        
+
         router = CapabilityRouter()
-        
+
         # Test capability checks
         capabilities = [
-            'openai_api',
-            'huggingface_models', 
-            'redis_connection',
-            'postgres_connection',
-            'alpha_vantage_api',
-            'yfinance_api',
-            'torch_models',
-            'streamlit_interface',
-            'plotly_visualization'
+            "openai_api",
+            "huggingface_models",
+            "redis_connection",
+            "postgres_connection",
+            "alpha_vantage_api",
+            "yfinance_api",
+            "torch_models",
+            "streamlit_interface",
+            "plotly_visualization",
         ]
-        
+
         results = {}
         for capability in capabilities:
             try:
@@ -50,87 +49,91 @@ def test_capability_router():
             except Exception as e:
                 results[capability] = False
                 print(f"  {capability}: Error - {e}")
-        
+
         # Test system health
         health = router.get_system_health()
         print(f"  System Health: {health.get('status', 'unknown')}")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"  CapabilityRouter test failed: {e}")
         return False
+
 
 def test_data_feed():
     """Test data feed fixes."""
     print("Testing DataFeed...")
     try:
         from data.live_feed import get_data_feed
-        
+
         feed = get_data_feed()
-        
+
         # Test provider status
         status = feed.get_provider_status()
         print(f"  Current Provider: {status.get('current_provider', 'unknown')}")
-        
+
         # Test system health
         health = feed.get_system_health()
         print(f"  System Health: {health.get('status', 'unknown')}")
         print(f"  Available Providers: {health.get('available_providers', 0)}")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"  DataFeed test failed: {e}")
         return False
+
 
 def test_rl_trader():
     """Test RL trader fixes."""
     print("Testing RLTrader...")
     try:
+        pass
+
         from rl.rl_trader import get_rl_trader
-        import pandas as pd
-        import numpy as np
-        
+
         trader = get_rl_trader()
-        
+
         # Test model status
         status = trader.get_model_status()
         print(f"  Model Available: {status.get('model_available', False)}")
         print(f"  Gymnasium Available: {status.get('gymnasium_available', False)}")
         print(f"  Stable-baselines3 Available: {status.get('stable_baselines3_available', False)}")
-        
+
         # Test system health
         health = trader.get_system_health()
         print(f"  System Health: {health.get('overall_status', 'unknown')}")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"  RLTrader test failed: {e}")
         return False
+
 
 def test_agent_hub():
     """Test agent hub fixes."""
     print("Testing AgentHub...")
     try:
         from core.agent_hub import AgentHub
-        
+
         hub = AgentHub()
-        
+
         # Test system health
         health = hub.get_system_health()
         print(f"  System Health: {health.get('status', 'unknown')}")
-        
+
         # Test agent status
         status = hub.get_agent_status()
         print(f"  Available Agents: {len(status.get('available_agents', []))}")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"  AgentHub test failed: {e}")
         return False
+
 
 def test_function_with_side_effects():
     """Test function with side effects that should return a status."""
@@ -138,17 +141,20 @@ def test_function_with_side_effects():
     print("Side effect: printing to console")
     return False
 
+
 def test_function_with_logging():
     """Test function with only logging that should return a status."""
     logger.info("This function only has logging")
     logger.warning("Warning message")
     return False
 
+
 def test_function_should_return():
     """Test function that should return based on name."""
     # This function name suggests it should return something
     data = [1, 2, 3, 4, 5]
     return False
+
 
 def test_function_with_operations():
     """Test function with meaningful operations."""
@@ -157,17 +163,20 @@ def test_function_with_operations():
     logger.info(f"Sum: {result}")
     return result
 
+
 def test_function_with_return():
     """Test function that already has a return statement."""
     data = [1, 2, 3, 4, 5]
     result = sum(data)
     return result
 
+
 def test_function_no_side_effects():
     """Test function with no side effects."""
     data = [1, 2, 3, 4, 5]
     result = sum(data)
     return result
+
 
 def test_function_with_file_operations():
     """Test function with file operations."""
@@ -179,15 +188,18 @@ def test_function_with_file_operations():
         logger.error(f"File operation error: {e}")
         return False
 
+
 def test_function_with_network_operations():
     """Test function with network operations."""
     try:
         import requests
+
         response = requests.get("https://httpbin.org/get")
         return response.status_code == 200
     except Exception as e:
         logger.error(f"Network operation error: {e}")
         return False
+
 
 def test_function_with_database_operations():
     """Test function with database operations."""
@@ -199,6 +211,7 @@ def test_function_with_database_operations():
         logger.error(f"Database operation error: {e}")
         return False
 
+
 def test_function_with_ui_operations():
     """Test function with UI operations."""
     try:
@@ -208,6 +221,7 @@ def test_function_with_ui_operations():
     except Exception as e:
         logger.error(f"UI operation error: {e}")
         return False
+
 
 def test_function_with_execution_operations():
     """Test function with execution operations."""
@@ -219,6 +233,7 @@ def test_function_with_execution_operations():
         logger.error(f"Execution operation error: {e}")
         return False
 
+
 def test_function_with_update_operations():
     """Test function with update operations."""
     try:
@@ -229,6 +244,7 @@ def test_function_with_update_operations():
         logger.error(f"Update operation error: {e}")
         return False
 
+
 def test_function_with_create_operations():
     """Test function with create operations."""
     try:
@@ -238,6 +254,7 @@ def test_function_with_create_operations():
     except Exception as e:
         logger.error(f"Create operation error: {e}")
         return False
+
 
 def test_function_with_delete_operations():
     """Test function with delete operations."""
@@ -249,6 +266,7 @@ def test_function_with_delete_operations():
         logger.error(f"Delete operation error: {e}")
         return False
 
+
 def test_function_with_send_operations():
     """Test function with send operations."""
     try:
@@ -258,6 +276,7 @@ def test_function_with_send_operations():
     except Exception as e:
         logger.error(f"Send operation error: {e}")
         return False
+
 
 def test_function_with_write_operations():
     """Test function with write operations."""
@@ -269,6 +288,7 @@ def test_function_with_write_operations():
         logger.error(f"Write operation error: {e}")
         return False
 
+
 def test_function_with_display_operations():
     """Test function with display operations."""
     try:
@@ -278,6 +298,7 @@ def test_function_with_display_operations():
     except Exception as e:
         logger.error(f"Display operation error: {e}")
         return False
+
 
 def test_function_with_show_operations():
     """Test function with show operations."""
@@ -289,6 +310,7 @@ def test_function_with_show_operations():
         logger.error(f"Show operation error: {e}")
         return False
 
+
 def test_function_with_plot_operations():
     """Test function with plot operations."""
     try:
@@ -298,6 +320,7 @@ def test_function_with_plot_operations():
     except Exception as e:
         logger.error(f"Plot operation error: {e}")
         return False
+
 
 def test_function_with_render_operations():
     """Test function with render operations."""
@@ -309,6 +332,7 @@ def test_function_with_render_operations():
         logger.error(f"Render operation error: {e}")
         return False
 
+
 def test_function_with_draw_operations():
     """Test function with draw operations."""
     try:
@@ -318,6 +342,7 @@ def test_function_with_draw_operations():
     except Exception as e:
         logger.error(f"Draw operation error: {e}")
         return False
+
 
 def test_function_with_execute_operations():
     """Test function with execute operations."""
@@ -329,6 +354,7 @@ def test_function_with_execute_operations():
         logger.error(f"Execute operation error: {e}")
         return False
 
+
 def test_function_with_run_operations():
     """Test function with run operations."""
     try:
@@ -338,6 +364,7 @@ def test_function_with_run_operations():
     except Exception as e:
         logger.error(f"Run operation error: {e}")
         return False
+
 
 def test_function_with_start_operations():
     """Test function with start operations."""
@@ -349,6 +376,7 @@ def test_function_with_start_operations():
         logger.error(f"Start operation error: {e}")
         return False
 
+
 def test_function_with_stop_operations():
     """Test function with stop operations."""
     try:
@@ -358,6 +386,7 @@ def test_function_with_stop_operations():
     except Exception as e:
         logger.error(f"Stop operation error: {e}")
         return False
+
 
 def test_function_with_select_operations():
     """Test function with select operations."""
@@ -369,6 +398,7 @@ def test_function_with_select_operations():
         logger.error(f"Select operation error: {e}")
         return False
 
+
 def test_function_with_choose_operations():
     """Test function with choose operations."""
     try:
@@ -378,6 +408,7 @@ def test_function_with_choose_operations():
     except Exception as e:
         logger.error(f"Choose operation error: {e}")
         return False
+
 
 def test_function_with_log_operations():
     """Test function with log operations."""
@@ -389,6 +420,7 @@ def test_function_with_log_operations():
         logger.error(f"Log operation error: {e}")
         return False
 
+
 def test_function_with_save_operations():
     """Test function with save operations."""
     try:
@@ -398,6 +430,7 @@ def test_function_with_save_operations():
     except Exception as e:
         logger.error(f"Save operation error: {e}")
         return False
+
 
 def test_function_with_export_operations():
     """Test function with export operations."""
@@ -409,6 +442,7 @@ def test_function_with_export_operations():
         logger.error(f"Export operation error: {e}")
         return False
 
+
 def test_function_with_publish_operations():
     """Test function with publish operations."""
     try:
@@ -418,6 +452,7 @@ def test_function_with_publish_operations():
     except Exception as e:
         logger.error(f"Publish operation error: {e}")
         return False
+
 
 def test_function_with_get_operations():
     """Test function with get operations."""
@@ -429,6 +464,7 @@ def test_function_with_get_operations():
         logger.error(f"Get operation error: {e}")
         return False
 
+
 def test_function_with_fetch_operations():
     """Test function with fetch operations."""
     try:
@@ -438,6 +474,7 @@ def test_function_with_fetch_operations():
     except Exception as e:
         logger.error(f"Fetch operation error: {e}")
         return False
+
 
 def test_function_with_load_operations():
     """Test function with load operations."""
@@ -449,6 +486,7 @@ def test_function_with_load_operations():
         logger.error(f"Load operation error: {e}")
         return False
 
+
 def test_function_with_read_operations():
     """Test function with read operations."""
     try:
@@ -458,6 +496,7 @@ def test_function_with_read_operations():
     except Exception as e:
         logger.error(f"Read operation error: {e}")
         return False
+
 
 def test_function_with_parse_operations():
     """Test function with parse operations."""
@@ -469,6 +508,7 @@ def test_function_with_parse_operations():
         logger.error(f"Parse operation error: {e}")
         return False
 
+
 def test_function_with_calculate_operations():
     """Test function with calculate operations."""
     try:
@@ -478,6 +518,7 @@ def test_function_with_calculate_operations():
     except Exception as e:
         logger.error(f"Calculate operation error: {e}")
         return False
+
 
 def test_function_with_compute_operations():
     """Test function with compute operations."""
@@ -489,6 +530,7 @@ def test_function_with_compute_operations():
         logger.error(f"Compute operation error: {e}")
         return False
 
+
 def test_function_with_generate_operations():
     """Test function with generate operations."""
     try:
@@ -498,6 +540,7 @@ def test_function_with_generate_operations():
     except Exception as e:
         logger.error(f"Generate operation error: {e}")
         return False
+
 
 def test_function_with_create_operations():
     """Test function with create operations."""
@@ -509,6 +552,7 @@ def test_function_with_create_operations():
         logger.error(f"Create operation error: {e}")
         return False
 
+
 def test_function_with_build_operations():
     """Test function with build operations."""
     try:
@@ -518,6 +562,7 @@ def test_function_with_build_operations():
     except Exception as e:
         logger.error(f"Build operation error: {e}")
         return False
+
 
 def test_function_with_make_operations():
     """Test function with make operations."""
@@ -529,6 +574,7 @@ def test_function_with_make_operations():
         logger.error(f"Make operation error: {e}")
         return False
 
+
 def test_function_with_render_operations():
     """Test function with render operations."""
     try:
@@ -538,6 +584,7 @@ def test_function_with_render_operations():
     except Exception as e:
         logger.error(f"Render operation error: {e}")
         return False
+
 
 def test_function_with_display_operations():
     """Test function with display operations."""
@@ -549,6 +596,7 @@ def test_function_with_display_operations():
         logger.error(f"Display operation error: {e}")
         return False
 
+
 def test_function_with_show_operations():
     """Test function with show operations."""
     try:
@@ -558,6 +606,7 @@ def test_function_with_show_operations():
     except Exception as e:
         logger.error(f"Show operation error: {e}")
         return False
+
 
 def test_function_with_plot_operations():
     """Test function with plot operations."""
@@ -569,6 +618,7 @@ def test_function_with_plot_operations():
         logger.error(f"Plot operation error: {e}")
         return False
 
+
 def test_function_with_draw_operations():
     """Test function with draw operations."""
     try:
@@ -578,6 +628,7 @@ def test_function_with_draw_operations():
     except Exception as e:
         logger.error(f"Draw operation error: {e}")
         return False
+
 
 def test_function_with_analyze_operations():
     """Test function with analyze operations."""
@@ -589,6 +640,7 @@ def test_function_with_analyze_operations():
         logger.error(f"Analyze operation error: {e}")
         return False
 
+
 def test_function_with_process_operations():
     """Test function with process operations."""
     try:
@@ -598,6 +650,7 @@ def test_function_with_process_operations():
     except Exception as e:
         logger.error(f"Process operation error: {e}")
         return False
+
 
 def test_function_with_transform_operations():
     """Test function with transform operations."""
@@ -609,6 +662,7 @@ def test_function_with_transform_operations():
         logger.error(f"Transform operation error: {e}")
         return False
 
+
 def test_function_with_convert_operations():
     """Test function with convert operations."""
     try:
@@ -618,6 +672,7 @@ def test_function_with_convert_operations():
     except Exception as e:
         logger.error(f"Convert operation error: {e}")
         return False
+
 
 def test_function_with_validate_operations():
     """Test function with validate operations."""
@@ -629,6 +684,7 @@ def test_function_with_validate_operations():
         logger.error(f"Validate operation error: {e}")
         return False
 
+
 def test_function_with_check_operations():
     """Test function with check operations."""
     try:
@@ -638,6 +694,7 @@ def test_function_with_check_operations():
     except Exception as e:
         logger.error(f"Check operation error: {e}")
         return False
+
 
 def test_function_with_verify_operations():
     """Test function with verify operations."""
@@ -649,6 +706,7 @@ def test_function_with_verify_operations():
         logger.error(f"Verify operation error: {e}")
         return False
 
+
 def test_function_with_test_operations():
     """Test function with test operations."""
     try:
@@ -658,6 +716,7 @@ def test_function_with_test_operations():
     except Exception as e:
         logger.error(f"Test operation error: {e}")
         return False
+
 
 def test_function_with_run_operations():
     """Test function with run operations."""
@@ -669,6 +728,7 @@ def test_function_with_run_operations():
         logger.error(f"Run operation error: {e}")
         return False
 
+
 def test_function_with_execute_operations():
     """Test function with execute operations."""
     try:
@@ -678,6 +738,7 @@ def test_function_with_execute_operations():
     except Exception as e:
         logger.error(f"Execute operation error: {e}")
         return False
+
 
 def test_function_with_select_operations():
     """Test function with select operations."""
@@ -689,6 +750,7 @@ def test_function_with_select_operations():
         logger.error(f"Select operation error: {e}")
         return False
 
+
 def test_function_with_choose_operations():
     """Test function with choose operations."""
     try:
@@ -698,6 +760,7 @@ def test_function_with_choose_operations():
     except Exception as e:
         logger.error(f"Choose operation error: {e}")
         return False
+
 
 def test_function_with_log_operations():
     """Test function with log operations."""
@@ -709,6 +772,7 @@ def test_function_with_log_operations():
         logger.error(f"Log operation error: {e}")
         return False
 
+
 def test_function_with_save_operations():
     """Test function with save operations."""
     try:
@@ -718,6 +782,7 @@ def test_function_with_save_operations():
     except Exception as e:
         logger.error(f"Save operation error: {e}")
         return False
+
 
 def test_function_with_export_operations():
     """Test function with export operations."""
@@ -729,6 +794,7 @@ def test_function_with_export_operations():
         logger.error(f"Export operation error: {e}")
         return False
 
+
 def test_function_with_publish_operations():
     """Test function with publish operations."""
     try:
@@ -739,12 +805,13 @@ def test_function_with_publish_operations():
         logger.error(f"Publish operation error: {e}")
         return False
 
+
 def main():
     """Run all tests."""
     print("=" * 60)
     print("EVOLVE TRADING SYSTEM - FIX VERIFICATION")
     print("=" * 60)
-    
+
     tests = [
         ("CapabilityRouter", test_capability_router),
         ("DataFeed", test_data_feed),
@@ -812,13 +879,13 @@ def main():
         ("Function with log operations", test_function_with_log_operations),
         ("Function with save operations", test_function_with_save_operations),
         ("Function with export operations", test_function_with_export_operations),
-        ("Function with publish operations", test_function_with_publish_operations)
+        ("Function with publish operations", test_function_with_publish_operations),
     ]
-    
+
     results = {}
     passed = 0
     total = len(tests)
-    
+
     for test_name, test_func in tests:
         print(f"\n{test_name}:")
         try:
@@ -832,7 +899,7 @@ def main():
         except Exception as e:
             results[test_name] = False
             print(f"  ERROR: {e}")
-    
+
     print("\n" + "=" * 60)
     print("TEST RESULTS SUMMARY")
     print("=" * 60)
@@ -840,44 +907,54 @@ def main():
     print(f"Passed: {passed}")
     print(f"Failed: {total - passed}")
     print(f"Success Rate: {(passed/total)*100:.1f}%")
-    
+
     if passed == total:
         print("STATUS: ALL FIXES VERIFIED SUCCESSFULLY")
     else:
         print("STATUS: SOME ISSUES REMAIN")
-    
+
     # Save results
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     results_file = f"test_reports/fix_verification_{timestamp}.json"
-    
+
     try:
         import os
+
         os.makedirs("test_reports", exist_ok=True)
-        
-        with open(results_file, 'w') as f:
-            json.dump({
-                'timestamp': timestamp,
-                'total_tests': total,
-                'passed': passed,
-                'failed': total - passed,
-                'success_rate': (passed/total)*100,
-                'results': results
-            }, f, indent=2)
-        
+
+        with open(results_file, "w") as f:
+            json.dump(
+                {
+                    "timestamp": timestamp,
+                    "total_tests": total,
+                    "passed": passed,
+                    "failed": total - passed,
+                    "success_rate": (passed / total) * 100,
+                    "results": results,
+                },
+                f,
+                indent=2,
+            )
+
         print(f"\nResults saved to: {results_file}")
-        
+
     except Exception as e:
         print(f"\nCould not save results: {e}")
-    
-    return {'success': True, 'result': None, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat(),
+
+    return {
+        "success": True,
+        "result": None,
+        "message": "Operation completed successfully",
+        "timestamp": datetime.now().isoformat(),
         "status": "completed",
         "total_tests": total,
         "passed": passed,
         "failed": total - passed,
-        "success_rate": (passed/total)*100,
+        "success_rate": (passed / total) * 100,
         "results": results,
-        "results_file": results_file
+        "results_file": results_file,
     }
 
+
 if __name__ == "__main__":
-    main() 
+    main()

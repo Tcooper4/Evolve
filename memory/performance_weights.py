@@ -5,13 +5,15 @@ This module provides functionality for computing, managing, and monitoring model
 based on historical performance metrics, including drift detection and retraining triggers.
 """
 
-import os
 import json
 import logging
-import pandas as pd
+import os
 from datetime import datetime
-from trading.memory.performance_memory import PerformanceMemory
+
+import pandas as pd
+
 from models.retrain import trigger_retraining_if_needed
+from trading.memory.performance_memory import PerformanceMemory
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -19,6 +21,7 @@ logger = logging.getLogger(__name__)
 WEIGHT_HISTORY_PATH = "memory/weight_history.json"
 CURRENT_WEIGHT_PATH = "memory/model_weights.json"
 AUDIT_LOG_PATH = "memory/weight_audit_log.json"
+
 
 def compute_model_weights(ticker: str, strategy="balanced", min_weight=0.05):
     """
@@ -54,6 +57,7 @@ def compute_model_weights(ticker: str, strategy="balanced", min_weight=0.05):
 
     return smoothed_weights
 
+
 def smooth_weights(weights: dict, ticker: str):
     """
     Apply exponential weighted moving average smoothing to weights.
@@ -71,15 +75,13 @@ def smooth_weights(weights: dict, ticker: str):
     with open(WEIGHT_HISTORY_PATH, "r") as f:
         history = json.load(f)
 
-    df = pd.DataFrame([
-        entry[ticker] for ts, entry in sorted(history.items())
-        if ticker in entry
-    ])
+    df = pd.DataFrame([entry[ticker] for ts, entry in sorted(history.items()) if ticker in entry])
 
     df = df.tail(5).append(weights, ignore_index=True)  # add current
     smoothed = df.ewm(span=3).mean().iloc[-1].to_dict()
     total = sum(smoothed.values())
     return {k: round(v / total, 4) for k, v in smoothed.items()}
+
 
 def export_weights_to_file(ticker: str, strategy="balanced"):
     """
@@ -114,7 +116,7 @@ def export_weights_to_file(ticker: str, strategy="balanced"):
         "time": now,
         "ticker": ticker,
         "weights": weights,
-        "justification": "Auto-computed from performance memory and EWMA smoothing"
+        "justification": "Auto-computed from performance memory and EWMA smoothing",
     }
     append_to_log(audit_entry, AUDIT_LOG_PATH)
 
@@ -123,6 +125,7 @@ def export_weights_to_file(ticker: str, strategy="balanced"):
     append_to_log({"time": now, "retraining": retrain_log}, "memory/retrain_log.json")
 
     return weights
+
 
 def append_to_log(entry, path):
     """
@@ -141,6 +144,7 @@ def append_to_log(entry, path):
     log.append(entry)
     with open(path, "w") as f:
         json.dump(log, f, indent=2)
+
 
 def detect_weight_drift(history: dict, sensitivity=0.1):
     """
@@ -164,6 +168,7 @@ def detect_weight_drift(history: dict, sensitivity=0.1):
             if drift > sensitivity:
                 logger.warning(f"[DRIFT] {model} weight changed by {drift:.2f} on {ticker}")
 
+
 def get_latest_weights():
     """
     Retrieve the most recent model weights.
@@ -174,4 +179,4 @@ def get_latest_weights():
     if os.path.exists(CURRENT_WEIGHT_PATH):
         with open(CURRENT_WEIGHT_PATH, "r") as f:
             return json.load(f)
-    return {} 
+    return {}

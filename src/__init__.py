@@ -2,4 +2,4 @@
 Source module for core application functionality.
 """
 
-__all__ = [] 
+__all__ = []

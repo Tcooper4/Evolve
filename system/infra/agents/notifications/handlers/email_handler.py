@@ -1,22 +1,17 @@
 import logging
-import aiosmtplib
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import Optional
+from email.mime.text import MIMEText
+
+import aiosmtplib
 
 from system.infra.agents.notifications.notification_service import Notification
 
 logger = logging.getLogger(__name__)
 
+
 class EmailHandler:
     def __init__(
-        self,
-        smtp_host: str,
-        smtp_port: int,
-        username: str,
-        password: str,
-        from_email: str,
-        use_tls: bool = True
+        self, smtp_host: str, smtp_port: int, username: str, password: str, from_email: str, use_tls: bool = True
     ):
         self.smtp_host = smtp_host
         self.smtp_port = smtp_port
@@ -43,12 +38,7 @@ class EmailHandler:
         message["Subject"] = notification.title
 
         # Add priority header
-        priority_map = {
-            "low": "5",
-            "medium": "3",
-            "high": "1",
-            "critical": "1"
-        }
+        priority_map = {"low": "5", "medium": "3", "high": "1", "critical": "1"}
         message["X-Priority"] = priority_map.get(notification.priority, "3")
 
         # Create HTML content
@@ -81,13 +71,9 @@ class EmailHandler:
     async def _send_email(self, message: MIMEMultipart) -> None:
         """Send the email message."""
         try:
-            async with aiosmtplib.SMTP(
-                hostname=self.smtp_host,
-                port=self.smtp_port,
-                use_tls=self.use_tls
-            ) as smtp:
+            async with aiosmtplib.SMTP(hostname=self.smtp_host, port=self.smtp_port, use_tls=self.use_tls) as smtp:
                 await smtp.login(self.username, self.password)
                 await smtp.send_message(message)
         except Exception as e:
             logger.error(f"SMTP error: {str(e)}")
-            raise 
+            raise

@@ -2,11 +2,11 @@
 Unit tests for app.py Streamlit application.
 """
 
+from unittest.mock import patch
+
 import pytest
-import streamlit as st
 from streamlit.testing.v1 import AppTest
-import pandas as pd
-from unittest.mock import patch, MagicMock
+
 
 def test_prompt_submission():
     """Test that prompt submission works correctly."""
@@ -18,6 +18,7 @@ def test_prompt_submission():
     except Exception as e:
         # Skip test if streamlit testing is not available
         pytest.skip(f"Streamlit testing not available: {e}")
+
 
 def test_empty_prompt():
     """Test handling of empty prompts."""
@@ -31,6 +32,7 @@ def test_empty_prompt():
     except Exception as e:
         pytest.skip(f"Streamlit testing not available: {e}")
 
+
 def test_investment_prompt():
     """Test investment-related prompts."""
     try:
@@ -42,21 +44,24 @@ def test_investment_prompt():
     except Exception as e:
         pytest.skip(f"Streamlit testing not available: {e}")
 
-@patch('streamlit.text_input')
-@patch('streamlit.button')
+
+@patch("streamlit.text_input")
+@patch("streamlit.button")
 def test_prompt_validation(mock_button, mock_text_input):
     """Test prompt validation logic."""
     # Mock streamlit components
     mock_text_input.return_value = "Test prompt"
     mock_button.return_value = True
-    
+
     # Import and test the app logic
     try:
-        import app
+        pass
+
         # Test that the app can handle the mocked input
         assert True  # If we get here, the app didn't crash
     except ImportError:
         pytest.skip("App module not available for testing")
+
 
 def test_app_initialization():
     """Test that the app initializes correctly."""
@@ -66,6 +71,7 @@ def test_app_initialization():
         assert app is not None
     except Exception as e:
         pytest.skip(f"Streamlit testing not available: {e}")
+
 
 def test_error_handling():
     """Test error handling in the app."""
@@ -80,5 +86,6 @@ def test_error_handling():
     except Exception as e:
         pytest.skip(f"Streamlit testing not available: {e}")
 
+
 if __name__ == "__main__":
-    pytest.main([__file__]) 
+    pytest.main([__file__])

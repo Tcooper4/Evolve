@@ -9,14 +9,14 @@ agentic forecasting platform, including:
 - Error tracking
 """
 
-import structlog
 import logging
 import sys
-import json
-from datetime import datetime
-from typing import Any, Dict, Optional
 import traceback
+from datetime import datetime
 from pathlib import Path
+from typing import Any, Dict, Optional
+
+import structlog
 
 # Configure structlog
 structlog.configure(
@@ -25,13 +25,14 @@ structlog.configure(
         structlog.stdlib.add_log_level,
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
     wrapper_class=structlog.stdlib.BoundLogger,
     cache_logger_on_first_use=True,
 )
+
 
 class AutomationLogger:
     def __init__(
@@ -40,7 +41,7 @@ class AutomationLogger:
         log_dir: str = "logs",
         log_level: str = "INFO",
         enable_console: bool = True,
-        enable_file: bool = True
+        enable_file: bool = True,
     ):
         self.name = name
         self.log_dir = Path(log_dir)
@@ -56,7 +57,7 @@ class AutomationLogger:
         if enable_file:
             self.log_dir.mkdir(parents=True, exist_ok=True)
         # Remove existing handlers
-        for handler in getattr(self.logger, 'handlers', [])[:]:
+        for handler in getattr(self.logger, "handlers", [])[:]:
             self.logger.removeHandler(handler)
         # Add console handler
         if enable_console:
@@ -72,11 +73,7 @@ class AutomationLogger:
 
     def _format_context(self, **kwargs) -> Dict[str, Any]:
         """Format context for logging."""
-        context = {
-            "timestamp": datetime.now().isoformat(),
-            "logger": self.name,
-            **kwargs
-        }
+        context = {"timestamp": datetime.now().isoformat(), "logger": self.name, **kwargs}
         return context
 
     def debug(self, message: str, **kwargs) -> None:
@@ -98,7 +95,7 @@ class AutomationLogger:
             context["exception"] = {
                 "type": type(exc_info).__name__,
                 "message": str(exc_info),
-                "traceback": traceback.format_exc()
+                "traceback": traceback.format_exc(),
             }
         self.logger.error(message, **context)
 
@@ -109,48 +106,32 @@ class AutomationLogger:
             context["exception"] = {
                 "type": type(exc_info).__name__,
                 "message": str(exc_info),
-                "traceback": traceback.format_exc()
+                "traceback": traceback.format_exc(),
             }
         self.logger.critical(message, **context)
 
     def performance(self, operation: str, duration_ms: float, **kwargs) -> None:
         """Log performance metrics."""
         self.logger.info(
-            f"Performance: {operation}",
-            **self._format_context(
-                operation=operation,
-                duration_ms=duration_ms,
-                **kwargs
-            )
+            f"Performance: {operation}", **self._format_context(operation=operation, duration_ms=duration_ms, **kwargs)
         )
 
     def security(self, event: str, **kwargs) -> None:
         """Log security events."""
         self.logger.warning(
-            f"Security Event: {event}",
-            **self._format_context(
-                event_type="security",
-                event=event,
-                **kwargs
-            )
+            f"Security Event: {event}", **self._format_context(event_type="security", event=event, **kwargs)
         )
 
     def audit(self, action: str, user: str, **kwargs) -> None:
         """Log audit events."""
         self.logger.info(
-            f"Audit: {action} by {user}",
-            **self._format_context(
-                event_type="audit",
-                action=action,
-                user=user,
-                **kwargs
-            )
+            f"Audit: {action} by {user}", **self._format_context(event_type="audit", action=action, user=user, **kwargs)
         )
 
     def set_level(self, level: str) -> None:
         """Set logging level."""
         self.log_level = getattr(logging, level.upper())
-        for handler in getattr(self.logger, 'handlers', []):
+        for handler in getattr(self.logger, "handlers", []):
             handler.setLevel(self.log_level)
 
     def get_logger(self) -> structlog.BoundLogger:

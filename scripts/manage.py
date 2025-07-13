@@ -41,15 +41,16 @@ Examples:
     python manage.py clean
 """
 
-import os
-import sys
 import argparse
 import logging
 import logging.config
-import yaml
 import subprocess
+import sys
 from pathlib import Path
 from typing import List, Optional
+
+import yaml
+
 
 class ApplicationManager:
     """Application manager for handling lifecycle commands.
@@ -88,7 +89,7 @@ class ApplicationManager:
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
             sys.exit(1)
-        
+
         with open(config_path) as f:
             return yaml.safe_load(f)
 
@@ -102,10 +103,10 @@ class ApplicationManager:
         if not log_config_path.exists():
             print("Error: logging_config.yaml not found")
             sys.exit(1)
-        
+
         with open(log_config_path) as f:
             log_config = yaml.safe_load(f)
-        
+
         logging.config.dictConfig(log_config)
 
     def run_command(self, command: List[str], cwd: Optional[str] = None) -> int:
@@ -119,13 +120,7 @@ class ApplicationManager:
             Exit code of the command
         """
         try:
-            process = subprocess.run(
-                command,
-                cwd=cwd,
-                check=True,
-                capture_output=True,
-                text=True
-            )
+            process = subprocess.run(command, cwd=cwd, check=True, capture_output=True, text=True)
             return process.returncode
         except subprocess.CalledProcessError as e:
             self.logger.error(f"Command failed: {e}")
@@ -139,17 +134,17 @@ class ApplicationManager:
             True if installation is successful, False otherwise
         """
         self.logger.info("Installing dependencies...")
-        
+
         # Install main dependencies
         if self.run_command(["pip", "install", "-r", "requirements.txt"]) != 0:
             self.logger.error("Failed to install main dependencies")
             return False
-        
+
         # Install development dependencies
         if self.run_command(["pip", "install", "-r", "requirements-dev.txt"]) != 0:
             self.logger.error("Failed to install development dependencies")
             return False
-        
+
         self.logger.info("Dependencies installed successfully")
         return True
 
@@ -160,11 +155,11 @@ class ApplicationManager:
             True if tests pass, False otherwise
         """
         self.logger.info("Running tests...")
-        
+
         if self.run_command(["pytest", "tests/", "-v"]) != 0:
             self.logger.error("Tests failed")
             return False
-        
+
         self.logger.info("Tests completed successfully")
         return True
 
@@ -175,27 +170,27 @@ class ApplicationManager:
             True if linting passes, False otherwise
         """
         self.logger.info("Running linting...")
-        
+
         # Run flake8
         if self.run_command(["flake8", "trading", "tests"]) != 0:
             self.logger.error("Flake8 checks failed")
             return False
-        
+
         # Run black
         if self.run_command(["black", "--check", "trading", "tests"]) != 0:
             self.logger.error("Black checks failed")
             return False
-        
+
         # Run isort
         if self.run_command(["isort", "--check-only", "trading", "tests"]) != 0:
             self.logger.error("isort checks failed")
             return False
-        
+
         # Run mypy
         if self.run_command(["mypy", "trading", "tests"]) != 0:
             self.logger.error("Type checking failed")
             return False
-        
+
         self.logger.info("Linting completed successfully")
         return True
 
@@ -206,17 +201,17 @@ class ApplicationManager:
             True if formatting is successful, False otherwise
         """
         self.logger.info("Formatting code...")
-        
+
         # Run black
         if self.run_command(["black", "trading", "tests"]) != 0:
             self.logger.error("Black formatting failed")
             return False
-        
+
         # Run isort
         if self.run_command(["isort", "trading", "tests"]) != 0:
             self.logger.error("isort formatting failed")
             return False
-        
+
         self.logger.info("Code formatting completed successfully")
         return True
 
@@ -227,11 +222,11 @@ class ApplicationManager:
             True if build is successful, False otherwise
         """
         self.logger.info("Building Docker image...")
-        
+
         if self.run_command(["docker", "build", "-t", "trading-app", "."]) != 0:
             self.logger.error("Docker build failed")
             return False
-        
+
         self.logger.info("Docker image built successfully")
         return True
 
@@ -242,16 +237,25 @@ class ApplicationManager:
             True if container runs successfully, False otherwise
         """
         self.logger.info("Running Docker container...")
-        
-        if self.run_command([
-            "docker", "run", "-d",
-            "-p", f"{self.config['server']['port']}:{self.config['server']['port']}",
-            "--name", "trading-app",
-            "trading-app"
-        ]) != 0:
+
+        if (
+            self.run_command(
+                [
+                    "docker",
+                    "run",
+                    "-d",
+                    "-p",
+                    f"{self.config['server']['port']}:{self.config['server']['port']}",
+                    "--name",
+                    "trading-app",
+                    "trading-app",
+                ]
+            )
+            != 0
+        ):
             self.logger.error("Failed to run Docker container")
             return False
-        
+
         self.logger.info("Docker container running successfully")
         return True
 
@@ -262,11 +266,11 @@ class ApplicationManager:
             True if container stops successfully, False otherwise
         """
         self.logger.info("Stopping Docker container...")
-        
+
         if self.run_command(["docker", "stop", "trading-app"]) != 0:
             self.logger.error("Failed to stop Docker container")
             return False
-        
+
         self.logger.info("Docker container stopped successfully")
         return True
 
@@ -277,54 +281,47 @@ class ApplicationManager:
             True if cleanup is successful, False otherwise
         """
         self.logger.info("Cleaning up...")
-        
+
         # Remove Python cache files
         if self.run_command(["find", ".", "-type", "d", "-name", "__pycache__", "-exec", "rm", "-r", "{}", "+"]) != 0:
             self.logger.error("Failed to remove Python cache files")
             return False
-        
+
         # Remove test cache
         if self.run_command(["rm", "-rf", ".pytest_cache"]) != 0:
             self.logger.error("Failed to remove test cache")
             return False
-        
+
         # Remove coverage files
         if self.run_command(["rm", "-rf", "htmlcov", ".coverage"]) != 0:
             self.logger.error("Failed to remove coverage files")
             return False
-        
+
         self.logger.info("Cleanup completed successfully")
         return True
+
 
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Trading Application Manager")
     parser.add_argument(
-        "command",
-        choices=[
-            "install",
-            "test",
-            "lint",
-            "format",
-            "docker",
-            "clean"
-        ],
-        help="Command to run"
+        "command", choices=["install", "test", "lint", "format", "docker", "clean"], help="Command to run"
     )
-    parser.add_argument(
-        "--help",
-        action="store_true",
-        help="Show usage examples"
-    )
+    parser.add_argument("--help", action="store_true", help="Show usage examples")
     args = parser.parse_args()
 
     if args.help:
         print(__doc__)
-        return {'success': True, 'result': {"status": "help_displayed", "command": "help"}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "result": {"status": "help_displayed", "command": "help"},
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     manager = ApplicationManager()
     result = {"status": "unknown", "command": args.command}
-    
+
     if args.command == "install":
         success = manager.install_dependencies()
         result["status"] = "success" if success else "failed"
@@ -344,8 +341,9 @@ def main():
     elif args.command == "clean":
         success = manager.clean()
         result["status"] = "success" if success else "failed"
-    
+
     return result
 
+
 if __name__ == "__main__":
-    main() 
+    main()

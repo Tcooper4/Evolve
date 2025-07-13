@@ -1,3 +1,3 @@
 """
 Backtesting tests module.
-""" 
+"""

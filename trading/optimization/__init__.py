@@ -81,24 +81,24 @@ except ImportError:
 
 # Define what's available
 __all__ = [
-    'BaseOptimizer',
-    'OptimizationResult', 
-    'OptimizerConfig',
-    'BayesianOptimizer',
-    'GeneticOptimizer',
-    'MultiObjectiveOptimizer',
-    'RSIOptimizer',
-    'RSIParameters',
-    'StrategyOptimizer',
-    'OptimizationVisualizer',
-    'OptimizerFactory',
-    'PerformanceLogger',
-    'StrategySelectionAgent',
-    'OptimizerConsolidator',
-    'run_optimizer_consolidation'
+    "BaseOptimizer",
+    "OptimizationResult",
+    "OptimizerConfig",
+    "BayesianOptimizer",
+    "GeneticOptimizer",
+    "MultiObjectiveOptimizer",
+    "RSIOptimizer",
+    "RSIParameters",
+    "StrategyOptimizer",
+    "OptimizationVisualizer",
+    "OptimizerFactory",
+    "PerformanceLogger",
+    "StrategySelectionAgent",
+    "OptimizerConsolidator",
+    "run_optimizer_consolidation",
 ]
 
 # Version info
 __version__ = "2.0.0"
 __author__ = "Evolve Trading System"
-__description__ = "Centralized optimization module for trading strategies" 
+__description__ = "Centralized optimization module for trading strategies"

@@ -5,21 +5,18 @@ This module provides functionality for logging and analyzing strategy performanc
 including tracking of model performance, agentic vs manual decisions, and historical analysis.
 """
 
-import os
 import json
+import os
 from datetime import datetime
 from typing import Dict, List, Optional, Union
-import pandas as pd
+
 
 PERF_LOG = "memory/performance_log.json"
 PERF_ANALYSIS = "memory/performance_analysis.json"
 
+
 def log_strategy_performance(
-    ticker: str,
-    model: str,
-    agentic: bool,
-    metrics: Dict[str, Union[float, int]],
-    metadata: Optional[Dict] = None
+    ticker: str, model: str, agentic: bool, metrics: Dict[str, Union[float, int]], metadata: Optional[Dict] = None
 ) -> None:
     """
     Store performance metrics tied to a strategy selection.
@@ -38,7 +35,7 @@ def log_strategy_performance(
         "model": model,
         "agentic": agentic,
         "metrics": metrics,
-        "metadata": metadata or {}
+        "metadata": metadata or {},
     }
 
     # Load existing log
@@ -54,15 +51,12 @@ def log_strategy_performance(
     # Save updated log
     with open(PERF_LOG, "w") as f:
         json.dump(data, f, indent=2)
-    
+
     # Update performance analysis
     _update_performance_analysis(ticker, entry)
 
-def get_performance_history(
-    ticker: Optional[str] = None,
-    model: Optional[str] = None,
-    limit: int = 100
-) -> List[Dict]:
+
+def get_performance_history(ticker: Optional[str] = None, model: Optional[str] = None, limit: int = 100) -> List[Dict]:
     """
     Retrieve performance history with optional filtering.
 
@@ -90,6 +84,7 @@ def get_performance_history(
     data.sort(key=lambda x: x["timestamp"], reverse=True)
     return data[:limit]
 
+
 def get_performance_analysis(ticker: str) -> Dict:
     """
     Get performance analysis for a ticker.
@@ -108,6 +103,7 @@ def get_performance_analysis(ticker: str) -> Dict:
 
     return analysis.get(ticker, {})
 
+
 def _update_performance_analysis(ticker: str, entry: Dict) -> None:
     """
     Update performance analysis for a ticker.
@@ -124,14 +120,17 @@ def _update_performance_analysis(ticker: str, entry: Dict) -> None:
         analysis = {}
 
     # Get or create ticker analysis
-    ticker_analysis = analysis.get(ticker, {
-        "total_entries": 0,
-        "agentic_entries": 0,
-        "manual_entries": 0,
-        "model_performance": {},
-        "metric_averages": {},
-        "last_updated": None
-    })
+    ticker_analysis = analysis.get(
+        ticker,
+        {
+            "total_entries": 0,
+            "agentic_entries": 0,
+            "manual_entries": 0,
+            "model_performance": {},
+            "metric_averages": {},
+            "last_updated": None,
+        },
+    )
 
     # Update entry counts
     ticker_analysis["total_entries"] += 1
@@ -143,11 +142,7 @@ def _update_performance_analysis(ticker: str, entry: Dict) -> None:
     # Update model performance
     model = entry["model"]
     if model not in ticker_analysis["model_performance"]:
-        ticker_analysis["model_performance"][model] = {
-            "count": 0,
-            "metrics_sum": {},
-            "metrics_avg": {}
-        }
+        ticker_analysis["model_performance"][model] = {"count": 0, "metrics_sum": {}, "metrics_avg": {}}
 
     model_stats = ticker_analysis["model_performance"][model]
     model_stats["count"] += 1
@@ -157,7 +152,7 @@ def _update_performance_analysis(ticker: str, entry: Dict) -> None:
         if metric not in model_stats["metrics_sum"]:
             model_stats["metrics_sum"][metric] = 0
             model_stats["metrics_avg"][metric] = 0
-        
+
         model_stats["metrics_sum"][metric] += value
         model_stats["metrics_avg"][metric] = model_stats["metrics_sum"][metric] / model_stats["count"]
 

@@ -1,1 +1,1 @@
-"""Tests for natural language processing components.""" 
+"""Tests for natural language processing components."""

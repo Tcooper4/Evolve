@@ -5,20 +5,17 @@ This module provides functionality for logging strategy decisions, including
 agentic selections and manual overrides, with detailed metadata and analysis.
 """
 
-import os
 import json
+import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
 LOG_PATH = "memory/strategy_override_log.json"
 ANALYSIS_PATH = "memory/strategy_analysis.json"
 
+
 def log_strategy_decision(
-    ticker: str,
-    selected_model: str,
-    is_agentic: bool,
-    confidence: float,
-    metadata: Optional[Dict] = None
+    ticker: str, selected_model: str, is_agentic: bool, confidence: float, metadata: Optional[Dict] = None
 ) -> Dict:
     """
     Logs whether the selected strategy was agentic or manually overridden.
@@ -39,7 +36,7 @@ def log_strategy_decision(
         "model": selected_model,
         "agentic": is_agentic,
         "confidence": round(confidence, 4),
-        "metadata": metadata or {}
+        "metadata": metadata or {},
     }
 
     # Load existing log
@@ -55,15 +52,12 @@ def log_strategy_decision(
     # Save updated log
     with open(LOG_PATH, "w") as f:
         json.dump(data, f, indent=2)
-    
+
     # Update analysis
     _update_strategy_analysis(ticker, entry)
 
-def get_strategy_history(
-    ticker: Optional[str] = None,
-    model: Optional[str] = None,
-    limit: int = 100
-) -> List[Dict]:
+
+def get_strategy_history(ticker: Optional[str] = None, model: Optional[str] = None, limit: int = 100) -> List[Dict]:
     """
     Retrieves strategy decision history with optional filtering.
 
@@ -91,6 +85,7 @@ def get_strategy_history(
     data.sort(key=lambda x: x["timestamp"], reverse=True)
     return data[:limit]
 
+
 def get_strategy_analysis(ticker: str) -> Dict:
     """
     Retrieves analysis of strategy decisions for a ticker.
@@ -109,6 +104,7 @@ def get_strategy_analysis(ticker: str) -> Dict:
 
     return analysis.get(ticker, {})
 
+
 def _update_strategy_analysis(ticker: str, entry: Dict) -> None:
     """
     Updates the strategy analysis for a ticker.
@@ -125,14 +121,17 @@ def _update_strategy_analysis(ticker: str, entry: Dict) -> None:
         analysis = {}
 
     # Get or create ticker analysis
-    ticker_analysis = analysis.get(ticker, {
-        "total_decisions": 0,
-        "agentic_decisions": 0,
-        "manual_overrides": 0,
-        "model_usage": {},
-        "average_confidence": 0.0,
-        "last_updated": None
-    })
+    ticker_analysis = analysis.get(
+        ticker,
+        {
+            "total_decisions": 0,
+            "agentic_decisions": 0,
+            "manual_overrides": 0,
+            "model_usage": {},
+            "average_confidence": 0.0,
+            "last_updated": None,
+        },
+    )
 
     # Update analysis
     ticker_analysis["total_decisions"] += 1

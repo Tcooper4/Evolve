@@ -4,11 +4,10 @@ Comprehensive System Check for Evolve Trading Platform
 Tests all modules, imports, and functionality
 """
 
-import sys
-import os
 import importlib
-import traceback
+import sys
 from datetime import datetime
+
 
 def test_import(module_name, description=""):
     """Test if a module can be imported."""
@@ -17,6 +16,7 @@ def test_import(module_name, description=""):
         return True, f"✅ {module_name} - {description}"
     except Exception as e:
         return None
+
 
 def test_function_call(module_name, function_name, description=""):
     """Test if a function can be called."""
@@ -33,18 +33,19 @@ def test_function_call(module_name, function_name, description=""):
     except Exception as e:
         return False, f"❌ {module_name}.{function_name} - {description}: {str(e)}"
 
+
 def main():
     print("🚀 Evolve Trading Platform - Comprehensive System Check")
     print("=" * 60)
     print(f"Timestamp: {datetime.now()}")
     print()
-    
+
     # Test results
     results = []
     successes = 0
     failures = 0
     warnings = 0
-    
+
     # Core modules
     print("📦 Testing Core Modules...")
     core_modules = [
@@ -77,7 +78,7 @@ def main():
         ("trading.agents.updater", "Agent updater"),
         ("trading.agents.upgrader", "Agent upgrader"),
     ]
-    
+
     for module_name, description in core_modules:
         success, message = test_import(module_name, description)
         results.append((success, message))
@@ -85,7 +86,7 @@ def main():
             successes += 1
         else:
             failures += 1
-    
+
     # Advanced modules
     print("\n🔬 Testing Advanced Modules...")
     advanced_modules = [
@@ -164,7 +165,7 @@ def main():
         ("system.infra.agents.web.static", "Static web"),
         ("system.infra.agents.web.templates", "Web templates"),
     ]
-    
+
     for module_name, description in advanced_modules:
         success, message = test_import(module_name, description)
         results.append((success, message))
@@ -172,7 +173,7 @@ def main():
             successes += 1
         else:
             failures += 1
-    
+
     # External dependencies
     print("\n🔧 Testing External Dependencies...")
     external_deps = [
@@ -271,7 +272,7 @@ def main():
         ("token", "Token constants"),
         ("tokenize", "Tokenizer"),
     ]
-    
+
     for module_name, description in external_deps:
         success, message = test_import(module_name, description)
         results.append((success, message))
@@ -279,7 +280,7 @@ def main():
             successes += 1
         else:
             warnings += 1  # External deps are warnings, not failures
-    
+
     # Function tests
     print("\n⚙️ Testing Key Functions...")
     function_tests = [
@@ -349,7 +350,7 @@ def main():
         ("system.infra.agents.scripts.deploy_services", "DeployServices", "Deploy services"),
         ("system.infra.agents.scripts.manage_secrets", "ManageSecrets", "Manage secrets"),
     ]
-    
+
     for module_name, function_name, description in function_tests:
         success, message = test_function_call(module_name, function_name, description)
         results.append((success, message))
@@ -357,7 +358,7 @@ def main():
             successes += 1
         else:
             failures += 1
-    
+
     # Streamlit pages
     print("\n📄 Testing Streamlit Pages...")
     streamlit_pages = [
@@ -374,7 +375,7 @@ def main():
         ("streamlit_pages.ModelTrust", "Model Trust page"),
         ("streamlit_pages.WeightDashboard", "Weight Dashboard page"),
     ]
-    
+
     for module_name, description in streamlit_pages:
         success, message = test_import(module_name, description)
         results.append((success, message))
@@ -382,32 +383,32 @@ def main():
             successes += 1
         else:
             failures += 1
-    
+
     # Print results
     print("\n" + "=" * 60)
     print("📊 SYSTEM CHECK RESULTS")
     print("=" * 60)
-    
+
     total_tests = len(results)
     success_rate = (successes / total_tests * 100) if total_tests > 0 else 0
-    
+
     print(f"Total Tests: {total_tests}")
     print(f"✅ Successes: {successes}")
     print(f"❌ Failures: {failures}")
     print(f"⚠️ Warnings: {warnings}")
     print(f"📈 Success Rate: {success_rate:.1f}%")
-    
+
     print("\n" + "=" * 60)
     print("📋 DETAILED RESULTS")
     print("=" * 60)
-    
+
     for success, message in results:
         print(message)
-    
+
     print("\n" + "=" * 60)
     print("🎯 SUMMARY")
     print("=" * 60)
-    
+
     if success_rate >= 95:
         print("🎉 EXCELLENT! System is production-ready with minimal issues.")
     elif success_rate >= 85:
@@ -416,7 +417,7 @@ def main():
         print("⚠️ FAIR! System has several issues that need attention.")
     else:
         print("❌ POOR! System has significant issues requiring immediate attention.")
-    
+
     if failures > 0:
         print(f"\n🔧 RECOMMENDATIONS:")
         print(f"- Fix {failures} critical failures first")
@@ -424,11 +425,12 @@ def main():
             print(f"- Address {warnings} warnings for optimal performance")
         print("- Run integration tests after fixes")
         print("- Consider dependency updates")
-    
+
     print(f"\n⏰ Check completed at: {datetime.now()}")
-    
+
     return success_rate
+
 
 if __name__ == "__main__":
     success_rate = main()
-    sys.exit(0 if success_rate >= 85 else 1) 
+    sys.exit(0 if success_rate >= 85 else 1)

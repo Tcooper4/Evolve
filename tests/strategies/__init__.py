@@ -1,1 +1,1 @@
-"""Tests for trading strategies.""" 
+"""Tests for trading strategies."""

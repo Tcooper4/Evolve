@@ -4,10 +4,11 @@
 import shutil
 from pathlib import Path
 
+
 def main():
     """Remove duplicate directories."""
     directories_to_remove = ["optimize", "optimizer", "optimizers"]
-    
+
     for dir_name in directories_to_remove:
         dir_path = Path(dir_name)
         if dir_path.exists():
@@ -19,5 +20,6 @@ def main():
         else:
             print(f"{dir_path} does not exist")
 
+
 if __name__ == "__main__":
-    main() 
+    main()

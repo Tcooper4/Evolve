@@ -1,16 +1,12 @@
+import json
+import logging
 import os
 import sys
-import logging
-from pathlib import Path
-import json
-import shutil
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 def create_directory_structure():
     """Create the necessary directory structure."""
@@ -20,66 +16,40 @@ def create_directory_structure():
         "automation/scripts",
         "automation/logs",
         "automation/results",
-        "automation/tests"
+        "automation/tests",
     ]
-    
+
     for directory in directories:
         os.makedirs(directory, exist_ok=True)
         logger.info(f"Created directory: {directory}")
+
 
 def create_config_files():
     """Create default configuration files."""
     # Default config
     default_config = {
-        "openai": {
-            "model": "gpt-4",
-            "temperature": 0.7,
-            "max_tokens": 2000
-        },
+        "openai": {"model": "gpt-4", "temperature": 0.7, "max_tokens": 2000},
         "agents": {
-            "code_generation": {
-                "enabled": True,
-                "priority": 1
-            },
-            "testing": {
-                "enabled": True,
-                "priority": 2
-            },
-            "review": {
-                "enabled": True,
-                "priority": 3
-            },
-            "deployment": {
-                "enabled": True,
-                "priority": 4
-            }
+            "code_generation": {"enabled": True, "priority": 1},
+            "testing": {"enabled": True, "priority": 2},
+            "review": {"enabled": True, "priority": 3},
+            "deployment": {"enabled": True, "priority": 4},
         },
-        "paths": {
-            "code_base": "trading",
-            "tests": "tests",
-            "docs": "docs"
-        },
+        "paths": {"code_base": "trading", "tests": "tests", "docs": "docs"},
         "monitoring": {
             "enabled": True,
             "check_interval": 60,
-            "alert_thresholds": {
-                "cpu": 80,
-                "memory": 85,
-                "disk": 90
-            }
+            "alert_thresholds": {"cpu": 80, "memory": 85, "disk": 90},
         },
-        "error_handling": {
-            "max_retries": 3,
-            "retry_delay": 5,
-            "recovery_enabled": True
-        }
+        "error_handling": {"max_retries": 3, "retry_delay": 5, "recovery_enabled": True},
     }
-    
+
     # Save config
     config_path = "automation/config/config.json"
-    with open(config_path, 'w') as f:
+    with open(config_path, "w") as f:
         json.dump(default_config, f, indent=4)
     logger.info(f"Created config file: {config_path}")
+
 
 def create_requirements_file():
     """Create requirements.txt file."""
@@ -94,12 +64,13 @@ def create_requirements_file():
         "black>=21.9b0",
         "isort>=5.9.3",
         "mypy>=0.910",
-        "pylint>=2.9.6"
+        "pylint>=2.9.6",
     ]
-    
-    with open("automation/requirements.txt", 'w') as f:
+
+    with open("automation/requirements.txt", "w") as f:
         f.write("\n".join(requirements))
     logger.info("Created requirements.txt file")
+
 
 def create_gitignore():
     """Create .gitignore file."""
@@ -159,10 +130,11 @@ build/
 # Local development
 .DS_Store
 """
-    
-    with open("automation/.gitignore", 'w') as f:
+
+    with open("automation/.gitignore", "w") as f:
         f.write(gitignore_content.strip())
     logger.info("Created .gitignore file")
+
 
 def create_readme():
     """Create README.md file."""
@@ -234,10 +206,11 @@ The system implements robust error handling:
 4. Push to the branch
 5. Create a Pull Request
 """
-    
-    with open("automation/README.md", 'w') as f:
+
+    with open("automation/README.md", "w") as f:
         f.write(readme_content)
     logger.info("Created README.md file")
+
 
 def create_env_example():
     """Create .env.example file."""
@@ -257,37 +230,39 @@ CPU_THRESHOLD=80
 MEMORY_THRESHOLD=85
 DISK_THRESHOLD=90
 """
-    
-    with open("automation/.env.example", 'w') as f:
+
+    with open("automation/.env.example", "w") as f:
         f.write(env_content)
     logger.info("Created .env.example file")
+
 
 def main():
     """Main setup function."""
     try:
         # Create directory structure
         create_directory_structure()
-        
+
         # Create configuration files
         create_config_files()
-        
+
         # Create requirements file
         create_requirements_file()
-        
+
         # Create .gitignore
         create_gitignore()
-        
+
         # Create README
         create_readme()
-        
+
         # Create .env.example
         create_env_example()
-        
+
         logger.info("Environment setup completed successfully")
-        
+
     except Exception as e:
         logger.error(f"Error during setup: {str(e)}")
         sys.exit(1)
 
+
 if __name__ == "__main__":
-    main() 
+    main()

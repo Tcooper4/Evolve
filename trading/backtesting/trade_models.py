@@ -5,22 +5,26 @@ This module contains the data structures and enums used for representing
 trades and trade types in the backtesting system.
 """
 
-from datetime import datetime
-from typing import Dict, Optional, Any
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, Optional
+
 
 class TradeType(Enum):
     """Types of trades."""
+
     BUY = "buy"
     SELL = "sell"
     EXIT = "exit"
     SCALE_IN = "scale_in"
     SCALE_OUT = "scale_out"
 
+
 @dataclass
 class Trade:
     """Represents a single trade."""
+
     timestamp: datetime
     asset: str
     quantity: float
@@ -78,48 +82,48 @@ class Trade:
     def to_dict(self) -> Dict[str, Any]:
         """Convert trade to dictionary for serialization."""
         return {
-            'timestamp': self.timestamp.isoformat(),
-            'asset': self.asset,
-            'quantity': self.quantity,
-            'price': self.price,
-            'type': self.type.value,
-            'slippage': self.slippage,
-            'transaction_cost': self.transaction_cost,
-            'spread': self.spread,
-            'cash_balance': self.cash_balance,
-            'portfolio_value': self.portfolio_value,
-            'strategy': self.strategy,
-            'position_size': self.position_size,
-            'risk_metrics': self.risk_metrics,
-            'entry_price': self.entry_price,
-            'exit_price': self.exit_price,
-            'holding_period': self.holding_period,
-            'pnl': self.pnl,
-            'pnl_pct': self.pnl_pct,
-            'metadata': self.metadata or {}
+            "timestamp": self.timestamp.isoformat(),
+            "asset": self.asset,
+            "quantity": self.quantity,
+            "price": self.price,
+            "type": self.type.value,
+            "slippage": self.slippage,
+            "transaction_cost": self.transaction_cost,
+            "spread": self.spread,
+            "cash_balance": self.cash_balance,
+            "portfolio_value": self.portfolio_value,
+            "strategy": self.strategy,
+            "position_size": self.position_size,
+            "risk_metrics": self.risk_metrics,
+            "entry_price": self.entry_price,
+            "exit_price": self.exit_price,
+            "holding_period": self.holding_period,
+            "pnl": self.pnl,
+            "pnl_pct": self.pnl_pct,
+            "metadata": self.metadata or {},
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Trade':
+    def from_dict(cls, data: Dict[str, Any]) -> "Trade":
         """Create trade from dictionary."""
         return cls(
-            timestamp=datetime.fromisoformat(data['timestamp']),
-            asset=data['asset'],
-            quantity=data['quantity'],
-            price=data['price'],
-            type=TradeType(data['type']),
-            slippage=data['slippage'],
-            transaction_cost=data['transaction_cost'],
-            spread=data['spread'],
-            cash_balance=data['cash_balance'],
-            portfolio_value=data['portfolio_value'],
-            strategy=data['strategy'],
-            position_size=data['position_size'],
-            risk_metrics=data['risk_metrics'],
-            entry_price=data.get('entry_price'),
-            exit_price=data.get('exit_price'),
-            holding_period=data.get('holding_period'),
-            pnl=data.get('pnl'),
-            pnl_pct=data.get('pnl_pct'),
-            metadata=data.get('metadata')
-        ) 
+            timestamp=datetime.fromisoformat(data["timestamp"]),
+            asset=data["asset"],
+            quantity=data["quantity"],
+            price=data["price"],
+            type=TradeType(data["type"]),
+            slippage=data["slippage"],
+            transaction_cost=data["transaction_cost"],
+            spread=data["spread"],
+            cash_balance=data["cash_balance"],
+            portfolio_value=data["portfolio_value"],
+            strategy=data["strategy"],
+            position_size=data["position_size"],
+            risk_metrics=data["risk_metrics"],
+            entry_price=data.get("entry_price"),
+            exit_price=data.get("exit_price"),
+            holding_period=data.get("holding_period"),
+            pnl=data.get("pnl"),
+            pnl_pct=data.get("pnl_pct"),
+            metadata=data.get("metadata"),
+        )
