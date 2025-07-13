@@ -1,1 +1,1 @@
-"""Tests for report generation components.""" 
+"""Tests for report generation components."""

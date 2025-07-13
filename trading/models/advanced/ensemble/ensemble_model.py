@@ -1,10 +1,13 @@
+from typing import Any, Dict, List, Optional
+
 import numpy as np
-import torch
-from typing import List, Dict, Any, Optional
 import pandas as pd
+import torch
 from scipy.stats import norm
-from trading.models.base_model import BaseModel
+
 from trading.memory.performance_memory import PerformanceMemory
+from trading.models.base_model import BaseModel
+
 
 class EnsembleForecaster(BaseModel):
     """Ensemble model that combines predictions from multiple models.
@@ -13,10 +16,10 @@ class EnsembleForecaster(BaseModel):
     entry in ``config['models']`` is copied internally so the original
     dictionaries remain unchanged after the ensemble is created.
     """
-    
+
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize ensemble model.
-        
+
         Args:
             config: Configuration dictionary containing:
                 - models: List of model configurations
@@ -47,7 +50,7 @@ class EnsembleForecaster(BaseModel):
             model_class = cfg.pop('class')
             model = model_class(config=cfg)
             self.models.append(model)
-        
+
         # Initialize model weights
         if self.config['model_weights'] is None:
             self.model_weights = torch.ones(len(self.models)) / len(self.models)
@@ -78,10 +81,10 @@ class EnsembleForecaster(BaseModel):
     return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through the ensemble.
-        
+
         Args:
             x: Input tensor
-            
+
         Returns:
             Ensemble prediction
         """
@@ -89,68 +92,68 @@ class EnsembleForecaster(BaseModel):
         for model in self.models:
             pred = model(x)
             predictions.append(pred)
-            
+
         # Stack predictions and apply weights
         stacked_preds = torch.stack(predictions, dim=0)
         weighted_preds = stacked_preds * self.model_weights.view(-1, 1, 1)
         ensemble_pred = weighted_preds.sum(dim=0)
-        
+
         return ensemble_pred
 
     def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> tuple:
         """Prepare data for training or prediction.
-        
+
         Args:
             data: Input data as pandas DataFrame
             is_training: Whether data is for training
-            
+
         Returns:
             Tuple of (X, y) tensors
         """
         # Validate input data
         if data.empty:
             raise ValueError("Input data is empty")
-            
+
         required_columns = ['close', 'volume']
         if not all(col in data.columns for col in required_columns):
             raise ValueError(f"Data must contain columns: {required_columns}")
-            
+
         if data.isnull().any().any():
             raise ValueError("Data contains missing values")
-            
+
         # Convert to numpy arrays
         X = data[['close', 'volume']].values
         y = data['close'].values[1:]  # Predict next day's close
-        
+
         # Normalize
         if is_training:
             self.X_mean = X.mean(axis=0)
             self.X_std = X.std(axis=0)
             self.y_mean = y.mean()
             self.y_std = y.std()
-        
+
         X = (X - self.X_mean) / self.X_std
         y = (y - self.y_mean) / self.y_std
-        
+
         # Convert to tensors
         X = torch.FloatTensor(X[:-1])
         y = torch.FloatTensor(y).unsqueeze(-1)
-        
+
         # Move to device
         X = X.to(self.device)
         y = y.to(self.device)
-        
+
         return {'success': True, 'result': X, y, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
 
     def save(self, path: str) -> None:
         """Save ensemble model state.
-        
+
         Args:
             path: Path to save model state
         """
         if not self.models:
             raise ValueError("No models in ensemble")
-            
+
         state = {
             'model_state': [model.state_dict() for model in self.models],
             'optimizer_state': self.optimizer.state_dict() if self.optimizer else None,
@@ -168,7 +171,7 @@ class EnsembleForecaster(BaseModel):
 
     def load(self, path: str) -> None:
         """Load ensemble model state.
-        
+
         Args:
             path: Path to load model state from
         """
@@ -177,18 +180,18 @@ class EnsembleForecaster(BaseModel):
         self.history = state['history']
         self.best_loss = state['best_loss']
         self.model_weights = state['model_weights'].to(self.device)
-        
+
         # Load model states
         for i, model_state in enumerate(state['model_state']):
             if i < len(self.models):
                 self.models[i].load_state_dict(model_state)
-            
+
         if self.optimizer is not None and state['optimizer_state'] is not None:
             self.optimizer.load_state_dict(state['optimizer_state'])
-            
+
         if self.scheduler is not None and state['scheduler_state'] is not None:
             self.scheduler.load_state_dict(state['scheduler_state'])
-            
+
         # Load normalization parameters
         if state['X_mean'] is not None:
             self.X_mean = state['X_mean']
@@ -199,12 +202,12 @@ class EnsembleForecaster(BaseModel):
     def fit(self, train_data: torch.Tensor, val_data: Optional[torch.Tensor] = None,
             **kwargs) -> Dict[str, Any]:
         """Train all models in the ensemble.
-        
+
         Args:
             train_data: Training data
             val_data: Validation data
             **kwargs: Additional training arguments
-            
+
         Returns:
             Dictionary containing training history
         """
@@ -218,23 +221,23 @@ class EnsembleForecaster(BaseModel):
                 self.log_performance(self.config.get('ticker', 'default'), model_history, i)
 
         return history
-        
+
     def predict(self, x: torch.Tensor) -> Dict[str, torch.Tensor]:
         """Make predictions using the ensemble.
-        
+
         Args:
             x: Input tensor
-            
+
         Returns:
             Dictionary containing ensemble prediction and individual model predictions
         """
         predictions = {}
-        
+
         # Get predictions from each model
         for i, model in enumerate(self.models):
             pred = model(x)
             predictions[f'model_{i}'] = pred
-            
+
         # Get ensemble prediction
         ensemble_pred = self.forward(x)
         predictions['ensemble'] = ensemble_pred
@@ -268,33 +271,33 @@ class EnsembleForecaster(BaseModel):
 
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
-        
+
         Args:
             data: Historical data DataFrame
             horizon: Number of time steps to forecast
-            
+
         Returns:
             Dictionary containing forecast results
         """
         try:
             # Make initial prediction
             predictions = self.predict(data)
-            
+
             # Generate multi-step forecast
             forecast_values = []
             current_data = data.copy()
-            
+
             for i in range(horizon):
                 # Get prediction for next step
                 pred = self.predict(current_data)
                 forecast_values.append(pred['ensemble'][-1])
-                
+
                 # Update data for next iteration
                 new_row = current_data.iloc[-1].copy()
                 new_row['close'] = pred['ensemble'][-1]  # Update with prediction
                 current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
                 current_data = current_data.iloc[1:]  # Remove oldest row
-            
+
             return {
                 'forecast': np.array(forecast_values),
                 'confidence': 0.9,  # High confidence for ensemble
@@ -303,7 +306,7 @@ class EnsembleForecaster(BaseModel):
                 'model_weights': self.model_weights.cpu().numpy().tolist(),
                 'num_models': len(self.models)
             }
-            
+
         except Exception as e:
             import logging
             logging.error(f"Error in ensemble model forecast: {e}")

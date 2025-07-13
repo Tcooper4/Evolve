@@ -1,1 +1,1 @@
-"""Tests for strategy optimization components.""" 
+"""Tests for strategy optimization components."""

@@ -1,12 +1,14 @@
 import asyncio
-import logging
-import psutil
 import json
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional
+
+import psutil
 from automation.core.orchestrator import Orchestrator
 
 logger = logging.getLogger(__name__)
+
 
 class MetricsAPI:
     def __init__(self, orchestrator: Orchestrator):
@@ -18,7 +20,7 @@ class MetricsAPI:
             cpu_percent = psutil.cpu_percent(interval=1)
             memory = psutil.virtual_memory()
             disk = psutil.disk_usage('/')
-            
+
             metrics = {
                 'timestamp': datetime.now().isoformat(),
                 'cpu_usage': cpu_percent,
@@ -31,12 +33,12 @@ class MetricsAPI:
                 'active_tasks': len(await self.orchestrator.get_running_tasks()),
                 'system_status': self._get_system_status(cpu_percent, memory.percent)
             }
-            
+
             # Store in history
             self._metrics_history.append(metrics)
             if len(self._metrics_history) > self._max_history_size:
                 self._metrics_history.pop(0)
-            
+
             return metrics
         except Exception as e:
             logger.error(f"Error getting system metrics: {str(e)}")
@@ -48,7 +50,7 @@ class MetricsAPI:
             task = await self.orchestrator.get_task(task_id)
             if not task:
                 return None
-            
+
             metrics = {
                 'task_id': task.task_id,
                 'name': task.name,
@@ -59,7 +61,7 @@ class MetricsAPI:
                 'execution_time': (task.end_time - task.start_time).total_seconds() if task.end_time and task.start_time else None,
                 'error_message': task.error_message
             }
-            
+
             return metrics
         except Exception as e:
             logger.error(f"Error getting task metrics: {str(e)}")
@@ -70,7 +72,7 @@ class MetricsAPI:
         try:
             agents = await self.orchestrator.get_agents()
             metrics = []
-            
+
             for agent in agents:
                 agent_metrics = {
                     'agent_id': agent.agent_id,
@@ -82,7 +84,7 @@ class MetricsAPI:
                     'memory_usage': agent.memory_usage if hasattr(agent, 'memory_usage') else None
                 }
                 metrics.append(agent_metrics)
-            
+
             return metrics
         except Exception as e:
             logger.error(f"Error getting agent metrics: {str(e)}")
@@ -93,7 +95,7 @@ class MetricsAPI:
         try:
             models = await self.orchestrator.get_models()
             metrics = []
-            
+
             for model in models:
                 model_metrics = {
                     'model_id': model.model_id,
@@ -105,7 +107,7 @@ class MetricsAPI:
                     'training_time': model.training_time if hasattr(model, 'training_time') else None
                 }
                 metrics.append(model_metrics)
-            
+
             return metrics
         except Exception as e:
             logger.error(f"Error getting model metrics: {str(e)}")
@@ -134,7 +136,7 @@ class MetricsAPI:
             system_metrics = await self.get_system_metrics()
             agent_metrics = await self.get_agent_metrics()
             model_metrics = await self.get_model_metrics()
-            
+
             return {
                 'system': system_metrics,
                 'agents': agent_metrics,
@@ -143,4 +145,4 @@ class MetricsAPI:
             }
         except Exception as e:
             logger.error(f"Error getting all metrics: {str(e)}")
-            raise 
+            raise

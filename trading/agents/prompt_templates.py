@@ -7,14 +7,14 @@ be moved here and referenced by name.
 
 Usage:
     from trading.agents.prompt_templates import PROMPT_TEMPLATES
-    
+
     prompt = PROMPT_TEMPLATES["forecast_request"].format(
-        symbol="AAPL", 
+        symbol="AAPL",
         timeframe="1 week"
     )
 """
 
-from typing import Dict, Any, List
+from typing import Dict, List
 
 # Main prompt templates dictionary
 PROMPT_TEMPLATES = {
@@ -32,7 +32,6 @@ Symbol: {symbol}
 Timeframe: {timeframe}
 Model Type: {model_type}
 """,
-
     "forecast_analysis": """
 Forecast Analysis Results:
 
@@ -52,10 +51,9 @@ Market Context:
 - Sector Performance: {sector_performance}
 - Risk Factors: {risk_factors}
 """,
-
     # === INTENT PARSING TEMPLATES ===
     "intent_classification": """
-You are an intent classifier for a trading system. 
+You are an intent classifier for a trading system.
 Classify the user's intent and extract arguments as JSON.
 
 Available intents: forecasting, backtesting, tuning, research, portfolio, risk, sentiment, analysis, comparison, optimization
@@ -64,7 +62,6 @@ User Query: {query}
 
 Return format: {{"intent": "intent_name", "confidence": 0.95, "args": {{"key": "value"}}}}
 """,
-
     "intent_extraction": """
 Analyze the following query and determine the user's intent:
 
@@ -86,7 +83,6 @@ Return as JSON:
     "confidence": 0.95
 }}
 """,
-
     # === RESPONSE GENERATION TEMPLATES ===
     "response_generation": """
 Generate a response to the following query:
@@ -118,7 +114,6 @@ Example response:
     }}
 }}
 """,
-
     # === BACKTESTING TEMPLATES ===
     "backtest_request": """
 Please run a backtest for the following configuration:
@@ -136,7 +131,6 @@ Requirements:
 - Include trade analysis and statistics
 - Consider transaction costs and slippage
 """,
-
     "backtest_results": """
 Backtest Results Summary:
 
@@ -163,7 +157,6 @@ Risk Metrics:
 - VaR (95%): {var_95}%
 - CVaR (95%): {cvar_95}%
 """,
-
     # === OPTIMIZATION TEMPLATES ===
     "optimization_request": """
 Please optimize the following strategy parameters:
@@ -182,7 +175,6 @@ Constraints:
 Optimization Method: {method}
 Number of Trials: {trials}
 """,
-
     "optimization_results": """
 Optimization Results:
 
@@ -205,7 +197,6 @@ Parameter Sensitivity:
 Recommendations:
 {recommendations}
 """,
-
     # === RESEARCH TEMPLATES ===
     "research_request": """
 Please research the following topic for trading insights:
@@ -222,7 +213,6 @@ Requirements:
 - Assess the credibility and relevance of sources
 - Provide actionable recommendations
 """,
-
     "research_summary": """
 Research Summary:
 
@@ -241,7 +231,6 @@ Recommendations:
 
 Confidence Level: {confidence}%
 """,
-
     # === PORTFOLIO TEMPLATES ===
     "portfolio_analysis": """
 Please analyze the current portfolio:
@@ -257,7 +246,6 @@ Analysis Requirements:
 - Diversification assessment
 - Correlation analysis
 """,
-
     "portfolio_recommendations": """
 Portfolio Recommendations:
 
@@ -278,7 +266,6 @@ Action Items:
 Expected Impact:
 {expected_impact}
 """,
-
     # === RISK ANALYSIS TEMPLATES ===
     "risk_analysis": """
 Please perform a comprehensive risk analysis:
@@ -295,7 +282,6 @@ Analysis Requirements:
 - Volatility forecasting
 - Tail risk assessment
 """,
-
     "risk_report": """
 Risk Analysis Report:
 
@@ -318,7 +304,6 @@ Risk Factors:
 Recommendations:
 {recommendations}
 """,
-
     # === SENTIMENT ANALYSIS TEMPLATES ===
     "sentiment_analysis": """
 Please analyze sentiment for the following:
@@ -334,7 +319,6 @@ Analysis Requirements:
 - Sentiment trends over time
 - Impact on price movement
 """,
-
     "sentiment_report": """
 Sentiment Analysis Report:
 
@@ -356,7 +340,6 @@ Trend Analysis:
 Impact Assessment:
 {impact_assessment}
 """,
-
     # === VOICE COMMAND TEMPLATES ===
     "voice_command_parsing": """
 Parse the following voice command into structured trading action:
@@ -379,7 +362,6 @@ Return as JSON:
     "raw_text": "original command"
 }}
 """,
-
     # === ERROR HANDLING TEMPLATES ===
     "error_response": """
 I encountered an error while processing your request:
@@ -395,7 +377,6 @@ What I can do to help:
 
 Please try again or provide more specific information.
 """,
-
     "fallback_response": """
 I'm having trouble understanding your request. Let me help you get what you need:
 
@@ -410,7 +391,6 @@ Here are some things I can help you with:
 
 Could you please rephrase your request or choose from the options above?
 """,
-
     # === SYSTEM TEMPLATES ===
     "system_status": """
 System Status Report:
@@ -432,7 +412,6 @@ Performance Metrics:
 Recent Activity:
 {recent_activity}
 """,
-
     "help_message": """
 Welcome to the Trading AI Assistant!
 
@@ -468,7 +447,6 @@ I can help you with:
 
 Just ask me anything about trading, analysis, or portfolio management!
 """,
-
     # === RESEARCH AGENT TEMPLATES ===
     "research_summarize": """
 Summarize this for a quant trading engineer:
@@ -481,7 +459,6 @@ Focus on:
 - Technical details and methodologies
 - Potential implementation considerations
 """,
-
     "research_code_suggestion": """
 Suggest Python code for a quant trading engineer based on this description:
 
@@ -493,7 +470,6 @@ Provide:
 - Error handling and validation
 - Performance considerations
 """,
-
     # === MULTIMODAL AGENT TEMPLATES ===
     "vision_chart_analysis": """
 {vision_prompt}
@@ -506,7 +482,6 @@ Focus on:
 - Risk considerations
 - Market context and implications
 """,
-
     "vision_equity_curve": """
 Describe the equity curve shape, trends, and any notable features for a quant trading engineer.
 
@@ -518,7 +493,6 @@ Key aspects to analyze:
 - Performance consistency
 - Risk-adjusted metrics
 """,
-
     "vision_drawdown_analysis": """
 Describe drawdown spikes and risk periods in this trading equity curve.
 
@@ -529,7 +503,6 @@ Focus on:
 - Volatility clustering
 - Potential stress testing scenarios
 """,
-
     "vision_performance_analysis": """
 Describe the strategy's performance over time and any patterns in the returns.
 
@@ -541,23 +514,20 @@ Analyze:
 - Drawdown characteristics
 - Sharpe ratio implications
 """,
-
     # === ENHANCED PROMPT ROUTER TEMPLATES ===
     "enhanced_intent_classification": """
-You are an intent classifier for a trading system. 
+You are an intent classifier for a trading system.
 Classify the user's intent and extract arguments as JSON.
 Available intents: forecasting, backtesting, tuning, research, portfolio, risk, sentiment
 Return format: {{"intent": "intent_name", "confidence": 0.95, "args": {{"key": "value"}}}}
 
 User Query: {query}
 """,
-
     "enhanced_intent_extraction": """
 Task: Classify trading intent
 User input: {user_input}
 Intent:
 """,
-
     # === STRATEGY SELECTOR TEMPLATES ===
     "strategy_selection_reasoning": """
 Generate reasoning for strategy selection based on market conditions and analysis.
@@ -573,7 +543,6 @@ Provide:
 - Expected performance characteristics
 - Implementation recommendations
 """,
-
     # === PERFORMANCE CRITIC TEMPLATES ===
     "performance_evaluation": """
 Generate predictions using the model.
@@ -588,7 +557,6 @@ Requirements:
 - Consider model limitations
 - Provide uncertainty estimates
 """,
-
     "trading_signal_generation": """
 Generate trading signals from predictions.
 
@@ -602,7 +570,6 @@ Generate:
 - Risk management rules
 - Entry/exit criteria
 """,
-
     "performance_recommendations": """
 Generate recommendations based on evaluation results.
 
@@ -616,7 +583,6 @@ Provide:
 - Risk management advice
 - Implementation guidance
 """,
-
     # === OPTIMIZER AGENT TEMPLATES ===
     "optimization_summary": """
 Generate optimization summary.
@@ -633,7 +599,6 @@ Summary should include:
 - Implementation recommendations
 - Next steps for optimization
 """,
-
     # === META RESEARCH AGENT TEMPLATES ===
     "model_implementation_code": """
 Generate model implementation code.
@@ -649,7 +614,6 @@ Provide:
 - Performance optimizations
 - Testing considerations
 """,
-
     "transformer_model_code": """
 Generate transformer model code for time series forecasting.
 
@@ -664,7 +628,6 @@ Include:
 - Evaluation metrics
 - Deployment considerations
 """,
-
     "lstm_model_code": """
 Generate LSTM model code for financial time series.
 
@@ -679,7 +642,6 @@ Include:
 - Validation methods
 - Performance monitoring
 """,
-
     "ensemble_model_code": """
 Generate ensemble model code combining multiple approaches.
 
@@ -694,7 +656,6 @@ Include:
 - Performance evaluation
 - Risk management
 """,
-
     # === DATA QUALITY AGENT TEMPLATES ===
     "data_quality_recommendations": """
 Generate recommendations for data quality improvement.
@@ -710,7 +671,6 @@ Provide:
 - Validation protocols
 - Implementation timeline
 """,
-
     # === EXECUTION AGENT TEMPLATES ===
     "execution_summary": """
 Generate execution summary.
@@ -731,7 +691,12 @@ Include:
 # Template categories for organization
 TEMPLATE_CATEGORIES = {
     "forecasting": ["forecast_request", "forecast_analysis"],
-    "intent_parsing": ["intent_classification", "intent_extraction", "enhanced_intent_classification", "enhanced_intent_extraction"],
+    "intent_parsing": [
+        "intent_classification",
+        "intent_extraction",
+        "enhanced_intent_classification",
+        "enhanced_intent_extraction",
+    ],
     "response_generation": ["response_generation"],
     "backtesting": ["backtest_request", "backtest_results"],
     "optimization": ["optimization_request", "optimization_results", "optimization_summary"],
@@ -742,69 +707,85 @@ TEMPLATE_CATEGORIES = {
     "voice": ["voice_command_parsing"],
     "error_handling": ["error_response", "fallback_response"],
     "system": ["system_status", "help_message"],
-    "multimodal": ["vision_chart_analysis", "vision_equity_curve", "vision_drawdown_analysis", "vision_performance_analysis"],
+    "multimodal": [
+        "vision_chart_analysis",
+        "vision_equity_curve",
+        "vision_drawdown_analysis",
+        "vision_performance_analysis",
+    ],
     "strategy": ["strategy_selection_reasoning"],
     "performance": ["performance_evaluation", "trading_signal_generation", "performance_recommendations"],
-    "model_development": ["model_implementation_code", "transformer_model_code", "lstm_model_code", "ensemble_model_code"],
+    "model_development": [
+        "model_implementation_code",
+        "transformer_model_code",
+        "lstm_model_code",
+        "ensemble_model_code",
+    ],
     "data_quality": ["data_quality_recommendations"],
-    "execution": ["execution_summary"]
+    "execution": ["execution_summary"],
 }
+
 
 def get_template(name: str) -> str:
     """
     Get a prompt template by name.
-    
+
     Args:
         name: Name of the template
-        
+
     Returns:
         Template string
-        
+
     Raises:
         KeyError: If template not found
     """
     if name not in PROMPT_TEMPLATES:
         raise KeyError(f"Template '{name}' not found. Available templates: {list(PROMPT_TEMPLATES.keys())}")
-    
+
     return PROMPT_TEMPLATES[name]
+
 
 def get_templates_by_category(category: str) -> Dict[str, str]:
     """
     Get all templates in a specific category.
-    
+
     Args:
         category: Category name
-        
+
     Returns:
         Dictionary of template names to template strings
     """
     if category not in TEMPLATE_CATEGORIES:
         raise KeyError(f"Category '{category}' not found. Available categories: {list(TEMPLATE_CATEGORIES.keys())}")
-    
+
     template_names = TEMPLATE_CATEGORIES[category]
     return {name: PROMPT_TEMPLATES[name] for name in template_names}
+
 
 def list_templates() -> List[str]:
     """Get list of all available template names."""
     return list(PROMPT_TEMPLATES.keys())
 
+
 def list_categories() -> List[str]:
     """Get list of all available template categories."""
     return list(TEMPLATE_CATEGORIES.keys())
 
+
 def format_template(name: str, **kwargs) -> str:
     """
     Get and format a template with the provided arguments.
-    
+
     Args:
         name: Template name
         **kwargs: Arguments to format the template
-        
+
     Returns:
         Formatted template string
     """
     template = get_template(name)
     return template.format(**kwargs)
+
 
 # Legacy template mappings for backward compatibility
 LEGACY_TEMPLATES = {
@@ -818,16 +799,17 @@ LEGACY_TEMPLATES = {
     "sentiment": "sentiment_analysis",
     "voice": "voice_command_parsing",
     "error": "error_response",
-    "help": "help_message"
+    "help": "help_message",
 }
+
 
 def get_legacy_template(name: str) -> str:
     """
     Get a template using legacy naming for backward compatibility.
-    
+
     Args:
         name: Legacy template name
-        
+
     Returns:
         Template string
     """
@@ -836,10 +818,11 @@ def get_legacy_template(name: str) -> str:
     else:
         return get_template(name)
 
+
 # Add support for multilingual templates
 TEMPLATES = {
-    'en': PROMPT_TEMPLATES,
-    'es': {
+    "en": PROMPT_TEMPLATES,
+    "es": {
         "forecast": "¿Qué acciones deberían comprarse hoy?",
         "analysis": "Analiza el rendimiento de {symbol}",
         "strategy": "Genera una estrategia de trading para {symbol}",
@@ -849,9 +832,9 @@ TEMPLATES = {
         "backtest": "Ejecuta un backtest de la estrategia",
         "research": "Investiga las últimas tendencias del mercado",
         "sentiment": "Analiza el sentimiento del mercado",
-        "system": "Verifica el estado del sistema"
+        "system": "Verifica el estado del sistema",
     },
-    'fr': {
+    "fr": {
         "forecast": "Quelles actions devraient être achetées aujourd'hui?",
         "analysis": "Analyser la performance de {symbol}",
         "strategy": "Générer une stratégie de trading pour {symbol}",
@@ -861,9 +844,9 @@ TEMPLATES = {
         "backtest": "Exécuter un backtest de la stratégie",
         "research": "Rechercher les dernières tendances du marché",
         "sentiment": "Analyser le sentiment du marché",
-        "system": "Vérifier l'état du système"
+        "system": "Vérifier l'état du système",
     },
-    'de': {
+    "de": {
         "forecast": "Welche Aktien sollten heute gekauft werden?",
         "analysis": "Analysieren Sie die Performance von {symbol}",
         "strategy": "Generieren Sie eine Trading-Strategie für {symbol}",
@@ -873,6 +856,6 @@ TEMPLATES = {
         "backtest": "Führen Sie einen Backtest der Strategie durch",
         "research": "Erforschen Sie die neuesten Markttrends",
         "sentiment": "Analysieren Sie die Marktstimmung",
-        "system": "Überprüfen Sie den Systemstatus"
-    }
-} 
+        "system": "Überprüfen Sie den Systemstatus",
+    },
+}

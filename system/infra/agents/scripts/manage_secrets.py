@@ -10,24 +10,19 @@ It provides functionality to:
 4. Rotate secrets
 """
 
-import os
-import sys
-import json
-import yaml
+import argparse
+import logging
 import secrets
 import string
-import argparse
+import sys
 from pathlib import Path
-from typing import Dict, Any, Optional
-import logging
-from datetime import datetime
+from typing import Dict, Optional
+
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 class SecretManager:
     def __init__(self, config_dir: str = "automation/config"):
@@ -38,35 +33,35 @@ class SecretManager:
     def generate_secure_secret(self, length: int = 32) -> str:
         """Generate a secure random secret."""
         alphabet = string.ascii_letters + string.digits + string.punctuation
-        return ''.join(secrets.choice(alphabet) for _ in range(length))
-    
+        return "".join(secrets.choice(alphabet) for _ in range(length))
+
     def generate_jwt_secret(self) -> str:
         """Generate a secure JWT secret."""
         return self.generate_secure_secret(64)
-    
+
     def generate_api_key(self) -> str:
         """Generate a secure API key."""
         return self.generate_secure_secret(32)
-    
+
     def load_env_file(self) -> Dict[str, str]:
         """Load environment variables from .env file."""
         if not self.env_file.exists():
             return {}
         env_vars = {}
-        with open(self.env_file, 'r') as f:
+        with open(self.env_file, "r") as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith('#'):
-                    key, value = line.split('=', 1)
+                if line and not line.startswith("#"):
+                    key, value = line.split("=", 1)
                     env_vars[key.strip()] = value.strip()
         return env_vars
-    
+
     def save_env_file(self, env_vars: Dict[str, str]) -> None:
         """Save environment variables to .env file."""
-        with open(self.env_file, 'w') as f:
+        with open(self.env_file, "w") as f:
             for key, value in env_vars.items():
                 f.write(f"{key}={value}\n")
-    
+
     def update_secret(self, key: str, value: Optional[str] = None) -> None:
         """Update a secret in the .env file."""
         env_vars = self.load_env_file()
@@ -80,7 +75,7 @@ class SecretManager:
         env_vars[key] = value
         self.save_env_file(env_vars)
         logger.info(f"Updated {key}")
-    
+
     def rotate_secrets(self) -> None:
         """Rotate all secrets in the .env file."""
         env_vars = self.load_env_file()
@@ -93,7 +88,7 @@ class SecretManager:
             logger.info("Rotated all secrets")
         else:
             logger.info("No secrets found to rotate")
-    
+
     def validate_config(self) -> bool:
         """Validate configuration files and environment variables."""
         required_vars = [
@@ -105,7 +100,7 @@ class SecretManager:
             "EMAIL_USERNAME",
             "EMAIL_PASSWORD",
             "EMAIL_FROM",
-            "SLACK_WEBHOOK_URL"
+            "SLACK_WEBHOOK_URL",
         ]
         env_vars = self.load_env_file()
         missing_vars = [var for var in required_vars if var not in env_vars]
@@ -119,7 +114,7 @@ class SecretManager:
             "API_CERT_PATH",
             "API_KEY_PATH",
             "MONITORING_CERT_PATH",
-            "MONITORING_KEY_PATH"
+            "MONITORING_KEY_PATH",
         ]
         for path_var in ssl_paths:
             if path_var in env_vars:
@@ -128,6 +123,7 @@ class SecretManager:
                     logger.error(f"SSL certificate/key not found: {path}")
                     return False
         return True
+
 
 def main():
     parser = argparse.ArgumentParser(description="Manage environment variables and secrets")
@@ -161,5 +157,6 @@ def main():
             logger.error("Invalid format for --update. Use KEY=VALUE")
             sys.exit(1)
 
+
 if __name__ == "__main__":
-    main() 
+    main()

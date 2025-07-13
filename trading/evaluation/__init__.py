@@ -1,15 +1,9 @@
-from .model_evaluator import ModelEvaluator
 from .metrics import (
-    RegressionMetrics,
     ClassificationMetrics,
+    RegressionMetrics,
+    RiskMetrics,
     TimeSeriesMetrics,
-    RiskMetrics
 )
+from .model_evaluator import ModelEvaluator
 
-__all__ = [
-    "ModelEvaluator",
-    "RegressionMetrics",
-    "ClassificationMetrics",
-    "TimeSeriesMetrics",
-    "RiskMetrics"
-] 
+__all__ = ["ModelEvaluator", "RegressionMetrics", "ClassificationMetrics", "TimeSeriesMetrics", "RiskMetrics"]
