@@ -7,6 +7,8 @@ import json
 import os
 from pathlib import Path
 
+from utils.safe_json_saver import safe_save_historical_data
+
 logger = logging.getLogger(__name__)
 
 class StrategyLogger:
@@ -102,9 +104,15 @@ class StrategyLogger:
             if len(mappings[strategy_name][regime]) > 50:
                 mappings[strategy_name][regime] = mappings[strategy_name][regime][-50:]
             
-            # Save mappings
-            with open(self.regime_mapping_file, 'w') as f:
-                json.dump(mappings, f, indent=2)
+            # Save mappings using safe JSON saving
+            result = safe_save_historical_data(mappings, self.regime_mapping_file)
+            if not result['success']:
+                self.logger.error(f"Failed to save strategy-regime mappings: {result['error']}")
+                return {
+                    'success': False,
+                    'error': f"Failed to save mappings: {result['error']}",
+                    'timestamp': datetime.now().isoformat()
+                }
             
             self.logger.info(f"Strategy-regime mapping saved: {strategy_name} -> {regime}")
             

@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from collections import defaultdict, deque
 from pathlib import Path
 
+from utils.safe_json_saver import safe_save_historical_data
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -130,7 +132,6 @@ class LongTermPerformanceTracker:
         """Save performance data to disk."""
         try:
             data_file = Path("data/performance_history.json")
-            data_file.parent.mkdir(parents=True, exist_ok=True)
             
             data = {
                 'metrics': [
@@ -148,8 +149,12 @@ class LongTermPerformanceTracker:
                 }
             }
             
-            with open(data_file, 'w') as f:
-                json.dump(data, f, indent=2)
+            # Use safe JSON saving to prevent data loss
+            result = safe_save_historical_data(data, data_file)
+            if not result['success']:
+                logger.error(f"Failed to save historical data: {result['error']}")
+            else:
+                logger.debug(f"Successfully saved historical data: {result['filepath']}")
                 
         except Exception as e:
             logger.error(f"Failed to save historical data: {e}")
