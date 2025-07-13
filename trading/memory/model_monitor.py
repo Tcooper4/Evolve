@@ -16,6 +16,8 @@ from scipy import stats
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import IsolationForest
 
+from utils.safe_json_saver import safe_save_historical_data
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -149,7 +151,6 @@ class ModelMonitor:
         """Save monitoring data to disk."""
         try:
             data_file = Path("data/model_monitoring_history.json")
-            data_file.parent.mkdir(parents=True, exist_ok=True)
             
             data = {
                 'parameter_history': {
@@ -182,8 +183,12 @@ class ModelMonitor:
                 ]
             }
             
-            with open(data_file, 'w') as f:
-                json.dump(data, f, indent=2)
+            # Use safe JSON saving to prevent data loss
+            result = safe_save_historical_data(data, data_file)
+            if not result['success']:
+                logger.error(f"Failed to save monitoring data: {result['error']}")
+            else:
+                logger.debug(f"Successfully saved monitoring data: {result['filepath']}")
                 
         except Exception as e:
             logger.error(f"Failed to save monitoring data: {e}")
