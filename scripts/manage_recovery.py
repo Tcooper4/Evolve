@@ -66,7 +66,9 @@ class RecoveryManager:
         self.backup_dir = Path("backups")
         self.backup_dir.mkdir(parents=True, exist_ok=True)
         self.recovery_dir = Path("recovery")
-        self.recovery_dir.mkdir(parents=True, exist_ok=True)def _load_config(self, config_path: str) -> dict:
+        self.recovery_dir.mkdir(parents=True, exist_ok=True)
+
+    def _load_config(self, config_path: str) -> dict:
         """Load application configuration."""
         if not Path(config_path).exists():
             print(f"Error: Configuration file not found: {config_path}")
@@ -87,7 +89,6 @@ class RecoveryManager:
 
         logging.config.dictConfig(log_config)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     async def create_recovery_point(self, components: List[str] = None):
         """Create a system recovery point."""
         self.logger.info("Creating system recovery point")

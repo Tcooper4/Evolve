@@ -456,8 +456,7 @@ class TestSelfImprovingAgent:
 
         # Verify failed predictions are tracked
         failed_predictions_history = mock_agent.get_failed_predictions_history()
-        self.assertEqual(len(failed_predictions_history), len(failed_predictions),
-                        "All failed predictions should be tracked")
+        self.assertEqual(len(failed_predictions_history), len(failed_predictions), "All failed predictions should be tracked")
 
         # Analyze failure patterns
         print(f"\n  🔍 Analyzing failure patterns...")
@@ -505,21 +504,17 @@ class TestSelfImprovingAgent:
 
         # Verify weight adjustments make sense
         # RSI strategy had 2 failures, should be reduced
-        self.assertLess(new_rsi_weight, initial_rsi_weight,
-                       "RSI weight should be reduced due to failures")
+        self.assertLess(new_rsi_weight, initial_rsi_weight, "RSI weight should be reduced due to failures")
 
         # MACD strategy had 1 failure, should be slightly reduced
-        self.assertLessEqual(new_macd_weight, initial_macd_weight,
-                            "MACD weight should be reduced or unchanged")
+        self.assertLessEqual(new_macd_weight, initial_macd_weight, "MACD weight should be reduced or unchanged")
 
         # Bollinger strategy had 0 failures, should be increased
-        self.assertGreater(new_bollinger_weight, initial_bollinger_weight,
-                          "Bollinger weight should be increased due to success")
+        self.assertGreater(new_bollinger_weight, initial_bollinger_weight, "Bollinger weight should be increased due to success")
 
         # Verify weights still sum to approximately 1.0
         total_weight = new_rsi_weight + new_macd_weight + new_bollinger_weight
-        self.assertAlmostEqual(total_weight, 1.0, places=2,
-                              "Total weights should sum to 1.0")
+        self.assertAlmostEqual(total_weight, 1.0, places=2, "Total weights should sum to 1.0")
 
         # Test learning rate adaptation based on failure frequency
         print(f"\n  📚 Testing learning rate adaptation...")
@@ -542,8 +537,7 @@ class TestSelfImprovingAgent:
         print(f"  Adaptation factor: {adaptation_result['adaptation_factor']:.3f}")
 
         # Verify learning rate increases with more failures
-        self.assertGreater(new_learning_rate, initial_learning_rate,
-                          "Learning rate should increase with failures")
+        self.assertGreater(new_learning_rate, initial_learning_rate, "Learning rate should increase with failures")
 
         # Test strategy performance tracking after adjustments
         print(f"\n  📊 Testing performance tracking after adjustments...")
@@ -623,7 +617,6 @@ class TestSelfImprovingAgent:
         print(f"  Performance change: {learning_cycle_result['performance_change']:.3f}")
 
         # Verify that learning leads to improvement
-        self.assertGreater(learning_cycle_result['performance_change'], 0,
-                          "Learning should lead to performance improvement")
+        self.assertGreater(learning_cycle_result['performance_change'], 0, "Learning should lead to performance improvement")
 
         print("✅ Learning from failed predictions and weight adjustment test completed")

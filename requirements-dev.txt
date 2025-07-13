@@ -1,53 +1,72 @@
-# Testing dependencies
+# Development and Testing Dependencies for Evolve AI Trading System
+# Install with: pip install -r requirements-dev.txt
+
+# Testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-benchmark>=4.0.0
+pytest-clarity>=1.0.1
+pytest-env>=1.0.0
+pytest-html>=3.2.0
+pytest-instafail>=0.5.0
+pytest-metadata>=3.0.0
+pytest-mock>=3.10.0
+pytest-profiling>=1.7.0
+pytest-randomly>=3.12.0
+pytest-rerunfailures>=12.0
+pytest-sugar>=0.9.7
+pytest-timeout>=2.1.0
+pytest-xdist>=3.0.0
+
+# Code quality and formatting
+black>=23.7.0
+flake8>=6.0.0
+mypy>=1.5.0
+isort>=5.12.0
+autoflake>=2.2.0
+bandit>=1.7.5
+safety>=2.3.0
+
+# Coverage and testing utilities
+coverage>=7.0.0
 factory-boy>=3.2.0
 faker>=8.12.0
 hypothesis>=6.14.0
-pytest>=6.2.0
-pytest-asyncio>=0.15.0
-pytest-benchmark>=3.4.0
-pytest-cov>=2.12.0
-pytest-env>=0.7.0
-pytest-mock>=3.6.0
-pytest-randomly>=3.8.0
-pytest-sugar>=0.9.0
-pytest-timeout>=2.1.0
-pytest-xdist>=2.4.0
 
-# Development dependencies
-black>=21.7b0
-flake8>=3.9.0
-isort>=5.9.0
-mypy>=0.910
-pre-commit>=2.15.0
-
-# Documentation dependencies
-mkdocs>=1.2.0
-mkdocs-material>=7.2.0
-sphinx>=4.1.0
-sphinx-rtd-theme>=0.5.0
-
-# Other dependencies
-bandit>=1.7.0
-debugpy>=1.4.0
-ipykernel>=6.0.0
-ipython>=7.26.0
+# Development tools
+ipython>=8.14.0
 jupyter>=1.0.0
-jupyterlab>=3.1.0
-line-profiler>=3.3.0
-memory-profiler>=0.60.0
-notebook>=6.4.0
-pydocstyle>=6.1.0
-pylint>=2.9.0
-python-dotenv>=0.19.0
-radon>=5.1.0
-safety>=1.10.0
-sphinx-autodoc-typehints>=1.12.0
-sphinx-copybutton>=0.4.0
-sphinx-panels>=0.6.0
-sphinx-tabs>=3.2.0
-types-PyYAML>=5.4.0
-types-python-dateutil>=2.8.0
-types-requests>=2.25.0
-types-setuptools>=57.0.0
-types-urllib3>=1.26.0
-watchdog>=2.1.0
+notebook>=7.0.0
+ipywidgets>=7.7.0
+
+# Debugging and profiling
+memory-profiler>=0.61.0
+line-profiler>=4.1.0
+py-spy>=0.3.14
+
+# Documentation
+sphinx>=5.0.0
+sphinx-rtd-theme>=1.0.0
+sphinx-autodoc-typehints>=1.24.0
+
+# Linting and type checking
+pylint>=2.17.0
+pylint-django>=2.5.5
+pylint-flask>=0.6
+pylint-celery>=0.3
+pylint-pytest>=0.2.0
+
+# Pre-commit hooks
+pre-commit>=3.3.0
+
+# Development utilities
+rich>=13.4.0
+click>=8.1.0
+tqdm>=4.65.0
+tabulate>=0.9.0
+
+# Optional: Advanced development features
+# dash>=2.6.0
+# dash-bootstrap-components>=1.4.0
+# streamlit-ace>=0.1.1

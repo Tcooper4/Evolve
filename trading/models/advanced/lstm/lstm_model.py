@@ -188,7 +188,7 @@ class LSTMForecaster(BaseModel):
         X = X.to(self.device)
         y = y.to(self.device)
 
-        return {'success': True, 'result': X, y, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return X, y
 
     def predict(self, data: pd.DataFrame) -> np.ndarray:
         """Make predictions using the LSTM model.

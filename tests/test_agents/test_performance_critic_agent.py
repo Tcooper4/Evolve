@@ -710,8 +710,7 @@ class TestPerformanceCriticAgentIntegration:
             print(f"    Should flag: {should_flag} (expected: {scenario['expected_flag']})")
 
             # Verify flagging logic
-            assert should_flag == scenario['expected_flag'],
-                           f"Flagging logic failed for {scenario['name']}"
+            assert should_flag == scenario['expected_flag'], f"Flagging logic failed for {scenario['name']}"
 
             if should_flag:
                 # Test flagging and scheduling
@@ -729,8 +728,7 @@ class TestPerformanceCriticAgentIntegration:
                 print(f"    Priority: {flag_result['priority']}")
 
                 # Verify recommended action matches expected
-                assert flag_result['recommended_action'] == scenario['expected_action'],
-                               f"Recommended action should be {scenario['expected_action']} for {scenario['name']}"
+                assert flag_result['recommended_action'] == scenario['expected_action'], f"Recommended action should be {scenario['expected_action']} for {scenario['name']}"
 
                 # Test scheduling for update
                 schedule_result = performance_critic_agent.schedule_model_update(flag_result)
@@ -746,14 +744,11 @@ class TestPerformanceCriticAgentIntegration:
 
                 # Verify update type based on performance
                 if scenario['name'] == 'Critical Underperformer':
-                    assert schedule_result['update_type'] == 'replace', \
-                                   "Critical underperformer should be scheduled for replacement"
+                    assert schedule_result['update_type'] == 'replace', "Critical underperformer should be scheduled for replacement"
                 elif 'High Drawdown' in scenario['name']:
-                    assert schedule_result['update_type'] == 'optimize', \
-                                   "High drawdown should be scheduled for optimization"
+                    assert schedule_result['update_type'] == 'optimize', "High drawdown should be scheduled for optimization"
                 else:
-                    assert schedule_result['update_type'] == 'retrain', \
-                                   "Other underperformers should be scheduled for retraining"
+                    assert schedule_result['update_type'] == 'retrain', "Other underperformers should be scheduled for retraining"
 
         # Test batch flagging and scheduling
         print(f"\n  📋 Testing batch flagging and scheduling...")
@@ -786,8 +781,8 @@ class TestPerformanceCriticAgentIntegration:
         batch_schedules = performance_critic_agent.schedule_batch_updates(batch_flags)
 
         # Verify batch processing
-        assert isinstance(batch_flags, list, "Batch flags should be a list")
-        assert isinstance(batch_schedules, list, "Batch schedules should be a list")
+        assert isinstance(batch_flags, list), "Batch flags should be a list"
+        assert isinstance(batch_schedules, list), "Batch schedules should be a list"
 
         flagged_count = sum(1 for flag in batch_flags if flag is not None)
         scheduled_count = sum(1 for schedule in batch_schedules if schedule is not None)
@@ -797,8 +792,7 @@ class TestPerformanceCriticAgentIntegration:
 
         # Verify that only underperforming models are flagged
         expected_flags = sum(1 for scenario in performance_scenarios[:3] if scenario['expected_flag'])
-        assert flagged_count == expected_flags,
-                        f"Should flag {expected_flags} underperforming models"
+        assert flagged_count == expected_flags, f"Should flag {expected_flags} underperforming models"
 
         # Test priority ordering
         print(f"\n  🎯 Testing priority ordering...")
@@ -812,8 +806,7 @@ class TestPerformanceCriticAgentIntegration:
             print(f"    Priority order: {priorities}")
 
             # Verify descending order
-            assert priorities == sorted(priorities, reverse=True),
-                           "Flags should be ordered by priority (descending)"
+            assert priorities == sorted(priorities, reverse=True), "Flags should be ordered by priority (descending)"
 
         # Test flag history tracking
         print(f"\n  📈 Testing flag history tracking...")
@@ -822,7 +815,7 @@ class TestPerformanceCriticAgentIntegration:
         flag_history = performance_critic_agent.get_flag_history()
 
         # Verify history tracking
-        assert isinstance(flag_history, dict, "Flag history should be a dictionary")
+        assert isinstance(flag_history, dict), "Flag history should be a dictionary"
         assert 'total_flags' in flag_history, "History should contain total_flags"
         assert 'flagged_models' in flag_history, "History should contain flagged_models"
         assert 'update_schedule' in flag_history, "History should contain update_schedule"
@@ -832,7 +825,6 @@ class TestPerformanceCriticAgentIntegration:
         print(f"    Scheduled updates: {len(flag_history['update_schedule'])}")
 
         # Verify history consistency
-        assert flag_history['total_flags'] >= flagged_count,
-                               "History should reflect all flagged models"
+        assert flag_history['total_flags'] >= flagged_count, "History should reflect all flagged models"
 
         print("✅ Underperforming models flagging and scheduling test completed")

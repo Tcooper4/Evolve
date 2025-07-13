@@ -46,15 +46,10 @@ class TemporalBlock(nn.Module):
         )
 
         self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
-        self.relu = nn.ReLU()def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through temporal block.
+        self.relu = nn.ReLU()
 
-        Args:
-            x: Input tensor
-
-        Returns:
-            Output tensor
-        """
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass through temporal block."""
         out = self.net(x)
         res = x if self.downsample is None else self.downsample(x)
         return self.relu(out + res)
@@ -86,7 +81,9 @@ class TemporalConvNet(nn.Module):
                 padding=(kernel_size-1) * dilation,
                 dropout=dropout
             ))
-        self.network = nn.Sequential(*layers)def forward(self, x: torch.Tensor) -> torch.Tensor:
+        self.network = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through TCN.
 
         Args:

@@ -526,6 +526,7 @@ class InstitutionalGradeSystem:
         """Check if system is within risk limits."""
         try:
             if not self.system_metrics:
+                return
 
             # Check drawdown limit
             if self.system_metrics.risk_score > 0.8:

@@ -101,7 +101,8 @@ class QuantGPTCommentaryAgent:
         # Load templates
         self._load_commentary_templates()
 
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+        return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
+
     async def generate_commentary(self, request: CommentaryRequest) -> CommentaryResponse:
         """
         Generate comprehensive commentary based on request type.
