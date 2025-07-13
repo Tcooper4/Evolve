@@ -43,7 +43,9 @@ class QuantGPTService(BaseService):
         )
         self.memory = AgentMemory()
 
-        logger.info("QuantGPTService initialized")def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        logger.info("QuantGPTService initialized")
+
+    def process_message(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Process incoming natural language queries.
 

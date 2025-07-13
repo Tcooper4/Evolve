@@ -101,7 +101,9 @@ class PerformanceManager:
         self.prof_dir = Path("profiles")
         self.prof_dir.mkdir(parents=True, exist_ok=True)
         self.reports_dir = Path("reports/performance")
-        self.reports_dir.mkdir(parents=True, exist_ok=True)def _load_config(self, config_path: str) -> dict:
+        self.reports_dir.mkdir(parents=True, exist_ok=True)
+
+    def _load_config(self, config_path: str) -> dict:
         """Load application configuration.
 
         Args:
@@ -136,7 +138,6 @@ class PerformanceManager:
 
         logging.config.dictConfig(log_config)
 
-    return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
     def profile_function(self, func: callable, *args, **kwargs):
         """Profile a function's performance.
 

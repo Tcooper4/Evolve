@@ -14,7 +14,9 @@ class MetricsAPI:
     def __init__(self, orchestrator: Orchestrator):
         self.orchestrator = orchestrator
         self._metrics_history: List[Dict] = []
-        self._max_history_size = 1000async def get_system_metrics(self) -> Dict:
+        self._max_history_size = 1000
+
+    async def get_system_metrics(self) -> Dict:
         """Get current system metrics"""
         try:
             cpu_percent = psutil.cpu_percent(interval=1)

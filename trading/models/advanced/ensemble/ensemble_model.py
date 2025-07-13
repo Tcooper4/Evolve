@@ -143,7 +143,7 @@ class EnsembleForecaster(BaseModel):
         X = X.to(self.device)
         y = y.to(self.device)
 
-        return {'success': True, 'result': X, y, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return X, y
 
     def save(self, path: str) -> None:
         """Save ensemble model state.

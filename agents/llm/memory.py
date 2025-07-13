@@ -78,6 +78,7 @@ class MemoryManager:
     def _rebuild_index(self) -> None:
         """Rebuild the FAISS index for memory search."""
         if not self.memories:
+            return
 
         # Get embeddings for all memories
         texts = [m.prompt for m in self.memories]
