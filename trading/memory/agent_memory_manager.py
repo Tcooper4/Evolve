@@ -103,7 +103,8 @@ class ThreadSafeConnectionPool:
             # Try to get existing connection
             try:
                 connection = self.connections.get_nowait()
-            except:
+            except Exception as e:
+                logger.warning(f"Error getting connection from pool: {e}")
                 # Create new connection if pool is empty and under limit
                 with self.lock:
                     if self._connection_count < self.max_connections:
@@ -126,7 +127,8 @@ class ThreadSafeConnectionPool:
                     # Test connection
                     connection.ping()
                     self.connections.put(connection)
-                except:
+                except Exception as e:
+                    logger.warning(f"Error returning connection to pool: {e}")
                     # Connection is dead, don't return it
                     with self.lock:
                         self._connection_count -= 1
@@ -1084,14 +1086,16 @@ class AgentMemoryManager:
                     with self.redis_pool.get_connection() as conn:
                         conn.ping()
                     health_info['redis_status'] = 'healthy'
-                except:
+                except Exception as e:
+                    logger.warning(f"Error checking Redis health: {e}")
                     health_info['redis_status'] = 'unhealthy'
             
             if self.pinecone_index:
                 try:
                     # Simple health check
                     health_info['pinecone_status'] = 'healthy'
-                except:
+                except Exception as e:
+                    logger.warning(f"Error checking Pinecone health: {e}")
                     health_info['pinecone_status'] = 'unhealthy'
             
             return {

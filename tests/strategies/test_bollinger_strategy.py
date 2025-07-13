@@ -17,6 +17,8 @@ from datetime import datetime, timedelta
 from typing import Dict, Any
 from trading.strategies.bollinger_strategy import BollingerStrategy, BollingerConfig
 from utils.strategy_utils import calculate_returns
+import logging
+logger = logging.getLogger(__name__)
 
 class TestBollingerStrategy:
     @pytest.fixture
@@ -211,7 +213,7 @@ class TestBollingerStrategy:
 
     def test_tight_bands_low_volatility_regime(self, strategy_config):
         """Test edge case with tight bands in low volatility regime."""
-        print("\n📊 Testing Tight Bands in Low Volatility Regime")
+        logger.debug("\n📊 Testing Tight Bands in Low Volatility Regime")
         
         # Test multiple volatility scenarios
         volatility_scenarios = [
@@ -236,7 +238,7 @@ class TestBollingerStrategy:
         ]
         
         for scenario in volatility_scenarios:
-            print(f"\n  📈 Testing scenario: {scenario['name']}")
+            logger.debug(f"\n  📈 Testing scenario: {scenario['name']}")
             
             # Create data with specific volatility
             dates = pd.date_range(start="2023-01-01", end="2023-12-31", freq="D")
@@ -258,11 +260,11 @@ class TestBollingerStrategy:
             band_width = (upper_band - lower_band) / middle_band
             avg_band_width = band_width.mean()
             
-            print(f"    Average band width: {avg_band_width:.4f} (expected < {scenario['expected_band_width']:.2f})")
+            logger.debug(f"    Average band width: {avg_band_width:.4f} (expected < {scenario['expected_band_width']:.2f})")
             
             # Verify band width is appropriate for volatility level
-            self.assertLess(avg_band_width, scenario['expected_band_width'],
-                           f"Band width should be tight for {scenario['name']}")
+            assert avg_band_width < scenario['expected_band_width'], \
+                   f"Band width should be tight for {scenario['name']}"
             
             # Test signal generation
             signals = strategy.generate_signals(volatility_data)
@@ -273,26 +275,26 @@ class TestBollingerStrategy:
             total_signals = len(signals)
             neutral_ratio = neutral_signals / total_signals
             
-            print(f"    Neutral signal ratio: {neutral_ratio:.2f} (expected > {scenario['expected_neutral_ratio']:.1f})")
+            logger.debug(f"    Neutral signal ratio: {neutral_ratio:.2f} (expected > {scenario['expected_neutral_ratio']:.1f})")
             
             # Verify signal distribution
-            self.assertGreater(neutral_ratio, scenario['expected_neutral_ratio'],
-                             f"Most signals should be neutral in {scenario['name']}")
+            assert neutral_ratio > scenario['expected_neutral_ratio'], \
+                   f"Most signals should be neutral in {scenario['name']}"
             
             # Test band relationships
-            self.assertTrue(all(upper_band >= middle_band), "Upper band should always be above middle")
-            self.assertTrue(all(lower_band <= middle_band), "Lower band should always be below middle")
+            assert all(upper_band >= middle_band), "Upper band should always be above middle"
+            assert all(lower_band <= middle_band), "Lower band should always be below middle"
             
             # Test band convergence
             max_band_separation = (upper_band - lower_band).max()
-            print(f"    Max band separation: {max_band_separation:.3f}")
+            logger.debug(f"    Max band separation: {max_band_separation:.3f}")
             
             # Verify bands don't diverge excessively
-            self.assertLess(max_band_separation, base_price * scenario['volatility'] * 10,
-                           f"Bands should not diverge excessively in {scenario['name']}")
+            assert max_band_separation < base_price * scenario['volatility'] * 10, \
+                   f"Bands should not diverge excessively in {scenario['name']}"
         
         # Test extreme low volatility edge case
-        print(f"\n  ⚠️ Testing extreme low volatility edge case...")
+        logger.debug(f"\n  ⚠️ Testing extreme low volatility edge case...")
         
         # Create nearly constant price data
         extreme_dates = pd.date_range(start="2023-01-01", periods=100)
@@ -313,22 +315,22 @@ class TestBollingerStrategy:
         band_differences = (extreme_upper - extreme_lower) / extreme_middle
         max_difference = band_differences.max()
         
-        print(f"    Max band difference: {max_difference:.6f}")
+        logger.debug(f"    Max band difference: {max_difference:.6f}")
         
         # Bands should be nearly identical for constant data
-        self.assertLess(max_difference, 0.001, "Bands should be nearly identical for constant data")
+        assert max_difference < 0.001, "Bands should be nearly identical for constant data"
         
         # Test signal generation for constant data
         extreme_signals = strategy.generate_signals(extreme_data)
         
         # All signals should be neutral for constant data
         all_neutral = all(signal == 0 for signal in extreme_signals["signal"])
-        print(f"    All signals neutral: {all_neutral}")
+        logger.debug(f"    All signals neutral: {all_neutral}")
         
-        self.assertTrue(all_neutral, "All signals should be neutral for constant data")
+        assert all_neutral, "All signals should be neutral for constant data"
         
         # Test transition from low to high volatility
-        print(f"\n  🔄 Testing volatility transition...")
+        logger.debug(f"\n  🔄 Testing volatility transition...")
         
         # Create data that transitions from low to high volatility
         transition_dates = pd.date_range(start="2023-01-01", periods=200)
@@ -358,12 +360,12 @@ class TestBollingerStrategy:
         low_vol_width = transition_band_width.iloc[:100].mean()
         high_vol_width = transition_band_width.iloc[100:].mean()
         
-        print(f"    Low volatility band width: {low_vol_width:.4f}")
-        print(f"    High volatility band width: {high_vol_width:.4f}")
+        logger.debug(f"    Low volatility band width: {low_vol_width:.4f}")
+        logger.debug(f"    High volatility band width: {high_vol_width:.4f}")
         
         # High volatility should have wider bands
-        self.assertGreater(high_vol_width, low_vol_width,
-                          "High volatility should result in wider bands")
+        assert high_vol_width > low_vol_width, \
+               "High volatility should result in wider bands"
         
         # Test signal frequency changes
         transition_signals = strategy.generate_signals(transition_data)
@@ -375,15 +377,15 @@ class TestBollingerStrategy:
         low_vol_neutral_ratio = (low_vol_signals == 0).mean()
         high_vol_neutral_ratio = (high_vol_signals == 0).mean()
         
-        print(f"    Low volatility neutral ratio: {low_vol_neutral_ratio:.2f}")
-        print(f"    High volatility neutral ratio: {high_vol_neutral_ratio:.2f}")
+        logger.debug(f"    Low volatility neutral ratio: {low_vol_neutral_ratio:.2f}")
+        logger.debug(f"    High volatility neutral ratio: {high_vol_neutral_ratio:.2f}")
         
         # Low volatility should have more neutral signals
-        self.assertGreater(low_vol_neutral_ratio, high_vol_neutral_ratio,
-                          "Low volatility should have more neutral signals")
+        assert low_vol_neutral_ratio > high_vol_neutral_ratio, \
+               "Low volatility should have more neutral signals"
         
         # Test parameter sensitivity in low volatility
-        print(f"\n  🎯 Testing parameter sensitivity...")
+        logger.debug(f"\n  🎯 Testing parameter sensitivity...")
         
         # Test different standard deviation parameters
         std_scenarios = [1.0, 1.5, 2.0, 2.5, 3.0]
@@ -416,14 +418,14 @@ class TestBollingerStrategy:
             test_band_width = (test_upper - test_lower) / test_middle
             avg_test_width = test_band_width.mean()
             
-            print(f"    Std {std_param}: Band width {avg_test_width:.4f}")
+            logger.debug(f"    Std {std_param}: Band width {avg_test_width:.4f}")
             
             # Verify band width increases with std parameter
             if std_param > 1.0:
-                self.assertGreater(avg_test_width, 0.001, f"Band width should be positive for std {std_param}")
+                assert avg_test_width > 0.001, f"Band width should be positive for std {std_param}"
         
         # Test volume filtering in low volatility
-        print(f"\n  📊 Testing volume filtering...")
+        logger.debug(f"\n  📊 Testing volume filtering...")
         
         # Create data with varying volumes
         volume_dates = pd.date_range(start="2023-01-01", periods=100)
@@ -449,10 +451,10 @@ class TestBollingerStrategy:
         
         if len(low_volume_signals) > 0:
             low_volume_neutral_ratio = (low_volume_signals == 0).mean()
-            print(f"    Low volume neutral ratio: {low_volume_neutral_ratio:.2f}")
+            logger.debug(f"    Low volume neutral ratio: {low_volume_neutral_ratio:.2f}")
             
             # Low volume periods should have neutral signals
-            self.assertGreater(low_volume_neutral_ratio, 0.8,
-                             "Low volume periods should have neutral signals")
+            assert low_volume_neutral_ratio > 0.8, \
+                   "Low volume periods should have neutral signals"
         
-        print("✅ Tight bands in low volatility regime test completed") 
+        logger.debug("✅ Tight bands in low volatility regime test completed") 
