@@ -180,10 +180,6 @@ class ArxivModelDiscoverer:
 
         if any(word in text for word in ["pytorch", "torch"]):
             return "pytorch"
-        elif any(word in text for word in ["tensorflow", "tf"]):
-            return "tensorflow"
-        elif any(word in text for word in ["sklearn", "scikit-learn"]):
-            return "sklearn"
         elif any(word in text for word in ["xgboost"]):
             return "xgboost"
         elif any(word in text for word in ["lightgbm"]):
@@ -277,8 +273,8 @@ class HuggingFaceModelDiscoverer:
 
         if any(word in text for word in ["pytorch", "torch"]):
             return "pytorch"
-        elif any(word in text for word in ["tensorflow", "tf"]):
-            return "tensorflow"
+        elif any(word in text for word in ["xgboost"]):
+            return "xgboost"
         else:
             return "pytorch"  # Default to PyTorch for HF models
 
@@ -381,8 +377,8 @@ class GitHubModelDiscoverer:
 
         if any(word in text for word in ["pytorch", "torch"]):
             return "pytorch"
-        elif any(word in text for word in ["tensorflow", "tf"]):
-            return "tensorflow"
+        elif any(word in text for word in ["xgboost"]):
+            return "xgboost"
         elif any(word in text for word in ["sklearn", "scikit"]):
             return "sklearn"
         else:
