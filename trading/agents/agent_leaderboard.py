@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 from enum import Enum
 
+from utils.safe_json_saver import safe_save_historical_data
+
 logger = logging.getLogger(__name__)
 
 class AgentStatus(Enum):
@@ -186,20 +188,23 @@ class AgentLeaderboard:
         try:
             # Save leaderboard
             leaderboard_file = self.data_dir / "leaderboard.json"
-            with open(leaderboard_file, 'w') as f:
-                json.dump(
-                    {name: perf.to_dict() for name, perf in self.leaderboard.items()},
-                    f, indent=2
-                )
+            leaderboard_data = {name: perf.to_dict() for name, perf in self.leaderboard.items()}
+            result = safe_save_historical_data(leaderboard_data, leaderboard_file)
+            if not result['success']:
+                self.logger.error(f"Failed to save leaderboard data: {result['error']}")
             
             # Save history (keep last 1000 entries)
             history_file = self.data_dir / "history.json"
-            with open(history_file, 'w') as f:
-                json.dump(self.history[-1000:], f, indent=2)
+            history_data = self.history[-1000:] if self.history else []
+            result = safe_save_historical_data(history_data, history_file)
+            if not result['success']:
+                self.logger.error(f"Failed to save history data: {result['error']}")
             
             # Save leaderboard rankings
-            with open("leaderboard.json", "w") as f:
-                json.dump(self.ranking, f)
+            ranking_file = Path("leaderboard.json")
+            result = safe_save_historical_data(self.ranking, ranking_file)
+            if not result['success']:
+                self.logger.error(f"Failed to save ranking data: {result['error']}")
             
             self.logger.debug("Leaderboard data saved successfully")
             
