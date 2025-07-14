@@ -491,28 +491,47 @@ with tab3:
 
 # Export Options
 st.sidebar.subheader("Export Options")
-if st.sidebar.button("Export Trade Report"):
-    # Create trade report
-    report_df = pd.DataFrame(
-        [
-            {
-                "Symbol": p.symbol,
-                "Strategy": p.strategy,
-                "Direction": p.direction.value,
-                "Entry Time": p.entry_time,
-                "Entry Price": p.entry_price,
-                "Size": p.size,
-                "Exit Time": p.exit_time,
-                "Exit Price": p.exit_price,
-                "PnL": p.pnl,
-                "Return": p.pnl / (p.entry_price * p.size)
-                if p.pnl is not None
-                else None,
-            }
-            for p in portfolio.state.closed_positions
-        ]
-    )
 
-    # Save to CSV
-    report_df.to_csv("trading/portfolio/data/trade_report.csv", index=False)
-    st.sidebar.success("Exported trade report to CSV")
+# Export mode dropdown
+export_mode = st.sidebar.selectbox(
+    "Export Format",
+    options=["CSV", "PDF"],
+    help="Choose the format for your trade report export"
+)
+
+if st.sidebar.button("Export Trade Report"):
+    try:
+        # Create trade report
+        report_df = pd.DataFrame(
+            [
+                {
+                    "timestamp": p.entry_time,
+                    "symbol": p.symbol,
+                    "strategy": p.strategy,
+                    "signal": p.direction.value,
+                    "entry_price": p.entry_price,
+                    "exit_price": p.exit_price,
+                    "size": p.size,
+                    "pnl": p.pnl,
+                    "return": p.pnl / (p.entry_price * p.size)
+                    if p.pnl is not None
+                    else None,
+                }
+                for p in portfolio.state.closed_positions
+            ]
+        )
+        
+        # Import and use the report exporter
+        from utils.report_exporter import export_trade_report
+        
+        # Export based on selected format
+        export_path = export_trade_report(
+            signals=report_df,
+            format=export_mode,
+            include_summary=True
+        )
+        
+        st.sidebar.success(f"Exported trade report to {export_mode}: {export_path}")
+        
+    except Exception as e:
+        st.sidebar.error(f"Export failed: {str(e)}")

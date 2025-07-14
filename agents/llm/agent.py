@@ -1,21 +1,36 @@
-"""Enhanced Prompt Agent for Trading System.
+"""
+Enhanced LLM Agent with full trading pipeline routing.
 
-This module provides an intelligent agent that can route user prompts through
-the complete trading pipeline: Forecast → Strategy → Backtest → Report → Trade.
+This module provides a comprehensive LLM agent that can handle various
+trading-related prompts and route them through the appropriate components
+of the trading pipeline.
 """
 
+import json
 import logging
+import os
 import re
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-# Import core components
-from models.forecast_router import ForecastRouter
-from trading.data.providers.fallback_provider import FallbackDataProvider
-from trading.execution.trade_execution_simulator import TradeExecutionSimulator
-from trading.optimization.self_tuning_optimizer import SelfTuningOptimizer
-from trading.strategies.gatekeeper import StrategyGatekeeper
+import numpy as np
+import pandas as pd
+
+# Import sentence transformers for semantic similarity
+try:
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+    logger.warning("SentenceTransformers not available. Prompt examples will be disabled.")
+
+from trading.agents.forecast_router import ForecastRouter
+from trading.agents.strategy_gatekeeper import StrategyGatekeeper
+from trading.agents.trade_execution import TradeExecutionSimulator
+from trading.agents.self_tuning_optimizer import SelfTuningOptimizer
+from trading.data.fallback_data_provider import FallbackDataProvider
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +126,21 @@ class PromptAgent:
         """
         self.config = config or {}
 
+        # Initialize prompt examples system
+        self.prompt_examples = self._load_prompt_examples()
+        self.sentence_transformer = None
+        self.example_embeddings = None
+        
+        if SENTENCE_TRANSFORMERS_AVAILABLE and self.prompt_examples:
+            try:
+                self.sentence_transformer = SentenceTransformer('all-MiniLM-L6-v2')
+                self.example_embeddings = self._compute_example_embeddings()
+                logger.info("Prompt examples system initialized successfully")
+            except Exception as e:
+                logger.warning(f"Could not initialize sentence transformer: {e}")
+        else:
+            logger.info("Prompt examples system disabled (SentenceTransformers not available)")
+
         # Initialize components
         self.forecast_router = ForecastRouter()
 
@@ -197,6 +227,288 @@ class PromptAgent:
 
         logger.info("Enhanced Prompt Agent initialized with full pipeline routing")
 
+    def _load_prompt_examples(self) -> Optional[Dict[str, Any]]:
+        """Load prompt examples from JSON file.
+        
+        Returns:
+            Dictionary containing prompt examples or None if file not found
+        """
+        try:
+            examples_path = Path(__file__).parent / "prompt_examples.json"
+            if examples_path.exists():
+                with open(examples_path, 'r') as f:
+                    examples = json.load(f)
+                logger.info(f"Loaded {len(examples.get('examples', []))} prompt examples")
+                return examples
+            else:
+                logger.warning("Prompt examples file not found")
+                return None
+        except Exception as e:
+            logger.error(f"Error loading prompt examples: {e}")
+            return None
+
+    def _compute_example_embeddings(self) -> Optional[np.ndarray]:
+        """Compute embeddings for all prompt examples.
+        
+        Returns:
+            Numpy array of embeddings or None if computation fails
+        """
+        if not self.prompt_examples or not self.sentence_transformer:
+            return None
+            
+        try:
+            examples = self.prompt_examples.get('examples', [])
+            prompts = [example['prompt'] for example in examples]
+            embeddings = self.sentence_transformer.encode(prompts)
+            logger.info(f"Computed embeddings for {len(prompts)} examples")
+            return embeddings
+        except Exception as e:
+            logger.error(f"Error computing example embeddings: {e}")
+            return None
+
+    def _find_similar_examples(self, prompt: str, top_k: int = 3) -> List[Dict[str, Any]]:
+        """Find similar examples using cosine similarity.
+        
+        Args:
+            prompt: Input prompt to find similar examples for
+            top_k: Number of top similar examples to return
+            
+        Returns:
+            List of similar examples with their similarity scores
+        """
+        if not self.sentence_transformer or not self.example_embeddings:
+            return []
+            
+        try:
+            # Encode the input prompt
+            prompt_embedding = self.sentence_transformer.encode([prompt])
+            
+            # Compute cosine similarities
+            similarities = np.dot(self.example_embeddings, prompt_embedding.T).flatten()
+            
+            # Get top-k similar examples
+            top_indices = np.argsort(similarities)[::-1][:top_k]
+            
+            examples = self.prompt_examples.get('examples', [])
+            similar_examples = []
+            
+            for idx in top_indices:
+                if idx < len(examples):
+                    example = examples[idx]
+                    similar_examples.append({
+                        'example': example,
+                        'similarity_score': float(similarities[idx]),
+                        'prompt': example['prompt'],
+                        'parsed_output': example['parsed_output'],
+                        'category': example.get('category', 'unknown'),
+                        'performance_score': example.get('performance_score', 0.0)
+                    })
+            
+            return similar_examples
+            
+        except Exception as e:
+            logger.error(f"Error finding similar examples: {e}")
+            return []
+
+    def _create_few_shot_prompt(self, prompt: str, similar_examples: List[Dict[str, Any]]) -> str:
+        """Create a few-shot prompt with similar examples as context.
+        
+        Args:
+            prompt: Original user prompt
+            similar_examples: List of similar examples with their outputs
+            
+        Returns:
+            Enhanced prompt with few-shot examples
+        """
+        if not similar_examples:
+            return prompt
+            
+        # Create few-shot context
+        few_shot_context = "Here are some similar examples to help guide your response:\n\n"
+        
+        for i, example_data in enumerate(similar_examples, 1):
+            example = example_data['example']
+            few_shot_context += f"Example {i}:\n"
+            few_shot_context += f"Input: {example['prompt']}\n"
+            few_shot_context += f"Output: {json.dumps(example['parsed_output'], indent=2)}\n"
+            few_shot_context += f"Category: {example.get('category', 'unknown')}\n"
+            few_shot_context += f"Performance Score: {example.get('performance_score', 0.0):.2f}\n\n"
+        
+        few_shot_context += f"Now, please process this request:\n{prompt}\n\n"
+        few_shot_context += "Based on the examples above, provide a structured response in JSON format."
+        
+        return few_shot_context
+
+    def _save_successful_example(self, prompt: str, parsed_output: Dict[str, Any], 
+                                category: str = "unknown", performance_score: float = 0.0) -> None:
+        """Save a successful prompt example to the examples file.
+        
+        Args:
+            prompt: User prompt
+            parsed_output: Parsed output from the prompt
+            category: Category of the prompt
+            performance_score: Performance score of the response
+        """
+        try:
+            if not self.prompt_examples:
+                return
+                
+            new_example = {
+                "id": f"{category}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "prompt": prompt,
+                "category": category,
+                "symbols": self._extract_symbols_from_prompt(prompt),
+                "timeframe": self._extract_timeframe_from_prompt(prompt),
+                "strategy_type": self._extract_strategy_type_from_prompt(prompt),
+                "parsed_output": parsed_output,
+                "success": True,
+                "timestamp": datetime.now().isoformat(),
+                "performance_score": performance_score
+            }
+            
+            # Add to examples
+            self.prompt_examples['examples'].append(new_example)
+            
+            # Update metadata
+            self.prompt_examples['metadata']['total_examples'] = len(self.prompt_examples['examples'])
+            self.prompt_examples['metadata']['last_updated'] = datetime.now().isoformat()
+            
+            # Save to file
+            examples_path = Path(__file__).parent / "prompt_examples.json"
+            with open(examples_path, 'w') as f:
+                json.dump(self.prompt_examples, f, indent=2)
+                
+            # Update embeddings if available
+            if self.sentence_transformer:
+                self.example_embeddings = self._compute_example_embeddings()
+                
+            logger.info(f"Saved successful prompt example: {new_example['id']}")
+            
+        except Exception as e:
+            logger.error(f"Error saving prompt example: {e}")
+
+    def _extract_symbols_from_prompt(self, prompt: str) -> List[str]:
+        """Extract stock symbols from prompt.
+        
+        Args:
+            prompt: User prompt
+            
+        Returns:
+            List of extracted symbols
+        """
+        # Simple regex to find stock symbols (1-5 capital letters)
+        symbols = re.findall(r'\b([A-Z]{1,5})\b', prompt.upper())
+        return list(set(symbols))  # Remove duplicates
+
+    def _extract_timeframe_from_prompt(self, prompt: str) -> str:
+        """Extract timeframe from prompt.
+        
+        Args:
+            prompt: User prompt
+            
+        Returns:
+            Extracted timeframe
+        """
+        prompt_lower = prompt.lower()
+        
+        if "next" in prompt_lower and "day" in prompt_lower:
+            match = re.search(r"next (\d+)d?", prompt_lower)
+            if match:
+                return f"{match.group(1)} days"
+        elif "next" in prompt_lower and "week" in prompt_lower:
+            match = re.search(r"next (\d+)w?", prompt_lower)
+            if match:
+                return f"{int(match.group(1)) * 7} days"
+        elif "next" in prompt_lower and "month" in prompt_lower:
+            match = re.search(r"next (\d+)m?", prompt_lower)
+            if match:
+                return f"{int(match.group(1)) * 30} days"
+        elif "last" in prompt_lower and "month" in prompt_lower:
+            match = re.search(r"last (\d+)m?", prompt_lower)
+            if match:
+                return f"{int(match.group(1)) * 30} days"
+                
+        return "unknown"
+
+    def _extract_strategy_type_from_prompt(self, prompt: str) -> str:
+        """Extract strategy type from prompt.
+        
+        Args:
+            prompt: User prompt
+            
+        Returns:
+            Extracted strategy type
+        """
+        prompt_lower = prompt.lower()
+        
+        strategy_keywords = {
+            "rsi": "RSI",
+            "macd": "MACD", 
+            "bollinger": "Bollinger_Bands",
+            "moving average": "Moving_Average",
+            "sma": "SMA",
+            "ema": "EMA",
+            "stochastic": "Stochastic",
+            "williams": "Williams_R",
+            "cci": "CCI",
+            "atr": "ATR",
+            "forecast": "Forecasting",
+            "predict": "Prediction",
+            "backtest": "Backtesting",
+            "optimize": "Optimization",
+            "analyze": "Analysis"
+        }
+        
+        for keyword, strategy_type in strategy_keywords.items():
+            if keyword in prompt_lower:
+                return strategy_type
+                
+        return "unknown"
+
+    def get_prompt_examples_stats(self) -> Dict[str, Any]:
+        """Get statistics about loaded prompt examples.
+        
+        Returns:
+            Dictionary with prompt examples statistics
+        """
+        if not self.prompt_examples:
+            return {"error": "No prompt examples loaded"}
+            
+        examples = self.prompt_examples.get('examples', [])
+        metadata = self.prompt_examples.get('metadata', {})
+        
+        # Count examples by category
+        categories = {}
+        symbols = set()
+        strategy_types = set()
+        
+        for example in examples:
+            category = example.get('category', 'unknown')
+            categories[category] = categories.get(category, 0) + 1
+            
+            # Collect symbols
+            for symbol in example.get('symbols', []):
+                symbols.add(symbol)
+                
+            # Collect strategy types
+            strategy_type = example.get('strategy_type', 'unknown')
+            strategy_types.add(strategy_type)
+        
+        # Calculate average performance score
+        performance_scores = [ex.get('performance_score', 0.0) for ex in examples]
+        avg_performance = sum(performance_scores) / len(performance_scores) if performance_scores else 0.0
+        
+        return {
+            "total_examples": len(examples),
+            "categories": categories,
+            "unique_symbols": list(symbols),
+            "unique_strategy_types": list(strategy_types),
+            "average_performance_score": avg_performance,
+            "embeddings_available": self.example_embeddings is not None,
+            "sentence_transformer_available": self.sentence_transformer is not None,
+            "metadata": metadata
+        }
+
     def process_prompt(self, prompt: str) -> AgentResponse:
         """Process user prompt and route through trading pipeline.
 
@@ -209,30 +521,73 @@ class PromptAgent:
         try:
             logger.info(f"Processing prompt: {prompt}")
 
+            # Find similar examples for few-shot learning
+            similar_examples = self._find_similar_examples(prompt, top_k=3)
+            
+            # Create enhanced prompt with few-shot examples
+            enhanced_prompt = self._create_few_shot_prompt(prompt, similar_examples)
+            
+            if similar_examples:
+                logger.info(f"Found {len(similar_examples)} similar examples with scores: "
+                          f"{[f'{ex['similarity_score']:.3f}' for ex in similar_examples]}")
+
             # Parse prompt to extract intent and parameters
             intent, params = self._parse_prompt(prompt)
 
+            # Process the request based on intent
             if intent == "forecast":
-                return self._handle_forecast_request(params)
+                response = self._handle_forecast_request(params)
             elif intent == "strategy":
-                return self._handle_strategy_request(params)
+                response = self._handle_strategy_request(params)
             elif intent == "backtest":
-                return self._handle_backtest_request(params)
+                response = self._handle_backtest_request(params)
             elif intent == "trade":
-                return self._handle_trade_request(params)
+                response = self._handle_trade_request(params)
             elif intent == "optimize":
-                return self._handle_optimization_request(params)
+                response = self._handle_optimization_request(params)
             elif intent == "analyze":
-                return self._handle_analysis_request(params)
+                response = self._handle_analysis_request(params)
             elif intent == "create_model":
-                return self._handle_model_creation_request(params)
+                response = self._handle_model_creation_request(params)
             else:
-                return {
+                response = {
                     "success": True,
                     "result": self._handle_general_request(prompt, params),
                     "message": "Operation completed successfully",
                     "timestamp": datetime.now().isoformat(),
                 }
+
+            # Save successful example if response was successful
+            if response and response.get("success", False):
+                try:
+                    # Extract category from intent
+                    category = intent if intent != "general" else "general_request"
+                    
+                    # Create parsed output for saving
+                    parsed_output = {
+                        "action": intent,
+                        "parameters": params,
+                        "response": response.get("result", {}),
+                        "message": response.get("message", ""),
+                        "timestamp": response.get("timestamp", datetime.now().isoformat())
+                    }
+                    
+                    # Calculate performance score (simple heuristic)
+                    performance_score = 0.8  # Default score
+                    if response.get("result"):
+                        performance_score = 0.9
+                    if similar_examples:
+                        # Boost score if we found similar examples
+                        avg_similarity = sum(ex['similarity_score'] for ex in similar_examples) / len(similar_examples)
+                        performance_score = min(1.0, performance_score + avg_similarity * 0.1)
+                    
+                    # Save the successful example
+                    self._save_successful_example(prompt, parsed_output, category, performance_score)
+                    
+                except Exception as e:
+                    logger.warning(f"Could not save successful example: {e}")
+
+            return response
 
         except Exception as e:
             logger.error(f"Error processing prompt: {e}")

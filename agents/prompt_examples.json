@@ -1,0 +1,342 @@
+{
+  "examples": [
+    {
+      "id": "forecast_aapl_001",
+      "prompt": "Forecast AAPL stock price for the next 30 days using technical analysis",
+      "category": "forecasting",
+      "symbols": ["AAPL"],
+      "timeframe": "30 days",
+      "strategy_type": "technical_analysis",
+      "parsed_output": {
+        "action": "forecast",
+        "symbol": "AAPL",
+        "timeframe": "30 days",
+        "method": "technical_analysis",
+        "confidence": 0.85,
+        "reasoning": "Using RSI, MACD, and Bollinger Bands for trend analysis"
+      },
+      "success": true,
+      "timestamp": "2024-01-15T10:30:00Z",
+      "performance_score": 0.92
+    },
+    {
+      "id": "strategy_rsi_001",
+      "prompt": "Create a bullish RSI strategy for TSLA with 14-period lookback",
+      "category": "strategy_creation",
+      "symbols": ["TSLA"],
+      "timeframe": "14 periods",
+      "strategy_type": "RSI",
+      "parsed_output": {
+        "action": "create_strategy",
+        "symbol": "TSLA",
+        "strategy": "RSI",
+        "parameters": {
+          "period": 14,
+          "overbought": 70,
+          "oversold": 30
+        },
+        "direction": "bullish",
+        "confidence": 0.78
+      },
+      "success": true,
+      "timestamp": "2024-01-15T11:15:00Z",
+      "performance_score": 0.88
+    },
+    {
+      "id": "backtest_macd_001",
+      "prompt": "Backtest MACD strategy on SPY for the last 6 months with 100k initial capital",
+      "category": "backtesting",
+      "symbols": ["SPY"],
+      "timeframe": "6 months",
+      "strategy_type": "MACD",
+      "parsed_output": {
+        "action": "backtest",
+        "symbol": "SPY",
+        "strategy": "MACD",
+        "timeframe": "6 months",
+        "initial_capital": 100000,
+        "metrics": ["returns", "sharpe_ratio", "max_drawdown"],
+        "confidence": 0.82
+      },
+      "success": true,
+      "timestamp": "2024-01-15T12:00:00Z",
+      "performance_score": 0.91
+    },
+    {
+      "id": "analysis_volatility_001",
+      "prompt": "Analyze volatility patterns in NVDA stock over the past year",
+      "category": "analysis",
+      "symbols": ["NVDA"],
+      "timeframe": "1 year",
+      "strategy_type": "volatility_analysis",
+      "parsed_output": {
+        "action": "analyze",
+        "symbol": "NVDA",
+        "analysis_type": "volatility",
+        "timeframe": "1 year",
+        "metrics": ["historical_volatility", "implied_volatility", "volatility_regime"],
+        "confidence": 0.79
+      },
+      "success": true,
+      "timestamp": "2024-01-15T13:30:00Z",
+      "performance_score": 0.87
+    },
+    {
+      "id": "portfolio_optimization_001",
+      "prompt": "Optimize portfolio weights for AAPL, GOOGL, MSFT with risk parity approach",
+      "category": "portfolio_optimization",
+      "symbols": ["AAPL", "GOOGL", "MSFT"],
+      "timeframe": "optimization",
+      "strategy_type": "risk_parity",
+      "parsed_output": {
+        "action": "optimize_portfolio",
+        "symbols": ["AAPL", "GOOGL", "MSFT"],
+        "method": "risk_parity",
+        "constraints": {
+          "min_weight": 0.1,
+          "max_weight": 0.5
+        },
+        "confidence": 0.84
+      },
+      "success": true,
+      "timestamp": "2024-01-15T14:15:00Z",
+      "performance_score": 0.89
+    },
+    {
+      "id": "risk_assessment_001",
+      "prompt": "Assess downside risk for AMZN position with 95% confidence level",
+      "category": "risk_assessment",
+      "symbols": ["AMZN"],
+      "timeframe": "risk_analysis",
+      "strategy_type": "var_analysis",
+      "parsed_output": {
+        "action": "assess_risk",
+        "symbol": "AMZN",
+        "risk_metric": "value_at_risk",
+        "confidence_level": 0.95,
+        "timeframe": "1 day",
+        "method": "historical_simulation",
+        "confidence": 0.81
+      },
+      "success": true,
+      "timestamp": "2024-01-15T15:00:00Z",
+      "performance_score": 0.86
+    },
+    {
+      "id": "signal_generation_001",
+      "prompt": "Generate buy/sell signals for META using Bollinger Bands strategy",
+      "category": "signal_generation",
+      "symbols": ["META"],
+      "timeframe": "signal_analysis",
+      "strategy_type": "bollinger_bands",
+      "parsed_output": {
+        "action": "generate_signals",
+        "symbol": "META",
+        "strategy": "bollinger_bands",
+        "signal_type": "buy_sell",
+        "parameters": {
+          "window": 20,
+          "num_std": 2.0
+        },
+        "confidence": 0.77
+      },
+      "success": true,
+      "timestamp": "2024-01-15T16:30:00Z",
+      "performance_score": 0.83
+    },
+    {
+      "id": "market_regime_001",
+      "prompt": "Identify current market regime for S&P 500 using regime classification",
+      "category": "market_regime",
+      "symbols": ["SPY"],
+      "timeframe": "regime_analysis",
+      "strategy_type": "regime_classification",
+      "parsed_output": {
+        "action": "classify_regime",
+        "symbol": "SPY",
+        "method": "regime_classification",
+        "regime_types": ["bull_market", "bear_market", "sideways", "volatile"],
+        "lookback_period": "6 months",
+        "confidence": 0.88
+      },
+      "success": true,
+      "timestamp": "2024-01-15T17:15:00Z",
+      "performance_score": 0.94
+    },
+    {
+      "id": "correlation_analysis_001",
+      "prompt": "Analyze correlation between BTC and ETH over the last 3 months",
+      "category": "correlation_analysis",
+      "symbols": ["BTC", "ETH"],
+      "timeframe": "3 months",
+      "strategy_type": "correlation_analysis",
+      "parsed_output": {
+        "action": "analyze_correlation",
+        "symbols": ["BTC", "ETH"],
+        "timeframe": "3 months",
+        "method": "pearson_correlation",
+        "rolling_window": 30,
+        "confidence": 0.85
+      },
+      "success": true,
+      "timestamp": "2024-01-15T18:00:00Z",
+      "performance_score": 0.90
+    },
+    {
+      "id": "momentum_analysis_001",
+      "prompt": "Calculate momentum indicators for NFLX including RSI, MACD, and Stochastic",
+      "category": "momentum_analysis",
+      "symbols": ["NFLX"],
+      "timeframe": "momentum_analysis",
+      "strategy_type": "momentum_indicators",
+      "parsed_output": {
+        "action": "calculate_momentum",
+        "symbol": "NFLX",
+        "indicators": ["RSI", "MACD", "Stochastic"],
+        "parameters": {
+          "rsi_period": 14,
+          "macd_fast": 12,
+          "macd_slow": 26,
+          "stoch_k": 14,
+          "stoch_d": 3
+        },
+        "confidence": 0.83
+      },
+      "success": true,
+      "timestamp": "2024-01-15T19:30:00Z",
+      "performance_score": 0.88
+    },
+    {
+      "id": "sentiment_analysis_001",
+      "prompt": "Analyze sentiment for TSLA using news headlines and social media data",
+      "category": "sentiment_analysis",
+      "symbols": ["TSLA"],
+      "timeframe": "sentiment_analysis",
+      "strategy_type": "sentiment_analysis",
+      "parsed_output": {
+        "action": "analyze_sentiment",
+        "symbol": "TSLA",
+        "data_sources": ["news_headlines", "social_media"],
+        "sentiment_metrics": ["compound_score", "positive_ratio", "negative_ratio"],
+        "timeframe": "7 days",
+        "confidence": 0.76
+      },
+      "success": true,
+      "timestamp": "2024-01-15T20:15:00Z",
+      "performance_score": 0.82
+    },
+    {
+      "id": "options_analysis_001",
+      "prompt": "Calculate implied volatility and Greeks for AAPL call options expiring in 30 days",
+      "category": "options_analysis",
+      "symbols": ["AAPL"],
+      "timeframe": "30 days",
+      "strategy_type": "options_analysis",
+      "parsed_output": {
+        "action": "analyze_options",
+        "symbol": "AAPL",
+        "option_type": "call",
+        "expiration": "30 days",
+        "metrics": ["implied_volatility", "delta", "gamma", "theta", "vega"],
+        "strike_prices": "at_the_money",
+        "confidence": 0.87
+      },
+      "success": true,
+      "timestamp": "2024-01-15T21:00:00Z",
+      "performance_score": 0.93
+    },
+    {
+      "id": "sector_rotation_001",
+      "prompt": "Identify sector rotation opportunities using sector ETF performance analysis",
+      "category": "sector_analysis",
+      "symbols": ["XLK", "XLF", "XLE", "XLV", "XLI"],
+      "timeframe": "sector_analysis",
+      "strategy_type": "sector_rotation",
+      "parsed_output": {
+        "action": "analyze_sector_rotation",
+        "sectors": ["technology", "financials", "energy", "healthcare", "industrials"],
+        "etfs": ["XLK", "XLF", "XLE", "XLV", "XLI"],
+        "analysis_period": "3 months",
+        "metrics": ["relative_strength", "momentum", "correlation"],
+        "confidence": 0.79
+      },
+      "success": true,
+      "timestamp": "2024-01-15T22:30:00Z",
+      "performance_score": 0.85
+    },
+    {
+      "id": "mean_reversion_001",
+      "prompt": "Find mean reversion opportunities in oversold stocks using Bollinger Bands",
+      "category": "mean_reversion",
+      "symbols": ["universe"],
+      "timeframe": "mean_reversion_analysis",
+      "strategy_type": "mean_reversion",
+      "parsed_output": {
+        "action": "find_mean_reversion",
+        "strategy": "bollinger_bands",
+        "screening_criteria": {
+          "oversold_threshold": 0.2,
+          "volume_filter": true,
+          "market_cap_filter": "large_cap"
+        },
+        "universe": "snp500",
+        "confidence": 0.74
+      },
+      "success": true,
+      "timestamp": "2024-01-15T23:15:00Z",
+      "performance_score": 0.80
+    },
+    {
+      "id": "trend_following_001",
+      "prompt": "Identify trending stocks using moving average crossover strategy",
+      "category": "trend_following",
+      "symbols": ["universe"],
+      "timeframe": "trend_analysis",
+      "strategy_type": "moving_average_crossover",
+      "parsed_output": {
+        "action": "identify_trends",
+        "strategy": "moving_average_crossover",
+        "parameters": {
+          "fast_ma": 10,
+          "slow_ma": 50
+        },
+        "screening_criteria": {
+          "trend_strength": "strong",
+          "volume_confirmation": true
+        },
+        "universe": "nasdaq100",
+        "confidence": 0.81
+      },
+      "success": true,
+      "timestamp": "2024-01-16T00:00:00Z",
+      "performance_score": 0.86
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "created": "2024-01-15T10:00:00Z",
+    "last_updated": "2024-01-16T00:00:00Z",
+    "total_examples": 15,
+    "categories": [
+      "forecasting",
+      "strategy_creation", 
+      "backtesting",
+      "analysis",
+      "portfolio_optimization",
+      "risk_assessment",
+      "signal_generation",
+      "market_regime",
+      "correlation_analysis",
+      "momentum_analysis",
+      "sentiment_analysis",
+      "options_analysis",
+      "sector_analysis",
+      "mean_reversion",
+      "trend_following"
+    ],
+    "symbols": [
+      "AAPL", "TSLA", "SPY", "NVDA", "GOOGL", "MSFT", "AMZN", "META", 
+      "BTC", "ETH", "NFLX", "XLK", "XLF", "XLE", "XLV", "XLI"
+    ]
+  }
+} 

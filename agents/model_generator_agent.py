@@ -18,7 +18,7 @@ import aiohttp
 import numpy as np
 import pandas as pd
 
-from core.agents.base_agent import AgentResult, BaseAgent
+from trading.base_agent import AgentResult, BaseAgent
 
 # ML imports
 try:
