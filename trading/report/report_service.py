@@ -55,7 +55,9 @@ class ReportService:
         self.service_name = service_name
 
         # Initialize Redis connection
-        self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
+        self.redis_client = redis.Redis(
+            host=redis_host, port=redis_port, db=redis_db, decode_responses=True
+        )
 
         # Initialize report generator
         self.report_generator = ReportGenerator(**kwargs)
@@ -65,11 +67,20 @@ class ReportService:
         self.last_heartbeat = time.time()
 
         # Channels to listen to
-        self.channels = ["forecast_completed", "strategy_completed", "backtest_completed", "model_evaluation_completed"]
+        self.channels = [
+            "forecast_completed",
+            "strategy_completed",
+            "backtest_completed",
+            "model_evaluation_completed",
+        ]
 
         logger.info(f"ReportService initialized: {service_name}")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def start(self):
         """Start the report service."""
@@ -101,7 +112,11 @@ class ReportService:
             while self.running:
                 try:
                     self.last_heartbeat = time.time()
-                    self.redis_client.set(f"service:{self.service_name}:heartbeat", self.last_heartbeat, ex=60)
+                    self.redis_client.set(
+                        f"service:{self.service_name}:heartbeat",
+                        self.last_heartbeat,
+                        ex=60,
+                    )
                     time.sleep(30)
                 except Exception as e:
                     logger.error(f"Heartbeat error: {e}")
@@ -140,7 +155,9 @@ class ReportService:
         """Handle incoming events."""
         try:
             event_data = json.loads(data)
-            logger.info(f"Received event on {channel}: {event_data.get('event_id', 'unknown')}")
+            logger.info(
+                f"Received event on {channel}: {event_data.get('event_id', 'unknown')}"
+            )
 
             if channel == "forecast_completed":
                 self._handle_forecast_completed(event_data)
@@ -389,7 +406,10 @@ def main():
     args = parser.parse_args()
 
     # Configure logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 
     # Create email config if provided
     email_config = {}

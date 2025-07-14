@@ -92,14 +92,20 @@ class ModelMonitor:
         self.performance_alerts = []  # List of performance alerts
 
         # Parameter tracking
-        self.parameter_history = defaultdict(list)  # model_name -> list of ModelParameters
+        self.parameter_history = defaultdict(
+            list
+        )  # model_name -> list of ModelParameters
         self.baseline_parameters = {}  # model_name -> baseline parameters
-        self.parameter_drift_scores = defaultdict(list)  # model_name -> list of drift scores
+        self.parameter_drift_scores = defaultdict(
+            list
+        )  # model_name -> list of drift scores
 
         # Anomaly detection
         self.anomaly_detector = IsolationForest(contamination=0.1, random_state=42)
         self.anomaly_scores = defaultdict(list)  # model_name -> list of anomaly scores
-        self.behavior_features = defaultdict(list)  # model_name -> list of behavior features
+        self.behavior_features = defaultdict(
+            list
+        )  # model_name -> list of behavior features
 
         # Drift detection
         self.drift_alerts = []  # List of DriftAlert objects
@@ -122,7 +128,9 @@ class ModelMonitor:
                     data = json.load(f)
 
                 # Load parameter history
-                for model_name, params_list in data.get("parameter_history", {}).items():
+                for model_name, params_list in data.get(
+                    "parameter_history", {}
+                ).items():
                     for param_data in params_list:
                         param = ModelParameters(
                             model_name=param_data["model_name"],
@@ -197,7 +205,9 @@ class ModelMonitor:
             if not result["success"]:
                 logger.error(f"Failed to save monitoring data: {result['error']}")
             else:
-                logger.debug(f"Successfully saved monitoring data: {result['filepath']}")
+                logger.debug(
+                    f"Successfully saved monitoring data: {result['filepath']}"
+                )
 
         except Exception as e:
             logger.error(f"Failed to save monitoring data: {e}")
@@ -213,7 +223,14 @@ class ModelMonitor:
             return self.trust_levels
         except Exception as e:
             self.logger.error(f"Error getting model trust levels: {str(e)}")
-            return {"lstm": 0.5, "xgboost": 0.5, "prophet": 0.5, "ensemble": 0.5, "tcn": 0.5, "transformer": 0.5}
+            return {
+                "lstm": 0.5,
+                "xgboost": 0.5,
+                "prophet": 0.5,
+                "ensemble": 0.5,
+                "tcn": 0.5,
+                "transformer": 0.5,
+            }
 
     def update_trust_level(self, model_name: str, new_trust: float):
         """Update trust level for a specific model.
@@ -229,7 +246,10 @@ class ModelMonitor:
             self.logger.error(f"Error updating trust level: {str(e)}")
 
     def record_model_parameters(
-        self, model_name: str, parameters: Dict[str, Any], metadata: Optional[Dict[str, Any]] = None
+        self,
+        model_name: str,
+        parameters: Dict[str, Any],
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Record model parameters and detect drift.
 
@@ -270,31 +290,41 @@ class ModelMonitor:
 
                 # Keep only last 100 parameter records
                 if len(self.parameter_history[model_name]) > 100:
-                    self.parameter_history[model_name] = self.parameter_history[model_name][-100:]
+                    self.parameter_history[model_name] = self.parameter_history[
+                        model_name
+                    ][-100:]
 
                 # Update drift scores
                 self.parameter_drift_scores[model_name].append(param_record.drift_score)
                 if len(self.parameter_drift_scores[model_name]) > 100:
-                    self.parameter_drift_scores[model_name] = self.parameter_drift_scores[model_name][-100:]
+                    self.parameter_drift_scores[
+                        model_name
+                    ] = self.parameter_drift_scores[model_name][-100:]
 
                 # Check for drift alerts
                 if param_record.drift_score > self.drift_threshold:
                     self._create_drift_alert(
-                        model_name, "parameter", param_record.drift_score, drift_result.get("affected_parameters", [])
+                        model_name,
+                        "parameter",
+                        param_record.drift_score,
+                        drift_result.get("affected_parameters", []),
                     )
 
                 # Save periodically
                 if len(self.parameter_history[model_name]) % 10 == 0:
                     self._save_monitoring_data()
 
-                self.logger.info(f"Recorded parameters for {model_name}, drift_score: {param_record.drift_score:.3f}")
+                self.logger.info(
+                    f"Recorded parameters for {model_name}, drift_score: {param_record.drift_score:.3f}"
+                )
 
                 return {
                     "success": True,
                     "drift_score": param_record.drift_score,
                     "anomaly_score": param_record.anomaly_score,
                     "drift_detected": param_record.drift_score > self.drift_threshold,
-                    "anomaly_detected": param_record.anomaly_score > self.anomaly_threshold,
+                    "anomaly_detected": param_record.anomaly_score
+                    > self.anomaly_threshold,
                 }
 
         except Exception as e:
@@ -312,13 +342,19 @@ class ModelMonitor:
         except Exception:
             return "unknown"
 
-    def _detect_parameter_drift(self, model_name: str, current_parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def _detect_parameter_drift(
+        self, model_name: str, current_parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Detect parameter drift compared to baseline."""
         try:
             if model_name not in self.baseline_parameters:
                 # Set baseline if not exists
                 self.baseline_parameters[model_name] = current_parameters.copy()
-                return {"drift_score": 0.0, "affected_parameters": [], "baseline_set": True}
+                return {
+                    "drift_score": 0.0,
+                    "affected_parameters": [],
+                    "baseline_set": True,
+                }
 
             baseline = self.baseline_parameters[model_name]
             drift_scores = {}
@@ -329,9 +365,13 @@ class ModelMonitor:
                     baseline_value = baseline[param_name]
 
                     # Calculate drift for numeric parameters
-                    if isinstance(current_value, (int, float)) and isinstance(baseline_value, (int, float)):
+                    if isinstance(current_value, (int, float)) and isinstance(
+                        baseline_value, (int, float)
+                    ):
                         if baseline_value != 0:
-                            drift_pct = abs(current_value - baseline_value) / abs(baseline_value)
+                            drift_pct = abs(current_value - baseline_value) / abs(
+                                baseline_value
+                            )
                             drift_scores[param_name] = drift_pct
 
                             if drift_pct > 0.1:  # 10% threshold
@@ -340,12 +380,16 @@ class ModelMonitor:
                             drift_scores[param_name] = 0.0
                     else:
                         # For non-numeric parameters, check if they changed
-                        drift_scores[param_name] = 1.0 if current_value != baseline_value else 0.0
+                        drift_scores[param_name] = (
+                            1.0 if current_value != baseline_value else 0.0
+                        )
                         if current_value != baseline_value:
                             affected_parameters.append(param_name)
 
             # Calculate overall drift score
-            overall_drift = np.mean(list(drift_scores.values())) if drift_scores else 0.0
+            overall_drift = (
+                np.mean(list(drift_scores.values())) if drift_scores else 0.0
+            )
 
             return {
                 "drift_score": overall_drift,
@@ -357,7 +401,9 @@ class ModelMonitor:
             self.logger.error(f"Error detecting parameter drift: {e}")
             return {"drift_score": 0.0, "affected_parameters": [], "error": str(e)}
 
-    def _detect_parameter_anomaly(self, model_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def _detect_parameter_anomaly(
+        self, model_name: str, parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Detect parameter anomalies using isolation forest."""
         try:
             # Extract numeric parameters for anomaly detection
@@ -375,7 +421,9 @@ class ModelMonitor:
             # Add to behavior features
             self.behavior_features[model_name].append(numeric_params)
             if len(self.behavior_features[model_name]) > 100:
-                self.behavior_features[model_name] = self.behavior_features[model_name][-100:]
+                self.behavior_features[model_name] = self.behavior_features[model_name][
+                    -100:
+                ]
 
             # Train anomaly detector if we have enough data
             if len(self.behavior_features[model_name]) >= 10:
@@ -386,7 +434,9 @@ class ModelMonitor:
 
                 # Predict anomaly score for current parameters
                 current_features = np.array([numeric_params])
-                anomaly_score = self.anomaly_detector.decision_function(current_features)[0]
+                anomaly_score = self.anomaly_detector.decision_function(
+                    current_features
+                )[0]
 
                 # Convert to 0-1 scale (higher = more anomalous)
                 anomaly_score = 1 - (anomaly_score + 0.5)  # Normalize to 0-1
@@ -394,7 +444,9 @@ class ModelMonitor:
                 # Store anomaly score
                 self.anomaly_scores[model_name].append(anomaly_score)
                 if len(self.anomaly_scores[model_name]) > 100:
-                    self.anomaly_scores[model_name] = self.anomaly_scores[model_name][-100:]
+                    self.anomaly_scores[model_name] = self.anomaly_scores[model_name][
+                        -100:
+                    ]
 
                 return {
                     "anomaly_score": anomaly_score,
@@ -402,16 +454,32 @@ class ModelMonitor:
                     "features_used": param_names,
                 }
             else:
-                return {"anomaly_score": 0.0, "anomaly_detected": False, "insufficient_data": True}
+                return {
+                    "anomaly_score": 0.0,
+                    "anomaly_detected": False,
+                    "insufficient_data": True,
+                }
 
         except Exception as e:
             self.logger.error(f"Error detecting parameter anomaly: {e}")
             return {"anomaly_score": 0.0, "anomaly_detected": False, "error": str(e)}
 
-    def _create_drift_alert(self, model_name: str, drift_type: str, drift_score: float, affected_parameters: List[str]):
+    def _create_drift_alert(
+        self,
+        model_name: str,
+        drift_type: str,
+        drift_score: float,
+        affected_parameters: List[str],
+    ):
         """Create a drift alert."""
         try:
-            severity = "high" if drift_score > 0.5 else "medium" if drift_score > 0.2 else "low"
+            severity = (
+                "high"
+                if drift_score > 0.5
+                else "medium"
+                if drift_score > 0.2
+                else "low"
+            )
 
             alert = DriftAlert(
                 timestamp=datetime.now(),
@@ -431,12 +499,16 @@ class ModelMonitor:
             if len(self.drift_alerts) > 100:
                 self.drift_alerts = self.drift_alerts[-100:]
 
-            self.logger.warning(f"Drift alert for {model_name}: {drift_type} drift score {drift_score:.3f}")
+            self.logger.warning(
+                f"Drift alert for {model_name}: {drift_type} drift score {drift_score:.3f}"
+            )
 
         except Exception as e:
             self.logger.error(f"Error creating drift alert: {e}")
 
-    def record_model_performance(self, model_name: str, performance_metrics: Dict[str, float]):
+    def record_model_performance(
+        self, model_name: str, performance_metrics: Dict[str, float]
+    ):
         """Record performance metrics for a model and check for drops.
 
         Args:
@@ -457,7 +529,9 @@ class ModelMonitor:
 
                 # Keep only last 100 records
                 if len(self.performance_history[model_name]) > 100:
-                    self.performance_history[model_name] = self.performance_history[model_name][-100:]
+                    self.performance_history[model_name] = self.performance_history[
+                        model_name
+                    ][-100:]
 
                 # Check for performance drops
                 self._check_performance_drops(model_name, performance_metrics)
@@ -471,7 +545,11 @@ class ModelMonitor:
             self.logger.error(f"Error recording model performance: {e}")
 
     def _check_performance_drops(
-        self, model_name: str, current_metrics: Dict[str, float], threshold_percent: float = 20.0, window_size: int = 10
+        self,
+        model_name: str,
+        current_metrics: Dict[str, float],
+        threshold_percent: float = 20.0,
+        window_size: int = 10,
     ):
         """Check for performance drops compared to rolling average.
 
@@ -496,7 +574,9 @@ class ModelMonitor:
                 if metric_name in ["timestamp", "last_updated"]:
                     continue
 
-                values = [record["metrics"].get(metric_name, 0) for record in recent_records]
+                values = [
+                    record["metrics"].get(metric_name, 0) for record in recent_records
+                ]
                 if values:
                     rolling_averages[metric_name] = np.mean(values)
 
@@ -513,7 +593,9 @@ class ModelMonitor:
                         # Calculate percentage change
                         if metric_name in ["mse", "mae", "max_drawdown", "volatility"]:
                             # For these metrics, higher is worse, so check for increases
-                            percent_change = ((current_value - rolling_avg) / rolling_avg) * 100
+                            percent_change = (
+                                (current_value - rolling_avg) / rolling_avg
+                            ) * 100
                             if percent_change > threshold_percent:
                                 drops_detected.append(
                                     {
@@ -526,7 +608,9 @@ class ModelMonitor:
                                 )
                         else:
                             # For other metrics, lower is worse, so check for decreases
-                            percent_change = ((rolling_avg - current_value) / rolling_avg) * 100
+                            percent_change = (
+                                (rolling_avg - current_value) / rolling_avg
+                            ) * 100
                             if percent_change > threshold_percent:
                                 drops_detected.append(
                                     {
@@ -547,19 +631,30 @@ class ModelMonitor:
                     "threshold_percent": threshold_percent,
                     "window_size": window_size,
                     "drops_detected": drops_detected,
-                    "severity": "high" if any(d["percent_change"] > 50 for d in drops_detected) else "medium",
+                    "severity": "high"
+                    if any(d["percent_change"] > 50 for d in drops_detected)
+                    else "medium",
                 }
 
                 self.performance_alerts.append(alert)
 
                 # Log the alert
-                drop_summary = ", ".join([f"{d['metric']}: {d['percent_change']:.1f}%" for d in drops_detected])
-                self.logger.warning(f"Performance drop detected for {model_name}: {drop_summary}")
+                drop_summary = ", ".join(
+                    [
+                        f"{d['metric']}: {d['percent_change']:.1f}%"
+                        for d in drops_detected
+                    ]
+                )
+                self.logger.warning(
+                    f"Performance drop detected for {model_name}: {drop_summary}"
+                )
 
         except Exception as e:
             self.logger.error(f"Error checking performance drops: {e}")
 
-    def _check_performance_drift(self, model_name: str, current_metrics: Dict[str, float]):
+    def _check_performance_drift(
+        self, model_name: str, current_metrics: Dict[str, float]
+    ):
         """Check for performance drift over time."""
         try:
             history = self.performance_history.get(model_name, [])
@@ -592,23 +687,32 @@ class ModelMonitor:
                     baseline_value = baseline_averages[metric_name]
 
                     if baseline_value != 0:
-                        drift_pct = abs(current_value - baseline_value) / abs(baseline_value)
+                        drift_pct = abs(current_value - baseline_value) / abs(
+                            baseline_value
+                        )
                         drift_scores[metric_name] = drift_pct
 
                         if drift_pct > 0.3:  # 30% threshold for performance drift
                             affected_metrics.append(metric_name)
 
             # Calculate overall performance drift
-            overall_drift = np.mean(list(drift_scores.values())) if drift_scores else 0.0
+            overall_drift = (
+                np.mean(list(drift_scores.values())) if drift_scores else 0.0
+            )
 
             if overall_drift > self.drift_threshold:
-                self._create_drift_alert(model_name, "performance", overall_drift, affected_metrics)
+                self._create_drift_alert(
+                    model_name, "performance", overall_drift, affected_metrics
+                )
 
         except Exception as e:
             self.logger.error(f"Error checking performance drift: {e}")
 
     def get_performance_alerts(
-        self, model_name: Optional[str] = None, severity: Optional[str] = None, limit: int = 50
+        self,
+        model_name: Optional[str] = None,
+        severity: Optional[str] = None,
+        limit: int = 50,
     ) -> List[Dict[str, Any]]:
         """Get performance alerts.
 
@@ -692,7 +796,9 @@ class ModelMonitor:
             self.logger.error(f"Error getting drift alerts: {e}")
             return []
 
-    def get_rolling_performance_averages(self, model_name: str, window_size: int = 10) -> Dict[str, float]:
+    def get_rolling_performance_averages(
+        self, model_name: str, window_size: int = 10
+    ) -> Dict[str, float]:
         """Get rolling performance averages for a model.
 
         Args:
@@ -751,17 +857,27 @@ class ModelMonitor:
                 return {"message": "No parameter history available"}
 
             # Calculate drift statistics
-            recent_drift_scores = drift_scores[-10:] if len(drift_scores) >= 10 else drift_scores
+            recent_drift_scores = (
+                drift_scores[-10:] if len(drift_scores) >= 10 else drift_scores
+            )
 
             summary = {
                 "model_name": model_name,
                 "total_parameter_records": len(params_history),
-                "current_drift_score": params_history[-1].drift_score if params_history else 0.0,
+                "current_drift_score": params_history[-1].drift_score
+                if params_history
+                else 0.0,
                 "average_drift_score": np.mean(drift_scores) if drift_scores else 0.0,
                 "max_drift_score": np.max(drift_scores) if drift_scores else 0.0,
-                "recent_drift_trend": np.mean(recent_drift_scores) if recent_drift_scores else 0.0,
-                "drift_alerts": len([a for a in self.drift_alerts if a.model_name == model_name]),
-                "last_parameter_update": params_history[-1].timestamp.isoformat() if params_history else None,
+                "recent_drift_trend": np.mean(recent_drift_scores)
+                if recent_drift_scores
+                else 0.0,
+                "drift_alerts": len(
+                    [a for a in self.drift_alerts if a.model_name == model_name]
+                ),
+                "last_parameter_update": params_history[-1].timestamp.isoformat()
+                if params_history
+                else None,
             }
 
             return summary
@@ -778,7 +894,11 @@ class ModelMonitor:
         """
         try:
             if model_name:
-                self.performance_alerts = [a for a in self.performance_alerts if a.get("model_name") != model_name]
+                self.performance_alerts = [
+                    a
+                    for a in self.performance_alerts
+                    if a.get("model_name") != model_name
+                ]
                 self.logger.info(f"Cleared performance alerts for {model_name}")
             else:
                 self.performance_alerts.clear()
@@ -787,7 +907,11 @@ class ModelMonitor:
             self.logger.error(f"Error clearing performance alerts: {e}")
 
     def detect_drift(
-        self, current_data: pd.DataFrame, historical_data: pd.DataFrame, threshold: float = 0.1, method: str = "ks_test"
+        self,
+        current_data: pd.DataFrame,
+        historical_data: pd.DataFrame,
+        threshold: float = 0.1,
+        method: str = "ks_test",
     ) -> Dict[str, Any]:
         """Detect data drift between current and historical data.
 
@@ -824,9 +948,13 @@ class ModelMonitor:
                 if method == "ks_test":
                     drift_score = self._calculate_ks_drift(current_col, historical_col)
                 elif method == "chi_square":
-                    drift_score = self._calculate_chi_square_drift(current_col, historical_col)
+                    drift_score = self._calculate_chi_square_drift(
+                        current_col, historical_col
+                    )
                 elif method == "wasserstein":
-                    drift_score = self._calculate_wasserstein_drift(current_col, historical_col)
+                    drift_score = self._calculate_wasserstein_drift(
+                        current_col, historical_col
+                    )
                 else:
                     drift_score = self._calculate_ks_drift(current_col, historical_col)
 
@@ -842,7 +970,9 @@ class ModelMonitor:
                     drifted_features.append(column)
 
             # Calculate overall drift
-            overall_drift = total_drift_score / len(common_columns) if common_columns else 0.0
+            overall_drift = (
+                total_drift_score / len(common_columns) if common_columns else 0.0
+            )
 
             return {
                 "overall_drift_score": overall_drift,
@@ -959,7 +1089,11 @@ class ModelMonitor:
 
             performance_stats = {}
             for metric_name in metric_names:
-                values = [m.get(metric_name, 0) for m in all_metrics if m.get(metric_name) is not None]
+                values = [
+                    m.get(metric_name, 0)
+                    for m in all_metrics
+                    if m.get(metric_name) is not None
+                ]
                 if values:
                     performance_stats[metric_name] = {
                         "mean": np.mean(values),
@@ -970,7 +1104,9 @@ class ModelMonitor:
                     }
 
             # Get recent performance
-            recent_performance = performance_history[-1]["metrics"] if performance_history else {}
+            recent_performance = (
+                performance_history[-1]["metrics"] if performance_history else {}
+            )
 
             # Get parameter drift info
             parameter_drift = self.get_parameter_drift_summary(model_name)
@@ -983,7 +1119,9 @@ class ModelMonitor:
                 "recent_performance": recent_performance,
                 "parameter_drift": parameter_drift,
                 "trust_level": self.trust_levels.get(model_name, 0.5),
-                "last_updated": performance_history[-1]["timestamp"].isoformat() if performance_history else None,
+                "last_updated": performance_history[-1]["timestamp"].isoformat()
+                if performance_history
+                else None,
             }
 
         except Exception as e:
@@ -1006,7 +1144,10 @@ def get_model_monitor() -> ModelMonitor:
 
 
 def detect_drift(
-    current_data: pd.DataFrame, historical_data: pd.DataFrame, threshold: float = 0.1, method: str = "ks_test"
+    current_data: pd.DataFrame,
+    historical_data: pd.DataFrame,
+    threshold: float = 0.1,
+    method: str = "ks_test",
 ) -> Dict[str, Any]:
     """Detect data drift between current and historical data.
 
@@ -1019,10 +1160,14 @@ def detect_drift(
     Returns:
         Drift detection results
     """
-    return get_model_monitor().detect_drift(current_data, historical_data, threshold, method)
+    return get_model_monitor().detect_drift(
+        current_data, historical_data, threshold, method
+    )
 
 
-def _calculate_ks_drift(current_data: pd.DataFrame, historical_data: pd.DataFrame) -> float:
+def _calculate_ks_drift(
+    current_data: pd.DataFrame, historical_data: pd.DataFrame
+) -> float:
     """Calculate Kolmogorov-Smirnov drift score."""
     try:
         statistic, p_value = stats.ks_2samp(current_data, historical_data)
@@ -1031,12 +1176,16 @@ def _calculate_ks_drift(current_data: pd.DataFrame, historical_data: pd.DataFram
         return 0.0
 
 
-def _calculate_chi_square_drift(current_data: pd.DataFrame, historical_data: pd.DataFrame) -> float:
+def _calculate_chi_square_drift(
+    current_data: pd.DataFrame, historical_data: pd.DataFrame
+) -> float:
     """Calculate Chi-square drift score."""
     try:
         # Create histograms for comparison
         bins = np.linspace(
-            min(current_data.min(), historical_data.min()), max(current_data.max(), historical_data.max()), 10
+            min(current_data.min(), historical_data.min()),
+            max(current_data.max(), historical_data.max()),
+            10,
         )
 
         current_hist, _ = np.histogram(current_data, bins=bins)
@@ -1047,13 +1196,17 @@ def _calculate_chi_square_drift(current_data: pd.DataFrame, historical_data: pd.
         historical_hist = historical_hist / historical_hist.sum()
 
         # Calculate chi-square statistic
-        chi_square = np.sum((current_hist - historical_hist) ** 2 / (historical_hist + 1e-8))
+        chi_square = np.sum(
+            (current_hist - historical_hist) ** 2 / (historical_hist + 1e-8)
+        )
         return min(1.0, chi_square / 100)  # Normalize to 0-1
     except Exception:
         return 0.0
 
 
-def _calculate_wasserstein_drift(current_data: pd.DataFrame, historical_data: pd.DataFrame) -> float:
+def _calculate_wasserstein_drift(
+    current_data: pd.DataFrame, historical_data: pd.DataFrame
+) -> float:
     """Calculate Wasserstein distance drift score."""
     try:
         from scipy.stats import wasserstein_distance
@@ -1061,7 +1214,9 @@ def _calculate_wasserstein_drift(current_data: pd.DataFrame, historical_data: pd
         distance = wasserstein_distance(current_data, historical_data)
 
         # Normalize by data range
-        data_range = max(current_data.max(), historical_data.max()) - min(current_data.min(), historical_data.min())
+        data_range = max(current_data.max(), historical_data.max()) - min(
+            current_data.min(), historical_data.min()
+        )
         normalized_distance = distance / (data_range + 1e-8)
 
         return min(1.0, normalized_distance)
@@ -1073,9 +1228,18 @@ def generate_strategy_priority(
     performance_metrics: Dict[str, float], market_conditions: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Generate strategy priority based on performance and market conditions."""
-    return get_model_monitor().generate_strategy_priority(performance_metrics, market_conditions)
+    return get_model_monitor().generate_strategy_priority(
+        performance_metrics, market_conditions
+    )
 
 
 def get_default_model_trust_levels() -> Dict[str, float]:
     """Get default model trust levels."""
-    return {"lstm": 0.85, "xgboost": 0.78, "prophet": 0.72, "ensemble": 0.91, "tcn": 0.68, "transformer": 0.82}
+    return {
+        "lstm": 0.85,
+        "xgboost": 0.78,
+        "prophet": 0.72,
+        "ensemble": 0.91,
+        "tcn": 0.68,
+        "transformer": 0.82,
+    }

@@ -107,7 +107,11 @@ class InMemoryCache:
 
         logger.info(f"Initialized InMemoryCache with max_size={max_size}")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def add_data(self, symbol: str, timeframe: str, data: MarketData):
         """Add data to cache.
@@ -179,7 +183,9 @@ class InMemoryCache:
         """Get latest data point for symbol/timeframe."""
         data_list = self.get_data(symbol, timeframe, limit=1)
 
-    def get_dataframe(self, symbol: str, timeframe: str, limit: Optional[int] = None) -> pd.DataFrame:
+    def get_dataframe(
+        self, symbol: str, timeframe: str, limit: Optional[int] = None
+    ) -> pd.DataFrame:
         """Get data as pandas DataFrame."""
         data_list = self.get_data(symbol, timeframe, limit=limit)
 
@@ -207,7 +213,9 @@ class InMemoryCache:
 
         return df
 
-    def clear_cache(self, symbol: Optional[str] = None, timeframe: Optional[str] = None):
+    def clear_cache(
+        self, symbol: Optional[str] = None, timeframe: Optional[str] = None
+    ):
         """Clear cache for specific symbol/timeframe or all."""
         if symbol is None:
             self.cache.clear()
@@ -233,7 +241,9 @@ class InMemoryCache:
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         total_data_points = sum(
-            len(timeframe_data) for symbol_data in self.cache.values() for timeframe_data in symbol_data.values()
+            len(timeframe_data)
+            for symbol_data in self.cache.values()
+            for timeframe_data in symbol_data.values()
         )
 
         return {
@@ -263,7 +273,9 @@ class DataProvider:
         """Connect to data provider (stub)."""
         import logging
 
-        logging.getLogger(__name__).warning("connect() not implemented for base DataProvider; override in subclass.")
+        logging.getLogger(__name__).warning(
+            "connect() not implemented for base DataProvider; override in subclass."
+        )
         return None
 
     async def disconnect(self):
@@ -275,7 +287,9 @@ class DataProvider:
         """Subscribe to data streams (stub)."""
         import logging
 
-        logging.getLogger(__name__).warning("subscribe() not implemented for base DataProvider; override in subclass.")
+        logging.getLogger(__name__).warning(
+            "subscribe() not implemented for base DataProvider; override in subclass."
+        )
         return None
 
     async def get_historical_data(
@@ -308,7 +322,8 @@ class PolygonDataProvider(DataProvider):
         """Connect to Polygon websocket."""
         try:
             self.websocket = await websockets.connect(
-                f"{self.base_url}/stocks", extra_headers={"Authorization": f"Bearer {self.api_key}"}
+                f"{self.base_url}/stocks",
+                extra_headers={"Authorization": f"Bearer {self.api_key}"},
             )
             logger.info("Connected to Polygon websocket")
         except Exception as e:
@@ -321,7 +336,10 @@ class PolygonDataProvider(DataProvider):
             await self.connect()
 
         # Subscribe to trades and quotes
-        subscribe_message = {"action": "subscribe", "params": f"T.{','.join(symbols)},Q.{','.join(symbols)}"}
+        subscribe_message = {
+            "action": "subscribe",
+            "params": f"T.{','.join(symbols)},Q.{','.join(symbols)}",
+        }
 
         await self.websocket.send(json.dumps(subscribe_message))
         logger.info(f"Subscribed to {len(symbols)} symbols on Polygon")
@@ -351,7 +369,9 @@ class PolygonDataProvider(DataProvider):
             if not self.session:
                 self.session = aiohttp.ClientSession()
 
-            async with self.session.get(url, params={"apiKey": self.api_key}) as response:
+            async with self.session.get(
+                url, params={"apiKey": self.api_key}
+            ) as response:
                 if response.status == 200:
                     data = await response.json()
 
@@ -474,11 +494,22 @@ class StreamingPipeline:
         self.error_callbacks = []
 
         # Statistics
-        self.stats = {"messages_received": 0, "triggers_fired": 0, "errors": 0, "start_time": None}
+        self.stats = {
+            "messages_received": 0,
+            "triggers_fired": 0,
+            "errors": 0,
+            "start_time": None,
+        }
 
-        logger.info(f"Initialized Streaming Pipeline with {len(config.symbols)} symbols")
+        logger.info(
+            f"Initialized Streaming Pipeline with {len(config.symbols)} symbols"
+        )
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def add_provider(self, name: str, provider: DataProvider):
         """Add data provider.
@@ -514,7 +545,9 @@ class StreamingPipeline:
         """
         with self.trigger_lock:
             self.triggers.append(trigger)
-        logger.info(f"Added trigger: {trigger.symbol} {trigger.condition} {trigger.threshold}")
+        logger.info(
+            f"Added trigger: {trigger.symbol} {trigger.condition} {trigger.threshold}"
+        )
 
     def remove_trigger(self, symbol: str, condition: str):
         """Remove data trigger.
@@ -524,7 +557,11 @@ class StreamingPipeline:
             condition: Trigger condition
         """
         with self.trigger_lock:
-            self.triggers = [t for t in self.triggers if not (t.symbol == symbol and t.condition == condition)]
+            self.triggers = [
+                t
+                for t in self.triggers
+                if not (t.symbol == symbol and t.condition == condition)
+            ]
 
     async def start_streaming(self):
         """Start streaming data."""
@@ -540,7 +577,9 @@ class StreamingPipeline:
             for name, provider in self.providers.items():
                 try:
                     await provider.connect()
-                    await provider.subscribe(self.config.symbols, self.config.timeframes)
+                    await provider.subscribe(
+                        self.config.symbols, self.config.timeframes
+                    )
                     self.active_providers.append(name)
                     logger.info(f"Connected to provider: {name}")
                 except Exception as e:
@@ -650,7 +689,9 @@ class StreamingPipeline:
         for trigger in active_triggers:
             try:
                 # Get latest data
-                latest_data = self.cache.get_latest_data(trigger.symbol, trigger.timeframe)
+                latest_data = self.cache.get_latest_data(
+                    trigger.symbol, trigger.timeframe
+                )
 
                 if not latest_data:
                     continue
@@ -665,14 +706,18 @@ class StreamingPipeline:
                     try:
                         await trigger.callback(trigger, latest_data)
                         self.stats["triggers_fired"] += 1
-                        logger.info(f"Trigger fired: {trigger.symbol} {trigger.condition}")
+                        logger.info(
+                            f"Trigger fired: {trigger.symbol} {trigger.condition}"
+                        )
                     except Exception as e:
                         logger.error(f"Error in trigger callback: {e}")
 
             except Exception as e:
                 logger.error(f"Error processing trigger: {e}")
 
-    async def _check_trigger_condition(self, trigger: DataTrigger, data: MarketData) -> bool:
+    async def _check_trigger_condition(
+        self, trigger: DataTrigger, data: MarketData
+    ) -> bool:
         """Check if trigger condition is met."""
         if trigger.condition == "price_above":
             return data.close > trigger.threshold
@@ -680,21 +725,30 @@ class StreamingPipeline:
             return data.close < trigger.threshold
         elif trigger.condition == "volume_spike":
             # Compare with recent volume average
-            recent_data = self.cache.get_data(trigger.symbol, trigger.timeframe, limit=20)
+            recent_data = self.cache.get_data(
+                trigger.symbol, trigger.timeframe, limit=20
+            )
             if len(recent_data) >= 10:
                 avg_volume = np.mean([d.volume for d in recent_data[-10:]])
                 return data.volume > avg_volume * trigger.threshold
         elif trigger.condition == "volatility_spike":
             # Calculate recent volatility
-            recent_data = self.cache.get_data(trigger.symbol, trigger.timeframe, limit=20)
+            recent_data = self.cache.get_data(
+                trigger.symbol, trigger.timeframe, limit=20
+            )
             if len(recent_data) >= 10:
-                returns = [d.close / recent_data[i - 1].close - 1 for i, d in enumerate(recent_data[1:], 1)]
+                returns = [
+                    d.close / recent_data[i - 1].close - 1
+                    for i, d in enumerate(recent_data[1:], 1)
+                ]
                 volatility = np.std(returns)
                 return volatility > trigger.threshold
 
         return False
 
-    def get_data(self, symbol: str, timeframe: str, limit: Optional[int] = None) -> pd.DataFrame:
+    def get_data(
+        self, symbol: str, timeframe: str, limit: Optional[int] = None
+    ) -> pd.DataFrame:
         """Get data from cache as DataFrame."""
         return {
             "success": True,
@@ -721,7 +775,9 @@ class StreamingPipeline:
             **cache_stats,
             "active_providers": len(self.providers),
             "active_triggers": len([t for t in self.triggers if t.is_active]),
-            "uptime": (datetime.now() - self.stats["start_time"]).total_seconds() if self.stats["start_time"] else 0,
+            "uptime": (datetime.now() - self.stats["start_time"]).total_seconds()
+            if self.stats["start_time"]
+            else 0,
         }
 
 
@@ -742,7 +798,9 @@ def create_streaming_pipeline(
     Returns:
         Streaming pipeline instance
     """
-    config = StreamingConfig(symbols=symbols, timeframes=timeframes, providers=providers)
+    config = StreamingConfig(
+        symbols=symbols, timeframes=timeframes, providers=providers
+    )
 
     pipeline = StreamingPipeline(config)
 

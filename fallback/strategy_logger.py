@@ -72,7 +72,9 @@ class FallbackStrategyLogger:
             if len(self._decisions) > 100:
                 self._decisions = self._decisions[-50:]
 
-            logger.debug(f"Logged fallback decision: {decision.get('action', 'unknown')}")
+            logger.debug(
+                f"Logged fallback decision: {decision.get('action', 'unknown')}"
+            )
 
         except Exception as e:
             logger.error(f"Error logging decision: {e}")
@@ -190,4 +192,9 @@ class FallbackStrategyLogger:
             }
         except Exception as e:
             logger.error(f"Error getting fallback strategy logger health: {e}")
-            return {"status": "error", "total_decisions": 0, "fallback_mode": True, "error": str(e)}
+            return {
+                "status": "error",
+                "total_decisions": 0,
+                "fallback_mode": True,
+                "error": str(e),
+            }

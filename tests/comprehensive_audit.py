@@ -54,7 +54,11 @@ class ReturnStatementAuditor:
             "*.exe",
         ]
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def should_exclude_file(self, file_path: Path) -> bool:
         """Check if file should be excluded from audit."""
@@ -144,7 +148,10 @@ class ReturnStatementAuditor:
         # Skip if it's a property or setter
         if hasattr(node, "decorator_list"):
             for decorator in node.decorator_list:
-                if isinstance(decorator, ast.Name) and decorator.id in ["property", "setter"]:
+                if isinstance(decorator, ast.Name) and decorator.id in [
+                    "property",
+                    "setter",
+                ]:
                     return False
 
         # Check if function has side effects (print, logging, file operations, etc.)
@@ -167,7 +174,10 @@ class ReturnStatementAuditor:
             r"\braise\b",  # Raises exception
         ]
 
-        has_side_effects = any(re.search(pattern, function_text, re.IGNORECASE) for pattern in side_effect_patterns)
+        has_side_effects = any(
+            re.search(pattern, function_text, re.IGNORECASE)
+            for pattern in side_effect_patterns
+        )
 
         # If function has side effects, it should have a return
         return has_side_effects
@@ -185,7 +195,9 @@ class ReturnStatementAuditor:
             return "Has Streamlit UI operations"
         elif re.search(r"\bplt\.", function_text):
             return "Has plotting operations"
-        elif re.search(r"\bopen\s*\(|\bwrite\s*\(|\bsave\s*\(|\bload\s*\(", function_text):
+        elif re.search(
+            r"\bopen\s*\(|\bwrite\s*\(|\bsave\s*\(|\bload\s*\(", function_text
+        ):
             return "Has file I/O operations"
         else:
             return "Has side effects"
@@ -238,7 +250,11 @@ class ReturnStatementAuditor:
         compliant_files = len(self.compliant_files)
         non_compliant_files = total_files - compliant_files
 
-        compliance_rate = (self.functions_with_returns / self.total_functions * 100) if self.total_functions > 0 else 0
+        compliance_rate = (
+            (self.functions_with_returns / self.total_functions * 100)
+            if self.total_functions > 0
+            else 0
+        )
 
         # Summary by priority
         priority_summary = {}
@@ -259,7 +275,9 @@ class ReturnStatementAuditor:
                 "functions_with_returns": self.functions_with_returns,
                 "functions_without_returns": self.functions_without_returns,
                 "compliance_rate": compliance_rate,
-                "file_compliance_rate": (compliant_files / total_files * 100) if total_files > 0 else 0,
+                "file_compliance_rate": (compliant_files / total_files * 100)
+                if total_files > 0
+                else 0,
             },
             "priority_summary": priority_summary,
             "detailed_results": results,
@@ -281,7 +299,9 @@ class ReturnStatementAuditor:
             )
 
         if high_count > 0:
-            recommendations.append(f"⚠️ HIGH: Address {high_count} high-priority violations (UI, logging, config)")
+            recommendations.append(
+                f"⚠️ HIGH: Address {high_count} high-priority violations (UI, logging, config)"
+            )
 
         if priority_summary["medium"]["count"] > 0:
             recommendations.append(
@@ -293,9 +313,15 @@ class ReturnStatementAuditor:
                 f"💡 LOW: {priority_summary['low']['count']} low-priority violations can be addressed later"
             )
 
-        recommendations.append("✅ Focus on functions with side effects (print, logging, file I/O, UI operations)")
-        recommendations.append("✅ Add return statements with structured dictionaries containing status and metadata")
-        recommendations.append("✅ Ensure all agent pipelines return usable outputs for autonomous operation")
+        recommendations.append(
+            "✅ Focus on functions with side effects (print, logging, file I/O, UI operations)"
+        )
+        recommendations.append(
+            "✅ Add return statements with structured dictionaries containing status and metadata"
+        )
+        recommendations.append(
+            "✅ Ensure all agent pipelines return usable outputs for autonomous operation"
+        )
 
         return recommendations
 
@@ -319,18 +345,28 @@ class ReturnStatementAuditor:
         print(f"\n🎯 VIOLATIONS BY PRIORITY:")
         for priority, data in priority_summary.items():
             if data["count"] > 0:
-                print(f"   {priority.upper()}: {data['count']} violations in {data['files_affected']} files")
+                print(
+                    f"   {priority.upper()}: {data['count']} violations in {data['files_affected']} files"
+                )
 
         print(f"\n🚨 CRITICAL VIOLATIONS:")
-        for violation in priority_summary["critical"]["violations"][:10]:  # Show first 10
-            print(f"   {violation['file']}:{violation['line']} - {violation['function']} ({violation['reason']})")
+        for violation in priority_summary["critical"]["violations"][
+            :10
+        ]:  # Show first 10
+            print(
+                f"   {violation['file']}:{violation['line']} - {violation['function']} ({violation['reason']})"
+            )
 
         if len(priority_summary["critical"]["violations"]) > 10:
-            print(f"   ... and {len(priority_summary['critical']['violations']) - 10} more")
+            print(
+                f"   ... and {len(priority_summary['critical']['violations']) - 10} more"
+            )
 
         print(f"\n⚠️ HIGH PRIORITY VIOLATIONS:")
         for violation in priority_summary["high"]["violations"][:10]:  # Show first 10
-            print(f"   {violation['file']}:{violation['line']} - {violation['function']} ({violation['reason']})")
+            print(
+                f"   {violation['file']}:{violation['line']} - {violation['function']} ({violation['reason']})"
+            )
 
         if len(priority_summary["high"]["violations"]) > 10:
             print(f"   ... and {len(priority_summary['high']['violations']) - 10} more")
@@ -341,7 +377,9 @@ class ReturnStatementAuditor:
 
         print("\n" + "=" * 80)
 
-    def save_report(self, report: Dict[str, Any], filename: str = "comprehensive_audit_report.json"):
+    def save_report(
+        self, report: Dict[str, Any], filename: str = "comprehensive_audit_report.json"
+    ):
         """Save audit report to JSON file."""
         with open(filename, "w") as f:
             json.dump(report, f, indent=2)
@@ -362,9 +400,13 @@ def main():
         "message": "Operation completed successfully",
         "timestamp": datetime.now().isoformat(),
         "compliance_rate": report["summary"]["compliance_rate"],
-        "critical_violations": len(report["priority_summary"]["critical"]["violations"]),
+        "critical_violations": len(
+            report["priority_summary"]["critical"]["violations"]
+        ),
         "high_violations": len(report["priority_summary"]["high"]["violations"]),
-        "total_violations": sum(len(data["violations"]) for data in report["priority_summary"].values()),
+        "total_violations": sum(
+            len(data["violations"]) for data in report["priority_summary"].values()
+        ),
     }
 
 

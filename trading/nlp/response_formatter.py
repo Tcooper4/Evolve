@@ -28,7 +28,9 @@ class ResponseFormatter:
             config_dir: Directory containing configuration files
         """
         self.logger = logging.getLogger(__name__)
-        self.config_dir = Path(config_dir) if config_dir else Path(__file__).parent / "config"
+        self.config_dir = (
+            Path(config_dir) if config_dir else Path(__file__).parent / "config"
+        )
 
         # Load templates and visualization settings
         self.templates = self._load_templates()
@@ -64,7 +66,9 @@ class ResponseFormatter:
         try:
             template = self.templates.get(response_data.type, {}).get("template", "")
             if not template:
-                self.logger.warning(f"No template found for response type: {response_data.type}")
+                self.logger.warning(
+                    f"No template found for response type: {response_data.type}"
+                )
                 return str(response_data.content)
 
             return template.format(**response_data.content)
@@ -82,14 +86,22 @@ class ResponseFormatter:
             Plotly figure object or None if visualization cannot be created
         """
         try:
-            viz_type = self.templates.get(response_data.type, {}).get("visualization", {}).get("type")
+            viz_type = (
+                self.templates.get(response_data.type, {})
+                .get("visualization", {})
+                .get("type")
+            )
             if not viz_type:
-                self.logger.warning(f"No visualization type found for response type: {response_data.type}")
+                self.logger.warning(
+                    f"No visualization type found for response type: {response_data.type}"
+                )
                 return None
 
             viz_method = getattr(self, f"_create_{viz_type}_viz", None)
             if not viz_method:
-                self.logger.warning(f"No visualization method found for type: {viz_type}")
+                self.logger.warning(
+                    f"No visualization method found for type: {viz_type}"
+                )
                 return None
 
             return viz_method(response_data)
@@ -109,7 +121,9 @@ class ResponseFormatter:
                     x=response_data.content["historical_dates"],
                     y=response_data.content["historical_values"],
                     name="Historical",
-                    line=dict(color=settings["line_color"], width=settings["line_width"]),
+                    line=dict(
+                        color=settings["line_color"], width=settings["line_width"]
+                    ),
                 )
             )
 
@@ -164,7 +178,8 @@ class ResponseFormatter:
                     fig.add_trace(
                         go.Scatter(
                             x=response_data.content["dates"],
-                            y=[threshold["value"]] * len(response_data.content["dates"]),
+                            y=[threshold["value"]]
+                            * len(response_data.content["dates"]),
                             name=threshold["name"],
                             line=dict(color="#d62728", width=1, dash="dash"),
                         )
@@ -185,7 +200,13 @@ class ResponseFormatter:
         """Create candlestick chart visualization."""
         settings = self.viz_settings.get("candlestick", {}).get("default", {})
 
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.03, row_heights=[0.7, 0.3])
+        fig = make_subplots(
+            rows=2,
+            cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.03,
+            row_heights=[0.7, 0.3],
+        )
 
         # Add candlestick chart
         fig.add_trace(
@@ -265,7 +286,11 @@ class ResponseFormatter:
                     y=[response_data.content["entry_price"]],
                     name="Entry",
                     mode="markers",
-                    marker=dict(color="#2ca02c", size=settings["marker_size"], symbol="triangle-up"),
+                    marker=dict(
+                        color="#2ca02c",
+                        size=settings["marker_size"],
+                        symbol="triangle-up",
+                    ),
                 )
             )
 
@@ -276,7 +301,11 @@ class ResponseFormatter:
                     y=[response_data.content["stop_loss"]],
                     name="Stop Loss",
                     mode="markers",
-                    marker=dict(color="#d62728", size=settings["marker_size"], symbol="triangle-down"),
+                    marker=dict(
+                        color="#d62728",
+                        size=settings["marker_size"],
+                        symbol="triangle-down",
+                    ),
                 )
             )
 
@@ -287,7 +316,9 @@ class ResponseFormatter:
                     y=[response_data.content["take_profit"]],
                     name="Take Profit",
                     mode="markers",
-                    marker=dict(color="#1f77b4", size=settings["marker_size"], symbol="star"),
+                    marker=dict(
+                        color="#1f77b4", size=settings["marker_size"], symbol="star"
+                    ),
                 )
             )
 
@@ -299,7 +330,10 @@ class ResponseFormatter:
                     y=response_data.content["y_values"],
                     name="Points",
                     mode="markers",
-                    marker=dict(color=settings["other_points_color"], size=settings["marker_size"]),
+                    marker=dict(
+                        color=settings["other_points_color"],
+                        size=settings["marker_size"],
+                    ),
                 )
             )
 
@@ -310,7 +344,11 @@ class ResponseFormatter:
                     y=[response_data.content["best_y"]],
                     name="Best Point",
                     mode="markers",
-                    marker=dict(color=settings["best_point_color"], size=settings["marker_size"] * 1.5, symbol="star"),
+                    marker=dict(
+                        color=settings["best_point_color"],
+                        size=settings["marker_size"] * 1.5,
+                        symbol="star",
+                    ),
                 )
             )
 
@@ -353,7 +391,14 @@ class ResponseFormatter:
                     else settings["neutral_color"]
                 )
 
-                fig.add_trace(go.Bar(x=[point["name"]], y=[point["value"]], name=point["name"], marker_color=color))
+                fig.add_trace(
+                    go.Bar(
+                        x=[point["name"]],
+                        y=[point["value"]],
+                        name=point["name"],
+                        marker_color=color,
+                    )
+                )
 
         elif response_data.type == "validate":
             # Add accuracy bars

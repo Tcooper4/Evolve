@@ -6,12 +6,9 @@ import os
 import platform
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import psutil
-
-from pathlib import Path
-
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -24,7 +21,9 @@ class SystemStatus:
         self.logger = logging.getLogger(self.__class__.__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
@@ -49,7 +48,12 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting CPU info: {str(e)}")
-            return {"usage_percent": None, "count": None, "frequency": None, "load_avg": None}
+            return {
+                "usage_percent": None,
+                "count": None,
+                "frequency": None,
+                "load_avg": None,
+            }
 
     def get_memory_info(self) -> Dict[str, Any]:
         """Get memory information."""
@@ -69,7 +73,12 @@ class SystemStatus:
         """Get disk information."""
         try:
             disk = psutil.disk_usage("/")
-            return {"total": disk.total, "used": disk.used, "free": disk.free, "percent": disk.percent}
+            return {
+                "total": disk.total,
+                "used": disk.used,
+                "free": disk.free,
+                "percent": disk.percent,
+            }
         except Exception as e:
             self.logger.error(f"Error getting disk info: {str(e)}")
             return {"total": None, "used": None, "free": None, "percent": None}
@@ -86,7 +95,12 @@ class SystemStatus:
             }
         except Exception as e:
             self.logger.error(f"Error getting network info: {str(e)}")
-            return {"bytes_sent": None, "bytes_recv": None, "packets_sent": None, "packets_recv": None}
+            return {
+                "bytes_sent": None,
+                "bytes_recv": None,
+                "packets_sent": None,
+                "packets_recv": None,
+            }
 
     def get_process_info(self) -> Dict[str, Any]:
         """Get process information."""
@@ -98,7 +112,9 @@ class SystemStatus:
                 "status": process.status(),
                 "cpu_percent": process.cpu_percent(),
                 "memory_percent": process.memory_percent(),
-                "create_time": datetime.fromtimestamp(process.create_time()).isoformat(),
+                "create_time": datetime.fromtimestamp(
+                    process.create_time()
+                ).isoformat(),
             }
         except Exception as e:
             self.logger.error(f"Error getting process info: {str(e)}")
@@ -125,14 +141,28 @@ class SystemStatus:
                 return {
                     "status": "running",
                     "pid": agent_process.info["pid"],
-                    "uptime": str(timedelta(seconds=int(time.time() - agent_process.create_time()))),
+                    "uptime": str(
+                        timedelta(
+                            seconds=int(time.time() - agent_process.create_time())
+                        )
+                    ),
                     "last_heartbeat": self._get_last_heartbeat(),
                 }
             else:
-                return {"status": "stopped", "pid": None, "uptime": None, "last_heartbeat": None}
+                return {
+                    "status": "stopped",
+                    "pid": None,
+                    "uptime": None,
+                    "last_heartbeat": None,
+                }
         except Exception as e:
             self.logger.error(f"Error getting agent liveness: {str(e)}")
-            return {"status": "unknown", "pid": None, "uptime": None, "last_heartbeat": None}
+            return {
+                "status": "unknown",
+                "pid": None,
+                "uptime": None,
+                "last_heartbeat": None,
+            }
 
     def _get_last_heartbeat(self) -> Optional[str]:
         """Get last agent heartbeat timestamp."""
@@ -237,7 +267,12 @@ def get_system_health() -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"Error getting system health: {e}")
-        return {"status": "error", "timestamp": datetime.now().isoformat(), "error": str(e), "overall_status": "error"}
+        return {
+            "status": "error",
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e),
+            "overall_status": "error",
+        }
 
 
 def get_system_scorecard() -> Dict[str, Any]:
@@ -261,17 +296,29 @@ def get_system_scorecard() -> Dict[str, Any]:
                 "cpu": {
                     "score": round(cpu_score, 2),
                     "usage": system_info["cpu"]["usage_percent"],
-                    "status": "healthy" if cpu_score > 70 else "warning" if cpu_score > 50 else "critical",
+                    "status": "healthy"
+                    if cpu_score > 70
+                    else "warning"
+                    if cpu_score > 50
+                    else "critical",
                 },
                 "memory": {
                     "score": round(memory_score, 2),
                     "usage": system_info["memory"]["percent"],
-                    "status": "healthy" if memory_score > 70 else "warning" if memory_score > 50 else "critical",
+                    "status": "healthy"
+                    if memory_score > 70
+                    else "warning"
+                    if memory_score > 50
+                    else "critical",
                 },
                 "disk": {
                     "score": round(disk_score, 2),
                     "usage": system_info["disk"]["percent"],
-                    "status": "healthy" if disk_score > 70 else "warning" if disk_score > 50 else "critical",
+                    "status": "healthy"
+                    if disk_score > 70
+                    else "warning"
+                    if disk_score > 50
+                    else "critical",
                 },
             },
             "system_info": {
@@ -296,7 +343,10 @@ def get_system_scorecard() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     # Set up logging
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
 
     # Create and print status
     status = SystemStatus()

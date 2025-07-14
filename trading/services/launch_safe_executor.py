@@ -20,7 +20,10 @@ from services.safe_executor_service import SafeExecutorService
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("logs/safe_executor_service.log"), logging.StreamHandler()],
+    handlers=[
+        logging.FileHandler("logs/safe_executor_service.log"),
+        logging.StreamHandler(),
+    ],
 )
 
 logger = logging.getLogger(__name__)
@@ -66,7 +69,9 @@ def main():
         signal.signal(signal.SIGTERM, signal_handler)
 
         logger.info("SafeExecutor service started successfully")
-        logger.info(f"Configuration: timeout={timeout_seconds}s, memory_limit={memory_limit_mb}MB")
+        logger.info(
+            f"Configuration: timeout={timeout_seconds}s, memory_limit={memory_limit_mb}MB"
+        )
         logger.info("Ready to execute user-defined models and strategies safely")
 
         # Start the service

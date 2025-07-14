@@ -33,28 +33,18 @@ import hashlib
 import json
 import logging
 import logging.config
-import os
 import shutil
 import socket
-import subprocess
 import sys
 import tarfile
-import time
-import zipfile
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
-import aiohttp
-import boto3
-import docker
 import psutil
 import redis
 import requests
 import yaml
-
-import kubernetes
-from kubernetes import client, config
 
 
 class RecoveryManager:
@@ -99,7 +89,7 @@ class RecoveryManager:
                 "timestamp": timestamp,
                 "components": {},
                 "system_state": {},
-                "checksums": {}
+                "checksums": {},
             }
 
             # Backup components
@@ -112,7 +102,9 @@ class RecoveryManager:
                 elif component == "data":
                     recovery_point["components"]["data"] = await self._backup_data()
                 elif component == "database":
-                    recovery_point["components"]["database"] = await self._backup_database()
+                    recovery_point["components"][
+                        "database"
+                    ] = await self._backup_database()
                 elif component == "logs":
                     recovery_point["components"]["logs"] = await self._backup_logs()
                 elif component == "models":
@@ -122,7 +114,9 @@ class RecoveryManager:
             recovery_point["system_state"] = await self._capture_system_state()
 
             # Calculate checksums
-            recovery_point["checksums"] = await self._calculate_checksums(recovery_point)
+            recovery_point["checksums"] = await self._calculate_checksums(
+                recovery_point
+            )
 
             # Save recovery point
             recovery_file = self.recovery_dir / f"recovery_point_{timestamp}.json"
@@ -190,7 +184,7 @@ class RecoveryManager:
                 "timestamp": datetime.now().isoformat(),
                 "components": {},
                 "system_metrics": {},
-                "recommendations": []
+                "recommendations": [],
             }
 
             # Check application components
@@ -200,7 +194,9 @@ class RecoveryManager:
             health_check["system_metrics"] = await self._check_system_metrics()
 
             # Generate recommendations
-            health_check["recommendations"] = await self._generate_recommendations(health_check)
+            health_check["recommendations"] = await self._generate_recommendations(
+                health_check
+            )
 
             # Save health check
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -258,16 +254,16 @@ class RecoveryManager:
                 host=self.config["database"]["host"],
                 port=self.config["database"]["port"],
                 db=self.config["database"]["db"],
-                password=self.config["database"]["password"]
+                password=self.config["database"]["password"],
             )
 
             # Create backup
-            backup_path = self.backup_dir / f"database_{datetime.now().strftime('%Y%m%d_%H%M%S')}.rdb"
-            redis_client.save()
-            shutil.copy2(
-                Path(self.config["database"]["rdb_path"]),
-                backup_path
+            backup_path = (
+                self.backup_dir
+                / f"database_{datetime.now().strftime('%Y%m%d_%H%M%S')}.rdb"
             )
+            redis_client.save()
+            shutil.copy2(Path(self.config["database"]["rdb_path"]), backup_path)
 
             return [str(backup_path)]
         except Exception as e:
@@ -317,19 +313,23 @@ class RecoveryManager:
                 "network": dict(psutil.net_io_counters()._asdict()),
                 "processes": len(psutil.pids()),
                 "hostname": socket.gethostname(),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
             self.logger.error(f"Failed to capture system state: {e}")
             raise
 
-    async def _calculate_checksums(self, recovery_point: Dict[str, Any]) -> Dict[str, str]:
+    async def _calculate_checksums(
+        self, recovery_point: Dict[str, Any]
+    ) -> Dict[str, str]:
         """Calculate checksums for recovery point files."""
         try:
             checksums = {}
 
             # Calculate checksum for recovery point file
-            recovery_file = self.recovery_dir / f"recovery_point_{recovery_point['timestamp']}.json"
+            recovery_file = (
+                self.recovery_dir / f"recovery_point_{recovery_point['timestamp']}.json"
+            )
             with open(recovery_file, "rb") as f:
                 checksums["recovery_point"] = hashlib.sha256(f.read()).hexdigest()
 
@@ -364,7 +364,9 @@ class RecoveryManager:
 
             # Check system state
             current_state = await self._capture_system_state()
-            if not self._compare_system_states(current_state, recovery_point["system_state"]):
+            if not self._compare_system_states(
+                current_state, recovery_point["system_state"]
+            ):
                 return False
 
             return True
@@ -372,7 +374,9 @@ class RecoveryManager:
             self.logger.error(f"Failed to verify restoration: {e}")
             raise
 
-    def _compare_system_states(self, current: Dict[str, Any], original: Dict[str, Any]) -> bool:
+    def _compare_system_states(
+        self, current: Dict[str, Any], original: Dict[str, Any]
+    ) -> bool:
         """Compare system states."""
         try:
             # Compare critical metrics
@@ -396,13 +400,13 @@ class RecoveryManager:
                 response = requests.get("http://localhost:8000/health")
                 components["application"] = {
                     "status": "healthy" if response.status_code == 200 else "unhealthy",
-                    "response_time": response.elapsed.total_seconds()
+                    "response_time": response.elapsed.total_seconds(),
                 }
             except Exception as e:
                 self.logger.error(f"Application health check failed: {e}")
                 components["application"] = {
                     "status": "unhealthy",
-                    "error": "Application not responding"
+                    "error": "Application not responding",
                 }
 
             # Check database
@@ -411,18 +415,18 @@ class RecoveryManager:
                     host=self.config["database"]["host"],
                     port=self.config["database"]["port"],
                     db=self.config["database"]["db"],
-                    password=self.config["database"]["password"]
+                    password=self.config["database"]["password"],
                 )
                 redis_client.ping()
                 components["database"] = {
                     "status": "healthy",
-                    "connected_clients": redis_client.client_list()
+                    "connected_clients": redis_client.client_list(),
                 }
             except Exception as e:
                 self.logger.error(f"Database health check failed: {e}")
                 components["database"] = {
                     "status": "unhealthy",
-                    "error": "Database not responding"
+                    "error": "Database not responding",
                 }
 
             # Check file system
@@ -430,13 +434,13 @@ class RecoveryManager:
                 disk_usage = psutil.disk_usage("/")
                 components["filesystem"] = {
                     "status": "healthy" if disk_usage.percent < 90 else "warning",
-                    "usage": disk_usage.percent
+                    "usage": disk_usage.percent,
                 }
             except Exception as e:
                 self.logger.error(f"Filesystem health check failed: {e}")
                 components["filesystem"] = {
                     "status": "unhealthy",
-                    "error": "Failed to check filesystem"
+                    "error": "Failed to check filesystem",
                 }
 
             return components
@@ -450,56 +454,72 @@ class RecoveryManager:
             return {
                 "cpu": {
                     "usage": psutil.cpu_percent(interval=1),
-                    "load": psutil.getloadavg()
+                    "load": psutil.getloadavg(),
                 },
                 "memory": dict(psutil.virtual_memory()._asdict()),
                 "disk": dict(psutil.disk_usage("/")._asdict()),
                 "network": dict(psutil.net_io_counters()._asdict()),
                 "processes": {
                     "total": len(psutil.pids()),
-                    "zombie": len([p for p in psutil.pids() if psutil.Process(p).status() == "zombie"])
-                }
+                    "zombie": len(
+                        [
+                            p
+                            for p in psutil.pids()
+                            if psutil.Process(p).status() == "zombie"
+                        ]
+                    ),
+                },
             }
         except Exception as e:
             self.logger.error(f"Failed to check system metrics: {e}")
             raise
 
-    async def _generate_recommendations(self, health_check: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _generate_recommendations(
+        self, health_check: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Generate recommendations based on health check."""
         try:
             recommendations = []
 
             # Check CPU usage
             if health_check["system_metrics"]["cpu"]["usage"] > 80:
-                recommendations.append({
-                    "component": "cpu",
-                    "issue": "High CPU usage",
-                    "recommendation": "Consider scaling up or optimizing CPU-intensive operations"
-                })
+                recommendations.append(
+                    {
+                        "component": "cpu",
+                        "issue": "High CPU usage",
+                        "recommendation": "Consider scaling up or optimizing CPU-intensive operations",
+                    }
+                )
 
             # Check memory usage
             if health_check["system_metrics"]["memory"]["percent"] > 80:
-                recommendations.append({
-                    "component": "memory",
-                    "issue": "High memory usage",
-                    "recommendation": "Consider increasing memory or optimizing memory usage"
-                })
+                recommendations.append(
+                    {
+                        "component": "memory",
+                        "issue": "High memory usage",
+                        "recommendation": "Consider increasing memory or optimizing memory usage",
+                    }
+                )
 
             # Check disk usage
             if health_check["system_metrics"]["disk"]["percent"] > 80:
-                recommendations.append({
-                    "component": "disk",
-                    "issue": "High disk usage",
-                    "recommendation": "Consider cleaning up old files or increasing disk space"
-                })
+                recommendations.append(
+                    {
+                        "component": "disk",
+                        "issue": "High disk usage",
+                        "recommendation": "Consider cleaning up old files or increasing disk space",
+                    }
+                )
 
             # Check application response time
             if health_check["components"]["application"]["response_time"] > 1:
-                recommendations.append({
-                    "component": "application",
-                    "issue": "Slow response time",
-                    "recommendation": "Consider optimizing application performance"
-                })
+                recommendations.append(
+                    {
+                        "component": "application",
+                        "issue": "Slow response time",
+                        "recommendation": "Consider optimizing application performance",
+                    }
+                )
 
             return recommendations
         except Exception as e:
@@ -538,33 +558,20 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Recovery Manager")
     parser.add_argument(
-        "command",
-        choices=["create", "restore", "health"],
-        help="Command to execute"
+        "command", choices=["create", "restore", "health"], help="Command to execute"
     )
     parser.add_argument(
-        "--components",
-        nargs="+",
-        help="Components to include in recovery point"
+        "--components", nargs="+", help="Components to include in recovery point"
     )
-    parser.add_argument(
-        "--recovery-point",
-        help="Recovery point to restore from"
-    )
+    parser.add_argument("--recovery-point", help="Recovery point to restore from")
 
     args = parser.parse_args()
     manager = RecoveryManager()
 
     commands = {
-        "create": lambda: asyncio.run(
-            manager.create_recovery_point(args.components)
-        ),
-        "restore": lambda: asyncio.run(
-            manager.restore_from_point(args.recovery_point)
-        ),
-        "health": lambda: asyncio.run(
-            manager.check_system_health()
-        )
+        "create": lambda: asyncio.run(manager.create_recovery_point(args.components)),
+        "restore": lambda: asyncio.run(manager.restore_from_point(args.recovery_point)),
+        "health": lambda: asyncio.run(manager.check_system_health()),
     }
 
     if args.command in commands:
@@ -573,6 +580,7 @@ def main():
     else:
         parser.print_help()
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

@@ -31,14 +31,19 @@ class MACDStrategy:
         self.signals = None
         self.positions = None
 
-    def calculate_macd(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    def calculate_macd(
+        self, data: pd.DataFrame
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Calculate MACD components for the given data."""
         if "close" not in data.columns:
             raise ValueError("Data must contain 'close' column")
 
         # Use centralized MACD calculation
         macd_line, signal_line, histogram = calculate_macd(
-            data["close"], self.config.fast_period, self.config.slow_period, self.config.signal_period
+            data["close"],
+            self.config.fast_period,
+            self.config.slow_period,
+            self.config.signal_period,
         )
 
         return macd_line, signal_line, histogram
@@ -71,7 +76,9 @@ class MACDStrategy:
         signals.loc[sell_condition, "signal"] = -1  # Sell signal
 
         # Drop duplicate consecutive signals to avoid over-trading
-        signals["signal"] = signals["signal"].loc[~(signals["signal"] == signals["signal"].shift(1))]
+        signals["signal"] = signals["signal"].loc[
+            ~(signals["signal"] == signals["signal"].shift(1))
+        ]
 
         # Add MACD components to signals
         signals["macd_line"] = macd_line
@@ -116,7 +123,11 @@ class MACDStrategy:
             self.config = MACDConfig(**params)
             self.signals = None
             self.positions = None
-            return {"status": "success", "parameters_updated": True, "config": self.get_parameters()}
+            return {
+                "status": "success",
+                "parameters_updated": True,
+                "config": self.get_parameters(),
+            }
         except Exception as e:
             return {
                 "success": True,

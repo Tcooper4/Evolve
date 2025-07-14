@@ -12,7 +12,9 @@ import sys
 from pathlib import Path
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Add project root to path
@@ -45,7 +47,11 @@ async def run_agent_loop():
         config = {
             "name": "agent_loop",
             "enabled": True,
-            "custom_config": {"execution_mode": "simulation", "max_positions": 3, "min_confidence": 0.6},
+            "custom_config": {
+                "execution_mode": "simulation",
+                "max_positions": 3,
+                "min_confidence": 0.6,
+            },
         }
 
         agent_config = AgentConfig(**config)

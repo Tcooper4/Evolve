@@ -148,22 +148,34 @@ class MetaResearchAgent(BaseAgent):
                 papers = await self.discover_research_papers(keywords, max_papers)
                 return AgentResult(
                     success=True,
-                    data={"discovered_papers": len(papers), "papers": [paper.__dict__ for paper in papers]},
+                    data={
+                        "discovered_papers": len(papers),
+                        "papers": [paper.__dict__ for paper in papers],
+                    },
                 )
             elif action == "evaluate_models":
                 papers = kwargs.get("papers", self.discovered_papers)
                 evaluations = await self.evaluate_models(papers)
-                return AgentResult(success=True, data={"evaluations": [eval.__dict__ for eval in evaluations]})
+                return AgentResult(
+                    success=True,
+                    data={"evaluations": [eval.__dict__ for eval in evaluations]},
+                )
             elif action == "auto_implement":
                 evaluations = kwargs.get("evaluations", self.evaluated_models)
                 threshold = kwargs.get("threshold")
-                implemented = await self.auto_implement_top_models(evaluations, threshold)
-                return AgentResult(success=True, data={"implemented_models": implemented})
+                implemented = await self.auto_implement_top_models(
+                    evaluations, threshold
+                )
+                return AgentResult(
+                    success=True, data={"implemented_models": implemented}
+                )
             elif action == "get_research_summary":
                 summary = self.get_research_summary()
                 return AgentResult(success=True, data={"research_summary": summary})
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
         except Exception as e:
             return self.handle_error(e)
 
@@ -214,13 +226,17 @@ class MetaResearchAgent(BaseAgent):
             self.logger.error(f"Error discovering research papers: {str(e)}")
             return []
 
-    async def _search_arxiv(self, keywords: List[str], max_papers: int) -> List[ResearchPaper]:
+    async def _search_arxiv(
+        self, keywords: List[str], max_papers: int
+    ) -> List[ResearchPaper]:
         """Search arXiv for relevant papers."""
         try:
             papers = []
 
             # Construct search query
-            query = " OR ".join([f'ti:"{kw}" OR abs:"{kw}"' for kw in keywords[:5]])  # Limit keywords
+            query = " OR ".join(
+                [f'ti:"{kw}" OR abs:"{kw}"' for kw in keywords[:5]]
+            )  # Limit keywords
 
             # arXiv API endpoint
             url = "http://export.arxiv.org/api/query"
@@ -244,7 +260,9 @@ class MetaResearchAgent(BaseAgent):
             self.logger.error(f"Error searching arXiv: {str(e)}")
             return []
 
-    async def _search_ssrn(self, keywords: List[str], max_papers: int) -> List[ResearchPaper]:
+    async def _search_ssrn(
+        self, keywords: List[str], max_papers: int
+    ) -> List[ResearchPaper]:
         """Search SSRN for relevant papers."""
         try:
             papers = []
@@ -282,7 +300,10 @@ class MetaResearchAgent(BaseAgent):
             for entry in entries:
                 try:
                     title = entry.find("title").text.strip()
-                    authors = [author.find("name").text.strip() for author in entry.find_all("author")]
+                    authors = [
+                        author.find("name").text.strip()
+                        for author in entry.find_all("author")
+                    ]
                     abstract = entry.find("summary").text.strip()
                     url = entry.find("id").text.strip()
                     published = entry.find("published").text.strip()
@@ -293,7 +314,9 @@ class MetaResearchAgent(BaseAgent):
                         abstract=abstract,
                         url=url,
                         source="arXiv",
-                        publication_date=datetime.fromisoformat(published.replace("Z", "+00:00")),
+                        publication_date=datetime.fromisoformat(
+                            published.replace("Z", "+00:00")
+                        ),
                         keywords=self._extract_keywords(abstract),
                     )
                     papers.append(paper)
@@ -325,7 +348,9 @@ class MetaResearchAgent(BaseAgent):
             self.logger.error(f"Error extracting keywords: {str(e)}")
             return []
 
-    def _filter_relevant_papers(self, papers: List[ResearchPaper]) -> List[ResearchPaper]:
+    def _filter_relevant_papers(
+        self, papers: List[ResearchPaper]
+    ) -> List[ResearchPaper]:
         """Filter papers based on relevance criteria."""
         try:
             relevant_papers = []
@@ -369,7 +394,9 @@ class MetaResearchAgent(BaseAgent):
             self.logger.error(f"Error deduplicating papers: {str(e)}")
             return []
 
-    async def evaluate_models(self, papers: List[ResearchPaper]) -> List[ModelEvaluation]:
+    async def evaluate_models(
+        self, papers: List[ResearchPaper]
+    ) -> List[ModelEvaluation]:
         """
         Evaluate models described in research papers.
 
@@ -430,7 +457,9 @@ class MetaResearchAgent(BaseAgent):
                 model_info["type"] = "unknown"
 
             # Extract performance metrics (simplified)
-            model_info["performance"] = self._extract_performance_metrics(paper.abstract)
+            model_info["performance"] = self._extract_performance_metrics(
+                paper.abstract
+            )
 
             # Extract implementation complexity
             model_info["complexity"] = self._assess_implementation_complexity(paper)
@@ -504,11 +533,15 @@ class MetaResearchAgent(BaseAgent):
             self.logger.error(f"Error assessing implementation complexity: {str(e)}")
             return 0.5
 
-    def _evaluate_model(self, paper: ResearchPaper, model_info: Dict[str, Any]) -> ModelEvaluation:
+    def _evaluate_model(
+        self, paper: ResearchPaper, model_info: Dict[str, Any]
+    ) -> ModelEvaluation:
         """Evaluate a model based on paper and extracted information."""
         try:
             # Calculate performance score
-            performance_score = self._calculate_performance_score(model_info["performance"])
+            performance_score = self._calculate_performance_score(
+                model_info["performance"]
+            )
 
             # Implementation complexity (inverse score)
             implementation_complexity = 1.0 - model_info["complexity"]
@@ -517,7 +550,11 @@ class MetaResearchAgent(BaseAgent):
             market_applicability = self._assess_market_applicability(paper, model_info)
 
             # Overall score
-            overall_score = 0.4 * performance_score + 0.3 * implementation_complexity + 0.3 * market_applicability
+            overall_score = (
+                0.4 * performance_score
+                + 0.3 * implementation_complexity
+                + 0.3 * market_applicability
+            )
 
             # Generate recommendation
             recommendation = self._generate_recommendation(overall_score, model_info)
@@ -585,7 +622,9 @@ class MetaResearchAgent(BaseAgent):
             self.logger.error(f"Error calculating performance score: {str(e)}")
             return 0.5
 
-    def _assess_market_applicability(self, paper: ResearchPaper, model_info: Dict[str, Any]) -> float:
+    def _assess_market_applicability(
+        self, paper: ResearchPaper, model_info: Dict[str, Any]
+    ) -> float:
         """Assess market applicability of the model."""
         try:
             applicability_score = 0.5  # Base score
@@ -614,7 +653,9 @@ class MetaResearchAgent(BaseAgent):
             self.logger.error(f"Error assessing market applicability: {str(e)}")
             return 0.5
 
-    def _generate_recommendation(self, overall_score: float, model_info: Dict[str, Any]) -> str:
+    def _generate_recommendation(
+        self, overall_score: float, model_info: Dict[str, Any]
+    ) -> str:
         """Generate recommendation based on evaluation."""
         try:
             if overall_score > 0.8:
@@ -663,7 +704,9 @@ class MetaResearchAgent(BaseAgent):
                         self.logger.info(f"Auto-implemented model: {model_name}")
 
                 except Exception as e:
-                    self.logger.error(f"Error implementing model {evaluation.model_name}: {str(e)}")
+                    self.logger.error(
+                        f"Error implementing model {evaluation.model_name}: {str(e)}"
+                    )
 
             # Store implementation results
             self._store_implementation_results(implemented_models)
@@ -686,7 +729,9 @@ class MetaResearchAgent(BaseAgent):
 
                 # In practice, you'd save the model code to a file
                 # and register it with the model registry
-                success = await self._register_model(model_name, model_code, evaluation.model_type)
+                success = await self._register_model(
+                    model_name, model_code, evaluation.model_type
+                )
 
                 if success:
                     return model_name
@@ -795,7 +840,9 @@ class {evaluation.model_name.replace(' ', '_')}:
         return self.model.predict(X)
 """
 
-    async def _register_model(self, model_name: str, model_code: str, model_type: str) -> bool:
+    async def _register_model(
+        self, model_name: str, model_code: str, model_type: str
+    ) -> bool:
         """Register model in the model registry."""
         try:
             # In practice, you'd save the code to a file and register it
@@ -811,7 +858,11 @@ class {evaluation.model_name.replace(' ', '_')}:
         """Store discovered papers in memory."""
         try:
             self.memory.store(
-                "discovered_papers", {"papers": [paper.__dict__ for paper in papers], "timestamp": datetime.now()}
+                "discovered_papers",
+                {
+                    "papers": [paper.__dict__ for paper in papers],
+                    "timestamp": datetime.now(),
+                },
             )
         except Exception as e:
             self.logger.error(f"Error storing discovered papers: {str(e)}")
@@ -821,7 +872,10 @@ class {evaluation.model_name.replace(' ', '_')}:
         try:
             self.memory.store(
                 "model_evaluations",
-                {"evaluations": [eval.__dict__ for eval in evaluations], "timestamp": datetime.now()},
+                {
+                    "evaluations": [eval.__dict__ for eval in evaluations],
+                    "timestamp": datetime.now(),
+                },
             )
         except Exception as e:
             self.logger.error(f"Error storing model evaluations: {str(e)}")
@@ -830,7 +884,8 @@ class {evaluation.model_name.replace(' ', '_')}:
         """Store implementation results in memory."""
         try:
             self.memory.store(
-                "implementation_results", {"implemented_models": implemented_models, "timestamp": datetime.now()}
+                "implementation_results",
+                {"implemented_models": implemented_models, "timestamp": datetime.now()},
             )
         except Exception as e:
             self.logger.error(f"Error storing implementation results: {str(e)}")
@@ -841,17 +896,24 @@ class {evaluation.model_name.replace(' ', '_')}:
             # Load discovered papers
             papers_data = self.memory.get("discovered_papers")
             if papers_data:
-                self.discovered_papers = [ResearchPaper(**p) for p in papers_data.get("papers", [])]
+                self.discovered_papers = [
+                    ResearchPaper(**p) for p in papers_data.get("papers", [])
+                ]
 
             # Load model evaluations
             evaluations_data = self.memory.get("model_evaluations")
             if evaluations_data:
-                self.evaluated_models = [ModelEvaluation(**e) for e in evaluations_data.get("evaluations", [])]
+                self.evaluated_models = [
+                    ModelEvaluation(**e)
+                    for e in evaluations_data.get("evaluations", [])
+                ]
 
             # Load implemented models
             implementation_data = self.memory.get("implementation_results")
             if implementation_data:
-                self.implemented_models = implementation_data.get("implemented_models", [])
+                self.implemented_models = implementation_data.get(
+                    "implemented_models", []
+                )
 
         except Exception as e:
             self.logger.error(f"Error loading research data: {str(e)}")
@@ -864,7 +926,11 @@ class {evaluation.model_name.replace(' ', '_')}:
                 "total_models_evaluated": len(self.evaluated_models),
                 "total_models_implemented": len(self.implemented_models),
                 "recent_discoveries": [
-                    {"title": paper.title, "source": paper.source, "date": paper.publication_date.isoformat()}
+                    {
+                        "title": paper.title,
+                        "source": paper.source,
+                        "date": paper.publication_date.isoformat(),
+                    }
                     for paper in self.discovered_papers[-5:]  # Last 5 papers
                 ],
                 "top_evaluations": [
@@ -873,7 +939,11 @@ class {evaluation.model_name.replace(' ', '_')}:
                         "overall_score": eval.overall_score,
                         "recommendation": eval.recommendation,
                     }
-                    for eval in sorted(self.evaluated_models, key=lambda x: x.overall_score, reverse=True)[:5]
+                    for eval in sorted(
+                        self.evaluated_models,
+                        key=lambda x: x.overall_score,
+                        reverse=True,
+                    )[:5]
                 ],
             }
 

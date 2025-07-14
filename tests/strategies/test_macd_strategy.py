@@ -22,7 +22,13 @@ class TestMACDStrategy:
     @pytest.fixture
     def strategy_config(self) -> MACDConfig:
         """Get strategy configuration."""
-        return MACDConfig(fast_period=12, slow_period=26, signal_period=9, min_volume=1000.0, min_price=1.0)
+        return MACDConfig(
+            fast_period=12,
+            slow_period=26,
+            signal_period=9,
+            min_volume=1000.0,
+            min_price=1.0,
+        )
 
     @pytest.fixture
     def sample_data(self) -> pd.DataFrame:
@@ -88,7 +94,7 @@ class TestMACDStrategy:
     def test_performance_metrics(self, strategy_config, sample_data):
         """Test performance metrics calculation."""
         strategy = MACDStrategy(config=strategy_config)
-        signals = strategy.generate_signals(sample_data)
+        strategy.generate_signals(sample_data)
         positions = strategy.calculate_positions(sample_data)
 
         # Verify positions
@@ -120,7 +126,13 @@ class TestMACDStrategy:
         strategy = MACDStrategy(config=strategy_config)
 
         # Update parameters
-        new_config = MACDConfig(fast_period=8, slow_period=21, signal_period=5, min_volume=2000.0, min_price=2.0)
+        new_config = MACDConfig(
+            fast_period=8,
+            slow_period=21,
+            signal_period=5,
+            min_volume=2000.0,
+            min_price=2.0,
+        )
         strategy.set_parameters(new_config.__dict__)
 
         # Verify updates
@@ -175,14 +187,20 @@ class TestMACDStrategy:
             # Generate declining prices first
             declining_prices = (
                 100
-                - np.linspace(0, scenario["decline_magnitude"], scenario["decline_period"])
+                - np.linspace(
+                    0, scenario["decline_magnitude"], scenario["decline_period"]
+                )
                 + np.random.normal(0, 1, scenario["decline_period"])
             )
 
             # Generate reversal and uptrend
             uptrend_prices = (
                 (100 - scenario["decline_magnitude"])
-                + np.linspace(0, scenario["uptrend_magnitude"], len(dates) - scenario["decline_period"])
+                + np.linspace(
+                    0,
+                    scenario["uptrend_magnitude"],
+                    len(dates) - scenario["decline_period"],
+                )
                 + np.random.normal(0, 1, len(dates) - scenario["decline_period"])
             )
 
@@ -190,17 +208,24 @@ class TestMACDStrategy:
             prices = np.concatenate([declining_prices, uptrend_prices])
             volumes = np.random.normal(5000, 1000, len(dates))
 
-            golden_cross_data = pd.DataFrame({"close": prices, "volume": volumes}, index=dates)
+            golden_cross_data = pd.DataFrame(
+                {"close": prices, "volume": volumes}, index=dates
+            )
 
             strategy = MACDStrategy(config=strategy_config)
 
             # Calculate MACD components
-            macd_line, signal_line, histogram = strategy.calculate_macd(golden_cross_data)
+            macd_line, signal_line, histogram = strategy.calculate_macd(
+                golden_cross_data
+            )
 
             # Find golden cross points (MACD line crosses above signal line)
             golden_cross_points = []
             for i in range(1, len(macd_line)):
-                if macd_line.iloc[i - 1] <= signal_line.iloc[i - 1] and macd_line.iloc[i] > signal_line.iloc[i]:
+                if (
+                    macd_line.iloc[i - 1] <= signal_line.iloc[i - 1]
+                    and macd_line.iloc[i] > signal_line.iloc[i]
+                ):
                     golden_cross_points.append(i)
 
             print(f"    Found {len(golden_cross_points)} golden cross points")
@@ -225,12 +250,22 @@ class TestMACDStrategy:
                     trend_confirmed = all(post_cross_macd >= post_cross_signal)
 
                     # Check histogram confirmation
-                    post_cross_histogram = histogram.iloc[cross_point : cross_point + 15]
+                    post_cross_histogram = histogram.iloc[
+                        cross_point : cross_point + 15
+                    ]
                     histogram_positive = all(post_cross_histogram > 0)
 
                     # Check trend strength
-                    macd_slope = np.polyfit(range(len(post_cross_macd)), post_cross_macd, 1)[0]
-                    trend_strength = "strong" if macd_slope > 0.1 else "medium" if macd_slope > 0.05 else "weak"
+                    macd_slope = np.polyfit(
+                        range(len(post_cross_macd)), post_cross_macd, 1
+                    )[0]
+                    trend_strength = (
+                        "strong"
+                        if macd_slope > 0.1
+                        else "medium"
+                        if macd_slope > 0.05
+                        else "weak"
+                    )
 
                     print(
                         f"    Cross at index {cross_point}: trend_confirmed={trend_confirmed}, histogram_positive={histogram_positive}, strength={trend_strength}"
@@ -240,10 +275,18 @@ class TestMACDStrategy:
                         trend_confirmation_count += 1
 
             # Verify trend confirmation rate
-            confirmation_rate = trend_confirmation_count / len(golden_cross_points) if golden_cross_points else 0
+            confirmation_rate = (
+                trend_confirmation_count / len(golden_cross_points)
+                if golden_cross_points
+                else 0
+            )
             print(f"    Trend confirmation rate: {confirmation_rate:.2f}")
 
-            self.assertGreater(confirmation_rate, 0.5, "Most golden crosses should have trend confirmation")
+            self.assertGreater(
+                confirmation_rate,
+                0.5,
+                "Most golden crosses should have trend confirmation",
+            )
 
         # Test signal generation and alignment
         print(f"\n  📊 Testing signal generation and alignment...")
@@ -254,19 +297,29 @@ class TestMACDStrategy:
 
         declining_prices = (
             100
-            - np.linspace(0, strong_scenario["decline_magnitude"], strong_scenario["decline_period"])
+            - np.linspace(
+                0,
+                strong_scenario["decline_magnitude"],
+                strong_scenario["decline_period"],
+            )
             + np.random.normal(0, 1, strong_scenario["decline_period"])
         )
         uptrend_prices = (
             (100 - strong_scenario["decline_magnitude"])
-            + np.linspace(0, strong_scenario["uptrend_magnitude"], len(dates) - strong_scenario["decline_period"])
+            + np.linspace(
+                0,
+                strong_scenario["uptrend_magnitude"],
+                len(dates) - strong_scenario["decline_period"],
+            )
             + np.random.normal(0, 1, len(dates) - strong_scenario["decline_period"])
         )
 
         prices = np.concatenate([declining_prices, uptrend_prices])
         volumes = np.random.normal(5000, 1000, len(dates))
 
-        signal_test_data = pd.DataFrame({"close": prices, "volume": volumes}, index=dates)
+        signal_test_data = pd.DataFrame(
+            {"close": prices, "volume": volumes}, index=dates
+        )
 
         strategy = MACDStrategy(config=strategy_config)
 
@@ -276,7 +329,10 @@ class TestMACDStrategy:
         # Find golden cross points
         golden_cross_points = []
         for i in range(1, len(macd_line)):
-            if macd_line.iloc[i - 1] <= signal_line.iloc[i - 1] and macd_line.iloc[i] > signal_line.iloc[i]:
+            if (
+                macd_line.iloc[i - 1] <= signal_line.iloc[i - 1]
+                and macd_line.iloc[i] > signal_line.iloc[i]
+            ):
                 golden_cross_points.append(i)
 
         # Generate signals
@@ -303,14 +359,20 @@ class TestMACDStrategy:
                 days_diff = abs(closest_buy - cross_point).days
                 alignment_details.append(days_diff)
 
-        alignment_ratio = signal_alignment / len(golden_cross_points) if golden_cross_points else 0
+        alignment_ratio = (
+            signal_alignment / len(golden_cross_points) if golden_cross_points else 0
+        )
         avg_alignment_days = np.mean(alignment_details) if alignment_details else 0
 
         print(f"    Signal alignment ratio: {alignment_ratio:.2f}")
         print(f"    Average alignment days: {avg_alignment_days:.1f}")
 
-        self.assertGreater(alignment_ratio, 0.6, "Most golden crosses should generate buy signals")
-        self.assertLess(avg_alignment_days, 3, "Buy signals should occur close to golden crosses")
+        self.assertGreater(
+            alignment_ratio, 0.6, "Most golden crosses should generate buy signals"
+        )
+        self.assertLess(
+            avg_alignment_days, 3, "Buy signals should occur close to golden crosses"
+        )
 
         # Test signal strength validation
         print(f"\n  💪 Testing signal strength validation...")
@@ -323,7 +385,9 @@ class TestMACDStrategy:
             if cross_point + 10 < len(signals):
                 # Calculate signal strength based on MACD line slope
                 post_cross_macd = macd_line.iloc[cross_point : cross_point + 10]
-                macd_slope = np.polyfit(range(len(post_cross_macd)), post_cross_macd, 1)[0]
+                macd_slope = np.polyfit(
+                    range(len(post_cross_macd)), post_cross_macd, 1
+                )[0]
 
                 # Calculate histogram strength
                 post_cross_histogram = histogram.iloc[cross_point : cross_point + 10]
@@ -353,8 +417,12 @@ class TestMACDStrategy:
 
             for cross_point in golden_cross_points:
                 if cross_point + timeframe < len(macd_line):
-                    post_cross_macd = macd_line.iloc[cross_point : cross_point + timeframe]
-                    post_cross_signal = signal_line.iloc[cross_point : cross_point + timeframe]
+                    post_cross_macd = macd_line.iloc[
+                        cross_point : cross_point + timeframe
+                    ]
+                    post_cross_signal = signal_line.iloc[
+                        cross_point : cross_point + timeframe
+                    ]
 
                     # Check if MACD stays above signal line
                     trend_confirmed = all(post_cross_macd >= post_cross_signal)
@@ -362,7 +430,11 @@ class TestMACDStrategy:
                     if trend_confirmed:
                         confirmation_count += 1
 
-            confirmation_rate = confirmation_count / len(golden_cross_points) if golden_cross_points else 0
+            confirmation_rate = (
+                confirmation_count / len(golden_cross_points)
+                if golden_cross_points
+                else 0
+            )
             print(f"    {timeframe}-day confirmation rate: {confirmation_rate:.2f}")
 
         # Test false signal detection
@@ -375,17 +447,24 @@ class TestMACDStrategy:
         choppy_prices = 100 + np.cumsum(np.random.normal(0, 0.5, 100))
         choppy_volumes = np.random.normal(5000, 1000, 100)
 
-        false_cross_data = pd.DataFrame({"close": choppy_prices, "volume": choppy_volumes}, index=false_cross_dates)
+        false_cross_data = pd.DataFrame(
+            {"close": choppy_prices, "volume": choppy_volumes}, index=false_cross_dates
+        )
 
         strategy = MACDStrategy(config=strategy_config)
 
         # Calculate MACD for choppy data
-        choppy_macd, choppy_signal, choppy_histogram = strategy.calculate_macd(false_cross_data)
+        choppy_macd, choppy_signal, choppy_histogram = strategy.calculate_macd(
+            false_cross_data
+        )
 
         # Find all crosses
         all_crosses = []
         for i in range(1, len(choppy_macd)):
-            if choppy_macd.iloc[i - 1] <= choppy_signal.iloc[i - 1] and choppy_macd.iloc[i] > choppy_signal.iloc[i]:
+            if (
+                choppy_macd.iloc[i - 1] <= choppy_signal.iloc[i - 1]
+                and choppy_macd.iloc[i] > choppy_signal.iloc[i]
+            ):
                 all_crosses.append(i)
 
         # Count false crosses (crosses without sustained trend)
@@ -415,6 +494,10 @@ class TestMACDStrategy:
         print(f"    Buy signals in choppy data: {choppy_buy_signals}")
 
         # In choppy data, there should be fewer buy signals
-        self.assertLess(choppy_buy_signals, len(all_crosses), "Should filter out some false signals in choppy data")
+        self.assertLess(
+            choppy_buy_signals,
+            len(all_crosses),
+            "Should filter out some false signals in choppy data",
+        )
 
         print("✅ Golden cross + trend confirmation test completed")

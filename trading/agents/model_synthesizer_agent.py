@@ -110,7 +110,9 @@ class ModelSynthesizerAgent:
 
         # Synthesis parameters
         self.max_synthesis_time = self.config.get("max_synthesis_time", 3600)  # 1 hour
-        self.min_performance_threshold = self.config.get("min_performance_threshold", 0.6)
+        self.min_performance_threshold = self.config.get(
+            "min_performance_threshold", 0.6
+        )
         self.max_model_complexity = self.config.get("max_model_complexity", 0.8)
         self.ensemble_size = self.config.get("ensemble_size", 5)
 
@@ -187,7 +189,12 @@ class ModelSynthesizerAgent:
                     {"type": "dropout", "rate": 0.2},
                     {"type": "dense", "units": 1},
                 ],
-                hyperparameters={"learning_rate": 0.001, "batch_size": 32, "epochs": 100, "optimizer": "adam"},
+                hyperparameters={
+                    "learning_rate": 0.001,
+                    "batch_size": 32,
+                    "epochs": 100,
+                    "optimizer": "adam",
+                },
                 input_features=["price", "volume", "technical_indicators"],
                 output_features=["price_prediction"],
                 complexity_score=0.3,
@@ -205,7 +212,12 @@ class ModelSynthesizerAgent:
                     {"type": "global_avg_pool"},
                     {"type": "dense", "units": 1},
                 ],
-                hyperparameters={"learning_rate": 0.0001, "batch_size": 16, "epochs": 200, "optimizer": "adamw"},
+                hyperparameters={
+                    "learning_rate": 0.0001,
+                    "batch_size": 16,
+                    "epochs": 200,
+                    "optimizer": "adamw",
+                },
                 input_features=["price", "volume", "technical_indicators", "sentiment"],
                 output_features=["price_prediction"],
                 complexity_score=0.8,
@@ -219,7 +231,11 @@ class ModelSynthesizerAgent:
                     {"type": "ensemble", "models": ["lstm", "gru", "transformer"]},
                     {"type": "meta_learner", "algorithm": "gradient_boosting"},
                 ],
-                hyperparameters={"learning_rate": 0.01, "n_estimators": 100, "max_depth": 6},
+                hyperparameters={
+                    "learning_rate": 0.01,
+                    "n_estimators": 100,
+                    "max_depth": 6,
+                },
                 input_features=["price", "volume", "technical_indicators"],
                 output_features=["price_prediction"],
                 complexity_score=0.7,
@@ -230,7 +246,9 @@ class ModelSynthesizerAgent:
         }
         return templates
 
-    def synthesize_model(self, request: SynthesisRequest, training_data: pd.DataFrame) -> SynthesisResult:
+    def synthesize_model(
+        self, request: SynthesisRequest, training_data: pd.DataFrame
+    ) -> SynthesisResult:
         """
         Synthesize a new model based on the request and training data.
 
@@ -268,7 +286,9 @@ class ModelSynthesizerAgent:
                 return self._create_failed_result("Failed to select architecture")
 
             # Build and train model
-            result = self._build_and_train_model(synthesis_id, best_architecture, training_data, request)
+            result = self._build_and_train_model(
+                synthesis_id, best_architecture, training_data, request
+            )
 
             # Add synthesis metadata
             result.synthesis_time = (datetime.now() - start_time).total_seconds()
@@ -285,7 +305,9 @@ class ModelSynthesizerAgent:
             logger.error(f"Model synthesis failed: {e}")
             return self._create_failed_result(f"Synthesis failed: {str(e)}")
 
-    def _validate_synthesis_input(self, request: SynthesisRequest, training_data: pd.DataFrame) -> bool:
+    def _validate_synthesis_input(
+        self, request: SynthesisRequest, training_data: pd.DataFrame
+    ) -> bool:
         """
         Validate synthesis input parameters.
 
@@ -317,7 +339,9 @@ class ModelSynthesizerAgent:
 
             # Check for required columns
             required_columns = ["price", "volume"]
-            missing_columns = [col for col in required_columns if col not in training_data.columns]
+            missing_columns = [
+                col for col in required_columns if col not in training_data.columns
+            ]
             if missing_columns:
                 logger.error(f"Missing required columns: {missing_columns}")
                 return False
@@ -328,7 +352,9 @@ class ModelSynthesizerAgent:
             logger.error(f"Error validating synthesis input: {e}")
             return False
 
-    def _generate_candidate_architectures(self, request: SynthesisRequest) -> List[ModelArchitecture]:
+    def _generate_candidate_architectures(
+        self, request: SynthesisRequest
+    ) -> List[ModelArchitecture]:
         """Generate candidate architectures based on requirements."""
         candidates = []
 
@@ -355,7 +381,9 @@ class ModelSynthesizerAgent:
         logger.info(f"Generated {len(candidates)} candidate architectures")
         return candidates
 
-    def _architecture_matches_requirements(self, architecture: ModelArchitecture, request: SynthesisRequest) -> bool:
+    def _architecture_matches_requirements(
+        self, architecture: ModelArchitecture, request: SynthesisRequest
+    ) -> bool:
         """Check if architecture matches synthesis requirements."""
         # Check complexity
         if architecture.complexity_score > request.max_complexity:
@@ -366,26 +394,43 @@ class ModelSynthesizerAgent:
             return False
 
         # Check model type preference
-        if request.preferred_model_types and architecture.model_type not in request.preferred_model_types:
+        if (
+            request.preferred_model_types
+            and architecture.model_type not in request.preferred_model_types
+        ):
             return False
 
         return True
 
-    def _generate_custom_architectures(self, request: SynthesisRequest) -> List[ModelArchitecture]:
+    def _generate_custom_architectures(
+        self, request: SynthesisRequest
+    ) -> List[ModelArchitecture]:
         """Generate custom architectures using meta-learning."""
         architectures = []
 
         # Generate LSTM variants
-        if ModelType.LSTM in request.preferred_model_types or not request.preferred_model_types:
+        if (
+            ModelType.LSTM in request.preferred_model_types
+            or not request.preferred_model_types
+        ):
             for units in [30, 50, 100]:
                 for layers in [1, 2, 3]:
                     arch = ModelArchitecture(
                         model_type=ModelType.LSTM,
                         layers=[
-                            {"type": "lstm", "units": units, "return_sequences": i < layers - 1} for i in range(layers)
+                            {
+                                "type": "lstm",
+                                "units": units,
+                                "return_sequences": i < layers - 1,
+                            }
+                            for i in range(layers)
                         ]
                         + [{"type": "dense", "units": 1}],
-                        hyperparameters={"learning_rate": 0.001, "batch_size": 32, "epochs": 100},
+                        hyperparameters={
+                            "learning_rate": 0.001,
+                            "batch_size": 32,
+                            "epochs": 100,
+                        },
                         input_features=request.data_characteristics.get("features", []),
                         output_features=["prediction"],
                         complexity_score=0.2 + 0.1 * layers,
@@ -396,7 +441,10 @@ class ModelSynthesizerAgent:
                     architectures.append(arch)
 
         # Generate Transformer variants
-        if ModelType.TRANSFORMER in request.preferred_model_types or not request.preferred_model_types:
+        if (
+            ModelType.TRANSFORMER in request.preferred_model_types
+            or not request.preferred_model_types
+        ):
             for heads in [4, 8, 16]:
                 for dim in [32, 64, 128]:
                     arch = ModelArchitecture(
@@ -407,7 +455,11 @@ class ModelSynthesizerAgent:
                             {"type": "global_avg_pool"},
                             {"type": "dense", "units": 1},
                         ],
-                        hyperparameters={"learning_rate": 0.0001, "batch_size": 16, "epochs": 150},
+                        hyperparameters={
+                            "learning_rate": 0.0001,
+                            "batch_size": 16,
+                            "epochs": 150,
+                        },
                         input_features=request.data_characteristics.get("features", []),
                         output_features=["prediction"],
                         complexity_score=0.5 + 0.1 * (heads // 4),
@@ -419,13 +471,21 @@ class ModelSynthesizerAgent:
 
         return architectures
 
-    def _generate_autosklearn_architecture(self, request: SynthesisRequest) -> Optional[ModelArchitecture]:
+    def _generate_autosklearn_architecture(
+        self, request: SynthesisRequest
+    ) -> Optional[ModelArchitecture]:
         """Generate AutoSklearn-based architecture."""
         try:
             return ModelArchitecture(
                 model_type=ModelType.AUTO_ML,
-                layers=[{"type": "autosklearn", "time_left": 300, "per_run_time_limit": 30}],
-                hyperparameters={"time_left": 300, "per_run_time_limit": 30, "ensemble_size": 5},
+                layers=[
+                    {"type": "autosklearn", "time_left": 300, "per_run_time_limit": 30}
+                ],
+                hyperparameters={
+                    "time_left": 300,
+                    "per_run_time_limit": 30,
+                    "ensemble_size": 5,
+                },
                 input_features=request.data_characteristics.get("features", []),
                 output_features=["prediction"],
                 complexity_score=0.6,
@@ -437,13 +497,19 @@ class ModelSynthesizerAgent:
             logger.warning(f"Failed to generate AutoSklearn architecture: {e}")
             return None
 
-    def _generate_pycaret_architecture(self, request: SynthesisRequest) -> Optional[ModelArchitecture]:
+    def _generate_pycaret_architecture(
+        self, request: SynthesisRequest
+    ) -> Optional[ModelArchitecture]:
         """Generate PyCaret-based architecture."""
         try:
             return ModelArchitecture(
                 model_type=ModelType.AUTO_ML,
                 layers=[{"type": "pycaret", "models": ["lr", "rf", "gbc", "xgboost"]}],
-                hyperparameters={"fold": 5, "tune_hyperparameters": True, "optimize": "AUC"},
+                hyperparameters={
+                    "fold": 5,
+                    "tune_hyperparameters": True,
+                    "optimize": "AUC",
+                },
                 input_features=request.data_characteristics.get("features", []),
                 output_features=["prediction"],
                 complexity_score=0.5,
@@ -475,27 +541,42 @@ class ModelSynthesizerAgent:
         logger.info(f"Selected architecture: {best_architecture.model_type.value}")
         return best_architecture
 
-    def _score_architecture(self, architecture: ModelArchitecture, request: SynthesisRequest) -> float:
+    def _score_architecture(
+        self, architecture: ModelArchitecture, request: SynthesisRequest
+    ) -> float:
         """Score an architecture based on multiple criteria."""
         # Performance score (40%)
-        performance_score = architecture.expected_performance / request.target_performance
+        performance_score = (
+            architecture.expected_performance / request.target_performance
+        )
 
         # Complexity score (30%) - lower is better
         complexity_score = 1 - (architecture.complexity_score / request.max_complexity)
 
         # Training time score (20%) - faster is better
-        time_score = 1 - min(architecture.training_time_estimate / self.max_synthesis_time, 1)
+        time_score = 1 - min(
+            architecture.training_time_estimate / self.max_synthesis_time, 1
+        )
 
         # Memory efficiency score (10%)
         memory_score = 1 - architecture.memory_requirements
 
         # Weighted combination
-        total_score = 0.4 * performance_score + 0.3 * complexity_score + 0.2 * time_score + 0.1 * memory_score
+        total_score = (
+            0.4 * performance_score
+            + 0.3 * complexity_score
+            + 0.2 * time_score
+            + 0.1 * memory_score
+        )
 
         return total_score
 
     def _build_and_train_model(
-        self, model_id: str, architecture: ModelArchitecture, training_data: pd.DataFrame, request: SynthesisRequest
+        self,
+        model_id: str,
+        architecture: ModelArchitecture,
+        training_data: pd.DataFrame,
+        request: SynthesisRequest,
     ) -> SynthesisResult:
         """Build and train the model."""
         start_time = datetime.now()
@@ -503,9 +584,13 @@ class ModelSynthesizerAgent:
         try:
             # Build model based on architecture type
             if architecture.model_type == ModelType.AUTO_ML:
-                model, performance_metrics = self._build_automl_model(architecture, training_data)
+                model, performance_metrics = self._build_automl_model(
+                    architecture, training_data
+                )
             else:
-                model, performance_metrics = self._build_custom_model(architecture, training_data)
+                model, performance_metrics = self._build_custom_model(
+                    architecture, training_data
+                )
 
             # Calculate synthesis time
             synthesis_time = (datetime.now() - start_time).total_seconds()
@@ -519,7 +604,9 @@ class ModelSynthesizerAgent:
                 validation_results={"accuracy": performance_metrics.get("accuracy", 0)},
                 synthesis_time=synthesis_time,
                 status=SynthesisStatus.COMPLETED,
-                recommendations=self._generate_recommendations(performance_metrics, architecture),
+                recommendations=self._generate_recommendations(
+                    performance_metrics, architecture
+                ),
                 timestamp=datetime.now(),
             )
 
@@ -549,7 +636,11 @@ class ModelSynthesizerAgent:
 
             # Prepare data
             X = training_data.drop(["target"], axis=1, errors="ignore")
-            y = training_data["target"] if "target" in training_data.columns else training_data.iloc[:, -1]
+            y = (
+                training_data["target"]
+                if "target" in training_data.columns
+                else training_data.iloc[:, -1]
+            )
 
             # Create and fit model
             automl = autosklearn.regression.AutoSklearnRegressor(
@@ -565,7 +656,11 @@ class ModelSynthesizerAgent:
             mse = np.mean((y - predictions) ** 2)
             r2 = 1 - mse / np.var(y)
 
-            performance_metrics = {"mse": mse, "r2": r2, "accuracy": r2}  # Using R² as accuracy proxy
+            performance_metrics = {
+                "mse": mse,
+                "r2": r2,
+                "accuracy": r2,
+            }  # Using R² as accuracy proxy
 
             return automl, performance_metrics
 
@@ -583,7 +678,9 @@ class ModelSynthesizerAgent:
             # Setup PyCaret
             setup = pycaret_reg.setup(
                 data=training_data,
-                target="target" if "target" in training_data.columns else training_data.columns[-1],
+                target="target"
+                if "target" in training_data.columns
+                else training_data.columns[-1],
                 fold=architecture.hyperparameters["fold"],
                 silent=True,
             )
@@ -634,14 +731,20 @@ class ModelSynthesizerAgent:
         recommendations = []
 
         if performance_metrics.get("accuracy", 0) < self.min_performance_threshold:
-            recommendations.append("Consider increasing model complexity or training time")
+            recommendations.append(
+                "Consider increasing model complexity or training time"
+            )
             recommendations.append("Try different feature engineering approaches")
 
         if architecture.complexity_score > 0.7:
-            recommendations.append("Model is complex - consider ensemble methods for stability")
+            recommendations.append(
+                "Model is complex - consider ensemble methods for stability"
+            )
 
         if architecture.training_time_estimate > 600:
-            recommendations.append("Training time is high - consider model compression techniques")
+            recommendations.append(
+                "Training time is high - consider model compression techniques"
+            )
 
         recommendations.append("Monitor model performance in production")
         recommendations.append("Consider retraining with new data periodically")
@@ -724,7 +827,9 @@ class ModelSynthesizerAgent:
         except Exception as e:
             logger.error(f"Error loading synthesis state: {e}")
 
-    def _generate_fallback_architectures(self, request: SynthesisRequest) -> List[ModelArchitecture]:
+    def _generate_fallback_architectures(
+        self, request: SynthesisRequest
+    ) -> List[ModelArchitecture]:
         """
         Generate fallback architectures when primary generation fails.
 
@@ -752,21 +857,27 @@ class ModelSynthesizerAgent:
                         input_features=template.input_features,
                         output_features=template.output_features,
                         complexity_score=min(template.complexity_score, 0.5),
-                        expected_performance=max(template.expected_performance * 0.8, 0.5),
+                        expected_performance=max(
+                            template.expected_performance * 0.8, 0.5
+                        ),
                         training_time_estimate=template.training_time_estimate * 0.5,
                         memory_requirements=template.memory_requirements * 0.5,
                     )
 
                     fallback_architectures.append(fallback_arch)
 
-            logger.info(f"Generated {len(fallback_architectures)} fallback architectures")
+            logger.info(
+                f"Generated {len(fallback_architectures)} fallback architectures"
+            )
 
         except Exception as e:
             logger.error(f"Error generating fallback architectures: {e}")
 
         return fallback_architectures
 
-    def test_synthetic_model(self, model_id: str, test_data: pd.DataFrame) -> Dict[str, Any]:
+    def test_synthetic_model(
+        self, model_id: str, test_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """
         Test a synthetic model with validation data.
 
@@ -792,7 +903,9 @@ class ModelSynthesizerAgent:
                 return {"error": "Failed to load trained model"}
 
             # Prepare test data
-            X_test, y_test = self._prepare_test_data(test_data, model_result.architecture)
+            X_test, y_test = self._prepare_test_data(
+                test_data, model_result.architecture
+            )
 
             # Make predictions
             predictions = self._make_predictions(model, X_test)
@@ -801,13 +914,17 @@ class ModelSynthesizerAgent:
             test_metrics = self._calculate_test_metrics(y_test, predictions)
 
             # Validate model performance
-            validation_result = self._validate_model_performance(test_metrics, model_result.architecture)
+            validation_result = self._validate_model_performance(
+                test_metrics, model_result.architecture
+            )
 
             return {
                 "model_id": model_id,
                 "test_metrics": test_metrics,
                 "validation_result": validation_result,
-                "predictions": predictions.tolist() if hasattr(predictions, "tolist") else predictions,
+                "predictions": predictions.tolist()
+                if hasattr(predictions, "tolist")
+                else predictions,
                 "timestamp": datetime.now().isoformat(),
             }
 
@@ -850,7 +967,9 @@ class ModelSynthesizerAgent:
         """
         try:
             # Select required features
-            available_features = [col for col in architecture.input_features if col in test_data.columns]
+            available_features = [
+                col for col in architecture.input_features if col in test_data.columns
+            ]
 
             if not available_features:
                 raise ValueError("No required features found in test data")
@@ -891,7 +1010,9 @@ class ModelSynthesizerAgent:
             logger.error(f"Error making predictions: {e}")
             raise
 
-    def _calculate_test_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+    def _calculate_test_metrics(
+        self, y_true: np.ndarray, y_pred: np.ndarray
+    ) -> Dict[str, float]:
         """
         Calculate test metrics for model evaluation.
 
@@ -920,7 +1041,9 @@ class ModelSynthesizerAgent:
             if len(y_true) > 1:
                 direction_true = np.diff(y_true) > 0
                 direction_pred = np.diff(y_pred) > 0
-                metrics["directional_accuracy"] = np.mean(direction_true == direction_pred)
+                metrics["directional_accuracy"] = np.mean(
+                    direction_true == direction_pred
+                )
 
             return metrics
 
@@ -949,13 +1072,17 @@ class ModelSynthesizerAgent:
                 if test_metrics["r2"] < 0.3:
                     validation_result["passed"] = False
                     validation_result["issues"].append("Low R² score")
-                    validation_result["recommendations"].append("Consider feature engineering or different model type")
+                    validation_result["recommendations"].append(
+                        "Consider feature engineering or different model type"
+                    )
 
             # Check directional accuracy
             if "directional_accuracy" in test_metrics:
                 if test_metrics["directional_accuracy"] < 0.5:
                     validation_result["issues"].append("Poor directional accuracy")
-                    validation_result["recommendations"].append("Model may not capture market direction well")
+                    validation_result["recommendations"].append(
+                        "Model may not capture market direction well"
+                    )
 
             # Check RMSE
             if "rmse" in test_metrics:
@@ -968,7 +1095,9 @@ class ModelSynthesizerAgent:
             logger.error(f"Error validating model performance: {e}")
             return {"passed": False, "issues": [f"Validation error: {str(e)}"]}
 
-    def run_comprehensive_tests(self, model_id: str, test_data: pd.DataFrame) -> Dict[str, Any]:
+    def run_comprehensive_tests(
+        self, model_id: str, test_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """
         Run comprehensive tests on a synthetic model.
 
@@ -1016,7 +1145,9 @@ class ModelSynthesizerAgent:
             logger.error(f"Error running comprehensive tests for model {model_id}: {e}")
             return {"error": f"Comprehensive tests failed: {str(e)}"}
 
-    def _run_stress_tests(self, model_id: str, test_data: pd.DataFrame) -> Dict[str, Any]:
+    def _run_stress_tests(
+        self, model_id: str, test_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """Run stress tests with different data sizes."""
         try:
             stress_results = {}
@@ -1035,7 +1166,9 @@ class ModelSynthesizerAgent:
             logger.error(f"Error in stress tests: {e}")
             return {"error": str(e)}
 
-    def _run_robustness_tests(self, model_id: str, test_data: pd.DataFrame) -> Dict[str, Any]:
+    def _run_robustness_tests(
+        self, model_id: str, test_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """Run robustness tests with added noise."""
         try:
             robustness_results = {}
@@ -1044,7 +1177,9 @@ class ModelSynthesizerAgent:
             for noise_level in [0.01, 0.05, 0.1]:
                 noisy_data = test_data.copy()
                 for col in noisy_data.select_dtypes(include=[np.number]).columns:
-                    noise = np.random.normal(0, noise_level * noisy_data[col].std(), len(noisy_data))
+                    noise = np.random.normal(
+                        0, noise_level * noisy_data[col].std(), len(noisy_data)
+                    )
                     noisy_data[col] += noise
 
                 test_result = self.test_synthetic_model(model_id, noisy_data)
@@ -1056,7 +1191,9 @@ class ModelSynthesizerAgent:
             logger.error(f"Error in robustness tests: {e}")
             return {"error": str(e)}
 
-    def _run_performance_tests(self, model_id: str, test_data: pd.DataFrame) -> Dict[str, Any]:
+    def _run_performance_tests(
+        self, model_id: str, test_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """Run performance tests to measure inference speed."""
         try:
             import time
@@ -1069,7 +1206,9 @@ class ModelSynthesizerAgent:
             inference_time = time.time() - start_time
 
             performance_results["inference_time"] = inference_time
-            performance_results["samples_per_second"] = len(test_data) / inference_time if inference_time > 0 else 0
+            performance_results["samples_per_second"] = (
+                len(test_data) / inference_time if inference_time > 0 else 0
+            )
             performance_results["test_result"] = test_result
 
             return performance_results
@@ -1079,17 +1218,29 @@ class ModelSynthesizerAgent:
             return {"error": str(e)}
 
     def _calculate_overall_test_score(
-        self, basic_test: Dict, stress_test: Dict, robustness_test: Dict, performance_test: Dict
+        self,
+        basic_test: Dict,
+        stress_test: Dict,
+        robustness_test: Dict,
+        performance_test: Dict,
     ) -> float:
         """Calculate overall test score from all test results."""
         try:
             score = 0.0
-            weights = {"basic": 0.4, "stress": 0.2, "robustness": 0.2, "performance": 0.2}
+            weights = {
+                "basic": 0.4,
+                "stress": 0.2,
+                "robustness": 0.2,
+                "performance": 0.2,
+            }
 
             # Basic test score
             if "test_metrics" in basic_test:
                 metrics = basic_test["test_metrics"]
-                basic_score = metrics.get("r2", 0.0) * 0.6 + metrics.get("directional_accuracy", 0.0) * 0.4
+                basic_score = (
+                    metrics.get("r2", 0.0) * 0.6
+                    + metrics.get("directional_accuracy", 0.0) * 0.4
+                )
                 score += basic_score * weights["basic"]
 
             # Stress test score
@@ -1113,7 +1264,9 @@ class ModelSynthesizerAgent:
             # Performance test score
             if "error" not in performance_test:
                 inference_time = performance_test.get("inference_time", float("inf"))
-                performance_score = 1.0 / (1.0 + inference_time)  # Higher score for faster inference
+                performance_score = 1.0 / (
+                    1.0 + inference_time
+                )  # Higher score for faster inference
                 score += performance_score * weights["performance"]
 
             return min(score, 1.0)  # Cap at 1.0
@@ -1123,7 +1276,9 @@ class ModelSynthesizerAgent:
             return 0.0
 
 
-def create_model_synthesizer(config: Optional[Dict[str, Any]] = None) -> ModelSynthesizerAgent:
+def create_model_synthesizer(
+    config: Optional[Dict[str, Any]] = None
+) -> ModelSynthesizerAgent:
     """Factory function to create a model synthesizer agent.
 
     Args:

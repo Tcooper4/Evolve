@@ -41,8 +41,12 @@ class AgentRequest(BaseModel):
     """Request model for agent operations."""
 
     agent_type: str = Field(..., description="Type of agent to create/execute")
-    config: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Agent configuration")
-    task_data: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Task data for agent execution")
+    config: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Agent configuration"
+    )
+    task_data: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Task data for agent execution"
+    )
 
 
 class AgentResponse(BaseModel):
@@ -96,7 +100,10 @@ class AgentAPIService:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "agent_api_service.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "agent_api_service.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def load_config(self) -> None:
@@ -150,7 +157,9 @@ class AgentAPIService:
                 "service": "agent_api",
                 "timestamp": datetime.now().isoformat(),
                 "agent_count": len(self.agent_manager.get_all_agents()),
-                "websocket_connections": self.websocket_service.get_connection_stats()["total_connections"],
+                "websocket_connections": self.websocket_service.get_connection_stats()[
+                    "total_connections"
+                ],
             }
 
         @self.app.get("/agents", response_model=List[Dict[str, Any]])
@@ -164,7 +173,9 @@ class AgentAPIService:
                         "agent_type": agent.agent_type,
                         "status": agent.status,
                         "capabilities": agent.capabilities,
-                        "created_at": agent.created_at.isoformat() if hasattr(agent, "created_at") else None,
+                        "created_at": agent.created_at.isoformat()
+                        if hasattr(agent, "created_at")
+                        else None,
                     }
                     for agent_id, agent in agents.items()
                 ]
@@ -224,7 +235,9 @@ class AgentAPIService:
                 raise HTTPException(status_code=500, detail=str(e))
 
         @self.app.post("/agents/{agent_id}/execute", response_model=AgentResponse)
-        async def execute_agent(agent_id: str, request: AgentRequest, background_tasks: BackgroundTasks):
+        async def execute_agent(
+            agent_id: str, request: AgentRequest, background_tasks: BackgroundTasks
+        ):
             """Execute an agent with given task data."""
             try:
                 agent = self.agent_manager.get_agent(agent_id)
@@ -240,7 +253,9 @@ class AgentAPIService:
                 result = await agent.execute(request.task_data)
 
                 # Broadcast execution completion
-                await self.websocket_service.broadcast_agent_update(agent_id, "execution_completed", {"result": result})
+                await self.websocket_service.broadcast_agent_update(
+                    agent_id, "execution_completed", {"result": result}
+                )
 
                 return AgentResponse(
                     success=True,
@@ -253,7 +268,9 @@ class AgentAPIService:
                 raise
             except Exception as e:
                 # Broadcast execution error
-                await self.websocket_service.broadcast_agent_update(agent_id, "execution_failed", {"error": str(e)})
+                await self.websocket_service.broadcast_agent_update(
+                    agent_id, "execution_failed", {"error": str(e)}
+                )
                 logger.error(f"Error executing agent: {str(e)}")
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -266,7 +283,9 @@ class AgentAPIService:
                     raise HTTPException(status_code=404, detail="Agent not found")
 
                 # Broadcast agent deletion
-                await self.websocket_service.broadcast_agent_update(agent_id, "deleted", {})
+                await self.websocket_service.broadcast_agent_update(
+                    agent_id, "deleted", {}
+                )
 
                 return AgentResponse(
                     success=True,
@@ -289,7 +308,9 @@ class AgentAPIService:
                     {
                         "agent_type": agent_type,
                         "capabilities": capabilities,
-                        "description": self.agent_registry.get_agent_description(agent_type),
+                        "description": self.agent_registry.get_agent_description(
+                            agent_type
+                        ),
                     }
                     for agent_type, capabilities in agent_types.items()
                 ]
@@ -304,7 +325,9 @@ class AgentAPIService:
                 results = []
                 for request in requests:
                     try:
-                        config = AgentConfig(agent_type=request.agent_type, **request.config)
+                        config = AgentConfig(
+                            agent_type=request.agent_type, **request.config
+                        )
                         agent_id = self.agent_manager.create_agent(config)
 
                         # Broadcast agent creation
@@ -344,13 +367,17 @@ class AgentAPIService:
                 status_data = {
                     "total_agents": len(agents),
                     "active_agents": len(active_agents),
-                    "system_status": "healthy" if len(agents) < self.config.get("max_agents", 100) else "at_capacity",
+                    "system_status": "healthy"
+                    if len(agents) < self.config.get("max_agents", 100)
+                    else "at_capacity",
                     "websocket_stats": self.websocket_service.get_connection_stats(),
                     "timestamp": datetime.now().isoformat(),
                 }
 
                 # Broadcast system status update
-                await self.websocket_service.broadcast_system_update("status", status_data)
+                await self.websocket_service.broadcast_system_update(
+                    "status", status_data
+                )
 
                 return status_data
             except Exception as e:
@@ -363,16 +390,26 @@ class AgentAPIService:
             try:
                 prompt = request.get("prompt")
                 if not prompt:
-                    raise HTTPException(status_code=400, detail="Missing 'prompt' in request body")
+                    raise HTTPException(
+                        status_code=400, detail="Missing 'prompt' in request body"
+                    )
                 # Route prompt through PromptAgent or PromptRouterAgent
                 from trading.llm.agent import PromptAgent
 
                 agent = PromptAgent()
                 result = agent.process_prompt(prompt)
-                return {"success": True, "result": result, "timestamp": datetime.now().isoformat()}
+                return {
+                    "success": True,
+                    "result": result,
+                    "timestamp": datetime.now().isoformat(),
+                }
             except Exception as e:
                 logger.error(f"Error in /trigger endpoint: {e}")
-                return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                }
 
         # WebSocket endpoints
         @self.app.websocket("/ws")
@@ -438,7 +475,12 @@ class AgentAPIService:
     async def start(self) -> None:
         """Start the API service."""
         try:
-            config = uvicorn.Config(self.app, host=self.config["host"], port=self.config["port"], log_level="info")
+            config = uvicorn.Config(
+                self.app,
+                host=self.config["host"],
+                port=self.config["port"],
+                log_level="info",
+            )
             server = uvicorn.Server(config)
             await server.serve()
         except Exception as e:
@@ -451,7 +493,9 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Agent API service")
-    parser.add_argument("--config", default="config/agent_api.json", help="Path to config file")
+    parser.add_argument(
+        "--config", default="config/agent_api.json", help="Path to config file"
+    )
     args = parser.parse_args()
 
     try:

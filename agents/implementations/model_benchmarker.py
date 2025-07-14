@@ -40,7 +40,12 @@ class BenchmarkResult:
 class ModelBenchmarker:
     """Benchmarks and evaluates model implementations."""
 
-    def __init__(self, benchmark_data: pd.DataFrame, target_column: str = "returns", current_best_score: float = 1.0):
+    def __init__(
+        self,
+        benchmark_data: pd.DataFrame,
+        target_column: str = "returns",
+        current_best_score: float = 1.0,
+    ):
         """
         Initialize the model benchmarker.
 
@@ -84,7 +89,12 @@ class ModelBenchmarker:
             # Benchmark based on model type
             if model_candidate.model_type == "sklearn":
                 result = self._benchmark_sklearn_model(model_candidate, X_test, y_test)
-            elif model_candidate.model_type in ["lstm", "transformer", "attention", "rl"]:
+            elif model_candidate.model_type in [
+                "lstm",
+                "transformer",
+                "attention",
+                "rl",
+            ]:
                 result = self._benchmark_pytorch_model(model_candidate, X_test, y_test)
             else:
                 result = self._benchmark_generic_model(model_candidate, X_test, y_test)
@@ -117,7 +127,9 @@ class ModelBenchmarker:
                 benchmark_date=datetime.now().isoformat(),
             )
 
-    def _prepare_benchmark_data(self, data: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    def _prepare_benchmark_data(
+        self, data: pd.DataFrame
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Prepare data for benchmarking."""
         try:
             # Ensure we have the target column
@@ -129,11 +141,15 @@ class ModelBenchmarker:
                         self.target_column = col
                         break
                 else:
-                    raise ValueError(f"Target column '{self.target_column}' not found in data")
+                    raise ValueError(
+                        f"Target column '{self.target_column}' not found in data"
+                    )
 
             # Prepare features (use all numeric columns except target)
             feature_columns = [
-                col for col in data.select_dtypes(include=[np.number]).columns if col != self.target_column
+                col
+                for col in data.select_dtypes(include=[np.number]).columns
+                if col != self.target_column
             ]
 
             if not feature_columns:
@@ -142,7 +158,10 @@ class ModelBenchmarker:
                 data = data.copy()
                 data[f"{self.target_column}_lag1"] = data[self.target_column].shift(1)
                 data[f"{self.target_column}_lag2"] = data[self.target_column].shift(2)
-                feature_columns = [f"{self.target_column}_lag1", f"{self.target_column}_lag2"]
+                feature_columns = [
+                    f"{self.target_column}_lag1",
+                    f"{self.target_column}_lag2",
+                ]
 
             # Remove rows with NaN values
             data_clean = data[feature_columns + [self.target_column]].dropna()
@@ -177,7 +196,9 @@ class ModelBenchmarker:
             from sklearn.svm import SVR
 
             # Split data
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42
+            )
 
             # Create model based on type
             model_type = model_candidate.name.lower()
@@ -232,7 +253,9 @@ class ModelBenchmarker:
             )
 
         except Exception as e:
-            logger.error(f"Error benchmarking sklearn model {model_candidate.name}: {e}")
+            logger.error(
+                f"Error benchmarking sklearn model {model_candidate.name}: {e}"
+            )
             raise
 
     def _benchmark_pytorch_model(
@@ -242,7 +265,9 @@ class ModelBenchmarker:
         try:
             # For now, return a placeholder result
             # In a full implementation, this would create and train the PyTorch model
-            logger.warning(f"PyTorch benchmarking not fully implemented for {model_candidate.name}")
+            logger.warning(
+                f"PyTorch benchmarking not fully implemented for {model_candidate.name}"
+            )
 
             return BenchmarkResult(
                 model_name=model_candidate.name,
@@ -259,7 +284,9 @@ class ModelBenchmarker:
             )
 
         except Exception as e:
-            logger.error(f"Error benchmarking PyTorch model {model_candidate.name}: {e}")
+            logger.error(
+                f"Error benchmarking PyTorch model {model_candidate.name}: {e}"
+            )
             raise
 
     def _benchmark_generic_model(
@@ -269,7 +296,9 @@ class ModelBenchmarker:
         try:
             # For now, return a placeholder result
             # In a full implementation, this would evaluate the generated code
-            logger.warning(f"Generic model benchmarking not fully implemented for {model_candidate.name}")
+            logger.warning(
+                f"Generic model benchmarking not fully implemented for {model_candidate.name}"
+            )
 
             return BenchmarkResult(
                 model_name=model_candidate.name,
@@ -286,10 +315,14 @@ class ModelBenchmarker:
             )
 
         except Exception as e:
-            logger.error(f"Error benchmarking generic model {model_candidate.name}: {e}")
+            logger.error(
+                f"Error benchmarking generic model {model_candidate.name}: {e}"
+            )
             raise
 
-    def _calculate_trading_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Tuple[float, float]:
+    def _calculate_trading_metrics(
+        self, y_true: np.ndarray, y_pred: np.ndarray
+    ) -> Tuple[float, float]:
         """Calculate trading-specific metrics."""
         try:
             # Calculate returns
@@ -320,14 +353,22 @@ class ModelBenchmarker:
             mae_score = max(0, 1 - result.mae / 0.5)  # Assuming max MAE of 0.5
             r2_score = max(0, result.r2_score)
             sharpe_score = max(0, min(1, result.sharpe_ratio / 2.0))  # Normalize to 0-1
-            drawdown_score = max(0, 1 - result.max_drawdown / 0.5)  # Assuming max drawdown of 0.5
+            drawdown_score = max(
+                0, 1 - result.max_drawdown / 0.5
+            )  # Assuming max drawdown of 0.5
 
             # Time efficiency scores (lower is better)
-            time_score = max(0, 1 - result.training_time / 60.0)  # Assuming max training time of 60s
-            inference_score = max(0, 1 - result.inference_time / 1.0)  # Assuming max inference time of 1s
+            time_score = max(
+                0, 1 - result.training_time / 60.0
+            )  # Assuming max training time of 60s
+            inference_score = max(
+                0, 1 - result.inference_time / 1.0
+            )  # Assuming max inference time of 1s
 
             # Memory efficiency score
-            memory_score = max(0, 1 - result.memory_usage / 1000.0)  # Assuming max memory of 1GB
+            memory_score = max(
+                0, 1 - result.memory_usage / 1000.0
+            )  # Assuming max memory of 1GB
 
             # Weighted combination
             weights = {

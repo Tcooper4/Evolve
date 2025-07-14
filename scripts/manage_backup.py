@@ -46,7 +46,6 @@ import redis
 import yaml
 
 
-
 class BackupManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
         """Initialize the backup manager."""
@@ -189,7 +188,9 @@ class BackupManager:
                 "schedule": schedule,
                 "target": target,
                 "last_run": None,
-                "next_run": croniter.croniter(schedule, datetime.now()).get_next(datetime).isoformat(),
+                "next_run": croniter.croniter(schedule, datetime.now())
+                .get_next(datetime)
+                .isoformat(),
             }
 
             # Save schedule
@@ -203,7 +204,11 @@ class BackupManager:
             def backup_job():
                 asyncio.run(self.create_backup(backup_type, target))
                 schedule_info["last_run"] = datetime.now().isoformat()
-                schedule_info["next_run"] = croniter.croniter(schedule, datetime.now()).get_next(datetime).isoformat()
+                schedule_info["next_run"] = (
+                    croniter.croniter(schedule, datetime.now())
+                    .get_next(datetime)
+                    .isoformat()
+                )
 
                 with open(schedule_file, "w") as f:
                     json.dump(schedule_info, f, indent=2)
@@ -279,11 +284,17 @@ class BackupManager:
             last_backup = self._get_last_backup_time()
 
             # Backup changed files since last backup
-            components["config"] = await self._backup_changed_files("config", last_backup)
+            components["config"] = await self._backup_changed_files(
+                "config", last_backup
+            )
             components["data"] = await self._backup_changed_files("data", last_backup)
-            components["database"] = await self._backup_database()  # Always backup database
+            components[
+                "database"
+            ] = await self._backup_database()  # Always backup database
             components["logs"] = await self._backup_changed_files("logs", last_backup)
-            components["models"] = await self._backup_changed_files("models", last_backup)
+            components["models"] = await self._backup_changed_files(
+                "models", last_backup
+            )
 
             return components
         except Exception as e:
@@ -299,11 +310,21 @@ class BackupManager:
             last_full_backup = self._get_last_full_backup_time()
 
             # Backup all files changed since last full backup
-            components["config"] = await self._backup_changed_files("config", last_full_backup)
-            components["data"] = await self._backup_changed_files("data", last_full_backup)
-            components["database"] = await self._backup_database()  # Always backup database
-            components["logs"] = await self._backup_changed_files("logs", last_full_backup)
-            components["models"] = await self._backup_changed_files("models", last_full_backup)
+            components["config"] = await self._backup_changed_files(
+                "config", last_full_backup
+            )
+            components["data"] = await self._backup_changed_files(
+                "data", last_full_backup
+            )
+            components[
+                "database"
+            ] = await self._backup_database()  # Always backup database
+            components["logs"] = await self._backup_changed_files(
+                "logs", last_full_backup
+            )
+            components["models"] = await self._backup_changed_files(
+                "models", last_full_backup
+            )
 
             return components
         except Exception as e:
@@ -355,7 +376,10 @@ class BackupManager:
             )
 
             # Create backup
-            backup_path = self.backup_dir / f"database_{datetime.now().strftime('%Y%m%d_%H%M%S')}.rdb"
+            backup_path = (
+                self.backup_dir
+                / f"database_{datetime.now().strftime('%Y%m%d_%H%M%S')}.rdb"
+            )
             redis_client.save()
             shutil.copy2(Path(self.config["database"]["rdb_path"]), backup_path)
 
@@ -441,7 +465,9 @@ class BackupManager:
                 with open(file) as f:
                     backup_info = json.load(f)
                     if backup_info["type"] == "full":
-                        full_backups.append(datetime.fromisoformat(backup_info["timestamp"]))
+                        full_backups.append(
+                            datetime.fromisoformat(backup_info["timestamp"])
+                        )
 
             return max(full_backups) if full_backups else datetime.min
         except Exception as e:
@@ -465,7 +491,11 @@ class BackupManager:
         try:
             if target == "s3":
                 s3 = boto3.client("s3")
-                s3.upload_file(str(backup_file), self.config["backup"]["s3"]["bucket"], f"backups/{backup_file.name}")
+                s3.upload_file(
+                    str(backup_file),
+                    self.config["backup"]["s3"]["bucket"],
+                    f"backups/{backup_file.name}",
+                )
             elif target == "gcs":
                 storage_client = storage.Client()
                 bucket = storage_client.bucket(self.config["backup"]["gcs"]["bucket"])
@@ -475,7 +505,9 @@ class BackupManager:
                 blob_service_client = BlobServiceClient.from_connection_string(
                     self.config["backup"]["azure"]["connection_string"]
                 )
-                container_client = blob_service_client.get_container_client(self.config["backup"]["azure"]["container"])
+                container_client = blob_service_client.get_container_client(
+                    self.config["backup"]["azure"]["container"]
+                )
                 with open(backup_file, "rb") as data:
                     container_client.upload_blob(f"backups/{backup_file.name}", data)
             else:
@@ -491,7 +523,11 @@ class BackupManager:
 
             if target == "s3":
                 s3 = boto3.client("s3")
-                s3.download_file(self.config["backup"]["s3"]["bucket"], f"backups/{backup_file}", str(local_path))
+                s3.download_file(
+                    self.config["backup"]["s3"]["bucket"],
+                    f"backups/{backup_file}",
+                    str(local_path),
+                )
             elif target == "gcs":
                 storage_client = storage.Client()
                 bucket = storage_client.bucket(self.config["backup"]["gcs"]["bucket"])
@@ -501,9 +537,15 @@ class BackupManager:
                 blob_service_client = BlobServiceClient.from_connection_string(
                     self.config["backup"]["azure"]["connection_string"]
                 )
-                container_client = blob_service_client.get_container_client(self.config["backup"]["azure"]["container"])
+                container_client = blob_service_client.get_container_client(
+                    self.config["backup"]["azure"]["container"]
+                )
                 with open(local_path, "wb") as data:
-                    data.write(container_client.download_blob(f"backups/{backup_file}").readall())
+                    data.write(
+                        container_client.download_blob(
+                            f"backups/{backup_file}"
+                        ).readall()
+                    )
             else:
                 raise ValueError(f"Unsupported target: {target}")
 
@@ -520,10 +562,13 @@ class BackupManager:
             if target == "s3":
                 s3 = boto3.client("s3")
                 response = s3.list_objects_v2(
-                    Bucket=self.config["backup"]["s3"]["bucket"], Prefix="backups/backup_info_"
+                    Bucket=self.config["backup"]["s3"]["bucket"],
+                    Prefix="backups/backup_info_",
                 )
                 for obj in response.get("Contents", []):
-                    info = s3.get_object(Bucket=self.config["backup"]["s3"]["bucket"], Key=obj["Key"])
+                    info = s3.get_object(
+                        Bucket=self.config["backup"]["s3"]["bucket"], Key=obj["Key"]
+                    )
                     backups.append(json.loads(info["Body"].read()))
 
             elif target == "gcs":
@@ -538,8 +583,12 @@ class BackupManager:
                 blob_service_client = BlobServiceClient.from_connection_string(
                     self.config["backup"]["azure"]["connection_string"]
                 )
-                container_client = blob_service_client.get_container_client(self.config["backup"]["azure"]["container"])
-                blobs = container_client.list_blobs(name_starts_with="backups/backup_info_")
+                container_client = blob_service_client.get_container_client(
+                    self.config["backup"]["azure"]["container"]
+                )
+                blobs = container_client.list_blobs(
+                    name_starts_with="backups/backup_info_"
+                )
                 for blob in blobs:
                     info = container_client.download_blob(blob.name).readall()
                     backups.append(json.loads(info))
@@ -566,9 +615,20 @@ class BackupManager:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Backup Manager")
-    parser.add_argument("command", choices=["create", "restore", "schedule", "list"], help="Command to execute")
-    parser.add_argument("--type", choices=["full", "incremental", "differential"], help="Backup type")
-    parser.add_argument("--target", default="local", choices=["local", "s3", "gcs", "azure"], help="Backup target")
+    parser.add_argument(
+        "command",
+        choices=["create", "restore", "schedule", "list"],
+        help="Command to execute",
+    )
+    parser.add_argument(
+        "--type", choices=["full", "incremental", "differential"], help="Backup type"
+    )
+    parser.add_argument(
+        "--target",
+        default="local",
+        choices=["local", "s3", "gcs", "azure"],
+        help="Backup target",
+    )
     parser.add_argument("--schedule", help="Cron schedule for automated backups")
     parser.add_argument("--backup-file", help="Backup file to restore from")
 
@@ -577,8 +637,12 @@ def main():
 
     commands = {
         "create": lambda: asyncio.run(manager.create_backup(args.type, args.target)),
-        "restore": lambda: asyncio.run(manager.restore_backup(args.backup_file, args.target)),
-        "schedule": lambda: manager.schedule_backup(args.type, args.schedule, args.target),
+        "restore": lambda: asyncio.run(
+            manager.restore_backup(args.backup_file, args.target)
+        ),
+        "schedule": lambda: manager.schedule_backup(
+            args.type, args.schedule, args.target
+        ),
         "list": lambda: manager.list_backups(args.type),
     }
 

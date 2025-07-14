@@ -268,7 +268,7 @@ def get_next_market_open() -> datetime:
 
 def get_previous_market_close() -> datetime:
     """Get previous market close time."""
-    market_hours = MarketHours()
+    MarketHours()
     # This is a simplified implementation
     return datetime.now() - timedelta(hours=16)
 
@@ -399,7 +399,9 @@ def cleanup_old_files(directory: str, days: int = 30) -> int:
 # Data utility functions
 
 
-def load_data(symbol: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
+def load_data(
+    symbol: str, start_date: str = None, end_date: str = None
+) -> pd.DataFrame:
     """Load data for a symbol."""
     # This is a stub - in practice would use data providers
     return pd.DataFrame()
@@ -426,7 +428,9 @@ def validate_date_range(start_date: str, end_date: str) -> bool:
         end = datetime.fromisoformat(end_date)
         return start < end
     except (ValueError, TypeError) as e:
-        utils_logger.warning(f"Invalid date format: {start_date} or {end_date}. Error: {e}")
+        utils_logger.warning(
+            f"Invalid date format: {start_date} or {end_date}. Error: {e}"
+        )
         return False
 
 

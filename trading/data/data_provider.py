@@ -87,7 +87,9 @@ class DataProviderConfig:
         Args:
             config_path: Path to configuration file
         """
-        self.config_path = config_path or "trading/data/config/data_provider_config.json"
+        self.config_path = (
+            config_path or "trading/data/config/data_provider_config.json"
+        )
         self.config = self._load_config()
 
     def _load_config(self) -> Dict[str, Any]:
@@ -95,9 +97,24 @@ class DataProviderConfig:
         default_config = {
             "cache": {"enabled": True, "ttl_minutes": 15, "max_size": 1000},
             "providers": {
-                "alpha_vantage": {"enabled": True, "priority": 1, "timeout_seconds": 30, "retry_attempts": 3},
-                "yfinance": {"enabled": True, "priority": 2, "timeout_seconds": 30, "retry_attempts": 3},
-                "fallback": {"enabled": True, "priority": 3, "timeout_seconds": 30, "retry_attempts": 3},
+                "alpha_vantage": {
+                    "enabled": True,
+                    "priority": 1,
+                    "timeout_seconds": 30,
+                    "retry_attempts": 3,
+                },
+                "yfinance": {
+                    "enabled": True,
+                    "priority": 2,
+                    "timeout_seconds": 30,
+                    "retry_attempts": 3,
+                },
+                "fallback": {
+                    "enabled": True,
+                    "priority": 3,
+                    "timeout_seconds": 30,
+                    "retry_attempts": 3,
+                },
             },
             "validation": {
                 "check_data_quality": True,
@@ -279,7 +296,10 @@ class DataValidator:
 
         # Check data length
         if len(data) < self.min_data_points:
-            return False, f"Insufficient data points: {len(data)} < {self.min_data_points}"
+            return (
+                False,
+                f"Insufficient data points: {len(data)} < {self.min_data_points}",
+            )
 
         # Check for reasonable data ranges
         if (data["high"] < data["low"]).any():
@@ -292,7 +312,10 @@ class DataValidator:
         if self.check_quality:
             price_changes = abs(data["close"].pct_change()).dropna()
             if (price_changes > self.max_price_change).any():
-                return False, f"Extreme price changes detected (>{self.max_price_change*100}%)"
+                return (
+                    False,
+                    f"Extreme price changes detected (>{self.max_price_change*100}%)",
+                )
 
         return True, None
 
@@ -334,7 +357,9 @@ class DataProviderManager:
             if alpha_config.get("enabled", True):
                 try:
                     self.providers["alpha_vantage"] = AlphaVantageProvider(alpha_config)
-                    self.provider_status["alpha_vantage"] = ProviderStatus(name="alpha_vantage", enabled=True)
+                    self.provider_status["alpha_vantage"] = ProviderStatus(
+                        name="alpha_vantage", enabled=True
+                    )
                     logger.info("AlphaVantage provider initialized")
                 except Exception as e:
                     logger.error(f"Failed to initialize AlphaVantage provider: {e}")
@@ -344,7 +369,9 @@ class DataProviderManager:
             if yfinance_config.get("enabled", True):
                 try:
                     self.providers["yfinance"] = YFinanceProvider(yfinance_config)
-                    self.provider_status["yfinance"] = ProviderStatus(name="yfinance", enabled=True)
+                    self.provider_status["yfinance"] = ProviderStatus(
+                        name="yfinance", enabled=True
+                    )
                     logger.info("YFinance provider initialized")
                 except Exception as e:
                     logger.error(f"Failed to initialize YFinance provider: {e}")
@@ -354,7 +381,9 @@ class DataProviderManager:
             if fallback_config.get("enabled", True):
                 try:
                     self.providers["fallback"] = FallbackProvider(fallback_config)
-                    self.provider_status["fallback"] = ProviderStatus(name="fallback", enabled=True)
+                    self.provider_status["fallback"] = ProviderStatus(
+                        name="fallback", enabled=True
+                    )
                     logger.info("Fallback provider initialized")
                 except Exception as e:
                     logger.error(f"Failed to initialize fallback provider: {e}")
@@ -383,7 +412,7 @@ class DataProviderManager:
 
         # Check cache first
         if request.use_cache:
-            cache_key = self._get_cache_key(request)
+            self._get_cache_key(request)
             cached_response = self._get_cached_data(request)
             if cached_response is not None:
                 logger.info(f"Cache hit for {request.symbol}")
@@ -398,19 +427,28 @@ class DataProviderManager:
                 continue
 
             try:
-                logger.info(f"Attempting to fetch data from {provider_name} for {request.symbol}")
+                logger.info(
+                    f"Attempting to fetch data from {provider_name} for {request.symbol}"
+                )
 
                 # Log fetch latency per provider call
                 provider_start_time = datetime.now()
 
                 provider = self.providers[provider_name]
                 data = provider.fetch(
-                    request.symbol, request.interval, start_date=request.start_date, end_date=request.end_date
+                    request.symbol,
+                    request.interval,
+                    start_date=request.start_date,
+                    end_date=request.end_date,
                 )
 
                 # Calculate and log latency
-                provider_latency = (datetime.now() - provider_start_time).total_seconds()
-                logger.info(f"Provider {provider_name} fetch latency for {request.symbol}: {provider_latency:.3f}s")
+                provider_latency = (
+                    datetime.now() - provider_start_time
+                ).total_seconds()
+                logger.info(
+                    f"Provider {provider_name} fetch latency for {request.symbol}: {provider_latency:.3f}s"
+                )
 
                 # Validate data
                 is_valid, error_msg = self.validator.validate(data, request.symbol)
@@ -423,7 +461,10 @@ class DataProviderManager:
                             "symbol": request.symbol,
                             "interval": request.interval,
                             "data_points": len(data),
-                            "response_time_ms": (datetime.now() - start_time).total_seconds() * 1000,
+                            "response_time_ms": (
+                                datetime.now() - start_time
+                            ).total_seconds()
+                            * 1000,
                         },
                     )
 
@@ -437,21 +478,29 @@ class DataProviderManager:
                     # Log request history
                     self.request_history.append(request)
 
-                    logger.info(f"Successfully fetched data from {provider_name} for {request.symbol}")
+                    logger.info(
+                        f"Successfully fetched data from {provider_name} for {request.symbol}"
+                    )
                     return response
                 else:
-                    logger.warning(f"Invalid data received from {provider_name} for {request.symbol}: {error_msg}")
+                    logger.warning(
+                        f"Invalid data received from {provider_name} for {request.symbol}: {error_msg}"
+                    )
                     self._update_provider_status(provider_name, False, error_msg)
 
             except Exception as e:
-                logger.warning(f"Provider {provider_name} failed for {request.symbol}: {e}")
+                logger.warning(
+                    f"Provider {provider_name} failed for {request.symbol}: {e}"
+                )
                 self._update_provider_status(provider_name, False, str(e))
                 continue
 
         # All providers failed
         error_msg = f"All data providers failed for {request.symbol}"
         logger.error(error_msg)
-        return DataResponse(data=pd.DataFrame(), provider="none", cache_hit=False, error=error_msg)
+        return DataResponse(
+            data=pd.DataFrame(), provider="none", cache_hit=False, error=error_msg
+        )
 
     def get_multiple_data(self, requests: List[DataRequest]) -> Dict[str, DataResponse]:
         """
@@ -496,7 +545,9 @@ class DataProviderManager:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.get_data, request)
 
-    def _get_provider_order(self, preferred_provider: Optional[str] = None) -> List[str]:
+    def _get_provider_order(
+        self, preferred_provider: Optional[str] = None
+    ) -> List[str]:
         """Get the order of providers to try."""
         if preferred_provider and preferred_provider in self.providers:
             # Start with preferred provider, then fallback
@@ -538,7 +589,9 @@ class DataProviderManager:
         """Generate cache key for request."""
         return f"{request.symbol}_{request.interval}_{request.start_date}_{request.end_date}"
 
-    def _update_provider_status(self, provider_name: str, success: bool, error: Optional[str]) -> None:
+    def _update_provider_status(
+        self, provider_name: str, success: bool, error: Optional[str]
+    ) -> None:
         """Update provider status statistics."""
         if provider_name in self.provider_status:
             status = self.provider_status[provider_name]
@@ -554,14 +607,18 @@ class DataProviderManager:
         status = {}
         for name, provider in self.providers.items():
             try:
-                provider_status = self.provider_status.get(name, ProviderStatus(name=name, enabled=False))
+                provider_status = self.provider_status.get(
+                    name, ProviderStatus(name=name, enabled=False)
+                )
                 status[name] = {
                     "enabled": provider.is_enabled() and provider_status.enabled,
                     "metadata": provider.get_metadata(),
                     "success_count": provider_status.success_count,
                     "error_count": provider_status.error_count,
                     "last_error": provider_status.last_error,
-                    "last_used": provider_status.last_used.isoformat() if provider_status.last_used else None,
+                    "last_used": provider_status.last_used.isoformat()
+                    if provider_status.last_used
+                    else None,
                 }
             except Exception as e:
                 status[name] = {"enabled": False, "error": str(e)}
@@ -626,7 +683,9 @@ def fetch_data(symbol: str, interval: str = "1d", **kwargs) -> pd.DataFrame:
     return response.data
 
 
-def fetch_multiple_data(symbols: List[str], interval: str = "1d", **kwargs) -> Dict[str, pd.DataFrame]:
+def fetch_multiple_data(
+    symbols: List[str], interval: str = "1d", **kwargs
+) -> Dict[str, pd.DataFrame]:
     """Fetch data for multiple symbols (convenience function).
 
     Args:
@@ -638,9 +697,15 @@ def fetch_multiple_data(symbols: List[str], interval: str = "1d", **kwargs) -> D
         Dictionary mapping symbols to DataFrames
     """
     provider = get_data_provider()
-    requests = [DataRequest(symbol=symbol, interval=interval, **kwargs) for symbol in symbols]
+    requests = [
+        DataRequest(symbol=symbol, interval=interval, **kwargs) for symbol in symbols
+    ]
     responses = provider.get_multiple_data(requests)
-    return {symbol: response.data for symbol, response in responses.items() if response.error is None}
+    return {
+        symbol: response.data
+        for symbol, response in responses.items()
+        if response.error is None
+    }
 
 
 # --- Exports ---

@@ -101,7 +101,9 @@ class PolygonProvider(DataProvider):
     def _health_check(self) -> bool:
         """Check Polygon API health."""
         try:
-            url = f"{self.base_url}/v2/aggs/ticker/AAPL/range/1/day/2023-01-01/2023-01-01"
+            url = (
+                f"{self.base_url}/v2/aggs/ticker/AAPL/range/1/day/2023-01-01/2023-01-01"
+            )
             params = {"apiKey": self.api_key}
             response = requests.get(url, params=params, timeout=10)
             return response.status_code == 200
@@ -125,7 +127,16 @@ class PolygonProvider(DataProvider):
 
             df = pd.DataFrame(data["results"])
             df["timestamp"] = pd.to_datetime(df["t"], unit="ms")
-            df = df.rename(columns={"o": "Open", "h": "High", "l": "Low", "c": "Close", "v": "Volume", "vw": "VWAP"})
+            df = df.rename(
+                columns={
+                    "o": "Open",
+                    "h": "High",
+                    "l": "Low",
+                    "c": "Close",
+                    "v": "Volume",
+                    "vw": "VWAP",
+                }
+            )
 
             self.last_successful_request = datetime.now()
             return df[["timestamp", "Open", "High", "Low", "Close", "Volume", "VWAP"]]
@@ -137,7 +148,9 @@ class PolygonProvider(DataProvider):
     def get_live_data(self, symbol: str) -> Optional[Dict]:
         """Get live data from Polygon."""
         try:
-            url = f"{self.base_url}/v2/snapshot/locale/us/markets/stocks/tickers/{symbol}"
+            url = (
+                f"{self.base_url}/v2/snapshot/locale/us/markets/stocks/tickers/{symbol}"
+            )
             params = {"apiKey": self.api_key}
 
             response = requests.get(url, params=params, timeout=10)
@@ -190,7 +203,13 @@ class FinnhubProvider(DataProvider):
             end_ts = int(pd.to_datetime(end_date).timestamp())
 
             url = f"{self.base_url}/stock/candle"
-            params = {"symbol": symbol, "resolution": "D", "from": start_ts, "to": end_ts, "token": self.api_key}
+            params = {
+                "symbol": symbol,
+                "resolution": "D",
+                "from": start_ts,
+                "to": end_ts,
+                "token": self.api_key,
+            }
 
             response = requests.get(url, params=params, timeout=30)
             response.raise_for_status()
@@ -253,7 +272,11 @@ class AlphaVantageProvider(DataProvider):
     def _health_check(self) -> bool:
         """Check Alpha Vantage API health."""
         try:
-            params = {"function": "TIME_SERIES_DAILY", "symbol": "AAPL", "apikey": self.api_key}
+            params = {
+                "function": "TIME_SERIES_DAILY",
+                "symbol": "AAPL",
+                "apikey": self.api_key,
+            }
             response = requests.get(self.base_url, params=params, timeout=10)
             return response.status_code == 200
         except Exception:
@@ -264,7 +287,12 @@ class AlphaVantageProvider(DataProvider):
     ) -> Optional[pd.DataFrame]:
         """Get historical data from Alpha Vantage."""
         try:
-            params = {"function": "TIME_SERIES_DAILY", "symbol": symbol, "apikey": self.api_key, "outputsize": "full"}
+            params = {
+                "function": "TIME_SERIES_DAILY",
+                "symbol": symbol,
+                "apikey": self.api_key,
+                "outputsize": "full",
+            }
 
             response = requests.get(self.base_url, params=params, timeout=30)
             response.raise_for_status()
@@ -305,7 +333,11 @@ class AlphaVantageProvider(DataProvider):
     def get_live_data(self, symbol: str) -> Optional[Dict]:
         """Get live data from Alpha Vantage."""
         try:
-            params = {"function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": self.api_key}
+            params = {
+                "function": "GLOBAL_QUOTE",
+                "symbol": symbol,
+                "apikey": self.api_key,
+            }
 
             response = requests.get(self.base_url, params=params, timeout=10)
             response.raise_for_status()
@@ -349,7 +381,9 @@ class LiveDataFeed:
         original_index = self.current_provider_index
 
         for i in range(len(self.providers)):
-            self.current_provider_index = (self.current_provider_index + 1) % len(self.providers)
+            self.current_provider_index = (self.current_provider_index + 1) % len(
+                self.providers
+            )
             provider = self.providers[self.current_provider_index]
 
             if provider.check_availability():
@@ -360,7 +394,9 @@ class LiveDataFeed:
         logger.error("No providers available")
         return False
 
-    def _get_cache_key(self, symbol: str, start_date: str, end_date: str, interval: str) -> str:
+    def _get_cache_key(
+        self, symbol: str, start_date: str, end_date: str, interval: str
+    ) -> str:
         """Generate cache key for data request."""
         return f"{symbol}_{start_date}_{end_date}_{interval}"
 
@@ -396,7 +432,9 @@ class LiveDataFeed:
         for _ in range(len(self.providers) - 1):
             if self._switch_provider():
                 provider = self._get_current_provider()
-                data = provider.get_historical_data(symbol, start_date, end_date, interval)
+                data = provider.get_historical_data(
+                    symbol, start_date, end_date, interval
+                )
                 if data is not None:
                     self.cache[cache_key] = (datetime.now(), data)
                     return data
@@ -428,7 +466,9 @@ class LiveDataFeed:
         logger.warning(f"All providers failed for {symbol}, generating fallback data")
         return self._get_fallback_live_data(symbol)
 
-    def _get_fallback_historical_data(self, symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
+    def _get_fallback_historical_data(
+        self, symbol: str, start_date: str, end_date: str
+    ) -> pd.DataFrame:
         """Generate fallback historical data."""
         start = pd.to_datetime(start_date)
         end = pd.to_datetime(end_date)
@@ -474,7 +514,10 @@ class LiveDataFeed:
 
     def get_provider_status(self) -> Dict[str, Any]:
         """Get status of all providers."""
-        status = {"current_provider": self._get_current_provider().name, "providers": {}}
+        status = {
+            "current_provider": self._get_current_provider().name,
+            "providers": {},
+        }
 
         for provider in self.providers:
             status["providers"][provider.name] = provider.get_provider_status()
@@ -498,7 +541,9 @@ class LiveDataFeed:
     def get_system_health(self) -> Dict[str, Any]:
         """Get overall system health."""
         provider_status = self.get_provider_status()
-        available_providers = sum(1 for status in provider_status["providers"].values() if status["available"])
+        available_providers = sum(
+            1 for status in provider_status["providers"].values() if status["available"]
+        )
 
         return {
             "status": "healthy" if available_providers > 0 else "degraded",

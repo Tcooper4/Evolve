@@ -20,7 +20,9 @@ class PerformanceMemory:
     with support for file locking, backups, and enhanced metric structures.
     """
 
-    def __init__(self, path: str = "model_performance.json", backup_dir: str = "backups"):
+    def __init__(
+        self, path: str = "model_performance.json", backup_dir: str = "backups"
+    ):
         """Initialize the performance memory storage.
 
         Args:
@@ -53,7 +55,9 @@ class PerformanceMemory:
                 cleaned_count = 0
                 for backup in self.backup_dir.glob("model_performance_*.json"):
                     try:
-                        backup_timestamp = datetime.strptime(backup.stem.split("_")[-1], "%Y%m%d_%H%M%S")
+                        backup_timestamp = datetime.strptime(
+                            backup.stem.split("_")[-1], "%Y%m%d_%H%M%S"
+                        )
                         if backup_timestamp < cutoff:
                             backup.unlink()
                             cleaned_count += 1
@@ -68,10 +72,18 @@ class PerformanceMemory:
                     "cleaned_count": cleaned_count,
                 }
             else:
-                return {"success": True, "message": "No file to backup", "timestamp": datetime.now().isoformat()}
+                return {
+                    "success": True,
+                    "message": "No file to backup",
+                    "timestamp": datetime.now().isoformat(),
+                }
         except Exception as e:
             logger.error(f"Failed to create backup: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _load_with_retry(self, max_retries: int = 3) -> Dict[str, Any]:
         """Load data with retry mechanism and backup fallback.
@@ -97,7 +109,9 @@ class PerformanceMemory:
                 logger.warning(f"JSON decode error on attempt {attempt + 1}")
                 if attempt == max_retries - 1:
                     # Try loading from backup
-                    backup_files = sorted(self.backup_dir.glob("model_performance_*.json"))
+                    backup_files = sorted(
+                        self.backup_dir.glob("model_performance_*.json")
+                    )
                     if backup_files:
                         try:
                             with open(backup_files[-1], "r") as f:
@@ -118,7 +132,11 @@ class PerformanceMemory:
             except Exception as e:
                 logger.error(f"Error loading data: {e}")
                 if attempt == max_retries - 1:
-                    return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+                    return {
+                        "success": False,
+                        "error": str(e),
+                        "timestamp": datetime.now().isoformat(),
+                    }
             time.sleep(0.1 * (attempt + 1))
 
         return {
@@ -164,8 +182,10 @@ class PerformanceMemory:
                 temp_path.replace(self.path)
 
                 # Create backup every 24 hours
-                if not hasattr(self, "_last_backup") or datetime.now() - self._last_backup > timedelta(hours=24):
-                    backup_result = self._create_backup()
+                if not hasattr(
+                    self, "_last_backup"
+                ) or datetime.now() - self._last_backup > timedelta(hours=24):
+                    self._create_backup()
                     self._last_backup = datetime.now()
 
                 return {
@@ -177,9 +197,15 @@ class PerformanceMemory:
 
         except Exception as e:
             logger.error(f"Failed to save data: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def update(self, ticker: str, model: str, metrics: Dict[str, Any]) -> Dict[str, Any]:
+    def update(
+        self, ticker: str, model: str, metrics: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Update stored metrics for a ticker and model with enhanced metadata.
 
         Args:
@@ -220,7 +246,11 @@ class PerformanceMemory:
             else:
                 return save_result
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_metrics(self, ticker: str) -> Dict[str, Any]:
         """Get metrics for a ticker.
@@ -304,7 +334,11 @@ class PerformanceMemory:
             else:
                 return save_result
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def remove_model(self, ticker: str, model: str) -> Dict[str, Any]:
         """Remove a specific model's metrics for a ticker.
@@ -347,7 +381,11 @@ class PerformanceMemory:
                     "model": model,
                 }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_all_tickers(self) -> List[str]:
         """Get list of all tickers in the performance memory.
@@ -367,7 +405,11 @@ class PerformanceMemory:
             return []
 
     def detect_anomalies(
-        self, ticker: str, model: str, current_metrics: Dict[str, float], threshold_std: float = 2.0
+        self,
+        ticker: str,
+        model: str,
+        current_metrics: Dict[str, float],
+        threshold_std: float = 2.0,
     ) -> Dict[str, Any]:
         """Detect anomalies by comparing current metrics to historical performance.
 
@@ -418,7 +460,9 @@ class PerformanceMemory:
 
                 # Calculate statistics
                 mean_val = sum(historical_values) / len(historical_values)
-                variance = sum((x - mean_val) ** 2 for x in historical_values) / len(historical_values)
+                variance = sum((x - mean_val) ** 2 for x in historical_values) / len(
+                    historical_values
+                )
                 std_dev = variance**0.5
 
                 historical_stats[metric_name] = {
@@ -456,8 +500,14 @@ class PerformanceMemory:
                             "z_score": z_score,
                             "anomaly_type": anomaly_type,
                             "is_good_anomaly": is_good_anomaly,
-                            "percentile": self._calculate_percentile(current_value, historical_values),
-                            "severity": "high" if z_score > 3.0 else "medium" if z_score > 2.5 else "low",
+                            "percentile": self._calculate_percentile(
+                                current_value, historical_values
+                            ),
+                            "severity": "high"
+                            if z_score > 3.0
+                            else "medium"
+                            if z_score > 2.5
+                            else "low",
                         }
 
             return {
@@ -473,9 +523,15 @@ class PerformanceMemory:
 
         except Exception as e:
             logger.error(f"Error detecting anomalies: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def _calculate_percentile(self, value: float, historical_values: List[float]) -> float:
+    def _calculate_percentile(
+        self, value: float, historical_values: List[float]
+    ) -> float:
         """Calculate percentile of current value in historical distribution.
 
         Args:
@@ -505,7 +561,9 @@ class PerformanceMemory:
             logger.error(f"Error calculating percentile: {e}")
             return 50.0
 
-    def get_performance_trends(self, ticker: str, model: str, metric: str, window_size: int = 10) -> Dict[str, Any]:
+    def get_performance_trends(
+        self, ticker: str, model: str, metric: str, window_size: int = 10
+    ) -> Dict[str, Any]:
         """Get performance trends for a specific metric.
 
         Args:
@@ -566,7 +624,10 @@ class PerformanceMemory:
             # Calculate trend strength (R-squared)
             y_pred = [slope * xi + intercept for xi in x]
             ss_res = sum((y - y_pred[i]) ** 2 for i, y in enumerate(metric_values))
-            ss_tot = sum((y - sum(metric_values) / len(metric_values)) ** 2 for y in metric_values)
+            ss_tot = sum(
+                (y - sum(metric_values) / len(metric_values)) ** 2
+                for y in metric_values
+            )
             r_squared = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
 
             # Determine trend direction
@@ -597,7 +658,11 @@ class PerformanceMemory:
 
         except Exception as e:
             logger.error(f"Error getting performance trends: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _linear_regression(self, x: List[float], y: List[float]) -> tuple[float, float]:
         """Perform simple linear regression.
@@ -702,21 +767,29 @@ class PerformanceMemory:
                     recent_records = [
                         record
                         for record in model_data["history"]
-                        if datetime.fromisoformat(record.get("timestamp", "")) > cutoff_date
+                        if datetime.fromisoformat(record.get("timestamp", ""))
+                        > cutoff_date
                     ]
 
                     if recent_records:
                         latest_metrics = recent_records[-1].get("metrics", {})
-                        anomaly_result = self.detect_anomalies(ticker, model_name, latest_metrics)
+                        anomaly_result = self.detect_anomalies(
+                            ticker, model_name, latest_metrics
+                        )
 
                         if anomaly_result["success"] and anomaly_result["anomalies"]:
                             summary["recent_anomalies"].append(
-                                {"model": model_name, "anomalies": anomaly_result["anomalies"]}
+                                {
+                                    "model": model_name,
+                                    "anomalies": anomaly_result["anomalies"],
+                                }
                             )
 
                 # Get performance trends
                 for metric in metrics:
-                    trend_result = self.get_performance_trends(ticker, model_name, metric)
+                    trend_result = self.get_performance_trends(
+                        ticker, model_name, metric
+                    )
                     if trend_result["success"]:
                         if model_name not in summary["performance_trends"]:
                             summary["performance_trends"][model_name] = {}
@@ -729,4 +802,8 @@ class PerformanceMemory:
 
         except Exception as e:
             logger.error(f"Error getting performance summary: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }

@@ -92,7 +92,7 @@ class TestBollingerStrategy:
     def test_performance_metrics(self, strategy_config, sample_data):
         """Test performance metrics calculation."""
         strategy = BollingerStrategy(config=strategy_config)
-        signals = strategy.generate_signals(sample_data)
+        strategy.generate_signals(sample_data)
         positions = strategy.calculate_positions(sample_data)
 
         # Verify positions
@@ -124,7 +124,9 @@ class TestBollingerStrategy:
         strategy = BollingerStrategy(config=strategy_config)
 
         # Update parameters
-        new_config = BollingerConfig(window=50, num_std=2.5, min_volume=2000.0, min_price=2.0)
+        new_config = BollingerConfig(
+            window=50, num_std=2.5, min_volume=2000.0, min_price=2.0
+        )
         strategy.set_parameters(new_config.__dict__)
 
         # Verify updates
@@ -162,7 +164,7 @@ class TestBollingerStrategy:
         strategy = BollingerStrategy(config=strategy_config)
 
         # Generate signals
-        signals = strategy.generate_signals(sample_data)
+        strategy.generate_signals(sample_data)
 
         # Reset strategy
         strategy.reset()
@@ -225,15 +227,21 @@ class TestBollingerStrategy:
             # Create data with specific volatility
             dates = pd.date_range(start="2023-01-01", end="2023-12-31", freq="D")
             base_price = 100
-            prices = base_price + np.random.normal(0, scenario["volatility"], len(dates))
+            prices = base_price + np.random.normal(
+                0, scenario["volatility"], len(dates)
+            )
             volumes = np.random.normal(5000, 1000, len(dates))
 
-            volatility_data = pd.DataFrame({"close": prices, "volume": volumes}, index=dates)
+            volatility_data = pd.DataFrame(
+                {"close": prices, "volume": volumes}, index=dates
+            )
 
             strategy = BollingerStrategy(config=strategy_config)
 
             # Calculate bands
-            upper_band, middle_band, lower_band = strategy.calculate_bands(volatility_data)
+            upper_band, middle_band, lower_band = strategy.calculate_bands(
+                volatility_data
+            )
 
             # Test band tightness
             band_width = (upper_band - lower_band) / middle_band
@@ -267,8 +275,12 @@ class TestBollingerStrategy:
             ), f"Most signals should be neutral in {scenario['name']}"
 
             # Test band relationships
-            assert all(upper_band >= middle_band), "Upper band should always be above middle"
-            assert all(lower_band <= middle_band), "Lower band should always be below middle"
+            assert all(
+                upper_band >= middle_band
+            ), "Upper band should always be above middle"
+            assert all(
+                lower_band <= middle_band
+            ), "Lower band should always be below middle"
 
             # Test band convergence
             max_band_separation = (upper_band - lower_band).max()
@@ -287,12 +299,16 @@ class TestBollingerStrategy:
         extreme_prices = [100.0] * 100  # Constant price
         extreme_volumes = [5000] * 100
 
-        extreme_data = pd.DataFrame({"close": extreme_prices, "volume": extreme_volumes}, index=extreme_dates)
+        extreme_data = pd.DataFrame(
+            {"close": extreme_prices, "volume": extreme_volumes}, index=extreme_dates
+        )
 
         strategy = BollingerStrategy(config=strategy_config)
 
         # Calculate bands for constant data
-        extreme_upper, extreme_middle, extreme_lower = strategy.calculate_bands(extreme_data)
+        extreme_upper, extreme_middle, extreme_lower = strategy.calculate_bands(
+            extreme_data
+        )
 
         # Test that bands are nearly identical for constant data
         band_differences = (extreme_upper - extreme_lower) / extreme_middle
@@ -301,7 +317,9 @@ class TestBollingerStrategy:
         logger.debug(f"    Max band difference: {max_difference:.6f}")
 
         # Bands should be nearly identical for constant data
-        assert max_difference < 0.001, "Bands should be nearly identical for constant data"
+        assert (
+            max_difference < 0.001
+        ), "Bands should be nearly identical for constant data"
 
         # Test signal generation for constant data
         extreme_signals = strategy.generate_signals(extreme_data)
@@ -327,16 +345,23 @@ class TestBollingerStrategy:
         transition_volumes = np.random.normal(5000, 1000, 200)
 
         transition_data = pd.DataFrame(
-            {"close": transition_prices, "volume": transition_volumes}, index=transition_dates
+            {"close": transition_prices, "volume": transition_volumes},
+            index=transition_dates,
         )
 
         strategy = BollingerStrategy(config=strategy_config)
 
         # Calculate bands for transition data
-        transition_upper, transition_middle, transition_lower = strategy.calculate_bands(transition_data)
+        (
+            transition_upper,
+            transition_middle,
+            transition_lower,
+        ) = strategy.calculate_bands(transition_data)
 
         # Test band width evolution
-        transition_band_width = (transition_upper - transition_lower) / transition_middle
+        transition_band_width = (
+            transition_upper - transition_lower
+        ) / transition_middle
 
         # Calculate average band width for each half
         low_vol_width = transition_band_width.iloc[:100].mean()
@@ -346,7 +371,9 @@ class TestBollingerStrategy:
         logger.debug(f"    High volatility band width: {high_vol_width:.4f}")
 
         # High volatility should have wider bands
-        assert high_vol_width > low_vol_width, "High volatility should result in wider bands"
+        assert (
+            high_vol_width > low_vol_width
+        ), "High volatility should result in wider bands"
 
         # Test signal frequency changes
         transition_signals = strategy.generate_signals(transition_data)
@@ -362,7 +389,9 @@ class TestBollingerStrategy:
         logger.debug(f"    High volatility neutral ratio: {high_vol_neutral_ratio:.2f}")
 
         # Low volatility should have more neutral signals
-        assert low_vol_neutral_ratio > high_vol_neutral_ratio, "Low volatility should have more neutral signals"
+        assert (
+            low_vol_neutral_ratio > high_vol_neutral_ratio
+        ), "Low volatility should have more neutral signals"
 
         # Test parameter sensitivity in low volatility
         logger.debug(f"\n  🎯 Testing parameter sensitivity...")
@@ -386,10 +415,15 @@ class TestBollingerStrategy:
             low_vol_prices = 100 + np.random.normal(0, 0.01, 50)
             low_vol_volumes = np.random.normal(5000, 1000, 50)
 
-            test_data = pd.DataFrame({"close": low_vol_prices, "volume": low_vol_volumes}, index=low_vol_dates)
+            test_data = pd.DataFrame(
+                {"close": low_vol_prices, "volume": low_vol_volumes},
+                index=low_vol_dates,
+            )
 
             # Calculate bands
-            test_upper, test_middle, test_lower = test_strategy.calculate_bands(test_data)
+            test_upper, test_middle, test_lower = test_strategy.calculate_bands(
+                test_data
+            )
 
             # Calculate band width
             test_band_width = (test_upper - test_lower) / test_middle
@@ -399,7 +433,9 @@ class TestBollingerStrategy:
 
             # Verify band width increases with std parameter
             if std_param > 1.0:
-                assert avg_test_width > 0.001, f"Band width should be positive for std {std_param}"
+                assert (
+                    avg_test_width > 0.001
+                ), f"Band width should be positive for std {std_param}"
 
         # Test volume filtering in low volatility
         logger.debug(f"\n  📊 Testing volume filtering...")
@@ -410,10 +446,15 @@ class TestBollingerStrategy:
 
         # Mix of high and low volumes
         volume_volumes = np.concatenate(
-            [np.random.normal(10000, 2000, 50), np.random.normal(500, 100, 50)]  # High volume  # Low volume
+            [
+                np.random.normal(10000, 2000, 50),
+                np.random.normal(500, 100, 50),
+            ]  # High volume  # Low volume
         )
 
-        volume_data = pd.DataFrame({"close": volume_prices, "volume": volume_volumes}, index=volume_dates)
+        volume_data = pd.DataFrame(
+            {"close": volume_prices, "volume": volume_volumes}, index=volume_dates
+        )
 
         strategy = BollingerStrategy(config=strategy_config)
         volume_signals = strategy.generate_signals(volume_data)
@@ -424,9 +465,13 @@ class TestBollingerStrategy:
 
         if len(low_volume_signals) > 0:
             low_volume_neutral_ratio = (low_volume_signals == 0).mean()
-            logger.debug(f"    Low volume neutral ratio: {low_volume_neutral_ratio:.2f}")
+            logger.debug(
+                f"    Low volume neutral ratio: {low_volume_neutral_ratio:.2f}"
+            )
 
             # Low volume periods should have neutral signals
-            assert low_volume_neutral_ratio > 0.8, "Low volume periods should have neutral signals"
+            assert (
+                low_volume_neutral_ratio > 0.8
+            ), "Low volume periods should have neutral signals"
 
         logger.debug("✅ Tight bands in low volatility regime test completed")

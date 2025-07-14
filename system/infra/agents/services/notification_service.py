@@ -1,13 +1,10 @@
 import asyncio
-import json
 import logging
 from datetime import datetime, timedelta
 from enum import Enum
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set
 from uuid import uuid4
 
-import yaml
 from automation.notifications.notification_manager import (
     NotificationManager,
     NotificationPriority,
@@ -34,7 +31,7 @@ from automation.services.template_service import TemplateService
 from automation.services.transaction_service import TransactionService
 from automation.services.validation_service import ValidationService
 from automation.services.worker_service import WorkerService
-from pydantic import BaseModel, Field, root_validator, validator
+from pydantic import BaseModel, Field, validator
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 class TemplateVersion(BaseModel):
     """Version of a notification template."""
+
     version: int = Field(..., ge=1)
     title: str = Field(..., min_length=1, max_length=255)
     message: str = Field(..., min_length=1, max_length=1000)
@@ -60,44 +58,50 @@ class TemplateVersion(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    @validator('rate_limit')
+    @validator("rate_limit")
     def validate_rate_limit(cls, v):
         if v:
-            if 'max_requests' not in v or 'window_seconds' not in v:
-                raise ValueError("Rate limit must contain max_requests and window_seconds")
-            if v['max_requests'] < 1 or v['window_seconds'] < 1:
+            if "max_requests" not in v or "window_seconds" not in v:
+                raise ValueError(
+                    "Rate limit must contain max_requests and window_seconds"
+                )
+            if v["max_requests"] < 1 or v["window_seconds"] < 1:
                 raise ValueError("Rate limit values must be positive")
         return v
 
-    @validator('retry_config')
+    @validator("retry_config")
     def validate_retry_config(cls, v):
         if v:
-            if 'max_retries' not in v or 'delay_seconds' not in v:
-                raise ValueError("Retry config must contain max_retries and delay_seconds")
-            if v['max_retries'] < 0 or v['delay_seconds'] < 0:
+            if "max_retries" not in v or "delay_seconds" not in v:
+                raise ValueError(
+                    "Retry config must contain max_retries and delay_seconds"
+                )
+            if v["max_retries"] < 0 or v["delay_seconds"] < 0:
                 raise ValueError("Retry config values must be non-negative")
         return v
 
-    @validator('timeout')
+    @validator("timeout")
     def validate_timeout(cls, v):
         if v is not None and v < 0:
             raise ValueError("Timeout must be non-negative")
         return v
 
-    @validator('cache_ttl')
+    @validator("cache_ttl")
     def validate_cache_ttl(cls, v):
         if v is not None and v < 0:
             raise ValueError("Cache TTL must be non-negative")
         return v
 
-    @validator('validation_rules')
+    @validator("validation_rules")
     def validate_rules(cls, v):
         if v:
-            if 'required_fields' not in v or 'field_types' not in v:
-                raise ValueError("Validation rules must contain required_fields and field_types")
+            if "required_fields" not in v or "field_types" not in v:
+                raise ValueError(
+                    "Validation rules must contain required_fields and field_types"
+                )
         return v
 
-    @validator('security_level', 'audit_level', 'metrics_level')
+    @validator("security_level", "audit_level", "metrics_level")
     def validate_levels(cls, v):
         if not 1 <= v <= 3:
             raise ValueError("Level must be between 1 and 3")
@@ -106,6 +110,7 @@ class TemplateVersion(BaseModel):
 
 class NotificationTemplate(BaseModel):
     """Template for notification messages."""
+
     id: str = Field(..., min_length=1, max_length=255)
     versions: Dict[int, TemplateVersion] = Field(default_factory=dict)
     parent_template: Optional[str] = None
@@ -154,6 +159,7 @@ class NotificationTemplate(BaseModel):
 
 class RateLimit(BaseModel):
     """Rate limit configuration."""
+
     id: str = Field(..., min_length=1, max_length=255)
     user_id: Optional[str] = None
     template_id: Optional[str] = None
@@ -198,6 +204,7 @@ class RateLimit(BaseModel):
 
 class NotificationDeliveryStatus(str, Enum):
     """Status of notification delivery."""
+
     PENDING = "pending"
     SENDING = "sending"
     DELIVERED = "delivered"
@@ -213,12 +220,15 @@ class NotificationDeliveryStatus(str, Enum):
 
 class NotificationDelivery(BaseModel):
     """Notification delivery record."""
+
     id: str = Field(..., min_length=1, max_length=255)
     notification_id: str = Field(..., min_length=1, max_length=255)
     template_id: str = Field(..., min_length=1, max_length=255)
     template_version: int = Field(..., ge=1)
     user_id: Optional[str] = None
-    status: NotificationDeliveryStatus = Field(default=NotificationDeliveryStatus.PENDING)
+    status: NotificationDeliveryStatus = Field(
+        default=NotificationDeliveryStatus.PENDING
+    )
     attempts: int = Field(default=0)
     max_attempts: int = Field(default=3)
     last_attempt: Optional[datetime] = None
@@ -251,13 +261,15 @@ class NotificationDelivery(BaseModel):
     health_rules: Optional[Dict[str, Any]] = None
     logging_rules: Optional[Dict[str, Any]] = None
 
-    def add_error(self, error: str, attempt: int, details: Optional[Dict[str, Any]] = None) -> None:
+    def add_error(
+        self, error: str, attempt: int, details: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Add error to history with additional details."""
         error_entry = {
-            'error': error,
-            'attempt': attempt,
-            'timestamp': datetime.utcnow(),
-            'details': details or {}
+            "error": error,
+            "attempt": attempt,
+            "timestamp": datetime.utcnow(),
+            "details": details or {},
         }
         self.error_history.append(error_entry)
         self.error = error
@@ -268,13 +280,17 @@ class NotificationDelivery(BaseModel):
 
         # Audit
         self.audit_service.record_audit(
-            'delivery_error',
-            'error',
+            "delivery_error",
+            "error",
             f"Delivery {self.id} failed: {error}",
-            details=error_entry
+            details=error_entry,
         )
 
-    def update_status(self, status: NotificationDeliveryStatus, details: Optional[Dict[str, Any]] = None) -> None:
+    def update_status(
+        self,
+        status: NotificationDeliveryStatus,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """Update delivery status with additional details."""
         old_status = self.status
         self.status = status
@@ -285,10 +301,10 @@ class NotificationDelivery(BaseModel):
 
         # Audit
         self.audit_service.record_audit(
-            'delivery_status_change',
-            'info',
+            "delivery_status_change",
+            "info",
             f"Delivery {self.id} status changed from {old_status} to {status}",
-            details=details
+            details=details,
         )
 
     def increment_attempts(self) -> None:
@@ -306,9 +322,9 @@ class NotificationDelivery(BaseModel):
 
         # Audit
         self.audit_service.record_audit(
-            'delivery_attempt',
-            'info',
-            f"Delivery {self.id} attempt {self.attempts} of {self.max_attempts}"
+            "delivery_attempt",
+            "info",
+            f"Delivery {self.id} attempt {self.attempts} of {self.max_attempts}",
         )
 
     def set_next_attempt(self, next_attempt: datetime) -> None:
@@ -324,9 +340,9 @@ class NotificationDelivery(BaseModel):
 
         # Audit
         self.audit_service.record_audit(
-            'delivery_scheduled',
-            'info',
-            f"Delivery {self.id} scheduled for {next_attempt}"
+            "delivery_scheduled",
+            "info",
+            f"Delivery {self.id} scheduled for {next_attempt}",
         )
 
     def is_expired(self) -> bool:
@@ -350,9 +366,7 @@ class NotificationDelivery(BaseModel):
 
         # Audit
         self.audit_service.record_audit(
-            'delivery_metadata_update',
-            'info',
-            f"Delivery {self.id} metadata updated"
+            "delivery_metadata_update", "info", f"Delivery {self.id} metadata updated"
         )
 
     def add_tag(self, tag: str) -> None:
@@ -365,9 +379,7 @@ class NotificationDelivery(BaseModel):
 
         # Audit
         self.audit_service.record_audit(
-            'delivery_tag_add',
-            'info',
-            f"Delivery {self.id} tag added: {tag}"
+            "delivery_tag_add", "info", f"Delivery {self.id} tag added: {tag}"
         )
 
     def remove_tag(self, tag: str) -> None:
@@ -380,9 +392,7 @@ class NotificationDelivery(BaseModel):
 
         # Audit
         self.audit_service.record_audit(
-            'delivery_tag_remove',
-            'info',
-            f"Delivery {self.id} tag removed: {tag}"
+            "delivery_tag_remove", "info", f"Delivery {self.id} tag removed: {tag}"
         )
 
     def validate(self) -> bool:
@@ -413,8 +423,14 @@ class NotificationDelivery(BaseModel):
                 return False
 
             # Validate levels
-            for level in [self.security_level, self.validation_level, self.audit_level,
-                         self.metrics_level, self.health_level, self.logging_level]:
+            for level in [
+                self.security_level,
+                self.validation_level,
+                self.audit_level,
+                self.metrics_level,
+                self.health_level,
+                self.logging_level,
+            ]:
                 if not 1 <= level <= 3:
                     return False
 
@@ -451,7 +467,7 @@ class NotificationService:
         persistence_service: PersistenceService,
         dependency_service: DependencyService,
         recovery_service: RecoveryService,
-        state_service: StateService
+        state_service: StateService,
     ):
         """Initialize notification service."""
         self.notification_manager = notification_manager
@@ -505,20 +521,16 @@ class NotificationService:
 
         # Schedule tasks
         self._template_reload_task = self.scheduler_service.schedule_task(
-            self._reload_templates(),
-            interval=300  # 5 minutes
+            self._reload_templates(), interval=300  # 5 minutes
         )
         self._rate_limit_cleanup_task = self.scheduler_service.schedule_task(
-            self._cleanup_rate_limits(),
-            interval=60  # 1 minute
+            self._cleanup_rate_limits(), interval=60  # 1 minute
         )
         self._delivery_cleanup_task = self.scheduler_service.schedule_task(
-            self._cleanup_deliveries(),
-            interval=300  # 5 minutes
+            self._cleanup_deliveries(), interval=300  # 5 minutes
         )
         self._health_check_task = self.scheduler_service.schedule_task(
-            self._check_health(),
-            interval=60  # 1 minute
+            self._check_health(), interval=60  # 1 minute
         )
 
         # Record metrics
@@ -526,9 +538,7 @@ class NotificationService:
 
         # Audit
         self.audit_service.record_audit(
-            'service_init',
-            'info',
-            "Notification service initialized"
+            "service_init", "info", "Notification service initialized"
         )
 
         logger.info("Notification service initialized")
@@ -538,83 +548,67 @@ class NotificationService:
         try:
             # Register metrics
             self.metrics_service.register_metric(
-                'notification_sent',
-                'counter',
-                'Number of notifications sent'
+                "notification_sent", "counter", "Number of notifications sent"
             )
             self.metrics_service.register_metric(
-                'notification_failed',
-                'counter',
-                'Number of failed notifications'
+                "notification_failed", "counter", "Number of failed notifications"
             )
             self.metrics_service.register_metric(
-                'notification_delivered',
-                'counter',
-                'Number of delivered notifications'
+                "notification_delivered", "counter", "Number of delivered notifications"
             )
             self.metrics_service.register_metric(
-                'notification_retried',
-                'counter',
-                'Number of retried notifications'
+                "notification_retried", "counter", "Number of retried notifications"
             )
             self.metrics_service.register_metric(
-                'notification_rate_limited',
-                'counter',
-                'Number of rate limited notifications'
+                "notification_rate_limited",
+                "counter",
+                "Number of rate limited notifications",
             )
             self.metrics_service.register_metric(
-                'notification_expired',
-                'counter',
-                'Number of expired notifications'
+                "notification_expired", "counter", "Number of expired notifications"
             )
             self.metrics_service.register_metric(
-                'notification_validation_failed',
-                'counter',
-                'Number of validation failed notifications'
+                "notification_validation_failed",
+                "counter",
+                "Number of validation failed notifications",
             )
             self.metrics_service.register_metric(
-                'notification_security_failed',
-                'counter',
-                'Number of security failed notifications'
+                "notification_security_failed",
+                "counter",
+                "Number of security failed notifications",
             )
             self.metrics_service.register_metric(
-                'notification_audit_failed',
-                'counter',
-                'Number of audit failed notifications'
+                "notification_audit_failed",
+                "counter",
+                "Number of audit failed notifications",
             )
             self.metrics_service.register_metric(
-                'notification_metrics_failed',
-                'counter',
-                'Number of metrics failed notifications'
+                "notification_metrics_failed",
+                "counter",
+                "Number of metrics failed notifications",
             )
             self.metrics_service.register_metric(
-                'notification_health_failed',
-                'counter',
-                'Number of health failed notifications'
+                "notification_health_failed",
+                "counter",
+                "Number of health failed notifications",
             )
             self.metrics_service.register_metric(
-                'notification_logging_failed',
-                'counter',
-                'Number of logging failed notifications'
+                "notification_logging_failed",
+                "counter",
+                "Number of logging failed notifications",
             )
             # Record metrics
             self.metrics_service.record_metrics_init()
             # Audit
             self.audit_service.record_audit(
-                'metrics_init',
-                'info',
-                "Metrics initialized"
+                "metrics_init", "info", "Metrics initialized"
             )
         except Exception as e:
             logger.error(f"Error initializing metrics: {str(e)}")
             # Record metrics
             self.metrics_service.record_metrics_init_error()
             # Audit
-            self.audit_service.record_audit(
-                'metrics_init',
-                'error',
-                str(e)
-            )
+            self.audit_service.record_audit("metrics_init", "error", str(e))
             raise
 
     def _init_security(self):
@@ -622,49 +616,38 @@ class NotificationService:
         try:
             # Register security rules
             self.security_service.register_rule(
-                'notification_send',
+                "notification_send",
                 {
-                    'required_permissions': ['notification.send'],
-                    'rate_limit': {
-                        'max_requests': 100,
-                        'window_seconds': 60
+                    "required_permissions": ["notification.send"],
+                    "rate_limit": {"max_requests": 100, "window_seconds": 60},
+                    "validation": {
+                        "required_fields": ["template_id", "template_vars"],
+                        "field_types": {
+                            "template_id": "string",
+                            "template_vars": "object",
+                        },
                     },
-                    'validation': {
-                        'required_fields': ['template_id', 'template_vars'],
-                        'field_types': {
-                            'template_id': 'string',
-                            'template_vars': 'object'
-                        }
-                    }
-                }
+                },
             )
             self.security_service.register_rule(
-                'notification_read',
+                "notification_read",
                 {
-                    'required_permissions': ['notification.read'],
-                    'rate_limit': {
-                        'max_requests': 1000,
-                        'window_seconds': 60
-                    }
-                }
+                    "required_permissions": ["notification.read"],
+                    "rate_limit": {"max_requests": 1000, "window_seconds": 60},
+                },
             )
             self.security_service.register_rule(
-                'notification_manage',
+                "notification_manage",
                 {
-                    'required_permissions': ['notification.manage'],
-                    'rate_limit': {
-                        'max_requests': 50,
-                        'window_seconds': 60
-                    }
-                }
+                    "required_permissions": ["notification.manage"],
+                    "rate_limit": {"max_requests": 50, "window_seconds": 60},
+                },
             )
             # Record metrics
             self.metrics_service.record_security_init()
             # Audit
             self.audit_service.record_audit(
-                'security_init',
-                'info',
-                "Security initialized"
+                "security_init", "info", "Security initialized"
             )
         except Exception as e:
             logger.error(f"Error initializing security: {str(e)}")
@@ -676,35 +659,29 @@ class NotificationService:
             # Configure logging
             self.logging_service.configure(
                 level=logging.INFO,
-                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
                 handlers=[
                     logging.StreamHandler(),
-                    logging.FileHandler('notification.log')
-                ]
+                    logging.FileHandler("notification.log"),
+                ],
             )
             # Record metrics
             self.metrics_service.record_logging_init()
             # Audit
             self.audit_service.record_audit(
-                'logging_init',
-                'info',
-                "Logging initialized"
+                "logging_init", "info", "Logging initialized"
             )
         except Exception as e:
             logger.error(f"Error initializing logging: {str(e)}")
             # Record metrics
             self.metrics_service.record_logging_init_error()
             # Audit
-            self.audit_service.record_audit(
-                'logging_init',
-                'error',
-                str(e)
-            )
+            self.audit_service.record_audit("logging_init", "error", str(e))
             raise
 
     def _load_templates(self):
         """Load notification templates from config."""
-        templates_config = self.config_service.get('notification.templates', {})
+        templates_config = self.config_service.get("notification.templates", {})
         for template_id, template_data in templates_config.items():
             try:
                 # Validate template data
@@ -714,16 +691,16 @@ class NotificationService:
                 template = NotificationTemplate(id=template_id)
 
                 # Add versions
-                for version_data in template_data.get('versions', []):
+                for version_data in template_data.get("versions", []):
                     version = TemplateVersion(**version_data)
                     template.add_version(version)
 
                 # Add tags
-                for tag in template_data.get('tags', []):
+                for tag in template_data.get("tags", []):
                     template.add_tag(tag)
 
                 # Add metadata
-                template.update_metadata(template_data.get('metadata', {}))
+                template.update_metadata(template_data.get("metadata", {}))
 
                 # Store template
                 self._templates[template_id] = template
@@ -735,15 +712,13 @@ class NotificationService:
                 version = template.get_latest_version()
                 if version:
                     self.security_service.set_template_policy(
-                        template_id,
-                        version.security_level
+                        template_id, version.security_level
                     )
 
                 # Set up logging
                 if version:
                     self.logging_service.set_template_logging(
-                        template_id,
-                        version.audit_level
+                        template_id, version.audit_level
                     )
 
             except Exception as e:
@@ -752,17 +727,14 @@ class NotificationService:
 
     def _load_rate_limits(self):
         """Load rate limits from config."""
-        rate_limits_config = self.config_service.get('notification.rate_limits', {})
+        rate_limits_config = self.config_service.get("notification.rate_limits", {})
         for limit_id, limit_data in rate_limits_config.items():
             try:
                 # Validate rate limit data
                 self.validation_service.validate_rate_limit(limit_data)
 
                 # Create rate limit
-                rate_limit = RateLimit(
-                    id=limit_id,
-                    **limit_data
-                )
+                rate_limit = RateLimit(id=limit_id, **limit_data)
 
                 # Store rate limit
                 self._rate_limits[limit_id] = rate_limit
@@ -782,9 +754,7 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'template_reload',
-                'success',
-                "Reloaded notification templates"
+                "template_reload", "success", "Reloaded notification templates"
             )
 
         except Exception as e:
@@ -794,11 +764,7 @@ class NotificationService:
             self.metrics_service.record_template_reload_error()
 
             # Audit
-            await self.audit_service.record_audit(
-                'template_reload',
-                'error',
-                str(e)
-            )
+            await self.audit_service.record_audit("template_reload", "error", str(e))
 
     async def _cleanup_rate_limits(self):
         """Clean up expired rate limits with enhanced error handling."""
@@ -809,8 +775,10 @@ class NotificationService:
             # Find expired rate limits
             async with self._rate_limit_lock:
                 expired = [
-                    (id_, limit) for id_, limit in self._rate_limits.items()
-                    if (now - limit.window_start).total_seconds() >= limit.window_seconds
+                    (id_, limit)
+                    for id_, limit in self._rate_limits.items()
+                    if (now - limit.window_start).total_seconds()
+                    >= limit.window_seconds
                 ]
 
                 # Remove expired limits
@@ -822,9 +790,9 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'rate_limit_cleanup',
-                'info',
-                f"Cleaned up {len(expired)} expired rate limits"
+                "rate_limit_cleanup",
+                "info",
+                f"Cleaned up {len(expired)} expired rate limits",
             )
 
         except Exception as e:
@@ -835,9 +803,7 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'rate_limit_cleanup_error',
-                'error',
-                str(e)
+                "rate_limit_cleanup_error", "error", str(e)
             )
 
             raise
@@ -846,12 +812,13 @@ class NotificationService:
         """Clean up expired deliveries with enhanced error handling."""
         try:
             # Get current time
-            now = datetime.utcnow()
+            datetime.utcnow()
 
             # Find expired deliveries
             async with self._delivery_lock:
                 expired = [
-                    (id_, delivery) for id_, delivery in self._deliveries.items()
+                    (id_, delivery)
+                    for id_, delivery in self._deliveries.items()
                     if delivery.is_expired()
                 ]
 
@@ -864,9 +831,9 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'delivery_cleanup',
-                'info',
-                f"Cleaned up {len(expired)} expired deliveries"
+                "delivery_cleanup",
+                "info",
+                f"Cleaned up {len(expired)} expired deliveries",
             )
 
         except Exception as e:
@@ -877,9 +844,7 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'delivery_cleanup_error',
-                'error',
-                str(e)
+                "delivery_cleanup_error", "error", str(e)
             )
 
             raise
@@ -889,45 +854,49 @@ class NotificationService:
         try:
             # Get health status
             health_status = {
-                'status': 'healthy',
-                'timestamp': datetime.utcnow(),
-                'metrics': {},
-                'errors': [],
-                'warnings': []
+                "status": "healthy",
+                "timestamp": datetime.utcnow(),
+                "metrics": {},
+                "errors": [],
+                "warnings": [],
             }
 
             # Check templates
             async with self._template_lock:
                 template_count = len(self._templates)
                 if template_count == 0:
-                    health_status['warnings'].append('No templates loaded')
-                health_status['metrics']['template_count'] = template_count
+                    health_status["warnings"].append("No templates loaded")
+                health_status["metrics"]["template_count"] = template_count
 
             # Check rate limits
             async with self._rate_limit_lock:
                 rate_limit_count = len(self._rate_limits)
-                health_status['metrics']['rate_limit_count'] = rate_limit_count
+                health_status["metrics"]["rate_limit_count"] = rate_limit_count
 
             # Check deliveries
             async with self._delivery_lock:
                 delivery_count = len(self._deliveries)
                 failed_deliveries = sum(
-                    1 for d in self._deliveries.values()
+                    1
+                    for d in self._deliveries.values()
                     if d.status == NotificationDeliveryStatus.FAILED
                 )
                 retrying_deliveries = sum(
-                    1 for d in self._deliveries.values()
+                    1
+                    for d in self._deliveries.values()
                     if d.status == NotificationDeliveryStatus.RETRYING
                 )
-                health_status['metrics'].update({
-                    'delivery_count': delivery_count,
-                    'failed_deliveries': failed_deliveries,
-                    'retrying_deliveries': retrying_deliveries
-                })
+                health_status["metrics"].update(
+                    {
+                        "delivery_count": delivery_count,
+                        "failed_deliveries": failed_deliveries,
+                        "retrying_deliveries": retrying_deliveries,
+                    }
+                )
 
                 if failed_deliveries > 0:
-                    health_status['warnings'].append(
-                        f'{failed_deliveries} failed deliveries'
+                    health_status["warnings"].append(
+                        f"{failed_deliveries} failed deliveries"
                     )
 
             # Check service dependencies
@@ -953,34 +922,34 @@ class NotificationService:
                 self.persistence_service,
                 self.dependency_service,
                 self.recovery_service,
-                self.state_service
+                self.state_service,
             ]:
                 try:
                     service_health = await service.get_health()
-                    if service_health['status'] != 'healthy':
-                        health_status['warnings'].append(
-                            f'Service {service.__class__.__name__} unhealthy'
+                    if service_health["status"] != "healthy":
+                        health_status["warnings"].append(
+                            f"Service {service.__class__.__name__} unhealthy"
                         )
                 except Exception as e:
-                    health_status['errors'].append(
-                        f'Error checking {service.__class__.__name__}: {str(e)}'
+                    health_status["errors"].append(
+                        f"Error checking {service.__class__.__name__}: {str(e)}"
                     )
 
             # Update overall status
-            if health_status['errors']:
-                health_status['status'] = 'unhealthy'
-            elif health_status['warnings']:
-                health_status['status'] = 'degraded'
+            if health_status["errors"]:
+                health_status["status"] = "unhealthy"
+            elif health_status["warnings"]:
+                health_status["status"] = "degraded"
 
             # Record metrics
             self.metrics_service.record_health_check(health_status)
 
             # Audit
             await self.audit_service.record_audit(
-                'health_check',
-                health_status['status'],
+                "health_check",
+                health_status["status"],
                 f"Health check completed: {health_status['status']}",
-                details=health_status
+                details=health_status,
             )
 
             return health_status
@@ -992,11 +961,7 @@ class NotificationService:
             self.metrics_service.record_health_check_error()
 
             # Audit
-            await self.audit_service.record_audit(
-                'health_check_error',
-                'error',
-                str(e)
-            )
+            await self.audit_service.record_audit("health_check_error", "error", str(e))
 
             raise
 
@@ -1014,13 +979,13 @@ class NotificationService:
                     # Get version
                     version = template.get_version(delivery.template_version)
                     if not version:
-                        raise ValueError(f"Version {delivery.template_version} not found")
+                        raise ValueError(
+                            f"Version {delivery.template_version} not found"
+                        )
 
                     # Check rate limit
                     if not await self._check_rate_limit(
-                        delivery.user_id,
-                        delivery.template_id,
-                        version.rate_limit
+                        delivery.user_id, delivery.template_id, version.rate_limit
                     ):
                         delivery.update_status(NotificationDeliveryStatus.RATE_LIMITED)
                         await self._update_delivery(delivery)
@@ -1038,9 +1003,7 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'delivery_batch',
-                'success',
-                f"Processed {len(batch)} deliveries"
+                "delivery_batch", "success", f"Processed {len(batch)} deliveries"
             )
 
         except Exception as e:
@@ -1050,11 +1013,7 @@ class NotificationService:
             self.metrics_service.record_delivery_batch_error()
 
             # Audit
-            await self.audit_service.record_audit(
-                'delivery_batch',
-                'error',
-                str(e)
-            )
+            await self.audit_service.record_audit("delivery_batch", "error", str(e))
 
     async def _get_template(self, template_id: str) -> Optional[NotificationTemplate]:
         """Get a notification template."""
@@ -1077,10 +1036,7 @@ class NotificationService:
             return None
 
     async def _check_rate_limit(
-        self,
-        user_id: str,
-        template_id: str,
-        rate_limit: Optional[Dict[str, int]]
+        self, user_id: str, template_id: str, rate_limit: Optional[Dict[str, int]]
     ) -> bool:
         """Check if rate limit is exceeded."""
         try:
@@ -1097,8 +1053,8 @@ class NotificationService:
                     id=limit_id,
                     user_id=user_id,
                     template_id=template_id,
-                    max_requests=rate_limit['max_requests'],
-                    window_seconds=rate_limit['window_seconds']
+                    max_requests=rate_limit["max_requests"],
+                    window_seconds=rate_limit["window_seconds"],
                 )
                 self._rate_limits[limit_id] = rate_limit_obj
 
@@ -1119,7 +1075,7 @@ class NotificationService:
         self,
         template_id: str,
         template_vars: Dict[str, Any],
-        user_id: Optional[str] = None
+        user_id: Optional[str] = None,
     ) -> str:
         """Send a notification with enhanced error handling and security."""
         try:
@@ -1138,7 +1094,9 @@ class NotificationService:
                 raise ValueError(f"No version found for template {template_id}")
 
             # Check rate limit
-            if not await self._check_rate_limit(user_id, template_id, version.rate_limit):
+            if not await self._check_rate_limit(
+                user_id, template_id, version.rate_limit
+            ):
                 raise ValueError("Rate limit exceeded")
 
             # Create delivery record
@@ -1159,7 +1117,7 @@ class NotificationService:
                 rate_limit=version.rate_limit,
                 validation_rules=version.validation_rules,
                 priority=version.priority,
-                channel=version.notification_type
+                channel=version.notification_type,
             )
 
             # Validate delivery
@@ -1178,14 +1136,14 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'notification_sent',
-                'info',
+                "notification_sent",
+                "info",
                 f"Notification sent: {delivery.id}",
                 details={
-                    'template_id': template_id,
-                    'user_id': user_id,
-                    'version': version.version
-                }
+                    "template_id": template_id,
+                    "user_id": user_id,
+                    "version": version.version,
+                },
             )
 
             return delivery.id
@@ -1198,28 +1156,23 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'notification_send_error',
-                'error',
+                "notification_send_error",
+                "error",
                 str(e),
-                details={
-                    'template_id': template_id,
-                    'user_id': user_id
-                }
+                details={"template_id": template_id, "user_id": user_id},
             )
 
             raise
 
     async def _send_notification_with_retry(
-        self,
-        delivery: NotificationDelivery,
-        version: TemplateVersion
+        self, delivery: NotificationDelivery, version: TemplateVersion
     ) -> None:
         """Send notification with retry logic."""
         try:
             # Get retry config
             retry_config = delivery.retry_strategy or {
-                'max_retries': 3,
-                'delay_seconds': 5
+                "max_retries": 3,
+                "delay_seconds": 5,
             }
 
             # Define send function
@@ -1230,7 +1183,7 @@ class NotificationService:
                     template_vars=version.template_vars,
                     user_id=delivery.user_id,
                     priority=version.priority,
-                    notification_type=version.notification_type
+                    notification_type=version.notification_type,
                 )
 
                 # Send notification
@@ -1244,17 +1197,17 @@ class NotificationService:
 
                 # Audit
                 await self.audit_service.record_audit(
-                    'notification_delivered',
-                    'info',
-                    f"Notification delivered: {delivery.id}"
+                    "notification_delivered",
+                    "info",
+                    f"Notification delivered: {delivery.id}",
                 )
 
             # Execute with retry
             await self.retry_service.execute_with_retry(
                 send,
-                max_retries=retry_config['max_retries'],
-                delay_seconds=retry_config['delay_seconds'],
-                on_retry=lambda attempt: delivery.increment_attempts()
+                max_retries=retry_config["max_retries"],
+                delay_seconds=retry_config["delay_seconds"],
+                on_retry=lambda attempt: delivery.increment_attempts(),
             )
 
         except Exception as e:
@@ -1266,9 +1219,7 @@ class NotificationService:
             raise
 
     async def _handle_delivery_failure(
-        self,
-        delivery: NotificationDelivery,
-        error: str
+        self, delivery: NotificationDelivery, error: str
     ) -> None:
         """Handle delivery failure with enhanced error handling."""
         try:
@@ -1283,17 +1234,17 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'notification_failed',
-                'error',
+                "notification_failed",
+                "error",
                 f"Notification failed: {delivery.id}",
-                details={'error': error}
+                details={"error": error},
             )
 
             # Check if should retry
             if delivery.attempts < delivery.max_attempts:
                 # Calculate next attempt
                 next_attempt = datetime.utcnow() + timedelta(
-                    seconds=delivery.retry_strategy['delay_seconds']
+                    seconds=delivery.retry_strategy["delay_seconds"]
                 )
 
                 # Update delivery
@@ -1303,10 +1254,9 @@ class NotificationService:
                 # Schedule retry
                 self.scheduler_service.schedule_task(
                     self._send_notification_with_retry(
-                        delivery,
-                        await self._get_template(delivery.template_id)
+                        delivery, await self._get_template(delivery.template_id)
                     ),
-                    run_at=next_attempt
+                    run_at=next_attempt,
                 )
 
                 # Record metrics
@@ -1314,10 +1264,10 @@ class NotificationService:
 
                 # Audit
                 await self.audit_service.record_audit(
-                    'notification_retry_scheduled',
-                    'info',
+                    "notification_retry_scheduled",
+                    "info",
                     f"Notification retry scheduled: {delivery.id}",
-                    details={'next_attempt': next_attempt}
+                    details={"next_attempt": next_attempt},
                 )
 
         except Exception as e:
@@ -1328,10 +1278,10 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'delivery_failure_handling_error',
-                'error',
+                "delivery_failure_handling_error",
+                "error",
                 str(e),
-                details={'delivery_id': delivery.id}
+                details={"delivery_id": delivery.id},
             )
 
             raise
@@ -1347,9 +1297,7 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'delivery_update',
-                'success',
-                f"Updated delivery {delivery.id}"
+                "delivery_update", "success", f"Updated delivery {delivery.id}"
             )
 
         except Exception as e:
@@ -1359,13 +1307,11 @@ class NotificationService:
             self.metrics_service.record_delivery_update_error()
 
             # Audit
-            await self.audit_service.record_audit(
-                'delivery_update',
-                'error',
-                str(e)
-            )
+            await self.audit_service.record_audit("delivery_update", "error", str(e))
 
-    async def notify_task_created(self, task_id: str, task_name: str, user_id: str) -> str:
+    async def notify_task_created(
+        self, task_id: str, task_name: str, user_id: str
+    ) -> str:
         """Notify task creation with enhanced error handling."""
         try:
             # Validate inputs
@@ -1374,37 +1320,35 @@ class NotificationService:
 
             # Send notification
             return await self._send_notification(
-                template_id='task_created',
+                template_id="task_created",
                 template_vars={
-                    'task_id': task_id,
-                    'task_name': task_name,
-                    'user_id': user_id,
-                    'timestamp': datetime.utcnow().isoformat()
+                    "task_id": task_id,
+                    "task_name": task_name,
+                    "user_id": user_id,
+                    "timestamp": datetime.utcnow().isoformat(),
                 },
-                user_id=user_id
+                user_id=user_id,
             )
 
         except Exception as e:
             logger.error(f"Error notifying task creation: {str(e)}")
 
             # Record metrics
-            self.metrics_service.record_task_notification_error('created')
+            self.metrics_service.record_task_notification_error("created")
 
             # Audit
             await self.audit_service.record_audit(
-                'task_notification_error',
-                'error',
+                "task_notification_error",
+                "error",
                 str(e),
-                details={
-                    'action': 'created',
-                    'task_id': task_id,
-                    'user_id': user_id
-                }
+                details={"action": "created", "task_id": task_id, "user_id": user_id},
             )
 
             raise
 
-    async def notify_task_updated(self, task_id: str, task_name: str, user_id: str) -> str:
+    async def notify_task_updated(
+        self, task_id: str, task_name: str, user_id: str
+    ) -> str:
         """Notify task update with enhanced error handling."""
         try:
             # Validate inputs
@@ -1413,37 +1357,35 @@ class NotificationService:
 
             # Send notification
             return await self._send_notification(
-                template_id='task_updated',
+                template_id="task_updated",
                 template_vars={
-                    'task_id': task_id,
-                    'task_name': task_name,
-                    'user_id': user_id,
-                    'timestamp': datetime.utcnow().isoformat()
+                    "task_id": task_id,
+                    "task_name": task_name,
+                    "user_id": user_id,
+                    "timestamp": datetime.utcnow().isoformat(),
                 },
-                user_id=user_id
+                user_id=user_id,
             )
 
         except Exception as e:
             logger.error(f"Error notifying task update: {str(e)}")
 
             # Record metrics
-            self.metrics_service.record_task_notification_error('updated')
+            self.metrics_service.record_task_notification_error("updated")
 
             # Audit
             await self.audit_service.record_audit(
-                'task_notification_error',
-                'error',
+                "task_notification_error",
+                "error",
                 str(e),
-                details={
-                    'action': 'updated',
-                    'task_id': task_id,
-                    'user_id': user_id
-                }
+                details={"action": "updated", "task_id": task_id, "user_id": user_id},
             )
 
             raise
 
-    async def notify_task_deleted(self, task_id: str, task_name: str, user_id: str) -> str:
+    async def notify_task_deleted(
+        self, task_id: str, task_name: str, user_id: str
+    ) -> str:
         """Notify task deletion with enhanced error handling."""
         try:
             # Validate inputs
@@ -1452,37 +1394,35 @@ class NotificationService:
 
             # Send notification
             return await self._send_notification(
-                template_id='task_deleted',
+                template_id="task_deleted",
                 template_vars={
-                    'task_id': task_id,
-                    'task_name': task_name,
-                    'user_id': user_id,
-                    'timestamp': datetime.utcnow().isoformat()
+                    "task_id": task_id,
+                    "task_name": task_name,
+                    "user_id": user_id,
+                    "timestamp": datetime.utcnow().isoformat(),
                 },
-                user_id=user_id
+                user_id=user_id,
             )
 
         except Exception as e:
             logger.error(f"Error notifying task deletion: {str(e)}")
 
             # Record metrics
-            self.metrics_service.record_task_notification_error('deleted')
+            self.metrics_service.record_task_notification_error("deleted")
 
             # Audit
             await self.audit_service.record_audit(
-                'task_notification_error',
-                'error',
+                "task_notification_error",
+                "error",
                 str(e),
-                details={
-                    'action': 'deleted',
-                    'task_id': task_id,
-                    'user_id': user_id
-                }
+                details={"action": "deleted", "task_id": task_id, "user_id": user_id},
             )
 
             raise
 
-    async def notify_task_execution_started(self, task_id: str, task_name: str, user_id: str) -> str:
+    async def notify_task_execution_started(
+        self, task_id: str, task_name: str, user_id: str
+    ) -> str:
         """Notify task execution start with enhanced error handling."""
         try:
             # Validate inputs
@@ -1491,37 +1431,39 @@ class NotificationService:
 
             # Send notification
             return await self._send_notification(
-                template_id='task_execution_started',
+                template_id="task_execution_started",
                 template_vars={
-                    'task_id': task_id,
-                    'task_name': task_name,
-                    'user_id': user_id,
-                    'timestamp': datetime.utcnow().isoformat()
+                    "task_id": task_id,
+                    "task_name": task_name,
+                    "user_id": user_id,
+                    "timestamp": datetime.utcnow().isoformat(),
                 },
-                user_id=user_id
+                user_id=user_id,
             )
 
         except Exception as e:
             logger.error(f"Error notifying task execution start: {str(e)}")
 
             # Record metrics
-            self.metrics_service.record_task_notification_error('execution_started')
+            self.metrics_service.record_task_notification_error("execution_started")
 
             # Audit
             await self.audit_service.record_audit(
-                'task_notification_error',
-                'error',
+                "task_notification_error",
+                "error",
                 str(e),
                 details={
-                    'action': 'execution_started',
-                    'task_id': task_id,
-                    'user_id': user_id
-                }
+                    "action": "execution_started",
+                    "task_id": task_id,
+                    "user_id": user_id,
+                },
             )
 
             raise
 
-    async def notify_task_execution_stopped(self, task_id: str, task_name: str, user_id: str) -> str:
+    async def notify_task_execution_stopped(
+        self, task_id: str, task_name: str, user_id: str
+    ) -> str:
         """Notify task execution stop with enhanced error handling."""
         try:
             # Validate inputs
@@ -1530,32 +1472,32 @@ class NotificationService:
 
             # Send notification
             return await self._send_notification(
-                template_id='task_execution_stopped',
+                template_id="task_execution_stopped",
                 template_vars={
-                    'task_id': task_id,
-                    'task_name': task_name,
-                    'user_id': user_id,
-                    'timestamp': datetime.utcnow().isoformat()
+                    "task_id": task_id,
+                    "task_name": task_name,
+                    "user_id": user_id,
+                    "timestamp": datetime.utcnow().isoformat(),
                 },
-                user_id=user_id
+                user_id=user_id,
             )
 
         except Exception as e:
             logger.error(f"Error notifying task execution stop: {str(e)}")
 
             # Record metrics
-            self.metrics_service.record_task_notification_error('execution_stopped')
+            self.metrics_service.record_task_notification_error("execution_stopped")
 
             # Audit
             await self.audit_service.record_audit(
-                'task_notification_error',
-                'error',
+                "task_notification_error",
+                "error",
                 str(e),
                 details={
-                    'action': 'execution_stopped',
-                    'task_id': task_id,
-                    'user_id': user_id
-                }
+                    "action": "execution_stopped",
+                    "task_id": task_id,
+                    "user_id": user_id,
+                },
             )
 
             raise
@@ -1572,14 +1514,16 @@ class NotificationService:
                 if not isinstance(value, (int, float)):
                     raise ValueError(f"Invalid metric value for {key}")
                 if value < 0 or value > 100:
-                    raise ValueError(f"Metric value for {key} must be between 0 and 100")
+                    raise ValueError(
+                        f"Metric value for {key} must be between 0 and 100"
+                    )
 
             # Get threshold config
             thresholds = {
-                'cpu_usage': 80,
-                'memory_usage': 80,
-                'disk_usage': 80,
-                'network_usage': 80
+                "cpu_usage": 80,
+                "memory_usage": 80,
+                "disk_usage": 80,
+                "network_usage": 80,
             }
 
             # Check thresholds
@@ -1588,13 +1532,13 @@ class NotificationService:
                 if value >= thresholds.get(metric, 80):
                     # Send notification
                     notification_id = await self._send_notification(
-                        template_id='system_metric_alert',
+                        template_id="system_metric_alert",
                         template_vars={
-                            'metric': metric,
-                            'value': value,
-                            'threshold': thresholds.get(metric, 80),
-                            'timestamp': datetime.utcnow().isoformat()
-                        }
+                            "metric": metric,
+                            "value": value,
+                            "threshold": thresholds.get(metric, 80),
+                            "timestamp": datetime.utcnow().isoformat(),
+                        },
                     )
                     notifications.append(notification_id)
 
@@ -1603,10 +1547,10 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'system_metrics_notification',
-                'info',
+                "system_metrics_notification",
+                "info",
                 f"Sent {len(notifications)} system metric notifications",
-                details={'metrics': metrics}
+                details={"metrics": metrics},
             )
 
             return notifications
@@ -1619,15 +1563,17 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'system_metrics_notification_error',
-                'error',
+                "system_metrics_notification_error",
+                "error",
                 str(e),
-                details={'metrics': metrics}
+                details={"metrics": metrics},
             )
 
             raise
 
-    async def notify_agent_status(self, agent_id: str, agent_name: str, status: str) -> str:
+    async def notify_agent_status(
+        self, agent_id: str, agent_name: str, status: str
+    ) -> str:
         """Notify agent status with enhanced error handling."""
         try:
             # Validate inputs
@@ -1635,19 +1581,19 @@ class NotificationService:
                 raise ValueError("Agent ID, name, and status are required")
 
             # Validate status
-            valid_statuses = ['online', 'offline', 'busy', 'error']
+            valid_statuses = ["online", "offline", "busy", "error"]
             if status not in valid_statuses:
                 raise ValueError(f"Invalid status. Must be one of: {valid_statuses}")
 
             # Send notification
             return await self._send_notification(
-                template_id='agent_status',
+                template_id="agent_status",
                 template_vars={
-                    'agent_id': agent_id,
-                    'agent_name': agent_name,
-                    'status': status,
-                    'timestamp': datetime.utcnow().isoformat()
-                }
+                    "agent_id": agent_id,
+                    "agent_name": agent_name,
+                    "status": status,
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
             )
 
         except Exception as e:
@@ -1658,19 +1604,21 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'agent_notification_error',
-                'error',
+                "agent_notification_error",
+                "error",
                 str(e),
                 details={
-                    'agent_id': agent_id,
-                    'agent_name': agent_name,
-                    'status': status
-                }
+                    "agent_id": agent_id,
+                    "agent_name": agent_name,
+                    "status": status,
+                },
             )
 
             raise
 
-    async def notify_model_training(self, model_id: str, model_name: str, status: str) -> str:
+    async def notify_model_training(
+        self, model_id: str, model_name: str, status: str
+    ) -> str:
         """Notify model training status with enhanced error handling."""
         try:
             # Validate inputs
@@ -1678,19 +1626,19 @@ class NotificationService:
                 raise ValueError("Model ID, name, and status are required")
 
             # Validate status
-            valid_statuses = ['started', 'completed', 'failed', 'cancelled']
+            valid_statuses = ["started", "completed", "failed", "cancelled"]
             if status not in valid_statuses:
                 raise ValueError(f"Invalid status. Must be one of: {valid_statuses}")
 
             # Send notification
             return await self._send_notification(
-                template_id='model_training',
+                template_id="model_training",
                 template_vars={
-                    'model_id': model_id,
-                    'model_name': model_name,
-                    'status': status,
-                    'timestamp': datetime.utcnow().isoformat()
-                }
+                    "model_id": model_id,
+                    "model_name": model_name,
+                    "status": status,
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
             )
 
         except Exception as e:
@@ -1701,14 +1649,14 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'model_notification_error',
-                'error',
+                "model_notification_error",
+                "error",
                 str(e),
                 details={
-                    'model_id': model_id,
-                    'model_name': model_name,
-                    'status': status
-                }
+                    "model_id": model_id,
+                    "model_name": model_name,
+                    "status": status,
+                },
             )
 
             raise
@@ -1721,19 +1669,21 @@ class NotificationService:
                 raise ValueError("User ID and activity are required")
 
             # Validate activity
-            valid_activities = ['login', 'logout', 'password_change', 'profile_update']
+            valid_activities = ["login", "logout", "password_change", "profile_update"]
             if activity not in valid_activities:
-                raise ValueError(f"Invalid activity. Must be one of: {valid_activities}")
+                raise ValueError(
+                    f"Invalid activity. Must be one of: {valid_activities}"
+                )
 
             # Send notification
             return await self._send_notification(
-                template_id='user_activity',
+                template_id="user_activity",
                 template_vars={
-                    'user_id': user_id,
-                    'activity': activity,
-                    'timestamp': datetime.utcnow().isoformat()
+                    "user_id": user_id,
+                    "activity": activity,
+                    "timestamp": datetime.utcnow().isoformat(),
                 },
-                user_id=user_id
+                user_id=user_id,
             )
 
         except Exception as e:
@@ -1744,18 +1694,17 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'user_notification_error',
-                'error',
+                "user_notification_error",
+                "error",
                 str(e),
-                details={
-                    'user_id': user_id,
-                    'activity': activity
-                }
+                details={"user_id": user_id, "activity": activity},
             )
 
             raise
 
-    async def notify_error(self, error_message: str, user_id: Optional[str] = None) -> str:
+    async def notify_error(
+        self, error_message: str, user_id: Optional[str] = None
+    ) -> str:
         """Send error notification."""
         try:
             # Get template
@@ -1776,11 +1725,13 @@ class NotificationService:
             template_vars = {
                 "error_message": error_message,
                 "timestamp": datetime.utcnow().isoformat(),
-                "user_id": user_id or "system"
+                "user_id": user_id or "system",
             }
 
             # Send notification
-            notification_id = await self._send_notification(template_id, template_vars, user_id)
+            notification_id = await self._send_notification(
+                template_id, template_vars, user_id
+            )
 
             # Log the error notification broadcast
             await self._log_notification_broadcast(
@@ -1791,7 +1742,7 @@ class NotificationService:
                 notification_type="error",
                 priority=version.priority,
                 template_vars=template_vars,
-                broadcast_type="error_notification"
+                broadcast_type="error_notification",
             )
 
             return notification_id
@@ -1810,7 +1761,7 @@ class NotificationService:
                 template_vars={"error_message": error_message},
                 broadcast_type="error_notification",
                 success=False,
-                error=str(e)
+                error=str(e),
             )
 
             return ""
@@ -1828,7 +1779,7 @@ class NotificationService:
         success: bool = True,
         error: Optional[str] = None,
         session_id: Optional[str] = None,
-        correlation_id: Optional[str] = None
+        correlation_id: Optional[str] = None,
     ) -> None:
         """Log all broadcasted notifications with comprehensive metadata.
 
@@ -1865,7 +1816,9 @@ class NotificationService:
                 "session_id": session_id,
                 "correlation_id": correlation_id,
                 "notification_type": notification_type,
-                "priority": priority.value if hasattr(priority, 'value') else str(priority),
+                "priority": priority.value
+                if hasattr(priority, "value")
+                else str(priority),
                 "broadcast_type": broadcast_type,
                 "success": success,
                 "error": error,
@@ -1874,15 +1827,15 @@ class NotificationService:
                     "user_agent": "notification_service",
                     "service_version": "1.0.0",
                     "environment": "production",
-                    "log_level": "INFO" if success else "ERROR"
-                }
+                    "log_level": "INFO" if success else "ERROR",
+                },
             }
 
             # Log to structured logging service
             await self.logging_service.log_structured(
                 "notification_broadcast",
                 broadcast_log,
-                level="INFO" if success else "ERROR"
+                level="INFO" if success else "ERROR",
             )
 
             # Log to audit service
@@ -1890,7 +1843,7 @@ class NotificationService:
                 "notification_broadcast",
                 "success" if success else "error",
                 f"Notification broadcast: {broadcast_type} to user {user_id}",
-                metadata=broadcast_log
+                metadata=broadcast_log,
             )
 
             # Record metrics
@@ -1925,16 +1878,14 @@ class NotificationService:
                 "original_data": {
                     "notification_id": notification_id,
                     "user_id": user_id,
-                    "broadcast_type": broadcast_type
-                }
+                    "broadcast_type": broadcast_type,
+                },
             }
 
             # Try to log fallback entry
             try:
                 await self.logging_service.log_structured(
-                    "notification_broadcast_fallback",
-                    fallback_log,
-                    level="ERROR"
+                    "notification_broadcast_fallback", fallback_log, level="ERROR"
                 )
             except Exception as fallback_error:
                 logger.error(f"Failed to log fallback entry: {fallback_error}")
@@ -1945,7 +1896,7 @@ class NotificationService:
         title: str = "System Notification",
         priority: NotificationPriority = NotificationPriority.MEDIUM,
         user_ids: Optional[List[str]] = None,
-        session_ids: Optional[Dict[str, str]] = None
+        session_ids: Optional[Dict[str, str]] = None,
     ) -> List[str]:
         """Broadcast system notification to multiple users with comprehensive logging.
 
@@ -1985,7 +1936,9 @@ class NotificationService:
                 "message": message,
                 "title": title,
                 "timestamp": datetime.utcnow().isoformat(),
-                "priority": priority.value if hasattr(priority, 'value') else str(priority)
+                "priority": priority.value
+                if hasattr(priority, "value")
+                else str(priority),
             }
 
             # Send to each user
@@ -2012,7 +1965,7 @@ class NotificationService:
                             notification_type="system",
                             priority=priority,
                             template_vars=template_vars,
-                            broadcast_type="system_broadcast"
+                            broadcast_type="system_broadcast",
                         )
 
                 except Exception as e:
@@ -2030,7 +1983,7 @@ class NotificationService:
                         template_vars=template_vars,
                         broadcast_type="system_broadcast",
                         success=False,
-                        error=str(e)
+                        error=str(e),
                     )
 
             # Log summary
@@ -2055,12 +2008,14 @@ class NotificationService:
                 template_vars={"message": message, "title": title},
                 broadcast_type="system_broadcast",
                 success=False,
-                error=str(e)
+                error=str(e),
             )
 
             return []
 
-    async def get_delivery_status(self, notification_id: str) -> Optional[NotificationDelivery]:
+    async def get_delivery_status(
+        self, notification_id: str
+    ) -> Optional[NotificationDelivery]:
         """Get delivery status with enhanced error handling."""
         try:
             # Validate inputs
@@ -2077,9 +2032,9 @@ class NotificationService:
 
                 # Audit
                 await self.audit_service.record_audit(
-                    'delivery_status_not_found',
-                    'warning',
-                    f"Delivery not found: {notification_id}"
+                    "delivery_status_not_found",
+                    "warning",
+                    f"Delivery not found: {notification_id}",
                 )
 
                 return None
@@ -2091,9 +2046,9 @@ class NotificationService:
 
                 # Audit
                 await self.audit_service.record_audit(
-                    'delivery_status_invalid',
-                    'error',
-                    f"Invalid delivery: {notification_id}"
+                    "delivery_status_invalid",
+                    "error",
+                    f"Invalid delivery: {notification_id}",
                 )
 
                 return None
@@ -2103,10 +2058,10 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'delivery_status_retrieved',
-                'info',
+                "delivery_status_retrieved",
+                "info",
                 f"Retrieved delivery status: {notification_id}",
-                details={'status': delivery.status}
+                details={"status": delivery.status},
             )
 
             return delivery
@@ -2119,10 +2074,10 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'delivery_status_error',
-                'error',
+                "delivery_status_error",
+                "error",
                 str(e),
-                details={'notification_id': notification_id}
+                details={"notification_id": notification_id},
             )
 
             raise
@@ -2132,32 +2087,32 @@ class NotificationService:
         try:
             # Initialize metrics
             metrics = {
-                'total_deliveries': 0,
-                'delivered': 0,
-                'failed': 0,
-                'retrying': 0,
-                'pending': 0,
-                'expired': 0,
-                'rate_limited': 0,
-                'validation_failed': 0,
-                'security_failed': 0,
-                'audit_failed': 0,
-                'metrics_failed': 0,
-                'health_failed': 0,
-                'logging_failed': 0,
-                'average_attempts': 0,
-                'success_rate': 0,
-                'error_rate': 0,
-                'retry_rate': 0,
-                'expiration_rate': 0,
-                'rate_limit_rate': 0,
-                'validation_failure_rate': 0,
-                'security_failure_rate': 0,
-                'audit_failure_rate': 0,
-                'metrics_failure_rate': 0,
-                'health_failure_rate': 0,
-                'logging_failure_rate': 0,
-                'timestamp': datetime.utcnow().isoformat()
+                "total_deliveries": 0,
+                "delivered": 0,
+                "failed": 0,
+                "retrying": 0,
+                "pending": 0,
+                "expired": 0,
+                "rate_limited": 0,
+                "validation_failed": 0,
+                "security_failed": 0,
+                "audit_failed": 0,
+                "metrics_failed": 0,
+                "health_failed": 0,
+                "logging_failed": 0,
+                "average_attempts": 0,
+                "success_rate": 0,
+                "error_rate": 0,
+                "retry_rate": 0,
+                "expiration_rate": 0,
+                "rate_limit_rate": 0,
+                "validation_failure_rate": 0,
+                "security_failure_rate": 0,
+                "audit_failure_rate": 0,
+                "metrics_failure_rate": 0,
+                "health_failure_rate": 0,
+                "logging_failure_rate": 0,
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
             # Get deliveries
@@ -2166,80 +2121,96 @@ class NotificationService:
 
             # Calculate metrics
             if deliveries:
-                metrics['total_deliveries'] = len(deliveries)
-                metrics['delivered'] = sum(
-                    1 for d in deliveries
+                metrics["total_deliveries"] = len(deliveries)
+                metrics["delivered"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.DELIVERED
                 )
-                metrics['failed'] = sum(
-                    1 for d in deliveries
+                metrics["failed"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.FAILED
                 )
-                metrics['retrying'] = sum(
-                    1 for d in deliveries
+                metrics["retrying"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.RETRYING
                 )
-                metrics['pending'] = sum(
-                    1 for d in deliveries
+                metrics["pending"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.PENDING
                 )
-                metrics['expired'] = sum(
-                    1 for d in deliveries
+                metrics["expired"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.EXPIRED
                 )
-                metrics['rate_limited'] = sum(
-                    1 for d in deliveries
+                metrics["rate_limited"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.RATE_LIMITED
                 )
-                metrics['validation_failed'] = sum(
-                    1 for d in deliveries
+                metrics["validation_failed"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.VALIDATION_FAILED
                 )
-                metrics['security_failed'] = sum(
-                    1 for d in deliveries
+                metrics["security_failed"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.SECURITY_FAILED
                 )
-                metrics['audit_failed'] = sum(
-                    1 for d in deliveries
+                metrics["audit_failed"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.AUDIT_FAILED
                 )
-                metrics['metrics_failed'] = sum(
-                    1 for d in deliveries
+                metrics["metrics_failed"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.METRICS_FAILED
                 )
-                metrics['health_failed'] = sum(
-                    1 for d in deliveries
+                metrics["health_failed"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.HEALTH_FAILED
                 )
-                metrics['logging_failed'] = sum(
-                    1 for d in deliveries
+                metrics["logging_failed"] = sum(
+                    1
+                    for d in deliveries
                     if d.status == NotificationDeliveryStatus.LOGGING_FAILED
                 )
 
                 # Calculate rates
-                total = metrics['total_deliveries']
-                metrics['average_attempts'] = sum(d.attempts for d in deliveries) / total
-                metrics['success_rate'] = metrics['delivered'] / total
-                metrics['error_rate'] = metrics['failed'] / total
-                metrics['retry_rate'] = metrics['retrying'] / total
-                metrics['expiration_rate'] = metrics['expired'] / total
-                metrics['rate_limit_rate'] = metrics['rate_limited'] / total
-                metrics['validation_failure_rate'] = metrics['validation_failed'] / total
-                metrics['security_failure_rate'] = metrics['security_failed'] / total
-                metrics['audit_failure_rate'] = metrics['audit_failed'] / total
-                metrics['metrics_failure_rate'] = metrics['metrics_failed'] / total
-                metrics['health_failure_rate'] = metrics['health_failed'] / total
-                metrics['logging_failure_rate'] = metrics['logging_failed'] / total
+                total = metrics["total_deliveries"]
+                metrics["average_attempts"] = (
+                    sum(d.attempts for d in deliveries) / total
+                )
+                metrics["success_rate"] = metrics["delivered"] / total
+                metrics["error_rate"] = metrics["failed"] / total
+                metrics["retry_rate"] = metrics["retrying"] / total
+                metrics["expiration_rate"] = metrics["expired"] / total
+                metrics["rate_limit_rate"] = metrics["rate_limited"] / total
+                metrics["validation_failure_rate"] = (
+                    metrics["validation_failed"] / total
+                )
+                metrics["security_failure_rate"] = metrics["security_failed"] / total
+                metrics["audit_failure_rate"] = metrics["audit_failed"] / total
+                metrics["metrics_failure_rate"] = metrics["metrics_failed"] / total
+                metrics["health_failure_rate"] = metrics["health_failed"] / total
+                metrics["logging_failure_rate"] = metrics["logging_failed"] / total
 
             # Record metrics
             self.metrics_service.record_delivery_metrics_retrieved()
 
             # Audit
             await self.audit_service.record_audit(
-                'delivery_metrics_retrieved',
-                'info',
+                "delivery_metrics_retrieved",
+                "info",
                 "Retrieved delivery metrics",
-                details=metrics
+                details=metrics,
             )
 
             return metrics
@@ -2252,9 +2223,7 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit(
-                'delivery_metrics_error',
-                'error',
-                str(e)
+                "delivery_metrics_error", "error", str(e)
             )
 
             raise
@@ -2266,45 +2235,47 @@ class NotificationService:
             health_status = await self._check_health()
 
             # Add service info
-            health_status.update({
-                'service': 'notification',
-                'version': '1.0.0',
-                'uptime': (datetime.utcnow() - self.created_at).total_seconds(),
-                'dependencies': {
-                    'notification_manager': await self.notification_manager.get_health(),
-                    'rate_limiting_service': await self.rate_limiting_service.get_health(),
-                    'template_service': await self.template_service.get_health(),
-                    'cache_service': await self.cache_service.get_health(),
-                    'metrics_service': await self.metrics_service.get_health(),
-                    'retry_service': await self.retry_service.get_health(),
-                    'error_handling_service': await self.error_handling_service.get_health(),
-                    'config_service': await self.config_service.get_health(),
-                    'audit_service': await self.audit_service.get_health(),
-                    'health_service': await self.health_service.get_health(),
-                    'transaction_service': await self.transaction_service.get_health(),
-                    'validation_service': await self.validation_service.get_health(),
-                    'security_service': await self.security_service.get_health(),
-                    'logging_service': await self.logging_service.get_health(),
-                    'monitoring_service': await self.monitoring_service.get_health(),
-                    'scheduler_service': await self.scheduler_service.get_health(),
-                    'queue_service': await self.queue_service.get_health(),
-                    'worker_service': await self.worker_service.get_health(),
-                    'persistence_service': await self.persistence_service.get_health(),
-                    'dependency_service': await self.dependency_service.get_health(),
-                    'recovery_service': await self.recovery_service.get_health(),
-                    'state_service': await self.state_service.get_health()
+            health_status.update(
+                {
+                    "service": "notification",
+                    "version": "1.0.0",
+                    "uptime": (datetime.utcnow() - self.created_at).total_seconds(),
+                    "dependencies": {
+                        "notification_manager": await self.notification_manager.get_health(),
+                        "rate_limiting_service": await self.rate_limiting_service.get_health(),
+                        "template_service": await self.template_service.get_health(),
+                        "cache_service": await self.cache_service.get_health(),
+                        "metrics_service": await self.metrics_service.get_health(),
+                        "retry_service": await self.retry_service.get_health(),
+                        "error_handling_service": await self.error_handling_service.get_health(),
+                        "config_service": await self.config_service.get_health(),
+                        "audit_service": await self.audit_service.get_health(),
+                        "health_service": await self.health_service.get_health(),
+                        "transaction_service": await self.transaction_service.get_health(),
+                        "validation_service": await self.validation_service.get_health(),
+                        "security_service": await self.security_service.get_health(),
+                        "logging_service": await self.logging_service.get_health(),
+                        "monitoring_service": await self.monitoring_service.get_health(),
+                        "scheduler_service": await self.scheduler_service.get_health(),
+                        "queue_service": await self.queue_service.get_health(),
+                        "worker_service": await self.worker_service.get_health(),
+                        "persistence_service": await self.persistence_service.get_health(),
+                        "dependency_service": await self.dependency_service.get_health(),
+                        "recovery_service": await self.recovery_service.get_health(),
+                        "state_service": await self.state_service.get_health(),
+                    },
                 }
-            })
+            )
 
             # Record metrics
             self.metrics_service.record_health_retrieved()
 
             # Audit
             await self.audit_service.record_audit(
-                'health_retrieved',
-                'info',
+                "health_retrieved",
+                "info",
                 "Retrieved service health",
-                details=health_status
+                details=health_status,
             )
 
             return health_status
@@ -2316,10 +2287,6 @@ class NotificationService:
             self.metrics_service.record_health_error()
 
             # Audit
-            await self.audit_service.record_audit(
-                'health_error',
-                'error',
-                str(e)
-            )
+            await self.audit_service.record_audit("health_error", "error", str(e))
 
             raise

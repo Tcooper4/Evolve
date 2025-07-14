@@ -41,7 +41,11 @@ def load_agent_registry() -> Dict[str, Any]:
     Returns:
         Dictionary containing agent registry information
     """
-    registry = {"agents": {}, "last_updated": datetime.now().isoformat(), "version": "1.0.0"}
+    registry = {
+        "agents": {},
+        "last_updated": datetime.now().isoformat(),
+        "version": "1.0.0",
+    }
 
     try:
         # Try to load from existing registry file
@@ -155,7 +159,10 @@ def initialize_core_system():
 
     logging.info("Core trading system initialization completed")
 
-    return {"agent_registry": agent_registry, "initialized_at": datetime.now().isoformat()}
+    return {
+        "agent_registry": agent_registry,
+        "initialized_at": datetime.now().isoformat(),
+    }
 
 
 # Global variables for system state
@@ -192,7 +199,9 @@ def update_agent_status(agent_name: str, status: str, **kwargs):
     if _agent_registry and "agents" in _agent_registry:
         if agent_name in _agent_registry["agents"]:
             _agent_registry["agents"][agent_name]["status"] = status
-            _agent_registry["agents"][agent_name]["last_used"] = datetime.now().isoformat()
+            _agent_registry["agents"][agent_name][
+                "last_used"
+            ] = datetime.now().isoformat()
 
             # Update additional fields
             for key, value in kwargs.items():
@@ -213,7 +222,9 @@ def get_system_status() -> Dict[str, Any]:
 
     status = {
         "initialized": _system_initialized,
-        "initialization_time": _initialization_data.get("initialized_at") if _initialization_data else None,
+        "initialization_time": _initialization_data.get("initialized_at")
+        if _initialization_data
+        else None,
         "agent_count": len(_agent_registry.get("agents", {})) if _agent_registry else 0,
         "active_agents": 0,
         "inactive_agents": 0,

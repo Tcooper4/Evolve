@@ -19,7 +19,11 @@ class TestAgentPerformance:
     def test_agent_performance_creation(self):
         """Test creating an AgentPerformance instance."""
         perf = AgentPerformance(
-            agent_name="test_agent", sharpe_ratio=1.5, max_drawdown=0.15, win_rate=0.65, total_return=0.25
+            agent_name="test_agent",
+            sharpe_ratio=1.5,
+            max_drawdown=0.15,
+            win_rate=0.65,
+            total_return=0.25,
         )
 
         assert perf.agent_name == "test_agent"
@@ -49,7 +53,11 @@ class TestAgentPerformance:
     def test_to_dict_method(self):
         """Test the to_dict method."""
         perf = AgentPerformance(
-            agent_name="test_agent", sharpe_ratio=1.5, max_drawdown=0.15, win_rate=0.65, total_return=0.25
+            agent_name="test_agent",
+            sharpe_ratio=1.5,
+            max_drawdown=0.15,
+            win_rate=0.65,
+            total_return=0.25,
         )
 
         result = perf.to_dict()
@@ -73,11 +81,19 @@ class TestAgentLeaderboard:
         """Test leaderboard initialization."""
         assert self.leaderboard.leaderboard == {}
         assert self.leaderboard.history == []
-        assert self.leaderboard.deprecation_thresholds == {"sharpe_ratio": 0.5, "max_drawdown": 0.25, "win_rate": 0.45}
+        assert self.leaderboard.deprecation_thresholds == {
+            "sharpe_ratio": 0.5,
+            "max_drawdown": 0.25,
+            "win_rate": 0.45,
+        }
 
     def test_custom_deprecation_thresholds(self):
         """Test initialization with custom deprecation thresholds."""
-        custom_thresholds = {"sharpe_ratio": 1.0, "max_drawdown": 0.20, "win_rate": 0.50}
+        custom_thresholds = {
+            "sharpe_ratio": 1.0,
+            "max_drawdown": 0.20,
+            "win_rate": 0.50,
+        }
 
         leaderboard = AgentLeaderboard(deprecation_thresholds=custom_thresholds)
         assert leaderboard.deprecation_thresholds == custom_thresholds
@@ -85,7 +101,11 @@ class TestAgentLeaderboard:
     def test_update_performance_new_agent(self):
         """Test updating performance for a new agent."""
         self.leaderboard.update_performance(
-            agent_name="test_agent", sharpe_ratio=1.5, max_drawdown=0.15, win_rate=0.65, total_return=0.25
+            agent_name="test_agent",
+            sharpe_ratio=1.5,
+            max_drawdown=0.15,
+            win_rate=0.65,
+            total_return=0.25,
         )
 
         assert "test_agent" in self.leaderboard.leaderboard
@@ -101,12 +121,20 @@ class TestAgentLeaderboard:
         """Test updating performance for an existing agent."""
         # Add initial performance
         self.leaderboard.update_performance(
-            agent_name="test_agent", sharpe_ratio=1.0, max_drawdown=0.20, win_rate=0.60, total_return=0.20
+            agent_name="test_agent",
+            sharpe_ratio=1.0,
+            max_drawdown=0.20,
+            win_rate=0.60,
+            total_return=0.20,
         )
 
         # Update performance
         self.leaderboard.update_performance(
-            agent_name="test_agent", sharpe_ratio=2.0, max_drawdown=0.10, win_rate=0.70, total_return=0.30
+            agent_name="test_agent",
+            sharpe_ratio=2.0,
+            max_drawdown=0.10,
+            win_rate=0.70,
+            total_return=0.30,
         )
 
         perf = self.leaderboard.leaderboard["test_agent"]
@@ -194,7 +222,9 @@ class TestAgentLeaderboard:
         ]
 
         for agent_name, sharpe, drawdown, win_rate, total_return in agents_data:
-            self.leaderboard.update_performance(agent_name, sharpe, drawdown, win_rate, total_return)
+            self.leaderboard.update_performance(
+                agent_name, sharpe, drawdown, win_rate, total_return
+            )
 
         result = self.leaderboard.get_leaderboard()
 
@@ -214,7 +244,9 @@ class TestAgentLeaderboard:
         ]
 
         for agent_name, sharpe, drawdown, win_rate, total_return in agents_data:
-            self.leaderboard.update_performance(agent_name, sharpe, drawdown, win_rate, total_return)
+            self.leaderboard.update_performance(
+                agent_name, sharpe, drawdown, win_rate, total_return
+            )
 
         result = self.leaderboard.get_leaderboard(sort_by="total_return")
 
@@ -235,7 +267,9 @@ class TestAgentLeaderboard:
         ]
 
         for agent_name, sharpe, drawdown, win_rate, total_return in agents_data:
-            self.leaderboard.update_performance(agent_name, sharpe, drawdown, win_rate, total_return)
+            self.leaderboard.update_performance(
+                agent_name, sharpe, drawdown, win_rate, total_return
+            )
 
         result = self.leaderboard.get_leaderboard(top_n=2)
 
@@ -247,8 +281,12 @@ class TestAgentLeaderboard:
         """Test getting list of deprecated agents."""
         # Add agents with different statuses
         self.leaderboard.update_performance("active_agent", 1.5, 0.15, 0.65, 0.25)
-        self.leaderboard.update_performance("deprecated_agent1", 0.3, 0.15, 0.65, 0.25)  # Low Sharpe
-        self.leaderboard.update_performance("deprecated_agent2", 1.5, 0.30, 0.65, 0.25)  # High drawdown
+        self.leaderboard.update_performance(
+            "deprecated_agent1", 0.3, 0.15, 0.65, 0.25
+        )  # Low Sharpe
+        self.leaderboard.update_performance(
+            "deprecated_agent2", 1.5, 0.30, 0.65, 0.25
+        )  # High drawdown
 
         deprecated = self.leaderboard.get_deprecated_agents()
 
@@ -276,7 +314,9 @@ class TestAgentLeaderboard:
         # Add multiple updates
         self.leaderboard.update_performance("agent1", 1.0, 0.15, 0.65, 0.25)
         self.leaderboard.update_performance("agent2", 1.5, 0.10, 0.70, 0.30)
-        self.leaderboard.update_performance("agent1", 1.2, 0.12, 0.68, 0.28)  # Update existing
+        self.leaderboard.update_performance(
+            "agent1", 1.2, 0.12, 0.68, 0.28
+        )  # Update existing
 
         history = self.leaderboard.get_history()
 
@@ -288,7 +328,9 @@ class TestAgentLeaderboard:
         """Test getting performance history with limit."""
         # Add multiple updates
         for i in range(10):
-            self.leaderboard.update_performance(f"agent{i}", 1.0 + i * 0.1, 0.15, 0.65, 0.25)
+            self.leaderboard.update_performance(
+                f"agent{i}", 1.0 + i * 0.1, 0.15, 0.65, 0.25
+            )
 
         history = self.leaderboard.get_history(limit=5)
 
@@ -304,7 +346,9 @@ class TestAgentLeaderboard:
         ]
 
         for agent_name, sharpe, drawdown, win_rate, total_return in agents_data:
-            self.leaderboard.update_performance(agent_name, sharpe, drawdown, win_rate, total_return)
+            self.leaderboard.update_performance(
+                agent_name, sharpe, drawdown, win_rate, total_return
+            )
 
         df = self.leaderboard.as_dataframe()
 
@@ -431,10 +475,34 @@ class TestAgentLeaderboard:
 
         # Add multiple agents with different performance levels
         agents_data = [
-            {"name": "agent_a", "sharpe": 1.0, "drawdown": 0.15, "win_rate": 0.60, "return": 0.20},
-            {"name": "agent_b", "sharpe": 1.5, "drawdown": 0.10, "win_rate": 0.65, "return": 0.25},
-            {"name": "agent_c", "sharpe": 0.8, "drawdown": 0.20, "win_rate": 0.55, "return": 0.15},
-            {"name": "agent_d", "sharpe": 2.0, "drawdown": 0.08, "win_rate": 0.70, "return": 0.30},
+            {
+                "name": "agent_a",
+                "sharpe": 1.0,
+                "drawdown": 0.15,
+                "win_rate": 0.60,
+                "return": 0.20,
+            },
+            {
+                "name": "agent_b",
+                "sharpe": 1.5,
+                "drawdown": 0.10,
+                "win_rate": 0.65,
+                "return": 0.25,
+            },
+            {
+                "name": "agent_c",
+                "sharpe": 0.8,
+                "drawdown": 0.20,
+                "win_rate": 0.55,
+                "return": 0.15,
+            },
+            {
+                "name": "agent_d",
+                "sharpe": 2.0,
+                "drawdown": 0.08,
+                "win_rate": 0.70,
+                "return": 0.30,
+            },
         ]
 
         # Track rankings after each update
@@ -468,7 +536,10 @@ class TestAgentLeaderboard:
                     print(f"  ⚠️ Ranking unchanged: {current_ranks}")
 
                 # Assert that rankings are properly ordered by Sharpe ratio
-                current_sharpes = [self.leaderboard.leaderboard[name].sharpe_ratio for name in current_ranks]
+                current_sharpes = [
+                    self.leaderboard.leaderboard[name].sharpe_ratio
+                    for name in current_ranks
+                ]
                 expected_sharpes = sorted(current_sharpes, reverse=True)
                 self.assertEqual(
                     current_sharpes,
@@ -482,30 +553,42 @@ class TestAgentLeaderboard:
         # Test ranking by total return
         return_ranking = self.leaderboard.get_leaderboard(sort_by="total_return")
         return_ranks = [perf.agent_name for perf in return_ranking]
-        return_values = [self.leaderboard.leaderboard[name].total_return for name in return_ranks]
+        return_values = [
+            self.leaderboard.leaderboard[name].total_return for name in return_ranks
+        ]
         expected_returns = sorted(return_values, reverse=True)
         self.assertEqual(
-            return_values, expected_returns, f"Rankings not properly ordered by total return: {return_values}"
+            return_values,
+            expected_returns,
+            f"Rankings not properly ordered by total return: {return_values}",
         )
         print(f"  Return ranking: {return_ranks}")
 
         # Test ranking by win rate
         winrate_ranking = self.leaderboard.get_leaderboard(sort_by="win_rate")
         winrate_ranks = [perf.agent_name for perf in winrate_ranking]
-        winrate_values = [self.leaderboard.leaderboard[name].win_rate for name in winrate_ranks]
+        winrate_values = [
+            self.leaderboard.leaderboard[name].win_rate for name in winrate_ranks
+        ]
         expected_winrates = sorted(winrate_values, reverse=True)
         self.assertEqual(
-            winrate_values, expected_winrates, f"Rankings not properly ordered by win rate: {winrate_values}"
+            winrate_values,
+            expected_winrates,
+            f"Rankings not properly ordered by win rate: {winrate_values}",
         )
         print(f"  Win rate ranking: {winrate_ranks}")
 
         # Test ranking by max drawdown (ascending - lower is better)
         drawdown_ranking = self.leaderboard.get_leaderboard(sort_by="max_drawdown")
         drawdown_ranks = [perf.agent_name for perf in drawdown_ranking]
-        drawdown_values = [self.leaderboard.leaderboard[name].max_drawdown for name in drawdown_ranks]
+        drawdown_values = [
+            self.leaderboard.leaderboard[name].max_drawdown for name in drawdown_ranks
+        ]
         expected_drawdowns = sorted(drawdown_values)  # Ascending order
         self.assertEqual(
-            drawdown_values, expected_drawdowns, f"Rankings not properly ordered by max drawdown: {drawdown_values}"
+            drawdown_values,
+            expected_drawdowns,
+            f"Rankings not properly ordered by max drawdown: {drawdown_values}",
         )
         print(f"  Drawdown ranking: {drawdown_ranks}")
 
@@ -519,7 +602,11 @@ class TestAgentLeaderboard:
         print(f"  Top by Win Rate: {top_winrate}")
 
         # Verify that agent_d should be top by Sharpe (2.0)
-        self.assertEqual(top_sharpe, "agent_d", f"Expected agent_d to be top by Sharpe, got {top_sharpe}")
+        self.assertEqual(
+            top_sharpe,
+            "agent_d",
+            f"Expected agent_d to be top by Sharpe, got {top_sharpe}",
+        )
 
         # Test ranking stability after multiple updates
         print(f"\n🔄 Testing ranking stability after multiple updates:")
@@ -527,7 +614,11 @@ class TestAgentLeaderboard:
         # Update the top agent multiple times with same performance
         for i in range(3):
             self.leaderboard.update_performance(
-                agent_name="agent_d", sharpe_ratio=2.0, max_drawdown=0.08, win_rate=0.70, total_return=0.30
+                agent_name="agent_d",
+                sharpe_ratio=2.0,
+                max_drawdown=0.08,
+                win_rate=0.70,
+                total_return=0.30,
             )
 
             stable_ranking = self.leaderboard.get_leaderboard(sort_by="sharpe_ratio")
@@ -536,7 +627,11 @@ class TestAgentLeaderboard:
             print(f"  Update {i+1}: {stable_ranks}")
 
             # Ranking should remain stable
-            self.assertEqual(stable_ranks[0], "agent_d", f"Top agent should remain agent_d after update {i+1}")
+            self.assertEqual(
+                stable_ranks[0],
+                "agent_d",
+                f"Top agent should remain agent_d after update {i+1}",
+            )
 
         print("✅ Leaderboard re-ranking test completed")
 
@@ -550,7 +645,9 @@ class TestAgentLeaderboardIntegration:
 
         # 1. Add initial agents
         leaderboard.update_performance("agent1", 1.5, 0.15, 0.65, 0.25)
-        leaderboard.update_performance("agent2", 0.3, 0.15, 0.65, 0.25)  # Will be deprecated
+        leaderboard.update_performance(
+            "agent2", 0.3, 0.15, 0.65, 0.25
+        )  # Will be deprecated
 
         # 2. Check initial state
         assert len(leaderboard.get_active_agents()) == 1
@@ -581,12 +678,13 @@ class TestAgentLeaderboardIntegration:
         import time
 
         leaderboard = AgentLeaderboard()
-        results = []
 
         def update_agent(agent_id):
             """Update agent performance in a thread."""
             for i in range(10):
-                leaderboard.update_performance(f"agent_{agent_id}", 1.0 + i * 0.1, 0.15, 0.65, 0.25)
+                leaderboard.update_performance(
+                    f"agent_{agent_id}", 1.0 + i * 0.1, 0.15, 0.65, 0.25
+                )
                 time.sleep(0.01)  # Small delay
 
         # Start multiple threads

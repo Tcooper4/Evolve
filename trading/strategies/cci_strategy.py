@@ -63,7 +63,9 @@ class CCIStrategy:
         sma_tp = typical_price.rolling(window=self.config.period).mean()
 
         # Calculate Mean Deviation
-        mean_deviation = typical_price.rolling(window=self.config.period).apply(lambda x: np.mean(np.abs(x - x.mean())))
+        mean_deviation = typical_price.rolling(window=self.config.period).apply(
+            lambda x: np.mean(np.abs(x - x.mean()))
+        )
 
         # Calculate CCI
         cci = (typical_price - sma_tp) / (self.config.constant * mean_deviation)
@@ -98,12 +100,16 @@ class CCIStrategy:
         # Generate signals based on CCI thresholds
         # Buy signal when CCI crosses above oversold threshold
         signals.loc[
-            (cci > self.config.oversold_threshold) & (cci.shift(1) <= self.config.oversold_threshold), "signal"
+            (cci > self.config.oversold_threshold)
+            & (cci.shift(1) <= self.config.oversold_threshold),
+            "signal",
         ] = 1
 
         # Sell signal when CCI crosses below overbought threshold
         signals.loc[
-            (cci < self.config.overbought_threshold) & (cci.shift(1) >= self.config.overbought_threshold), "signal"
+            (cci < self.config.overbought_threshold)
+            & (cci.shift(1) >= self.config.overbought_threshold),
+            "signal",
         ] = -1
 
         # Additional signals for extreme values
@@ -142,7 +148,9 @@ class CCIStrategy:
         positions["position"] = positions["position"].clip(-1, 1)
 
         # Add position size based on signal strength
-        positions["position_size"] = positions["position"] * self.signals["signal_strength"]
+        positions["position_size"] = (
+            positions["position"] * self.signals["signal_strength"]
+        )
 
         self.positions = positions
         return positions
@@ -167,7 +175,9 @@ class CCIStrategy:
             "indicators": ["cci"],
         }
 
-    def optimize_parameters(self, data: pd.DataFrame, optimization_metric: str = "sharpe_ratio") -> CCIConfig:
+    def optimize_parameters(
+        self, data: pd.DataFrame, optimization_metric: str = "sharpe_ratio"
+    ) -> CCIConfig:
         """
         Optimize strategy parameters using historical data.
 
@@ -206,7 +216,9 @@ class CCIStrategy:
                         signals = temp_strategy.generate_signals(data)
 
                         # Calculate performance metric
-                        metric_value = self._calculate_performance_metric(signals, data, optimization_metric)
+                        metric_value = self._calculate_performance_metric(
+                            signals, data, optimization_metric
+                        )
 
                         if metric_value > best_metric:
                             best_metric = metric_value
@@ -218,7 +230,9 @@ class CCIStrategy:
 
         return best_config or self.config
 
-    def _calculate_performance_metric(self, signals: pd.DataFrame, data: pd.DataFrame, metric: str) -> float:
+    def _calculate_performance_metric(
+        self, signals: pd.DataFrame, data: pd.DataFrame, metric: str
+    ) -> float:
         """
         Calculate performance metric for optimization.
 
@@ -236,7 +250,11 @@ class CCIStrategy:
             strategy_returns = signals["signal"].shift(1) * returns
 
             if metric == "sharpe_ratio":
-                return strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() > 0 else 0
+                return (
+                    strategy_returns.mean() / strategy_returns.std()
+                    if strategy_returns.std() > 0
+                    else 0
+                )
             elif metric == "total_return":
                 return strategy_returns.sum()
             elif metric == "max_drawdown":
@@ -288,4 +306,8 @@ def generate_cci_signals(data: pd.DataFrame, **kwargs) -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"Error generating CCI signals: {e}")
-        return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }

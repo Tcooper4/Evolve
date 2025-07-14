@@ -167,7 +167,11 @@ class TestUpdaterAgent:
             max_concurrent_runs=2,
             timeout_seconds=600,
             retry_attempts=2,
-            custom_config={"backup_models": True, "max_model_age_days": 30, "performance_decay_threshold": 0.1},
+            custom_config={
+                "backup_models": True,
+                "max_model_age_days": 30,
+                "performance_decay_threshold": 0.1,
+            },
         )
 
     @pytest.fixture
@@ -191,7 +195,9 @@ class TestUpdaterAgent:
         assert "model-updating" in metadata["tags"]
         assert "model_retraining" in metadata["capabilities"]
 
-    def test_updater_agent_validate_input_valid(self, updater_agent, mock_old_model, sample_new_data):
+    def test_updater_agent_validate_input_valid(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test input validation with valid data."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -204,7 +210,9 @@ class TestUpdaterAgent:
 
         assert updater_agent.validate_input(request=request) is True
 
-    def test_updater_agent_validate_input_invalid_model_path(self, updater_agent, sample_new_data):
+    def test_updater_agent_validate_input_invalid_model_path(
+        self, updater_agent, sample_new_data
+    ):
         """Test input validation with invalid model path."""
         request = UpdateRequest(
             model_id="model_123",
@@ -216,7 +224,9 @@ class TestUpdaterAgent:
 
         assert updater_agent.validate_input(request=request) is False
 
-    def test_updater_agent_validate_input_invalid_new_data_path(self, updater_agent, mock_old_model):
+    def test_updater_agent_validate_input_invalid_new_data_path(
+        self, updater_agent, mock_old_model
+    ):
         """Test input validation with invalid new data path."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -229,7 +239,9 @@ class TestUpdaterAgent:
 
         assert updater_agent.validate_input(request=request) is False
 
-    def test_updater_agent_validate_input_invalid_update_type(self, updater_agent, mock_old_model, sample_new_data):
+    def test_updater_agent_validate_input_invalid_update_type(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test input validation with invalid update type."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -251,7 +263,9 @@ class TestUpdaterAgent:
         assert updater_agent.validate_input(request="not_a_request") is False
 
     @pytest.mark.asyncio
-    async def test_updater_agent_execute_success(self, updater_agent, mock_old_model, sample_new_data):
+    async def test_updater_agent_execute_success(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test successful model update execution."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -286,7 +300,9 @@ class TestUpdaterAgent:
         assert "instance" in result.error_message.lower()
 
     @pytest.mark.asyncio
-    async def test_updater_agent_update_lstm_model(self, updater_agent, mock_old_model, sample_new_data):
+    async def test_updater_agent_update_lstm_model(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test LSTM model updating."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -307,7 +323,9 @@ class TestUpdaterAgent:
         assert result.old_model_path == model_path
 
     @pytest.mark.asyncio
-    async def test_updater_agent_update_xgboost_model(self, updater_agent, mock_old_model, sample_new_data):
+    async def test_updater_agent_update_xgboost_model(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test XGBoost model updating."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -327,7 +345,9 @@ class TestUpdaterAgent:
         assert Path(result.new_model_path).exists()
 
     @pytest.mark.asyncio
-    async def test_updater_agent_incremental_update(self, updater_agent, mock_old_model, sample_new_data):
+    async def test_updater_agent_incremental_update(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test incremental model update."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -367,7 +387,9 @@ class TestUpdaterAgent:
         assert result.performance_improvement is not None
 
     @pytest.mark.asyncio
-    async def test_updater_agent_update_invalid_model_type(self, updater_agent, mock_old_model, sample_new_data):
+    async def test_updater_agent_update_invalid_model_type(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test updating with invalid model type."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -383,7 +405,9 @@ class TestUpdaterAgent:
         assert result.update_status == "failed"
         assert "unsupported" in result.error_message.lower()
 
-    def test_updater_agent_get_update_history(self, updater_agent, mock_old_model, sample_new_data):
+    def test_updater_agent_get_update_history(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test getting update history."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -395,7 +419,7 @@ class TestUpdaterAgent:
         )
 
         # Update model first
-        result = updater_agent.update_model(request)
+        updater_agent.update_model(request)
 
         # Get history
         history = updater_agent.get_update_history("model_123")
@@ -424,7 +448,7 @@ class TestUpdaterAgent:
         model_path, _ = mock_old_model
 
         # Create a backup
-        backup_path = updater_agent.backup_model(model_path, "model_123")
+        updater_agent.backup_model(model_path, "model_123")
 
         # Cleanup old backups (should not remove recent backups)
         removed_count = updater_agent.cleanup_old_backups(max_age_days=1)
@@ -447,7 +471,9 @@ class TestUpdaterAgentErrorHandling:
         return UpdaterAgent(agent_config)
 
     @pytest.mark.asyncio
-    async def test_updater_agent_update_with_missing_model(self, updater_agent, sample_new_data):
+    async def test_updater_agent_update_with_missing_model(
+        self, updater_agent, sample_new_data
+    ):
         """Test updating with missing model file."""
         request = UpdateRequest(
             model_id="model_123",
@@ -463,7 +489,9 @@ class TestUpdaterAgentErrorHandling:
         assert "error" in result.error_message.lower()
 
     @pytest.mark.asyncio
-    async def test_updater_agent_update_with_missing_new_data(self, updater_agent, mock_old_model):
+    async def test_updater_agent_update_with_missing_new_data(
+        self, updater_agent, mock_old_model
+    ):
         """Test updating with missing new data file."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -480,7 +508,9 @@ class TestUpdaterAgentErrorHandling:
         assert "error" in result.error_message.lower()
 
     @pytest.mark.asyncio
-    async def test_updater_agent_update_with_invalid_data(self, updater_agent, mock_old_model, temp_data_dir):
+    async def test_updater_agent_update_with_invalid_data(
+        self, updater_agent, mock_old_model, temp_data_dir
+    ):
         """Test updating with invalid new data."""
         model_path, _ = mock_old_model
 
@@ -519,10 +549,14 @@ class TestUpdaterAgentPerformance:
         """Test performance improvement evaluation."""
         # Mock old and new model predictions
         old_predictions = pd.Series(np.random.randn(100) * 0.01 + 0.001)
-        new_predictions = pd.Series(np.random.randn(100) * 0.01 + 0.002)  # Slightly better
+        new_predictions = pd.Series(
+            np.random.randn(100) * 0.01 + 0.002
+        )  # Slightly better
         test_data = pd.DataFrame({"close": np.random.randn(100).cumsum() + 100})
 
-        improvement = updater_agent._evaluate_performance_improvement(old_predictions, new_predictions, test_data)
+        improvement = updater_agent._evaluate_performance_improvement(
+            old_predictions, new_predictions, test_data
+        )
 
         assert isinstance(improvement, float)
         assert improvement >= -1.0 and improvement <= 1.0
@@ -541,7 +575,9 @@ class TestUpdaterAgentPerformance:
         should_retrain = updater_agent._should_retrain(current_performance, threshold)
         assert should_retrain is False
 
-    def test_updater_agent_merge_data(self, updater_agent, sample_old_data, sample_new_data):
+    def test_updater_agent_merge_data(
+        self, updater_agent, sample_old_data, sample_new_data
+    ):
         """Test data merging functionality."""
         merged_data = updater_agent._merge_data(sample_old_data, sample_new_data)
 
@@ -565,7 +601,9 @@ class TestUpdaterAgentIntegration:
         return UpdaterAgent(agent_config)
 
     @pytest.mark.asyncio
-    async def test_updater_agent_multiple_updates(self, updater_agent, mock_old_model, sample_new_data):
+    async def test_updater_agent_multiple_updates(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test multiple model updates."""
         model_path, _ = mock_old_model
 
@@ -588,7 +626,9 @@ class TestUpdaterAgentIntegration:
             assert len(history) == 1
 
     @pytest.mark.asyncio
-    async def test_updater_agent_backup_integration(self, updater_agent, mock_old_model, sample_new_data):
+    async def test_updater_agent_backup_integration(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test that backups are created during updates."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -607,7 +647,9 @@ class TestUpdaterAgentIntegration:
         assert Path(result.old_model_path).exists()
 
     @pytest.mark.asyncio
-    async def test_updater_agent_performance_tracking(self, updater_agent, mock_old_model, sample_new_data):
+    async def test_updater_agent_performance_tracking(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test that performance improvements are tracked."""
         model_path, _ = mock_old_model
         request = UpdateRequest(
@@ -625,7 +667,9 @@ class TestUpdaterAgentIntegration:
         assert result.performance_improvement is not None
         assert isinstance(result.performance_improvement, float)
 
-    def test_rollback_to_previous_model_versions_on_degradation(self, updater_agent, mock_old_model, sample_new_data):
+    def test_rollback_to_previous_model_versions_on_degradation(
+        self, updater_agent, mock_old_model, sample_new_data
+    ):
         """Test that the agent can rollback to previous model versions if performance degrades."""
         print("\n🔄 Testing Model Rollback on Performance Degradation")
 
@@ -698,12 +742,20 @@ class TestUpdaterAgentIntegration:
             "profit_factor": 1.2,
         }
 
-        degradation_detected = updater_agent.detect_performance_degradation(current_performance)
+        degradation_detected = updater_agent.detect_performance_degradation(
+            current_performance
+        )
 
         # Verify degradation detection
-        self.assertTrue(degradation_detected["is_degraded"], "Should detect performance degradation")
-        self.assertIn("degradation_score", degradation_detected, "Should have degradation score")
-        self.assertIn("affected_metrics", degradation_detected, "Should have affected metrics")
+        self.assertTrue(
+            degradation_detected["is_degraded"], "Should detect performance degradation"
+        )
+        self.assertIn(
+            "degradation_score", degradation_detected, "Should have degradation score"
+        )
+        self.assertIn(
+            "affected_metrics", degradation_detected, "Should have affected metrics"
+        )
         self.assertIn("severity", degradation_detected, "Should have severity level")
 
         print(f"  Degradation detected: {degradation_detected['is_degraded']}")
@@ -714,36 +766,59 @@ class TestUpdaterAgentIntegration:
         # Test rollback decision logic
         print(f"\n  🤔 Testing rollback decision logic...")
 
-        rollback_decision = updater_agent.evaluate_rollback_necessity(degradation_detected)
+        rollback_decision = updater_agent.evaluate_rollback_necessity(
+            degradation_detected
+        )
 
         # Verify rollback decision
         self.assertIsNotNone(rollback_decision, "Rollback decision should not be None")
-        self.assertIn("should_rollback", rollback_decision, "Should indicate if rollback needed")
-        self.assertIn("recommended_version", rollback_decision, "Should recommend version")
-        self.assertIn("rollback_reason", rollback_decision, "Should have rollback reason")
-        self.assertIn("expected_improvement", rollback_decision, "Should have expected improvement")
+        self.assertIn(
+            "should_rollback", rollback_decision, "Should indicate if rollback needed"
+        )
+        self.assertIn(
+            "recommended_version", rollback_decision, "Should recommend version"
+        )
+        self.assertIn(
+            "rollback_reason", rollback_decision, "Should have rollback reason"
+        )
+        self.assertIn(
+            "expected_improvement",
+            rollback_decision,
+            "Should have expected improvement",
+        )
 
         print(f"  Should rollback: {rollback_decision['should_rollback']}")
         print(f"  Recommended version: {rollback_decision['recommended_version']}")
         print(f"  Rollback reason: {rollback_decision['rollback_reason']}")
-        print(f"  Expected improvement: {rollback_decision['expected_improvement']:.3f}")
+        print(
+            f"  Expected improvement: {rollback_decision['expected_improvement']:.3f}"
+        )
 
         # Verify rollback is recommended for significant degradation
-        self.assertTrue(rollback_decision["should_rollback"], "Should recommend rollback for significant degradation")
+        self.assertTrue(
+            rollback_decision["should_rollback"],
+            "Should recommend rollback for significant degradation",
+        )
 
         # Test rollback execution
         print(f"\n  🔄 Testing rollback execution...")
 
-        rollback_result = updater_agent.execute_model_rollback(rollback_decision["recommended_version"])
+        rollback_result = updater_agent.execute_model_rollback(
+            rollback_decision["recommended_version"]
+        )
 
         # Verify rollback result
         self.assertIsNotNone(rollback_result, "Rollback result should not be None")
         self.assertIn("rollback_id", rollback_result, "Should have rollback ID")
         self.assertIn("from_version", rollback_result, "Should have from version")
         self.assertIn("to_version", rollback_result, "Should have to version")
-        self.assertIn("rollback_timestamp", rollback_result, "Should have rollback timestamp")
+        self.assertIn(
+            "rollback_timestamp", rollback_result, "Should have rollback timestamp"
+        )
         self.assertIn("rollback_status", rollback_result, "Should have rollback status")
-        self.assertIn("backup_created", rollback_result, "Should indicate backup creation")
+        self.assertIn(
+            "backup_created", rollback_result, "Should indicate backup creation"
+        )
 
         print(f"  Rollback ID: {rollback_result['rollback_id']}")
         print(f"  From version: {rollback_result['from_version']}")
@@ -752,7 +827,11 @@ class TestUpdaterAgentIntegration:
         print(f"  Backup created: {rollback_result['backup_created']}")
 
         # Verify rollback was successful
-        self.assertEqual(rollback_result["rollback_status"], "success", "Rollback should be successful")
+        self.assertEqual(
+            rollback_result["rollback_status"],
+            "success",
+            "Rollback should be successful",
+        )
         self.assertTrue(rollback_result["backup_created"], "Backup should be created")
 
         # Test rollback validation
@@ -762,10 +841,18 @@ class TestUpdaterAgentIntegration:
 
         # Verify validation result
         self.assertIsNotNone(validation_result, "Validation result should not be None")
-        self.assertIn("is_valid", validation_result, "Should indicate if rollback is valid")
-        self.assertIn("current_version", validation_result, "Should show current version")
-        self.assertIn("performance_check", validation_result, "Should have performance check")
-        self.assertIn("stability_check", validation_result, "Should have stability check")
+        self.assertIn(
+            "is_valid", validation_result, "Should indicate if rollback is valid"
+        )
+        self.assertIn(
+            "current_version", validation_result, "Should show current version"
+        )
+        self.assertIn(
+            "performance_check", validation_result, "Should have performance check"
+        )
+        self.assertIn(
+            "stability_check", validation_result, "Should have stability check"
+        )
 
         print(f"  Rollback valid: {validation_result['is_valid']}")
         print(f"  Current version: {validation_result['current_version']}")
@@ -787,18 +874,28 @@ class TestUpdaterAgentIntegration:
 
         # Verify rollback history
         self.assertIsNotNone(rollback_history, "Rollback history should not be None")
-        self.assertIn("total_rollbacks", rollback_history, "Should have total rollbacks")
-        self.assertIn("rollback_events", rollback_history, "Should have rollback events")
+        self.assertIn(
+            "total_rollbacks", rollback_history, "Should have total rollbacks"
+        )
+        self.assertIn(
+            "rollback_events", rollback_history, "Should have rollback events"
+        )
         self.assertIn("success_rate", rollback_history, "Should have success rate")
-        self.assertIn("average_improvement", rollback_history, "Should have average improvement")
+        self.assertIn(
+            "average_improvement", rollback_history, "Should have average improvement"
+        )
 
         print(f"  Total rollbacks: {rollback_history['total_rollbacks']}")
         print(f"  Success rate: {rollback_history['success_rate']:.2f}")
         print(f"  Average improvement: {rollback_history['average_improvement']:.3f}")
 
         # Verify history contains the recent rollback
-        self.assertGreater(rollback_history["total_rollbacks"], 0, "Should have rollback history")
-        self.assertEqual(rollback_history["success_rate"], 1.0, "Success rate should be 100%")
+        self.assertGreater(
+            rollback_history["total_rollbacks"], 0, "Should have rollback history"
+        )
+        self.assertEqual(
+            rollback_history["success_rate"], 1.0, "Success rate should be 100%"
+        )
 
         # Test automatic rollback triggers
         print(f"\n  🚨 Testing automatic rollback triggers...")
@@ -813,17 +910,31 @@ class TestUpdaterAgentIntegration:
         }
 
         # Test trigger evaluation
-        trigger_evaluation = updater_agent.evaluate_rollback_triggers(current_performance, rollback_triggers)
+        trigger_evaluation = updater_agent.evaluate_rollback_triggers(
+            current_performance, rollback_triggers
+        )
 
         # Verify trigger evaluation
-        self.assertIsNotNone(trigger_evaluation, "Trigger evaluation should not be None")
-        self.assertIn("triggers_activated", trigger_evaluation, "Should have activated triggers")
-        self.assertIn("trigger_reasons", trigger_evaluation, "Should have trigger reasons")
-        self.assertIn("automatic_rollback_needed", trigger_evaluation, "Should indicate if auto-rollback needed")
+        self.assertIsNotNone(
+            trigger_evaluation, "Trigger evaluation should not be None"
+        )
+        self.assertIn(
+            "triggers_activated", trigger_evaluation, "Should have activated triggers"
+        )
+        self.assertIn(
+            "trigger_reasons", trigger_evaluation, "Should have trigger reasons"
+        )
+        self.assertIn(
+            "automatic_rollback_needed",
+            trigger_evaluation,
+            "Should indicate if auto-rollback needed",
+        )
 
         print(f"  Triggers activated: {trigger_evaluation['triggers_activated']}")
         print(f"  Trigger reasons: {trigger_evaluation['trigger_reasons']}")
-        print(f"  Automatic rollback needed: {trigger_evaluation['automatic_rollback_needed']}")
+        print(
+            f"  Automatic rollback needed: {trigger_evaluation['automatic_rollback_needed']}"
+        )
 
         # Test rollback point selection
         print(f"\n  🎯 Testing rollback point selection...")
@@ -832,22 +943,36 @@ class TestUpdaterAgentIntegration:
         rollback_candidates = updater_agent.get_rollback_candidates()
 
         # Verify rollback candidates
-        self.assertIsNotNone(rollback_candidates, "Rollback candidates should not be None")
-        self.assertIsInstance(rollback_candidates, list, "Rollback candidates should be a list")
+        self.assertIsNotNone(
+            rollback_candidates, "Rollback candidates should not be None"
+        )
+        self.assertIsInstance(
+            rollback_candidates, list, "Rollback candidates should be a list"
+        )
 
         print(f"  Available rollback candidates: {len(rollback_candidates)}")
 
         for candidate in rollback_candidates:
-            print(f"    Version: {candidate['version']}, Performance: {candidate['performance_score']:.3f}")
+            print(
+                f"    Version: {candidate['version']}, Performance: {candidate['performance_score']:.3f}"
+            )
 
         # Test optimal rollback point selection
-        optimal_rollback = updater_agent.select_optimal_rollback_point(rollback_candidates)
+        optimal_rollback = updater_agent.select_optimal_rollback_point(
+            rollback_candidates
+        )
 
         # Verify optimal rollback selection
         self.assertIsNotNone(optimal_rollback, "Optimal rollback should not be None")
-        self.assertIn("selected_version", optimal_rollback, "Should have selected version")
-        self.assertIn("selection_reason", optimal_rollback, "Should have selection reason")
-        self.assertIn("expected_performance", optimal_rollback, "Should have expected performance")
+        self.assertIn(
+            "selected_version", optimal_rollback, "Should have selected version"
+        )
+        self.assertIn(
+            "selection_reason", optimal_rollback, "Should have selection reason"
+        )
+        self.assertIn(
+            "expected_performance", optimal_rollback, "Should have expected performance"
+        )
 
         print(f"  Optimal rollback version: {optimal_rollback['selected_version']}")
         print(f"  Selection reason: {optimal_rollback['selection_reason']}")
@@ -857,14 +982,24 @@ class TestUpdaterAgentIntegration:
         print(f"\n  📊 Testing rollback with performance monitoring...")
 
         # Simulate post-rollback performance monitoring
-        monitoring_result = updater_agent.monitor_post_rollback_performance(rollback_result["rollback_id"])
+        monitoring_result = updater_agent.monitor_post_rollback_performance(
+            rollback_result["rollback_id"]
+        )
 
         # Verify monitoring result
         self.assertIsNotNone(monitoring_result, "Monitoring result should not be None")
-        self.assertIn("monitoring_period", monitoring_result, "Should have monitoring period")
-        self.assertIn("performance_trend", monitoring_result, "Should have performance trend")
-        self.assertIn("stability_metrics", monitoring_result, "Should have stability metrics")
-        self.assertIn("recommendations", monitoring_result, "Should have recommendations")
+        self.assertIn(
+            "monitoring_period", monitoring_result, "Should have monitoring period"
+        )
+        self.assertIn(
+            "performance_trend", monitoring_result, "Should have performance trend"
+        )
+        self.assertIn(
+            "stability_metrics", monitoring_result, "Should have stability metrics"
+        )
+        self.assertIn(
+            "recommendations", monitoring_result, "Should have recommendations"
+        )
 
         print(f"  Monitoring period: {monitoring_result['monitoring_period']}")
         print(f"  Performance trend: {monitoring_result['performance_trend']}")
@@ -873,13 +1008,27 @@ class TestUpdaterAgentIntegration:
         # Test rollback recovery validation
         print(f"\n  🔍 Testing rollback recovery validation...")
 
-        recovery_validation = updater_agent.validate_rollback_recovery(rollback_result["rollback_id"])
+        recovery_validation = updater_agent.validate_rollback_recovery(
+            rollback_result["rollback_id"]
+        )
 
         # Verify recovery validation
-        self.assertIsNotNone(recovery_validation, "Recovery validation should not be None")
-        self.assertIn("recovery_successful", recovery_validation, "Should indicate recovery success")
-        self.assertIn("performance_restored", recovery_validation, "Should indicate performance restoration")
-        self.assertIn("stability_achieved", recovery_validation, "Should indicate stability")
+        self.assertIsNotNone(
+            recovery_validation, "Recovery validation should not be None"
+        )
+        self.assertIn(
+            "recovery_successful",
+            recovery_validation,
+            "Should indicate recovery success",
+        )
+        self.assertIn(
+            "performance_restored",
+            recovery_validation,
+            "Should indicate performance restoration",
+        )
+        self.assertIn(
+            "stability_achieved", recovery_validation, "Should indicate stability"
+        )
         self.assertIn("next_actions", recovery_validation, "Should have next actions")
 
         print(f"  Recovery successful: {recovery_validation['recovery_successful']}")

@@ -21,7 +21,6 @@ class ValidationError(Exception):
     """Exception raised for validation errors."""
 
 
-
 def ensure_array_compatible(data: Any, name: str = "data") -> np.ndarray:
     """Ensure data is numpy or pandas compatible and convert to numpy array.
 
@@ -44,13 +43,17 @@ def ensure_array_compatible(data: Any, name: str = "data") -> np.ndarray:
             if data.shape[1] == 1:
                 return data.iloc[:, 0].to_numpy()
             else:
-                raise ValidationError(f"{name} is a DataFrame with multiple columns, cannot convert to 1D array")
+                raise ValidationError(
+                    f"{name} is a DataFrame with multiple columns, cannot convert to 1D array"
+                )
         elif isinstance(data, (list, tuple)):
             return np.array(data)
         elif hasattr(data, "__array__"):
             return np.array(data)
         else:
-            raise ValidationError(f"{name} is not numpy or pandas compatible: {type(data)}")
+            raise ValidationError(
+                f"{name} is not numpy or pandas compatible: {type(data)}"
+            )
     except Exception as e:
         raise ValidationError(f"Failed to convert {name} to numpy array: {str(e)}")
 
@@ -89,15 +92,21 @@ def validate_array_shape(
 
     # Check dimensions
     if min_dims is not None and array.ndim < min_dims:
-        raise ValidationError(f"{name} has {array.ndim} dimensions, expected at least {min_dims}")
+        raise ValidationError(
+            f"{name} has {array.ndim} dimensions, expected at least {min_dims}"
+        )
 
     if max_dims is not None and array.ndim > max_dims:
-        raise ValidationError(f"{name} has {array.ndim} dimensions, expected at most {max_dims}")
+        raise ValidationError(
+            f"{name} has {array.ndim} dimensions, expected at most {max_dims}"
+        )
 
     # Check expected shape
     if expected_shape is not None:
         if array.shape != expected_shape:
-            raise ValidationError(f"{name} has shape {array.shape}, expected {expected_shape}")
+            raise ValidationError(
+                f"{name} has shape {array.shape}, expected {expected_shape}"
+            )
 
     return True
 
@@ -174,7 +183,9 @@ def validate_dataframe_integrity(
         if col in df.columns:
             try:
                 array = ensure_array_compatible(df[col], f"column '{col}'")
-                validate_array_shape(array, min_dims=1, max_dims=1, name=f"column '{col}'")
+                validate_array_shape(
+                    array, min_dims=1, max_dims=1, name=f"column '{col}'"
+                )
 
                 if not pd.api.types.is_numeric_dtype(df[col]):
                     issues.append(f"Column {col} is not numeric")
@@ -334,17 +345,25 @@ class ParameterValidator:
 
             # Check range
             if "min" in schema and value < schema["min"]:
-                issues.append(f"Parameter {name} below minimum: {value} < {schema['min']}")
+                issues.append(
+                    f"Parameter {name} below minimum: {value} < {schema['min']}"
+                )
             if "max" in schema and value > schema["max"]:
-                issues.append(f"Parameter {name} above maximum: {value} > {schema['max']}")
+                issues.append(
+                    f"Parameter {name} above maximum: {value} > {schema['max']}"
+                )
 
             # Check choices
             if "choices" in schema and value not in schema["choices"]:
-                issues.append(f"Parameter {name} not in choices: {value} not in {schema['choices']}")
+                issues.append(
+                    f"Parameter {name} not in choices: {value} not in {schema['choices']}"
+                )
 
             # Check pattern
             if "pattern" in schema and not re.match(schema["pattern"], str(value)):
-                issues.append(f"Parameter {name} does not match pattern: {schema['pattern']}")
+                issues.append(
+                    f"Parameter {name} does not match pattern: {schema['pattern']}"
+                )
 
         return len(issues) == 0, issues
 
@@ -381,7 +400,9 @@ class ConfigValidator:
         issues = []
 
         # Check required sections
-        missing_sections = [section for section in self.required_sections if section not in config]
+        missing_sections = [
+            section for section in self.required_sections if section not in config
+        ]
         if missing_sections:
             issues.append(f"Missing required sections: {missing_sections}")
 
@@ -392,7 +413,9 @@ class ConfigValidator:
 
             missing_keys = [key for key in keys if key not in config[section]]
             if missing_keys:
-                issues.append(f"Missing required keys in section {section}: {missing_keys}")
+                issues.append(
+                    f"Missing required keys in section {section}: {missing_keys}"
+                )
 
         # Validate values
         for key, validator in self.value_validators.items():
@@ -402,7 +425,9 @@ class ConfigValidator:
 
         return len(issues) == 0, issues
 
-    def validate_config_file(self, file_path: Union[str, Path]) -> Tuple[bool, List[str]]:
+    def validate_config_file(
+        self, file_path: Union[str, Path]
+    ) -> Tuple[bool, List[str]]:
         """Validate configuration file.
 
         Args:
@@ -441,7 +466,9 @@ def validate_numeric_range(
     return True
 
 
-def validate_string_length(value: str, min_length: Optional[int] = None, max_length: Optional[int] = None) -> bool:
+def validate_string_length(
+    value: str, min_length: Optional[int] = None, max_length: Optional[int] = None
+) -> bool:
     """Validate string length is within range.
 
     Args:
@@ -460,7 +487,9 @@ def validate_string_length(value: str, min_length: Optional[int] = None, max_len
 
 
 def validate_datetime_range(
-    value: datetime, min_date: Optional[datetime] = None, max_date: Optional[datetime] = None
+    value: datetime,
+    min_date: Optional[datetime] = None,
+    max_date: Optional[datetime] = None,
 ) -> bool:
     """Validate datetime is within range.
 

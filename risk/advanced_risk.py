@@ -75,7 +75,10 @@ class AdvancedRiskAnalyzer:
         self.risk_history = []
 
     def calculate_comprehensive_risk(
-        self, returns: pd.Series, prices: Optional[pd.Series] = None, confidence_levels: List[float] = None
+        self,
+        returns: pd.Series,
+        prices: Optional[pd.Series] = None,
+        confidence_levels: List[float] = None,
     ) -> RiskMetrics:
         """Calculate comprehensive risk metrics."""
 
@@ -91,8 +94,16 @@ class AdvancedRiskAnalyzer:
 
         # Sortino ratio (downside deviation)
         downside_returns = returns[returns < 0]
-        downside_deviation = downside_returns.std() * np.sqrt(252) if len(downside_returns) > 0 else 0.001
-        sortino_ratio = mean_return / downside_deviation * np.sqrt(252) if downside_deviation > 0 else 0
+        downside_deviation = (
+            downside_returns.std() * np.sqrt(252)
+            if len(downside_returns) > 0
+            else 0.001
+        )
+        sortino_ratio = (
+            mean_return / downside_deviation * np.sqrt(252)
+            if downside_deviation > 0
+            else 0
+        )
 
         # Calmar ratio
         max_dd = self.calculate_max_drawdown(returns)
@@ -189,7 +200,12 @@ class AdvancedRiskAnalyzer:
             elif dd >= 0 and in_drawdown:
                 in_drawdown = False
                 drawdown_periods.append(
-                    {"start": start_idx, "end": i, "duration": i - start_idx, "depth": drawdown[start_idx:i].min()}
+                    {
+                        "start": start_idx,
+                        "end": i,
+                        "duration": i - start_idx,
+                        "depth": drawdown[start_idx:i].min(),
+                    }
                 )
 
         # Handle ongoing drawdown
@@ -217,7 +233,9 @@ class AdvancedRiskAnalyzer:
             "drawdown_periods": drawdown_periods,
         }
 
-    def calculate_expected_shortfall(self, returns: pd.Series, confidence_level: float) -> float:
+    def calculate_expected_shortfall(
+        self, returns: pd.Series, confidence_level: float
+    ) -> float:
         """Calculate expected shortfall (conditional VaR)."""
         var_level = (1 - confidence_level) * 100
         var = np.percentile(returns, var_level)
@@ -245,7 +263,11 @@ class AdvancedRiskAnalyzer:
         stress_2sd = mean_return - 2 * volatility
         stress_3sd = mean_return - 3 * volatility
 
-        return {"stress_1sd": stress_1sd, "stress_2sd": stress_2sd, "stress_3sd": stress_3sd}
+        return {
+            "stress_1sd": stress_1sd,
+            "stress_2sd": stress_2sd,
+            "stress_3sd": stress_3sd,
+        }
 
     def calculate_portfolio_risk(
         self, portfolio_returns: pd.Series, weights: Optional[Dict[str, float]] = None
@@ -265,7 +287,9 @@ class AdvancedRiskAnalyzer:
         return {
             "portfolio_risk": portfolio_risk,
             "component_var": component_var,
-            "diversification_ratio": self.calculate_diversification_ratio(portfolio_returns, weights),
+            "diversification_ratio": self.calculate_diversification_ratio(
+                portfolio_returns, weights
+            ),
         }
 
     def calculate_diversification_ratio(
@@ -281,7 +305,9 @@ class AdvancedRiskAnalyzer:
 
         return portfolio_vol / weighted_vol if weighted_vol > 0 else 1.0
 
-    def calculate_regime_risk(self, returns: pd.Series, regime_indicator: pd.Series) -> Dict[str, RiskMetrics]:
+    def calculate_regime_risk(
+        self, returns: pd.Series, regime_indicator: pd.Series
+    ) -> Dict[str, RiskMetrics]:
         """Calculate risk metrics for different market regimes."""
         regime_risks = {}
 
@@ -294,7 +320,9 @@ class AdvancedRiskAnalyzer:
 
         return regime_risks
 
-    def calculate_rolling_risk(self, returns: pd.Series, window: int = 252) -> pd.DataFrame:
+    def calculate_rolling_risk(
+        self, returns: pd.Series, window: int = 252
+    ) -> pd.DataFrame:
         """Calculate rolling risk metrics."""
         rolling_metrics = []
 
@@ -422,7 +450,9 @@ class AdvancedRiskAnalyzer:
         recommendations = []
 
         if metrics.volatility > 0.3:
-            recommendations.append("Consider reducing position sizes to manage high volatility")
+            recommendations.append(
+                "Consider reducing position sizes to manage high volatility"
+            )
 
         if abs(metrics.max_drawdown) > 0.2:
             recommendations.append("Implement stop-loss mechanisms to limit drawdowns")
@@ -434,11 +464,15 @@ class AdvancedRiskAnalyzer:
             recommendations.append("Consider tail risk hedging due to fat tails")
 
         if metrics.skewness < -1:
-            recommendations.append("Strategy shows negative skewness - consider asymmetric risk management")
+            recommendations.append(
+                "Strategy shows negative skewness - consider asymmetric risk management"
+            )
 
         return recommendations
 
-    def save_risk_report(self, report: Dict[str, Any], filepath: str = "reports/risk_analysis.json") -> bool:
+    def save_risk_report(
+        self, report: Dict[str, Any], filepath: str = "reports/risk_analysis.json"
+    ) -> bool:
         """Save risk report to file."""
         try:
             import json

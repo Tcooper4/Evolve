@@ -67,16 +67,26 @@ class DataProviderManager:
 
                         # Look for provider classes
                         for name, obj in inspect.getmembers(module):
-                            if inspect.isclass(obj) and issubclass(obj, BaseDataProvider) and obj != BaseDataProvider:
+                            if (
+                                inspect.isclass(obj)
+                                and issubclass(obj, BaseDataProvider)
+                                and obj != BaseDataProvider
+                            ):
                                 try:
                                     # Try to instantiate the provider
                                     provider_instance = obj()
-                                    provider_name = provider_instance.get_provider_name()
-                                    self.register_provider(provider_name, provider_instance)
+                                    provider_name = (
+                                        provider_instance.get_provider_name()
+                                    )
+                                    self.register_provider(
+                                        provider_name, provider_instance
+                                    )
                                     logger.info(f"Discovered provider: {provider_name}")
 
                                 except Exception as e:
-                                    logger.warning(f"Error instantiating provider {name}: {e}")
+                                    logger.warning(
+                                        f"Error instantiating provider {name}: {e}"
+                                    )
                                     continue
 
                     except Exception as e:
@@ -186,11 +196,15 @@ class DataProviderManager:
 
             if default_provider in self.providers:
                 self.default_provider = default_provider
-                logger.info(f"Set default provider from environment: {default_provider}")
+                logger.info(
+                    f"Set default provider from environment: {default_provider}"
+                )
             elif self.providers:
                 # Use first available provider
                 self.default_provider = list(self.providers.keys())[0]
-                logger.info(f"No valid default provider in environment, using: {self.default_provider}")
+                logger.info(
+                    f"No valid default provider in environment, using: {self.default_provider}"
+                )
             else:
                 logger.warning("No data providers available")
 
@@ -215,7 +229,9 @@ class DataProviderManager:
                 provider_status = {
                     "name": name,
                     "class": provider.__class__.__name__,
-                    "available": provider.is_available() if hasattr(provider, "is_available") else True,
+                    "available": provider.is_available()
+                    if hasattr(provider, "is_available")
+                    else True,
                     "config": self.get_provider_config(name),
                 }
                 status["provider_details"][name] = provider_status

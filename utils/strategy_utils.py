@@ -35,7 +35,11 @@ def calculate_sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> f
         Sharpe ratio
     """
     excess_returns = returns - risk_free_rate
-    return excess_returns.mean() / excess_returns.std() if excess_returns.std() > 0 else 0.0
+    return (
+        excess_returns.mean() / excess_returns.std()
+        if excess_returns.std() > 0
+        else 0.0
+    )
 
 
 def calculate_max_drawdown(returns: pd.Series) -> float:
@@ -110,7 +114,9 @@ def calculate_beta(returns: pd.Series, market_returns: pd.Series) -> float:
     return covariance / market_variance if market_variance > 0 else 0.0
 
 
-def calculate_alpha(returns: pd.Series, market_returns: pd.Series, risk_free_rate: float = 0.0) -> float:
+def calculate_alpha(
+    returns: pd.Series, market_returns: pd.Series, risk_free_rate: float = 0.0
+) -> float:
     """Calculate alpha.
 
     Args:
@@ -122,10 +128,14 @@ def calculate_alpha(returns: pd.Series, market_returns: pd.Series, risk_free_rat
         Alpha
     """
     beta = calculate_beta(returns, market_returns)
-    return returns.mean() - (risk_free_rate + beta * (market_returns.mean() - risk_free_rate))
+    return returns.mean() - (
+        risk_free_rate + beta * (market_returns.mean() - risk_free_rate)
+    )
 
 
-def calculate_information_ratio(returns: pd.Series, benchmark_returns: pd.Series) -> float:
+def calculate_information_ratio(
+    returns: pd.Series, benchmark_returns: pd.Series
+) -> float:
     """Calculate information ratio.
 
     Args:
@@ -136,7 +146,11 @@ def calculate_information_ratio(returns: pd.Series, benchmark_returns: pd.Series
         Information ratio
     """
     excess_returns = returns - benchmark_returns
-    return excess_returns.mean() / excess_returns.std() if excess_returns.std() > 0 else 0.0
+    return (
+        excess_returns.mean() / excess_returns.std()
+        if excess_returns.std() > 0
+        else 0.0
+    )
 
 
 def calculate_calmar_ratio(returns: pd.Series, risk_free_rate: float = 0.0) -> float:
@@ -213,7 +227,9 @@ def calculate_recovery_factor(returns: pd.Series) -> float:
     return total_return / abs(max_dd) if max_dd < 0 else 0.0
 
 
-def calculate_risk_metrics(returns: pd.Series, market_returns: Optional[pd.Series] = None) -> Dict[str, float]:
+def calculate_risk_metrics(
+    returns: pd.Series, market_returns: Optional[pd.Series] = None
+) -> Dict[str, float]:
     """Calculate comprehensive risk metrics.
 
     Args:
@@ -243,7 +259,9 @@ def calculate_risk_metrics(returns: pd.Series, market_returns: Optional[pd.Serie
             {
                 "beta": calculate_beta(returns, market_returns),
                 "alpha": calculate_alpha(returns, market_returns),
-                "information_ratio": calculate_information_ratio(returns, market_returns),
+                "information_ratio": calculate_information_ratio(
+                    returns, market_returns
+                ),
             }
         )
 

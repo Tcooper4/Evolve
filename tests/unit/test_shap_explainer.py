@@ -117,14 +117,18 @@ class TestSHAPExplainer:
 
         # Test with None input
         with pytest.raises(ValueError, match="Model cannot be None"):
-            explainer._calculate_feature_importance(None, pd.DataFrame({"test": [1]}), method="shap")
+            explainer._calculate_feature_importance(
+                None, pd.DataFrame({"test": [1]}), method="shap"
+            )
 
         # Test with empty features
         model = Mock()
         empty_features = pd.DataFrame()
 
         with pytest.raises(ValueError, match="Empty features data"):
-            explainer._calculate_feature_importance(model, empty_features, method="shap")
+            explainer._calculate_feature_importance(
+                model, empty_features, method="shap"
+            )
 
     def test_invalid_model_type_handling(self, explainer, sample_data):
         """Test handling of unsupported model types."""
@@ -133,7 +137,9 @@ class TestSHAPExplainer:
         unsupported_model.__class__.__name__ = "UnsupportedModel"
 
         # Should fallback to KernelExplainer for unsupported models
-        result = explainer._calculate_feature_importance(unsupported_model, sample_data, method="shap")
+        result = explainer._calculate_feature_importance(
+            unsupported_model, sample_data, method="shap"
+        )
 
         assert isinstance(result, dict)
         assert len(result) > 0
@@ -141,26 +147,36 @@ class TestSHAPExplainer:
     def test_tree_model_detection(self, explainer, tree_model, sample_data):
         """Test detection and handling of tree-based models."""
         # Test with RandomForestRegressor
-        result = explainer._calculate_feature_importance(tree_model, sample_data, method="shap")
+        result = explainer._calculate_feature_importance(
+            tree_model, sample_data, method="shap"
+        )
 
         assert isinstance(result, dict)
         assert len(result) == len(sample_data.columns)
 
         # Test with other tree models
-        tree_models = ["DecisionTreeRegressor", "GradientBoostingRegressor", "XGBRegressor"]
+        tree_models = [
+            "DecisionTreeRegressor",
+            "GradientBoostingRegressor",
+            "XGBRegressor",
+        ]
 
         for model_name in tree_models:
             model = Mock()
             model.__class__.__name__ = model_name
             model.predict = Mock(return_value=np.random.random(10))
 
-            result = explainer._calculate_feature_importance(model, sample_data, method="shap")
+            result = explainer._calculate_feature_importance(
+                model, sample_data, method="shap"
+            )
             assert isinstance(result, dict)
             assert len(result) > 0
 
     def test_lstm_model_fallback(self, explainer, lstm_model, sample_data):
         """Test fallback to KernelExplainer for LSTM models."""
-        result = explainer._calculate_feature_importance(lstm_model, sample_data, method="shap")
+        result = explainer._calculate_feature_importance(
+            lstm_model, sample_data, method="shap"
+        )
 
         assert isinstance(result, dict)
         assert len(result) > 0
@@ -170,21 +186,27 @@ class TestSHAPExplainer:
 
     def test_prophet_model_fallback(self, explainer, prophet_model, sample_data):
         """Test fallback to KernelExplainer for Prophet models."""
-        result = explainer._calculate_feature_importance(prophet_model, sample_data, method="shap")
+        result = explainer._calculate_feature_importance(
+            prophet_model, sample_data, method="shap"
+        )
 
         assert isinstance(result, dict)
         assert len(result) > 0
 
     def test_lime_explainer(self, explainer, tree_model, sample_data):
         """Test LIME explainer functionality."""
-        result = explainer._calculate_feature_importance(tree_model, sample_data, method="lime")
+        result = explainer._calculate_feature_importance(
+            tree_model, sample_data, method="lime"
+        )
 
         assert isinstance(result, dict)
         assert len(result) > 0
 
     def test_integrated_explainer(self, explainer, tree_model, sample_data):
         """Test integrated explainer functionality."""
-        result = explainer._calculate_feature_importance(tree_model, sample_data, method="integrated")
+        result = explainer._calculate_feature_importance(
+            tree_model, sample_data, method="integrated"
+        )
 
         assert isinstance(result, dict)
         assert len(result) > 0
@@ -192,11 +214,15 @@ class TestSHAPExplainer:
     def test_invalid_method_handling(self, explainer, tree_model, sample_data):
         """Test handling of invalid explainer methods."""
         with pytest.raises(ValueError, match="Unsupported explainer method"):
-            explainer._calculate_feature_importance(tree_model, sample_data, method="invalid_method")
+            explainer._calculate_feature_importance(
+                tree_model, sample_data, method="invalid_method"
+            )
 
     def test_feature_importance_structure(self, explainer, tree_model, sample_data):
         """Test that feature importance has correct structure."""
-        result = explainer._calculate_feature_importance(tree_model, sample_data, method="shap")
+        result = explainer._calculate_feature_importance(
+            tree_model, sample_data, method="shap"
+        )
 
         # Check structure
         assert isinstance(result, dict)
@@ -213,7 +239,9 @@ class TestSHAPExplainer:
         # Run multiple times with same input
         results = []
         for _ in range(5):
-            result = explainer._calculate_feature_importance(tree_model, sample_data, method="shap")
+            result = explainer._calculate_feature_importance(
+                tree_model, sample_data, method="shap"
+            )
             results.append(result)
 
         # Check that all results have same structure
@@ -229,7 +257,9 @@ class TestSHAPExplainer:
         error_model.predict = Mock(side_effect=Exception("Prediction error"))
 
         with pytest.raises(Exception, match="Prediction error"):
-            explainer._calculate_feature_importance(error_model, sample_data, method="shap")
+            explainer._calculate_feature_importance(
+                error_model, sample_data, method="shap"
+            )
 
     def test_data_type_validation(self, explainer, tree_model):
         """Test validation of data types."""
@@ -237,19 +267,27 @@ class TestSHAPExplainer:
         numpy_data = np.random.random((100, 3))
 
         with pytest.raises(ValueError, match="Features must be a pandas DataFrame"):
-            explainer._calculate_feature_importance(tree_model, numpy_data, method="shap")
+            explainer._calculate_feature_importance(
+                tree_model, numpy_data, method="shap"
+            )
 
         # Test with list instead of DataFrame
         list_data = [[1, 2, 3], [4, 5, 6]]
 
         with pytest.raises(ValueError, match="Features must be a pandas DataFrame"):
-            explainer._calculate_feature_importance(tree_model, list_data, method="shap")
+            explainer._calculate_feature_importance(
+                tree_model, list_data, method="shap"
+            )
 
     def test_single_row_data(self, explainer, tree_model):
         """Test handling of single row data."""
-        single_row_data = pd.DataFrame({"feature1": [1.0], "feature2": [2.0], "feature3": [3.0]})
+        single_row_data = pd.DataFrame(
+            {"feature1": [1.0], "feature2": [2.0], "feature3": [3.0]}
+        )
 
-        result = explainer._calculate_feature_importance(tree_model, single_row_data, method="shap")
+        result = explainer._calculate_feature_importance(
+            tree_model, single_row_data, method="shap"
+        )
 
         assert isinstance(result, dict)
         assert len(result) == len(single_row_data.columns)
@@ -265,7 +303,9 @@ class TestSHAPExplainer:
             }
         )
 
-        result = explainer._calculate_feature_importance(tree_model, large_data, method="shap")
+        result = explainer._calculate_feature_importance(
+            tree_model, large_data, method="shap"
+        )
 
         assert isinstance(result, dict)
         assert len(result) == len(large_data.columns)
@@ -282,7 +322,9 @@ class TestSHAPExplainer:
         )
 
         # Should handle missing values gracefully
-        result = explainer._calculate_feature_importance(tree_model, data_with_nans, method="shap")
+        result = explainer._calculate_feature_importance(
+            tree_model, data_with_nans, method="shap"
+        )
 
         assert isinstance(result, dict)
         assert len(result) == len(data_with_nans.columns)
@@ -291,10 +333,16 @@ class TestSHAPExplainer:
         """Test handling of categorical features."""
         # Create data with categorical features
         categorical_data = pd.DataFrame(
-            {"feature1": ["A", "B", "A", "B"], "feature2": [1.0, 2.0, 3.0, 4.0], "feature3": ["X", "Y", "X", "Y"]}
+            {
+                "feature1": ["A", "B", "A", "B"],
+                "feature2": [1.0, 2.0, 3.0, 4.0],
+                "feature3": ["X", "Y", "X", "Y"],
+            }
         )
 
-        result = explainer._calculate_feature_importance(tree_model, categorical_data, method="shap")
+        result = explainer._calculate_feature_importance(
+            tree_model, categorical_data, method="shap"
+        )
 
         assert isinstance(result, dict)
         assert len(result) == len(categorical_data.columns)
@@ -306,7 +354,9 @@ class TestSHAPExplainer:
 
         for method in methods:
             try:
-                result = explainer._calculate_feature_importance(tree_model, sample_data, method=method)
+                result = explainer._calculate_feature_importance(
+                    tree_model, sample_data, method=method
+                )
                 results[method] = result
             except Exception as e:
                 results[method] = f"Error: {str(e)}"
@@ -330,11 +380,17 @@ class TestSHAPExplainer:
 
         # Create large dataset
         large_data = pd.DataFrame(
-            {"feature1": np.random.random(5000), "feature2": np.random.random(5000), "feature3": np.random.random(5000)}
+            {
+                "feature1": np.random.random(5000),
+                "feature2": np.random.random(5000),
+                "feature3": np.random.random(5000),
+            }
         )
 
         # Run explainer
-        result = explainer._calculate_feature_importance(tree_model, large_data, method="shap")
+        result = explainer._calculate_feature_importance(
+            tree_model, large_data, method="shap"
+        )
 
         # Get final memory usage
         final_memory = process.memory_info().rss
@@ -355,7 +411,9 @@ class TestSHAPExplainer:
 
         def run_explainer():
             try:
-                result = explainer._calculate_feature_importance(tree_model, sample_data, method="shap")
+                result = explainer._calculate_feature_importance(
+                    tree_model, sample_data, method="shap"
+                )
                 results.append(result)
             except Exception as e:
                 errors.append(e)
@@ -380,10 +438,14 @@ class TestSHAPExplainer:
             assert isinstance(result, dict)
             assert len(result) == len(sample_data.columns)
 
-    def test_feature_importance_bounds_validation(self, explainer, tree_model, sample_data):
+    def test_feature_importance_bounds_validation(
+        self, explainer, tree_model, sample_data
+    ):
         """Test that feature importances are within expected bounds and flag values exceeding 1.0."""
         # Get SHAP feature importance
-        result = explainer._calculate_feature_importance(tree_model, sample_data, method="shap")
+        result = explainer._calculate_feature_importance(
+            tree_model, sample_data, method="shap"
+        )
 
         # Check structure
         assert isinstance(result, dict)
@@ -392,27 +454,41 @@ class TestSHAPExplainer:
         # Validate each feature importance value
         for feature_name, importance in result.items():
             # Basic type and value checks
-            assert isinstance(importance, (int, float)), f"Feature {feature_name} importance should be numeric"
-            assert not np.isnan(importance), f"Feature {feature_name} importance should not be NaN"
-            assert not np.isinf(importance), f"Feature {feature_name} importance should not be infinite"
+            assert isinstance(
+                importance, (int, float)
+            ), f"Feature {feature_name} importance should be numeric"
+            assert not np.isnan(
+                importance
+            ), f"Feature {feature_name} importance should not be NaN"
+            assert not np.isinf(
+                importance
+            ), f"Feature {feature_name} importance should not be infinite"
 
             # Check for values exceeding 1.0 (potential bug indicator)
             if abs(importance) > 1.0:
                 # Log warning for values exceeding 1.0
-                print(f"WARNING: Feature {feature_name} has importance {importance} exceeding 1.0")
+                print(
+                    f"WARNING: Feature {feature_name} has importance {importance} exceeding 1.0"
+                )
                 # This could indicate a bug in the SHAP calculation or data normalization
                 # In a real implementation, you might want to raise a warning or error
-                assert False, f"Feature importance {importance} for {feature_name} exceeds 1.0 - potential bug"
+                assert (
+                    False
+                ), f"Feature importance {importance} for {feature_name} exceeds 1.0 - potential bug"
 
             # Check for reasonable bounds (SHAP values should typically be in reasonable range)
-            assert abs(importance) <= 10.0, f"Feature {feature_name} importance {importance} seems unreasonably high"
+            assert (
+                abs(importance) <= 10.0
+            ), f"Feature {feature_name} importance {importance} seems unreasonably high"
 
         # Test with different model types to ensure bounds validation works
         lstm_model = Mock()
         lstm_model.__class__.__name__ = "Sequential"
         lstm_model.predict = Mock(return_value=np.random.random(10))
 
-        lstm_result = explainer._calculate_feature_importance(lstm_model, sample_data, method="shap")
+        lstm_result = explainer._calculate_feature_importance(
+            lstm_model, sample_data, method="shap"
+        )
 
         for feature_name, importance in lstm_result.items():
             assert isinstance(importance, (int, float))
@@ -421,11 +497,15 @@ class TestSHAPExplainer:
 
             # Check for values exceeding 1.0
             if abs(importance) > 1.0:
-                assert False, f"LSTM model feature importance {importance} for {feature_name} exceeds 1.0"
+                assert (
+                    False
+                ), f"LSTM model feature importance {importance} for {feature_name} exceeds 1.0"
 
         # Test with normalized data to ensure bounds are still respected
         normalized_data = (sample_data - sample_data.mean()) / sample_data.std()
-        normalized_result = explainer._calculate_feature_importance(tree_model, normalized_data, method="shap")
+        normalized_result = explainer._calculate_feature_importance(
+            tree_model, normalized_data, method="shap"
+        )
 
         for feature_name, importance in normalized_result.items():
             assert isinstance(importance, (int, float))
@@ -434,11 +514,15 @@ class TestSHAPExplainer:
 
             # Even with normalized data, SHAP values should not exceed reasonable bounds
             if abs(importance) > 1.0:
-                assert False, f"Normalized data feature importance {importance} for {feature_name} exceeds 1.0"
+                assert (
+                    False
+                ), f"Normalized data feature importance {importance} for {feature_name} exceeds 1.0"
 
         # Test edge case with very small dataset
         small_data = sample_data.head(5)
-        small_result = explainer._calculate_feature_importance(tree_model, small_data, method="shap")
+        small_result = explainer._calculate_feature_importance(
+            tree_model, small_data, method="shap"
+        )
 
         for feature_name, importance in small_result.items():
             assert isinstance(importance, (int, float))
@@ -447,7 +531,9 @@ class TestSHAPExplainer:
 
             # Small datasets might have more variance, but still check bounds
             if abs(importance) > 1.0:
-                assert False, f"Small dataset feature importance {importance} for {feature_name} exceeds 1.0"
+                assert (
+                    False
+                ), f"Small dataset feature importance {importance} for {feature_name} exceeds 1.0"
 
 
 if __name__ == "__main__":

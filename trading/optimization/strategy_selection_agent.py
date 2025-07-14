@@ -17,7 +17,9 @@ logger.setLevel(logging.DEBUG)
 # Add file handler for debug logs
 debug_handler = logging.FileHandler("trading/optimization/logs/optimization_debug.log")
 debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+debug_formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 debug_handler.setFormatter(debug_formatter)
 logger.addHandler(debug_handler)
 
@@ -26,8 +28,12 @@ class MarketRegime(BaseModel):
     """Market regime classification."""
 
     regime: str = Field(..., description="Market regime type")
-    confidence: float = Field(..., ge=0, le=1, description="Confidence in regime classification")
-    features: Dict[str, float] = Field(..., description="Market features used for classification")
+    confidence: float = Field(
+        ..., ge=0, le=1, description="Confidence in regime classification"
+    )
+    features: Dict[str, float] = Field(
+        ..., description="Market features used for classification"
+    )
 
     @classmethod
     def from_data(cls, data: pd.DataFrame) -> "MarketRegime":
@@ -62,7 +68,11 @@ class MarketRegime(BaseModel):
         return cls(
             regime=regime,
             confidence=confidence,
-            features={"volatility": volatility, "trend": trend, "volume_trend": volume_trend},
+            features={
+                "volatility": volatility,
+                "trend": trend,
+                "volume_trend": volume_trend,
+            },
         )
 
 
@@ -131,9 +141,15 @@ class StrategySelectionAgent:
 
         logger.info("Initialized StrategySelectionAgent")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
-    def select_strategy(self, data: pd.DataFrame, available_strategies: List[str]) -> Tuple[str, float, str]:
+    def select_strategy(
+        self, data: pd.DataFrame, available_strategies: List[str]
+    ) -> Tuple[str, float, str]:
         """Select best strategy for current market conditions.
 
         Args:
@@ -149,7 +165,9 @@ class StrategySelectionAgent:
             self.regime_history.append(current_regime)
 
             # Get recent performance for each strategy
-            recent_performance = self._get_recent_performance(available_strategies, current_regime.regime)
+            recent_performance = self._get_recent_performance(
+                available_strategies, current_regime.regime
+            )
 
             if not recent_performance:
                 # No recent performance data, use default strategy
@@ -170,7 +188,9 @@ class StrategySelectionAgent:
             )
 
             # Log decision
-            self._log_decision(best_strategy[0], best_strategy[1], current_regime, explanation)
+            self._log_decision(
+                best_strategy[0], best_strategy[1], current_regime, explanation
+            )
 
             return best_strategy[0], best_strategy[1], explanation
 
@@ -233,7 +253,9 @@ class StrategySelectionAgent:
         except Exception as e:
             logger.error(f"Error saving performance history: {e}")
 
-    def _get_recent_performance(self, strategies: List[str], regime: str) -> Dict[str, List[StrategyPerformance]]:
+    def _get_recent_performance(
+        self, strategies: List[str], regime: str
+    ) -> Dict[str, List[StrategyPerformance]]:
         """Get recent performance for strategies.
 
         Args:
@@ -250,14 +272,18 @@ class StrategySelectionAgent:
             strategy_performance = [
                 p
                 for p in self.performance_history
-                if p.strategy == strategy and p.timestamp > cutoff_date and p.regime == regime
+                if p.strategy == strategy
+                and p.timestamp > cutoff_date
+                and p.regime == regime
             ]
             if strategy_performance:
                 recent_performance[strategy] = strategy_performance
 
         return recent_performance
 
-    def _score_strategies(self, recent_performance: Dict[str, List[StrategyPerformance]]) -> Dict[str, float]:
+    def _score_strategies(
+        self, recent_performance: Dict[str, List[StrategyPerformance]]
+    ) -> Dict[str, float]:
         """Score strategies based on recent performance.
 
         Args:
@@ -277,14 +303,22 @@ class StrategySelectionAgent:
 
             # Calculate score (weighted average of metrics)
             score = (
-                0.4 * avg_sharpe + 0.3 * avg_win_rate + 0.2 * (1 - avg_drawdown) + 0.1 * avg_alpha  # Invert drawdown
+                0.4 * avg_sharpe
+                + 0.3 * avg_win_rate
+                + 0.2 * (1 - avg_drawdown)
+                + 0.1 * avg_alpha  # Invert drawdown
             )
 
             scores[strategy] = score
 
         return scores
 
-    def _generate_explanation(self, strategy: str, regime: MarketRegime, performance: List[StrategyPerformance]) -> str:
+    def _generate_explanation(
+        self,
+        strategy: str,
+        regime: MarketRegime,
+        performance: List[StrategyPerformance],
+    ) -> str:
         """Generate explanation for strategy selection.
 
         Args:
@@ -306,7 +340,9 @@ class StrategySelectionAgent:
             f"Win Rate={avg_win_rate:.2f}"
         )
 
-    def _log_decision(self, strategy: str, confidence: float, regime: MarketRegime, explanation: str) -> None:
+    def _log_decision(
+        self, strategy: str, confidence: float, regime: MarketRegime, explanation: str
+    ) -> None:
         """Log strategy selection decision.
 
         Args:

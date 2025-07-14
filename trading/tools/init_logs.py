@@ -17,7 +17,9 @@ from pathlib import Path
 from typing import Dict, Literal
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -43,7 +45,9 @@ def load_log_config() -> list:
         raise
 
 
-def init_log_files(log_dir: str = "logs", verbose: bool = True) -> Dict[str, Literal["created", "exists"]]:
+def init_log_files(
+    log_dir: str = "logs", verbose: bool = True
+) -> Dict[str, Literal["created", "exists"]]:
     """Initialize or verify log files.
 
     Args:
@@ -82,7 +86,9 @@ def init_log_files(log_dir: str = "logs", verbose: bool = True) -> Dict[str, Lit
                     # JSON Lines format
                     content = config["template"]
                     if isinstance(content, dict):
-                        content = {k: v.format(timestamp=timestamp) for k, v in content.items()}
+                        content = {
+                            k: v.format(timestamp=timestamp) for k, v in content.items()
+                        }
                     json.dump(content, file)
                     file.write("\n")
                 else:
@@ -111,7 +117,9 @@ def main() -> None:
         for filename, status in results.items():
             logger.info(f"- {filename}: {status}")
 
-        logger.info("\nNote: These files are for development only and should not be committed to git.")
+        logger.info(
+            "\nNote: These files are for development only and should not be committed to git."
+        )
     except Exception as e:
         logger.error(f"Failed to initialize log files: {e}")
         raise

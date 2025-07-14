@@ -36,7 +36,9 @@ class CommentaryGenerator:
 
             openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    def generate_commentary(self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]) -> str:
+    def generate_commentary(
+        self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]
+    ) -> str:
         """
         Generate commentary on the analysis results.
 
@@ -57,7 +59,9 @@ class CommentaryGenerator:
             logger.error(f"Error generating GPT commentary: {e}")
             return self._generate_fallback_commentary(query, parsed, result)
 
-    def _generate_gpt_commentary(self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]) -> str:
+    def _generate_gpt_commentary(
+        self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]
+    ) -> str:
         """Generate GPT commentary on the analysis results."""
         # Prepare context for GPT
         context = {
@@ -94,14 +98,19 @@ class CommentaryGenerator:
 
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
             temperature=0.7,
             max_tokens=500,
         )
 
         return response.choices[0].message.content
 
-    def _generate_fallback_commentary(self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]) -> str:
+    def _generate_fallback_commentary(
+        self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]
+    ) -> str:
         """Generate fallback commentary without GPT."""
         intent = parsed.get("intent")
         symbol = parsed.get("symbol")
@@ -118,9 +127,7 @@ class CommentaryGenerator:
             if signal:
                 return f"Trading signal for {symbol}: {signal['signal']} ({signal['strength']} confidence). {signal['reasoning']} Model performance score: {signal['model_score']:.2f}"
             else:
-                return (
-                    f"Unable to generate trading signal for {symbol}. Please check model availability and data quality."
-                )
+                return f"Unable to generate trading signal for {symbol}. Please check model availability and data quality."
 
         elif intent == "market_analysis":
             return f"Comprehensive market analysis completed for {symbol}. The analysis includes model performance evaluation, market data trends, and technical indicators. Review the generated plots for visual insights."

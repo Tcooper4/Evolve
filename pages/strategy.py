@@ -56,14 +56,23 @@ def render_strategy_page():
                         st.subheader("Performance Metrics")
                         col1, col2, col3 = st.columns(3)
                         with col1:
-                            st.metric("Total Return", f"{metrics.get('total_return', 0):.1%}")
-                            st.metric("Sharpe Ratio", f"{metrics.get('sharpe_ratio', 0):.2f}")
+                            st.metric(
+                                "Total Return", f"{metrics.get('total_return', 0):.1%}"
+                            )
+                            st.metric(
+                                "Sharpe Ratio", f"{metrics.get('sharpe_ratio', 0):.2f}"
+                            )
                         with col2:
                             st.metric("Win Rate", f"{metrics.get('win_rate', 0):.1%}")
-                            st.metric("Max Drawdown", f"{metrics.get('max_drawdown', 0):.1%}")
+                            st.metric(
+                                "Max Drawdown", f"{metrics.get('max_drawdown', 0):.1%}"
+                            )
                         with col3:
                             st.metric("Avg Trade", f"{metrics.get('avg_trade', 0):.1%}")
-                            st.metric("Profit Factor", f"{metrics.get('profit_factor', 0):.2f}")
+                            st.metric(
+                                "Profit Factor",
+                                f"{metrics.get('profit_factor', 0):.2f}",
+                            )
 
                         # Strategy parameters
                         if "parameters" in metrics:

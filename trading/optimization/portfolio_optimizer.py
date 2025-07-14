@@ -24,7 +24,6 @@ except ImportError:
     logging.warning("CVXPY not available. Install with: pip install cvxpy")
 
 try:
-    import cvxopt
     CVXOPT_AVAILABLE = True
 except ImportError:
     CVXOPT_AVAILABLE = False
@@ -49,7 +48,9 @@ class PortfolioOptimizer:
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
         if not CVXPY_AVAILABLE:
-            logger.warning("CVXPY not available. Portfolio optimization will use simplified methods.")
+            logger.warning(
+                "CVXPY not available. Portfolio optimization will use simplified methods."
+            )
 
         logger.info("Portfolio optimizer initialized")
 
@@ -96,8 +97,13 @@ class PortfolioOptimizer:
             else:
                 # Maximize Sharpe ratio (minimize negative Sharpe)
                 excess_return = mu - self.risk_free_rate
-                objective = cp.Minimize(-excess_return @ w / cp.sqrt(cp.quad_form(w, Sigma)))
-                constraints_list = [w >= 0, cp.sum(w) == 1]  # Long-only constraint  # Budget constraint
+                objective = cp.Minimize(
+                    -excess_return @ w / cp.sqrt(cp.quad_form(w, Sigma))
+                )
+                constraints_list = [
+                    w >= 0,
+                    cp.sum(w) == 1,
+                ]  # Long-only constraint  # Budget constraint
 
             # Add custom constraints
             if constraints:
@@ -121,7 +127,9 @@ class PortfolioOptimizer:
                 sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
 
                 # Calculate asset contributions
-                asset_contributions = self._calculate_asset_contributions(weights, mu, Sigma)
+                asset_contributions = self._calculate_asset_contributions(
+                    weights, mu, Sigma
+                )
 
                 result = {
                     "weights": dict(zip(returns.columns, weights)),
@@ -167,7 +175,7 @@ class PortfolioOptimizer:
         """
         try:
             # Calculate market equilibrium returns
-            mu_market = returns.mean()
+            returns.mean()
             Sigma = returns.cov()
 
             # Market equilibrium returns (reverse optimization)
@@ -186,18 +194,22 @@ class PortfolioOptimizer:
                     P[i, col_idx] = 1
 
             # Black-Litterman posterior estimates
-            M1 = np.linalg.inv(np.linalg.inv(tau * Sigma) + P.T @ np.linalg.inv(Omega) @ P)
+            M1 = np.linalg.inv(
+                np.linalg.inv(tau * Sigma) + P.T @ np.linalg.inv(Omega) @ P
+            )
             M2 = np.linalg.inv(tau * Sigma) @ pi + P.T @ np.linalg.inv(Omega) @ q
 
             mu_bl = M1 @ M2
-            Sigma_bl = Sigma + M1
+            Sigma + M1
 
             # Convert to Series
             mu_bl_series = pd.Series(mu_bl, index=returns.columns)
 
             # Run mean-variance optimization with BL estimates
             return self.mean_variance_optimization(
-                returns, target_return=None, constraints={"max_weight": 0.2}  # Limit individual weights
+                returns,
+                target_return=None,
+                constraints={"max_weight": 0.2},  # Limit individual weights
             )
 
         except Exception as e:
@@ -205,7 +217,10 @@ class PortfolioOptimizer:
             return {"error": str(e)}
 
     def risk_parity_optimization(
-        self, returns: pd.DataFrame, target_risk: Optional[float] = None, risk_measure: str = "volatility"
+        self,
+        returns: pd.DataFrame,
+        target_risk: Optional[float] = None,
+        risk_measure: str = "volatility",
     ) -> Dict[str, Any]:
         """Risk Parity Optimization.
 
@@ -241,7 +256,9 @@ class PortfolioOptimizer:
 
                 # Objective: minimize sum of squared differences in risk contributions
                 target_risk_contrib = portfolio_vol / n_assets
-                objective = cp.Minimize(cp.sum_squares(cp.hstack(risk_contrib) - target_risk_contrib))
+                objective = cp.Minimize(
+                    cp.sum_squares(cp.hstack(risk_contrib) - target_risk_contrib)
+                )
 
             elif risk_measure == "cvar":
                 # Risk parity using CVaR
@@ -262,7 +279,10 @@ class PortfolioOptimizer:
                 objective = cp.Minimize(var)
 
             # Constraints
-            constraints_list = [w >= 0, cp.sum(w) == 1]  # Long-only constraint  # Budget constraint
+            constraints_list = [
+                w >= 0,
+                cp.sum(w) == 1,
+            ]  # Long-only constraint  # Budget constraint
 
             if target_risk is not None and risk_measure == "volatility":
                 constraints_list.append(portfolio_vol <= target_risk)
@@ -278,7 +298,9 @@ class PortfolioOptimizer:
                 sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
 
                 # Calculate risk contributions
-                risk_contributions = self._calculate_risk_contributions(weights, Sigma, risk_measure)
+                risk_contributions = self._calculate_risk_contributions(
+                    weights, Sigma, risk_measure
+                )
 
                 result = {
                     "weights": dict(zip(returns.columns, weights)),
@@ -328,7 +350,7 @@ class PortfolioOptimizer:
         """
         try:
             # Calculate market equilibrium returns
-            mu_market = returns.mean()
+            returns.mean()
             Sigma = returns.cov()
 
             # Market equilibrium returns (reverse optimization)
@@ -383,11 +405,13 @@ class PortfolioOptimizer:
             Omega = np.diag([1 / confidence[asset] for asset in assets])
 
             # Black-Litterman posterior estimates
-            M1 = np.linalg.inv(np.linalg.inv(tau * Sigma) + P.T @ np.linalg.inv(Omega) @ P)
+            M1 = np.linalg.inv(
+                np.linalg.inv(tau * Sigma) + P.T @ np.linalg.inv(Omega) @ P
+            )
             M2 = np.linalg.inv(tau * Sigma) @ pi + P.T @ np.linalg.inv(Omega) @ q
 
             mu_bl = M1 @ M2
-            Sigma_bl = Sigma + M1
+            Sigma + M1
 
             # Convert to Series
             mu_bl_series = pd.Series(mu_bl, index=returns.columns)
@@ -405,7 +429,10 @@ class PortfolioOptimizer:
             return {"error": str(e)}
 
     def min_cvar_optimization(
-        self, returns: pd.DataFrame, confidence_level: float = 0.95, target_return: Optional[float] = None
+        self,
+        returns: pd.DataFrame,
+        confidence_level: float = 0.95,
+        target_return: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Minimum Conditional Value at Risk (CVaR) optimization.
 
@@ -418,7 +445,9 @@ class PortfolioOptimizer:
             Dictionary with optimization results
         """
         if not CVXPY_AVAILABLE:
-            return self._simple_cvar_optimization(returns, confidence_level, target_return)
+            return self._simple_cvar_optimization(
+                returns, confidence_level, target_return
+            )
 
         try:
             n_assets = len(returns.columns)
@@ -481,10 +510,15 @@ class PortfolioOptimizer:
 
         except Exception as e:
             logger.error(f"Error in Min-CVaR optimization: {e}")
-            return self._simple_cvar_optimization(returns, confidence_level, target_return)
+            return self._simple_cvar_optimization(
+                returns, confidence_level, target_return
+            )
 
     def _simple_mean_variance(
-        self, returns: pd.DataFrame, target_return: Optional[float], risk_aversion: float
+        self,
+        returns: pd.DataFrame,
+        target_return: Optional[float],
+        risk_aversion: float,
     ) -> Dict[str, Any]:
         """Simplified mean-variance optimization without CVXPY."""
         try:
@@ -556,7 +590,9 @@ class PortfolioOptimizer:
             sharpe_ratio = (portfolio_return - self.risk_free_rate) / portfolio_vol
 
             # Calculate risk contributions
-            risk_contributions = self._calculate_risk_contributions(weights, Sigma, risk_measure)
+            risk_contributions = self._calculate_risk_contributions(
+                weights, Sigma, risk_measure
+            )
 
             result = {
                 "weights": dict(zip(returns.columns, weights)),
@@ -598,7 +634,10 @@ class PortfolioOptimizer:
             return {}
 
     def _simple_cvar_optimization(
-        self, returns: pd.DataFrame, confidence_level: float, target_return: Optional[float]
+        self,
+        returns: pd.DataFrame,
+        confidence_level: float,
+        target_return: Optional[float],
     ) -> Dict[str, Any]:
         """Simplified CVaR optimization without CVXPY."""
         try:
@@ -633,11 +672,13 @@ class PortfolioOptimizer:
     ) -> Dict[str, Dict[str, float]]:
         """Calculate asset contributions to portfolio metrics."""
         try:
-            portfolio_return = mu @ weights
+            mu @ weights
             portfolio_vol = np.sqrt(weights @ Sigma @ weights)
 
             # Return contribution
-            return_contrib = {asset: weight * mu[asset] for asset, weight in zip(mu.index, weights)}
+            return_contrib = {
+                asset: weight * mu[asset] for asset, weight in zip(mu.index, weights)
+            }
 
             # Risk contribution
             risk_contrib = {}
@@ -650,7 +691,8 @@ class PortfolioOptimizer:
             sharpe_contrib = {}
             for asset in mu.index:
                 sharpe_contrib[asset] = (
-                    return_contrib[asset] - self.risk_free_rate * weights[mu.index.get_loc(asset)]
+                    return_contrib[asset]
+                    - self.risk_free_rate * weights[mu.index.get_loc(asset)]
                 ) / portfolio_vol
 
             return {
@@ -677,7 +719,8 @@ class PortfolioOptimizer:
                     serializable_results[key] = value.tolist()
                 elif isinstance(value, dict):
                     serializable_results[key] = {
-                        k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in value.items()
+                        k: v.tolist() if isinstance(v, np.ndarray) else v
+                        for k, v in value.items()
                     }
                 else:
                     serializable_results[key] = value
@@ -702,7 +745,11 @@ class PortfolioOptimizer:
             equal_vol = np.sqrt(equal_weights @ returns.cov() @ equal_weights)
             equal_sharpe = (equal_return - self.risk_free_rate) / equal_vol
 
-            strategies["Equal Weight"] = {"Return": equal_return, "Volatility": equal_vol, "Sharpe": equal_sharpe}
+            strategies["Equal Weight"] = {
+                "Return": equal_return,
+                "Volatility": equal_vol,
+                "Sharpe": equal_sharpe,
+            }
 
             # Mean-Variance
             mv_result = self.mean_variance_optimization(returns)
@@ -734,11 +781,15 @@ class PortfolioOptimizer:
 
             # Black-Litterman (if market caps available)
             if len(returns.columns) >= 2:
-                market_caps = pd.Series(1.0 / len(returns.columns), index=returns.columns)
+                market_caps = pd.Series(
+                    1.0 / len(returns.columns), index=returns.columns
+                )
                 views = {returns.columns[0]: 0.05}  # Simple view
                 confidence = {returns.columns[0]: 0.5}
 
-                bl_result = self.black_litterman_optimization(returns, market_caps, views, confidence)
+                bl_result = self.black_litterman_optimization(
+                    returns, market_caps, views, confidence
+                )
                 if "error" not in bl_result:
                     strategies["Black-Litterman"] = {
                         "Return": bl_result["portfolio_return"],
@@ -748,11 +799,19 @@ class PortfolioOptimizer:
 
                 # Enhanced Black-Litterman with relative views
                 if len(returns.columns) >= 3:
-                    relative_views = {f"{returns.columns[0]} vs {returns.columns[1]}": 0.02}
-                    relative_confidence = {f"{returns.columns[0]} vs {returns.columns[1]}": 0.6}
+                    relative_views = {
+                        f"{returns.columns[0]} vs {returns.columns[1]}": 0.02
+                    }
+                    relative_confidence = {
+                        f"{returns.columns[0]} vs {returns.columns[1]}": 0.6
+                    }
 
                     ebl_result = self.enhanced_black_litterman_optimization(
-                        returns, market_caps, relative_views, relative_confidence, view_type="relative"
+                        returns,
+                        market_caps,
+                        relative_views,
+                        relative_confidence,
+                        view_type="relative",
                     )
                     if "error" not in ebl_result:
                         strategies["Enhanced BL (Relative)"] = {

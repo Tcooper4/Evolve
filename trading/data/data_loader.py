@@ -106,7 +106,11 @@ class DataLoaderConfig:
                 "timeout": 30,
                 "retry_attempts": 3,
             },
-            "validation": {"check_data_quality": True, "min_data_points": 5, "max_price_change": 0.5},
+            "validation": {
+                "check_data_quality": True,
+                "min_data_points": 5,
+                "max_price_change": 0.5,
+            },
             "caching": {"enabled": True, "ttl_minutes": 15},
             "parallel": {
                 "max_workers": 4,
@@ -188,7 +192,9 @@ class DataValidator:
         self.min_data_points = config.get("min_data_points", 5)
         self.max_price_change = config.get("max_price_change", 0.5)
 
-    def validate_market_data(self, data: pd.DataFrame, ticker: str) -> tuple[bool, Optional[str]]:
+    def validate_market_data(
+        self, data: pd.DataFrame, ticker: str
+    ) -> tuple[bool, Optional[str]]:
         """Validate market data.
 
         Args:
@@ -209,7 +215,10 @@ class DataValidator:
 
         # Check data length
         if len(data) < self.min_data_points:
-            return False, f"Insufficient data points: {len(data)} < {self.min_data_points}"
+            return (
+                False,
+                f"Insufficient data points: {len(data)} < {self.min_data_points}",
+            )
 
         # Check for reasonable data ranges
         if (data["high"] < data["low"]).any():
@@ -222,7 +231,10 @@ class DataValidator:
         if self.check_quality and len(data) > 1:
             price_changes = abs(data["close"].pct_change()).dropna()
             if (price_changes > self.max_price_change).any():
-                return False, f"Extreme price changes detected (>{self.max_price_change*100}%)"
+                return (
+                    False,
+                    f"Extreme price changes detected (>{self.max_price_change*100}%)",
+                )
 
         return True, None
 
@@ -257,7 +269,9 @@ class ParallelProcessor:
                     progress=self._completed_count / self._total_count,
                 )
 
-    def _load_single_ticker_with_retry(self, request: DataLoadRequest, loader_instance) -> tuple[str, DataLoadResponse]:
+    def _load_single_ticker_with_retry(
+        self, request: DataLoadRequest, loader_instance
+    ) -> tuple[str, DataLoadResponse]:
         """Load a single ticker with retry logic.
 
         Args:
@@ -285,12 +299,16 @@ class ParallelProcessor:
 
         # All retries failed
         error_response = DataLoadResponse(
-            success=False, message=f"Failed after {self.config.retry_attempts} attempts: {last_error}", ticker=ticker
+            success=False,
+            message=f"Failed after {self.config.retry_attempts} attempts: {last_error}",
+            ticker=ticker,
         )
         self._update_progress(ticker, False)
         return ticker, error_response
 
-    def load_tickers_parallel(self, requests: List[DataLoadRequest], loader_instance) -> Dict[str, DataLoadResponse]:
+    def load_tickers_parallel(
+        self, requests: List[DataLoadRequest], loader_instance
+    ) -> Dict[str, DataLoadResponse]:
         """Load multiple tickers in parallel.
 
         Args:
@@ -306,29 +324,42 @@ class ParallelProcessor:
         results: Dict[str, DataLoadResponse] = {}
 
         # Create partial function with loader instance
-        load_func = partial(self._load_single_ticker_with_retry, loader_instance=loader_instance)
+        load_func = partial(
+            self._load_single_ticker_with_retry, loader_instance=loader_instance
+        )
 
-        logger.info(f"Starting parallel load of {len(requests)} tickers with {self.config.max_workers} workers")
+        logger.info(
+            f"Starting parallel load of {len(requests)} tickers with {self.config.max_workers} workers"
+        )
 
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             # Submit all tasks
-            future_to_ticker = {executor.submit(load_func, request): request.ticker for request in requests}
+            future_to_ticker = {
+                executor.submit(load_func, request): request.ticker
+                for request in requests
+            }
 
             # Process completed tasks
-            for future in as_completed(future_to_ticker, timeout=self.config.timeout_seconds):
+            for future in as_completed(
+                future_to_ticker, timeout=self.config.timeout_seconds
+            ):
                 ticker = future_to_ticker[future]
                 try:
                     ticker, response = future.result()
                     results[ticker] = response
 
                     if response.success:
-                        logger.debug(f"Successfully loaded {ticker} ({response.rows} rows)")
+                        logger.debug(
+                            f"Successfully loaded {ticker} ({response.rows} rows)"
+                        )
                     else:
                         logger.warning(f"Failed to load {ticker}: {response.message}")
 
                 except Exception as e:
                     logger.error(f"Exception occurred while loading {ticker}: {e}")
-                    error_response = DataLoadResponse(success=False, message=f"Exception: {str(e)}", ticker=ticker)
+                    error_response = DataLoadResponse(
+                        success=False, message=f"Exception: {str(e)}", ticker=ticker
+                    )
                     results[ticker] = error_response
                     self._update_progress(ticker, False)
 
@@ -337,7 +368,9 @@ class ParallelProcessor:
         )
         return results
 
-    def load_tickers_in_chunks(self, requests: List[DataLoadRequest], loader_instance) -> Dict[str, DataLoadResponse]:
+    def load_tickers_in_chunks(
+        self, requests: List[DataLoadRequest], loader_instance
+    ) -> Dict[str, DataLoadResponse]:
         """Load tickers in chunks to avoid overwhelming the API.
 
         Args:
@@ -350,12 +383,19 @@ class ParallelProcessor:
         all_results: Dict[str, DataLoadResponse] = {}
 
         # Split requests into chunks
-        chunks = [requests[i : i + self.config.chunk_size] for i in range(0, len(requests), self.config.chunk_size)]
+        chunks = [
+            requests[i : i + self.config.chunk_size]
+            for i in range(0, len(requests), self.config.chunk_size)
+        ]
 
-        logger.info(f"Processing {len(requests)} tickers in {len(chunks)} chunks of {self.config.chunk_size}")
+        logger.info(
+            f"Processing {len(requests)} tickers in {len(chunks)} chunks of {self.config.chunk_size}"
+        )
 
         for i, chunk in enumerate(chunks):
-            logger.info(f"Processing chunk {i + 1}/{len(chunks)} ({len(chunk)} tickers)")
+            logger.info(
+                f"Processing chunk {i + 1}/{len(chunks)} ({len(chunk)} tickers)"
+            )
 
             chunk_results = self.load_tickers_parallel(chunk, loader_instance)
             all_results.update(chunk_results)
@@ -385,7 +425,9 @@ class DataLoader:
         self.parallel_config = self.config_manager.get_parallel_config()
         self.parallel_processor = ParallelProcessor(self.parallel_config)
         self.cache: Dict[str, DataLoadResponse] = {}
-        self.cache_ttl = timedelta(minutes=self.config_manager.config.get("caching", {}).get("ttl_minutes", 15))
+        self.cache_ttl = timedelta(
+            minutes=self.config_manager.config.get("caching", {}).get("ttl_minutes", 15)
+        )
 
         # Add data caching mechanism using joblib or diskcache
         self.cache_dir = Path("cache/data_loader")
@@ -437,10 +479,14 @@ class DataLoader:
                 )
 
             # Validate data
-            is_valid, error_msg = self.validator.validate_market_data(data, request.ticker)
+            is_valid, error_msg = self.validator.validate_market_data(
+                data, request.ticker
+            )
             if not is_valid:
                 return DataLoadResponse(
-                    success=False, message=f"Data validation failed: {error_msg}", ticker=request.ticker
+                    success=False,
+                    message=f"Data validation failed: {error_msg}",
+                    ticker=request.ticker,
                 )
 
             # Create response
@@ -467,10 +513,17 @@ class DataLoader:
 
         except Exception as e:
             logger.error(f"Error loading data for {request.ticker}: {e}")
-            return DataLoadResponse(success=False, message=f"Error loading data: {str(e)}", ticker=request.ticker)
+            return DataLoadResponse(
+                success=False,
+                message=f"Error loading data: {str(e)}",
+                ticker=request.ticker,
+            )
 
     def load_multiple_tickers(
-        self, requests: List[DataLoadRequest], use_parallel: bool = True, progress_callback: Optional[callable] = None
+        self,
+        requests: List[DataLoadRequest],
+        use_parallel: bool = True,
+        progress_callback: Optional[callable] = None,
     ) -> Dict[str, DataLoadResponse]:
         """Load market data for multiple tickers.
 
@@ -494,7 +547,9 @@ class DataLoader:
                 # Use parallel processing for multiple tickers
                 if len(requests) > self.parallel_config.chunk_size:
                     # Use chunked processing for large numbers of tickers
-                    return self.parallel_processor.load_tickers_in_chunks(requests, self)
+                    return self.parallel_processor.load_tickers_in_chunks(
+                        requests, self
+                    )
                 else:
                     # Use direct parallel processing for smaller batches
                     return self.parallel_processor.load_tickers_parallel(requests, self)
@@ -530,7 +585,9 @@ class DataLoader:
             # Return error responses for all requests
             return {
                 request.ticker: DataLoadResponse(
-                    success=False, message=f"Batch processing error: {str(e)}", ticker=request.ticker
+                    success=False,
+                    message=f"Batch processing error: {str(e)}",
+                    ticker=request.ticker,
                 )
                 for request in requests
             }
@@ -556,7 +613,11 @@ class DataLoader:
                 if not hist.empty:
                     current_price = hist["Close"].iloc[-1]
                 else:
-                    return PriceResponse(success=False, message="Could not retrieve current price", ticker=ticker)
+                    return PriceResponse(
+                        success=False,
+                        message="Could not retrieve current price",
+                        ticker=ticker,
+                    )
 
             return PriceResponse(
                 success=True,
@@ -573,7 +634,11 @@ class DataLoader:
 
         except Exception as e:
             logger.error(f"Error getting latest price for {ticker}: {e}")
-            return PriceResponse(success=False, message=f"Error retrieving price: {str(e)}", ticker=ticker)
+            return PriceResponse(
+                success=False,
+                message=f"Error retrieving price: {str(e)}",
+                ticker=ticker,
+            )
 
     def _get_cache_key(self, request: DataLoadRequest) -> str:
         """Generate cache key for a request."""
@@ -590,7 +655,9 @@ class DataLoader:
                 cache_file = self._get_cache_file_path(cache_key)
                 if cache_file.exists():
                     # Check if cache is still valid
-                    cache_age = datetime.now() - datetime.fromtimestamp(cache_file.stat().st_mtime)
+                    cache_age = datetime.now() - datetime.fromtimestamp(
+                        cache_file.stat().st_mtime
+                    )
                     if cache_age < self.cache_ttl:
                         cached_data = joblib.load(cache_file)
                         return cached_data
@@ -653,7 +720,10 @@ def get_data_loader() -> DataLoader:
 
 
 def load_market_data(
-    ticker: str, start_date: Optional[str] = None, end_date: Optional[str] = None, period: str = "1y"
+    ticker: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    period: str = "1y",
 ) -> Dict[str, Any]:
     """Load market data for a single ticker.
 
@@ -667,7 +737,9 @@ def load_market_data(
         Dictionary with load result
     """
     try:
-        request = DataLoadRequest(ticker=ticker, start_date=start_date, end_date=end_date, period=period)
+        request = DataLoadRequest(
+            ticker=ticker, start_date=start_date, end_date=end_date, period=period
+        )
 
         loader = get_data_loader()
         response = loader.load_market_data(request)
@@ -716,12 +788,16 @@ def load_multiple_tickers(
     """
     try:
         requests = [
-            DataLoadRequest(ticker=ticker, start_date=start_date, end_date=end_date, period=period)
+            DataLoadRequest(
+                ticker=ticker, start_date=start_date, end_date=end_date, period=period
+            )
             for ticker in tickers
         ]
 
         loader = get_data_loader()
-        responses = loader.load_multiple_tickers(requests, use_parallel, progress_callback)
+        responses = loader.load_multiple_tickers(
+            requests, use_parallel, progress_callback
+        )
 
         # Convert responses to dictionary format
         results = {}

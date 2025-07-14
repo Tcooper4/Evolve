@@ -23,16 +23,22 @@ class DataValidator:
         try:
             # Check required columns
             required_columns = ["open", "high", "low", "close", "volume"]
-            missing_columns = [col for col in required_columns if col not in data.columns]
+            missing_columns = [
+                col for col in required_columns if col not in data.columns
+            ]
 
             if missing_columns:
-                self.validation_errors.append(f"Missing required columns: {missing_columns}")
+                self.validation_errors.append(
+                    f"Missing required columns: {missing_columns}"
+                )
                 return False
 
             # Check for NaN values
             nan_counts = data[required_columns].isna().sum()
             if nan_counts.sum() > 0:
-                self.validation_warnings.append(f"Found NaN values: {nan_counts.to_dict()}")
+                self.validation_warnings.append(
+                    f"Found NaN values: {nan_counts.to_dict()}"
+                )
 
             # Check for negative prices
             price_columns = ["open", "high", "low", "close"]
@@ -63,17 +69,23 @@ class DataValidator:
         try:
             # Check required columns for forecasts
             required_columns = ["timestamp", "forecast", "confidence"]
-            missing_columns = [col for col in required_columns if col not in data.columns]
+            missing_columns = [
+                col for col in required_columns if col not in data.columns
+            ]
 
             if missing_columns:
-                self.validation_errors.append(f"Missing required forecast columns: {missing_columns}")
+                self.validation_errors.append(
+                    f"Missing required forecast columns: {missing_columns}"
+                )
                 return False
 
             # Check confidence values are between 0 and 1
             if "confidence" in data.columns:
                 invalid_confidence = (data["confidence"] < 0) | (data["confidence"] > 1)
                 if invalid_confidence.any():
-                    self.validation_errors.append("Confidence values must be between 0 and 1")
+                    self.validation_errors.append(
+                        "Confidence values must be between 0 and 1"
+                    )
                     return False
 
             return len(self.validation_errors) == 0
@@ -91,11 +103,21 @@ class DataValidator:
                 return False
 
             # Validate numeric parameters
-            numeric_params = ["learning_rate", "epochs", "batch_size", "validation_split"]
+            numeric_params = [
+                "learning_rate",
+                "epochs",
+                "batch_size",
+                "validation_split",
+            ]
             for param in numeric_params:
                 if param in params:
-                    if not isinstance(params[param], (int, float)) or params[param] <= 0:
-                        self.validation_errors.append(f"Invalid {param}: must be positive number")
+                    if (
+                        not isinstance(params[param], (int, float))
+                        or params[param] <= 0
+                    ):
+                        self.validation_errors.append(
+                            f"Invalid {param}: must be positive number"
+                        )
                         return False
 
             return len(self.validation_errors) == 0
@@ -139,7 +161,9 @@ def validate_timeframe(timeframe: str) -> bool:
     return timeframe in valid_timeframes
 
 
-def validate_date_range(start_date: Union[str, datetime], end_date: Union[str, datetime]) -> bool:
+def validate_date_range(
+    start_date: Union[str, datetime], end_date: Union[str, datetime]
+) -> bool:
     """Validate date range."""
     try:
         if isinstance(start_date, str):

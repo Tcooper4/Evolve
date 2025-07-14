@@ -110,10 +110,14 @@ class ExecutionEngine:
                 result = self._execute_simulation_order(validated_order)
 
             # Store execution
-            self.execution_history.append({"timestamp": "now", "order": validated_order, "result": result})
+            self.execution_history.append(
+                {"timestamp": "now", "order": validated_order, "result": result}
+            )
 
             # Update memory
-            self.memory.memory.append({"timestamp": "now", "type": "order_execution", "data": result})
+            self.memory.memory.append(
+                {"timestamp": "now", "type": "order_execution", "data": result}
+            )
 
             return result
 
@@ -320,7 +324,9 @@ class ExecutionEngine:
                 if self.config.execution_mode == "live":
                     if order["symbol"].endswith("USD"):  # Crypto
                         if "binance" in self.brokers:
-                            self.brokers["binance"].cancel_order(order_id, order["symbol"])
+                            self.brokers["binance"].cancel_order(
+                                order_id, order["symbol"]
+                            )
                     else:  # Stock
                         if "alpaca" in self.brokers:
                             self.brokers["alpaca"].cancel_order(order_id)
@@ -366,11 +372,14 @@ class ExecutionEngine:
             }
 
         total_orders = len(self.execution_history)
-        successful_orders = sum(1 for ex in self.execution_history if ex["result"]["status"] == "success")
+        successful_orders = sum(
+            1 for ex in self.execution_history if ex["result"]["status"] == "success"
+        )
         failed_orders = total_orders - successful_orders
 
         total_volume = sum(
-            ex["result"].get("filled_quantity", 0) * ex["result"].get("average_price", 0)
+            ex["result"].get("filled_quantity", 0)
+            * ex["result"].get("average_price", 0)
             for ex in self.execution_history
             if ex["result"]["status"] == "success"
         )
@@ -379,7 +388,9 @@ class ExecutionEngine:
             "total_orders": total_orders,
             "successful_orders": successful_orders,
             "failed_orders": failed_orders,
-            "success_rate": successful_orders / total_orders if total_orders > 0 else 0.0,
+            "success_rate": successful_orders / total_orders
+            if total_orders > 0
+            else 0.0,
             "total_volume": total_volume,
             "avg_execution_time": 0.0,  # Would need timing data
         }
@@ -408,7 +419,11 @@ class ExecutionEngine:
 
         except Exception as e:
             logger.error(f"Error clearing execution history: {e}")
-            return {"success": False, "message": f"Error clearing execution history: {str(e)}", "timestamp": "now"}
+            return {
+                "success": False,
+                "message": f"Error clearing execution history: {str(e)}",
+                "timestamp": "now",
+            }
 
 
 # Global execution engine instance
@@ -433,4 +448,8 @@ def get_execution_engine() -> dict:
         }
     except Exception as e:
         logger.error(f"Error getting execution engine: {e}")
-        return {"success": False, "message": f"Error getting execution engine: {str(e)}", "timestamp": "now"}
+        return {
+            "success": False,
+            "message": f"Error getting execution engine: {str(e)}",
+            "timestamp": "now",
+        }

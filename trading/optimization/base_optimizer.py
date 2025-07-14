@@ -24,9 +24,13 @@ logger.setLevel(logging.DEBUG)
 # Add file handler for debug logs
 try:
     os.makedirs("trading/optimization/logs", exist_ok=True)
-    debug_handler = logging.FileHandler("trading/optimization/logs/optimization_debug.log")
+    debug_handler = logging.FileHandler(
+        "trading/optimization/logs/optimization_debug.log"
+    )
     debug_handler.setLevel(logging.DEBUG)
-    debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    debug_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     debug_handler.setFormatter(debug_formatter)
     logger.addHandler(debug_handler)
 except Exception as e:
@@ -41,7 +45,9 @@ class ParameterSchema(BaseModel):
     min_value: Optional[Union[int, float]] = Field(None, description="Minimum value")
     max_value: Optional[Union[int, float]] = Field(None, description="Maximum value")
     default: Optional[Any] = Field(None, description="Default value")
-    choices: Optional[List[Any]] = Field(None, description="Valid choices for categorical parameters")
+    choices: Optional[List[Any]] = Field(
+        None, description="Valid choices for categorical parameters"
+    )
     description: Optional[str] = Field(None, description="Parameter description")
 
     @validator("type")
@@ -57,7 +63,9 @@ class ParameterSchema(BaseModel):
         """Validate min/max values."""
         if v is not None and "type" in values:
             if values["type"] in ["int", "float"] and not isinstance(v, (int, float)):
-                raise ValueError(f"min_value/max_value must be numeric for {values['type']} parameters")
+                raise ValueError(
+                    f"min_value/max_value must be numeric for {values['type']} parameters"
+                )
         return v
 
 
@@ -66,32 +74,50 @@ class OptimizerConfig(BaseModel):
 
     # General settings
     name: str = Field(..., description="Name of the optimizer")
-    max_iterations: int = Field(100, ge=1, description="Maximum number of optimization iterations")
-    early_stopping_patience: int = Field(5, ge=1, description="Number of iterations to wait before early stopping")
+    max_iterations: int = Field(
+        100, ge=1, description="Maximum number of optimization iterations"
+    )
+    early_stopping_patience: int = Field(
+        5, ge=1, description="Number of iterations to wait before early stopping"
+    )
     learning_rate: float = Field(0.01, gt=0, description="Initial learning rate")
     batch_size: int = Field(32, ge=1, description="Batch size for optimization")
 
     # Multi-objective settings
-    is_multi_objective: bool = Field(False, description="Whether to use multi-objective optimization")
-    objectives: List[str] = Field(["sharpe_ratio", "win_rate"], description="List of objectives to optimize")
+    is_multi_objective: bool = Field(
+        False, description="Whether to use multi-objective optimization"
+    )
+    objectives: List[str] = Field(
+        ["sharpe_ratio", "win_rate"], description="List of objectives to optimize"
+    )
     objective_weights: Dict[str, float] = Field(
         {"sharpe_ratio": 0.6, "win_rate": 0.4}, description="Weights for each objective"
     )
 
     # Learning rate scheduler settings
-    use_lr_scheduler: bool = Field(True, description="Whether to use learning rate scheduling")
+    use_lr_scheduler: bool = Field(
+        True, description="Whether to use learning rate scheduling"
+    )
     scheduler_type: str = Field("cosine", description="Type of learning rate scheduler")
     min_lr: float = Field(0.0001, gt=0, description="Minimum learning rate")
     warmup_steps: int = Field(0, ge=0, description="Number of warmup steps")
 
     # Checkpoint settings
     save_checkpoints: bool = Field(True, description="Whether to save checkpoints")
-    checkpoint_dir: str = Field("checkpoints", description="Directory to save checkpoints")
-    checkpoint_frequency: int = Field(5, ge=1, description="Save checkpoint every N iterations")
+    checkpoint_dir: str = Field(
+        "checkpoints", description="Directory to save checkpoints"
+    )
+    checkpoint_frequency: int = Field(
+        5, ge=1, description="Save checkpoint every N iterations"
+    )
 
     # Validation settings
-    validation_split: float = Field(0.2, gt=0, lt=1, description="Validation split ratio")
-    cross_validation_folds: int = Field(3, ge=2, description="Number of cross-validation folds")
+    validation_split: float = Field(
+        0.2, gt=0, lt=1, description="Validation split ratio"
+    )
+    cross_validation_folds: int = Field(
+        3, ge=2, description="Number of cross-validation folds"
+    )
 
     # Logging settings
     log_level: str = Field("INFO", description="Logging level")
@@ -109,10 +135,20 @@ class OptimizerConfig(BaseModel):
     @validator("objectives", allow_reuse=True)
     def validate_objectives(cls, v):
         """Validate objectives."""
-        valid_objectives = ["sharpe_ratio", "win_rate", "max_drawdown", "mse", "alpha", "calmar_ratio", "sortino_ratio"]
+        valid_objectives = [
+            "sharpe_ratio",
+            "win_rate",
+            "max_drawdown",
+            "mse",
+            "alpha",
+            "calmar_ratio",
+            "sortino_ratio",
+        ]
         for obj in v:
             if obj not in valid_objectives:
-                raise ValueError(f"Invalid objective: {obj}. Must be one of {valid_objectives}")
+                raise ValueError(
+                    f"Invalid objective: {obj}. Must be one of {valid_objectives}"
+                )
         return v
 
     @validator("log_level", allow_reuse=True)
@@ -207,7 +243,9 @@ class BaseOptimizer(ABC):
                 log_path.parent.mkdir(parents=True, exist_ok=True)
                 file_handler = logging.FileHandler(log_path)
                 file_handler.setLevel(log_level)
-                formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+                formatter = logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                )
                 file_handler.setFormatter(formatter)
                 logger.addHandler(file_handler)
             except Exception as e:
@@ -247,7 +285,9 @@ class BaseOptimizer(ABC):
         """
 
     @abstractmethod
-    def log_results(self, results: List[OptimizationResult], **kwargs) -> Dict[str, Any]:
+    def log_results(
+        self, results: List[OptimizationResult], **kwargs
+    ) -> Dict[str, Any]:
         """Log optimization results with comprehensive analysis.
 
         Args:
@@ -258,7 +298,9 @@ class BaseOptimizer(ABC):
             Dictionary containing logged information
         """
 
-    def validate_parameters(self, parameters: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    def validate_parameters(
+        self, parameters: Dict[str, Any]
+    ) -> Tuple[bool, Optional[str]]:
         """Validate parameters against schema.
 
         Args:
@@ -284,7 +326,9 @@ class BaseOptimizer(ABC):
                 # Type validation
                 if param_schema.type == "int" and not isinstance(param_value, int):
                     return False, f"Parameter '{param_name}' must be an integer"
-                elif param_schema.type == "float" and not isinstance(param_value, (int, float)):
+                elif param_schema.type == "float" and not isinstance(
+                    param_value, (int, float)
+                ):
                     return False, f"Parameter '{param_name}' must be a number"
                 elif param_schema.type == "str" and not isinstance(param_value, str):
                     return False, f"Parameter '{param_name}' must be a string"
@@ -292,21 +336,41 @@ class BaseOptimizer(ABC):
                     return False, f"Parameter '{param_name}' must be a boolean"
 
                 # Range validation
-                if param_schema.min_value is not None and param_value < param_schema.min_value:
-                    return False, f"Parameter '{param_name}' must be >= {param_schema.min_value}"
-                if param_schema.max_value is not None and param_value > param_schema.max_value:
-                    return False, f"Parameter '{param_name}' must be <= {param_schema.max_value}"
+                if (
+                    param_schema.min_value is not None
+                    and param_value < param_schema.min_value
+                ):
+                    return (
+                        False,
+                        f"Parameter '{param_name}' must be >= {param_schema.min_value}",
+                    )
+                if (
+                    param_schema.max_value is not None
+                    and param_value > param_schema.max_value
+                ):
+                    return (
+                        False,
+                        f"Parameter '{param_name}' must be <= {param_schema.max_value}",
+                    )
 
                 # Choices validation
-                if param_schema.choices is not None and param_value not in param_schema.choices:
-                    return False, f"Parameter '{param_name}' must be one of {param_schema.choices}"
+                if (
+                    param_schema.choices is not None
+                    and param_value not in param_schema.choices
+                ):
+                    return (
+                        False,
+                        f"Parameter '{param_name}' must be one of {param_schema.choices}",
+                    )
 
             return True, None
 
         except Exception as e:
             return False, f"Parameter validation error: {str(e)}"
 
-    def calculate_metrics(self, returns: pd.Series, signals: pd.Series, equity_curve: pd.Series) -> Dict[str, float]:
+    def calculate_metrics(
+        self, returns: pd.Series, signals: pd.Series, equity_curve: pd.Series
+    ) -> Dict[str, float]:
         """Calculate performance metrics.
 
         Args:
@@ -320,14 +384,20 @@ class BaseOptimizer(ABC):
         try:
             # Basic metrics
             total_return = equity_curve.iloc[-1] - 1 if len(equity_curve) > 0 else 0
-            annual_return = (1 + total_return) ** (252 / len(returns)) - 1 if len(returns) > 0 else 0
+            annual_return = (
+                (1 + total_return) ** (252 / len(returns)) - 1
+                if len(returns) > 0
+                else 0
+            )
             volatility = returns.std() * np.sqrt(252) if len(returns) > 0 else 0
             sharpe_ratio = annual_return / volatility if volatility != 0 else 0
 
             # Win rate
             winning_trades = returns[returns > 0]
             total_trades = returns[returns != 0]
-            win_rate = len(winning_trades) / len(total_trades) if len(total_trades) > 0 else 0
+            win_rate = (
+                len(winning_trades) / len(total_trades) if len(total_trades) > 0 else 0
+            )
 
             # Drawdown
             rolling_max = equity_curve.expanding().max()
@@ -337,7 +407,9 @@ class BaseOptimizer(ABC):
             # Additional metrics
             calmar_ratio = annual_return / abs(max_drawdown) if max_drawdown != 0 else 0
             sortino_ratio = (
-                annual_return / (returns[returns < 0].std() * np.sqrt(252)) if len(returns[returns < 0]) > 0 else 0
+                annual_return / (returns[returns < 0].std() * np.sqrt(252))
+                if len(returns[returns < 0]) > 0
+                else 0
             )
 
             # Alpha and beta (if market data available)
@@ -348,13 +420,19 @@ class BaseOptimizer(ABC):
                 if len(market_returns) > 0 and len(returns) > 0:
                     # Align returns
                     aligned_returns = returns.reindex(market_returns.index).dropna()
-                    aligned_market = market_returns.reindex(aligned_returns.index).dropna()
+                    aligned_market = market_returns.reindex(
+                        aligned_returns.index
+                    ).dropna()
 
                     if len(aligned_returns) > 10:
                         # Calculate beta
                         covariance = np.cov(aligned_returns, aligned_market)[0, 1]
                         market_variance = np.var(aligned_market)
-                        beta = covariance / market_variance if market_variance != 0 else 1.0
+                        beta = (
+                            covariance / market_variance
+                            if market_variance != 0
+                            else 1.0
+                        )
 
                         # Calculate alpha
                         alpha = aligned_returns.mean() - beta * aligned_market.mean()
@@ -408,10 +486,13 @@ class BaseOptimizer(ABC):
 
             # Update best result
             if self.best_result is None or (
-                result.metrics.get("sharpe_ratio", 0) > self.best_result.metrics.get("sharpe_ratio", 0)
+                result.metrics.get("sharpe_ratio", 0)
+                > self.best_result.metrics.get("sharpe_ratio", 0)
             ):
                 self.best_result = result
-                logger.info(f"New best result found: Sharpe={result.metrics.get('sharpe_ratio', 0):.3f}")
+                logger.info(
+                    f"New best result found: Sharpe={result.metrics.get('sharpe_ratio', 0):.3f}"
+                )
 
         except Exception as e:
             logger.error(f"Error logging result: {e}")
@@ -432,7 +513,9 @@ class BaseOptimizer(ABC):
         """
         return self.results
 
-    def get_top_results(self, n: int = 10, metric: str = "sharpe_ratio") -> List[OptimizationResult]:
+    def get_top_results(
+        self, n: int = 10, metric: str = "sharpe_ratio"
+    ) -> List[OptimizationResult]:
         """Get top N results by specified metric.
 
         Args:
@@ -446,7 +529,9 @@ class BaseOptimizer(ABC):
             return []
 
         # Sort by metric
-        sorted_results = sorted(self.results, key=lambda x: x.metrics.get(metric, 0), reverse=True)
+        sorted_results = sorted(
+            self.results, key=lambda x: x.metrics.get(metric, 0), reverse=True
+        )
 
         return sorted_results[:n]
 
@@ -472,7 +557,9 @@ class BaseOptimizer(ABC):
                         "strategy_type": self.strategy_type,
                         "timestamp": datetime.now().isoformat(),
                         "total_results": len(self.results),
-                        "best_sharpe": self.best_result.metrics.get("sharpe_ratio", 0) if self.best_result else 0,
+                        "best_sharpe": self.best_result.metrics.get("sharpe_ratio", 0)
+                        if self.best_result
+                        else 0,
                     },
                     "results": [],
                 }
@@ -536,7 +623,9 @@ class BaseOptimizer(ABC):
             **kwargs: Plotting parameters
         """
 
-    def log_metrics(self, metrics: Dict[str, float], iteration: Optional[int] = None) -> None:
+    def log_metrics(
+        self, metrics: Dict[str, float], iteration: Optional[int] = None
+    ) -> None:
         """Log metrics for current iteration.
 
         Args:
@@ -546,7 +635,11 @@ class BaseOptimizer(ABC):
         try:
             iteration = iteration or self.current_iteration
 
-            log_entry = {"iteration": iteration, "timestamp": datetime.now().isoformat(), "metrics": metrics}
+            log_entry = {
+                "iteration": iteration,
+                "timestamp": datetime.now().isoformat(),
+                "metrics": metrics,
+            }
 
             self.metrics_history.append(log_entry)
 
@@ -569,7 +662,9 @@ class BaseOptimizer(ABC):
             logger.error(f"Error logging metrics: {e}")
             return False
 
-    def save_checkpoint(self, params: Dict[str, Any], metrics: Dict[str, float]) -> None:
+    def save_checkpoint(
+        self, params: Dict[str, Any], metrics: Dict[str, float]
+    ) -> None:
         """Save optimization checkpoint.
 
         Args:
@@ -588,7 +683,10 @@ class BaseOptimizer(ABC):
                 "best_metric": self.best_metric,
             }
 
-            checkpoint_path = Path(self.config.checkpoint_dir) / f"checkpoint_{self.current_iteration}.json"
+            checkpoint_path = (
+                Path(self.config.checkpoint_dir)
+                / f"checkpoint_{self.current_iteration}.json"
+            )
 
             with open(checkpoint_path, "w") as f:
                 json.dump(checkpoint_data, f, indent=2)
@@ -608,7 +706,9 @@ class BaseOptimizer(ABC):
             Checkpoint data or None
         """
         try:
-            checkpoint_path = Path(self.config.checkpoint_dir) / f"checkpoint_{iteration}.json"
+            checkpoint_path = (
+                Path(self.config.checkpoint_dir) / f"checkpoint_{iteration}.json"
+            )
 
             if not checkpoint_path.exists():
                 logger.warning(f"Checkpoint not found: {checkpoint_path}")
@@ -653,22 +753,27 @@ class BaseOptimizer(ABC):
         # Simple cosine annealing
         if self.config.scheduler_type == "cosine":
             progress = min(self.current_iteration / self.config.max_iterations, 1.0)
-            lr = self.config.min_lr + 0.5 * (self.config.learning_rate - self.config.min_lr) * (
-                1 + np.cos(np.pi * progress)
-            )
+            lr = self.config.min_lr + 0.5 * (
+                self.config.learning_rate - self.config.min_lr
+            ) * (1 + np.cos(np.pi * progress))
             return lr
 
         # Step decay
         elif self.config.scheduler_type == "step":
             decay_factor = 0.1
             decay_steps = self.config.max_iterations // 3
-            lr = self.config.learning_rate * (decay_factor ** (self.current_iteration // decay_steps))
+            lr = self.config.learning_rate * (
+                decay_factor ** (self.current_iteration // decay_steps)
+            )
             return max(lr, self.config.min_lr)
 
         # Performance-based decay
         elif self.config.scheduler_type == "performance":
             if len(self.metrics_history) > 10:
-                recent_metrics = [m["metrics"].get("sharpe_ratio", 0) for m in self.metrics_history[-10:]]
+                recent_metrics = [
+                    m["metrics"].get("sharpe_ratio", 0)
+                    for m in self.metrics_history[-10:]
+                ]
                 if np.std(recent_metrics) < 0.01:  # Low improvement
                     return self.config.learning_rate * 0.5
             return self.config.learning_rate

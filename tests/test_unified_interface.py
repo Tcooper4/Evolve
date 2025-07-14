@@ -115,24 +115,36 @@ def test_prompt_to_strategy_mapping():
 
             # Process natural language to strategy mapping
             strategy_config = llm_processor.extract_strategy_from_prompt(prompt)
-            assert strategy_config is not None, f"Failed to extract strategy from prompt: {prompt}"
-            print(f"✅ Extracted strategy config: {strategy_config.get('strategy_type', 'Unknown')}")
+            assert (
+                strategy_config is not None
+            ), f"Failed to extract strategy from prompt: {prompt}"
+            print(
+                f"✅ Extracted strategy config: {strategy_config.get('strategy_type', 'Unknown')}"
+            )
 
             # Create strategy instance
             strategy = strategy_factory.create_strategy(strategy_config)
-            assert strategy is not None, f"Failed to create strategy from config: {strategy_config}"
+            assert (
+                strategy is not None
+            ), f"Failed to create strategy from config: {strategy_config}"
             print(f"✅ Created strategy: {type(strategy).__name__}")
 
             # Test model execution
             if hasattr(strategy, "generate_signals"):
                 signals = strategy.generate_signals()
-                assert signals is not None, f"Strategy {type(strategy).__name__} failed to generate signals"
-                print(f"✅ Generated signals: {len(signals) if hasattr(signals, '__len__') else 'N/A'}")
+                assert (
+                    signals is not None
+                ), f"Strategy {type(strategy).__name__} failed to generate signals"
+                print(
+                    f"✅ Generated signals: {len(signals) if hasattr(signals, '__len__') else 'N/A'}"
+                )
 
             # Test forecast integration
             if hasattr(forecast_engine, "forecast"):
                 forecast = forecast_engine.forecast("AAPL", strategy=strategy)
-                assert forecast is not None, f"Failed to generate forecast with strategy {type(strategy).__name__}"
+                assert (
+                    forecast is not None
+                ), f"Failed to generate forecast with strategy {type(strategy).__name__}"
                 print(f"✅ Generated forecast with strategy integration")
 
         print("\n🎉 All prompt-to-strategy mapping tests passed!")

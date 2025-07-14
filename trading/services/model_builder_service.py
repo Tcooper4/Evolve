@@ -27,7 +27,9 @@ class ModelBuilderService(BaseService):
     Handles model building requests and communicates results via Redis.
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0):
+    def __init__(
+        self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0
+    ):
         """Initialize the ModelBuilderService."""
         super().__init__("model_builder", redis_host, redis_port, redis_db)
 
@@ -60,7 +62,11 @@ class ModelBuilderService(BaseService):
                 return self._handle_delete_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {"type": "error", "error": f"Unknown message type: {message_type}", "original_message": data}
+                return {
+                    "type": "error",
+                    "error": f"Unknown message type: {message_type}",
+                    "original_message": data,
+                }
 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
@@ -154,12 +160,22 @@ class ModelBuilderService(BaseService):
             if success:
                 # Log to memory
                 self.memory.log_decision(
-                    agent_name="model_builder", decision_type="delete_model", details={"model_id": model_id}
+                    agent_name="model_builder",
+                    decision_type="delete_model",
+                    details={"model_id": model_id},
                 )
 
-                return {"type": "model_deleted", "model_id": model_id, "status": "success"}
+                return {
+                    "type": "model_deleted",
+                    "model_id": model_id,
+                    "status": "success",
+                }
             else:
-                return {"type": "error", "error": f"Failed to delete model {model_id}", "status": "failed"}
+                return {
+                    "type": "error",
+                    "error": f"Failed to delete model {model_id}",
+                    "status": "failed",
+                }
 
         except Exception as e:
             logger.error(f"Error deleting model: {e}")
@@ -173,7 +189,9 @@ class ModelBuilderService(BaseService):
 
             return {
                 "total_models": len(models),
-                "model_types": list(set(m.get("model_type", "unknown") for m in models)),
+                "model_types": list(
+                    set(m.get("model_type", "unknown") for m in models)
+                ),
                 "memory_entries": memory_stats.get("total_entries", 0),
                 "recent_decisions": memory_stats.get("recent_decisions", []),
             }

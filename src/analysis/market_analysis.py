@@ -55,19 +55,29 @@ class MarketAnalysis:
         self._setup_logging()
         self._initialize_indicators()
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _setup_logging(self):
         """Setup logging configuration"""
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _initialize_indicators(self):
         """Initialize technical indicators"""
@@ -106,7 +116,11 @@ class MarketAnalysis:
             },
         }
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def analyze_market(self, data: pd.DataFrame) -> Dict:
         """Perform comprehensive market analysis"""
@@ -123,7 +137,12 @@ class MarketAnalysis:
             # Generate signals
             signals = self._generate_signals(data, indicators, regime, conditions)
 
-            return {"indicators": indicators, "regime": regime, "conditions": conditions, "signals": signals}
+            return {
+                "indicators": indicators,
+                "regime": regime,
+                "conditions": conditions,
+                "signals": signals,
+            }
 
         except Exception as e:
             self.logger.error(f"Error in market analysis: {str(e)}")
@@ -144,13 +163,15 @@ class MarketAnalysis:
 
         return indicators
 
-    def _analyze_market_regime(self, data: pd.DataFrame, indicators: Dict) -> MarketRegime:
+    def _analyze_market_regime(
+        self, data: pd.DataFrame, indicators: Dict
+    ) -> MarketRegime:
         """Analyze current market regime"""
         # Calculate regime metrics
         trend_strength = self._calculate_trend_strength(data, indicators)
         volatility = self._calculate_volatility(data, indicators)
-        momentum = self._calculate_momentum(data, indicators)
-        volume_profile = self._calculate_volume_profile(data, indicators)
+        self._calculate_momentum(data, indicators)
+        self._calculate_volume_profile(data, indicators)
 
         # Determine regime
         if trend_strength > 0.7 and volatility < 0.3:
@@ -204,7 +225,9 @@ class MarketAnalysis:
 
         return regime
 
-    def _analyze_market_conditions(self, data: pd.DataFrame, indicators: Dict) -> List[MarketCondition]:
+    def _analyze_market_conditions(
+        self, data: pd.DataFrame, indicators: Dict
+    ) -> List[MarketCondition]:
         """Analyze current market conditions"""
         conditions = []
 
@@ -236,7 +259,11 @@ class MarketAnalysis:
         return conditions
 
     def _generate_signals(
-        self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime, conditions: List[MarketCondition]
+        self,
+        data: pd.DataFrame,
+        indicators: Dict,
+        regime: MarketRegime,
+        conditions: List[MarketCondition],
     ) -> Dict:
         """Generate trading signals based on analysis"""
         signals = {
@@ -244,7 +271,9 @@ class MarketAnalysis:
             "momentum": self._generate_momentum_signals(data, indicators, regime),
             "volatility": self._generate_volatility_signals(data, indicators, regime),
             "volume": self._generate_volume_signals(data, indicators, regime),
-            "support_resistance": self._generate_support_resistance_signals(data, indicators, regime),
+            "support_resistance": self._generate_support_resistance_signals(
+                data, indicators, regime
+            ),
         }
 
         # Combine signals
@@ -261,7 +290,9 @@ class MarketAnalysis:
         """Calculate Exponential Moving Average"""
         return data["close"].ewm(span=window, adjust=False).mean()
 
-    def _calculate_macd(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    def _calculate_macd(
+        self, data: pd.DataFrame
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Calculate MACD"""
         exp1 = data["close"].ewm(span=12, adjust=False).mean()
         exp2 = data["close"].ewm(span=26, adjust=False).mean()
@@ -309,7 +340,9 @@ class MarketAnalysis:
         tenkan_sen = (high.rolling(window=9).max() + low.rolling(window=9).min()) / 2
         kijun_sen = (high.rolling(window=26).max() + low.rolling(window=26).min()) / 2
         senkou_span_a = ((tenkan_sen + kijun_sen) / 2).shift(26)
-        senkou_span_b = ((high.rolling(window=52).max() + low.rolling(window=52).min()) / 2).shift(26)
+        senkou_span_b = (
+            (high.rolling(window=52).max() + low.rolling(window=52).min()) / 2
+        ).shift(26)
         chikou_span = data["close"].shift(-26)
 
         return {
@@ -363,16 +396,25 @@ class MarketAnalysis:
 
     def _calculate_roc(self, data: pd.DataFrame, window: int = 12) -> pd.Series:
         """Calculate Rate of Change"""
-        return ((data["close"] - data["close"].shift(window)) / data["close"].shift(window)) * 100
+        return (
+            (data["close"] - data["close"].shift(window)) / data["close"].shift(window)
+        ) * 100
 
-    def _calculate_bollinger_bands(self, data: pd.DataFrame, window: int = 20, num_std: float = 2) -> Dict:
+    def _calculate_bollinger_bands(
+        self, data: pd.DataFrame, window: int = 20, num_std: float = 2
+    ) -> Dict:
         """Calculate Bollinger Bands"""
         middle_band = data["close"].rolling(window=window).mean()
         std = data["close"].rolling(window=window).std()
         upper_band = middle_band + (std * num_std)
         lower_band = middle_band - (std * num_std)
 
-        return {"middle_band": middle_band, "upper_band": upper_band, "lower_band": lower_band, "std": std}
+        return {
+            "middle_band": middle_band,
+            "upper_band": upper_band,
+            "lower_band": lower_band,
+            "std": std,
+        }
 
     def _calculate_atr(self, data: pd.DataFrame, window: int = 14) -> pd.Series:
         """Calculate Average True Range"""
@@ -387,22 +429,35 @@ class MarketAnalysis:
         tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
         return tr.rolling(window=window).mean()
 
-    def _calculate_keltner_channels(self, data: pd.DataFrame, window: int = 20, num_std: float = 2) -> Dict:
+    def _calculate_keltner_channels(
+        self, data: pd.DataFrame, window: int = 20, num_std: float = 2
+    ) -> Dict:
         """Calculate Keltner Channels"""
         middle_band = data["close"].ewm(span=window).mean()
         atr = self._calculate_atr(data, window)
         upper_band = middle_band + (atr * num_std)
         lower_band = middle_band - (atr * num_std)
 
-        return {"middle_band": middle_band, "upper_band": upper_band, "lower_band": lower_band, "atr": atr}
+        return {
+            "middle_band": middle_band,
+            "upper_band": upper_band,
+            "lower_band": lower_band,
+            "atr": atr,
+        }
 
-    def _calculate_donchian_channels(self, data: pd.DataFrame, window: int = 20) -> Dict:
+    def _calculate_donchian_channels(
+        self, data: pd.DataFrame, window: int = 20
+    ) -> Dict:
         """Calculate Donchian Channels"""
         upper_band = data["high"].rolling(window=window).max()
         lower_band = data["low"].rolling(window=window).min()
         middle_band = (upper_band + lower_band) / 2
 
-        return {"upper_band": upper_band, "middle_band": middle_band, "lower_band": lower_band}
+        return {
+            "upper_band": upper_band,
+            "middle_band": middle_band,
+            "lower_band": lower_band,
+        }
 
     def _calculate_obv(self, data: pd.DataFrame) -> pd.Series:
         """Calculate On-Balance Volume"""
@@ -425,15 +480,22 @@ class MarketAnalysis:
 
     def _calculate_cmf(self, data: pd.DataFrame, window: int = 20) -> pd.Series:
         """Calculate Chaikin Money Flow"""
-        mfv = ((data["close"] - data["low"]) - (data["high"] - data["close"])) / (data["high"] - data["low"])
+        mfv = ((data["close"] - data["low"]) - (data["high"] - data["close"])) / (
+            data["high"] - data["low"]
+        )
         mfv = mfv.fillna(0)
         mfv *= data["volume"]
 
-        return mfv.rolling(window=window).sum() / data["volume"].rolling(window=window).sum()
+        return (
+            mfv.rolling(window=window).sum()
+            / data["volume"].rolling(window=window).sum()
+        )
 
     def _calculate_ad(self, data: pd.DataFrame) -> pd.Series:
         """Calculate Accumulation/Distribution Line"""
-        clv = ((data["close"] - data["low"]) - (data["high"] - data["close"])) / (data["high"] - data["low"])
+        clv = ((data["close"] - data["low"]) - (data["high"] - data["close"])) / (
+            data["high"] - data["low"]
+        )
         clv = clv.fillna(0)
         return (clv * data["volume"]).cumsum()
 
@@ -453,7 +515,9 @@ class MarketAnalysis:
 
         return {"pp": pp, "r1": r1, "s1": s1, "r2": r2, "s2": s2, "r3": r3, "s3": s3}
 
-    def _calculate_fibonacci_retracement(self, data: pd.DataFrame, window: int = 20) -> Dict:
+    def _calculate_fibonacci_retracement(
+        self, data: pd.DataFrame, window: int = 20
+    ) -> Dict:
         """Calculate Fibonacci Retracement Levels"""
         high = data["high"].rolling(window=window).max()
         low = data["low"].rolling(window=window).min()
@@ -477,10 +541,16 @@ class MarketAnalysis:
         low_channel = data["low"].rolling(window=window).min()
         middle_channel = (high_channel + low_channel) / 2
 
-        return {"high_channel": high_channel, "middle_channel": middle_channel, "low_channel": low_channel}
+        return {
+            "high_channel": high_channel,
+            "middle_channel": middle_channel,
+            "low_channel": low_channel,
+        }
 
     # Market condition analysis methods
-    def _analyze_trend_condition(self, data: pd.DataFrame, indicators: Dict) -> Optional[MarketCondition]:
+    def _analyze_trend_condition(
+        self, data: pd.DataFrame, indicators: Dict
+    ) -> Optional[MarketCondition]:
         """Analyze trend condition"""
         trend_indicators = indicators["trend"]
 
@@ -529,7 +599,9 @@ class MarketAnalysis:
 
         return None
 
-    def _analyze_momentum_condition(self, data: pd.DataFrame, indicators: Dict) -> Optional[MarketCondition]:
+    def _analyze_momentum_condition(
+        self, data: pd.DataFrame, indicators: Dict
+    ) -> Optional[MarketCondition]:
         """Analyze momentum condition"""
         momentum_indicators = indicators["momentum"]
 
@@ -546,7 +618,11 @@ class MarketAnalysis:
             return MarketCondition(
                 name="Overbought",
                 description="Market is overbought with high RSI, Stochastic, and CCI",
-                indicators={"rsi": rsi.iloc[-1], "stochastic": k.iloc[-1], "cci": cci.iloc[-1]},
+                indicators={
+                    "rsi": rsi.iloc[-1],
+                    "stochastic": k.iloc[-1],
+                    "cci": cci.iloc[-1],
+                },
                 signals={"momentum": "overbought"},
                 strength=0.8,
             )
@@ -554,14 +630,20 @@ class MarketAnalysis:
             return MarketCondition(
                 name="Oversold",
                 description="Market is oversold with low RSI, Stochastic, and CCI",
-                indicators={"rsi": rsi.iloc[-1], "stochastic": k.iloc[-1], "cci": cci.iloc[-1]},
+                indicators={
+                    "rsi": rsi.iloc[-1],
+                    "stochastic": k.iloc[-1],
+                    "cci": cci.iloc[-1],
+                },
                 signals={"momentum": "oversold"},
                 strength=0.8,
             )
 
         return None
 
-    def _analyze_volatility_condition(self, data: pd.DataFrame, indicators: Dict) -> Optional[MarketCondition]:
+    def _analyze_volatility_condition(
+        self, data: pd.DataFrame, indicators: Dict
+    ) -> Optional[MarketCondition]:
         """Analyze volatility condition"""
         volatility_indicators = indicators["volatility"]
 
@@ -582,7 +664,11 @@ class MarketAnalysis:
             return MarketCondition(
                 name="High Volatility",
                 description="Market is experiencing high volatility",
-                indicators={"bb_width": bb_width.iloc[-1], "kc_width": kc_width.iloc[-1], "atr": atr.iloc[-1]},
+                indicators={
+                    "bb_width": bb_width.iloc[-1],
+                    "kc_width": kc_width.iloc[-1],
+                    "atr": atr.iloc[-1],
+                },
                 signals={"volatility": "high"},
                 strength=0.7,
             )
@@ -590,14 +676,20 @@ class MarketAnalysis:
             return MarketCondition(
                 name="Low Volatility",
                 description="Market is experiencing low volatility",
-                indicators={"bb_width": bb_width.iloc[-1], "kc_width": kc_width.iloc[-1], "atr": atr.iloc[-1]},
+                indicators={
+                    "bb_width": bb_width.iloc[-1],
+                    "kc_width": kc_width.iloc[-1],
+                    "atr": atr.iloc[-1],
+                },
                 signals={"volatility": "low"},
                 strength=0.7,
             )
 
         return None
 
-    def _analyze_volume_condition(self, data: pd.DataFrame, indicators: Dict) -> Optional[MarketCondition]:
+    def _analyze_volume_condition(
+        self, data: pd.DataFrame, indicators: Dict
+    ) -> Optional[MarketCondition]:
         """Analyze volume condition"""
         volume_indicators = indicators["volume"]
 
@@ -614,26 +706,44 @@ class MarketAnalysis:
         vpt_change = vpt.pct_change()
 
         # Determine volume condition
-        if obv_change.iloc[-1] > 0.1 and vpt_change.iloc[-1] > 0.1 and cmf.iloc[-1] > 0.2:
+        if (
+            obv_change.iloc[-1] > 0.1
+            and vpt_change.iloc[-1] > 0.1
+            and cmf.iloc[-1] > 0.2
+        ):
             return MarketCondition(
                 name="High Volume",
                 description="Market is experiencing high volume with positive flow",
-                indicators={"obv_change": obv_change.iloc[-1], "vpt_change": vpt_change.iloc[-1], "cmf": cmf.iloc[-1]},
+                indicators={
+                    "obv_change": obv_change.iloc[-1],
+                    "vpt_change": vpt_change.iloc[-1],
+                    "cmf": cmf.iloc[-1],
+                },
                 signals={"volume": "high", "flow": "positive"},
                 strength=0.7,
             )
-        elif obv_change.iloc[-1] < -0.1 and vpt_change.iloc[-1] < -0.1 and cmf.iloc[-1] < -0.2:
+        elif (
+            obv_change.iloc[-1] < -0.1
+            and vpt_change.iloc[-1] < -0.1
+            and cmf.iloc[-1] < -0.2
+        ):
             return MarketCondition(
                 name="Low Volume",
                 description="Market is experiencing low volume with negative flow",
-                indicators={"obv_change": obv_change.iloc[-1], "vpt_change": vpt_change.iloc[-1], "cmf": cmf.iloc[-1]},
+                indicators={
+                    "obv_change": obv_change.iloc[-1],
+                    "vpt_change": vpt_change.iloc[-1],
+                    "cmf": cmf.iloc[-1],
+                },
                 signals={"volume": "low", "flow": "negative"},
                 strength=0.7,
             )
 
         return None
 
-    def _analyze_support_resistance_condition(self, data: pd.DataFrame, indicators: Dict) -> Optional[MarketCondition]:
+    def _analyze_support_resistance_condition(
+        self, data: pd.DataFrame, indicators: Dict
+    ) -> Optional[MarketCondition]:
         """Analyze support/resistance condition"""
         sr_indicators = indicators["support_resistance"]
 
@@ -669,7 +779,9 @@ class MarketAnalysis:
         return None
 
     # Signal generation methods
-    def _generate_trend_signals(self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime) -> Dict:
+    def _generate_trend_signals(
+        self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime
+    ) -> Dict:
         """Generate trend signals"""
         trend_indicators = indicators["trend"]
 
@@ -685,13 +797,23 @@ class MarketAnalysis:
         signals = {
             "macd": "buy" if macd.iloc[-1] > signal.iloc[-1] else "sell",
             "adx": "strong" if adx.iloc[-1] > 25 else "weak",
-            "ichimoku": "buy" if data["close"].iloc[-1] > ichimoku["senkou_span_a"].iloc[-1] else "sell",
+            "ichimoku": "buy"
+            if data["close"].iloc[-1] > ichimoku["senkou_span_a"].iloc[-1]
+            else "sell",
         }
 
         # Combine signals
-        if signals["macd"] == "buy" and signals["ichimoku"] == "buy" and signals["adx"] == "strong":
+        if (
+            signals["macd"] == "buy"
+            and signals["ichimoku"] == "buy"
+            and signals["adx"] == "strong"
+        ):
             return {"signal": "strong_buy", "strength": 0.8}
-        elif signals["macd"] == "sell" and signals["ichimoku"] == "sell" and signals["adx"] == "strong":
+        elif (
+            signals["macd"] == "sell"
+            and signals["ichimoku"] == "sell"
+            and signals["adx"] == "strong"
+        ):
             return {"signal": "strong_sell", "strength": 0.8}
         elif signals["macd"] == "buy" and signals["ichimoku"] == "buy":
             return {"signal": "buy", "strength": 0.6}
@@ -700,7 +822,9 @@ class MarketAnalysis:
 
         return {"signal": "neutral", "strength": 0.4}
 
-    def _generate_momentum_signals(self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime) -> Dict:
+    def _generate_momentum_signals(
+        self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime
+    ) -> Dict:
         """Generate momentum signals"""
         momentum_indicators = indicators["momentum"]
 
@@ -714,16 +838,34 @@ class MarketAnalysis:
 
         # Generate signals
         signals = {
-            "rsi": "oversold" if rsi.iloc[-1] < 30 else "overbought" if rsi.iloc[-1] > 70 else "neutral",
-            "stochastic": "oversold" if k.iloc[-1] < 20 else "overbought" if k.iloc[-1] > 80 else "neutral",
-            "cci": "oversold" if cci.iloc[-1] < -100 else "overbought" if cci.iloc[-1] > 100 else "neutral",
+            "rsi": "oversold"
+            if rsi.iloc[-1] < 30
+            else "overbought"
+            if rsi.iloc[-1] > 70
+            else "neutral",
+            "stochastic": "oversold"
+            if k.iloc[-1] < 20
+            else "overbought"
+            if k.iloc[-1] > 80
+            else "neutral",
+            "cci": "oversold"
+            if cci.iloc[-1] < -100
+            else "overbought"
+            if cci.iloc[-1] > 100
+            else "neutral",
         }
 
         # Combine signals
-        if signals["rsi"] == "oversold" and signals["stochastic"] == "oversold" and signals["cci"] == "oversold":
+        if (
+            signals["rsi"] == "oversold"
+            and signals["stochastic"] == "oversold"
+            and signals["cci"] == "oversold"
+        ):
             return {"signal": "strong_buy", "strength": 0.8}
         elif (
-            signals["rsi"] == "overbought" and signals["stochastic"] == "overbought" and signals["cci"] == "overbought"
+            signals["rsi"] == "overbought"
+            and signals["stochastic"] == "overbought"
+            and signals["cci"] == "overbought"
         ):
             return {"signal": "strong_sell", "strength": 0.8}
         elif signals["rsi"] == "oversold" and signals["stochastic"] == "oversold":
@@ -733,7 +875,9 @@ class MarketAnalysis:
 
         return {"signal": "neutral", "strength": 0.4}
 
-    def _generate_volatility_signals(self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime) -> Dict:
+    def _generate_volatility_signals(
+        self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime
+    ) -> Dict:
         """Generate volatility signals"""
         volatility_indicators = indicators["volatility"]
 
@@ -773,7 +917,9 @@ class MarketAnalysis:
 
         return {"signal": "neutral", "strength": 0.4}
 
-    def _generate_volume_signals(self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime) -> Dict:
+    def _generate_volume_signals(
+        self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime
+    ) -> Dict:
         """Generate volume signals"""
         volume_indicators = indicators["volume"]
 
@@ -793,9 +939,17 @@ class MarketAnalysis:
         }
 
         # Combine signals
-        if signals["obv"] == "positive" and signals["vpt"] == "positive" and signals["cmf"] == "positive":
+        if (
+            signals["obv"] == "positive"
+            and signals["vpt"] == "positive"
+            and signals["cmf"] == "positive"
+        ):
             return {"signal": "strong_buy", "strength": 0.8}
-        elif signals["obv"] == "negative" and signals["vpt"] == "negative" and signals["cmf"] == "negative":
+        elif (
+            signals["obv"] == "negative"
+            and signals["vpt"] == "negative"
+            and signals["cmf"] == "negative"
+        ):
             return {"signal": "strong_sell", "strength": 0.8}
         elif signals["obv"] == "positive" and signals["vpt"] == "positive":
             return {"signal": "buy", "strength": 0.6}
@@ -804,7 +958,9 @@ class MarketAnalysis:
 
         return {"signal": "neutral", "strength": 0.4}
 
-    def _generate_support_resistance_signals(self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime) -> Dict:
+    def _generate_support_resistance_signals(
+        self, data: pd.DataFrame, indicators: Dict, regime: MarketRegime
+    ) -> Dict:
         """Generate support/resistance signals"""
         sr_indicators = indicators["support_resistance"]
 
@@ -821,13 +977,23 @@ class MarketAnalysis:
         signals = {
             "pp": "support" if current_price < pp["pp"].iloc[-1] else "resistance",
             "fib": "support" if current_price < fib["0.5"].iloc[-1] else "resistance",
-            "pc": "support" if current_price < pc["middle_channel"].iloc[-1] else "resistance",
+            "pc": "support"
+            if current_price < pc["middle_channel"].iloc[-1]
+            else "resistance",
         }
 
         # Combine signals
-        if signals["pp"] == "support" and signals["fib"] == "support" and signals["pc"] == "support":
+        if (
+            signals["pp"] == "support"
+            and signals["fib"] == "support"
+            and signals["pc"] == "support"
+        ):
             return {"signal": "strong_buy", "strength": 0.8}
-        elif signals["pp"] == "resistance" and signals["fib"] == "resistance" and signals["pc"] == "resistance":
+        elif (
+            signals["pp"] == "resistance"
+            and signals["fib"] == "resistance"
+            and signals["pc"] == "resistance"
+        ):
             return {"signal": "strong_sell", "strength": 0.8}
         elif signals["pp"] == "support" and signals["fib"] == "support":
             return {"signal": "buy", "strength": 0.6}
@@ -836,7 +1002,9 @@ class MarketAnalysis:
 
         return {"signal": "neutral", "strength": 0.4}
 
-    def _combine_signals(self, signals: Dict, regime: MarketRegime, conditions: List[MarketCondition]) -> Dict:
+    def _combine_signals(
+        self, signals: Dict, regime: MarketRegime, conditions: List[MarketCondition]
+    ) -> Dict:
         """Combine all signals into a final trading signal"""
         # Get individual signals
         trend_signal = signals["trend"]
@@ -857,12 +1025,24 @@ class MarketAnalysis:
         # Count buy and sell signals
         buy_signals = sum(
             1
-            for signal in [trend_signal, momentum_signal, volatility_signal, volume_signal, sr_signal]
+            for signal in [
+                trend_signal,
+                momentum_signal,
+                volatility_signal,
+                volume_signal,
+                sr_signal,
+            ]
             if signal["signal"] in ["buy", "strong_buy"]
         )
         sell_signals = sum(
             1
-            for signal in [trend_signal, momentum_signal, volatility_signal, volume_signal, sr_signal]
+            for signal in [
+                trend_signal,
+                momentum_signal,
+                volatility_signal,
+                volume_signal,
+                sr_signal,
+            ]
             if signal["signal"] in ["sell", "strong_sell"]
         )
 
@@ -873,7 +1053,11 @@ class MarketAnalysis:
         if buy_signals >= 4 and avg_strength >= 0.7:
             return {"signal": "strong_buy", "strength": avg_strength, "confidence": 0.9}
         elif sell_signals >= 4 and avg_strength >= 0.7:
-            return {"signal": "strong_sell", "strength": avg_strength, "confidence": 0.9}
+            return {
+                "signal": "strong_sell",
+                "strength": avg_strength,
+                "confidence": 0.9,
+            }
         elif buy_signals >= 3 and avg_strength >= 0.6:
             return {"signal": "buy", "strength": avg_strength, "confidence": 0.7}
         elif sell_signals >= 3 and avg_strength >= 0.6:
@@ -897,4 +1081,10 @@ def analyze_market_conditions(data: pd.DataFrame) -> Dict[str, Any]:
         return analyzer.analyze_market_conditions(data)
     except Exception as e:
         logger.error(f"Error analyzing market conditions: {str(e)}")
-        return {"error": str(e), "indicators": {}, "regime": None, "conditions": [], "signals": {}}
+        return {
+            "error": str(e),
+            "indicators": {},
+            "regime": None,
+            "conditions": [],
+            "signals": {},
+        }

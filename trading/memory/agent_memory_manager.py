@@ -121,7 +121,9 @@ class ThreadSafeConnectionPool:
                         self._connection_count += 1
                     else:
                         # Wait for a connection to become available
-                        connection = self.connections.get(timeout=self.connection_timeout)
+                        connection = self.connections.get(
+                            timeout=self.connection_timeout
+                        )
 
             yield connection
 
@@ -276,7 +278,9 @@ class AgentMemoryManager:
         else:
             self._initialize_storage(redis_host, redis_port, redis_db, max_connections)
 
-        logger.info(f"Agent Memory Manager initialized with backend: {self.memory_backend}")
+        logger.info(
+            f"Agent Memory Manager initialized with backend: {self.memory_backend}"
+        )
 
     def _get_file_lock(self, file_path: str) -> threading.RLock:
         """Get or create a lock for a specific file."""
@@ -285,11 +289,12 @@ class AgentMemoryManager:
                 self._file_locks[file_path] = threading.RLock()
             return self._file_locks[file_path]
 
-    def _initialize_storage(self, redis_host: str, redis_port: int, redis_db: int, max_connections: int):
+    def _initialize_storage(
+        self, redis_host: str, redis_port: int, redis_db: int, max_connections: int
+    ):
         """Initialize storage backend."""
         try:
             import os
-
 
             # Get Redis password from environment
             redis_password = os.getenv("REDIS_PASSWORD")
@@ -476,7 +481,9 @@ class AgentMemoryManager:
             self._operation_counter.increment()
 
             # Check cache first
-            cache_key = f"model:{model_memory.model_name}:{model_memory.timestamp.isoformat()}"
+            cache_key = (
+                f"model:{model_memory.model_name}:{model_memory.timestamp.isoformat()}"
+            )
             if self.memory_cache.get(cache_key):
                 return {
                     "success": True,
@@ -540,7 +547,11 @@ class AgentMemoryManager:
     def _store_in_local(self, data_type: str, data: Any) -> bool:
         """Store data in local files - thread-safe."""
         try:
-            file_path = self.local_storage_path / f"{data_type}s" / f"{data.timestamp.strftime('%Y%m%d')}.json"
+            file_path = (
+                self.local_storage_path
+                / f"{data_type}s"
+                / f"{data.timestamp.strftime('%Y%m%d')}.json"
+            )
             file_lock = self._get_file_lock(str(file_path))
 
             with file_lock:
@@ -590,7 +601,9 @@ class AgentMemoryManager:
             logger.error(f"Pinecone store error: {e}")
             return False
 
-    def get_agent_interactions(self, agent_type: str = None, limit: int = 100, since: datetime = None) -> dict:
+    def get_agent_interactions(
+        self, agent_type: str = None, limit: int = 100, since: datetime = None
+    ) -> dict:
         """Get agent interactions - thread-safe."""
         try:
             self._operation_counter.increment()
@@ -612,13 +625,20 @@ class AgentMemoryManager:
             # Cache the result
             self.memory_cache.set(cache_key, data)
 
-            return {"success": True, "data": data, "count": len(data), "source": self.memory_backend}
+            return {
+                "success": True,
+                "data": data,
+                "count": len(data),
+                "source": self.memory_backend,
+            }
         except Exception as e:
             self._error_counter.increment()
             logger.error(f"Failed to get agent interactions: {e}")
             return {"success": False, "error": str(e), "data": []}
 
-    def get_strategy_memory(self, strategy_name: str = None, limit: int = 100, since: datetime = None) -> dict:
+    def get_strategy_memory(
+        self, strategy_name: str = None, limit: int = 100, since: datetime = None
+    ) -> dict:
         """Get strategy memory - thread-safe."""
         try:
             self._operation_counter.increment()
@@ -640,19 +660,28 @@ class AgentMemoryManager:
             # Cache the result
             self.memory_cache.set(cache_key, data)
 
-            return {"success": True, "data": data, "count": len(data), "source": self.memory_backend}
+            return {
+                "success": True,
+                "data": data,
+                "count": len(data),
+                "source": self.memory_backend,
+            }
         except Exception as e:
             self._error_counter.increment()
             logger.error(f"Failed to get strategy memory: {e}")
             return {"success": False, "error": str(e), "data": []}
 
-    def get_model_memory(self, model_name: str = None, limit: int = 100, since: datetime = None) -> dict:
+    def get_model_memory(
+        self, model_name: str = None, limit: int = 100, since: datetime = None
+    ) -> dict:
         """Get model memory - thread-safe."""
         try:
             self._operation_counter.increment()
 
             # Check cache first
-            cache_key = f"models:{model_name}:{limit}:{since.isoformat() if since else 'all'}"
+            cache_key = (
+                f"models:{model_name}:{limit}:{since.isoformat() if since else 'all'}"
+            )
             cached_result = self.memory_cache.get(cache_key)
             if cached_result:
                 return {"success": True, "data": cached_result, "source": "cache"}
@@ -668,14 +697,23 @@ class AgentMemoryManager:
             # Cache the result
             self.memory_cache.set(cache_key, data)
 
-            return {"success": True, "data": data, "count": len(data), "source": self.memory_backend}
+            return {
+                "success": True,
+                "data": data,
+                "count": len(data),
+                "source": self.memory_backend,
+            }
         except Exception as e:
             self._error_counter.increment()
             logger.error(f"Failed to get model memory: {e}")
             return {"success": False, "error": str(e), "data": []}
 
     def _get_from_redis(
-        self, data_type: str, filter_value: str = None, limit: int = 100, since: datetime = None
+        self,
+        data_type: str,
+        filter_value: str = None,
+        limit: int = 100,
+        since: datetime = None,
     ) -> List[Any]:
         """Get data from Redis - thread-safe."""
         try:
@@ -710,7 +748,11 @@ class AgentMemoryManager:
             return []
 
     def _get_from_local(
-        self, data_type: str, filter_value: str = None, limit: int = 100, since: datetime = None
+        self,
+        data_type: str,
+        filter_value: str = None,
+        limit: int = 100,
+        since: datetime = None,
     ) -> List[Any]:
         """Get data from local files - thread-safe."""
         try:
@@ -739,14 +781,26 @@ class AgentMemoryManager:
 
                             # Apply filters
                             if filter_value:
-                                if data_type == "interaction" and item.get("agent_type") != filter_value:
+                                if (
+                                    data_type == "interaction"
+                                    and item.get("agent_type") != filter_value
+                                ):
                                     continue
-                                elif data_type == "strategy" and item.get("strategy_name") != filter_value:
+                                elif (
+                                    data_type == "strategy"
+                                    and item.get("strategy_name") != filter_value
+                                ):
                                     continue
-                                elif data_type == "model" and item.get("model_name") != filter_value:
+                                elif (
+                                    data_type == "model"
+                                    and item.get("model_name") != filter_value
+                                ):
                                     continue
 
-                            if since and datetime.fromisoformat(item["timestamp"]) < since:
+                            if (
+                                since
+                                and datetime.fromisoformat(item["timestamp"]) < since
+                            ):
                                 continue
 
                             data.append(item)
@@ -760,7 +814,11 @@ class AgentMemoryManager:
             return []
 
     def _get_from_memory(
-        self, data_type: str, filter_value: str = None, limit: int = 100, since: datetime = None
+        self,
+        data_type: str,
+        filter_value: str = None,
+        limit: int = 100,
+        since: datetime = None,
     ) -> List[Any]:
         """Get data from memory - thread-safe."""
         try:
@@ -775,11 +833,20 @@ class AgentMemoryManager:
 
                     # Apply filters
                     if filter_value:
-                        if data_type == "interaction" and item.get("agent_type") != filter_value:
+                        if (
+                            data_type == "interaction"
+                            and item.get("agent_type") != filter_value
+                        ):
                             continue
-                        elif data_type == "strategy" and item.get("strategy_name") != filter_value:
+                        elif (
+                            data_type == "strategy"
+                            and item.get("strategy_name") != filter_value
+                        ):
                             continue
-                        elif data_type == "model" and item.get("model_name") != filter_value:
+                        elif (
+                            data_type == "model"
+                            and item.get("model_name") != filter_value
+                        ):
                             continue
 
                     if since and datetime.fromisoformat(item["timestamp"]) < since:
@@ -793,24 +860,39 @@ class AgentMemoryManager:
             return []
 
     def _get_from_pinecone(
-        self, data_type: str, filter_value: str = None, limit: int = 100, since: datetime = None
+        self,
+        data_type: str,
+        filter_value: str = None,
+        limit: int = 100,
+        since: datetime = None,
     ) -> dict:
         """Get data from Pinecone - thread-safe."""
         try:
             with self._lock:
                 # Query Pinecone (simplified)
                 query_vector = np.random.rand(512).tolist()
-                results = self.pinecone_index.query(vector=query_vector, top_k=limit, include_metadata=True)
+                results = self.pinecone_index.query(
+                    vector=query_vector, top_k=limit, include_metadata=True
+                )
 
                 data = []
                 for match in results.matches:
                     metadata = match.metadata
                     if filter_value:
-                        if data_type == "interaction" and metadata.get("agent_type") != filter_value:
+                        if (
+                            data_type == "interaction"
+                            and metadata.get("agent_type") != filter_value
+                        ):
                             continue
-                        elif data_type == "strategy" and metadata.get("strategy_name") != filter_value:
+                        elif (
+                            data_type == "strategy"
+                            and metadata.get("strategy_name") != filter_value
+                        ):
                             continue
-                        elif data_type == "model" and metadata.get("model_name") != filter_value:
+                        elif (
+                            data_type == "model"
+                            and metadata.get("model_name") != filter_value
+                        ):
                             continue
 
                     if since and datetime.fromisoformat(metadata["timestamp"]) < since:
@@ -844,7 +926,9 @@ class AgentMemoryManager:
                     "timestamp": datetime.now().isoformat(),
                 }
 
-            recent_memory = recent_memory_result.get("data", [])  # Use 'data' from get_strategy_memory
+            recent_memory = recent_memory_result.get(
+                "data", []
+            )  # Use 'data' from get_strategy_memory
             if not recent_memory:
                 return {
                     "success": True,
@@ -855,26 +939,37 @@ class AgentMemoryManager:
                 }
 
             # Calculate success rate in last 20 executions
-            recent_successes = sum(1 for record in recent_memory if record.get("success"))
+            recent_successes = sum(
+                1 for record in recent_memory if record.get("success")
+            )
             success_rate = recent_successes / len(recent_memory)
 
             # Calculate average confidence
-            avg_confidence = np.mean([record.get("confidence", 0) for record in recent_memory])
+            avg_confidence = np.mean(
+                [record.get("confidence", 0) for record in recent_memory]
+            )
 
             # Calculate performance trend
             if len(recent_memory) >= 2:
                 recent_performance = [
-                    record.get("performance", {}).get("sharpe_ratio", 0) for record in recent_memory[-10:]
+                    record.get("performance", {}).get("sharpe_ratio", 0)
+                    for record in recent_memory[-10:]
                 ]
                 if len(recent_performance) >= 2:
-                    performance_trend = np.mean(recent_performance[-5:]) - np.mean(recent_performance[:5])
+                    performance_trend = np.mean(recent_performance[-5:]) - np.mean(
+                        recent_performance[:5]
+                    )
                 else:
                     performance_trend = 0.0
             else:
                 performance_trend = 0.0
 
             # Calculate confidence boost
-            boost = success_rate * 0.4 + avg_confidence * 0.3 + max(0, performance_trend) * 0.3
+            boost = (
+                success_rate * 0.4
+                + avg_confidence * 0.3
+                + max(0, performance_trend) * 0.3
+            )
             confidence_boost = min(1.0, max(0.0, boost))
 
             return {
@@ -919,7 +1014,9 @@ class AgentMemoryManager:
                     "timestamp": datetime.now().isoformat(),
                 }
 
-            recent_memory = recent_memory_result.get("data", [])  # Use 'data' from get_model_memory
+            recent_memory = recent_memory_result.get(
+                "data", []
+            )  # Use 'data' from get_model_memory
             if not recent_memory:
                 return {
                     "success": True,
@@ -930,24 +1027,34 @@ class AgentMemoryManager:
                 }
 
             # Calculate success rate in last 20 executions
-            recent_successes = sum(1 for record in recent_memory if record.get("success"))
+            recent_successes = sum(
+                1 for record in recent_memory if record.get("success")
+            )
             success_rate = recent_successes / len(recent_memory)
 
             # Calculate average confidence
-            avg_confidence = np.mean([record.get("confidence", 0) for record in recent_memory])
+            avg_confidence = np.mean(
+                [record.get("confidence", 0) for record in recent_memory]
+            )
 
             # Calculate data quality trend
             if len(recent_memory) >= 2:
-                recent_quality = [record.get("data_quality", 0) for record in recent_memory[-10:]]
+                recent_quality = [
+                    record.get("data_quality", 0) for record in recent_memory[-10:]
+                ]
                 if len(recent_quality) >= 2:
-                    quality_trend = np.mean(recent_quality[-5:]) - np.mean(recent_quality[:5])
+                    quality_trend = np.mean(recent_quality[-5:]) - np.mean(
+                        recent_quality[:5]
+                    )
                 else:
                     quality_trend = 0.0
             else:
                 quality_trend = 0.0
 
             # Calculate confidence boost
-            boost = success_rate * 0.4 + avg_confidence * 0.3 + max(0, quality_trend) * 0.3
+            boost = (
+                success_rate * 0.4 + avg_confidence * 0.3 + max(0, quality_trend) * 0.3
+            )
             confidence_boost = min(1.0, max(0.0, boost))
 
             return {
@@ -992,7 +1099,9 @@ class AgentMemoryManager:
                     "timestamp": datetime.now().isoformat(),
                 }
 
-            memory = memory_result.get("data", [])  # Use 'data' from get_strategy_memory
+            memory = memory_result.get(
+                "data", []
+            )  # Use 'data' from get_strategy_memory
             if len(memory) < 20:
                 return {
                     "success": True,
@@ -1008,11 +1117,25 @@ class AgentMemoryManager:
             recent_performance = memory[-20:]
             older_performance = memory[-50:-20] if len(memory) >= 50 else memory[:-20]
 
-            recent_sharpe = np.mean([r.get("performance", {}).get("sharpe_ratio", 0) for r in recent_performance])
-            older_sharpe = np.mean([r.get("performance", {}).get("sharpe_ratio", 0) for r in older_performance])
+            recent_sharpe = np.mean(
+                [
+                    r.get("performance", {}).get("sharpe_ratio", 0)
+                    for r in recent_performance
+                ]
+            )
+            older_sharpe = np.mean(
+                [
+                    r.get("performance", {}).get("sharpe_ratio", 0)
+                    for r in older_performance
+                ]
+            )
 
-            recent_success_rate = sum(1 for r in recent_performance if r.get("success")) / len(recent_performance)
-            older_success_rate = sum(1 for r in older_performance if r.get("success")) / len(older_performance)
+            recent_success_rate = sum(
+                1 for r in recent_performance if r.get("success")
+            ) / len(recent_performance)
+            older_success_rate = sum(
+                1 for r in older_performance if r.get("success")
+            ) / len(older_performance)
 
             # Calculate decay
             sharpe_decay = (older_sharpe - recent_sharpe) / max(abs(older_sharpe), 0.1)
@@ -1022,7 +1145,8 @@ class AgentMemoryManager:
             should_retire = (
                 sharpe_decay > 0.3
                 or success_decay > 0.2  # 30% Sharpe decay
-                or recent_success_rate < 0.3  # 20% success rate decay  # Less than 30% success rate
+                or recent_success_rate
+                < 0.3  # 20% success rate decay  # Less than 30% success rate
             )
 
             confidence = min(1.0, (sharpe_decay + success_decay) / 2)
@@ -1059,7 +1183,10 @@ class AgentMemoryManager:
                 "backend": self.memory_backend,
                 "operations_total": self._operation_counter.get(),
                 "errors_total": self._error_counter.get(),
-                "error_rate": (self._error_counter.get() / max(1, self._operation_counter.get())) * 100,
+                "error_rate": (
+                    self._error_counter.get() / max(1, self._operation_counter.get())
+                )
+                * 100,
                 "cache_stats": self.memory_cache.get_stats(),
                 "timestamp": datetime.now().isoformat(),
             }
@@ -1203,7 +1330,9 @@ class AgentMemoryManager:
                     with self.redis_pool.get_connection() as conn:
                         redis_snapshots = conn.keys("agent_memory:snapshot:*")
                         for key in redis_snapshots:
-                            snapshot_id = key.decode().split(":")[-1]  # Decode bytes if needed
+                            snapshot_id = key.decode().split(":")[
+                                -1
+                            ]  # Decode bytes if needed
                             snapshots.append(
                                 {
                                     "snapshot_id": snapshot_id,
@@ -1237,7 +1366,9 @@ class AgentMemoryManager:
             snapshot_data = None
 
             # Check local storage first
-            snapshot_path = self.local_storage_path / "snapshots" / f"{snapshot_id}.json"
+            snapshot_path = (
+                self.local_storage_path / "snapshots" / f"{snapshot_id}.json"
+            )
             if snapshot_path.exists():
                 with open(snapshot_path, "r") as f:
                     snapshot_data = json.load(f)

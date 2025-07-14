@@ -26,7 +26,6 @@ sys.path.insert(0, str(project_root))
 # Configure logging
 import logging
 
-
 # Import trading components
 
 # Import shared utilities
@@ -56,7 +55,9 @@ def get_model_summary(model):
         configs = load_model_configs()
         return {
             "success": True,
-            "result": configs.get(model, {}).get("description", "No description available"),
+            "result": configs.get(model, {}).get(
+                "description", "No description available"
+            ),
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
@@ -86,8 +87,12 @@ def analyze_market_context(ticker: str, data: pd.DataFrame) -> Dict:
 
         # Calculate basic metrics
         latest_price = data["close"].iloc[-1] if "close" in data.columns else None
-        price_change = data["close"].pct_change().iloc[-1] if "close" in data.columns else None
-        volatility = data["close"].pct_change().std() if "close" in data.columns else None
+        price_change = (
+            data["close"].pct_change().iloc[-1] if "close" in data.columns else None
+        )
+        volatility = (
+            data["close"].pct_change().std() if "close" in data.columns else None
+        )
 
         return {
             "status": "success",
@@ -112,7 +117,10 @@ def display_market_analysis(analysis: Dict):
 
         with col1:
             st.metric(
-                "Latest Price", f"${analysis.get('latest_price', 0):.2f}" if analysis.get("latest_price") else "N/A"
+                "Latest Price",
+                f"${analysis.get('latest_price', 0):.2f}"
+                if analysis.get("latest_price")
+                else "N/A",
             )
 
         with col2:
@@ -121,7 +129,11 @@ def display_market_analysis(analysis: Dict):
                 st.metric(
                     "Price Change",
                     f"{price_change:.2%}",
-                    delta="↗️" if price_change > 0 else "↘️" if price_change < 0 else "→",
+                    delta="↗️"
+                    if price_change > 0
+                    else "↘️"
+                    if price_change < 0
+                    else "→",
                 )
             else:
                 st.metric("Price Change", "N/A")
@@ -156,9 +168,13 @@ def generate_market_commentary(analysis: Dict, forecast_data: pd.DataFrame) -> s
 
         if latest_price and price_change is not None:
             if price_change > 0.02:
-                commentary += f"📈 Strong positive momentum with {price_change:.1%} gain. "
+                commentary += (
+                    f"📈 Strong positive momentum with {price_change:.1%} gain. "
+                )
             elif price_change > 0:
-                commentary += f"📈 Moderate positive movement with {price_change:.1%} gain. "
+                commentary += (
+                    f"📈 Moderate positive movement with {price_change:.1%} gain. "
+                )
             elif price_change < -0.02:
                 commentary += f"📉 Significant decline with {price_change:.1%} loss. "
             elif price_change < 0:
@@ -190,7 +206,9 @@ def generate_market_commentary(analysis: Dict, forecast_data: pd.DataFrame) -> s
 # Add input validation function
 
 
-def validate_forecast_inputs(symbol: str, horizon: int, model_type: str, strategy_type: str) -> Tuple[bool, str]:
+def validate_forecast_inputs(
+    symbol: str, horizon: int, model_type: str, strategy_type: str
+) -> Tuple[bool, str]:
     """
     Validate forecast inputs before processing.
 
@@ -223,9 +241,19 @@ def validate_forecast_inputs(symbol: str, horizon: int, model_type: str, strateg
         return False, f"Invalid model type. Choose from: {', '.join(valid_models)}"
 
     # Validate strategy type
-    valid_strategies = ["rsi", "macd", "bollinger", "sma", "mean_reversion", "trend_following"]
+    valid_strategies = [
+        "rsi",
+        "macd",
+        "bollinger",
+        "sma",
+        "mean_reversion",
+        "trend_following",
+    ]
     if strategy_type not in valid_strategies:
-        return False, f"Invalid strategy type. Choose from: {', '.join(valid_strategies)}"
+        return (
+            False,
+            f"Invalid strategy type. Choose from: {', '.join(valid_strategies)}",
+        )
 
     # Validate model-strategy compatibility
     incompatible_pairs = [
@@ -234,7 +262,10 @@ def validate_forecast_inputs(symbol: str, horizon: int, model_type: str, strateg
     ]
 
     if (model_type, strategy_type) in incompatible_pairs:
-        return False, f"Model '{model_type}' is not compatible with strategy '{strategy_type}'"
+        return (
+            False,
+            f"Model '{model_type}' is not compatible with strategy '{strategy_type}'",
+        )
 
     return True, ""
 
@@ -242,7 +273,9 @@ def validate_forecast_inputs(symbol: str, horizon: int, model_type: str, strateg
 # Add validation to the main forecast function
 
 
-def generate_forecast_with_validation(symbol: str, horizon: int, model_type: str, strategy_type: str) -> Dict[str, Any]:
+def generate_forecast_with_validation(
+    symbol: str, horizon: int, model_type: str, strategy_type: str
+) -> Dict[str, Any]:
     """
     Generate forecast with input validation.
 
@@ -256,10 +289,16 @@ def generate_forecast_with_validation(symbol: str, horizon: int, model_type: str
         Dictionary with forecast results or error
     """
     # Validate inputs
-    is_valid, error_message = validate_forecast_inputs(symbol, horizon, model_type, strategy_type)
+    is_valid, error_message = validate_forecast_inputs(
+        symbol, horizon, model_type, strategy_type
+    )
 
     if not is_valid:
-        return {"success": False, "error": error_message, "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": error_message,
+            "timestamp": datetime.now().isoformat(),
+        }
 
     # Proceed with forecast generation
     try:
@@ -277,7 +316,9 @@ def main():
     """Main function for the Forecast & Trade page."""
 
     # Page configuration
-    st.set_page_config(page_title="Forecast & Trade - Evolve AI", page_icon="📈", layout="wide")
+    st.set_page_config(
+        page_title="Forecast & Trade - Evolve AI", page_icon="📈", layout="wide"
+    )
 
     # Custom CSS for better styling
     st.markdown(
@@ -322,7 +363,11 @@ def main():
         st.header("⚙️ Configuration")
 
         # Stock symbol input with validation
-        symbol = st.text_input("Stock Symbol", value="AAPL", help="Enter the stock symbol (e.g., AAPL, TSLA, GOOGL)")
+        symbol = st.text_input(
+            "Stock Symbol",
+            value="AAPL",
+            help="Enter the stock symbol (e.g., AAPL, TSLA, GOOGL)",
+        )
 
         # Forecast horizon with tooltip
         horizon = st.slider(
@@ -343,7 +388,9 @@ def main():
         }
 
         model_type = st.selectbox(
-            "Forecasting Model", options=list(model_descriptions.keys()), help="Choose the AI model for forecasting"
+            "Forecasting Model",
+            options=list(model_descriptions.keys()),
+            help="Choose the AI model for forecasting",
         )
 
         # Show model description
@@ -368,23 +415,31 @@ def main():
 
         # Show strategy description
         if strategy_type in strategy_descriptions:
-            st.info(f"**{strategy_type.upper()}**: {strategy_descriptions[strategy_type]}")
+            st.info(
+                f"**{strategy_type.upper()}**: {strategy_descriptions[strategy_type]}"
+            )
 
         # Risk tolerance
         risk_tolerance = st.selectbox(
-            "Risk Tolerance", options=["low", "medium", "high"], help="Risk tolerance level for position sizing"
+            "Risk Tolerance",
+            options=["low", "medium", "high"],
+            help="Risk tolerance level for position sizing",
         )
 
         # Generate forecast button
         if st.button("🚀 Generate Forecast", type="primary", use_container_width=True):
             # Validate inputs first
-            is_valid, error_message = validate_forecast_inputs(symbol, horizon, model_type, strategy_type)
+            is_valid, error_message = validate_forecast_inputs(
+                symbol, horizon, model_type, strategy_type
+            )
 
             if not is_valid:
                 st.error(f"❌ {error_message}")
             else:
                 with st.spinner("Generating forecast..."):
-                    result = generate_forecast_with_validation(symbol, horizon, model_type, strategy_type)
+                    result = generate_forecast_with_validation(
+                        symbol, horizon, model_type, strategy_type
+                    )
 
                     if result.get("success", False):
                         st.success("✅ Forecast generated successfully!")
@@ -477,7 +532,9 @@ def display_forecast_results(result: Dict):
             display_market_analysis(result["market_analysis"])
 
             if result.get("show_market_commentary"):
-                commentary = generate_market_commentary(result["market_analysis"], result["forecast_data"])
+                commentary = generate_market_commentary(
+                    result["market_analysis"], result["forecast_data"]
+                )
                 st.info(commentary)
 
         # Forecast visualization
@@ -551,7 +608,9 @@ def display_forecast_results(result: Dict):
             col1, col2, col3, col4 = st.columns(4)
 
             with col1:
-                st.metric("Sharpe Ratio", f"{calculate_sharpe_ratio(forecast_data):.2f}")
+                st.metric(
+                    "Sharpe Ratio", f"{calculate_sharpe_ratio(forecast_data):.2f}"
+                )
 
             with col2:
                 st.metric("Accuracy", f"{calculate_accuracy(forecast_data):.1%}")
@@ -569,7 +628,9 @@ def display_forecast_results(result: Dict):
 
             with col1:
                 st.write(f"**Selected Model:** {result['selected_model']}")
-                st.write(f"**Selection Method:** {'Agentic' if result.get('use_agentic') else 'Manual'}")
+                st.write(
+                    f"**Selection Method:** {'Agentic' if result.get('use_agentic') else 'Manual'}"
+                )
                 st.write(f"**Forecast Period:** {len(forecast_data)} days")
 
             with col2:
@@ -581,25 +642,37 @@ def display_forecast_results(result: Dict):
                 st.subheader("📈 Backtest Results")
 
                 backtest_results = run_backtest(
-                    forecast_data, initial_capital=10000, position_size=50, stop_loss=2.0, take_profit=4.0
+                    forecast_data,
+                    initial_capital=10000,
+                    position_size=50,
+                    stop_loss=2.0,
+                    take_profit=4.0,
                 )
 
                 if backtest_results:
                     col1, col2, col3, col4 = st.columns(4)
 
                     with col1:
-                        st.metric("Total Return", f"{backtest_results['total_return']:.1%}")
+                        st.metric(
+                            "Total Return", f"{backtest_results['total_return']:.1%}"
+                        )
 
                     with col2:
-                        st.metric("Max Drawdown", f"{backtest_results['max_drawdown']:.1%}")
+                        st.metric(
+                            "Max Drawdown", f"{backtest_results['max_drawdown']:.1%}"
+                        )
 
                     with col3:
                         st.metric("Win Rate", f"{backtest_results['win_rate']:.1%}")
 
                     with col4:
-                        st.metric("Profit Factor", f"{backtest_results['profit_factor']:.2f}")
+                        st.metric(
+                            "Profit Factor", f"{backtest_results['profit_factor']:.2f}"
+                        )
     else:
-        st.error(f"❌ Forecast generation failed: {result.get('error', 'Unknown error')}")
+        st.error(
+            f"❌ Forecast generation failed: {result.get('error', 'Unknown error')}"
+        )
 
 
 def calculate_sharpe_ratio(forecast_data):
@@ -627,7 +700,11 @@ def calculate_sharpe_ratio(forecast_data):
 
 def calculate_accuracy(forecast_data):
     """Calculate forecast accuracy."""
-    if forecast_data.empty or "forecast" not in forecast_data.columns or "historical" not in forecast_data.columns:
+    if (
+        forecast_data.empty
+        or "forecast" not in forecast_data.columns
+        or "historical" not in forecast_data.columns
+    ):
         return 0.0
 
     try:
@@ -684,7 +761,9 @@ def generate_forecast(ticker, selected_model):
         base_price = 100.0
 
         # Generate daily returns with trend and volatility
-        daily_returns = np.random.normal(0.0005, 0.02, len(dates))  # 0.05% daily return, 2% volatility
+        daily_returns = np.random.normal(
+            0.0005, 0.02, len(dates)
+        )  # 0.05% daily return, 2% volatility
 
         # Add trend based on model type
         if "trend" in selected_model.lower():
@@ -701,13 +780,19 @@ def generate_forecast(ticker, selected_model):
 
         # Generate forecast (last 30 days)
         forecast_dates = dates[-30:]
-        forecast_returns = np.random.normal(0.0003, 0.015, 30)  # Lower volatility for forecast
+        forecast_returns = np.random.normal(
+            0.0003, 0.015, 30
+        )  # Lower volatility for forecast
 
         # Add model-specific forecast characteristics
         if "lstm" in selected_model.lower():
-            forecast_returns += np.linspace(0, 0.02, 30)  # LSTM tends to be more conservative
+            forecast_returns += np.linspace(
+                0, 0.02, 30
+            )  # LSTM tends to be more conservative
         elif "prophet" in selected_model.lower():
-            forecast_returns += 0.001 * np.sin(np.linspace(0, 2 * np.pi, 30))  # Prophet adds seasonality
+            forecast_returns += 0.001 * np.sin(
+                np.linspace(0, 2 * np.pi, 30)
+            )  # Prophet adds seasonality
         elif "tcn" in selected_model.lower():
             forecast_returns += np.random.normal(0, 0.005, 30)  # TCN adds some noise
 
@@ -716,7 +801,6 @@ def generate_forecast(ticker, selected_model):
         forecast_prices = last_price * np.cumprod(1 + forecast_returns)
 
         # Create confidence intervals
-        confidence_level = 0.95
         z_score = 1.96  # 95% confidence interval
 
         forecast_volatility = np.std(forecast_returns) * np.sqrt(np.arange(1, 31))
@@ -725,15 +809,32 @@ def generate_forecast(ticker, selected_model):
 
         # Combine historical and forecast data
         all_dates = pd.concat([dates[:-30], forecast_dates])
-        all_prices = pd.concat([historical_prices[:-30], pd.Series(forecast_prices, index=forecast_dates)])
+        all_prices = pd.concat(
+            [historical_prices[:-30], pd.Series(forecast_prices, index=forecast_dates)]
+        )
 
         # Create forecast DataFrame
         forecast_data = pd.DataFrame(
             {
                 "historical": all_prices,
-                "forecast": pd.concat([historical_prices[-30:], pd.Series(forecast_prices, index=forecast_dates)]),
-                "upper": pd.concat([historical_prices[-30:], pd.Series(upper_bound, index=forecast_dates)]),
-                "lower": pd.concat([historical_prices[-30:], pd.Series(lower_bound, index=forecast_dates)]),
+                "forecast": pd.concat(
+                    [
+                        historical_prices[-30:],
+                        pd.Series(forecast_prices, index=forecast_dates),
+                    ]
+                ),
+                "upper": pd.concat(
+                    [
+                        historical_prices[-30:],
+                        pd.Series(upper_bound, index=forecast_dates),
+                    ]
+                ),
+                "lower": pd.concat(
+                    [
+                        historical_prices[-30:],
+                        pd.Series(lower_bound, index=forecast_dates),
+                    ]
+                ),
             },
             index=all_dates,
         )
@@ -745,7 +846,13 @@ def generate_forecast(ticker, selected_model):
         return pd.DataFrame()
 
 
-def run_backtest(forecast_data, initial_capital=10000, position_size=50, stop_loss=2.0, take_profit=4.0):
+def run_backtest(
+    forecast_data,
+    initial_capital=10000,
+    position_size=50,
+    stop_loss=2.0,
+    take_profit=4.0,
+):
     """Run realistic backtest simulation."""
     if forecast_data.empty:
         return None

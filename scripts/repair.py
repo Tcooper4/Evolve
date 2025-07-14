@@ -116,7 +116,11 @@ class CodeRepair:
                     content = f.read()
 
                 # Convert relative imports to absolute
-                content = re.sub(r"from \.([a-zA-Z_][a-zA-Z0-9_]*) import", r"from trading.\1 import", content)
+                content = re.sub(
+                    r"from \.([a-zA-Z_][a-zA-Z0-9_]*) import",
+                    r"from trading.\1 import",
+                    content,
+                )
 
                 with open(py_file, "w", encoding="utf-8") as f:
                     f.write(content)
@@ -227,7 +231,11 @@ Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
             }
         except Exception as e:
             logging.error(f"Error during cleanup: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def execute_repair_operations(self) -> Dict[str, Any]:
         """Execute all repair operations.
@@ -247,7 +255,9 @@ Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         results.append(self.find_duplicates())
 
         if self.encoding_issues:
-            logging.info(f"Found {len(self.encoding_issues)} files with encoding issues")
+            logging.info(
+                f"Found {len(self.encoding_issues)} files with encoding issues"
+            )
             results.append(self.fix_encoding())
 
         if self.duplicate_files:

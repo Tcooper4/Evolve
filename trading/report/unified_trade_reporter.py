@@ -28,9 +28,7 @@ from ..backtesting.performance_analysis import PerformanceAnalyzer
 from ..backtesting.risk_metrics import RiskMetricsEngine
 
 # Local imports
-from .report_generator import (
-    ReportGenerator,
-)
+from .report_generator import ReportGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +132,9 @@ class UnifiedTradeReporter:
         # Initialize components
         self.report_generator = ReportGenerator(output_dir=str(self.output_dir))
         self.performance_analyzer = PerformanceAnalyzer()
-        self.risk_metrics_engine = RiskMetricsEngine(risk_free_rate=risk_free_rate, period=trading_days_per_year)
+        self.risk_metrics_engine = RiskMetricsEngine(
+            risk_free_rate=risk_free_rate, period=trading_days_per_year
+        )
 
         # Report configuration
         self.report_config = report_config or {
@@ -200,7 +200,9 @@ class UnifiedTradeReporter:
             risk_metrics = self._calculate_risk_metrics(equity_curve)
 
             # Generate performance attribution
-            performance_attribution = self._calculate_performance_attribution(trades, equity_curve)
+            performance_attribution = self._calculate_performance_attribution(
+                trades, equity_curve
+            )
 
             # Create trade analysis
             trade_analysis = TradeAnalysis(
@@ -245,7 +247,9 @@ class UnifiedTradeReporter:
             logger.error(f"Error generating comprehensive report: {e}")
             return self._generate_error_report(report_id, str(e))
 
-    def _calculate_enhanced_metrics(self, trades: List[Dict[str, Any]]) -> EnhancedTradeMetrics:
+    def _calculate_enhanced_metrics(
+        self, trades: List[Dict[str, Any]]
+    ) -> EnhancedTradeMetrics:
         """Calculate enhanced trade performance metrics."""
         try:
             if not trades:
@@ -275,7 +279,9 @@ class UnifiedTradeReporter:
             largest_loss = max(losses) if losses else 0.0
 
             # Consecutive wins/losses
-            consecutive_wins, consecutive_losses = self._calculate_consecutive_trades(trades)
+            consecutive_wins, consecutive_losses = self._calculate_consecutive_trades(
+                trades
+            )
 
             # Calculate returns for risk metrics
             returns = [t.get("pnl", 0) for t in trades]
@@ -286,31 +292,47 @@ class UnifiedTradeReporter:
 
                 # Risk-adjusted metrics
                 sharpe_ratio = (
-                    (avg_trade_return - self.risk_free_rate / self.trading_days_per_year) / volatility
+                    (
+                        avg_trade_return
+                        - self.risk_free_rate / self.trading_days_per_year
+                    )
+                    / volatility
                     if volatility > 0
                     else 0.0
                 )
 
                 # Sortino ratio (downside deviation)
                 downside_returns = [r for r in returns if r < 0]
-                downside_deviation = np.std(downside_returns) if downside_returns else 0.0
+                downside_deviation = (
+                    np.std(downside_returns) if downside_returns else 0.0
+                )
                 sortino_ratio = (
-                    (avg_trade_return - self.risk_free_rate / self.trading_days_per_year) / downside_deviation
+                    (
+                        avg_trade_return
+                        - self.risk_free_rate / self.trading_days_per_year
+                    )
+                    / downside_deviation
                     if downside_deviation > 0
                     else 0.0
                 )
 
                 # VaR and CVaR
                 var_95 = np.percentile(returns, 5)  # 95% VaR
-                cvar_95 = np.mean([r for r in returns if r <= var_95]) if var_95 else 0.0
+                cvar_95 = (
+                    np.mean([r for r in returns if r <= var_95]) if var_95 else 0.0
+                )
 
                 # Profit factor
                 total_gains = sum(gains) if gains else 0.0
                 total_losses = sum(losses) if losses else 0.0
-                profit_factor = total_gains / total_losses if total_losses > 0 else float("inf")
+                profit_factor = (
+                    total_gains / total_losses if total_losses > 0 else float("inf")
+                )
 
                 # Risk-reward ratio
-                risk_reward_ratio = avg_gain / avg_loss if avg_loss > 0 else float("inf")
+                risk_reward_ratio = (
+                    avg_gain / avg_loss if avg_loss > 0 else float("inf")
+                )
 
             else:
                 # Fallback for insufficient data
@@ -335,18 +357,25 @@ class UnifiedTradeReporter:
                 annualized_return = 0.0
 
             # Calmar ratio
-            calmar_ratio = annualized_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
+            calmar_ratio = (
+                annualized_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
+            )
 
             # Beta and Alpha (simplified - would need benchmark data)
             beta = 1.0  # Default to market beta
-            alpha = avg_trade_return - (self.risk_free_rate / self.trading_days_per_year * beta)
+            alpha = avg_trade_return - (
+                self.risk_free_rate / self.trading_days_per_year * beta
+            )
 
             # Information ratio (simplified)
             information_ratio = alpha / volatility if volatility > 0 else 0.0
 
             # Treynor ratio
             treynor_ratio = (
-                (avg_trade_return - self.risk_free_rate / self.trading_days_per_year) / beta if beta != 0 else 0.0
+                (avg_trade_return - self.risk_free_rate / self.trading_days_per_year)
+                / beta
+                if beta != 0
+                else 0.0
             )
 
             return EnhancedTradeMetrics(
@@ -385,7 +414,9 @@ class UnifiedTradeReporter:
             logger.error(f"Error calculating enhanced metrics: {e}")
             return self._get_empty_metrics()
 
-    def _calculate_consecutive_trades(self, trades: List[Dict[str, Any]]) -> Tuple[int, int]:
+    def _calculate_consecutive_trades(
+        self, trades: List[Dict[str, Any]]
+    ) -> Tuple[int, int]:
         """Calculate consecutive wins and losses."""
         if not trades:
             return 0, 0
@@ -438,9 +469,13 @@ class UnifiedTradeReporter:
                 timestamp = trade.get("timestamp")
                 if isinstance(timestamp, str):
                     try:
-                        timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                        timestamp = datetime.fromisoformat(
+                            timestamp.replace("Z", "+00:00")
+                        )
                     except (ValueError, TypeError) as e:
-                        logger.warning(f"Invalid timestamp format: {timestamp}, using current time. Error: {e}")
+                        logger.warning(
+                            f"Invalid timestamp format: {timestamp}, using current time. Error: {e}"
+                        )
                         timestamp = datetime.now()
                 elif not isinstance(timestamp, datetime):
                     timestamp = datetime.now()
@@ -458,7 +493,11 @@ class UnifiedTradeReporter:
                 if current_equity > peak_equity:
                     peak_equity = current_equity
 
-                current_drawdown = (peak_equity - current_equity) / peak_equity if peak_equity > 0 else 0.0
+                current_drawdown = (
+                    (peak_equity - current_equity) / peak_equity
+                    if peak_equity > 0
+                    else 0.0
+                )
 
                 # Store values
                 dates.append(timestamp)
@@ -485,7 +524,9 @@ class UnifiedTradeReporter:
             logger.error(f"Error generating equity curve: {e}")
             return self._get_empty_equity_curve()
 
-    def _calculate_risk_metrics(self, equity_curve: EquityCurveData) -> Dict[str, float]:
+    def _calculate_risk_metrics(
+        self, equity_curve: EquityCurveData
+    ) -> Dict[str, float]:
         """Calculate comprehensive risk metrics from equity curve."""
         try:
             if not equity_curve.returns:
@@ -494,9 +535,17 @@ class UnifiedTradeReporter:
             returns = np.array(equity_curve.returns)
 
             # Basic risk metrics
-            volatility = np.std(returns) * np.sqrt(self.trading_days_per_year) if len(returns) > 1 else 0.0
+            volatility = (
+                np.std(returns) * np.sqrt(self.trading_days_per_year)
+                if len(returns) > 1
+                else 0.0
+            )
             var_95 = np.percentile(returns, 5) if len(returns) > 0 else 0.0
-            cvar_95 = np.mean(returns[returns <= var_95]) if var_95 and len(returns) > 0 else 0.0
+            cvar_95 = (
+                np.mean(returns[returns <= var_95])
+                if var_95 and len(returns) > 0
+                else 0.0
+            )
 
             # Maximum drawdown
             max_drawdown = max(equity_curve.drawdown) if equity_curve.drawdown else 0.0
@@ -504,7 +553,9 @@ class UnifiedTradeReporter:
             # Downside deviation
             downside_returns = returns[returns < 0]
             downside_deviation = (
-                np.std(downside_returns) * np.sqrt(self.trading_days_per_year) if len(downside_returns) > 1 else 0.0
+                np.std(downside_returns) * np.sqrt(self.trading_days_per_year)
+                if len(downside_returns) > 1
+                else 0.0
             )
 
             # Skewness and kurtosis
@@ -574,12 +625,16 @@ class UnifiedTradeReporter:
                     strategies[strategy] = []
                 strategies[strategy].append(trade.get("pnl", 0))
 
-            strategy_performance = {strategy: sum(pnls) for strategy, pnls in strategies.items()}
+            strategy_performance = {
+                strategy: sum(pnls) for strategy, pnls in strategies.items()
+            }
 
             # Time-based attribution
             if equity_curve.dates:
                 # Monthly performance
-                monthly_performance = self._calculate_monthly_performance(trades, equity_curve.dates)
+                monthly_performance = self._calculate_monthly_performance(
+                    trades, equity_curve.dates
+                )
             else:
                 monthly_performance = {}
 
@@ -596,7 +651,9 @@ class UnifiedTradeReporter:
             logger.error(f"Error calculating performance attribution: {e}")
             return {}
 
-    def _calculate_monthly_performance(self, trades: List[Dict[str, Any]], dates: List[datetime]) -> Dict[str, float]:
+    def _calculate_monthly_performance(
+        self, trades: List[Dict[str, Any]], dates: List[datetime]
+    ) -> Dict[str, float]:
         """Calculate monthly performance breakdown."""
         try:
             monthly_pnl = {}
@@ -617,7 +674,9 @@ class UnifiedTradeReporter:
             logger.error(f"Error calculating monthly performance: {e}")
             return {}
 
-    def _generate_charts(self, trade_analysis: TradeAnalysis, symbol: str) -> Dict[str, str]:
+    def _generate_charts(
+        self, trade_analysis: TradeAnalysis, symbol: str
+    ) -> Dict[str, str]:
         """Generate charts for the trade analysis."""
         try:
             # Set matplotlib backend to non-interactive to avoid Tkinter issues
@@ -666,7 +725,9 @@ class UnifiedTradeReporter:
                     ax.legend()
                     ax.grid(True, alpha=0.3)
 
-                    chart_path = charts_dir / f"equity_curve_{symbol}_{int(time.time())}.png"
+                    chart_path = (
+                        charts_dir / f"equity_curve_{symbol}_{int(time.time())}.png"
+                    )
                     plt.savefig(chart_path, dpi=300, bbox_inches="tight")
                     plt.close()
                     charts["equity_curve"] = str(chart_path)
@@ -678,9 +739,19 @@ class UnifiedTradeReporter:
                 if len(equity_curve.dates) > 1:
                     fig, ax = plt.subplots(figsize=(12, 6))
                     ax.fill_between(
-                        equity_curve.dates, equity_curve.drawdown, 0, alpha=0.3, color="red", label="Drawdown"
+                        equity_curve.dates,
+                        equity_curve.drawdown,
+                        0,
+                        alpha=0.3,
+                        color="red",
+                        label="Drawdown",
                     )
-                    ax.plot(equity_curve.dates, equity_curve.drawdown, linewidth=1, color="red")
+                    ax.plot(
+                        equity_curve.dates,
+                        equity_curve.drawdown,
+                        linewidth=1,
+                        color="red",
+                    )
 
                     # Format x-axis
                     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
@@ -693,7 +764,9 @@ class UnifiedTradeReporter:
                     ax.legend()
                     ax.grid(True, alpha=0.3)
 
-                    chart_path = charts_dir / f"drawdown_{symbol}_{int(time.time())}.png"
+                    chart_path = (
+                        charts_dir / f"drawdown_{symbol}_{int(time.time())}.png"
+                    )
                     plt.savefig(chart_path, dpi=300, bbox_inches="tight")
                     plt.close()
                     charts["drawdown"] = str(chart_path)
@@ -707,7 +780,9 @@ class UnifiedTradeReporter:
                     # Group trades by month
                     monthly_returns = {}
                     for trade in trades:
-                        trade_date = datetime.fromisoformat(trade["entry_time"].replace("Z", "+00:00"))
+                        trade_date = datetime.fromisoformat(
+                            trade["entry_time"].replace("Z", "+00:00")
+                        )
                         month_key = f"{trade_date.year}-{trade_date.month:02d}"
                         if month_key not in monthly_returns:
                             monthly_returns[month_key] = 0
@@ -715,7 +790,9 @@ class UnifiedTradeReporter:
 
                     if monthly_returns:
                         # Create heatmap data
-                        years = sorted(list(set(k.split("-")[0] for k in monthly_returns.keys())))
+                        years = sorted(
+                            list(set(k.split("-")[0] for k in monthly_returns.keys()))
+                        )
                         months = list(range(1, 13))
 
                         returns_matrix = []
@@ -731,7 +808,20 @@ class UnifiedTradeReporter:
                             im = ax.imshow(returns_matrix, cmap="RdYlGn", aspect="auto")
                             ax.set_xticks(range(12))
                             ax.set_xticklabels(
-                                ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                                [
+                                    "Jan",
+                                    "Feb",
+                                    "Mar",
+                                    "Apr",
+                                    "May",
+                                    "Jun",
+                                    "Jul",
+                                    "Aug",
+                                    "Sep",
+                                    "Oct",
+                                    "Nov",
+                                    "Dec",
+                                ]
                             )
                             ax.set_yticks(range(len(years)))
                             ax.set_yticklabels(years)
@@ -741,7 +831,10 @@ class UnifiedTradeReporter:
                             cbar = plt.colorbar(im, ax=ax)
                             cbar.set_label("PnL ($)")
 
-                            chart_path = charts_dir / f"monthly_heatmap_{symbol}_{int(time.time())}.png"
+                            chart_path = (
+                                charts_dir
+                                / f"monthly_heatmap_{symbol}_{int(time.time())}.png"
+                            )
                             plt.savefig(chart_path, dpi=300, bbox_inches="tight")
                             plt.close()
                             charts["monthly_heatmap"] = str(chart_path)
@@ -796,13 +889,17 @@ class UnifiedTradeReporter:
             logger.error(f"Error generating summary: {e}")
             return {}
 
-    def _export_report(self, report_data: Dict[str, Any], report_id: str) -> Dict[str, str]:
+    def _export_report(
+        self, report_data: Dict[str, Any], report_id: str
+    ) -> Dict[str, str]:
         """Export report in multiple formats."""
         try:
             export_paths = {}
 
             # Export formats
-            formats = self.report_config.get("export_formats", ["csv", "pdf", "html", "json"])
+            formats = self.report_config.get(
+                "export_formats", ["csv", "pdf", "html", "json"]
+            )
 
             # JSON export
             if "json" in formats:
@@ -924,7 +1021,9 @@ class UnifiedTradeReporter:
             logger.error(f"Error generating HTML report: {e}")
             return f"<html><body><h1>Error generating report: {e}</h1></body></html>"
 
-    def _generate_empty_report(self, report_id: str, symbol: str, timeframe: str, period: str) -> Dict[str, Any]:
+    def _generate_empty_report(
+        self, report_id: str, symbol: str, timeframe: str, period: str
+    ) -> Dict[str, Any]:
         """Generate an empty report when no trades are available."""
         return {
             "report_id": report_id,
@@ -946,7 +1045,9 @@ class UnifiedTradeReporter:
             "export_paths": {},
         }
 
-    def _generate_error_report(self, report_id: str, error_message: str) -> Dict[str, Any]:
+    def _generate_error_report(
+        self, report_id: str, error_message: str
+    ) -> Dict[str, Any]:
         """Generate an error report."""
         return {
             "report_id": report_id,
@@ -1028,11 +1129,15 @@ def generate_unified_report(
 ) -> Dict[str, Any]:
     """Generate a unified trade report with all enhancements."""
     reporter = UnifiedTradeReporter(**kwargs)
-    return reporter.generate_comprehensive_report(trade_data, model_data, strategy_data, symbol, timeframe, period)
+    return reporter.generate_comprehensive_report(
+        trade_data, model_data, strategy_data, symbol, timeframe, period
+    )
 
 
 def export_trade_report(
-    report_data: Dict[str, Any], export_formats: List[str] = None, output_dir: str = "reports"
+    report_data: Dict[str, Any],
+    export_formats: List[str] = None,
+    output_dir: str = "reports",
 ) -> Dict[str, str]:
     """Export trade report in specified formats."""
     reporter = UnifiedTradeReporter(output_dir=output_dir)

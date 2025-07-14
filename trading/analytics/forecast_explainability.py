@@ -104,7 +104,11 @@ class IntelligentForecastExplainability:
 
         logger.info("Intelligent Forecast Explainability initialized successfully")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def calculate_confidence_intervals(
         self, predictions: np.ndarray, method: str = "bootstrap", **kwargs
@@ -115,13 +119,21 @@ class IntelligentForecastExplainability:
 
             for confidence_level in self.confidence_levels:
                 if method == "bootstrap":
-                    interval = self._bootstrap_confidence_interval(predictions, confidence_level)
+                    interval = self._bootstrap_confidence_interval(
+                        predictions, confidence_level
+                    )
                 elif method == "parametric":
-                    interval = self._parametric_confidence_interval(predictions, confidence_level)
+                    interval = self._parametric_confidence_interval(
+                        predictions, confidence_level
+                    )
                 elif method == "quantile":
-                    interval = self._quantile_confidence_interval(predictions, confidence_level)
+                    interval = self._quantile_confidence_interval(
+                        predictions, confidence_level
+                    )
                 else:
-                    interval = self._parametric_confidence_interval(predictions, confidence_level)
+                    interval = self._parametric_confidence_interval(
+                        predictions, confidence_level
+                    )
 
                 intervals.append(interval)
 
@@ -137,12 +149,16 @@ class IntelligentForecastExplainability:
         """Calculate bootstrap confidence interval."""
         try:
             if len(predictions) < 10:
-                return self._parametric_confidence_interval(predictions, confidence_level)
+                return self._parametric_confidence_interval(
+                    predictions, confidence_level
+                )
 
             # Bootstrap sampling
             bootstrap_means = []
             for _ in range(n_bootstrap):
-                sample = np.random.choice(predictions, size=len(predictions), replace=True)
+                sample = np.random.choice(
+                    predictions, size=len(predictions), replace=True
+                )
                 bootstrap_means.append(np.mean(sample))
 
             # Calculate percentiles
@@ -154,19 +170,26 @@ class IntelligentForecastExplainability:
             upper_bound = np.percentile(bootstrap_means, upper_percentile)
 
             return ConfidenceInterval(
-                lower_bound=lower_bound, upper_bound=upper_bound, confidence_level=confidence_level, method="bootstrap"
+                lower_bound=lower_bound,
+                upper_bound=upper_bound,
+                confidence_level=confidence_level,
+                method="bootstrap",
             )
 
         except Exception as e:
             logger.error(f"Error in bootstrap confidence interval: {e}")
             return {
                 "success": True,
-                "result": self._parametric_confidence_interval(predictions, confidence_level),
+                "result": self._parametric_confidence_interval(
+                    predictions, confidence_level
+                ),
                 "message": "Operation completed successfully",
                 "timestamp": datetime.now().isoformat(),
             }
 
-    def _parametric_confidence_interval(self, predictions: np.ndarray, confidence_level: float) -> ConfidenceInterval:
+    def _parametric_confidence_interval(
+        self, predictions: np.ndarray, confidence_level: float
+    ) -> ConfidenceInterval:
         """Calculate parametric confidence interval assuming normal distribution."""
         try:
             mean_pred = np.mean(predictions)
@@ -189,7 +212,9 @@ class IntelligentForecastExplainability:
             logger.error(f"Error in parametric confidence interval: {e}")
             return self._create_fallback_interval(confidence_level)
 
-    def _quantile_confidence_interval(self, predictions: np.ndarray, confidence_level: float) -> ConfidenceInterval:
+    def _quantile_confidence_interval(
+        self, predictions: np.ndarray, confidence_level: float
+    ) -> ConfidenceInterval:
         """Calculate quantile-based confidence interval."""
         try:
             alpha = 1 - confidence_level
@@ -200,26 +225,41 @@ class IntelligentForecastExplainability:
             upper_bound = np.percentile(predictions, upper_percentile)
 
             return ConfidenceInterval(
-                lower_bound=lower_bound, upper_bound=upper_bound, confidence_level=confidence_level, method="quantile"
+                lower_bound=lower_bound,
+                upper_bound=upper_bound,
+                confidence_level=confidence_level,
+                method="quantile",
             )
 
         except Exception as e:
             logger.error(f"Error in quantile confidence interval: {e}")
             return {
                 "success": True,
-                "result": self._parametric_confidence_interval(predictions, confidence_level),
+                "result": self._parametric_confidence_interval(
+                    predictions, confidence_level
+                ),
                 "message": "Operation completed successfully",
                 "timestamp": datetime.now().isoformat(),
             }
 
     def _create_fallback_intervals(self) -> List[ConfidenceInterval]:
         """Create fallback confidence intervals."""
-        return [ConfidenceInterval(lower_bound=0.0, upper_bound=1.0, confidence_level=0.95, method="fallback")]
+        return [
+            ConfidenceInterval(
+                lower_bound=0.0,
+                upper_bound=1.0,
+                confidence_level=0.95,
+                method="fallback",
+            )
+        ]
 
     def _create_fallback_interval(self, confidence_level: float) -> ConfidenceInterval:
         """Create fallback confidence interval."""
         return ConfidenceInterval(
-            lower_bound=0.0, upper_bound=1.0, confidence_level=confidence_level, method="fallback"
+            lower_bound=0.0,
+            upper_bound=1.0,
+            confidence_level=confidence_level,
+            method="fallback",
         )
 
     def calculate_feature_importance(
@@ -243,7 +283,9 @@ class IntelligentForecastExplainability:
             logger.error(f"Error calculating feature importance: {e}")
             return self._create_fallback_importance(X.columns)
 
-    def _calculate_shap_importance(self, model: Any, X: pd.DataFrame) -> List[FeatureImportance]:
+    def _calculate_shap_importance(
+        self, model: Any, X: pd.DataFrame
+    ) -> List[FeatureImportance]:
         """Calculate SHAP feature importance."""
         try:
             # Create SHAP explainer
@@ -291,13 +333,17 @@ class IntelligentForecastExplainability:
                 "timestamp": datetime.now().isoformat(),
             }
 
-    def _calculate_permutation_importance(self, model: Any, X: pd.DataFrame) -> List[FeatureImportance]:
+    def _calculate_permutation_importance(
+        self, model: Any, X: pd.DataFrame
+    ) -> List[FeatureImportance]:
         """Calculate permutation feature importance."""
         try:
             from sklearn.inspection import permutation_importance
 
             # Calculate permutation importance
-            result = permutation_importance(model, X, model.predict(X), n_repeats=10, random_state=42)
+            result = permutation_importance(
+                model, X, model.predict(X), n_repeats=10, random_state=42
+            )
 
             # Create feature importance list
             feature_importance = []
@@ -307,7 +353,10 @@ class IntelligentForecastExplainability:
                     importance_score=float(result.importances_mean[i]),
                     importance_rank=0,
                     contribution_type="neutral",
-                    metadata={"method": "permutation", "std": float(result.importances_std[i])},
+                    metadata={
+                        "method": "permutation",
+                        "std": float(result.importances_std[i]),
+                    },
                 )
                 feature_importance.append(importance)
 
@@ -327,7 +376,9 @@ class IntelligentForecastExplainability:
                 "timestamp": datetime.now().isoformat(),
             }
 
-    def _calculate_model_importance(self, model: Any, X: pd.DataFrame) -> List[FeatureImportance]:
+    def _calculate_model_importance(
+        self, model: Any, X: pd.DataFrame
+    ) -> List[FeatureImportance]:
         """Calculate feature importance using model's built-in method."""
         try:
             feature_importance = []
@@ -349,15 +400,22 @@ class IntelligentForecastExplainability:
                 # Linear models
                 coefficients = model.coef_
                 if coefficients.ndim > 1:
-                    coefficients = coefficients[0]  # Take first class for binary classification
+                    coefficients = coefficients[
+                        0
+                    ]  # Take first class for binary classification
 
                 for i, feature_name in enumerate(X.columns):
                     importance = FeatureImportance(
                         feature_name=feature_name,
                         importance_score=float(abs(coefficients[i])),
                         importance_rank=0,
-                        contribution_type="positive" if coefficients[i] > 0 else "negative",
-                        metadata={"method": "model_builtin", "coefficient": float(coefficients[i])},
+                        contribution_type="positive"
+                        if coefficients[i] > 0
+                        else "negative",
+                        metadata={
+                            "method": "model_builtin",
+                            "coefficient": float(coefficients[i]),
+                        },
                     )
                     feature_importance.append(importance)
 
@@ -384,7 +442,9 @@ class IntelligentForecastExplainability:
             logger.error(f"Error calculating model importance: {e}")
             return self._create_fallback_importance(X.columns)
 
-    def _create_fallback_importance(self, feature_names: List[str]) -> List[FeatureImportance]:
+    def _create_fallback_importance(
+        self, feature_names: List[str]
+    ) -> List[FeatureImportance]:
         """Create fallback feature importance."""
         return [
             FeatureImportance(
@@ -415,11 +475,16 @@ class IntelligentForecastExplainability:
             feature_importance = self.calculate_feature_importance(model, X)
 
             # Calculate model confidence
-            model_confidence = self._calculate_model_confidence(predictions, forecast_value)
+            model_confidence = self._calculate_model_confidence(
+                predictions, forecast_value
+            )
 
             # Generate explanation text
             explanation_text = self._generate_explanation_text(
-                forecast_value, confidence_intervals, feature_importance, model_confidence
+                forecast_value,
+                confidence_intervals,
+                feature_importance,
+                model_confidence,
             )
 
             # Identify risk factors
@@ -437,7 +502,11 @@ class IntelligentForecastExplainability:
                 explanation_text=explanation_text,
                 risk_factors=risk_factors,
                 timestamp=datetime.now(),
-                metadata={"n_features": len(X.columns), "n_samples": len(X), "model_type": type(model).__name__},
+                metadata={
+                    "n_features": len(X.columns),
+                    "n_samples": len(X),
+                    "model_type": type(model).__name__,
+                },
             )
 
             # Store explanation history
@@ -455,14 +524,18 @@ class IntelligentForecastExplainability:
             if len(self.explanation_history) > 1000:
                 self.explanation_history = self.explanation_history[-1000:]
 
-            logger.info(f"Generated forecast explanation with {len(feature_importance)} features")
+            logger.info(
+                f"Generated forecast explanation with {len(feature_importance)} features"
+            )
             return explanation
 
         except Exception as e:
             logger.error(f"Error generating forecast explanation: {e}")
             return {
                 "success": True,
-                "result": self._create_fallback_explanation(forecast_value, forecast_horizon),
+                "result": self._create_fallback_explanation(
+                    forecast_value, forecast_horizon
+                ),
                 "message": "Operation completed successfully",
                 "timestamp": datetime.now().isoformat(),
             }
@@ -487,7 +560,9 @@ class IntelligentForecastExplainability:
             return np.array([0.0] * 10)
         # TODO: Specify exception type instead of using bare except
 
-    def _calculate_model_confidence(self, predictions: np.ndarray, forecast_value: float) -> float:
+    def _calculate_model_confidence(
+        self, predictions: np.ndarray, forecast_value: float
+    ) -> float:
         """Calculate model confidence based on prediction consistency."""
         try:
             # Calculate coefficient of variation
@@ -520,7 +595,9 @@ class IntelligentForecastExplainability:
             explanation_parts = []
 
             # Main forecast
-            explanation_parts.append(f"The model forecasts a value of {forecast_value:.4f}.")
+            explanation_parts.append(
+                f"The model forecasts a value of {forecast_value:.4f}."
+            )
 
             # Confidence intervals
             if confidence_intervals:
@@ -539,7 +616,9 @@ class IntelligentForecastExplainability:
             else:
                 confidence_level = "low"
 
-            explanation_parts.append(f"Model confidence is {confidence_level} ({model_confidence:.2f}).")
+            explanation_parts.append(
+                f"Model confidence is {confidence_level} ({model_confidence:.2f})."
+            )
 
             # Top features
             if feature_importance:
@@ -571,7 +650,9 @@ class IntelligentForecastExplainability:
                 main_interval = confidence_intervals[0]
                 interval_width = main_interval.upper_bound - main_interval.lower_bound
                 if interval_width > abs(forecast_value) * 0.5:
-                    risk_factors.append("Wide confidence intervals indicate high uncertainty")
+                    risk_factors.append(
+                        "Wide confidence intervals indicate high uncertainty"
+                    )
 
             # High feature importance concentration
             if feature_importance:
@@ -584,7 +665,9 @@ class IntelligentForecastExplainability:
             if actual_values is not None and len(actual_values) > 10:
                 recent_actual = actual_values.tail(10).mean()
                 if abs(forecast_value - recent_actual) > abs(recent_actual) * 0.2:
-                    risk_factors.append("Forecast significantly different from recent actuals")
+                    risk_factors.append(
+                        "Forecast significantly different from recent actuals"
+                    )
 
             # Extreme values
             if abs(forecast_value) > 2.0:  # Assuming normalized data
@@ -596,7 +679,9 @@ class IntelligentForecastExplainability:
             logger.error(f"Error identifying risk factors: {e}")
             return ["Unable to assess risk factors"]
 
-    def _create_fallback_explanation(self, forecast_value: float, forecast_horizon: int) -> ForecastExplanation:
+    def _create_fallback_explanation(
+        self, forecast_value: float, forecast_horizon: int
+    ) -> ForecastExplanation:
         """Create fallback explanation when generation fails."""
         return ForecastExplanation(
             forecast_value=forecast_value,
@@ -611,7 +696,10 @@ class IntelligentForecastExplainability:
         )
 
     def create_forecast_vs_actual_plot(
-        self, actual_values: pd.Series, forecast_values: pd.Series, save_path: Optional[str] = None
+        self,
+        actual_values: pd.Series,
+        forecast_values: pd.Series,
+        save_path: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create forecast vs actual comparison plot."""
         try:
@@ -623,8 +711,15 @@ class IntelligentForecastExplainability:
 
             # Main plot
             plt.subplot(2, 2, 1)
-            plt.plot(actual_values.index, actual_values.values, label="Actual", linewidth=2)
-            plt.plot(forecast_values.index, forecast_values.values, label="Forecast", linewidth=2)
+            plt.plot(
+                actual_values.index, actual_values.values, label="Actual", linewidth=2
+            )
+            plt.plot(
+                forecast_values.index,
+                forecast_values.values,
+                label="Forecast",
+                linewidth=2,
+            )
             plt.title("Forecast vs Actual Values")
             plt.legend()
             plt.grid(True, alpha=0.3)
@@ -670,7 +765,9 @@ class IntelligentForecastExplainability:
                 "mae": np.mean(np.abs(residuals)),
                 "rmse": np.sqrt(np.mean(residuals**2)),
                 "mape": np.mean(np.abs(residuals / actual_values)) * 100,
-                "r2": 1 - np.sum(residuals**2) / np.sum((actual_values - actual_values.mean()) ** 2),
+                "r2": 1
+                - np.sum(residuals**2)
+                / np.sum((actual_values - actual_values.mean()) ** 2),
             }
 
             return {"plot_created": True, "save_path": save_path, "metrics": metrics}
@@ -699,7 +796,8 @@ class IntelligentForecastExplainability:
                     [
                         e
                         for e in self.explanation_history
-                        if datetime.fromisoformat(e["timestamp"]) > datetime.now() - timedelta(days=7)
+                        if datetime.fromisoformat(e["timestamp"])
+                        > datetime.now() - timedelta(days=7)
                     ]
                 ),
             }

@@ -11,7 +11,17 @@ import pandas as pd
 # Constants
 LOG_DIR = Path("memory/logs")
 LOG_FILE = LOG_DIR / "performance_log.csv"
-REQUIRED_FIELDS = ["timestamp", "ticker", "model", "strategy", "sharpe", "drawdown", "mse", "accuracy", "notes"]
+REQUIRED_FIELDS = [
+    "timestamp",
+    "ticker",
+    "model",
+    "strategy",
+    "sharpe",
+    "drawdown",
+    "mse",
+    "accuracy",
+    "notes",
+]
 
 
 def ensure_log_directory():

@@ -8,7 +8,9 @@ import pandas as pd
 import pytest
 
 # Add project root to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 # Try to import ARIMA model with fallback
 try:
@@ -167,7 +169,9 @@ class TestARIMAModel:
 
         # Should handle constant series gracefully
         result = model.fit(constant_data)
-        assert result["success"] is True or "constant" in result.get("error", "").lower()
+        assert (
+            result["success"] is True or "constant" in result.get("error", "").lower()
+        )
 
         if result["success"]:
             forecast = model.predict(steps=5)
@@ -182,7 +186,10 @@ class TestARIMAModel:
         result = model.fit(short_data)
         # Should fail gracefully with clear error message
         assert result["success"] is False
-        assert "insufficient" in result.get("error", "").lower() or "at least" in result.get("error", "").lower()
+        assert (
+            "insufficient" in result.get("error", "").lower()
+            or "at least" in result.get("error", "").lower()
+        )
 
         # Test with exactly 3 datapoints (minimum for ARIMA)
         minimal_data = pd.Series([100, 101, 102])
@@ -198,7 +205,10 @@ class TestARIMAModel:
         seasonal_data = pd.Series(100 + 10 * np.sin(t) + np.random.normal(0, 1, 200))
 
         # Test with seasonal order
-        sarima_config = {"order": (1, 1, 1), "seasonal_order": (1, 1, 1, 12)}  # Monthly seasonality
+        sarima_config = {
+            "order": (1, 1, 1),
+            "seasonal_order": (1, 1, 1, 12),
+        }  # Monthly seasonality
         sarima_model = ARIMAModel(config=sarima_config)
 
         result = sarima_model.fit(seasonal_data)

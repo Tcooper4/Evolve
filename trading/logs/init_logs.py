@@ -103,7 +103,9 @@ def main() -> dict:
         if result["success"]:
             logger.info("All logging files verified or recreated.")
         else:
-            logger.error(f"Log initialization completed with errors: {result['errors']}")
+            logger.error(
+                f"Log initialization completed with errors: {result['errors']}"
+            )
 
         return result
 

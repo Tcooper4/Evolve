@@ -72,13 +72,19 @@ class ForecastExplainability:
         self.config = config or {}
 
         # Confidence interval settings
-        self.confidence_levels = self.config.get("confidence_levels", [0.68, 0.95, 0.99])
+        self.confidence_levels = self.config.get(
+            "confidence_levels", [0.68, 0.95, 0.99]
+        )
         self.default_confidence = self.config.get("default_confidence", 0.95)
 
         # SHAP settings
         self.shap_config = self.config.get(
             "shap_config",
-            {"max_features": 20, "background_samples": 100, "explainer_type": "tree"},  # tree, linear, kernel
+            {
+                "max_features": 20,
+                "background_samples": 100,
+                "explainer_type": "tree",
+            },  # tree, linear, kernel
         )
 
         # Explanation templates
@@ -167,7 +173,9 @@ class ForecastExplainability:
             }
         except Exception as e:
             logger.error(f"Error explaining forecast {forecast_id}: {e}")
-            default_explanation = self._create_default_explanation(forecast_id, symbol, forecast_value)
+            default_explanation = self._create_default_explanation(
+                forecast_id, symbol, forecast_value
+            )
             return {
                 "success": False,
                 "explanation": default_explanation,
@@ -176,7 +184,11 @@ class ForecastExplainability:
             }
 
     def _calculate_confidence_intervals(
-        self, model: Any, features: pd.DataFrame, forecast_value: float, confidence_level: float
+        self,
+        model: Any,
+        features: pd.DataFrame,
+        forecast_value: float,
+        confidence_level: float,
     ) -> Dict[str, float]:
         """Calculate confidence intervals for forecast.
 
@@ -198,7 +210,9 @@ class ForecastExplainability:
                 n_bootstrap = 1000
                 for _ in range(n_bootstrap):
                     # Bootstrap sample of features
-                    bootstrap_idx = np.random.choice(len(features), size=len(features), replace=True)
+                    bootstrap_idx = np.random.choice(
+                        len(features), size=len(features), replace=True
+                    )
                     bootstrap_features = features.iloc[bootstrap_idx]
 
                     # Add noise to features
@@ -239,14 +253,22 @@ class ForecastExplainability:
                 # LIME explainer
                 try:
                     explainer = LimeTabularExplainer(
-                        training_data=features.values, feature_names=features.columns.tolist(), mode="regression"
+                        training_data=features.values,
+                        feature_names=features.columns.tolist(),
+                        mode="regression",
                     )
                     exp = explainer.explain_instance(
-                        features.iloc[-1].values, model.predict, num_features=min(20, features.shape[1])
+                        features.iloc[-1].values,
+                        model.predict,
+                        num_features=min(20, features.shape[1]),
                     )
                     for feature, importance in exp.as_list():
                         feature_importance[feature] = abs(importance)
-                    feature_importance = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
+                    feature_importance = dict(
+                        sorted(
+                            feature_importance.items(), key=lambda x: x[1], reverse=True
+                        )
+                    )
                     return feature_importance
                 except Exception as e:
                     logger.warning(f"LIME calculation failed: {e}")
@@ -264,7 +286,9 @@ class ForecastExplainability:
                         elif "linear" in model_name or hasattr(model, "coef_"):
                             explainer = shap.LinearExplainer(model, features)
                         else:
-                            explainer = shap.KernelExplainer(model.predict, features.sample(min(100, len(features))))
+                            explainer = shap.KernelExplainer(
+                                model.predict, features.sample(min(100, len(features)))
+                            )
                         shap_values = explainer.shap_values(features.iloc[-1:])
                         if isinstance(shap_values, list):
                             shap_values = shap_values[0]
@@ -273,9 +297,17 @@ class ForecastExplainability:
                             if i < len(shap_values[0]):
                                 importance = abs(shap_values[0][i])
                                 feature_importance[feature] = float(importance)
-                        feature_importance = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
+                        feature_importance = dict(
+                            sorted(
+                                feature_importance.items(),
+                                key=lambda x: x[1],
+                                reverse=True,
+                            )
+                        )
                         max_features = self.shap_config.get("max_features", 20)
-                        feature_importance = dict(list(feature_importance.items())[:max_features])
+                        feature_importance = dict(
+                            list(feature_importance.items())[:max_features]
+                        )
                         return feature_importance
                     except Exception as e:
                         logger.warning(f"SHAP calculation failed: {e}")
@@ -290,7 +322,9 @@ class ForecastExplainability:
                         feature_importance[feature] = float(importances[i])
 
                 # Sort by importance
-                feature_importance = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
+                feature_importance = dict(
+                    sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
+                )
 
                 return feature_importance
 
@@ -304,7 +338,9 @@ class ForecastExplainability:
                         feature_importance[feature] = float(abs(coefficients[i]))
 
                 # Sort by importance
-                feature_importance = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
+                feature_importance = dict(
+                    sorted(feature_importance.items(), key=lambda x: x[1], reverse=True)
+                )
 
                 return feature_importance
 
@@ -319,7 +355,11 @@ class ForecastExplainability:
                         feature_importance[feature] = float(corr)
 
                     # Sort by importance
-                    feature_importance = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
+                    feature_importance = dict(
+                        sorted(
+                            feature_importance.items(), key=lambda x: x[1], reverse=True
+                        )
+                    )
 
                     return feature_importance
 
@@ -376,7 +416,9 @@ class ForecastExplainability:
             top_features_text = ", ".join(top_features)
 
             # Generate explanation
-            template = self.explanation_templates.get(direction, self.explanation_templates["neutral"])
+            template = self.explanation_templates.get(
+                direction, self.explanation_templates["neutral"]
+            )
 
             explanation = template.format(
                 symbol=symbol,
@@ -432,7 +474,9 @@ class ForecastExplainability:
             logger.error(f"Error extracting model metadata: {e}")
             return {"model_type": "unknown"}
 
-    def _create_default_explanation(self, forecast_id: str, symbol: str, forecast_value: float) -> ForecastExplanation:
+    def _create_default_explanation(
+        self, forecast_id: str, symbol: str, forecast_value: float
+    ) -> ForecastExplanation:
         """Create default explanation when error occurs.
 
         Args:
@@ -506,7 +550,9 @@ class ForecastExplainability:
             # Store in history
             self.accuracy_history.append(accuracy)
 
-            logger.info(f"Tracked accuracy for forecast {forecast_id}: {accuracy_score:.3f}")
+            logger.info(
+                f"Tracked accuracy for forecast {forecast_id}: {accuracy_score:.3f}"
+            )
 
             return accuracy
 
@@ -524,7 +570,9 @@ class ForecastExplainability:
                 timestamp=datetime.now(),
             )
 
-    def get_forecast_vs_actual_plot_data(self, symbol: str, days: int = 30) -> Dict[str, Any]:
+    def get_forecast_vs_actual_plot_data(
+        self, symbol: str, days: int = 30
+    ) -> Dict[str, Any]:
         """Get data for forecast vs actual plots.
 
         Args:
@@ -537,7 +585,11 @@ class ForecastExplainability:
         try:
             # Filter accuracy history by symbol and time
             cutoff_date = datetime.now() - timedelta(days=days)
-            recent_accuracy = [a for a in self.accuracy_history if a.symbol == symbol and a.timestamp > cutoff_date]
+            recent_accuracy = [
+                a
+                for a in self.accuracy_history
+                if a.symbol == symbol and a.timestamp > cutoff_date
+            ]
 
             if not recent_accuracy:
                 return {}
@@ -565,7 +617,9 @@ class ForecastExplainability:
             logger.error(f"Error getting forecast vs actual plot data: {e}")
             return {}
 
-    def get_feature_importance_summary(self, symbol: str, days: int = 30) -> Dict[str, Any]:
+    def get_feature_importance_summary(
+        self, symbol: str, days: int = 30
+    ) -> Dict[str, Any]:
         """Get feature importance summary.
 
         Args:
@@ -579,7 +633,9 @@ class ForecastExplainability:
             # Filter explanations by symbol and time
             cutoff_date = datetime.now() - timedelta(days=days)
             recent_explanations = [
-                e for e in self.explanation_history if e.symbol == symbol and e.timestamp > cutoff_date
+                e
+                for e in self.explanation_history
+                if e.symbol == symbol and e.timestamp > cutoff_date
             ]
 
             if not recent_explanations:
@@ -604,7 +660,9 @@ class ForecastExplainability:
                 avg_importance[feature] = np.mean(importances)
 
             # Sort by average importance
-            sorted_features = sorted(avg_importance.items(), key=lambda x: x[1], reverse=True)
+            sorted_features = sorted(
+                avg_importance.items(), key=lambda x: x[1], reverse=True
+            )
 
             return {
                 "symbol": symbol,
@@ -632,7 +690,9 @@ class ForecastExplainability:
             # Filter explanations by symbol and time
             cutoff_date = datetime.now() - timedelta(days=days)
             recent_explanations = [
-                e for e in self.explanation_history if e.symbol == symbol and e.timestamp > cutoff_date
+                e
+                for e in self.explanation_history
+                if e.symbol == symbol and e.timestamp > cutoff_date
             ]
 
             if not recent_explanations:
@@ -646,11 +706,17 @@ class ForecastExplainability:
             explanation_types = {}
             for explanation in recent_explanations:
                 if "bullish" in explanation.explanation_text.lower():
-                    explanation_types["bullish"] = explanation_types.get("bullish", 0) + 1
+                    explanation_types["bullish"] = (
+                        explanation_types.get("bullish", 0) + 1
+                    )
                 elif "bearish" in explanation.explanation_text.lower():
-                    explanation_types["bearish"] = explanation_types.get("bearish", 0) + 1
+                    explanation_types["bearish"] = (
+                        explanation_types.get("bearish", 0) + 1
+                    )
                 else:
-                    explanation_types["neutral"] = explanation_types.get("neutral", 0) + 1
+                    explanation_types["neutral"] = (
+                        explanation_types.get("neutral", 0) + 1
+                    )
 
             return {
                 "symbol": symbol,
@@ -676,7 +742,9 @@ class ForecastExplainability:
             logger.error(f"Error getting explanation summary: {e}")
             return {}
 
-    def export_explanation_report(self, filepath: str, symbol: Optional[str] = None) -> Dict[str, Any]:
+    def export_explanation_report(
+        self, filepath: str, symbol: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Export explanation report to a file.
 
         Args:
@@ -706,7 +774,11 @@ class ForecastExplainability:
             }
         except Exception as e:
             logger.error(f"Error exporting explanation report: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
 
 # Global forecast explainability instance

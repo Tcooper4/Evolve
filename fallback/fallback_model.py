@@ -40,7 +40,11 @@ class FallbackModel:
             Dict: Training results
         """
         self.logger.info(f"Training fallback model {self.model_name}")
-        return {"status": "success", "model_name": self.model_name, "message": "Fallback model training completed"}
+        return {
+            "status": "success",
+            "model_name": self.model_name,
+            "message": "Fallback model training completed",
+        }
 
     def predict(self, data: pd.DataFrame, **kwargs) -> List[float]:
         """
@@ -147,7 +151,9 @@ class FallbackLSTMModel(FallbackModel):
 
         for i in range(5):
             # Add trend and some random noise
-            prediction = last_price + trend * (i + 1) + np.random.normal(0, volatility * 0.1)
+            prediction = (
+                last_price + trend * (i + 1) + np.random.normal(0, volatility * 0.1)
+            )
             predictions.append(max(0, prediction))  # Ensure non-negative prices
 
         return predictions
@@ -236,7 +242,9 @@ class FallbackXGBoostModel(FallbackModel):
         predictions = []
         for i in range(5):
             # Add some trend and noise
-            prediction = base_prediction * (1 + 0.01 * (i + 1)) + np.random.normal(0, 0.01)
+            prediction = base_prediction * (1 + 0.01 * (i + 1)) + np.random.normal(
+                0, 0.01
+            )
             predictions.append(max(0, prediction))
 
         return predictions

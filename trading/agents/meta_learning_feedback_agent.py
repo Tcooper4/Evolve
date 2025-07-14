@@ -104,9 +104,15 @@ class MetaLearningFeedbackAgent(BaseAgent):
         # Configuration
         self.performance_window = self.config_dict.get("performance_window", 30)
         self.retuning_frequency = self.config_dict.get("retuning_frequency", "weekly")
-        self.ensemble_update_frequency = self.config_dict.get("ensemble_update_frequency", "weekly")
-        self.min_performance_threshold = self.config_dict.get("min_performance_threshold", 0.5)
-        self.max_hyperparameter_changes = self.config_dict.get("max_hyperparameter_changes", 5)
+        self.ensemble_update_frequency = self.config_dict.get(
+            "ensemble_update_frequency", "weekly"
+        )
+        self.min_performance_threshold = self.config_dict.get(
+            "min_performance_threshold", 0.5
+        )
+        self.max_hyperparameter_changes = self.config_dict.get(
+            "max_hyperparameter_changes", 5
+        )
         # Optimizers
         self.bayesian_optimizer = BayesianOptimizer()
         self.genetic_optimizer = GeneticOptimizer()
@@ -129,21 +135,30 @@ class MetaLearningFeedbackAgent(BaseAgent):
             if action == "process_feedback":
                 feedback_data = kwargs.get("feedback")
                 if not feedback_data:
-                    return AgentResult(success=False, error_message="Missing feedback data")
+                    return AgentResult(
+                        success=False, error_message="Missing feedback data"
+                    )
                 feedback = ModelFeedback(**feedback_data)
                 await self.process_model_feedback(feedback)
-                return AgentResult(success=True, data={"message": f"Processed feedback for {feedback.model_name}"})
+                return AgentResult(
+                    success=True,
+                    data={"message": f"Processed feedback for {feedback.model_name}"},
+                )
             elif action == "get_ensemble_weights":
                 weights = self.get_ensemble_weights()
                 return AgentResult(success=True, data={"ensemble_weights": weights})
             elif action == "get_model_performance_summary":
                 model_name = kwargs.get("model_name")
                 if not model_name:
-                    return AgentResult(success=False, error_message="Missing model_name")
+                    return AgentResult(
+                        success=False, error_message="Missing model_name"
+                    )
                 summary = self.get_model_performance_summary(model_name)
                 return AgentResult(success=True, data={"performance_summary": summary})
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
         except Exception as e:
             return self.handle_error(e)
 
@@ -184,7 +199,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
             # Keep only recent feedback
             cutoff_date = datetime.now() - timedelta(days=self.performance_window)
             self.feedback_history[feedback.model_name] = [
-                f for f in self.feedback_history[feedback.model_name] if f.timestamp > cutoff_date
+                f
+                for f in self.feedback_history[feedback.model_name]
+                if f.timestamp > cutoff_date
             ]
 
             # Store in memory
@@ -192,7 +209,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
             self.memory.store(
                 memory_key,
                 {
-                    "feedback": [f.__dict__ for f in self.feedback_history[feedback.model_name]],
+                    "feedback": [
+                        f.__dict__ for f in self.feedback_history[feedback.model_name]
+                    ],
                     "timestamp": datetime.now(),
                 },
             )
@@ -220,7 +239,11 @@ class MetaLearningFeedbackAgent(BaseAgent):
                 avg_win_rate = np.mean([f.win_rate for f in recent_feedback])
 
                 # Calculate composite score
-                performance_score = 0.4 * max(0, avg_sharpe) + 0.3 * (1 - min(1, avg_mse)) + 0.3 * avg_win_rate
+                performance_score = (
+                    0.4 * max(0, avg_sharpe)
+                    + 0.3 * (1 - min(1, avg_mse))
+                    + 0.3 * avg_win_rate
+                )
 
                 performance_scores[model_name] = performance_score
 
@@ -230,14 +253,22 @@ class MetaLearningFeedbackAgent(BaseAgent):
             # Normalize weights
             total_score = sum(performance_scores.values())
             if total_score > 0:
-                self.ensemble_weights = {model: score / total_score for model, score in performance_scores.items()}
+                self.ensemble_weights = {
+                    model: score / total_score
+                    for model, score in performance_scores.items()
+                }
             else:
                 # Equal weights if no positive performance
                 num_models = len(performance_scores)
-                self.ensemble_weights = {model: 1.0 / num_models for model in performance_scores.keys()}
+                self.ensemble_weights = {
+                    model: 1.0 / num_models for model in performance_scores.keys()
+                }
 
             # Store updated weights
-            self.memory.store("ensemble_weights", {"weights": self.ensemble_weights, "timestamp": datetime.now()})
+            self.memory.store(
+                "ensemble_weights",
+                {"weights": self.ensemble_weights, "timestamp": datetime.now()},
+            )
 
             self.memory.store("last_ensemble_update", {"timestamp": datetime.now()})
 
@@ -266,7 +297,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
 
             # Trigger retuning if performance is declining significantly
             mse_decline = (recent_mse - older_mse) / max(older_mse, 1e-6)
-            sharpe_decline = (older_sharpe - recent_sharpe) / max(abs(older_sharpe), 1e-6)
+            sharpe_decline = (older_sharpe - recent_sharpe) / max(
+                abs(older_sharpe), 1e-6
+            )
 
             return mse_decline > 0.2 or sharpe_decline > 0.3
 
@@ -298,8 +331,12 @@ class MetaLearningFeedbackAgent(BaseAgent):
                     model.update_hyperparameters(hyperparams)
 
                     # Calculate expected performance based on historical patterns
-                    expected_mse = self._estimate_performance_improvement(model_name, hyperparams, "mse")
-                    expected_sharpe = self._estimate_performance_improvement(model_name, hyperparams, "sharpe")
+                    expected_mse = self._estimate_performance_improvement(
+                        model_name, hyperparams, "mse"
+                    )
+                    expected_sharpe = self._estimate_performance_improvement(
+                        model_name, hyperparams, "sharpe"
+                    )
 
                     # Return negative score (minimize)
                     return -(0.6 * expected_sharpe + 0.4 * (1 - expected_mse))
@@ -316,7 +353,11 @@ class MetaLearningFeedbackAgent(BaseAgent):
                 if len(param_space) <= 3:
                     # Use Bayesian optimization for small spaces
                     best_params = await asyncio.get_event_loop().run_in_executor(
-                        executor, self.bayesian_optimizer.optimize, objective, param_space, n_trials=20
+                        executor,
+                        self.bayesian_optimizer.optimize,
+                        objective,
+                        param_space,
+                        n_trials=20,
                     )
                 else:
                     # Use genetic optimization for larger spaces
@@ -337,12 +378,16 @@ class MetaLearningFeedbackAgent(BaseAgent):
                 # Store hyperparameter update
                 self._store_hyperparameter_update(model_name, old_params, best_params)
 
-                self.logger.info(f"Updated hyperparameters for {model_name}: {best_params}")
+                self.logger.info(
+                    f"Updated hyperparameters for {model_name}: {best_params}"
+                )
 
         except Exception as e:
             self.logger.error(f"Error retuning hyperparameters: {str(e)}")
 
-    def _estimate_performance_improvement(self, model_name: str, hyperparams: Dict[str, Any], metric: str) -> float:
+    def _estimate_performance_improvement(
+        self, model_name: str, hyperparams: Dict[str, Any], metric: str
+    ) -> float:
         """Estimate performance improvement from hyperparameter changes."""
         try:
             # This is a simplified estimation - in practice, you'd use more sophisticated methods
@@ -354,7 +399,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
             # Find similar hyperparameter configurations
             similar_configs = []
             for hist_params in self.hyperparameter_history[model_name]:
-                similarity = self._calculate_hyperparameter_similarity(hyperparams, hist_params)
+                similarity = self._calculate_hyperparameter_similarity(
+                    hyperparams, hist_params
+                )
                 if similarity > 0.7:
                     similar_configs.append(hist_params)
 
@@ -365,7 +412,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
             if metric == "mse":
                 return np.mean([config.get("mse", 0.5) for config in similar_configs])
             elif metric == "sharpe":
-                return np.mean([config.get("sharpe_ratio", 0.5) for config in similar_configs])
+                return np.mean(
+                    [config.get("sharpe_ratio", 0.5) for config in similar_configs]
+                )
             else:
                 return 0.5
 
@@ -373,7 +422,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
             self.logger.error(f"Error estimating performance improvement: {str(e)}")
             return 0.5
 
-    def _calculate_hyperparameter_similarity(self, params1: Dict[str, Any], params2: Dict[str, Any]) -> float:
+    def _calculate_hyperparameter_similarity(
+        self, params1: Dict[str, Any], params2: Dict[str, Any]
+    ) -> float:
         """Calculate similarity between two hyperparameter configurations."""
         try:
             common_keys = set(params1.keys()) & set(params2.keys())
@@ -430,7 +481,11 @@ class MetaLearningFeedbackAgent(BaseAgent):
                 }
             else:
                 # Default space
-                return {"learning_rate": [0.001, 0.01, 0.1], "batch_size": [32, 64, 128], "epochs": [50, 100, 200]}
+                return {
+                    "learning_rate": [0.001, 0.01, 0.1],
+                    "batch_size": [32, 64, 128],
+                    "epochs": [50, 100, 200],
+                }
 
         except Exception as e:
             self.logger.error(f"Error getting hyperparameter space: {str(e)}")
@@ -453,7 +508,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
 
             # Check if performance is below thresholds
             if (
-                recent_mse > 0.1 or recent_sharpe < -0.5 or recent_win_rate < 0.3  # High MSE  # Negative Sharpe
+                recent_mse > 0.1
+                or recent_sharpe < -0.5
+                or recent_win_rate < 0.3  # High MSE  # Negative Sharpe
             ):  # Low win rate
                 return True
 
@@ -493,13 +550,19 @@ class MetaLearningFeedbackAgent(BaseAgent):
 
             if best_alternative:
                 # Update ensemble weights to favor the better model
-                self.ensemble_weights[best_alternative] = self.ensemble_weights.get(best_alternative, 0.1) + 0.2
+                self.ensemble_weights[best_alternative] = (
+                    self.ensemble_weights.get(best_alternative, 0.1) + 0.2
+                )
                 if model_name in self.ensemble_weights:
-                    self.ensemble_weights[model_name] = max(0.05, self.ensemble_weights[model_name] - 0.1)
+                    self.ensemble_weights[model_name] = max(
+                        0.05, self.ensemble_weights[model_name] - 0.1
+                    )
 
                 # Normalize weights
                 total_weight = sum(self.ensemble_weights.values())
-                self.ensemble_weights = {k: v / total_weight for k, v in self.ensemble_weights.items()}
+                self.ensemble_weights = {
+                    k: v / total_weight for k, v in self.ensemble_weights.items()
+                }
 
                 self.logger.info(f"Replaced {model_name} with {best_alternative}")
                 self.logger.info(f"Updated ensemble weights: {self.ensemble_weights}")
@@ -507,7 +570,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error replacing model: {str(e)}")
 
-    def _store_hyperparameter_update(self, model_name: str, old_params: Dict[str, Any], new_params: Dict[str, Any]):
+    def _store_hyperparameter_update(
+        self, model_name: str, old_params: Dict[str, Any], new_params: Dict[str, Any]
+    ):
         """Store hyperparameter update history."""
         try:
             if model_name not in self.hyperparameter_history:
@@ -525,7 +590,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
             # Keep only recent updates
             cutoff_date = datetime.now() - timedelta(days=30)
             self.hyperparameter_history[model_name] = [
-                record for record in self.hyperparameter_history[model_name] if record["timestamp"] > cutoff_date
+                record
+                for record in self.hyperparameter_history[model_name]
+                if record["timestamp"] > cutoff_date
             ]
 
         except Exception as e:
@@ -535,7 +602,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
         """Get current ensemble weights."""
         return self.ensemble_weights.copy()
 
-    def get_model_performance_summary(self, model_name: str) -> Optional[Dict[str, Any]]:
+    def get_model_performance_summary(
+        self, model_name: str
+    ) -> Optional[Dict[str, Any]]:
         """Get performance summary for a specific model."""
         try:
             if model_name not in self.feedback_history:
@@ -553,8 +622,12 @@ class MetaLearningFeedbackAgent(BaseAgent):
                 "recent_mse": np.mean([f.mse for f in recent_feedback]),
                 "recent_sharpe": np.mean([f.sharpe_ratio for f in recent_feedback]),
                 "recent_win_rate": np.mean([f.win_rate for f in recent_feedback]),
-                "recent_max_drawdown": np.mean([f.max_drawdown for f in recent_feedback]),
-                "last_updated": recent_feedback[-1].timestamp if recent_feedback else None,
+                "recent_max_drawdown": np.mean(
+                    [f.max_drawdown for f in recent_feedback]
+                ),
+                "last_updated": recent_feedback[-1].timestamp
+                if recent_feedback
+                else None,
             }
 
         except Exception as e:
@@ -569,7 +642,9 @@ class MetaLearningFeedbackAgent(BaseAgent):
                 with open(feedback_file, "r") as f:
                     data = json.load(f)
                     for model_name, feedback_list in data.items():
-                        self.feedback_history[model_name] = [ModelFeedback(**f) for f in feedback_list]
+                        self.feedback_history[model_name] = [
+                            ModelFeedback(**f) for f in feedback_list
+                        ]
 
         except Exception as e:
             self.logger.error(f"Error loading feedback history: {str(e)}")

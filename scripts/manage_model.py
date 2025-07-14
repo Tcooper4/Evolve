@@ -85,7 +85,9 @@ class ModelManager:
 
         logging.config.dictConfig(log_config)
 
-    def train_model(self, model_type: str, data_path: str, params: Optional[Dict[str, Any]] = None):
+    def train_model(
+        self, model_type: str, data_path: str, params: Optional[Dict[str, Any]] = None
+    ):
         """Train a machine learning model."""
         self.logger.info(f"Training {model_type} model...")
 
@@ -162,7 +164,9 @@ class ModelManager:
             base_model = self._initialize_model(model_type)
 
             # Perform grid search
-            grid_search = GridSearchCV(base_model, param_grid, cv=5, scoring="f1", n_jobs=-1)
+            grid_search = GridSearchCV(
+                base_model, param_grid, cv=5, scoring="f1", n_jobs=-1
+            )
 
             # Fit grid search
             start_time = time.time()
@@ -207,7 +211,9 @@ class ModelManager:
             self.logger.error(f"Failed to load data: {e}")
             raise
 
-    def _prepare_data(self, data: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _prepare_data(
+        self, data: pd.DataFrame
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Prepare data for training."""
         try:
             # Split features and target
@@ -215,7 +221,9 @@ class ModelManager:
             y = data["target"]
 
             # Split into train and test sets
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42
+            )
 
             # Scale features
             scaler = StandardScaler()
@@ -227,7 +235,9 @@ class ModelManager:
             self.logger.error(f"Failed to prepare data: {e}")
             raise
 
-    def _prepare_evaluation_data(self, data: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    def _prepare_evaluation_data(
+        self, data: pd.DataFrame
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Prepare data for evaluation."""
         try:
             # Split features and target
@@ -243,7 +253,9 @@ class ModelManager:
             self.logger.error(f"Failed to prepare evaluation data: {e}")
             raise
 
-    def _initialize_model(self, model_type: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    def _initialize_model(
+        self, model_type: str, params: Optional[Dict[str, Any]] = None
+    ) -> Any:
         """Initialize model based on type."""
         try:
             if model_type == "random_forest":
@@ -262,7 +274,9 @@ class ModelManager:
             self.logger.error(f"Failed to initialize model: {e}")
             raise
 
-    def _initialize_lstm_model(self, params: Optional[Dict[str, Any]] = None) -> nn.Module:
+    def _initialize_lstm_model(
+        self, params: Optional[Dict[str, Any]] = None
+    ) -> nn.Module:
         """Initialize LSTM model."""
         try:
 
@@ -271,12 +285,18 @@ class ModelManager:
                     super(LSTMModel, self).__init__()
                     self.hidden_size = hidden_size
                     self.num_layers = num_layers
-                    self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+                    self.lstm = nn.LSTM(
+                        input_size, hidden_size, num_layers, batch_first=True
+                    )
                     self.fc = nn.Linear(hidden_size, num_classes)
 
                 def forward(self, x):
-                    h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-                    c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+                    h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(
+                        x.device
+                    )
+                    c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(
+                        x.device
+                    )
                     out, _ = self.lstm(x, (h0, c0))
                     out = self.fc(out[:, -1, :])
                     return out
@@ -303,7 +323,9 @@ class ModelManager:
             self.logger.error(f"Failed to train model: {e}")
             raise
 
-    def _train_pytorch_model(self, model: nn.Module, X: np.ndarray, y: np.ndarray) -> nn.Module:
+    def _train_pytorch_model(
+        self, model: nn.Module, X: np.ndarray, y: np.ndarray
+    ) -> nn.Module:
         """Train PyTorch model."""
         try:
             # Convert data to PyTorch tensors
@@ -333,7 +355,9 @@ class ModelManager:
             self.logger.error(f"Failed to train PyTorch model: {e}")
             raise
 
-    def _evaluate_model(self, model: Any, X: np.ndarray, y: np.ndarray) -> Dict[str, float]:
+    def _evaluate_model(
+        self, model: Any, X: np.ndarray, y: np.ndarray
+    ) -> Dict[str, float]:
         """Evaluate model."""
         try:
             if isinstance(model, nn.Module):
@@ -381,11 +405,21 @@ class ModelManager:
                 "subsample": [0.8, 0.9, 1.0],
             }
         elif model_type == "lstm":
-            return {"hidden_size": [32, 64, 128], "num_layers": [1, 2, 3], "dropout": [0.1, 0.2, 0.3]}
+            return {
+                "hidden_size": [32, 64, 128],
+                "num_layers": [1, 2, 3],
+                "dropout": [0.1, 0.2, 0.3],
+            }
         else:
             raise ValueError(f"Unknown model type: {model_type}")
 
-    def _save_model(self, model: Any, model_type: str, metrics: Dict[str, Any], optimized: bool = False):
+    def _save_model(
+        self,
+        model: Any,
+        model_type: str,
+        metrics: Dict[str, Any],
+        optimized: bool = False,
+    ):
         """Save model and metrics."""
         try:
             # Create model directory
@@ -443,11 +477,18 @@ class ModelManager:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Model Manager")
-    parser.add_argument("command", choices=["train", "evaluate", "optimize"], help="Command to execute")
     parser.add_argument(
-        "--model-type", choices=["random_forest", "xgboost", "lstm"], required=True, help="Type of model to use"
+        "command", choices=["train", "evaluate", "optimize"], help="Command to execute"
     )
-    parser.add_argument("--data-path", required=True, help="Path to training/evaluation data")
+    parser.add_argument(
+        "--model-type",
+        choices=["random_forest", "xgboost", "lstm"],
+        required=True,
+        help="Type of model to use",
+    )
+    parser.add_argument(
+        "--data-path", required=True, help="Path to training/evaluation data"
+    )
     parser.add_argument("--params", help="Model parameters in JSON format")
 
     args = parser.parse_args()

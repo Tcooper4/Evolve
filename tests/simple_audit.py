@@ -11,7 +11,15 @@ import sys
 def find_python_files(root_dir=".", exclude_dirs=None):
     """Find all Python files in the codebase."""
     if exclude_dirs is None:
-        exclude_dirs = {"archive", "legacy", "test_coverage", "__pycache__", ".git", "venv", "env"}
+        exclude_dirs = {
+            "archive",
+            "legacy",
+            "test_coverage",
+            "__pycache__",
+            ".git",
+            "venv",
+            "env",
+        }
 
     python_files = []
     for root, dirs, files in os.walk(root_dir):
@@ -102,11 +110,17 @@ def check_function_returns(file_path):
                     "draw_",
                 ]
 
-                should_return = any(indicator in func_name for indicator in return_indicators)
+                should_return = any(
+                    indicator in func_name for indicator in return_indicators
+                )
 
                 if (side_effects or should_return) and not has_return:
                     issues.append(
-                        {"function": func_name, "line": func_line, "reason": "Has side effects or should return data"}
+                        {
+                            "function": func_name,
+                            "line": func_line,
+                            "reason": "Has side effects or should return data",
+                        }
                     )
                 else:
                     passing_functions.append(func_name)

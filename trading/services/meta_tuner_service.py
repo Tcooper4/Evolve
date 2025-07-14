@@ -27,7 +27,9 @@ class MetaTunerService(BaseService):
     Handles hyperparameter tuning requests and communicates results via Redis.
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0):
+    def __init__(
+        self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0
+    ):
         """Initialize the MetaTunerService."""
         super().__init__("meta_tuner", redis_host, redis_port, redis_db)
 
@@ -60,7 +62,11 @@ class MetaTunerService(BaseService):
                 return self._handle_auto_tune_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {"type": "error", "error": f"Unknown message type: {message_type}", "original_message": data}
+                return {
+                    "type": "error",
+                    "error": f"Unknown message type: {message_type}",
+                    "original_message": data,
+                }
 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
@@ -114,7 +120,11 @@ class MetaTunerService(BaseService):
                 },
             )
 
-            response = {"type": "hyperparameters_tuned", "result": result, "status": "success"}
+            response = {
+                "type": "hyperparameters_tuned",
+                "result": result,
+                "status": "success",
+            }
             # Attach sensitivity/importance info to response if present
             if param_importances:
                 response["param_importances"] = param_importances
@@ -142,7 +152,11 @@ class MetaTunerService(BaseService):
             # Get tuning history
             history = self.agent.get_tuning_history(model_type=model_type, limit=limit)
 
-            return {"type": "tuning_history", "history": history, "model_type": model_type}
+            return {
+                "type": "tuning_history",
+                "history": history,
+                "model_type": model_type,
+            }
 
         except Exception as e:
             logger.error(f"Error getting tuning history: {e}")
@@ -161,7 +175,9 @@ class MetaTunerService(BaseService):
                 return {"type": "error", "error": "model_type is required"}
 
             # Get best parameters
-            best_params = self.agent.get_best_hyperparameters(model_type=model_type, dataset_size=dataset_size)
+            best_params = self.agent.get_best_hyperparameters(
+                model_type=model_type, dataset_size=dataset_size
+            )
 
             return {
                 "type": "best_hyperparameters",
@@ -206,7 +222,11 @@ class MetaTunerService(BaseService):
                 },
             )
 
-            return {"type": "auto_tune_completed", "result": result, "status": "success"}
+            return {
+                "type": "auto_tune_completed",
+                "result": result,
+                "status": "success",
+            }
 
         except Exception as e:
             logger.error(f"Error in auto-tune: {e}")
@@ -219,7 +239,9 @@ class MetaTunerService(BaseService):
 
             # Get recent tuning activities
             recent_tuning = [
-                entry for entry in memory_stats.get("recent_decisions", []) if entry.get("agent_name") == "meta_tuner"
+                entry
+                for entry in memory_stats.get("recent_decisions", [])
+                if entry.get("agent_name") == "meta_tuner"
             ]
 
             # Count by type

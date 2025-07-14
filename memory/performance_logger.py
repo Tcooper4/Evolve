@@ -10,13 +10,16 @@ import os
 from datetime import datetime
 from typing import Dict, List, Optional, Union
 
-
 PERF_LOG = "memory/performance_log.json"
 PERF_ANALYSIS = "memory/performance_analysis.json"
 
 
 def log_strategy_performance(
-    ticker: str, model: str, agentic: bool, metrics: Dict[str, Union[float, int]], metadata: Optional[Dict] = None
+    ticker: str,
+    model: str,
+    agentic: bool,
+    metrics: Dict[str, Union[float, int]],
+    metadata: Optional[Dict] = None,
 ) -> None:
     """
     Store performance metrics tied to a strategy selection.
@@ -56,7 +59,9 @@ def log_strategy_performance(
     _update_performance_analysis(ticker, entry)
 
 
-def get_performance_history(ticker: Optional[str] = None, model: Optional[str] = None, limit: int = 100) -> List[Dict]:
+def get_performance_history(
+    ticker: Optional[str] = None, model: Optional[str] = None, limit: int = 100
+) -> List[Dict]:
     """
     Retrieve performance history with optional filtering.
 
@@ -142,7 +147,11 @@ def _update_performance_analysis(ticker: str, entry: Dict) -> None:
     # Update model performance
     model = entry["model"]
     if model not in ticker_analysis["model_performance"]:
-        ticker_analysis["model_performance"][model] = {"count": 0, "metrics_sum": {}, "metrics_avg": {}}
+        ticker_analysis["model_performance"][model] = {
+            "count": 0,
+            "metrics_sum": {},
+            "metrics_avg": {},
+        }
 
     model_stats = ticker_analysis["model_performance"][model]
     model_stats["count"] += 1
@@ -154,7 +163,9 @@ def _update_performance_analysis(ticker: str, entry: Dict) -> None:
             model_stats["metrics_avg"][metric] = 0
 
         model_stats["metrics_sum"][metric] += value
-        model_stats["metrics_avg"][metric] = model_stats["metrics_sum"][metric] / model_stats["count"]
+        model_stats["metrics_avg"][metric] = (
+            model_stats["metrics_sum"][metric] / model_stats["count"]
+        )
 
     # Update timestamp
     ticker_analysis["last_updated"] = entry["timestamp"]

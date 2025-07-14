@@ -15,7 +15,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +28,7 @@ class RequirementsCleaner:
         self.requirements_file = requirements_file
         self.output_file = output_file
         self.logger = logging.getLogger(__name__)
-        self.packages_to_remove = {"ta-lib", "talib"}
+        self.packages_to_remove = set()
         self.categories = {
             "core": [
                 "numpy",
@@ -40,9 +42,21 @@ class RequirementsCleaner:
                 "plotly",
                 "streamlit",
             ],
-            "trading": ["ccxt", "backtrader", "websockets", "requests", "alpha_vantage"],
+            "trading": [
+                "ccxt",
+                "backtrader",
+                "websockets",
+                "requests",
+                "alpha_vantage",
+            ],
             "visualization": ["dash", "bokeh", "seaborn"],
-            "system": ["prometheus-client", "grafana-api", "psutil", "docker", "kubernetes"],
+            "system": [
+                "prometheus-client",
+                "grafana-api",
+                "psutil",
+                "docker",
+                "kubernetes",
+            ],
             "database": ["sqlalchemy", "pymongo", "redis"],
             "testing": [
                 "pytest",
@@ -67,7 +81,12 @@ class RequirementsCleaner:
                 "hypothesis",
             ],
             "development": ["black", "flake8", "mypy", "isort", "pre-commit"],
-            "documentation": ["sphinx", "sphinx-rtd-theme", "mkdocs", "mkdocs-material"],
+            "documentation": [
+                "sphinx",
+                "sphinx-rtd-theme",
+                "mkdocs",
+                "mkdocs-material",
+            ],
             "security": ["cryptography", "python-jose", "passlib", "bcrypt"],
             "monitoring": ["sentry-sdk", "loguru", "python-json-logger"],
             "additional": [
@@ -87,23 +106,45 @@ class RequirementsCleaner:
         """Load requirements from file."""
         try:
             with open(self.requirements_file, "r") as f:
-                return [line.strip() for line in f if line.strip() and not line.startswith("#")]
+                return [
+                    line.strip()
+                    for line in f
+                    if line.strip() and not line.startswith("#")
+                ]
         except Exception as e:
             self.logger.error(f"Error loading requirements: {e}")
             return []
 
     def categorize_packages(self, packages: List[str]) -> Dict[str, List[str]]:
         """Categorize packages by type."""
-        categorized = {"core": [], "ml": [], "web": [], "data": [], "utils": [], "dev": [], "unknown": []}
+        categorized = {
+            "core": [],
+            "ml": [],
+            "web": [],
+            "data": [],
+            "utils": [],
+            "dev": [],
+            "unknown": [],
+        }
 
         for package in packages:
-            if any(keyword in package.lower() for keyword in ["numpy", "pandas", "scipy"]):
+            if any(
+                keyword in package.lower() for keyword in ["numpy", "pandas", "scipy"]
+            ):
                 categorized["data"].append(package)
-            elif any(keyword in package.lower() for keyword in ["tensorflow", "torch", "sklearn", "xgboost"]):
+            elif any(
+                keyword in package.lower()
+                for keyword in ["tensorflow", "torch", "sklearn", "xgboost"]
+            ):
                 categorized["ml"].append(package)
-            elif any(keyword in package.lower() for keyword in ["flask", "streamlit", "fastapi", "django"]):
+            elif any(
+                keyword in package.lower()
+                for keyword in ["flask", "streamlit", "fastapi", "django"]
+            ):
                 categorized["web"].append(package)
-            elif any(keyword in package.lower() for keyword in ["pytest", "black", "flake8"]):
+            elif any(
+                keyword in package.lower() for keyword in ["pytest", "black", "flake8"]
+            ):
                 categorized["dev"].append(package)
             else:
                 categorized["unknown"].append(package)
@@ -130,7 +171,9 @@ class RequirementsCleaner:
             name, version = self.get_package_info(package)
 
             # Simple health check based on package name
-            if any(keyword in name.lower() for keyword in ["numpy", "pandas", "requests"]):
+            if any(
+                keyword in name.lower() for keyword in ["numpy", "pandas", "requests"]
+            ):
                 return 95  # Well-maintained packages
             elif any(keyword in name.lower() for keyword in ["tensorflow", "torch"]):
                 return 90  # ML frameworks
@@ -175,7 +218,9 @@ class RequirementsCleaner:
                     if health >= 70:  # Keep packages with health >= 70
                         healthy_packages.append(package)
                     else:
-                        self.logger.warning(f"Removing low-health package: {package} (health: {health})")
+                        self.logger.warning(
+                            f"Removing low-health package: {package} (health: {health})"
+                        )
 
             # Format and save
             formatted_content = self.format_requirements(healthy_packages)
@@ -183,7 +228,9 @@ class RequirementsCleaner:
             with open(self.output_file, "w") as f:
                 f.write(formatted_content)
 
-            self.logger.info(f"Cleanup completed. Kept {len(healthy_packages)}/{len(packages)} packages")
+            self.logger.info(
+                f"Cleanup completed. Kept {len(healthy_packages)}/{len(packages)} packages"
+            )
             return True
 
         except Exception as e:

@@ -116,7 +116,9 @@ class ReasoningLogger:
             log_dir: Directory to store log files
             enable_gpt_explanations: Whether to use GPT for enhanced explanations
         """
-        self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
+        self.redis_client = redis.Redis(
+            host=redis_host, port=redis_port, db=redis_db, decode_responses=True
+        )
 
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         self.enable_gpt_explanations = enable_gpt_explanations
@@ -223,7 +225,9 @@ class ReasoningLogger:
         try:
             # Store in Redis
             decision_key = f"decision:{decision.decision_id}"
-            self.redis_client.setex(decision_key, 86400 * 30, json.dumps(asdict(decision), default=str))  # 30 days TTL
+            self.redis_client.setex(
+                decision_key, 86400 * 30, json.dumps(asdict(decision), default=str)
+            )  # 30 days TTL
 
             # Store in file system
             decision_file = self.log_dir / "decisions" / f"{decision.decision_id}.json"
@@ -252,14 +256,20 @@ class ReasoningLogger:
             with open(summary_file, "w") as f:
                 f.write(summary)
 
-            explanation_file = self.log_dir / "explanations" / f"{decision.decision_id}.txt"
+            explanation_file = (
+                self.log_dir / "explanations" / f"{decision.decision_id}.txt"
+            )
             with open(explanation_file, "w") as f:
                 f.write(chat_explanation)
 
             # Store in Redis
-            self.redis_client.setex(f"summary:{decision.decision_id}", 86400 * 30, summary)
+            self.redis_client.setex(
+                f"summary:{decision.decision_id}", 86400 * 30, summary
+            )
 
-            self.redis_client.setex(f"explanation:{decision.decision_id}", 86400 * 30, chat_explanation)
+            self.redis_client.setex(
+                f"explanation:{decision.decision_id}", 86400 * 30, chat_explanation
+            )
 
         except Exception as e:
             logger.error(f"Error generating explanations: {e}")
@@ -440,10 +450,14 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
         except Exception as e:
             logger.error(f"Error retrieving decision: {e}")
 
-    def get_agent_decisions(self, agent_name: str, limit: int = 50) -> List[AgentDecision]:
+    def get_agent_decisions(
+        self, agent_name: str, limit: int = 50
+    ) -> List[AgentDecision]:
         """Get recent decisions for a specific agent."""
         try:
-            decision_ids = self.redis_client.lrange(f"decisions:{agent_name}", 0, limit - 1)
+            decision_ids = self.redis_client.lrange(
+                f"decisions:{agent_name}", 0, limit - 1
+            )
             decisions = []
 
             for decision_id in decision_ids:
@@ -457,7 +471,9 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
             logger.error(f"Error retrieving agent decisions: {e}")
             return []
 
-    def get_decisions_by_type(self, decision_type: DecisionType, limit: int = 50) -> List[AgentDecision]:
+    def get_decisions_by_type(
+        self, decision_type: DecisionType, limit: int = 50
+    ) -> List[AgentDecision]:
         """Get recent decisions of a specific type."""
         try:
             # This would require additional indexing in a production system
@@ -472,7 +488,9 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
                 all_decisions.extend(agent_decisions)
 
             # Filter by type
-            filtered_decisions = [d for d in all_decisions if d.decision_type == decision_type]
+            filtered_decisions = [
+                d for d in all_decisions if d.decision_type == decision_type
+            ]
 
             # Sort by timestamp and limit
             filtered_decisions.sort(key=lambda x: x.timestamp, reverse=True)
@@ -571,7 +589,9 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
 
                     # Count by type
                     decision_type = decision.decision_type.value
-                    stats["decisions_by_type"][decision_type] = stats["decisions_by_type"].get(decision_type, 0) + 1
+                    stats["decisions_by_type"][decision_type] = (
+                        stats["decisions_by_type"].get(decision_type, 0) + 1
+                    )
 
                     # Count by confidence
                     confidence = decision.confidence_level.value
@@ -604,7 +624,9 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
                 for decision_id in decision_ids:
                     decision = self.get_decision(decision_id)
                     if decision:
-                        decision_time = datetime.fromisoformat(decision.timestamp).timestamp()
+                        decision_time = datetime.fromisoformat(
+                            decision.timestamp
+                        ).timestamp()
                         if decision_time < cutoff_time:
                             # Remove from Redis
                             self.redis_client.delete(f"decision:{decision_id}")
@@ -616,7 +638,9 @@ Hey there! I just made a {{ decision.decision_type.value.replace('_', ' ') }} de
 
                             # Remove files
                             for file_type in ["decisions", "summaries", "explanations"]:
-                                file_path = self.log_dir / file_type / f"{decision_id}.json"
+                                file_path = (
+                                    self.log_dir / file_type / f"{decision_id}.json"
+                                )
                                 if file_path.exists():
                                     file_path.unlink()
 
@@ -654,13 +678,20 @@ def log_forecast_decision(
             "user_preferences": reasoning.get("user_preferences", {}),
         },
         reasoning=reasoning,
-        confidence_level=ConfidenceLevel.HIGH if confidence > 0.7 else ConfidenceLevel.MEDIUM,
+        confidence_level=ConfidenceLevel.HIGH
+        if confidence > 0.7
+        else ConfidenceLevel.MEDIUM,
         metadata={"forecast_value": forecast_value, "confidence_score": confidence},
     )
 
 
 def log_strategy_decision(
-    agent_name: str, symbol: str, action: str, strategy_name: str, reasoning: Dict[str, Any], **kwargs
+    agent_name: str,
+    symbol: str,
+    action: str,
+    strategy_name: str,
+    reasoning: Dict[str, Any],
+    **kwargs,
 ) -> str:
     """Log a strategy decision."""
     logger = ReasoningLogger(**kwargs)

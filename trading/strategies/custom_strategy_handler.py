@@ -73,8 +73,12 @@ class CustomStrategyHandler:
                 description=config.get("description", ""),
                 code=config.get("code", ""),
                 config=config.get("parameters", {}),
-                created_at=datetime.fromisoformat(config.get("created_at", datetime.now().isoformat())),
-                updated_at=datetime.fromisoformat(config.get("updated_at", datetime.now().isoformat())),
+                created_at=datetime.fromisoformat(
+                    config.get("created_at", datetime.now().isoformat())
+                ),
+                updated_at=datetime.fromisoformat(
+                    config.get("updated_at", datetime.now().isoformat())
+                ),
                 is_active=config.get("is_active", True),
             )
 
@@ -94,8 +98,12 @@ class CustomStrategyHandler:
                 description=config.get("description", ""),
                 code=config.get("code", ""),
                 config=config.get("parameters", {}),
-                created_at=datetime.fromisoformat(config.get("created_at", datetime.now().isoformat())),
-                updated_at=datetime.fromisoformat(config.get("updated_at", datetime.now().isoformat())),
+                created_at=datetime.fromisoformat(
+                    config.get("created_at", datetime.now().isoformat())
+                ),
+                updated_at=datetime.fromisoformat(
+                    config.get("updated_at", datetime.now().isoformat())
+                ),
                 is_active=config.get("is_active", True),
             )
 
@@ -148,7 +156,9 @@ class CustomStrategyHandler:
             logger.error(f"Error creating strategy from YAML: {e}")
             return {"success": False, "error": str(e)}
 
-    def create_strategy_from_code(self, name: str, code: str, parameters: Dict[str, Any] = None) -> Dict[str, Any]:
+    def create_strategy_from_code(
+        self, name: str, code: str, parameters: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
         """Create a custom strategy from Python code.
 
         Args:
@@ -201,7 +211,10 @@ class CustomStrategyHandler:
         try:
             # Check if strategy name already exists
             if strategy.name in self.strategies:
-                return {"success": False, "error": f'Strategy "{strategy.name}" already exists'}
+                return {
+                    "success": False,
+                    "error": f'Strategy "{strategy.name}" already exists',
+                }
 
             # Validate code if provided
             if strategy.code:
@@ -210,7 +223,10 @@ class CustomStrategyHandler:
 
                 # Check for required functions
                 if "generate_signals" not in strategy.code:
-                    return {"success": False, "error": "Strategy code must contain generate_signals function"}
+                    return {
+                        "success": False,
+                        "error": "Strategy code must contain generate_signals function",
+                    }
 
             return {"success": True, "message": "Strategy validation passed"}
 
@@ -241,7 +257,9 @@ class CustomStrategyHandler:
         except Exception as e:
             logger.error(f"Error saving strategy {strategy.name}: {e}")
 
-    def execute_strategy(self, strategy_name: str, data: pd.DataFrame) -> Dict[str, Any]:
+    def execute_strategy(
+        self, strategy_name: str, data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """Execute a custom strategy.
 
         Args:
@@ -253,11 +271,17 @@ class CustomStrategyHandler:
         """
         try:
             if strategy_name not in self.strategies:
-                return {"success": False, "error": f'Strategy "{strategy_name}" not found'}
+                return {
+                    "success": False,
+                    "error": f'Strategy "{strategy_name}" not found',
+                }
 
             strategy = self.strategies[strategy_name]
             if not strategy.is_active:
-                return {"success": False, "error": f'Strategy "{strategy_name}" is not active'}
+                return {
+                    "success": False,
+                    "error": f'Strategy "{strategy_name}" is not active',
+                }
 
             # Execute strategy code
             if strategy.code:
@@ -276,7 +300,9 @@ class CustomStrategyHandler:
             logger.error(f"Error executing strategy {strategy_name}: {e}")
             return {"success": False, "error": str(e)}
 
-    def _execute_strategy_code(self, strategy: CustomStrategy, data: pd.DataFrame) -> Dict[str, Any]:
+    def _execute_strategy_code(
+        self, strategy: CustomStrategy, data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """Execute strategy using Python code."""
         try:
             # Create a new module for the strategy
@@ -289,7 +315,11 @@ class CustomStrategyHandler:
             # Call the generate_signals function
             if hasattr(module, "generate_signals"):
                 signals = module.generate_signals(data, **strategy.config)
-                return {"signals": signals, "execution_method": "code", "parameters_used": strategy.config}
+                return {
+                    "signals": signals,
+                    "execution_method": "code",
+                    "parameters_used": strategy.config,
+                }
             else:
                 raise ValueError("Strategy code must contain generate_signals function")
 
@@ -297,7 +327,9 @@ class CustomStrategyHandler:
             logger.error(f"Error executing strategy code: {e}")
             raise
 
-    def _execute_strategy_config(self, strategy: CustomStrategy, data: pd.DataFrame) -> Dict[str, Any]:
+    def _execute_strategy_config(
+        self, strategy: CustomStrategy, data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """Execute strategy using configuration parameters."""
         try:
             # Default strategy implementation based on parameters
@@ -318,13 +350,19 @@ class CustomStrategyHandler:
             else:
                 signals = pd.Series(0, index=data.index)
 
-            return {"signals": signals, "execution_method": "config", "parameters_used": config}
+            return {
+                "signals": signals,
+                "execution_method": "config",
+                "parameters_used": config,
+            }
 
         except Exception as e:
             logger.error(f"Error executing strategy config: {e}")
             raise
 
-    def _generate_sma_signals(self, data: pd.DataFrame, period: int, threshold: float) -> pd.Series:
+    def _generate_sma_signals(
+        self, data: pd.DataFrame, period: int, threshold: float
+    ) -> pd.Series:
         """Generate SMA-based signals."""
         # Add check to ensure df contains 'close' and no NaNs before calculations
         if "close" not in data.columns or data["close"].isna().all():
@@ -333,7 +371,9 @@ class CustomStrategyHandler:
 
         # Handle NaN values in close column
         if data["close"].isna().any():
-            logger.warning("SMA signals: NaN values found in close column, filling with forward fill")
+            logger.warning(
+                "SMA signals: NaN values found in close column, filling with forward fill"
+            )
             data = data.copy()
             data["close"] = data["close"].fillna(method="ffill").fillna(method="bfill")
 
@@ -343,7 +383,9 @@ class CustomStrategyHandler:
         signals[data["close"] < sma * (1 - threshold)] = -1
         return signals
 
-    def _generate_rsi_signals(self, data: pd.DataFrame, period: int, threshold: float) -> pd.Series:
+    def _generate_rsi_signals(
+        self, data: pd.DataFrame, period: int, threshold: float
+    ) -> pd.Series:
         """Generate RSI-based signals."""
         delta = data["close"].diff()
         gain = (delta.where(delta > 0, 0)).rolling(period).mean()
@@ -356,7 +398,9 @@ class CustomStrategyHandler:
         signals[rsi > 70] = -1  # Overbought
         return signals
 
-    def _generate_bollinger_signals(self, data: pd.DataFrame, period: int, threshold: float) -> pd.Series:
+    def _generate_bollinger_signals(
+        self, data: pd.DataFrame, period: int, threshold: float
+    ) -> pd.Series:
         """Generate Bollinger Bands signals."""
         sma = data["close"].rolling(period).mean()
         std = data["close"].rolling(period).std()
@@ -385,7 +429,10 @@ class CustomStrategyHandler:
         """Delete a custom strategy."""
         try:
             if strategy_name not in self.strategies:
-                return {"success": False, "error": f'Strategy "{strategy_name}" not found'}
+                return {
+                    "success": False,
+                    "error": f'Strategy "{strategy_name}" not found',
+                }
 
             # Remove from memory
             del self.strategies[strategy_name]
@@ -395,7 +442,10 @@ class CustomStrategyHandler:
             if file_path.exists():
                 file_path.unlink()
 
-            return {"success": True, "message": f'Strategy "{strategy_name}" deleted successfully'}
+            return {
+                "success": True,
+                "message": f'Strategy "{strategy_name}" deleted successfully',
+            }
 
         except Exception as e:
             logger.error(f"Error deleting strategy {strategy_name}: {e}")

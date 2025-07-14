@@ -72,7 +72,9 @@ def validate_market_data(data: pd.DataFrame) -> List[str]:
     return errors
 
 
-def validate_signals(signals: pd.Series, data: pd.DataFrame, config: SignalConfig) -> Tuple[bool, List[str], float]:
+def validate_signals(
+    signals: pd.Series, data: pd.DataFrame, config: SignalConfig
+) -> Tuple[bool, List[str], float]:
     """
     Validate generated signals for completeness and quality.
 
@@ -100,7 +102,9 @@ def validate_signals(signals: pd.Series, data: pd.DataFrame, config: SignalConfi
     completeness_score = non_zero_signals / total_signals if total_signals > 0 else 0.0
 
     if config.validate_completeness and completeness_score < 0.01:
-        errors.append(f"Signal completeness too low: {completeness_score:.3f} (minimum 0.01)")
+        errors.append(
+            f"Signal completeness too low: {completeness_score:.3f} (minimum 0.01)"
+        )
 
     # Check for signal clustering (too many consecutive signals)
     consecutive_signals = 0
@@ -124,7 +128,9 @@ def validate_signals(signals: pd.Series, data: pd.DataFrame, config: SignalConfi
     return is_valid, errors, completeness_score
 
 
-def calculate_signal_confidence(signals: pd.Series, data: pd.DataFrame, config: SignalConfig) -> pd.Series:
+def calculate_signal_confidence(
+    signals: pd.Series, data: pd.DataFrame, config: SignalConfig
+) -> pd.Series:
     """
     Calculate confidence level for each signal based on multiple factors.
 
@@ -182,7 +188,9 @@ def calculate_signal_confidence(signals: pd.Series, data: pd.DataFrame, config: 
     return confidence
 
 
-def calculate_technical_indicators(data: pd.DataFrame, config: SignalConfig) -> pd.DataFrame:
+def calculate_technical_indicators(
+    data: pd.DataFrame, config: SignalConfig
+) -> pd.DataFrame:
     """Calculate technical indicators for signal generation.
 
     Args:
@@ -230,7 +238,9 @@ def calculate_technical_indicators(data: pd.DataFrame, config: SignalConfig) -> 
     return data
 
 
-def apply_signal_filters(signals: pd.Series, data: pd.DataFrame, config: SignalConfig) -> pd.Series:
+def apply_signal_filters(
+    signals: pd.Series, data: pd.DataFrame, config: SignalConfig
+) -> pd.Series:
     """Apply filters to raw trading signals.
 
     Args:
@@ -260,7 +270,9 @@ def apply_signal_filters(signals: pd.Series, data: pd.DataFrame, config: SignalC
     return filtered_signals
 
 
-def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, SignalResult]:
+def generate_signals(
+    data: pd.DataFrame, config: SignalConfig
+) -> Dict[str, SignalResult]:
     """Generate trading signals using multiple strategies with validation, confidence, and safeguards.
 
     Args:
@@ -282,8 +294,12 @@ def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, Sign
         raise ValueError("Empty data provided for signal generation")
 
     if len(data) < 3:
-        logger.error(f"Insufficient data for signal generation: {len(data)} rows (minimum 3 required)")
-        raise ValueError(f"Insufficient data for signal generation: {len(data)} rows (minimum 3 required)")
+        logger.error(
+            f"Insufficient data for signal generation: {len(data)} rows (minimum 3 required)"
+        )
+        raise ValueError(
+            f"Insufficient data for signal generation: {len(data)} rows (minimum 3 required)"
+        )
 
     # Validate Close column exists
     if "Close" not in data.columns:
@@ -330,7 +346,11 @@ def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, Sign
 
     # MACD strategy with safeguards
     macd_signals = pd.Series(0, index=data.index)
-    if "macd" in data.columns and "macd_signal" in data.columns and not data["macd"].isna().all():
+    if (
+        "macd" in data.columns
+        and "macd_signal" in data.columns
+        and not data["macd"].isna().all()
+    ):
         macd_signals[data["macd"] > data["macd_signal"]] = 1  # Bullish crossover
         macd_signals[data["macd"] < data["macd_signal"]] = -1  # Bearish crossover
     else:
@@ -352,11 +372,16 @@ def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, Sign
 
     # Bollinger Bands strategy with safeguards
     bb_signals = pd.Series(0, index=data.index)
-    if all(col in data.columns for col in ["close", "bb_lower", "bb_upper"]) and not data["close"].isna().all():
+    if (
+        all(col in data.columns for col in ["close", "bb_lower", "bb_upper"])
+        and not data["close"].isna().all()
+    ):
         bb_signals[data["close"] < data["bb_lower"]] = 1  # Price below lower band
         bb_signals[data["close"] > data["bb_upper"]] = -1  # Price above upper band
     else:
-        logger.warning("Bollinger Bands columns missing or all NaN, skipping BB signals")
+        logger.warning(
+            "Bollinger Bands columns missing or all NaN, skipping BB signals"
+        )
     filtered_bb = apply_signal_filters(bb_signals, data, config)
 
     # Validate BB signals
@@ -374,7 +399,10 @@ def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, Sign
 
     # Moving Average Crossover strategy with safeguards
     ma_signals = pd.Series(0, index=data.index)
-    if all(col in data.columns for col in ["sma_short", "sma_long"]) and not data["sma_short"].isna().all():
+    if (
+        all(col in data.columns for col in ["sma_short", "sma_long"])
+        and not data["sma_short"].isna().all()
+    ):
         ma_signals[data["sma_short"] > data["sma_long"]] = 1  # Bullish crossover
         ma_signals[data["sma_short"] < data["sma_long"]] = -1  # Bearish crossover
     else:
@@ -397,14 +425,20 @@ def generate_signals(data: pd.DataFrame, config: SignalConfig) -> Dict[str, Sign
     # Log validation results
     for strategy, result in signal_results.items():
         if not result.is_valid:
-            logger.warning(f"{strategy} signals validation failed: {result.validation_errors}")
+            logger.warning(
+                f"{strategy} signals validation failed: {result.validation_errors}"
+            )
         else:
-            logger.info(f"{strategy} signals generated successfully (completeness: {result.completeness_score:.3f})")
+            logger.info(
+                f"{strategy} signals generated successfully (completeness: {result.completeness_score:.3f})"
+            )
 
     return signal_results
 
 
-def generate_custom_signals(data: pd.DataFrame, rules: List[Dict[str, Any]], config: SignalConfig) -> SignalResult:
+def generate_custom_signals(
+    data: pd.DataFrame, rules: List[Dict[str, Any]], config: SignalConfig
+) -> SignalResult:
     """Generate custom trading signals based on user-defined rules with validation.
 
     Args:
@@ -439,9 +473,17 @@ def generate_custom_signals(data: pd.DataFrame, rules: List[Dict[str, Any]], con
         elif condition == "macd":
             mask = data["macd"] > value if signal == 1 else data["macd"] < value
         elif condition == "bb":
-            mask = data["close"] < data["bb_lower"] if signal == 1 else data["close"] > data["bb_upper"]
+            mask = (
+                data["close"] < data["bb_lower"]
+                if signal == 1
+                else data["close"] > data["bb_upper"]
+            )
         elif condition == "ma":
-            mask = data["sma_short"] > data["sma_long"] if signal == 1 else data["sma_short"] < data["sma_long"]
+            mask = (
+                data["sma_short"] > data["sma_long"]
+                if signal == 1
+                else data["sma_short"] < data["sma_long"]
+            )
         else:
             raise ValueError(f"Unknown condition: {condition}")
 
@@ -467,7 +509,9 @@ def generate_custom_signals(data: pd.DataFrame, rules: List[Dict[str, Any]], con
     if not result.is_valid:
         logger.warning(f"Custom signals validation failed: {result.validation_errors}")
     else:
-        logger.info(f"Custom signals generated successfully (completeness: {result.completeness_score:.3f})")
+        logger.info(
+            f"Custom signals generated successfully (completeness: {result.completeness_score:.3f})"
+        )
 
     return result
 
@@ -485,8 +529,12 @@ def get_signal_summary(signal_results: Dict[str, SignalResult]) -> Dict[str, Any
     summary = {
         "total_strategies": len(signal_results),
         "valid_strategies": sum(1 for r in signal_results.values() if r.is_valid),
-        "average_completeness": np.mean([r.completeness_score for r in signal_results.values()]),
-        "average_confidence": np.mean([r.confidence.mean() for r in signal_results.values()]),
+        "average_completeness": np.mean(
+            [r.completeness_score for r in signal_results.values()]
+        ),
+        "average_confidence": np.mean(
+            [r.confidence.mean() for r in signal_results.values()]
+        ),
         "strategy_details": {},
     }
 

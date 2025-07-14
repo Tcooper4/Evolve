@@ -26,7 +26,9 @@ logger.setLevel(logging.DEBUG)
 # Add file handler for debug logs
 debug_handler = logging.FileHandler("trading/optimization/logs/optimization_debug.log")
 debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+debug_formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 debug_handler.setFormatter(debug_formatter)
 logger.addHandler(debug_handler)
 
@@ -74,25 +76,57 @@ def plot_optimization_metrics(df: pd.DataFrame) -> go.Figure:
     Returns:
         Plotly figure
     """
-    fig = make_subplots(rows=2, cols=2, subplot_titles=("Sharpe Ratio", "Win Rate", "Max Drawdown", "Alpha"))
+    fig = make_subplots(
+        rows=2,
+        cols=2,
+        subplot_titles=("Sharpe Ratio", "Win Rate", "Max Drawdown", "Alpha"),
+    )
 
     # Sharpe Ratio
     fig.add_trace(
-        go.Scatter(x=df["timestamp"], y=df["sharpe_ratio"], mode="lines+markers", name="Sharpe Ratio"), row=1, col=1
+        go.Scatter(
+            x=df["timestamp"],
+            y=df["sharpe_ratio"],
+            mode="lines+markers",
+            name="Sharpe Ratio",
+        ),
+        row=1,
+        col=1,
     )
 
     # Win Rate
-    fig.add_trace(go.Scatter(x=df["timestamp"], y=df["win_rate"], mode="lines+markers", name="Win Rate"), row=1, col=2)
+    fig.add_trace(
+        go.Scatter(
+            x=df["timestamp"], y=df["win_rate"], mode="lines+markers", name="Win Rate"
+        ),
+        row=1,
+        col=2,
+    )
 
     # Max Drawdown
     fig.add_trace(
-        go.Scatter(x=df["timestamp"], y=df["max_drawdown"], mode="lines+markers", name="Max Drawdown"), row=2, col=1
+        go.Scatter(
+            x=df["timestamp"],
+            y=df["max_drawdown"],
+            mode="lines+markers",
+            name="Max Drawdown",
+        ),
+        row=2,
+        col=1,
     )
 
     # Alpha
-    fig.add_trace(go.Scatter(x=df["timestamp"], y=df["alpha"], mode="lines+markers", name="Alpha"), row=2, col=2)
+    fig.add_trace(
+        go.Scatter(
+            x=df["timestamp"], y=df["alpha"], mode="lines+markers", name="Alpha"
+        ),
+        row=2,
+        col=2,
+    )
 
-    fig.update_layout(height=800, showlegend=True, title_text="Optimization Metrics Over Time")
+    fig.update_layout(
+        height=800, showlegend=True, title_text="Optimization Metrics Over Time"
+    )
 
     return fig
 
@@ -109,7 +143,14 @@ def plot_strategy_comparison(df: pd.DataFrame) -> go.Figure:
     # Group by strategy
     strategy_metrics = (
         df.groupby("strategy")
-        .agg({"sharpe_ratio": "mean", "win_rate": "mean", "max_drawdown": "mean", "alpha": "mean"})
+        .agg(
+            {
+                "sharpe_ratio": "mean",
+                "win_rate": "mean",
+                "max_drawdown": "mean",
+                "alpha": "mean",
+            }
+        )
         .reset_index()
     )
 
@@ -119,7 +160,12 @@ def plot_strategy_comparison(df: pd.DataFrame) -> go.Figure:
     for _, row in strategy_metrics.iterrows():
         fig.add_trace(
             go.Scatterpolar(
-                r=[row["sharpe_ratio"], row["win_rate"], 1 - row["max_drawdown"], row["alpha"]],  # Invert drawdown
+                r=[
+                    row["sharpe_ratio"],
+                    row["win_rate"],
+                    1 - row["max_drawdown"],
+                    row["alpha"],
+                ],  # Invert drawdown
                 theta=["Sharpe Ratio", "Win Rate", "Drawdown", "Alpha"],
                 fill="toself",
                 name=row["strategy"],
@@ -127,7 +173,9 @@ def plot_strategy_comparison(df: pd.DataFrame) -> go.Figure:
         )
 
     fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True, range=[0, 1])), showlegend=True, title_text="Strategy Comparison"
+        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+        showlegend=True,
+        title_text="Strategy Comparison",
     )
 
     return fig
@@ -159,18 +207,30 @@ def plot_parameter_changes(df: pd.DataFrame) -> go.Figure:
     params_df = pd.DataFrame(params)
 
     # Create subplots
-    fig = make_subplots(rows=2, cols=2, subplot_titles=("RSI", "MACD", "Bollinger", "SMA"))
+    fig = make_subplots(
+        rows=2, cols=2, subplot_titles=("RSI", "MACD", "Bollinger", "SMA")
+    )
 
     # RSI
     fig.add_trace(
-        go.Scatter(x=params_df["timestamp"], y=params_df["rsi_period"], mode="lines+markers", name="RSI Period"),
+        go.Scatter(
+            x=params_df["timestamp"],
+            y=params_df["rsi_period"],
+            mode="lines+markers",
+            name="RSI Period",
+        ),
         row=1,
         col=1,
     )
 
     # MACD
     fig.add_trace(
-        go.Scatter(x=params_df["timestamp"], y=params_df["macd_fast"], mode="lines+markers", name="MACD Fast"),
+        go.Scatter(
+            x=params_df["timestamp"],
+            y=params_df["macd_fast"],
+            mode="lines+markers",
+            name="MACD Fast",
+        ),
         row=1,
         col=2,
     )
@@ -178,7 +238,10 @@ def plot_parameter_changes(df: pd.DataFrame) -> go.Figure:
     # Bollinger
     fig.add_trace(
         go.Scatter(
-            x=params_df["timestamp"], y=params_df["bollinger_period"], mode="lines+markers", name="Bollinger Period"
+            x=params_df["timestamp"],
+            y=params_df["bollinger_period"],
+            mode="lines+markers",
+            name="Bollinger Period",
         ),
         row=2,
         col=1,
@@ -186,12 +249,19 @@ def plot_parameter_changes(df: pd.DataFrame) -> go.Figure:
 
     # SMA
     fig.add_trace(
-        go.Scatter(x=params_df["timestamp"], y=params_df["sma_period"], mode="lines+markers", name="SMA Period"),
+        go.Scatter(
+            x=params_df["timestamp"],
+            y=params_df["sma_period"],
+            mode="lines+markers",
+            name="SMA Period",
+        ),
         row=2,
         col=2,
     )
 
-    fig.update_layout(height=800, showlegend=True, title_text="Parameter Changes Over Time")
+    fig.update_layout(
+        height=800, showlegend=True, title_text="Parameter Changes Over Time"
+    )
 
     return fig
 
@@ -210,23 +280,27 @@ def main():
     st.subheader("Strategy Parameters")
     col1, col2 = st.columns(2)
     with col1:
-        rsi_period = st.slider("RSI Period", 5, 30, 14)
-        macd_fast = st.slider("MACD Fast Period", 5, 30, 12)
+        st.slider("RSI Period", 5, 30, 14)
+        st.slider("MACD Fast Period", 5, 30, 12)
     with col2:
-        bollinger_period = st.slider("Bollinger Period", 5, 30, 20)
-        sma_period = st.slider("SMA Period", 5, 30, 20)
+        st.slider("Bollinger Period", 5, 30, 20)
+        st.slider("SMA Period", 5, 30, 20)
 
     # ==== Auto-Tune Mode ====
     st.subheader("Auto-Tune Mode")
     auto_tune = st.checkbox("Enable Auto-Tune", value=False)
     if auto_tune:
-        st.info("Auto-Tune mode is enabled. The optimizer will automatically tune hyperparameters.")
+        st.info(
+            "Auto-Tune mode is enabled. The optimizer will automatically tune hyperparameters."
+        )
         # Call backend optimizer here
         # optimizer = BaseOptimizer()
         # optimizer.optimize()
 
     # ==== Tabs ====
-    tab1, tab2, tab3 = st.tabs(["📉 Metrics", "📊 Strategy Comparison", "📈 Parameter Changes"])
+    tab1, tab2, tab3 = st.tabs(
+        ["📉 Metrics", "📊 Strategy Comparison", "📈 Parameter Changes"]
+    )
 
     with tab1:
         st.subheader("📉 Optimization Metrics")

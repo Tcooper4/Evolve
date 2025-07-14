@@ -28,7 +28,9 @@ except ImportError:
             excess_returns = returns - risk_free
             if len(excess_returns) == 0 or excess_returns.std() == 0:
                 return 0.0
-            return (excess_returns.mean() * period) / (excess_returns.std() * np.sqrt(period))
+            return (excess_returns.mean() * period) / (
+                excess_returns.std() * np.sqrt(period)
+            )
 
         @staticmethod
         def sortino_ratio(returns, risk_free=0.0, period=252):
@@ -36,7 +38,9 @@ except ImportError:
             downside_returns = excess_returns[excess_returns < 0]
             if len(downside_returns) == 0 or downside_returns.std() == 0:
                 return 0.0
-            return (excess_returns.mean() * period) / (downside_returns.std() * np.sqrt(period))
+            return (excess_returns.mean() * period) / (
+                downside_returns.std() * np.sqrt(period)
+            )
 
         @staticmethod
         def max_drawdown(returns):
@@ -122,10 +126,16 @@ class RiskMetricsEngine:
         """Calculate a comprehensive set of risk metrics for a return series."""
         metrics = {}
         try:
-            metrics["sharpe_ratio"] = ep.sharpe_ratio(returns, risk_free=self.risk_free_rate, period=self.period)
-            metrics["sortino_ratio"] = ep.sortino_ratio(returns, risk_free=self.risk_free_rate, period=self.period)
+            metrics["sharpe_ratio"] = ep.sharpe_ratio(
+                returns, risk_free=self.risk_free_rate, period=self.period
+            )
+            metrics["sortino_ratio"] = ep.sortino_ratio(
+                returns, risk_free=self.risk_free_rate, period=self.period
+            )
             metrics["max_drawdown"] = ep.max_drawdown(returns)
-            metrics["calmar_ratio"] = ep.calmar_ratio(returns, risk_free=self.risk_free_rate, period=self.period)
+            metrics["calmar_ratio"] = ep.calmar_ratio(
+                returns, risk_free=self.risk_free_rate, period=self.period
+            )
             metrics["volatility"] = returns.std() * np.sqrt(self.period)
             metrics["skewness"] = returns.skew()
             metrics["kurtosis"] = returns.kurtosis()

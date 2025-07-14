@@ -114,7 +114,9 @@ class ModelValidator:
     """Model validation and compilation utilities."""
 
     @staticmethod
-    def validate_model_specification(spec: ModelSpecification) -> Tuple[bool, List[str]]:
+    def validate_model_specification(
+        spec: ModelSpecification,
+    ) -> Tuple[bool, List[str]]:
         """Validate model specification before creation."""
         errors = []
 
@@ -122,10 +124,19 @@ class ModelValidator:
         if not spec.name or not spec.name.strip():
             errors.append("Model name is required")
 
-        if not spec.framework or spec.framework not in ["sklearn", "xgboost", "lightgbm", "pytorch"]:
+        if not spec.framework or spec.framework not in [
+            "sklearn",
+            "xgboost",
+            "lightgbm",
+            "pytorch",
+        ]:
             errors.append("Invalid framework specified")
 
-        if not spec.model_type or spec.model_type not in ["regression", "classification", "forecasting"]:
+        if not spec.model_type or spec.model_type not in [
+            "regression",
+            "classification",
+            "forecasting",
+        ]:
             errors.append("Invalid model type specified")
 
         # Validate parameters
@@ -176,11 +187,15 @@ class BacktestEngine:
     def __init__(self):
         self.backtest_results = {}
 
-    def run_backtest(self, model, X: np.ndarray, y: np.ndarray, test_size: float = 0.2) -> Dict[str, Any]:
+    def run_backtest(
+        self, model, X: np.ndarray, y: np.ndarray, test_size: float = 0.2
+    ) -> Dict[str, Any]:
         """Run comprehensive backtest on model."""
         try:
             # Split data
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=test_size, random_state=42
+            )
 
             # Train model
             start_time = datetime.now()
@@ -205,7 +220,9 @@ class BacktestEngine:
 
             # Sharpe ratio (simplified)
             if len(returns) > 0:
-                sharpe_ratio = np.mean(returns) / (np.std(returns) + 1e-8) * np.sqrt(252)
+                sharpe_ratio = (
+                    np.mean(returns) / (np.std(returns) + 1e-8) * np.sqrt(252)
+                )
             else:
                 sharpe_ratio = 0.0
 
@@ -221,9 +238,13 @@ class BacktestEngine:
                 "win_rate": win_rate,
                 "sharpe_ratio": sharpe_ratio,
                 "max_drawdown": max_drawdown,
-                "total_return": cumulative_returns[-1] - 1 if len(cumulative_returns) > 0 else 0,
+                "total_return": cumulative_returns[-1] - 1
+                if len(cumulative_returns) > 0
+                else 0,
                 "volatility": np.std(returns) * np.sqrt(252) if len(returns) > 0 else 0,
-                "calmar_ratio": (np.mean(returns) * 252) / abs(max_drawdown) if max_drawdown != 0 else 0,
+                "calmar_ratio": (np.mean(returns) * 252) / abs(max_drawdown)
+                if max_drawdown != 0
+                else 0,
             }
 
         except Exception as e:
@@ -235,7 +256,9 @@ class ModelEvaluator:
     """Enhanced model evaluation with comprehensive metrics."""
 
     @staticmethod
-    def calculate_all_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+    def calculate_all_metrics(
+        y_true: np.ndarray, y_pred: np.ndarray
+    ) -> Dict[str, float]:
         """Calculate comprehensive evaluation metrics."""
         try:
             # Basic regression metrics
@@ -265,7 +288,9 @@ class ModelEvaluator:
 
             # Sharpe ratio
             if len(returns) > 0:
-                sharpe_ratio = np.mean(returns) / (np.std(returns) + 1e-8) * np.sqrt(252)
+                sharpe_ratio = (
+                    np.mean(returns) / (np.std(returns) + 1e-8) * np.sqrt(252)
+                )
             else:
                 sharpe_ratio = 0.0
 
@@ -309,7 +334,9 @@ class ModelEvaluator:
 
             # Directional accuracy (higher is better)
             if "Directional_Accuracy" in metrics:
-                normalized_metrics["Directional_Accuracy"] = metrics["Directional_Accuracy"]
+                normalized_metrics["Directional_Accuracy"] = metrics[
+                    "Directional_Accuracy"
+                ]
 
             # Win rate (higher is better)
             if "Win_Rate" in metrics:
@@ -317,7 +344,9 @@ class ModelEvaluator:
 
             # Sharpe ratio (higher is better, normalize)
             if "Sharpe_Ratio" in metrics:
-                normalized_metrics["Sharpe_Ratio"] = max(0, min(1, metrics["Sharpe_Ratio"] / 2))
+                normalized_metrics["Sharpe_Ratio"] = max(
+                    0, min(1, metrics["Sharpe_Ratio"] / 2)
+                )
 
             # Calculate overall score
             if normalized_metrics:
@@ -391,11 +420,15 @@ class ModelLeaderboard:
 
     def remove_poor_models(self, threshold_score: float = 0.3) -> List[str]:
         """Remove models below threshold score."""
-        poor_models = [entry for entry in self.entries if entry.overall_score < threshold_score]
+        poor_models = [
+            entry for entry in self.entries if entry.overall_score < threshold_score
+        ]
         removed_names = [entry.model_name for entry in poor_models]
 
         # Remove from entries
-        self.entries = [entry for entry in self.entries if entry.overall_score >= threshold_score]
+        self.entries = [
+            entry for entry in self.entries if entry.overall_score >= threshold_score
+        ]
         self._update_ranks()
         self.save_leaderboard()
 
@@ -417,7 +450,9 @@ class ModelLeaderboard:
         try:
             self.leaderboard_file.parent.mkdir(exist_ok=True)
             with open(self.leaderboard_file, "w") as f:
-                json.dump([asdict(entry) for entry in self.entries], f, indent=2, default=str)
+                json.dump(
+                    [asdict(entry) for entry in self.entries], f, indent=2, default=str
+                )
         except Exception as e:
             logger.error(f"Could not save leaderboard: {e}")
 
@@ -453,8 +488,12 @@ class EnhancedModelCreatorAgent:
             "sklearn": {
                 "available": SKLEARN_AVAILABLE,
                 "models": {
-                    "RandomForest": RandomForestRegressor if SKLEARN_AVAILABLE else None,
-                    "GradientBoosting": GradientBoostingRegressor if SKLEARN_AVAILABLE else None,
+                    "RandomForest": RandomForestRegressor
+                    if SKLEARN_AVAILABLE
+                    else None,
+                    "GradientBoosting": GradientBoostingRegressor
+                    if SKLEARN_AVAILABLE
+                    else None,
                     "Ridge": Ridge if SKLEARN_AVAILABLE else None,
                     "Lasso": Lasso if SKLEARN_AVAILABLE else None,
                     "ElasticNet": ElasticNet if SKLEARN_AVAILABLE else None,
@@ -465,12 +504,16 @@ class EnhancedModelCreatorAgent:
             },
             "xgboost": {
                 "available": XGBOOST_AVAILABLE,
-                "models": {"XGBRegressor": xgb.XGBRegressor if XGBOOST_AVAILABLE else None},
+                "models": {
+                    "XGBRegressor": xgb.XGBRegressor if XGBOOST_AVAILABLE else None
+                },
                 "description": "XGBoost for gradient boosting",
             },
             "lightgbm": {
                 "available": LIGHTGBM_AVAILABLE,
-                "models": {"LGBMRegressor": lgb.LGBMRegressor if LIGHTGBM_AVAILABLE else None},
+                "models": {
+                    "LGBMRegressor": lgb.LGBMRegressor if LIGHTGBM_AVAILABLE else None
+                },
                 "description": "LightGBM for fast gradient boosting",
             },
         }
@@ -512,9 +555,15 @@ class EnhancedModelCreatorAgent:
 
         # Extract model type
         model_type = "regression"  # default
-        if any(word in requirements_lower for word in ["classification", "classify", "class"]):
+        if any(
+            word in requirements_lower
+            for word in ["classification", "classify", "class"]
+        ):
             model_type = "classification"
-        elif any(word in requirements_lower for word in ["forecast", "time series", "sequence"]):
+        elif any(
+            word in requirements_lower
+            for word in ["forecast", "time series", "sequence"]
+        ):
             model_type = "forecasting"
 
         # Extract framework preference
@@ -532,14 +581,18 @@ class EnhancedModelCreatorAgent:
         complexity = "medium"
         if any(word in requirements_lower for word in ["simple", "basic", "fast"]):
             complexity = "simple"
-        elif any(word in requirements_lower for word in ["complex", "advanced", "deep"]):
+        elif any(
+            word in requirements_lower for word in ["complex", "advanced", "deep"]
+        ):
             complexity = "complex"
 
         # Extract specific parameters
         parameters = {}
 
         # Extract numbers for common parameters
-        n_estimators_match = re.search(r"(\d+)\s*(estimators?|trees?)", requirements_lower)
+        n_estimators_match = re.search(
+            r"(\d+)\s*(estimators?|trees?)", requirements_lower
+        )
         if n_estimators_match:
             parameters["n_estimators"] = int(n_estimators_match.group(1))
 
@@ -547,7 +600,9 @@ class EnhancedModelCreatorAgent:
         if max_depth_match:
             parameters["max_depth"] = int(max_depth_match.group(1))
 
-        learning_rate_match = re.search(r"learning\s*rate\s*([\d.]+)", requirements_lower)
+        learning_rate_match = re.search(
+            r"learning\s*rate\s*([\d.]+)", requirements_lower
+        )
         if learning_rate_match:
             parameters["learning_rate"] = float(learning_rate_match.group(1))
 
@@ -592,7 +647,9 @@ class EnhancedModelCreatorAgent:
     ) -> Tuple[ModelSpecification, bool, List[str]]:
         """Create a model with automatic validation and compilation."""
         try:
-            logger.info(f"Creating and validating model with requirements: {requirements}")
+            logger.info(
+                f"Creating and validating model with requirements: {requirements}"
+            )
 
             # Parse requirements
             parsed_req = self.parse_requirements(requirements)
@@ -619,11 +676,15 @@ class EnhancedModelCreatorAgent:
                 requirements=requirements,
                 created_at=datetime.now(),
                 description=f"Model created from requirements: {requirements[:100]}...",
-                architecture_blueprint=self._create_architecture_blueprint(framework, final_params),
+                architecture_blueprint=self._create_architecture_blueprint(
+                    framework, final_params
+                ),
             )
 
             # Validate specification
-            is_valid, validation_errors = self.validator.validate_model_specification(spec)
+            is_valid, validation_errors = self.validator.validate_model_specification(
+                spec
+            )
 
             if not is_valid:
                 spec.validation_status = "failed"
@@ -632,7 +693,9 @@ class EnhancedModelCreatorAgent:
             # Create model instance and compile
             try:
                 model = self._create_model_instance(spec)
-                is_compiled, compilation_message = self.validator.compile_model(model, framework)
+                is_compiled, compilation_message = self.validator.compile_model(
+                    model, framework
+                )
 
                 if is_compiled:
                     spec.validation_status = "passed"
@@ -660,7 +723,9 @@ class EnhancedModelCreatorAgent:
             logger.error(f"Error creating model: {e}")
             raise
 
-    def _create_architecture_blueprint(self, framework: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def _create_architecture_blueprint(
+        self, framework: str, parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Create architecture blueprint for model."""
         blueprint = {
             "framework": framework,
@@ -677,7 +742,9 @@ class EnhancedModelCreatorAgent:
 
         return blueprint
 
-    def _get_pytorch_architecture(self, parameters: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _get_pytorch_architecture(
+        self, parameters: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Get PyTorch architecture configuration."""
         # Default LSTM architecture
         return [
@@ -688,7 +755,10 @@ class EnhancedModelCreatorAgent:
         ]
 
     def run_full_evaluation(
-        self, model_name: str, X: Optional[np.ndarray] = None, y: Optional[np.ndarray] = None
+        self,
+        model_name: str,
+        X: Optional[np.ndarray] = None,
+        y: Optional[np.ndarray] = None,
     ) -> ModelEvaluation:
         """Run comprehensive evaluation including forecasting and backtesting."""
         try:
@@ -719,7 +789,9 @@ class EnhancedModelCreatorAgent:
             is_approved = overall_score >= self.auto_approval_threshold
 
             # Generate recommendations
-            recommendations = self._generate_recommendations(metrics, overall_score, spec)
+            recommendations = self._generate_recommendations(
+                metrics, overall_score, spec
+            )
 
             # Create evaluation
             evaluation = ModelEvaluation(
@@ -759,7 +831,9 @@ class EnhancedModelCreatorAgent:
             )
             self.leaderboard.add_entry(leaderboard_entry)
 
-            logger.info(f"Successfully evaluated model: {model_name} (Grade: {grade}, Score: {overall_score:.3f})")
+            logger.info(
+                f"Successfully evaluated model: {model_name} (Grade: {grade}, Score: {overall_score:.3f})"
+            )
             return evaluation
 
         except Exception as e:
@@ -784,10 +858,14 @@ class EnhancedModelCreatorAgent:
             recommendations.append("High MAPE: Model may need better feature selection")
 
         if metrics.get("Win_Rate", 0) < 0.5:
-            recommendations.append("Low win rate: Consider directional prediction models")
+            recommendations.append(
+                "Low win rate: Consider directional prediction models"
+            )
 
         if metrics.get("Sharpe_Ratio", 0) < 0.5:
-            recommendations.append("Low Sharpe ratio: Consider risk-adjusted optimization")
+            recommendations.append(
+                "Low Sharpe ratio: Consider risk-adjusted optimization"
+            )
 
         if spec.framework == "sklearn" and overall_score < 0.6:
             recommendations.append("Consider upgrading to XGBoost or LightGBM")
@@ -806,7 +884,9 @@ class EnhancedModelCreatorAgent:
         self._save_model_registry()
 
         if removed_models:
-            logger.info(f"Automatically removed {len(removed_models)} poor performing models")
+            logger.info(
+                f"Automatically removed {len(removed_models)} poor performing models"
+            )
 
         return removed_models
 
@@ -887,7 +967,9 @@ class EnhancedModelCreatorAgent:
             return None
 
     # Existing helper methods (updated for enhanced functionality)
-    def _get_default_parameters(self, framework: str, requirements: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_default_parameters(
+        self, framework: str, requirements: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Get default parameters for a framework and complexity level."""
         complexity = requirements["complexity"]
 
@@ -913,7 +995,12 @@ class EnhancedModelCreatorAgent:
 
         elif framework == "xgboost":
             if complexity == "simple":
-                return {"n_estimators": 50, "max_depth": 4, "learning_rate": 0.1, "random_state": 42}
+                return {
+                    "n_estimators": 50,
+                    "max_depth": 4,
+                    "learning_rate": 0.1,
+                    "random_state": 42,
+                }
             elif complexity == "complex":
                 return {
                     "n_estimators": 300,
@@ -935,7 +1022,12 @@ class EnhancedModelCreatorAgent:
 
         elif framework == "lightgbm":
             if complexity == "simple":
-                return {"n_estimators": 50, "max_depth": 4, "learning_rate": 0.1, "random_state": 42}
+                return {
+                    "n_estimators": 50,
+                    "max_depth": 4,
+                    "learning_rate": 0.1,
+                    "random_state": 42,
+                }
             elif complexity == "complex":
                 return {
                     "n_estimators": 300,
@@ -956,7 +1048,12 @@ class EnhancedModelCreatorAgent:
                 }
 
         elif framework == "pytorch":
-            return {"hidden_size": 64, "num_layers": 2, "dropout": 0.2, "learning_rate": 0.001}
+            return {
+                "hidden_size": 64,
+                "num_layers": 2,
+                "dropout": 0.2,
+                "learning_rate": 0.001,
+            }
 
         return {}
 
@@ -998,16 +1095,23 @@ class EnhancedModelCreatorAgent:
 
         # Simple LSTM model for demonstration
         class SimpleLSTM(nn.Module):
-            def __init__(self, input_size=10, hidden_size=64, num_layers=2, output_size=1):
+            def __init__(
+                self, input_size=10, hidden_size=64, num_layers=2, output_size=1
+            ):
                 super().__init__()
-                self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+                self.lstm = nn.LSTM(
+                    input_size, hidden_size, num_layers, batch_first=True
+                )
                 self.fc = nn.Linear(hidden_size, output_size)
 
             def forward(self, x):
                 lstm_out, _ = self.lstm(x)
                 return self.fc(lstm_out[:, -1, :])
 
-        return SimpleLSTM(hidden_size=params.get("hidden_size", 64), num_layers=params.get("num_layers", 2))
+        return SimpleLSTM(
+            hidden_size=params.get("hidden_size", 64),
+            num_layers=params.get("num_layers", 2),
+        )
 
     def _generate_mock_data(self) -> Tuple[np.ndarray, np.ndarray]:
         """Generate mock data for evaluation."""
@@ -1040,7 +1144,9 @@ class EnhancedModelCreatorAgent:
 
     def get_framework_status(self) -> Dict[str, bool]:
         """Get status of available frameworks."""
-        return {name: info["available"] for name, info in self.framework_registry.items()}
+        return {
+            name: info["available"] for name, info in self.framework_registry.items()
+        }
 
     def get_leaderboard(self) -> List[ModelLeaderboardEntry]:
         """Get current leaderboard."""
@@ -1067,6 +1173,8 @@ class EnhancedModelCreatorAgent:
 # Factory function
 
 
-def get_model_creator_agent(config: Optional[Dict[str, Any]] = None) -> EnhancedModelCreatorAgent:
+def get_model_creator_agent(
+    config: Optional[Dict[str, Any]] = None
+) -> EnhancedModelCreatorAgent:
     """Get a configured enhanced model creator agent."""
     return EnhancedModelCreatorAgent(config)

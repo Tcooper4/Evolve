@@ -79,7 +79,12 @@ class HistoryLogger:
         if self.enable_auto_cleanup:
             self._start_auto_cleanup()
 
-    def log_event(self, event_type: str, data: Dict[str, Any], timestamp: Optional[datetime] = None) -> str:
+    def log_event(
+        self,
+        event_type: str,
+        data: Dict[str, Any],
+        timestamp: Optional[datetime] = None,
+    ) -> str:
         """Log an event to history.
 
         Args:
@@ -92,10 +97,16 @@ class HistoryLogger:
         """
         try:
             timestamp = timestamp or datetime.now()
-            filename = f"{event_type}_{timestamp.strftime('%Y%m%d_%H%M%S_%f')[:-3]}.json"
+            filename = (
+                f"{event_type}_{timestamp.strftime('%Y%m%d_%H%M%S_%f')[:-3]}.json"
+            )
             filepath = self.log_dir / filename
 
-            log_entry = {"timestamp": timestamp.isoformat(), "event_type": event_type, "data": data}
+            log_entry = {
+                "timestamp": timestamp.isoformat(),
+                "event_type": event_type,
+                "data": data,
+            }
 
             with open(filepath, "w") as f:
                 json.dump(log_entry, f, indent=2, default=str)
@@ -113,7 +124,9 @@ class HistoryLogger:
             logger.error(f"Error logging event: {e}")
             return ""
 
-    def get_recent_events(self, event_type: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_recent_events(
+        self, event_type: Optional[str] = None, limit: int = 50
+    ) -> List[Dict[str, Any]]:
         """Get recent events from history.
 
         Args:
@@ -168,7 +181,9 @@ class HistoryLogger:
                     filename = filepath.stem
                     if "_" in filename:
                         timestamp_str = filename.split("_", 1)[1]
-                        file_timestamp = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S_%f")
+                        file_timestamp = datetime.strptime(
+                            timestamp_str, "%Y%m%d_%H%M%S_%f"
+                        )
 
                         if start_date <= file_timestamp <= end_date:
                             with open(filepath, "r") as f:
@@ -214,7 +229,9 @@ class HistoryLogger:
             conn.commit()
             conn.close()
 
-            logger.debug(f"Logged data to database: {data.get('event_type', 'unknown')}")
+            logger.debug(
+                f"Logged data to database: {data.get('event_type', 'unknown')}"
+            )
             return True
 
         except Exception as e:
@@ -227,7 +244,12 @@ class HistoryLogger:
         Returns:
             Dictionary with cleanup statistics
         """
-        stats = {"files_removed": 0, "files_compressed": 0, "files_archived": 0, "bytes_freed": 0}
+        stats = {
+            "files_removed": 0,
+            "files_compressed": 0,
+            "files_archived": 0,
+            "bytes_freed": 0,
+        }
 
         try:
             if self.retention_config.policy == RetentionPolicy.BY_AGE:
@@ -244,7 +266,11 @@ class HistoryLogger:
 
                 # Combine statistics
                 for key in stats:
-                    stats[key] = age_stats.get(key, 0) + size_stats.get(key, 0) + count_stats.get(key, 0)
+                    stats[key] = (
+                        age_stats.get(key, 0)
+                        + size_stats.get(key, 0)
+                        + count_stats.get(key, 0)
+                    )
 
             logger.info(f"Cleanup completed: {stats}")
             return stats
@@ -260,7 +286,9 @@ class HistoryLogger:
             Dictionary with cleanup statistics
         """
         stats = {"files_removed": 0, "bytes_freed": 0}
-        cutoff_date = datetime.now() - timedelta(days=self.retention_config.max_age_days)
+        cutoff_date = datetime.now() - timedelta(
+            days=self.retention_config.max_age_days
+        )
 
         try:
             for filepath in self.log_dir.glob("*.json"):
@@ -269,18 +297,27 @@ class HistoryLogger:
                     filename = filepath.stem
                     if "_" in filename:
                         timestamp_str = filename.split("_", 1)[1]
-                        file_timestamp = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S_%f")
+                        file_timestamp = datetime.strptime(
+                            timestamp_str, "%Y%m%d_%H%M%S_%f"
+                        )
 
                         if file_timestamp < cutoff_date:
                             # Archive if enabled
-                            if self.retention_config.archive_old_logs and self.retention_config.archive_dir:
+                            if (
+                                self.retention_config.archive_old_logs
+                                and self.retention_config.archive_dir
+                            ):
                                 self._archive_file(filepath)
-                                stats["files_archived"] = stats.get("files_archived", 0) + 1
+                                stats["files_archived"] = (
+                                    stats.get("files_archived", 0) + 1
+                                )
                             else:
                                 # Compress if enabled
                                 if self.retention_config.compress_old_logs:
                                     self._compress_file(filepath)
-                                    stats["files_compressed"] = stats.get("files_compressed", 0) + 1
+                                    stats["files_compressed"] = (
+                                        stats.get("files_compressed", 0) + 1
+                                    )
                                 else:
                                     # Remove file
                                     file_size = filepath.stat().st_size
@@ -293,7 +330,8 @@ class HistoryLogger:
                     continue
 
             logger.info(
-                f"Age-based cleanup: removed {stats['files_removed']} files, " f"freed {stats['bytes_freed']} bytes"
+                f"Age-based cleanup: removed {stats['files_removed']} files, "
+                f"freed {stats['bytes_freed']} bytes"
             )
             return stats
 
@@ -322,7 +360,9 @@ class HistoryLogger:
 
                     if "_" in filename:
                         timestamp_str = filename.split("_", 1)[1]
-                        file_timestamp = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S_%f")
+                        file_timestamp = datetime.strptime(
+                            timestamp_str, "%Y%m%d_%H%M%S_%f"
+                        )
 
                         files_info.append((filepath, file_size, file_timestamp))
                         total_size += file_size
@@ -348,7 +388,8 @@ class HistoryLogger:
                     logger.warning(f"Error removing file {filepath}: {e}")
 
             logger.info(
-                f"Size-based cleanup: removed {stats['files_removed']} files, " f"freed {stats['bytes_freed']} bytes"
+                f"Size-based cleanup: removed {stats['files_removed']} files, "
+                f"freed {stats['bytes_freed']} bytes"
             )
             return stats
 
@@ -373,7 +414,9 @@ class HistoryLogger:
                     filename = filepath.stem
                     if "_" in filename:
                         timestamp_str = filename.split("_", 1)[1]
-                        file_timestamp = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S_%f")
+                        file_timestamp = datetime.strptime(
+                            timestamp_str, "%Y%m%d_%H%M%S_%f"
+                        )
                         files_info.append((filepath, file_timestamp))
 
                 except Exception as e:
@@ -397,7 +440,8 @@ class HistoryLogger:
                         logger.warning(f"Error removing file {filepath}: {e}")
 
             logger.info(
-                f"Count-based cleanup: removed {stats['files_removed']} files, " f"freed {stats['bytes_freed']} bytes"
+                f"Count-based cleanup: removed {stats['files_removed']} files, "
+                f"freed {stats['bytes_freed']} bytes"
             )
             return stats
 
@@ -448,7 +492,9 @@ class HistoryLogger:
 
             # Create year/month subdirectories
             file_timestamp = datetime.fromtimestamp(filepath.stat().st_mtime)
-            archive_subdir = archive_dir / str(file_timestamp.year) / f"{file_timestamp.month:02d}"
+            archive_subdir = (
+                archive_dir / str(file_timestamp.year) / f"{file_timestamp.month:02d}"
+            )
             archive_subdir.mkdir(parents=True, exist_ok=True)
 
             # Move file to archive
@@ -570,15 +616,25 @@ class HistoryLogger:
                     filename = filepath.stem
                     if "_" in filename:
                         event_type = filename.split("_")[0]
-                        stats["files_by_type"][event_type] = stats["files_by_type"].get(event_type, 0) + 1
+                        stats["files_by_type"][event_type] = (
+                            stats["files_by_type"].get(event_type, 0) + 1
+                        )
 
                         timestamp_str = filename.split("_", 1)[1]
                         try:
-                            file_timestamp = datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S_%f")
+                            file_timestamp = datetime.strptime(
+                                timestamp_str, "%Y%m%d_%H%M%S_%f"
+                            )
 
-                            if not stats["oldest_file"] or file_timestamp < stats["oldest_file"]:
+                            if (
+                                not stats["oldest_file"]
+                                or file_timestamp < stats["oldest_file"]
+                            ):
                                 stats["oldest_file"] = file_timestamp
-                            if not stats["newest_file"] or file_timestamp > stats["newest_file"]:
+                            if (
+                                not stats["newest_file"]
+                                or file_timestamp > stats["newest_file"]
+                            ):
                                 stats["newest_file"] = file_timestamp
                         except ValueError:
                             pass
@@ -612,11 +668,15 @@ def get_history_logger() -> HistoryLogger:
     return get_history_logger._instance
 
 
-def log_event(event_type: str, data: Dict[str, Any], timestamp: Optional[datetime] = None) -> str:
+def log_event(
+    event_type: str, data: Dict[str, Any], timestamp: Optional[datetime] = None
+) -> str:
     """Convenience function to log an event."""
     return get_history_logger().log_event(event_type, data, timestamp)
 
 
-def get_recent_events(event_type: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+def get_recent_events(
+    event_type: Optional[str] = None, limit: int = 50
+) -> List[Dict[str, Any]]:
     """Convenience function to get recent events."""
     return get_history_logger().get_recent_events(event_type, limit)

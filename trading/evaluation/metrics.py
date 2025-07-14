@@ -16,7 +16,9 @@ class RegressionMetrics:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def root_mean_squared_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+    def root_mean_squared_error(
+        self, actuals: np.ndarray, predictions: np.ndarray
+    ) -> float:
         """Return Root Mean Squared Error."""
         return {
             "success": True,
@@ -25,7 +27,9 @@ class RegressionMetrics:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def mean_absolute_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+    def mean_absolute_error(
+        self, actuals: np.ndarray, predictions: np.ndarray
+    ) -> float:
         """Return Mean Absolute Error."""
         return {
             "success": True,
@@ -83,22 +87,32 @@ class TimeSeriesMetrics:
         """Initialize the metrics calculator."""
         self.metrics = {}
 
-    def mean_absolute_percentage_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+    def mean_absolute_percentage_error(
+        self, actuals: np.ndarray, predictions: np.ndarray
+    ) -> float:
         """Return MAPE."""
         actuals = np.asarray(actuals)
         predictions = np.asarray(predictions)
         mask = actuals != 0
-        return float(np.mean(np.abs((actuals[mask] - predictions[mask]) / actuals[mask])) * 100)
+        return float(
+            np.mean(np.abs((actuals[mask] - predictions[mask]) / actuals[mask])) * 100
+        )
 
-    def symmetric_mean_absolute_percentage_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+    def symmetric_mean_absolute_percentage_error(
+        self, actuals: np.ndarray, predictions: np.ndarray
+    ) -> float:
         """Return SMAPE."""
         actuals = np.asarray(actuals)
         predictions = np.asarray(predictions)
         denominator = (np.abs(actuals) + np.abs(predictions)) / 2
         mask = denominator != 0
-        return float(np.mean(np.abs(actuals[mask] - predictions[mask]) / denominator[mask]) * 100)
+        return float(
+            np.mean(np.abs(actuals[mask] - predictions[mask]) / denominator[mask]) * 100
+        )
 
-    def mean_absolute_scaled_error(self, actuals: np.ndarray, predictions: np.ndarray) -> float:
+    def mean_absolute_scaled_error(
+        self, actuals: np.ndarray, predictions: np.ndarray
+    ) -> float:
         """Return MASE using naive forecast for scaling."""
         actuals = np.asarray(actuals)
         predictions = np.asarray(predictions)
@@ -108,7 +122,9 @@ class TimeSeriesMetrics:
             return float("inf")
         return float(np.mean(np.abs(actuals - predictions)) / denom)
 
-    def calculate_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+    def calculate_metrics(
+        self, y_true: np.ndarray, y_pred: np.ndarray
+    ) -> Dict[str, float]:
         """Calculate all time series metrics.
 
         Args:
@@ -199,7 +215,11 @@ class RiskMetrics:
     def sharpe_ratio(self, returns: np.ndarray, risk_free_rate: float = 0.0) -> float:
         """Calculate the Sharpe ratio."""
         excess = returns - risk_free_rate / len(returns)
-        return float(np.sqrt(252) * excess.mean() / excess.std()) if excess.std() != 0 else 0.0
+        return (
+            float(np.sqrt(252) * excess.mean() / excess.std())
+            if excess.std() != 0
+            else 0.0
+        )
 
     def sortino_ratio(self, returns: np.ndarray, risk_free_rate: float = 0.0) -> float:
         """Calculate the Sortino ratio."""
@@ -255,7 +275,9 @@ def calculate_sharpe_ratio(returns: np.ndarray, risk_free_rate: float = 0.0) -> 
     if len(returns) == 0:
         return 0.0
     excess = returns - risk_free_rate / len(returns)
-    return float(np.sqrt(252) * excess.mean() / excess.std()) if excess.std() != 0 else 0.0
+    return (
+        float(np.sqrt(252) * excess.mean() / excess.std()) if excess.std() != 0 else 0.0
+    )
 
 
 def calculate_max_drawdown(returns: np.ndarray) -> float:

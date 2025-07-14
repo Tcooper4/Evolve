@@ -50,7 +50,9 @@ class DataValidator:
 
         # Check data points
         if len(df) < self.min_data_points:
-            issues.append(f"Insufficient data points: {len(df)} < {self.min_data_points}")
+            issues.append(
+                f"Insufficient data points: {len(df)} < {self.min_data_points}"
+            )
 
         # Check required columns
         missing_cols = [col for col in required_columns if col not in df.columns]
@@ -84,7 +86,12 @@ class DataValidator:
 class DataPreprocessor:
     """Preprocessor for financial data."""
 
-    def __init__(self, scale_features: bool = True, handle_missing: bool = True, remove_outliers: bool = False):
+    def __init__(
+        self,
+        scale_features: bool = True,
+        handle_missing: bool = True,
+        remove_outliers: bool = False,
+    ):
         """Initialize the preprocessor.
 
         Args:
@@ -99,7 +106,10 @@ class DataPreprocessor:
         self.imputer = SimpleImputer(strategy="mean")
 
     def preprocess_data(
-        self, df: pd.DataFrame, target_column: Optional[str] = None, feature_columns: Optional[List[str]] = None
+        self,
+        df: pd.DataFrame,
+        target_column: Optional[str] = None,
+        feature_columns: Optional[List[str]] = None,
     ) -> pd.DataFrame:
         """Preprocess the data.
 
@@ -167,7 +177,10 @@ class DataPreprocessor:
         return df
 
     def _scale_features(
-        self, df: pd.DataFrame, target_column: Optional[str], feature_columns: Optional[List[str]]
+        self,
+        df: pd.DataFrame,
+        target_column: Optional[str],
+        feature_columns: Optional[List[str]],
     ) -> pd.DataFrame:
         """Scale features in the data.
 
@@ -188,7 +201,9 @@ class DataPreprocessor:
         return df
 
 
-def resample_data(df: pd.DataFrame, freq: str, agg_dict: Optional[Dict[str, str]] = None) -> pd.DataFrame:
+def resample_data(
+    df: pd.DataFrame, freq: str, agg_dict: Optional[Dict[str, str]] = None
+) -> pd.DataFrame:
     """Resample time series data.
 
     Args:
@@ -200,13 +215,21 @@ def resample_data(df: pd.DataFrame, freq: str, agg_dict: Optional[Dict[str, str]
         Resampled DataFrame
     """
     if agg_dict is None:
-        agg_dict = {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+        agg_dict = {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+            "volume": "sum",
+        }
 
     return df.resample(freq).agg(agg_dict)
 
 
 def calculate_technical_indicators(
-    df: pd.DataFrame, indicators: List[str], params: Optional[Dict[str, Dict[str, int]]] = None
+    df: pd.DataFrame,
+    indicators: List[str],
+    params: Optional[Dict[str, Dict[str, int]]] = None,
 ) -> pd.DataFrame:
     """Calculate technical indicators (DEPRECATED).
 
@@ -271,7 +294,11 @@ def calculate_technical_indicators(
 
 
 def split_data(
-    df: pd.DataFrame, target_column: str, test_size: float = 0.2, validation_size: float = 0.1, shuffle: bool = False
+    df: pd.DataFrame,
+    target_column: str,
+    test_size: float = 0.2,
+    validation_size: float = 0.1,
+    shuffle: bool = False,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Split data into train, validation, and test sets.
 

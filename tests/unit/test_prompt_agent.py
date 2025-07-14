@@ -62,7 +62,13 @@ class TestPromptAgent:
     def mock_llm_responses(self):
         """Mock LLM responses for different scenarios."""
         return {
-            "forecast": {"action": "forecast", "model": "arima", "symbol": "AAPL", "horizon": 10, "confidence": 0.85},
+            "forecast": {
+                "action": "forecast",
+                "model": "arima",
+                "symbol": "AAPL",
+                "horizon": 10,
+                "confidence": 0.85,
+            },
             "rsi_strategy": {
                 "action": "apply_strategy",
                 "strategy": "rsi",
@@ -74,7 +80,11 @@ class TestPromptAgent:
                 "action": "apply_strategy",
                 "strategy": "macd",
                 "symbol": "MSFT",
-                "parameters": {"fast_period": 12, "slow_period": 26, "signal_period": 9},
+                "parameters": {
+                    "fast_period": 12,
+                    "slow_period": 26,
+                    "signal_period": 9,
+                },
                 "confidence": 0.82,
             },
             "bollinger_strategy": {
@@ -157,7 +167,12 @@ class TestPromptAgent:
             result = prompt_agent.process_prompt(prompt)
 
             assert result["success"] is True
-            assert result["action"] in ["forecast", "apply_strategy", "analyze_sentiment", "get_indicators"]
+            assert result["action"] in [
+                "forecast",
+                "apply_strategy",
+                "analyze_sentiment",
+                "get_indicators",
+            ]
 
     def test_model_selection(self, prompt_agent):
         """Test that correct models are selected for forecasting."""
@@ -173,7 +188,13 @@ class TestPromptAgent:
 
             if result["action"] == "forecast":
                 assert "model" in result
-                assert result["model"] in ["arima", "lstm", "prophet", "xgboost", "hybrid"]
+                assert result["model"] in [
+                    "arima",
+                    "lstm",
+                    "prophet",
+                    "xgboost",
+                    "hybrid",
+                ]
 
     def test_strategy_selection(self, prompt_agent):
         """Test that correct strategies are selected."""
@@ -189,7 +210,12 @@ class TestPromptAgent:
 
             if result["action"] == "apply_strategy":
                 assert "strategy" in result
-                assert result["strategy"] in ["rsi", "macd", "bollinger", "moving_average"]
+                assert result["strategy"] in [
+                    "rsi",
+                    "macd",
+                    "bollinger",
+                    "moving_average",
+                ]
 
     @patch("trading.agents.prompt_agent.openai.ChatCompletion.create")
     def test_openai_integration(self, mock_openai, prompt_agent):
@@ -198,7 +224,13 @@ class TestPromptAgent:
         mock_response = Mock()
         mock_response.choices = [Mock()]
         mock_response.choices[0].message.content = json.dumps(
-            {"action": "forecast", "model": "arima", "symbol": "AAPL", "horizon": 10, "confidence": 0.85}
+            {
+                "action": "forecast",
+                "model": "arima",
+                "symbol": "AAPL",
+                "horizon": 10,
+                "confidence": 0.85,
+            }
         )
         mock_openai.return_value = mock_response
 
@@ -342,7 +374,10 @@ class TestPromptAgent:
             else:
                 # Should fail with validation error
                 assert "error" in result
-                assert "invalid" in result["error"].lower() or "validation" in result["error"].lower()
+                assert (
+                    "invalid" in result["error"].lower()
+                    or "validation" in result["error"].lower()
+                )
 
     def test_model_compatibility(self, prompt_agent):
         """Test that model selection is compatible with data."""
@@ -405,7 +440,9 @@ class TestPromptAgent:
         assert retrieved_agent == prompt_agent
 
         # Test agent execution
-        result = agent_manager.execute_agent("prompt_agent", "forecast AAPL for 10 days")
+        result = agent_manager.execute_agent(
+            "prompt_agent", "forecast AAPL for 10 days"
+        )
         assert isinstance(result, dict)
         assert "success" in result
 
@@ -425,7 +462,12 @@ class TestPromptAgent:
 
         # Create multiple threads
         threads = []
-        prompts = ["forecast AAPL for 10 days", "apply RSI to TSLA", "use MACD for MSFT", "analyze GOOGL"]
+        prompts = [
+            "forecast AAPL for 10 days",
+            "apply RSI to TSLA",
+            "use MACD for MSFT",
+            "analyze GOOGL",
+        ]
 
         for prompt in prompts:
             thread = threading.Thread(target=process_prompt, args=(prompt,))

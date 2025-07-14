@@ -17,9 +17,7 @@ from trading.agents.agent_manager import (
 )
 from trading.agents.base_agent_interface import AgentConfig, AgentResult, BaseAgent
 from trading.agents.model_builder_agent import ModelBuildRequest
-from trading.agents.performance_critic_agent import (
-    ModelEvaluationRequest,
-)
+from trading.agents.performance_critic_agent import ModelEvaluationRequest
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -49,7 +47,11 @@ class DemoAgent(BaseAgent):
 
         return AgentResult(
             success=True,
-            data={"message": message, "execution_count": self.execution_count, "timestamp": self.timestamp.isoformat()},
+            data={
+                "message": message,
+                "execution_count": self.execution_count,
+                "timestamp": self.timestamp.isoformat(),
+            },
         )
 
 
@@ -67,7 +69,9 @@ async def demo_basic_usage():
     # Get agent statuses
     statuses = manager.get_all_agent_statuses()
     for name, status in statuses.items():
-        logger.info(f"Agent {name}: enabled={status.enabled}, running={status.is_running}")
+        logger.info(
+            f"Agent {name}: enabled={status.enabled}, running={status.is_running}"
+        )
 
     # Enable/disable agents
     logger.info("\n--- Enabling/Disabling Agents ---")
@@ -137,7 +141,10 @@ async def demo_configuration_management():
     manager = get_agent_manager()
 
     # Update agent configuration
-    new_config = {"max_models": 15, "model_types": ["lstm", "xgboost", "ensemble", "transformer"]}
+    new_config = {
+        "max_models": 15,
+        "model_types": ["lstm", "xgboost", "ensemble", "transformer"],
+    }
 
     success = manager.update_agent_config("model_builder", new_config)
     if success:
@@ -158,7 +165,9 @@ async def demo_agent_workflow():
 
     # Step 1: Build a model
     logger.info("Step 1: Building model...")
-    build_request = ModelBuildRequest(model_type="xgboost", data_path="data/sample_data.csv", target_column="close")
+    build_request = ModelBuildRequest(
+        model_type="xgboost", data_path="data/sample_data.csv", target_column="close"
+    )
 
     build_result = await execute_agent("model_builder", request=build_request)
 
@@ -172,7 +181,10 @@ async def demo_agent_workflow():
     # Step 2: Evaluate the model
     logger.info("Step 2: Evaluating model...")
     eval_request = ModelEvaluationRequest(
-        model_id=model_id, model_path=model_path, model_type="xgboost", test_data_path="data/test_data.csv"
+        model_id=model_id,
+        model_path=model_path,
+        model_type="xgboost",
+        test_data_path="data/test_data.csv",
     )
 
     eval_result = await execute_agent("performance_critic", request=eval_request)

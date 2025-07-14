@@ -19,23 +19,30 @@ class NotificationSystem:
 
     def __init__(self):
         """Initialize the notification system."""
-        self.slack_webhook_url = os.getenv('SLACK_WEBHOOK_URL', '')
-        self.email_password = os.getenv('EMAIL_PASSWORD', 'dev-email-password')
-        self.email_host = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-        self.email_port = int(os.getenv('EMAIL_PORT', '587'))
-        self.email_user = os.getenv('EMAIL_USER', 'your-email@gmail.com')
+        self.slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL", "")
+        self.email_password = os.getenv("EMAIL_PASSWORD", "dev-email-password")
+        self.email_host = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+        self.email_port = int(os.getenv("EMAIL_PORT", "587"))
+        self.email_user = os.getenv("EMAIL_USER", "your-email@gmail.com")
 
         # Initialize notification status
         self.notification_status = {
-            'slack': bool(self.slack_webhook_url),
-            'email': bool(self.email_password),
-            'last_notification': None
+            "slack": bool(self.slack_webhook_url),
+            "email": bool(self.email_password),
+            "last_notification": None,
         }
 
-        logger.info(f"Notification system initialized - Slack: {self.notification_status['slack']}, Email: {self.notification_status['email']}")
+        logger.info(
+            f"Notification system initialized - Slack: {self.notification_status['slack']}, Email: {self.notification_status['email']}"
+        )
 
-    def send_slack_notification(self, message: str, channel: str = "#trading-alerts",
-                               username: str = "Trading Bot", icon_emoji: str = ":robot_face:") -> bool:
+    def send_slack_notification(
+        self,
+        message: str,
+        channel: str = "#trading-alerts",
+        username: str = "Trading Bot",
+        icon_emoji: str = ":robot_face:",
+    ) -> bool:
         """
         Send Slack notification if webhook URL is configured.
 
@@ -59,78 +66,55 @@ class NotificationSystem:
                 "channel": channel,
                 "username": username,
                 "text": message,
-                "icon_emoji": icon_emoji
+                "icon_emoji": icon_emoji,
             }
 
             response = requests.post(
                 self.slack_webhook_url,
                 data=json.dumps(payload),
-                headers={'Content-Type': 'application/json'},
-                timeout=10
+                headers={"Content-Type": "application/json"},
+                timeout=10,
             )
 
             if response.status_code == 200:
                 logger.info(f"✅ Slack notification sent successfully to {channel}")
-                self.notification_status['last_notification'] = datetime.now()
+                self.notification_status["last_notification"] = datetime.now()
                 return True
             else:
-                logger.error(f"❌ Slack notification failed: {response.status_code} - {response.text}")
+                logger.error(
+                    f"❌ Slack notification failed: {response.status_code} - {response.text}"
+                )
                 return False
 
         except Exception as e:
             logger.error(f"❌ Error sending Slack notification: {str(e)}")
             return False
 
-    def send_email_notification(self, subject: str, message: str,
-                               to_email: str, from_email: Optional[str] = None) -> bool:
+    def send_email_notification(
+        self,
+        subject: str,
+        message: str,
+        to_email: str,
+        from_email: Optional[str] = None,
+    ) -> bool:
         """
-        Send email notification if email password is configured.
+        Send email notification (DISABLED - email functionality removed).
 
         Args:
             subject: Email subject
             message: Email message
             to_email: Recipient email
-            from_email: Sender email (defaults to configured email)
+            from_email: Sender email (optional)
 
         Returns:
-            True if notification was sent successfully
+            False (email functionality has been removed)
         """
-        if not self.email_password:
-            logger.debug("Email password not configured, skipping notification")
-            return False
+        logger.info("Email notifications have been disabled - functionality removed")
+        return False
 
-        try:
-            import smtplib
-            from email.mime.multipart import MIMEMultipart
-            from email.mime.text import MIMEText
-
-            # Create message
-            msg = MIMEMultipart()
-            msg['From'] = from_email or self.email_user
-            msg['To'] = to_email
-            msg['Subject'] = subject
-
-            # Add message body
-            msg.attach(MIMEText(message, 'plain'))
-
-            # Send email
-            server = smtplib.SMTP(self.email_host, self.email_port)
-            server.starttls()
-            server.login(self.email_user, self.email_password)
-            text = msg.as_string()
-            server.sendmail(self.email_user, to_email, text)
-            server.quit()
-
-            logger.info(f"✅ Email notification sent successfully to {to_email}")
-            self.notification_status['last_notification'] = datetime.now()
-            return True
-
-        except Exception as e:
-            logger.error(f"❌ Error sending email notification: {str(e)}")
-            return False
-
-    def send_trading_alert(self, alert_type: str, message: str,
-                          data: Optional[Dict[str, Any]] = None) -> Dict[str, bool]:
+    def send_trading_alert(
+        self, alert_type: str, message: str, data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, bool]:
         """
         Send trading alert via all available channels.
 
@@ -142,20 +126,17 @@ class NotificationSystem:
         Returns:
             Dictionary with notification results
         """
-        results = {
-            'slack': False,
-            'email': False
-        }
+        results = {"slack": False, "email": False}
 
         # Format message based on alert type
         emoji_map = {
-            'info': ':information_source:',
-            'warning': ':warning:',
-            'error': ':x:',
-            'success': ':white_check_mark:'
+            "info": ":information_source:",
+            "warning": ":warning:",
+            "error": ":x:",
+            "success": ":white_check_mark:",
         }
 
-        emoji = emoji_map.get(alert_type, ':bell:')
+        emoji = emoji_map.get(alert_type, ":bell:")
         formatted_message = f"{emoji} **{alert_type.upper()}**: {message}"
 
         if data:
@@ -163,25 +144,26 @@ class NotificationSystem:
 
         # Send Slack notification
         if self.slack_webhook_url:
-            results['slack'] = self.send_slack_notification(
+            results["slack"] = self.send_slack_notification(
                 formatted_message,
                 channel="#trading-alerts",
                 username="Trading Alert Bot",
-                icon_emoji=emoji
+                icon_emoji=emoji,
             )
 
         # Send email notification (mock for now)
         if self.email_password:
-            results['email'] = self.send_email_notification(
+            results["email"] = self.send_email_notification(
                 subject=f"Trading Alert: {alert_type.upper()}",
                 message=message,
-                to_email="admin@trading.com"  # Mock email
+                to_email="admin@trading.com",  # Mock email
             )
 
         return results
 
-    def send_model_performance_alert(self, model_name: str, metrics: Dict[str, float],
-                                   threshold: float = 0.7) -> Dict[str, bool]:
+    def send_model_performance_alert(
+        self, model_name: str, metrics: Dict[str, float], threshold: float = 0.7
+    ) -> Dict[str, bool]:
         """
         Send model performance alert if metrics are below threshold.
 
@@ -197,16 +179,24 @@ class NotificationSystem:
         low_performance = {k: v for k, v in metrics.items() if v < threshold}
 
         if not low_performance:
-            return {'success': True, 'result': {'slack': False, 'email': False}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": {"slack": False, "email": False},
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         message = f"Model {model_name} performance below threshold ({threshold}):"
         for metric, value in low_performance.items():
             message += f"\n- {metric}: {value:.3f}"
 
-        return self.send_trading_alert('warning', message, {'model': model_name, 'metrics': metrics})
+        return self.send_trading_alert(
+            "warning", message, {"model": model_name, "metrics": metrics}
+        )
 
-    def send_system_health_alert(self, component: str, status: str,
-                                details: Optional[Dict[str, Any]] = None) -> Dict[str, bool]:
+    def send_system_health_alert(
+        self, component: str, status: str, details: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, bool]:
         """
         Send system health alert.
 
@@ -221,13 +211,12 @@ class NotificationSystem:
         message = f"System health alert - {component}: {status}"
 
         return self.send_trading_alert(
-            'error' if status == 'down' else 'warning',
-            message,
-            details
+            "error" if status == "down" else "warning", message, details
         )
 
-    def send_agent_activity_notification(self, agent_name: str, action: str,
-                                        result: Optional[Dict[str, Any]] = None) -> Dict[str, bool]:
+    def send_agent_activity_notification(
+        self, agent_name: str, action: str, result: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, bool]:
         """
         Send agent activity notification.
 
@@ -241,10 +230,16 @@ class NotificationSystem:
         """
         message = f"Agent {agent_name} performed: {action}"
 
-        return {'success': True, 'result': self.send_trading_alert('info', message, result), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+        return {
+            "success": True,
+            "result": self.send_trading_alert("info", message, result),
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
-    def send_goal_progress_notification(self, goal_name: str, progress: float,
-                                      target: float = 1.0) -> Dict[str, bool]:
+    def send_goal_progress_notification(
+        self, goal_name: str, progress: float, target: float = 1.0
+    ) -> Dict[str, bool]:
         """
         Send goal progress notification.
 
@@ -258,19 +253,24 @@ class NotificationSystem:
         """
         if progress >= target:
             message = f"Goal '{goal_name}' completed! Progress: {progress:.1%}"
-            alert_type = 'success'
+            alert_type = "success"
         elif progress >= 0.8:
             message = f"Goal '{goal_name}' nearly complete! Progress: {progress:.1%}"
-            alert_type = 'info'
+            alert_type = "info"
         else:
             message = f"Goal '{goal_name}' progress update: {progress:.1%}"
-            alert_type = 'info'
+            alert_type = "info"
 
-        return {'success': True, 'result': self.send_trading_alert(alert_type, message, {, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
-            'goal': goal_name,
-            'progress': progress,
-            'target': target
-        })
+        return {
+            "success": True,
+            "result": self.send_trading_alert(
+                alert_type,
+                message,
+                {"goal": goal_name, "progress": progress, "target": target},
+            ),
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def get_notification_status(self) -> Dict[str, Any]:
         """
@@ -280,12 +280,12 @@ class NotificationSystem:
             Dictionary with notification status
         """
         return {
-            'slack_configured': bool(self.slack_webhook_url),
-            'email_configured': bool(self.email_password),
-            'last_notification': self.notification_status['last_notification'],
-            'email_host': self.email_host,
-            'email_port': self.email_port,
-            'email_user': self.email_user
+            "slack_configured": bool(self.slack_webhook_url),
+            "email_configured": bool(self.email_password),
+            "last_notification": self.notification_status["last_notification"],
+            "email_host": self.email_host,
+            "email_port": self.email_port,
+            "email_user": self.email_user,
         }
 
     def test_notifications(self) -> Dict[str, bool]:
@@ -297,35 +297,35 @@ class NotificationSystem:
         """
         test_message = f"Test notification from Trading System at {datetime.now()}"
 
-        results = {
-            'slack': False,
-            'email': False
-        }
+        results = {"slack": False, "email": False}
 
         # Test Slack
         if self.slack_webhook_url:
-            results['slack'] = self.send_slack_notification(
+            results["slack"] = self.send_slack_notification(
                 test_message,
                 channel="#trading-alerts",
                 username="Test Bot",
-                icon_emoji=":test_tube:"
+                icon_emoji=":test_tube:",
             )
 
         # Test Email
         if self.email_password:
-            results['email'] = self.send_email_notification(
+            results["email"] = self.send_email_notification(
                 subject="Test Notification",
                 message=test_message,
-                to_email="test@example.com"  # Mock email
+                to_email="test@example.com",  # Mock email
             )
 
         return results
+
 
 # Global notification instance
 notification_system = NotificationSystem()
 
 
-def send_alert(alert_type: str, message: str, data: Optional[Dict[str, Any]] = None) -> Dict[str, bool]:
+def send_alert(
+    alert_type: str, message: str, data: Optional[Dict[str, Any]] = None
+) -> Dict[str, bool]:
     """
     Convenience function to send alerts.
 
@@ -337,10 +337,17 @@ def send_alert(alert_type: str, message: str, data: Optional[Dict[str, Any]] = N
     Returns:
         Dictionary with notification results
     """
-    return {'success': True, 'result': notification_system.send_trading_alert(alert_type, message, data), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return {
+        "success": True,
+        "result": notification_system.send_trading_alert(alert_type, message, data),
+        "message": "Operation completed successfully",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
-def send_model_alert(model_name: str, metrics: Dict[str, float], threshold: float = 0.7) -> Dict[str, bool]:
+def send_model_alert(
+    model_name: str, metrics: Dict[str, float], threshold: float = 0.7
+) -> Dict[str, bool]:
     """
     Convenience function to send model performance alerts.
 
@@ -352,10 +359,19 @@ def send_model_alert(model_name: str, metrics: Dict[str, float], threshold: floa
     Returns:
         Dictionary with notification results
     """
-    return {'success': True, 'result': notification_system.send_model_performance_alert(model_name, metrics, threshold), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return {
+        "success": True,
+        "result": notification_system.send_model_performance_alert(
+            model_name, metrics, threshold
+        ),
+        "message": "Operation completed successfully",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
-def send_system_alert(component: str, status: str, details: Optional[Dict[str, Any]] = None) -> Dict[str, bool]:
+def send_system_alert(
+    component: str, status: str, details: Optional[Dict[str, Any]] = None
+) -> Dict[str, bool]:
     """
     Convenience function to send system health alerts.
 
@@ -367,4 +383,11 @@ def send_system_alert(component: str, status: str, details: Optional[Dict[str, A
     Returns:
         Dictionary with notification results
     """
-    return {'success': True, 'result': notification_system.send_system_health_alert(component, status, details), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+    return {
+        "success": True,
+        "result": notification_system.send_system_health_alert(
+            component, status, details
+        ),
+        "message": "Operation completed successfully",
+        "timestamp": datetime.now().isoformat(),
+    }

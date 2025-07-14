@@ -37,10 +37,14 @@ class DataTransformer:
         elif self.scaler_type == "robust":
             return RobustScaler()
         else:
-            logger.warning(f"Unknown scaler type: {self.scaler_type}, using StandardScaler")
+            logger.warning(
+                f"Unknown scaler type: {self.scaler_type}, using StandardScaler"
+            )
             return StandardScaler()
 
-    def fit_transform(self, data: pd.DataFrame, columns: Optional[List[str]] = None) -> pd.DataFrame:
+    def fit_transform(
+        self, data: pd.DataFrame, columns: Optional[List[str]] = None
+    ) -> pd.DataFrame:
         """Fit the transformer and transform the data."""
         if columns is None:
             columns = data.select_dtypes(include=[np.number]).columns.tolist()
@@ -52,7 +56,9 @@ class DataTransformer:
 
         return transformed_data
 
-    def transform(self, data: pd.DataFrame, columns: Optional[List[str]] = None) -> pd.DataFrame:
+    def transform(
+        self, data: pd.DataFrame, columns: Optional[List[str]] = None
+    ) -> pd.DataFrame:
         """Transform data using fitted scaler."""
         if not self.is_fitted:
             raise ValueError("Transformer must be fitted before transform")
@@ -65,7 +71,9 @@ class DataTransformer:
 
         return transformed_data
 
-    def inverse_transform(self, data: pd.DataFrame, columns: Optional[List[str]] = None) -> pd.DataFrame:
+    def inverse_transform(
+        self, data: pd.DataFrame, columns: Optional[List[str]] = None
+    ) -> pd.DataFrame:
         """Inverse transform data."""
         if not self.is_fitted:
             raise ValueError("Transformer must be fitted before inverse_transform")
@@ -79,7 +87,10 @@ class DataTransformer:
         return inverse_data
 
     def apply_pca(
-        self, data: pd.DataFrame, n_components: Optional[int] = None, columns: Optional[List[str]] = None
+        self,
+        data: pd.DataFrame,
+        n_components: Optional[int] = None,
+        columns: Optional[List[str]] = None,
     ) -> pd.DataFrame:
         """Apply PCA transformation."""
         if columns is None:
@@ -109,15 +120,26 @@ class DataTransformer:
         if self.pca is None:
             return {}
 
-        return {f"pca_{i}": importance for i, importance in enumerate(self.pca.explained_variance_ratio_)}
+        return {
+            f"pca_{i}": importance
+            for i, importance in enumerate(self.pca.explained_variance_ratio_)
+        }
 
 
-def resample_data(data: pd.DataFrame, timeframe: str, agg_method: str = "ohlc") -> pd.DataFrame:
+def resample_data(
+    data: pd.DataFrame, timeframe: str, agg_method: str = "ohlc"
+) -> pd.DataFrame:
     """Resample time series data to different timeframe."""
     try:
         if agg_method == "ohlc":
             resampled = data.resample(timeframe).agg(
-                {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+                {
+                    "open": "first",
+                    "high": "max",
+                    "low": "min",
+                    "close": "last",
+                    "volume": "sum",
+                }
             )
         elif agg_method == "mean":
             resampled = data.resample(timeframe).mean()
@@ -192,7 +214,10 @@ def split_data(
 
 
 def prepare_forecast_data(
-    data: pd.DataFrame, target_column: str = "close", sequence_length: int = 60, forecast_horizon: int = 1
+    data: pd.DataFrame,
+    target_column: str = "close",
+    sequence_length: int = 60,
+    forecast_horizon: int = 1,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Prepare data for time series forecasting."""
     try:
@@ -201,7 +226,11 @@ def prepare_forecast_data(
 
         for i in range(len(data) - sequence_length - forecast_horizon + 1):
             X.append(data[target_column].values[i : i + sequence_length])
-            y.append(data[target_column].values[i + sequence_length : i + sequence_length + forecast_horizon])
+            y.append(
+                data[target_column].values[
+                    i + sequence_length : i + sequence_length + forecast_horizon
+                ]
+            )
 
         return np.array(X), np.array(y)
     except Exception as e:

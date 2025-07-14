@@ -79,7 +79,9 @@ class SystemResilience:
         self.agent_restart_count = {}
         self.max_agent_restarts = self.config.get("max_agent_restarts", 5)
         self.agent_restart_delay = self.config.get("agent_restart_delay", 30)  # seconds
-        self.agent_health_check_interval = self.config.get("agent_health_check_interval", 60)  # seconds
+        self.agent_health_check_interval = self.config.get(
+            "agent_health_check_interval", 60
+        )  # seconds
 
         # Initialize resilience components
         self._initialize_resilience()
@@ -129,15 +131,29 @@ class SystemResilience:
             "overall_status": "healthy",
             "last_check": datetime.now().isoformat(),
             "components": {
-                "models": {"status": "healthy", "last_check": datetime.now().isoformat()},
-                "strategies": {"status": "healthy", "last_check": datetime.now().isoformat()},
-                "data_feed": {"status": "healthy", "last_check": datetime.now().isoformat()},
-                "ensemble": {"status": "healthy", "last_check": datetime.now().isoformat()},
+                "models": {
+                    "status": "healthy",
+                    "last_check": datetime.now().isoformat(),
+                },
+                "strategies": {
+                    "status": "healthy",
+                    "last_check": datetime.now().isoformat(),
+                },
+                "data_feed": {
+                    "status": "healthy",
+                    "last_check": datetime.now().isoformat(),
+                },
+                "ensemble": {
+                    "status": "healthy",
+                    "last_check": datetime.now().isoformat(),
+                },
             },
             "metrics": {"error_rate": 0.0, "fallback_rate": 0.0, "response_time": 0.0},
         }
 
-    def handle_model_failure(self, model_name: str, error: Exception, context: Dict[str, Any]) -> Dict[str, Any]:
+    def handle_model_failure(
+        self, model_name: str, error: Exception, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Handle model failure with fallback mechanism.
 
         Args:
@@ -170,7 +186,9 @@ class SystemResilience:
             self._save_fallback_history()
 
             # Update system health
-            self._update_component_health("models", "degraded" if fallback_result["success"] else "failed")
+            self._update_component_health(
+                "models", "degraded" if fallback_result["success"] else "failed"
+            )
 
             # Send alert if configured
             if self.fallback_config.alert_on_fallback:
@@ -187,7 +205,9 @@ class SystemResilience:
                 "message": "Failed to handle model failure",
             }
 
-    def _attempt_model_fallback(self, model_name: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _attempt_model_fallback(
+        self, model_name: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Attempt model fallback.
 
         Args:
@@ -231,7 +251,12 @@ class SystemResilience:
 
         except Exception as e:
             logger.error(f"Error in model fallback: {e}")
-            return {"success": False, "fallback_used": False, "error": str(e), "message": "Fallback attempt failed"}
+            return {
+                "success": False,
+                "fallback_used": False,
+                "error": str(e),
+                "message": "Fallback attempt failed",
+            }
 
     def _get_backup_model(self, model_name: str) -> Optional[str]:
         """Get backup model for failed model.
@@ -427,23 +452,31 @@ class SystemResilience:
 
             # Check component health
             for component in self.system_health["components"]:
-                self.system_health["components"][component]["last_check"] = current_time.isoformat()
+                self.system_health["components"][component][
+                    "last_check"
+                ] = current_time.isoformat()
 
             # Calculate error rate
             if self.fallback_history:
                 recent_failures = [
-                    f for f in self.fallback_history[-100:] if not f.get("success", True)  # Last 100 records
+                    f
+                    for f in self.fallback_history[-100:]
+                    if not f.get("success", True)  # Last 100 records
                 ]
-                self.system_health["metrics"]["error_rate"] = len(recent_failures) / min(
-                    100, len(self.fallback_history)
-                )
+                self.system_health["metrics"]["error_rate"] = len(
+                    recent_failures
+                ) / min(100, len(self.fallback_history))
 
             # Calculate fallback rate
             if self.fallback_history:
-                recent_fallbacks = [f for f in self.fallback_history[-100:] if f.get("fallback_used", False)]
-                self.system_health["metrics"]["fallback_rate"] = len(recent_fallbacks) / min(
-                    100, len(self.fallback_history)
-                )
+                recent_fallbacks = [
+                    f
+                    for f in self.fallback_history[-100:]
+                    if f.get("fallback_used", False)
+                ]
+                self.system_health["metrics"]["fallback_rate"] = len(
+                    recent_fallbacks
+                ) / min(100, len(self.fallback_history))
 
             # Determine overall status
             error_rate = self.system_health["metrics"]["error_rate"]
@@ -473,7 +506,9 @@ class SystemResilience:
         """
         if component in self.system_health["components"]:
             self.system_health["components"][component]["status"] = status
-            self.system_health["components"][component]["last_check"] = datetime.now().isoformat()
+            self.system_health["components"][component][
+                "last_check"
+            ] = datetime.now().isoformat()
 
     def _send_fallback_alert(self, fallback_record: Dict[str, Any]):
         """Send fallback alert.
@@ -507,8 +542,12 @@ class SystemResilience:
                 "signal_warnings": warning_summary,
                 "fallback_history": {
                     "total_fallbacks": len(self.fallback_history),
-                    "recent_fallbacks": self.fallback_history[-10:] if self.fallback_history else [],
-                    "success_rate": len([f for f in self.fallback_history if f.get("success", False)])
+                    "recent_fallbacks": self.fallback_history[-10:]
+                    if self.fallback_history
+                    else [],
+                    "success_rate": len(
+                        [f for f in self.fallback_history if f.get("success", False)]
+                    )
                     / max(1, len(self.fallback_history)),
                 },
                 "configuration": {
@@ -560,18 +599,26 @@ class SystemResilience:
         recent_crashes = [
             crash
             for crash in self.crash_history
-            if (current_time - datetime.fromisoformat(crash["timestamp"])).total_seconds() < 300
+            if (
+                current_time - datetime.fromisoformat(crash["timestamp"])
+            ).total_seconds()
+            < 300
         ]
 
         if len(recent_crashes) > 3:
-            logger.critical(f"Crash loop detected: {len(recent_crashes)} crashes in 5 minutes")
+            logger.critical(
+                f"Crash loop detected: {len(recent_crashes)} crashes in 5 minutes"
+            )
             raise SystemError("System entering crash loop.")
 
         self.last_crash_time = current_time
         return False
 
     def register_agent_for_monitoring(
-        self, agent_id: str, agent_instance: Any, restart_callback: Optional[callable] = None
+        self,
+        agent_id: str,
+        agent_instance: Any,
+        restart_callback: Optional[callable] = None,
     ) -> bool:
         """Register an agent for health monitoring and self-healing.
 
@@ -646,7 +693,10 @@ class SystemResilience:
             Health status dictionary
         """
         if agent_id not in self.agent_monitors:
-            return {"status": "not_monitored", "error": "Agent not registered for monitoring"}
+            return {
+                "status": "not_monitored",
+                "error": "Agent not registered for monitoring",
+            }
 
         try:
             monitor = self.agent_monitors[agent_id]
@@ -679,7 +729,12 @@ class SystemResilience:
 
         except Exception as e:
             logger.error(f"Error checking health for agent {agent_id}: {e}")
-            return {"agent_id": agent_id, "status": "error", "error": str(e), "is_alive": False}
+            return {
+                "agent_id": agent_id,
+                "status": "error",
+                "error": str(e),
+                "is_alive": False,
+            }
 
     def _check_agent_alive(self, agent_instance: Any) -> bool:
         """Check if an agent instance is still alive and responsive.
@@ -728,7 +783,9 @@ class SystemResilience:
 
             # Check if we've exceeded max restarts
             if restart_count >= self.max_agent_restarts:
-                logger.error(f"Agent {agent_id} exceeded maximum restart attempts ({self.max_agent_restarts})")
+                logger.error(
+                    f"Agent {agent_id} exceeded maximum restart attempts ({self.max_agent_restarts})"
+                )
                 self.agent_health[agent_id]["status"] = "failed"
                 return False
 
@@ -736,7 +793,9 @@ class SystemResilience:
             restart_callback = monitor.get("restart_callback")
 
             if restart_callback:
-                logger.info(f"Attempting to restart agent {agent_id} (attempt {restart_count + 1})")
+                logger.info(
+                    f"Attempting to restart agent {agent_id} (attempt {restart_count + 1})"
+                )
 
                 # Call restart callback
                 success = restart_callback(agent_id)
@@ -845,7 +904,13 @@ class SystemResilience:
             Recovery statistics
         """
         total_restarts = sum(self.agent_restart_count.values())
-        failed_agents = len([aid for aid, health in self.agent_health.items() if health["status"] == "failed"])
+        failed_agents = len(
+            [
+                aid
+                for aid, health in self.agent_health.items()
+                if health["status"] == "failed"
+            ]
+        )
 
         return {
             "total_restarts": total_restarts,
@@ -860,7 +925,9 @@ class SystemResilience:
 system_resilience = SystemResilience()
 
 
-def handle_model_failure(model_name: str, error: Exception, context: Dict[str, Any]) -> Dict[str, Any]:
+def handle_model_failure(
+    model_name: str, error: Exception, context: Dict[str, Any]
+) -> Dict[str, Any]:
     """Global function to handle model failures."""
     return system_resilience.handle_model_failure(model_name, error, context)
 

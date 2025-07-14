@@ -12,7 +12,9 @@ from datetime import datetime
 from pathlib import Path
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -147,7 +149,10 @@ def update_codebase_imports(root_dir: Path):
     # Process all Python files
     for py_file in root_dir.rglob("*.py"):
         # Skip files in backup and cache directories
-        if any(part in ["backup", "__pycache__", ".git", ".venv", "node_modules"] for part in py_file.parts):
+        if any(
+            part in ["backup", "__pycache__", ".git", ".venv", "node_modules"]
+            for part in py_file.parts
+        ):
             continue
 
         # Skip files in the optimization directory (already fixed)
@@ -202,7 +207,7 @@ def remove_duplicate_directories(source_dirs: dict):
         if source_dir.exists():
             try:
                 # Add deprecation notice to remaining files
-                deprecation_result = add_deprecation_notices(source_dir)
+                add_deprecation_notices(source_dir)
 
                 # Remove directory
                 shutil.rmtree(source_dir)
@@ -258,9 +263,15 @@ def validate_consolidation(target_dir: Path):
         # Check strategy improvements
         strategy_improvements = validate_strategy_improvements(target_dir)
         validation_results["strategy_improvements"] = strategy_improvements
-        validation_results["performance_metrics"] = strategy_improvements.get("metrics", {})
-        validation_results["baseline_comparison"] = strategy_improvements.get("baseline", {})
-        validation_results["consolidation_benefits"] = strategy_improvements.get("benefits", {})
+        validation_results["performance_metrics"] = strategy_improvements.get(
+            "metrics", {}
+        )
+        validation_results["baseline_comparison"] = strategy_improvements.get(
+            "baseline", {}
+        )
+        validation_results["consolidation_benefits"] = strategy_improvements.get(
+            "benefits", {}
+        )
 
         if strategy_improvements["success"]:
             logger.info("✅ Strategy improvements validated")
@@ -306,7 +317,9 @@ def check_import_consistency(target_dir: Path) -> bool:
                 logger.error(f"Error checking imports in {py_file}: {e}")
 
         if inconsistent_files:
-            logger.warning(f"Found {len(inconsistent_files)} files with inconsistent imports")
+            logger.warning(
+                f"Found {len(inconsistent_files)} files with inconsistent imports"
+            )
             return False
 
         return True
@@ -318,7 +331,13 @@ def check_import_consistency(target_dir: Path) -> bool:
 
 def validate_strategy_improvements(target_dir: Path) -> dict:
     """Validate that consolidated strategies show improvements."""
-    results = {"success": False, "metrics": {}, "baseline": {}, "benefits": {}, "improvements": []}
+    results = {
+        "success": False,
+        "metrics": {},
+        "baseline": {},
+        "benefits": {},
+        "improvements": [],
+    }
 
     try:
         # Load baseline performance metrics
@@ -468,7 +487,9 @@ def calculate_aggregate_metrics(metrics: dict) -> dict:
         metric_keys = list(next(iter(metrics.values())).keys())
 
         for key in metric_keys:
-            values = [strategy_metrics.get(key, 0) for strategy_metrics in metrics.values()]
+            values = [
+                strategy_metrics.get(key, 0) for strategy_metrics in metrics.values()
+            ]
             aggregate[key] = sum(values) / len(values)
 
         return aggregate
@@ -490,7 +511,9 @@ def compare_performance(baseline: dict, consolidated: dict) -> dict:
 
                 # Calculate improvement percentage
                 if baseline_val != 0:
-                    improvement = ((consolidated_val - baseline_val) / baseline_val) * 100
+                    improvement = (
+                        (consolidated_val - baseline_val) / baseline_val
+                    ) * 100
                 else:
                     improvement = 100 if consolidated_val > 0 else 0
 
@@ -522,12 +545,17 @@ def calculate_consolidation_benefits(improvements: dict) -> dict:
 
         # Calculate average improvement
         if improvements:
-            benefits["average_improvement"] = sum(improvements.values()) / len(improvements)
+            benefits["average_improvement"] = sum(improvements.values()) / len(
+                improvements
+            )
 
         # Find best improving metric
         if positive_improvements:
             best_metric = max(positive_improvements.items(), key=lambda x: x[1])
-            benefits["best_improving_metric"] = {"metric": best_metric[0], "improvement": best_metric[1]}
+            benefits["best_improving_metric"] = {
+                "metric": best_metric[0],
+                "improvement": best_metric[1],
+            }
 
         # Calculate overall improvement
         benefits["overall_improvement"] = benefits["average_improvement"]
@@ -543,11 +571,15 @@ def assert_non_zero_improvements(validation_results: dict):
     """Assert that there are non-zero improvements in consolidated strategies."""
     try:
         # Check if strategy improvements validation passed
-        if not validation_results.get("strategy_improvements", {}).get("success", False):
+        if not validation_results.get("strategy_improvements", {}).get(
+            "success", False
+        ):
             raise AssertionError("Strategy improvements validation failed")
 
         # Check for non-zero improvements
-        improvements = validation_results.get("strategy_improvements", {}).get("improvements", {})
+        improvements = validation_results.get("strategy_improvements", {}).get(
+            "improvements", {}
+        )
 
         if not improvements:
             raise AssertionError("No improvement metrics found")
@@ -556,13 +588,17 @@ def assert_non_zero_improvements(validation_results: dict):
         positive_improvements = [imp for imp in improvements.values() if imp > 0]
 
         if not positive_improvements:
-            raise AssertionError("No positive improvements detected in consolidated strategies")
+            raise AssertionError(
+                "No positive improvements detected in consolidated strategies"
+            )
 
         # Check if average improvement is positive
         average_improvement = sum(improvements.values()) / len(improvements)
 
         if average_improvement <= 0:
-            raise AssertionError(f"Average improvement ({average_improvement:.2f}%) is not positive")
+            raise AssertionError(
+                f"Average improvement ({average_improvement:.2f}%) is not positive"
+            )
 
         # Log successful assertion
         logger.info(

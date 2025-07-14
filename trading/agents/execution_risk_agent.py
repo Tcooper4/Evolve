@@ -175,7 +175,9 @@ class ExecutionRiskAgent(BaseAgent):
                 side = kwargs.get("side")
                 price = kwargs.get("price")
                 portfolio_context = kwargs.get("portfolio_context")
-                approval = self.approve_trade(trade_id, symbol, size, side, price, portfolio_context)
+                approval = self.approve_trade(
+                    trade_id, symbol, size, side, price, portfolio_context
+                )
                 return AgentResult(
                     success=True,
                     data={
@@ -195,7 +197,9 @@ class ExecutionRiskAgent(BaseAgent):
                 summary = self.get_risk_summary()
                 return AgentResult(success=True, data={"risk_summary": summary})
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
         except Exception as e:
             return self.handle_error(e)
 
@@ -258,16 +262,27 @@ class ExecutionRiskAgent(BaseAgent):
 
             # Determine approval status
             failed_checks = [check for check in risk_checks if not check.passed]
-            critical_failures = [check for check in failed_checks if check.risk_level == RiskLevel.CRITICAL]
+            critical_failures = [
+                check
+                for check in failed_checks
+                if check.risk_level == RiskLevel.CRITICAL
+            ]
 
             if critical_failures:
                 status = TradeStatus.REJECTED
                 approved_size = 0.0
-                warnings.extend([f"Critical risk: {check.check_name}" for check in critical_failures])
+                warnings.extend(
+                    [
+                        f"Critical risk: {check.check_name}"
+                        for check in critical_failures
+                    ]
+                )
             elif failed_checks:
                 status = TradeStatus.MODIFIED
                 approved_size = self._calculate_modified_size(size, failed_checks)
-                warnings.extend([f"Risk limit: {check.check_name}" for check in failed_checks])
+                warnings.extend(
+                    [f"Risk limit: {check.check_name}" for check in failed_checks]
+                )
             else:
                 status = TradeStatus.APPROVED
                 approved_size = size
@@ -282,7 +297,11 @@ class ExecutionRiskAgent(BaseAgent):
                 risk_checks=risk_checks,
                 warnings=warnings,
                 timestamp=datetime.now(),
-                metadata={"side": side, "price": price, "risk_score": self._calculate_risk_score(risk_checks)},
+                metadata={
+                    "side": side,
+                    "price": price,
+                    "risk_score": self._calculate_risk_score(risk_checks),
+                },
             )
 
             # Update state
@@ -290,7 +309,9 @@ class ExecutionRiskAgent(BaseAgent):
             if status == TradeStatus.APPROVED:
                 self._update_portfolio_state(symbol, approved_size, side, price)
 
-            logger.info(f"Trade {trade_id} {status.value}: {approved_size:.2%} of {size:.2%} approved")
+            logger.info(
+                f"Trade {trade_id} {status.value}: {approved_size:.2%} of {size:.2%} approved"
+            )
 
             return approval
 
@@ -350,7 +371,9 @@ class ExecutionRiskAgent(BaseAgent):
             threshold = self.risk_limits["max_position_size"]
             passed = new_position <= threshold
 
-            risk_level = RiskLevel.CRITICAL if new_position > threshold * 1.5 else RiskLevel.HIGH
+            risk_level = (
+                RiskLevel.CRITICAL if new_position > threshold * 1.5 else RiskLevel.HIGH
+            )
 
             return RiskCheck(
                 check_name="Position Size Limit",
@@ -382,13 +405,17 @@ class ExecutionRiskAgent(BaseAgent):
         try:
             if portfolio_context and "sector" in portfolio_context:
                 sector = portfolio_context["sector"]
-                current_exposure = self.portfolio_state["sector_exposures"].get(sector, 0)
+                current_exposure = self.portfolio_state["sector_exposures"].get(
+                    sector, 0
+                )
                 new_exposure = current_exposure + size
 
                 threshold = self.risk_limits["max_sector_exposure"]
                 passed = new_exposure <= threshold
 
-                risk_level = RiskLevel.HIGH if new_exposure > threshold else RiskLevel.MEDIUM
+                risk_level = (
+                    RiskLevel.HIGH if new_exposure > threshold else RiskLevel.MEDIUM
+                )
 
                 return RiskCheck(
                     check_name="Sector Exposure Limit",
@@ -406,7 +433,9 @@ class ExecutionRiskAgent(BaseAgent):
             logger.error(f"Error checking sector exposure: {e}")
             return True
 
-    def _check_portfolio_risk(self, size: float, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
+    def _check_portfolio_risk(
+        self, size: float, portfolio_context: Optional[Dict[str, Any]]
+    ) -> Optional[RiskCheck]:
         """Check portfolio risk limit.
 
         Args:
@@ -423,7 +452,9 @@ class ExecutionRiskAgent(BaseAgent):
             threshold = self.risk_limits["max_portfolio_risk"]
             passed = new_risk <= threshold
 
-            risk_level = RiskLevel.CRITICAL if new_risk > threshold * 1.2 else RiskLevel.HIGH
+            risk_level = (
+                RiskLevel.CRITICAL if new_risk > threshold * 1.2 else RiskLevel.HIGH
+            )
 
             return RiskCheck(
                 check_name="Portfolio Risk Limit",
@@ -439,7 +470,9 @@ class ExecutionRiskAgent(BaseAgent):
             logger.error(f"Error checking portfolio risk: {e}")
             return True
 
-    def _check_daily_loss_limit(self, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
+    def _check_daily_loss_limit(
+        self, portfolio_context: Optional[Dict[str, Any]]
+    ) -> Optional[RiskCheck]:
         """Check daily loss limit.
 
         Args:
@@ -453,7 +486,9 @@ class ExecutionRiskAgent(BaseAgent):
             threshold = self.risk_limits["max_daily_loss"]
             passed = daily_loss <= threshold
 
-            risk_level = RiskLevel.CRITICAL if daily_loss > threshold else RiskLevel.HIGH
+            risk_level = (
+                RiskLevel.CRITICAL if daily_loss > threshold else RiskLevel.HIGH
+            )
 
             return RiskCheck(
                 check_name="Daily Loss Limit",
@@ -469,7 +504,9 @@ class ExecutionRiskAgent(BaseAgent):
             logger.error(f"Error checking daily loss limit: {e}")
             return True
 
-    def _check_drawdown_limit(self, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
+    def _check_drawdown_limit(
+        self, portfolio_context: Optional[Dict[str, Any]]
+    ) -> Optional[RiskCheck]:
         """Check drawdown limit.
 
         Args:
@@ -483,7 +520,9 @@ class ExecutionRiskAgent(BaseAgent):
             threshold = self.risk_limits["max_drawdown"]
             passed = current_drawdown <= threshold
 
-            risk_level = RiskLevel.CRITICAL if current_drawdown > threshold else RiskLevel.HIGH
+            risk_level = (
+                RiskLevel.CRITICAL if current_drawdown > threshold else RiskLevel.HIGH
+            )
 
             return RiskCheck(
                 check_name="Drawdown Limit",
@@ -499,7 +538,9 @@ class ExecutionRiskAgent(BaseAgent):
             logger.error(f"Error checking drawdown limit: {e}")
             return True
 
-    def _check_leverage_limit(self, size: float, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
+    def _check_leverage_limit(
+        self, size: float, portfolio_context: Optional[Dict[str, Any]]
+    ) -> Optional[RiskCheck]:
         """Check leverage limit.
 
         Args:
@@ -512,7 +553,9 @@ class ExecutionRiskAgent(BaseAgent):
         try:
             # Simplified leverage calculation
             total_exposure = self.portfolio_state["total_exposure"] + size
-            leverage = total_exposure / max(1.0, total_exposure - size)  # Avoid division by zero
+            leverage = total_exposure / max(
+                1.0, total_exposure - size
+            )  # Avoid division by zero
 
             threshold = self.risk_limits["max_leverage"]
             passed = leverage <= threshold
@@ -552,7 +595,9 @@ class ExecutionRiskAgent(BaseAgent):
                 threshold = self.risk_limits["min_liquidity"]
                 passed = liquidity >= threshold
 
-                risk_level = RiskLevel.MEDIUM if liquidity < threshold else RiskLevel.LOW
+                risk_level = (
+                    RiskLevel.MEDIUM if liquidity < threshold else RiskLevel.LOW
+                )
 
                 return RiskCheck(
                     check_name="Liquidity Requirement",
@@ -570,7 +615,9 @@ class ExecutionRiskAgent(BaseAgent):
             logger.error(f"Error checking liquidity: {e}")
             return True
 
-    def _check_volatility(self, symbol: str, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
+    def _check_volatility(
+        self, symbol: str, portfolio_context: Optional[Dict[str, Any]]
+    ) -> Optional[RiskCheck]:
         """Check volatility threshold.
 
         Args:
@@ -586,7 +633,9 @@ class ExecutionRiskAgent(BaseAgent):
                 threshold = self.risk_thresholds["volatility_threshold"]
                 passed = volatility <= threshold
 
-                risk_level = RiskLevel.HIGH if volatility > threshold * 1.5 else RiskLevel.MEDIUM
+                risk_level = (
+                    RiskLevel.HIGH if volatility > threshold * 1.5 else RiskLevel.MEDIUM
+                )
 
                 return RiskCheck(
                     check_name="Volatility Threshold",
@@ -604,7 +653,9 @@ class ExecutionRiskAgent(BaseAgent):
             logger.error(f"Error checking volatility: {e}")
             return True
 
-    def _check_correlation(self, symbol: str, portfolio_context: Optional[Dict[str, Any]]) -> Optional[RiskCheck]:
+    def _check_correlation(
+        self, symbol: str, portfolio_context: Optional[Dict[str, Any]]
+    ) -> Optional[RiskCheck]:
         """Check correlation threshold.
 
         Args:
@@ -620,7 +671,9 @@ class ExecutionRiskAgent(BaseAgent):
                 threshold = self.risk_thresholds["correlation_threshold"]
                 passed = abs(correlation) <= threshold
 
-                risk_level = RiskLevel.MEDIUM if abs(correlation) > threshold else RiskLevel.LOW
+                risk_level = (
+                    RiskLevel.MEDIUM if abs(correlation) > threshold else RiskLevel.LOW
+                )
 
                 return RiskCheck(
                     check_name="Correlation Threshold",
@@ -661,7 +714,9 @@ class ExecutionRiskAgent(BaseAgent):
                 threshold = self.risk_thresholds["concentration_threshold"]
                 passed = concentration <= threshold
 
-                risk_level = RiskLevel.HIGH if concentration > threshold else RiskLevel.MEDIUM
+                risk_level = (
+                    RiskLevel.HIGH if concentration > threshold else RiskLevel.MEDIUM
+                )
 
                 return RiskCheck(
                     check_name="Concentration Threshold",
@@ -679,7 +734,9 @@ class ExecutionRiskAgent(BaseAgent):
             logger.error(f"Error checking concentration: {e}")
             return True
 
-    def _calculate_modified_size(self, original_size: float, failed_checks: List[RiskCheck]) -> float:
+    def _calculate_modified_size(
+        self, original_size: float, failed_checks: List[RiskCheck]
+    ) -> float:
         """Calculate modified trade size based on failed checks.
 
         Args:
@@ -723,7 +780,12 @@ class ExecutionRiskAgent(BaseAgent):
                 return 0.0
 
             # Weight risk levels
-            risk_weights = {RiskLevel.LOW: 0.1, RiskLevel.MEDIUM: 0.3, RiskLevel.HIGH: 0.6, RiskLevel.CRITICAL: 1.0}
+            risk_weights = {
+                RiskLevel.LOW: 0.1,
+                RiskLevel.MEDIUM: 0.3,
+                RiskLevel.HIGH: 0.6,
+                RiskLevel.CRITICAL: 1.0,
+            }
 
             total_score = 0.0
             total_weight = 0.0
@@ -740,7 +802,9 @@ class ExecutionRiskAgent(BaseAgent):
             logger.error(f"Error calculating risk score: {e}")
             return 0.5
 
-    def _update_portfolio_state(self, symbol: str, size: float, side: str, price: float):
+    def _update_portfolio_state(
+        self, symbol: str, size: float, side: str, price: float
+    ):
         """Update portfolio state after trade.
 
         Args:
@@ -753,18 +817,26 @@ class ExecutionRiskAgent(BaseAgent):
             # Update position
             current_position = self.portfolio_state["current_positions"].get(symbol, 0)
             if side.lower() == "buy":
-                self.portfolio_state["current_positions"][symbol] = current_position + size
+                self.portfolio_state["current_positions"][symbol] = (
+                    current_position + size
+                )
             else:
-                self.portfolio_state["current_positions"][symbol] = current_position - size
+                self.portfolio_state["current_positions"][symbol] = (
+                    current_position - size
+                )
 
             # Update total exposure
-            total_exposure = sum(abs(pos) for pos in self.portfolio_state["current_positions"].values())
+            total_exposure = sum(
+                abs(pos) for pos in self.portfolio_state["current_positions"].values()
+            )
             self.portfolio_state["total_exposure"] = total_exposure
 
         except Exception as e:
             logger.error(f"Error updating portfolio state: {e}")
 
-    def trigger_cooling_period(self, symbol: str, reason: str, hours: Optional[int] = None):
+    def trigger_cooling_period(
+        self, symbol: str, reason: str, hours: Optional[int] = None
+    ):
         """Trigger cooling period for a symbol.
 
         Args:
@@ -785,7 +857,9 @@ class ExecutionRiskAgent(BaseAgent):
                 "duration_hours": hours,
             }
 
-            logger.warning(f"Cooling period triggered for {symbol}: {reason} for {hours} hours")
+            logger.warning(
+                f"Cooling period triggered for {symbol}: {reason} for {hours} hours"
+            )
 
         except Exception as e:
             logger.error(f"Error triggering cooling period: {e}")
@@ -797,13 +871,23 @@ class ExecutionRiskAgent(BaseAgent):
             Risk summary dictionary
         """
         try:
-            recent_trades = [t for t in self.trade_history if t.timestamp > datetime.now() - timedelta(days=1)]
+            recent_trades = [
+                t
+                for t in self.trade_history
+                if t.timestamp > datetime.now() - timedelta(days=1)
+            ]
 
             summary = {
                 "total_trades": len(recent_trades),
-                "approved_trades": len([t for t in recent_trades if t.status == TradeStatus.APPROVED]),
-                "rejected_trades": len([t for t in recent_trades if t.status == TradeStatus.REJECTED]),
-                "modified_trades": len([t for t in recent_trades if t.status == TradeStatus.MODIFIED]),
+                "approved_trades": len(
+                    [t for t in recent_trades if t.status == TradeStatus.APPROVED]
+                ),
+                "rejected_trades": len(
+                    [t for t in recent_trades if t.status == TradeStatus.REJECTED]
+                ),
+                "modified_trades": len(
+                    [t for t in recent_trades if t.status == TradeStatus.MODIFIED]
+                ),
                 "active_cooling_periods": len(self.cooling_periods_active),
                 "portfolio_exposure": self.portfolio_state["total_exposure"],
                 "daily_pnl": self.portfolio_state["daily_pnl"],

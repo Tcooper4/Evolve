@@ -18,7 +18,13 @@ class SystemChecker:
     """Comprehensive system checker for Evolve platform."""
 
     def __init__(self):
-        self.results = {"success": 0, "failure": 0, "warning": 0, "total": 0, "details": []}
+        self.results = {
+            "success": 0,
+            "failure": 0,
+            "warning": 0,
+            "total": 0,
+            "details": [],
+        }
         self.critical_modules = [
             "pandas",
             "numpy",
@@ -166,7 +172,7 @@ class SystemChecker:
         try:
             from trading.models.forecast_router import ForecastRouter
 
-            router = ForecastRouter()
+            ForecastRouter()
             self._record_success("Model: ForecastRouter")
         except Exception as e:
             self._record_failure(f"Model: ForecastRouter - {str(e)}")
@@ -174,7 +180,7 @@ class SystemChecker:
         try:
             from trading.strategies.bollinger_strategy import BollingerStrategy
 
-            strategy = BollingerStrategy()
+            BollingerStrategy()
             self._record_success("Strategy: BollingerStrategy")
         except Exception as e:
             self._record_failure(f"Strategy: BollingerStrategy - {str(e)}")
@@ -208,7 +214,16 @@ class SystemChecker:
         """Check critical file structure."""
         logger.info("Checking file structure...")
 
-        critical_dirs = ["trading", "pages", "config", "data", "models", "strategies", "utils", "scripts"]
+        critical_dirs = [
+            "trading",
+            "pages",
+            "config",
+            "data",
+            "models",
+            "strategies",
+            "utils",
+            "scripts",
+        ]
 
         for dir_name in critical_dirs:
             if os.path.exists(dir_name):

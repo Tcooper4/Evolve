@@ -97,7 +97,9 @@ class TradeExecutionSimulator:
 
         # Configuration
         self.base_commission = self.config.get("base_commission", 0.005)  # $5 per trade
-        self.commission_rate = self.config.get("commission_rate", 0.001)  # 0.1% of trade value
+        self.commission_rate = self.config.get(
+            "commission_rate", 0.001
+        )  # 0.1% of trade value
         self.min_commission = self.config.get("min_commission", 1.0)
         self.max_commission = self.config.get("max_commission", 29.95)
 
@@ -107,8 +109,12 @@ class TradeExecutionSimulator:
         self.volatility_impact_factor = self.config.get("volatility_impact_factor", 0.5)
 
         # Execution delay configuration
-        self.min_execution_delay = self.config.get("min_execution_delay", 0.1)  # seconds
-        self.max_execution_delay = self.config.get("max_execution_delay", 2.0)  # seconds
+        self.min_execution_delay = self.config.get(
+            "min_execution_delay", 0.1
+        )  # seconds
+        self.max_execution_delay = self.config.get(
+            "max_execution_delay", 2.0
+        )  # seconds
         self.market_hours_only = self.config.get("market_hours_only", True)
 
         # Spread configuration
@@ -148,7 +154,9 @@ class TradeExecutionSimulator:
             order_id = f"order_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{random.randint(1000, 9999)}"
 
             # Validate order parameters
-            if not self._validate_order_parameters(symbol, order_type, side, quantity, price, stop_price):
+            if not self._validate_order_parameters(
+                symbol, order_type, side, quantity, price, stop_price
+            ):
                 raise ValueError("Invalid order parameters")
 
             # Create order
@@ -166,7 +174,9 @@ class TradeExecutionSimulator:
             # Store order
             self.orders[order_id] = order
 
-            self.logger.info(f"Placed {order_type.value} order: {order_id} for {quantity} {symbol} at {price}")
+            self.logger.info(
+                f"Placed {order_type.value} order: {order_id} for {quantity} {symbol} at {price}"
+            )
 
             return order_id
 
@@ -174,7 +184,9 @@ class TradeExecutionSimulator:
             self.logger.error(f"Error placing order: {str(e)}")
             raise
 
-    def execute_order(self, order_id: str, market_data: pd.DataFrame) -> ExecutionResult:
+    def execute_order(
+        self, order_id: str, market_data: pd.DataFrame
+    ) -> ExecutionResult:
         """
         Execute an order with realistic market simulation.
 
@@ -224,14 +236,18 @@ class TradeExecutionSimulator:
                 slippage=slippage,
                 commission=commission,
                 market_impact=market_impact,
-                total_cost=self._calculate_total_cost(order, execution_price, commission),
+                total_cost=self._calculate_total_cost(
+                    order, execution_price, commission
+                ),
                 success=True,
             )
 
             # Store execution result
             self.execution_history.append(result)
 
-            self.logger.info(f"Executed order {order_id}: {order.quantity} {order.symbol} at {execution_price}")
+            self.logger.info(
+                f"Executed order {order_id}: {order.quantity} {order.symbol} at {execution_price}"
+            )
 
             return result
 
@@ -266,7 +282,9 @@ class TradeExecutionSimulator:
             if order_type == OrderType.LIMIT and price is None:
                 return False
 
-            if order_type == OrderType.STOP_LIMIT and (price is None or stop_price is None):
+            if order_type == OrderType.STOP_LIMIT and (
+                price is None or stop_price is None
+            ):
                 return False
 
             if order_type == OrderType.STOP_MARKET and stop_price is None:
@@ -317,7 +335,9 @@ class TradeExecutionSimulator:
             self.logger.error(f"Error checking order execution: {str(e)}")
             return False
 
-    def _calculate_execution_price(self, order: Order, market_data: pd.DataFrame) -> float:
+    def _calculate_execution_price(
+        self, order: Order, market_data: pd.DataFrame
+    ) -> float:
         """Calculate execution price based on order type and market conditions."""
         try:
             current_price = market_data["close"].iloc[-1]
@@ -418,7 +438,9 @@ class TradeExecutionSimulator:
             self.logger.error(f"Error calculating commission: {str(e)}")
             return self.base_commission
 
-    def _calculate_market_impact(self, order: Order, market_data: pd.DataFrame) -> float:
+    def _calculate_market_impact(
+        self, order: Order, market_data: pd.DataFrame
+    ) -> float:
         """Calculate market impact of the order."""
         try:
             if "volume" in market_data.columns:
@@ -457,7 +479,9 @@ class TradeExecutionSimulator:
             self.logger.error(f"Error calculating execution delay: {str(e)}")
             return self.min_execution_delay
 
-    def _calculate_total_cost(self, order: Order, execution_price: float, commission: float) -> float:
+    def _calculate_total_cost(
+        self, order: Order, execution_price: float, commission: float
+    ) -> float:
         """Calculate total cost including slippage and commission."""
         try:
             base_cost = order.quantity * execution_price
@@ -539,12 +563,20 @@ class TradeExecutionSimulator:
                 "total_orders": len(executions),
                 "successful_orders": len(successful_executions),
                 "success_rate": len(successful_executions) / len(executions),
-                "avg_execution_time": np.mean([e.execution_time for e in successful_executions]),
+                "avg_execution_time": np.mean(
+                    [e.execution_time for e in successful_executions]
+                ),
                 "avg_slippage": np.mean([e.slippage for e in successful_executions]),
-                "avg_commission": np.mean([e.commission for e in successful_executions]),
-                "avg_market_impact": np.mean([e.market_impact for e in successful_executions]),
+                "avg_commission": np.mean(
+                    [e.commission for e in successful_executions]
+                ),
+                "avg_market_impact": np.mean(
+                    [e.market_impact for e in successful_executions]
+                ),
                 "total_commission": sum([e.commission for e in successful_executions]),
-                "total_slippage": sum([e.slippage * e.quantity * e.price for e in successful_executions]),
+                "total_slippage": sum(
+                    [e.slippage * e.quantity * e.price for e in successful_executions]
+                ),
             }
 
         except Exception as e:
@@ -571,10 +603,14 @@ class TradeExecutionSimulator:
 
                 # Execute order
                 if order_data["symbol"] in market_data:
-                    result = self.execute_order(order_id, market_data[order_data["symbol"]])
+                    result = self.execute_order(
+                        order_id, market_data[order_data["symbol"]]
+                    )
                     results.append(result)
                 else:
-                    result = self._create_rejected_result(self.orders[order_id], "No market data available")
+                    result = self._create_rejected_result(
+                        self.orders[order_id], "No market data available"
+                    )
                     results.append(result)
 
             return results
@@ -586,7 +622,11 @@ class TradeExecutionSimulator:
     def get_pending_orders(self) -> List[Order]:
         """Get all pending orders."""
         try:
-            return [order for order in self.orders.values() if order.status == OrderStatus.PENDING]
+            return [
+                order
+                for order in self.orders.values()
+                if order.status == OrderStatus.PENDING
+            ]
         except Exception as e:
             self.logger.error(f"Error getting pending orders: {str(e)}")
             return []

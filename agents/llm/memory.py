@@ -1,6 +1,5 @@
 """Memory management for LLM agents with long-term storage and recall capabilities."""
 
-import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
@@ -10,7 +9,6 @@ from typing import Any, Dict, List, Optional, Union
 
 import faiss
 import numpy as np
-import yaml
 from sentence_transformers import SentenceTransformer
 
 logger = logging.getLogger(__name__)
@@ -19,6 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MemoryEntry:
     """A single memory entry with metadata."""
+
     prompt: str
     response: str
     timestamp: datetime
@@ -35,7 +34,8 @@ class MemoryManager:
         storage_path: Union[str, Path],
         embedding_model: str = "all-MiniLM-L6-v2",
         max_memories: int = 1000,
-        similarity_threshold: float = 0.8):
+        similarity_threshold: float = 0.8,
+    ):
         """Initialize the memory manager.
 
         Args:
@@ -59,7 +59,7 @@ class MemoryManager:
         """Load memories from storage."""
         memory_file = self.storage_path / "memories.json"
         if memory_file.exists():
-            with open(memory_file, 'r') as f:
+            with open(memory_file, "r") as f:
                 data = json.load(f)
                 for entry in data:
                     memory = MemoryEntry(
@@ -67,7 +67,7 @@ class MemoryManager:
                         response=entry["response"],
                         timestamp=datetime.fromisoformat(entry["timestamp"]),
                         metadata=entry.get("metadata", {}),
-                        importance=entry.get("importance", 1.0)
+                        importance=entry.get("importance", 1.0),
                     )
                     self.memories.append(memory)
 
@@ -87,7 +87,7 @@ class MemoryManager:
         # Create FAISS index
         dimension = embeddings.shape[1]
         self.index = faiss.IndexFlatL2(dimension)
-        self.index.add(embeddings.astype('float32'))
+        self.index.add(embeddings.astype("float32"))
 
         # Store embeddings in memory entries
         for memory, embedding in zip(self.memories, embeddings):
@@ -98,7 +98,7 @@ class MemoryManager:
         prompt: str,
         response: str,
         metadata: Optional[Dict[str, Any]] = None,
-        importance: float = 1.0
+        importance: float = 1.0,
     ) -> None:
         """Store a new memory.
 
@@ -114,7 +114,7 @@ class MemoryManager:
             response=response,
             timestamp=datetime.now(),
             metadata=metadata or {},
-            importance=importance
+            importance=importance,
         )
 
         # Get embedding for the prompt
@@ -127,7 +127,7 @@ class MemoryManager:
         if self.index is None:
             self._rebuild_index()
         else:
-            self.index.add(memory.embedding.reshape(1, -1).astype('float32'))
+            self.index.add(memory.embedding.reshape(1, -1).astype("float32"))
 
         # Trim memories if needed
         if len(self.memories) > self.max_memories:
@@ -137,9 +137,7 @@ class MemoryManager:
         await self._save_memories()
 
     async def recall(
-        self,
-        prompt: str,
-        max_results: int = 3
+        self, prompt: str, max_results: int = 3
     ) -> Optional[Dict[str, Any]]:
         """Recall relevant memories for a prompt.
 
@@ -158,8 +156,8 @@ class MemoryManager:
 
         # Search for similar memories
         distances, indices = self.index.search(
-            query_embedding.reshape(1, -1).astype('float32'),
-            min(max_results, len(self.memories))
+            query_embedding.reshape(1, -1).astype("float32"),
+            min(max_results, len(self.memories)),
         )
 
         # Filter by similarity threshold
@@ -167,13 +165,15 @@ class MemoryManager:
         for distance, idx in zip(distances[0], indices[0]):
             if distance < (1 - self.similarity_threshold):
                 memory = self.memories[idx]
-                recalled_memories.append({
-                    "prompt": memory.prompt,
-                    "response": memory.response,
-                    "similarity": 1 - distance,
-                    "timestamp": memory.timestamp.isoformat(),
-                    "metadata": memory.metadata
-                })
+                recalled_memories.append(
+                    {
+                        "prompt": memory.prompt,
+                        "response": memory.response,
+                        "similarity": 1 - distance,
+                        "timestamp": memory.timestamp.isoformat(),
+                        "metadata": memory.metadata,
+                    }
+                )
 
         if not recalled_memories:
             return None
@@ -181,19 +181,16 @@ class MemoryManager:
         return {
             "memories": recalled_memories,
             "count": len(recalled_memories),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
     def _trim_memories(self) -> None:
         """Trim memories based on importance and recency."""
         # Sort memories by importance and recency
-        self.memories.sort(
-            key=lambda x: (x.importance, x.timestamp),
-            reverse=True
-        )
+        self.memories.sort(key=lambda x: (x.importance, x.timestamp), reverse=True)
 
         # Keep only the most important/recent memories
-        self.memories = self.memories[:self.max_memories]
+        self.memories = self.memories[: self.max_memories]
 
         # Rebuild index
         self._rebuild_index()
@@ -210,21 +207,27 @@ class MemoryManager:
                 "response": memory.response,
                 "timestamp": memory.timestamp.isoformat(),
                 "metadata": memory.metadata,
-                "importance": memory.importance
+                "importance": memory.importance,
             }
             data.append(entry)
 
         # Save to file
-        with open(memory_file, 'w') as f:
+        with open(memory_file, "w") as f:
             json.dump(data, f, indent=2)
 
     def get_memory_stats(self) -> Dict[str, Any]:
         """Get statistics about stored memories."""
         return {
             "total_memories": len(self.memories),
-            "oldest_memory": min(m.timestamp for m in self.memories).isoformat() if self.memories else None,
-            "newest_memory": max(m.timestamp for m in self.memories).isoformat() if self.memories else None,
-            "average_importance": np.mean([m.importance for m in self.memories]) if self.memories else 0.0
+            "oldest_memory": min(m.timestamp for m in self.memories).isoformat()
+            if self.memories
+            else None,
+            "newest_memory": max(m.timestamp for m in self.memories).isoformat()
+            if self.memories
+            else None,
+            "average_importance": np.mean([m.importance for m in self.memories])
+            if self.memories
+            else 0.0,
         }
 
     def clear_memories(self) -> None:

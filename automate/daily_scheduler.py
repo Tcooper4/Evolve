@@ -120,19 +120,29 @@ async def run_ticker_analysis(ticker: str, router: AgentRouter) -> TickerResult:
 
         # Run forecast
         forecast_result = await router.handle_prompt(
-            f"Forecast {ticker} for the next 30 days", data=None  # Data will be fetched by the router
+            f"Forecast {ticker} for the next 30 days",
+            data=None,  # Data will be fetched by the router
         )
 
         if forecast_result.status == "error":
-            return TickerResult(ticker=ticker, success=False, error=f"Forecast failed: {forecast_result.error}")
+            return TickerResult(
+                ticker=ticker,
+                success=False,
+                error=f"Forecast failed: {forecast_result.error}",
+            )
 
         # Run strategy
         strategy_result = await router.handle_prompt(
-            f"Apply active strategy to {ticker}", data=None  # Data will be fetched by the router
+            f"Apply active strategy to {ticker}",
+            data=None,  # Data will be fetched by the router
         )
 
         if strategy_result.status == "error":
-            return TickerResult(ticker=ticker, success=False, error=f"Strategy failed: {strategy_result.error}")
+            return TickerResult(
+                ticker=ticker,
+                success=False,
+                error=f"Strategy failed: {strategy_result.error}",
+            )
 
         # Extract metrics safely
         forecast_metrics = {
@@ -162,7 +172,10 @@ async def run_ticker_analysis(ticker: str, router: AgentRouter) -> TickerResult:
         logger.info(f"Successfully completed analysis for {ticker}")
 
         return TickerResult(
-            ticker=ticker, success=True, forecast_metrics=forecast_metrics, strategy_metrics=strategy_metrics
+            ticker=ticker,
+            success=True,
+            forecast_metrics=forecast_metrics,
+            strategy_metrics=strategy_metrics,
         )
 
     except Exception as e:
@@ -233,7 +246,11 @@ async def run_daily_schedule(tickers: Optional[List[str]] = None) -> Dict[str, A
 
     except Exception as e:
         logger.error(f"Error in daily schedule: {str(e)}")
-        return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def main():

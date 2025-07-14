@@ -5,14 +5,20 @@ time series forecasting with interpretable attention mechanisms.
 """
 
 import logging
+import os
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from pytorch_lightning import LightningModule, Trainer
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.utilities.types import STEP_OUTPUT
+from sklearn.preprocessing import StandardScaler
 
 # PyTorch Lightning imports
 try:
@@ -97,11 +103,18 @@ class TimeSeriesDataset(Dataset):
         # Create sequences
         self.sequences = []
         self.targets = []
-        for i in range(len(self.data) - self.sequence_length - self.prediction_horizon + 1):
+        for i in range(
+            len(self.data) - self.sequence_length - self.prediction_horizon + 1
+        ):
             # Input sequence
             seq_data = self.data.iloc[i : i + self.sequence_length]
             # Target sequence
-            target_data = self.data.iloc[i + self.sequence_length : i + self.sequence_length + self.prediction_horizon]
+            target_data = self.data.iloc[
+                i
+                + self.sequence_length : i
+                + self.sequence_length
+                + self.prediction_horizon
+            ]
             # Extract features
             sequence = {
                 "target": torch.FloatTensor(seq_data[self.target_column].values),
@@ -112,7 +125,11 @@ class TimeSeriesDataset(Dataset):
                 if self.time_features
                 else torch.zeros(1),
                 "features": torch.FloatTensor(
-                    seq_data.drop(columns=[self.target_column] + self.static_features + self.time_features).values
+                    seq_data.drop(
+                        columns=[self.target_column]
+                        + self.static_features
+                        + self.time_features
+                    ).values
                 ),
             }
             target = torch.FloatTensor(target_data[self.target_column].values)
@@ -141,12 +158,18 @@ class VariableSelectionNetwork(nn.Module):
     def forward(self, x: torch.Tensor, c: torch.Tensor) -> torch.Tensor:
         """Forward pass."""
         # Calculate variable selection weights
-        feature_weights = self.feature_selection(x)  # [batch_size, num_variables, num_variables]
-        context_weights = self.context_projection(c).unsqueeze(1)  # [batch_size, 1, num_variables]
+        feature_weights = self.feature_selection(
+            x
+        )  # [batch_size, num_variables, num_variables]
+        context_weights = self.context_projection(c).unsqueeze(
+            1
+        )  # [batch_size, 1, num_variables]
         # Combine weights
         selection_weights = F.softmax(feature_weights + context_weights, dim=-1)
         # Apply selection
-        selected_features = torch.sum(x.unsqueeze(-1) * selection_weights.unsqueeze(-2), dim=1)
+        selected_features = torch.sum(
+            x.unsqueeze(-1) * selection_weights.unsqueeze(-2), dim=1
+        )
         return selected_features
 
 
@@ -158,7 +181,9 @@ class InterpretableMultiHeadAttention(nn.Module):
         self.d_model = d_model
         self.num_heads = num_heads
         self.head_dim = d_model // num_heads
-        assert self.head_dim * num_heads == d_model, "d_model must be divisible by num_heads"
+        assert (
+            self.head_dim * num_heads == d_model
+        ), "d_model must be divisible by num_heads"
         # Attention layers
         self.query_projection = nn.Linear(d_model, d_model)
         self.key_projection = nn.Linear(d_model, d_model)
@@ -170,14 +195,30 @@ class InterpretableMultiHeadAttention(nn.Module):
         self.attention_weights = None
 
     def forward(
-        self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor, mask: Optional[torch.Tensor] = None
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """Forward pass."""
         batch_size, seq_len, _ = query.shape
         # Project to query, key, value
-        Q = self.query_projection(query).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        K = self.key_projection(key).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
-        V = self.value_projection(value).view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        Q = (
+            self.query_projection(query)
+            .view(batch_size, seq_len, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+        )
+        K = (
+            self.key_projection(key)
+            .view(batch_size, seq_len, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+        )
+        V = (
+            self.value_projection(value)
+            .view(batch_size, seq_len, self.num_heads, self.head_dim)
+            .transpose(1, 2)
+        )
         # Calculate attention scores
         scores = torch.matmul(Q, K.transpose(-2, -1)) / np.sqrt(self.head_dim)
         if mask is not None:
@@ -190,7 +231,9 @@ class InterpretableMultiHeadAttention(nn.Module):
         # Apply attention to values
         context = torch.matmul(attention_weights, V)
         # Reshape and project output
-        context = context.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        context = (
+            context.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+        )
         output = self.output_projection(context)
         return output
 
@@ -206,7 +249,9 @@ class TemporalVariableSelection(nn.Module):
         # GRU for temporal processing
         self.gru = nn.GRU(input_size, hidden_size, batch_first=True)
         # Variable selection
-        self.variable_selection = VariableSelectionNetwork(input_size, hidden_size, num_variables)
+        self.variable_selection = VariableSelectionNetwork(
+            input_size, hidden_size, num_variables
+        )
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Forward pass."""
@@ -272,9 +317,13 @@ class TFTModel(nn.Module):
         self.output_projection = nn.Linear(hidden_size, prediction_horizon)
 
         # Attention for interpretability
-        self.attention = InterpretableMultiHeadAttention(hidden_size, num_heads, dropout)
+        self.attention = InterpretableMultiHeadAttention(
+            hidden_size, num_heads, dropout
+        )
 
-    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(
+        self, x: torch.Tensor, mask: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         """Forward pass.
 
         Args:
@@ -310,7 +359,10 @@ class TFTModel(nn.Module):
         batch_size, seq_len, d_model = x.shape
 
         position = torch.arange(seq_len, device=x.device).unsqueeze(1).float()
-        div_term = torch.exp(torch.arange(0, d_model, 2, device=x.device).float() * -(np.log(10000.0) / d_model))
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2, device=x.device).float()
+            * -(np.log(10000.0) / d_model)
+        )
 
         pos_encoding = torch.zeros(seq_len, d_model, device=x.device)
         pos_encoding[:, 0::2] = torch.sin(position * div_term)
@@ -353,7 +405,9 @@ class TFTLightningModule(pl.LightningModule):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.model(x)
 
-    def training_step(self, batch: Tuple[Dict[str, torch.Tensor], torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(
+        self, batch: Tuple[Dict[str, torch.Tensor], torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
         """Training step."""
         data, targets = batch
 
@@ -368,7 +422,9 @@ class TFTLightningModule(pl.LightningModule):
 
         return loss
 
-    def validation_step(self, batch: Tuple[Dict[str, torch.Tensor], torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def validation_step(
+        self, batch: Tuple[Dict[str, torch.Tensor], torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
         """Validation step."""
         data, targets = batch
 
@@ -389,7 +445,9 @@ class TFTLightningModule(pl.LightningModule):
 
         return loss
 
-    def test_step(self, batch: Tuple[Dict[str, torch.Tensor], torch.Tensor], batch_idx: int) -> Dict[str, torch.Tensor]:
+    def test_step(
+        self, batch: Tuple[Dict[str, torch.Tensor], torch.Tensor], batch_idx: int
+    ) -> Dict[str, torch.Tensor]:
         """Test step."""
         data, targets = batch
 
@@ -406,7 +464,12 @@ class TFTLightningModule(pl.LightningModule):
         true_direction = torch.sign(targets[:, 1:] - targets[:, :-1])
         directional_accuracy = (pred_direction == true_direction).float().mean()
 
-        return {"test_loss": loss, "test_mae": mae, "test_mape": mape, "directional_accuracy": directional_accuracy}
+        return {
+            "test_loss": loss,
+            "test_mae": mae,
+            "test_mape": mape,
+            "directional_accuracy": directional_accuracy,
+        }
 
     def configure_optimizers(self):
         """Configure optimizer."""
@@ -415,7 +478,10 @@ class TFTLightningModule(pl.LightningModule):
             optimizer, mode="min", factor=0.5, patience=5, verbose=True
         )
 
-        return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler, "monitor": "val_loss"}}
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {"scheduler": scheduler, "monitor": "val_loss"},
+        }
 
 
 class TFTForecaster:
@@ -479,14 +545,25 @@ class TFTForecaster:
         test_data = data.iloc[train_size + val_size :]
 
         # Create datasets
-        train_dataset = TimeSeriesDataset(train_data, target_column, self.sequence_length, self.prediction_horizon)
-        val_dataset = TimeSeriesDataset(val_data, target_column, self.sequence_length, self.prediction_horizon)
-        test_dataset = TimeSeriesDataset(test_data, target_column, self.sequence_length, self.prediction_horizon)
+        train_dataset = TimeSeriesDataset(
+            train_data, target_column, self.sequence_length, self.prediction_horizon
+        )
+        val_dataset = TimeSeriesDataset(
+            val_data, target_column, self.sequence_length, self.prediction_horizon
+        )
+        test_dataset = TimeSeriesDataset(
+            test_data, target_column, self.sequence_length, self.prediction_horizon
+        )
 
         return train_dataset, val_dataset, test_dataset
 
     def train(
-        self, data: pd.DataFrame, target_column: str, batch_size: int = 32, max_epochs: int = 100, patience: int = 10
+        self,
+        data: pd.DataFrame,
+        target_column: str,
+        batch_size: int = 32,
+        max_epochs: int = 100,
+        patience: int = 10,
     ) -> Dict[str, Any]:
         """Train TFT model.
 
@@ -503,7 +580,9 @@ class TFTForecaster:
         logger.info("Starting TFT model training...")
 
         # Prepare data
-        train_dataset, val_dataset, test_dataset = self._prepare_data(data, target_column)
+        train_dataset, val_dataset, test_dataset = self._prepare_data(
+            data, target_column
+        )
 
         # Determine input size
         sample_features = train_dataset[0][0]["features"]
@@ -529,18 +608,19 @@ class TFTForecaster:
         callbacks = [
             EarlyStopping(monitor="val_loss", patience=patience, mode="min"),
             ModelCheckpoint(
-                dirpath=str(self.output_dir), filename="tft_best_model", monitor="val_loss", mode="min", save_top_k=1
+                dirpath=str(self.output_dir),
+                filename="tft_best_model",
+                monitor="val_loss",
+                mode="min",
+                save_top_k=1,
             ),
         ]
 
-        # Setup logger
-        logger_tb = TensorBoardLogger(str(self.output_dir), name="tft_logs")
-
-        # Initialize trainer
+        # Initialize trainer (tensorboard logging removed)
         self.trainer = pl.Trainer(
             max_epochs=max_epochs,
             callbacks=callbacks,
-            logger=logger_tb,
+            logger=None,  # TensorBoard logging removed
             accelerator="auto",
             devices=1,
             gradient_clip_val=0.5,
@@ -572,7 +652,9 @@ class TFTForecaster:
             },
         }
 
-        logger.info(f"TFT training completed. Test loss: {test_results[0]['test_loss']:.4f}")
+        logger.info(
+            f"TFT training completed. Test loss: {test_results[0]['test_loss']:.4f}"
+        )
         return results
 
     def predict(self, data: pd.DataFrame, target_column: str) -> np.ndarray:
@@ -589,7 +671,9 @@ class TFTForecaster:
             raise ValueError("Model not trained. Call train() first.")
 
         # Create dataset
-        dataset = TimeSeriesDataset(data, target_column, self.sequence_length, self.prediction_horizon)
+        dataset = TimeSeriesDataset(
+            data, target_column, self.sequence_length, self.prediction_horizon
+        )
 
         # Create data loader
         dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
@@ -606,7 +690,9 @@ class TFTForecaster:
 
         return np.concatenate(predictions, axis=0)
 
-    def get_attention_weights(self, data: pd.DataFrame, target_column: str) -> np.ndarray:
+    def get_attention_weights(
+        self, data: pd.DataFrame, target_column: str
+    ) -> np.ndarray:
         """Get attention weights for interpretability.
 
         Args:
@@ -620,7 +706,9 @@ class TFTForecaster:
             raise ValueError("Model not trained. Call train() first.")
 
         # Create dataset
-        dataset = TimeSeriesDataset(data, target_column, self.sequence_length, self.prediction_horizon)
+        dataset = TimeSeriesDataset(
+            data, target_column, self.sequence_length, self.prediction_horizon
+        )
 
         # Get attention weights from model
         attention_weights = []
@@ -632,7 +720,9 @@ class TFTForecaster:
                 _ = self.model(data_sample["features"].unsqueeze(0))
 
                 if hasattr(self.model.model.attention, "attention_weights"):
-                    attention_weights.append(self.model.model.attention.attention_weights.cpu().numpy())
+                    attention_weights.append(
+                        self.model.model.attention.attention_weights.cpu().numpy()
+                    )
 
         return np.array(attention_weights) if attention_weights else np.array([])
 
@@ -650,7 +740,10 @@ class TFTForecaster:
 
 
 def create_tft_forecaster(
-    data: pd.DataFrame, target_column: str = "close", sequence_length: int = 60, prediction_horizon: int = 5
+    data: pd.DataFrame,
+    target_column: str = "close",
+    sequence_length: int = 60,
+    prediction_horizon: int = 5,
 ) -> Dict[str, Any]:
     """Create and train TFT forecaster.
 
@@ -676,7 +769,13 @@ def create_tft_forecaster(
         )
 
         # Train model
-        results = forecaster.train(data=data, target_column=target_column, batch_size=32, max_epochs=50, patience=10)
+        results = forecaster.train(
+            data=data,
+            target_column=target_column,
+            batch_size=32,
+            max_epochs=50,
+            patience=10,
+        )
 
         return results
 

@@ -23,10 +23,13 @@ def main():
         symbol = st.text_input("Symbol", value="AAPL").upper()
 
         # Analysis type
-        analysis_type = st.selectbox("Analysis Type", ["Technical", "Fundamental", "Sentiment", "Regime Detection"])
+        st.selectbox(
+            "Analysis Type",
+            ["Technical", "Fundamental", "Sentiment", "Regime Detection"],
+        )
 
         # Time period
-        time_period = st.selectbox("Time Period", ["1D", "1W", "1M", "3M", "6M", "1Y"])
+        st.selectbox("Time Period", ["1D", "1W", "1M", "3M", "6M", "1Y"])
 
         # Indicators
         st.subheader("Technical Indicators")
@@ -41,13 +44,17 @@ def main():
 
     # Main content
     if analyze:
-        st.info("Market analysis requires real market data. Please connect to a market data provider.")
+        st.info(
+            "Market analysis requires real market data. Please connect to a market data provider."
+        )
     else:
         st.info("Configure analysis parameters and click 'Analyze' to start.")
 
         # Show placeholder for real results
         st.subheader("📈 Market Data")
-        st.warning("Real market data will appear here after connecting to a market data provider.")
+        st.warning(
+            "Real market data will appear here after connecting to a market data provider."
+        )
 
         # Technical analysis
         st.subheader("📊 Technical Analysis")

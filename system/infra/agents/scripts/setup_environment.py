@@ -4,7 +4,9 @@ import os
 import sys
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -41,7 +43,11 @@ def create_config_files():
             "check_interval": 60,
             "alert_thresholds": {"cpu": 80, "memory": 85, "disk": 90},
         },
-        "error_handling": {"max_retries": 3, "retry_delay": 5, "recovery_enabled": True},
+        "error_handling": {
+            "max_retries": 3,
+            "retry_delay": 5,
+            "recovery_enabled": True,
+        },
     }
 
     # Save config

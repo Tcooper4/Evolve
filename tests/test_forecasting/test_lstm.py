@@ -8,7 +8,9 @@ import pandas as pd
 import pytest
 
 # Add project root to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 # Try to import LSTM model with fallback
 try:
@@ -25,7 +27,9 @@ class TestLSTMModel:
     @pytest.fixture
     def model(self):
         """Create an LSTM model instance for testing."""
-        return LSTMModel(sequence_length=10, n_units=50, dropout_rate=0.2, learning_rate=0.001)
+        return LSTMModel(
+            sequence_length=10, n_units=50, dropout_rate=0.2, learning_rate=0.001
+        )
 
     @pytest.fixture
     def sample_data(self, sample_price_data):
@@ -154,7 +158,13 @@ class TestLSTMModel:
 
     def test_early_stopping(self, model, sample_data):
         """Test that early stopping works correctly."""
-        model.fit(sample_data["close"], epochs=10, batch_size=32, early_stopping=True, patience=2)
+        model.fit(
+            sample_data["close"],
+            epochs=10,
+            batch_size=32,
+            early_stopping=True,
+            patience=2,
+        )
 
         assert model.is_fitted
         assert hasattr(model, "history")
@@ -162,7 +172,9 @@ class TestLSTMModel:
 
     def test_learning_rate_scheduling(self, model, sample_data):
         """Test that learning rate scheduling works correctly."""
-        model.fit(sample_data["close"], epochs=2, batch_size=32, learning_rate_schedule=True)
+        model.fit(
+            sample_data["close"], epochs=2, batch_size=32, learning_rate_schedule=True
+        )
 
         assert model.is_fitted
         assert hasattr(model, "history")
@@ -180,7 +192,9 @@ class TestLSTMModel:
         if "val_loss" in history.history:
             val_losses = history.history["val_loss"]
             # Check that validation loss doesn't become NaN
-            assert not any(np.isnan(loss) for loss in val_losses), "Validation loss contains NaN values"
+            assert not any(
+                np.isnan(loss) for loss in val_losses
+            ), "Validation loss contains NaN values"
 
             # Check that validation loss doesn't explode (should be reasonable)
             assert all(loss < 1000 for loss in val_losses), "Validation loss exploded"
@@ -205,23 +219,38 @@ class TestLSTMModel:
             # Check that loss values are not NaN
             if "loss" in history.history:
                 losses = history.history["loss"]
-                assert not any(np.isnan(loss) for loss in losses), "Training loss contains NaN values"
-                assert all(np.isfinite(loss) for loss in losses), "Training loss contains infinite values"
+                assert not any(
+                    np.isnan(loss) for loss in losses
+                ), "Training loss contains NaN values"
+                assert all(
+                    np.isfinite(loss) for loss in losses
+                ), "Training loss contains infinite values"
 
             if "val_loss" in history.history:
                 val_losses = history.history["val_loss"]
-                assert not any(np.isnan(loss) for loss in val_losses), "Validation loss contains NaN values"
-                assert all(np.isfinite(loss) for loss in val_losses), "Validation loss contains infinite values"
+                assert not any(
+                    np.isnan(loss) for loss in val_losses
+                ), "Validation loss contains NaN values"
+                assert all(
+                    np.isfinite(loss) for loss in val_losses
+                ), "Validation loss contains infinite values"
 
         except Exception as e:
             # If the model fails, it should fail gracefully with a clear error
-            assert "NaN" in str(e) or "invalid" in str(e).lower(), f"Model should handle NaN data gracefully, got: {e}"
+            assert (
+                "NaN" in str(e) or "invalid" in str(e).lower()
+            ), f"Model should handle NaN data gracefully, got: {e}"
 
     def test_validation_split_functionality(self, model, sample_data):
         """Test that validation split works correctly."""
         # Test with different validation splits
         for val_split in [0.1, 0.2, 0.3]:
-            history = model.fit(sample_data["close"], epochs=3, batch_size=32, validation_split=val_split)
+            history = model.fit(
+                sample_data["close"],
+                epochs=3,
+                batch_size=32,
+                validation_split=val_split,
+            )
 
             # Check that both train and validation loss are recorded
             assert "loss" in history.history, "Training loss should be recorded"

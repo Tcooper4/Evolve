@@ -2,17 +2,12 @@
 Strategy Improver Agent for dynamic strategy parameter optimization.
 """
 
-import asyncio
-import json
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-import pandas as pd
 
 from trading.memory.agent_memory import AgentMemory
 from trading.memory.strategy_logger import StrategyLogger
@@ -25,7 +20,7 @@ from trading.utils.performance_metrics import (
     calculate_sharpe_ratio,
 )
 
-from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
+from .base_agent_interface import AgentResult, BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +28,14 @@ logger = logging.getLogger(__name__)
 @dataclass
 class StrategyImprovementRequest:
     """Request for strategy improvement."""
+
     strategy_name: str
     improvement_type: str  # 'parameter_optimization', 'logic_update', 'threshold_adjustment'
     performance_thresholds: Optional[Dict[str, float]] = None
-    optimization_method: str = 'bayesian'
+    optimization_method: str = "bayesian"
     max_iterations: int = 30
     timeout: int = 1800
-    priority: str = 'normal'  # 'low', 'normal', 'high', 'urgent'
+    priority: str = "normal"  # 'low', 'normal', 'high', 'urgent'
     market_conditions: Optional[Dict[str, Any]] = None
     metadata: Optional[Dict[str, Any]] = None
 
@@ -47,6 +43,7 @@ class StrategyImprovementRequest:
 @dataclass
 class StrategyImprovementResult:
     """Result of strategy improvement process."""
+
     success: bool
     strategy_name: str
     improvement_type: str
@@ -72,7 +69,9 @@ class StrategyImproverAgent(BaseAgent):
     and performance metrics.
     """
 
-    def __init__(self, name: str = "strategy_improver", config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, name: str = "strategy_improver", config: Optional[Dict[str, Any]] = None
+    ):
         """
         Initialize the Strategy Improver Agent.
 
@@ -88,9 +87,9 @@ class StrategyImproverAgent(BaseAgent):
 
         # Strategy registry
         self.strategies = {
-            'bollinger': BollingerStrategy,
-            'rsi': RSIStrategy,
-            'macd': MACDStrategy
+            "bollinger": BollingerStrategy,
+            "rsi": RSIStrategy,
+            "macd": MACDStrategy,
         }
 
         # Strategy performance tracking for auto-pruning
@@ -101,39 +100,52 @@ class StrategyImproverAgent(BaseAgent):
         self.last_improvement: Dict[str, datetime] = {}
 
         # Configuration
-        self.improvement_interval = config.get('improvement_interval', 86400)  # 24 hours
-        self.performance_thresholds = config.get('performance_thresholds', {
-            'min_sharpe': 0.8,
-            'max_drawdown': 0.25,
-            'min_win_rate': 0.45,
-            'min_profit_factor': 1.1
-        })
+        self.improvement_interval = config.get(
+            "improvement_interval", 86400
+        )  # 24 hours
+        self.performance_thresholds = config.get(
+            "performance_thresholds",
+            {
+                "min_sharpe": 0.8,
+                "max_drawdown": 0.25,
+                "min_win_rate": 0.45,
+                "min_profit_factor": 1.1,
+            },
+        )
 
         # Optimization settings
-        self.optimization_method = config.get('optimization_method', 'bayesian')
-        self.max_optimization_iterations = config.get('max_optimization_iterations', 30)
-        self.optimization_timeout = config.get('optimization_timeout', 1800)  # 30 minutes
+        self.optimization_method = config.get("optimization_method", "bayesian")
+        self.max_optimization_iterations = config.get("max_optimization_iterations", 30)
+        self.optimization_timeout = config.get(
+            "optimization_timeout", 1800
+        )  # 30 minutes
 
         # Initialize optimizers
         self.bayesian_optimizer = BayesianOptimizer()
         self.genetic_optimizer = GeneticOptimizer()
 
-        logger.info(f"Initialized StrategyImproverAgent with {self.optimization_method} optimization")
+        logger.info(
+            f"Initialized StrategyImproverAgent with {self.optimization_method} optimization"
+        )
 
     async def execute(self, **kwargs) -> AgentResult:
         """Main entry point for the strategy improver agent."""
         try:
-            action = kwargs.get('action', 'improve_all')
-            if action == 'improve_all':
+            action = kwargs.get("action", "improve_all")
+            if action == "improve_all":
                 return await self._improve_all_strategies()
-            elif action == 'improve_specific':
-                strategy_name = kwargs.get('strategy_name')
+            elif action == "improve_specific":
+                strategy_name = kwargs.get("strategy_name")
                 if not strategy_name:
-                    return AgentResult(success=False, error_message="Missing strategy_name")
+                    return AgentResult(
+                        success=False, error_message="Missing strategy_name"
+                    )
                 performance = self._get_strategy_performance(strategy_name)
-                return AgentResult(success=True, data={'performance': performance})
+                return AgentResult(success=True, data={"performance": performance})
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
             # Auto-prune underperforming strategies
             self._prune_underperforming_strategies()
@@ -149,21 +161,25 @@ class StrategyImproverAgent(BaseAgent):
                 try:
                     # Check if improvement is needed
                     if self._should_improve_strategy(strategy_name):
-                        improvement = await self._improve_specific_strategy(strategy_name)
+                        improvement = await self._improve_specific_strategy(
+                            strategy_name
+                        )
                         if improvement.success:
                             improvements.append(improvement.data)
                         else:
-                            logger.warning(f"Failed to improve strategy {strategy_name}: {improvement.error_message}")
+                            logger.warning(
+                                f"Failed to improve strategy {strategy_name}: {improvement.error_message}"
+                            )
                 except Exception as e:
                     logger.error(f"Error improving strategy {strategy_name}: {str(e)}")
 
             return AgentResult(
                 success=True,
                 data={
-                    'improvements_made': len(improvements),
-                    'improvements': improvements,
-                    'timestamp': datetime.now().isoformat()
-                }
+                    "improvements_made": len(improvements),
+                    "improvements": improvements,
+                    "timestamp": datetime.now().isoformat(),
+                },
             )
 
         except Exception as e:
@@ -176,18 +192,25 @@ class StrategyImproverAgent(BaseAgent):
             # Get strategy class
             strategy_class = self.strategies.get(strategy_name)
             if not strategy_class:
-                return AgentResult(success=False, error_message=f"Strategy {strategy_name} not found")
+                return AgentResult(
+                    success=False, error_message=f"Strategy {strategy_name} not found"
+                )
 
             # Get recent performance
             performance = self._get_strategy_performance(strategy_name)
             if not performance:
-                return AgentResult(success=False, error_message=f"No performance data for {strategy_name}")
+                return AgentResult(
+                    success=False,
+                    error_message=f"No performance data for {strategy_name}",
+                )
 
             # Check if improvement is needed
             if not self._needs_improvement(performance):
                 return AgentResult(
                     success=True,
-                    data={'message': f'Strategy {strategy_name} performing well, no improvement needed'}
+                    data={
+                        "message": f"Strategy {strategy_name} performing well, no improvement needed"
+                    },
                 )
 
             # Get current parameters
@@ -213,7 +236,7 @@ class StrategyImproverAgent(BaseAgent):
             param_space = self._get_strategy_parameter_space(strategy_name)
 
             # Run optimization
-            if self.optimization_method == 'bayesian':
+            if self.optimization_method == "bayesian":
                 best_params = await self._run_bayesian_optimization(
                     objective, param_space, current_params
                 )
@@ -229,14 +252,14 @@ class StrategyImproverAgent(BaseAgent):
 
                 # Log improvement
                 improvement_record = {
-                    'strategy_name': strategy_name,
-                    'timestamp': datetime.now().isoformat(),
-                    'old_params': current_params,
-                    'new_params': best_params,
-                    'performance_before': performance,
-                    'estimated_improvement': self._estimate_strategy_improvement(
+                    "strategy_name": strategy_name,
+                    "timestamp": datetime.now().isoformat(),
+                    "old_params": current_params,
+                    "new_params": best_params,
+                    "performance_before": performance,
+                    "estimated_improvement": self._estimate_strategy_improvement(
                         strategy_name, best_params, performance
-                    )
+                    ),
                 }
 
                 self.improvement_history.append(improvement_record)
@@ -245,8 +268,8 @@ class StrategyImproverAgent(BaseAgent):
                 # Store in memory
                 self.memory.log_outcome(
                     agent=self.name,
-                    run_type='strategy_improvement',
-                    outcome=improvement_record
+                    run_type="strategy_improvement",
+                    outcome=improvement_record,
                 )
 
                 logger.info(f"Improved strategy {strategy_name} with new parameters")
@@ -254,15 +277,15 @@ class StrategyImproverAgent(BaseAgent):
                 return AgentResult(
                     success=True,
                     data={
-                        'strategy_name': strategy_name,
-                        'improvement': improvement_record,
-                        'message': f'Successfully improved {strategy_name}'
-                    }
+                        "strategy_name": strategy_name,
+                        "improvement": improvement_record,
+                        "message": f"Successfully improved {strategy_name}",
+                    },
                 )
             else:
                 return AgentResult(
                     success=False,
-                    error_message=f"Failed to find better parameters for {strategy_name}"
+                    error_message=f"Failed to find better parameters for {strategy_name}",
                 )
 
         except Exception as e:
@@ -274,7 +297,9 @@ class StrategyImproverAgent(BaseAgent):
         try:
             # Check if enough time has passed since last improvement
             if strategy_name in self.last_improvement:
-                time_since_improvement = datetime.now() - self.last_improvement[strategy_name]
+                time_since_improvement = (
+                    datetime.now() - self.last_improvement[strategy_name]
+                )
                 if time_since_improvement.total_seconds() < self.improvement_interval:
                     return False
 
@@ -294,18 +319,16 @@ class StrategyImproverAgent(BaseAgent):
         try:
             # Get recent strategy decisions and outcomes
             recent_data = self.memory.get_recent_outcomes(
-                agent=strategy_name,
-                run_type='strategy_decision',
-                limit=50
+                agent=strategy_name, run_type="strategy_decision", limit=50
             )
 
             if not recent_data:
                 return None
 
             # Calculate performance metrics
-            decisions = [entry.get('decision', 'hold') for entry in recent_data]
-            returns = [entry.get('return', 0.0) for entry in recent_data]
-            timestamps = [entry.get('timestamp', '') for entry in recent_data]
+            [entry.get("decision", "hold") for entry in recent_data]
+            returns = [entry.get("return", 0.0) for entry in recent_data]
+            [entry.get("timestamp", "") for entry in recent_data]
 
             if len(returns) < 10:
                 return None
@@ -329,16 +352,16 @@ class StrategyImproverAgent(BaseAgent):
             if losing_trades:
                 profit_factor = abs(sum(winning_trades)) / abs(sum(losing_trades))
             else:
-                profit_factor = float('inf') if winning_trades else 1.0
+                profit_factor = float("inf") if winning_trades else 1.0
 
             return {
-                'total_return': total_return,
-                'win_rate': win_rate,
-                'sharpe_ratio': sharpe,
-                'max_drawdown': max_dd,
-                'profit_factor': profit_factor,
-                'num_trades': len(returns),
-                'last_updated': datetime.now().isoformat()
+                "total_return": total_return,
+                "win_rate": win_rate,
+                "sharpe_ratio": sharpe,
+                "max_drawdown": max_dd,
+                "profit_factor": profit_factor,
+                "num_trades": len(returns),
+                "last_updated": datetime.now().isoformat(),
             }
 
         except Exception as e:
@@ -352,16 +375,28 @@ class StrategyImproverAgent(BaseAgent):
                 return True
 
             # Check against thresholds
-            if performance.get('sharpe_ratio', 0) < self.performance_thresholds['min_sharpe']:
+            if (
+                performance.get("sharpe_ratio", 0)
+                < self.performance_thresholds["min_sharpe"]
+            ):
                 return True
 
-            if performance.get('max_drawdown', 1) > self.performance_thresholds['max_drawdown']:
+            if (
+                performance.get("max_drawdown", 1)
+                > self.performance_thresholds["max_drawdown"]
+            ):
                 return True
 
-            if performance.get('win_rate', 0) < self.performance_thresholds['min_win_rate']:
+            if (
+                performance.get("win_rate", 0)
+                < self.performance_thresholds["min_win_rate"]
+            ):
                 return True
 
-            if performance.get('profit_factor', 0) < self.performance_thresholds['min_profit_factor']:
+            if (
+                performance.get("profit_factor", 0)
+                < self.performance_thresholds["min_profit_factor"]
+            ):
                 return True
 
             return False
@@ -374,25 +409,16 @@ class StrategyImproverAgent(BaseAgent):
         """Get current parameters for a strategy."""
         try:
             # Default parameters for each strategy type
-            if strategy_name == 'bollinger':
+            if strategy_name == "bollinger":
+                return {"window": 20, "num_std": 2.0, "min_trades": 5}
+            elif strategy_name == "rsi":
+                return {"period": 14, "oversold": 30, "overbought": 70, "min_trades": 5}
+            elif strategy_name == "macd":
                 return {
-                    'window': 20,
-                    'num_std': 2.0,
-                    'min_trades': 5
-                }
-            elif strategy_name == 'rsi':
-                return {
-                    'period': 14,
-                    'oversold': 30,
-                    'overbought': 70,
-                    'min_trades': 5
-                }
-            elif strategy_name == 'macd':
-                return {
-                    'fast_period': 12,
-                    'slow_period': 26,
-                    'signal_period': 9,
-                    'min_trades': 5
+                    "fast_period": 12,
+                    "slow_period": 26,
+                    "signal_period": 9,
+                    "min_trades": 5,
                 }
             else:
                 return {}
@@ -404,25 +430,25 @@ class StrategyImproverAgent(BaseAgent):
     def _get_strategy_parameter_space(self, strategy_name: str) -> Dict[str, Any]:
         """Get parameter search space for a strategy."""
         try:
-            if strategy_name == 'bollinger':
+            if strategy_name == "bollinger":
                 return {
-                    'window': (10, 50),
-                    'num_std': (1.5, 3.0),
-                    'min_trades': (3, 10)
+                    "window": (10, 50),
+                    "num_std": (1.5, 3.0),
+                    "min_trades": (3, 10),
                 }
-            elif strategy_name == 'rsi':
+            elif strategy_name == "rsi":
                 return {
-                    'period': (7, 21),
-                    'oversold': (20, 40),
-                    'overbought': (60, 80),
-                    'min_trades': (3, 10)
+                    "period": (7, 21),
+                    "oversold": (20, 40),
+                    "overbought": (60, 80),
+                    "min_trades": (3, 10),
                 }
-            elif strategy_name == 'macd':
+            elif strategy_name == "macd":
                 return {
-                    'fast_period': (8, 16),
-                    'slow_period': (20, 32),
-                    'signal_period': (7, 12),
-                    'min_trades': (3, 10)
+                    "fast_period": (8, 16),
+                    "slow_period": (20, 32),
+                    "signal_period": (7, 12),
+                    "min_trades": (3, 10),
                 }
             else:
                 return {}
@@ -431,10 +457,12 @@ class StrategyImproverAgent(BaseAgent):
             logger.error(f"Error getting strategy parameter space: {str(e)}")
             return {}
 
-    def _estimate_strategy_improvement(self,
-                                     strategy_name: str,
-                                     params: Dict[str, Any],
-                                     current_performance: Dict[str, Any]) -> float:
+    def _estimate_strategy_improvement(
+        self,
+        strategy_name: str,
+        params: Dict[str, Any],
+        current_performance: Dict[str, Any],
+    ) -> float:
         """Estimate performance improvement from parameter changes."""
         try:
             # This is a simplified estimation - in practice, you'd use more sophisticated methods
@@ -442,9 +470,9 @@ class StrategyImproverAgent(BaseAgent):
             improvement_score = 0.0
 
             # Strategy-specific parameter validation
-            if strategy_name == 'rsi':
-                oversold = params.get('oversold', 30)
-                overbought = params.get('overbought', 70)
+            if strategy_name == "rsi":
+                oversold = params.get("oversold", 30)
+                overbought = params.get("overbought", 70)
 
                 # Check for reasonable RSI thresholds
                 if 20 <= oversold <= 40 and 60 <= overbought <= 80:
@@ -452,9 +480,9 @@ class StrategyImproverAgent(BaseAgent):
                 if oversold < overbought:
                     improvement_score += 0.2
 
-            elif strategy_name == 'bollinger':
-                window = params.get('window', 20)
-                num_std = params.get('num_std', 2.0)
+            elif strategy_name == "bollinger":
+                window = params.get("window", 20)
+                num_std = params.get("num_std", 2.0)
 
                 # Check for reasonable Bollinger parameters
                 if 10 <= window <= 50:
@@ -462,9 +490,9 @@ class StrategyImproverAgent(BaseAgent):
                 if 1.5 <= num_std <= 3.0:
                     improvement_score += 0.2
 
-            elif strategy_name == 'macd':
-                fast = params.get('fast_period', 12)
-                slow = params.get('slow_period', 26)
+            elif strategy_name == "macd":
+                fast = params.get("fast_period", 12)
+                slow = params.get("slow_period", 26)
 
                 # Check for reasonable MACD parameters
                 if fast < slow:
@@ -473,10 +501,10 @@ class StrategyImproverAgent(BaseAgent):
                     improvement_score += 0.2
 
             # Consider current performance
-            if current_performance.get('sharpe_ratio', 0) < 0.5:
+            if current_performance.get("sharpe_ratio", 0) < 0.5:
                 improvement_score += 0.3  # High potential for improvement
 
-            if current_performance.get('win_rate', 0) < 0.4:
+            if current_performance.get("win_rate", 0) < 0.4:
                 improvement_score += 0.2
 
             return min(1.0, improvement_score)
@@ -485,7 +513,9 @@ class StrategyImproverAgent(BaseAgent):
             logger.error(f"Error estimating strategy improvement: {str(e)}")
             return 0.0
 
-    def _update_strategy_params(self, strategy_name: str, new_params: Dict[str, Any]) -> None:
+    def _update_strategy_params(
+        self, strategy_name: str, new_params: Dict[str, Any]
+    ) -> None:
         """Update strategy parameters."""
         try:
             # In a real implementation, you would update the strategy configuration
@@ -495,21 +525,23 @@ class StrategyImproverAgent(BaseAgent):
             # Store the update in memory
             self.memory.log_outcome(
                 agent=self.name,
-                run_type='parameter_update',
+                run_type="parameter_update",
                 outcome={
-                    'strategy_name': strategy_name,
-                    'new_params': new_params,
-                    'timestamp': datetime.now().isoformat()
-                }
+                    "strategy_name": strategy_name,
+                    "new_params": new_params,
+                    "timestamp": datetime.now().isoformat(),
+                },
             )
 
         except Exception as e:
             logger.error(f"Error updating strategy params: {str(e)}")
 
-    async def _run_bayesian_optimization(self,
-                                       objective: callable,
-                                       param_space: Dict[str, Any],
-                                       current_params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def _run_bayesian_optimization(
+        self,
+        objective: callable,
+        param_space: Dict[str, Any],
+        current_params: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
         """Run Bayesian optimization for parameter tuning."""
         try:
             # Initialize with current parameters
@@ -521,7 +553,7 @@ class StrategyImproverAgent(BaseAgent):
                 param_space=param_space,
                 initial_points=initial_params,
                 n_iterations=self.max_optimization_iterations,
-                timeout=self.optimization_timeout
+                timeout=self.optimization_timeout,
             )
 
             return best_params
@@ -530,10 +562,12 @@ class StrategyImproverAgent(BaseAgent):
             logger.error(f"Error in Bayesian optimization: {str(e)}")
             return None
 
-    async def _run_genetic_optimization(self,
-                                      objective: callable,
-                                      param_space: Dict[str, Any],
-                                      current_params: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def _run_genetic_optimization(
+        self,
+        objective: callable,
+        param_space: Dict[str, Any],
+        current_params: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
         """Run genetic optimization for parameter tuning."""
         try:
             # Initialize with current parameters
@@ -545,7 +579,7 @@ class StrategyImproverAgent(BaseAgent):
                 param_space=param_space,
                 initial_population=initial_population,
                 generations=8,
-                population_size=15
+                population_size=15,
             )
 
             return best_params
@@ -573,13 +607,19 @@ class StrategyImproverAgent(BaseAgent):
             recent_improvements = self.improvement_history[-10:]
 
             return {
-                'total_improvements': len(self.improvement_history),
-                'recent_improvements': len(recent_improvements),
-                'strategies_improved': list(set(imp['strategy_name'] for imp in recent_improvements)),
-                'last_improvement': recent_improvements[-1]['timestamp'] if recent_improvements else None,
-                'average_improvement_score': np.mean([
-                    imp.get('estimated_improvement', 0) for imp in recent_improvements
-                ]) if recent_improvements else 0.0
+                "total_improvements": len(self.improvement_history),
+                "recent_improvements": len(recent_improvements),
+                "strategies_improved": list(
+                    set(imp["strategy_name"] for imp in recent_improvements)
+                ),
+                "last_improvement": recent_improvements[-1]["timestamp"]
+                if recent_improvements
+                else None,
+                "average_improvement_score": np.mean(
+                    [imp.get("estimated_improvement", 0) for imp in recent_improvements]
+                )
+                if recent_improvements
+                else 0.0,
             }
 
         except Exception as e:
@@ -594,13 +634,15 @@ class StrategyImproverAgent(BaseAgent):
     def get_status(self) -> Dict[str, Any]:
         """Get agent status information."""
         base_status = super().get_status()
-        base_status.update({
-            'improvement_interval': self.improvement_interval,
-            'optimization_method': self.optimization_method,
-            'performance_thresholds': self.performance_thresholds,
-            'improvement_summary': self.get_improvement_summary(),
-            'strategies_tracked': len(self.strategies)
-        })
+        base_status.update(
+            {
+                "improvement_interval": self.improvement_interval,
+                "optimization_method": self.optimization_method,
+                "performance_thresholds": self.performance_thresholds,
+                "improvement_summary": self.get_improvement_summary(),
+                "strategies_tracked": len(self.strategies),
+            }
+        )
         return base_status
 
     def _prune_underperforming_strategies(self):
@@ -609,14 +651,19 @@ class StrategyImproverAgent(BaseAgent):
             # Update strategy metrics
             for strategy_name in list(self.strategies.keys()):
                 performance = self._get_strategy_performance(strategy_name)
-                if performance and 'sharpe' in performance:
-                    self.strategy_metrics[strategy_name] = performance['sharpe']
+                if performance and "sharpe" in performance:
+                    self.strategy_metrics[strategy_name] = performance["sharpe"]
 
             # Prune strategies with Sharpe ratio below threshold
-            self.strategies = {name: strategy for name, strategy in self.strategies.items()
-                             if self.strategy_metrics.get(name, 0) > 0.5}
+            self.strategies = {
+                name: strategy
+                for name, strategy in self.strategies.items()
+                if self.strategy_metrics.get(name, 0) > 0.5
+            }
 
-            logger.info(f"Auto-pruned underperforming strategies. Remaining: {len(self.strategies)}")
+            logger.info(
+                f"Auto-pruned underperforming strategies. Remaining: {len(self.strategies)}"
+            )
 
         except Exception as e:
             logger.error(f"Error pruning strategies: {e}")

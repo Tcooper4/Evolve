@@ -82,7 +82,9 @@ class MacroFeatureEngineer:
 
         logger.info("Macro feature engineer initialized")
 
-    def get_fred_data(self, series_ids: List[str], start_date: str, end_date: str) -> pd.DataFrame:
+    def get_fred_data(
+        self, series_ids: List[str], start_date: str, end_date: str
+    ) -> pd.DataFrame:
         """Fetch data from FRED API.
 
         Args:
@@ -102,7 +104,9 @@ class MacroFeatureEngineer:
             for series_id in series_ids:
                 try:
                     series_data = self.fred_client.get_series(
-                        series_id, observation_start=start_date, observation_end=end_date
+                        series_id,
+                        observation_start=start_date,
+                        observation_end=end_date,
                     )
                     data[series_id] = series_data
                     logger.debug(f"Fetched FRED data for {series_id}")
@@ -122,7 +126,9 @@ class MacroFeatureEngineer:
             logger.error(f"Error fetching FRED data: {e}")
             return self._get_cached_macro_data("fred", start_date, end_date)
 
-    def get_worldbank_data(self, country: str = "US", start_date: str = None, end_date: str = None) -> pd.DataFrame:
+    def get_worldbank_data(
+        self, country: str = "US", start_date: str = None, end_date: str = None
+    ) -> pd.DataFrame:
         """Fetch data from World Bank API.
 
         Args:
@@ -139,11 +145,19 @@ class MacroFeatureEngineer:
 
         try:
             # Convert dates to datetime
-            start_dt = datetime.strptime(start_date, "%Y-%m-%d") if start_date else datetime(2010, 1, 1)
-            end_dt = datetime.strptime(end_date, "%Y-%m-%d") if end_date else datetime.now()
+            start_dt = (
+                datetime.strptime(start_date, "%Y-%m-%d")
+                if start_date
+                else datetime(2010, 1, 1)
+            )
+            end_dt = (
+                datetime.strptime(end_date, "%Y-%m-%d") if end_date else datetime.now()
+            )
 
             # Fetch data
-            data = wbdata.get_dataframe(self.wb_indicators, country=country, data_date=(start_dt, end_dt))
+            data = wbdata.get_dataframe(
+                self.wb_indicators, country=country, data_date=(start_dt, end_dt)
+            )
 
             # Clean column names
             data.columns = [col.split(".")[-1] for col in data.columns]
@@ -157,7 +171,9 @@ class MacroFeatureEngineer:
             logger.error(f"Error fetching World Bank data: {e}")
             return self._get_cached_macro_data("worldbank", start_date, end_date)
 
-    def enrich_trading_data(self, df: pd.DataFrame, include_sentiment: bool = True) -> pd.DataFrame:
+    def enrich_trading_data(
+        self, df: pd.DataFrame, include_sentiment: bool = True
+    ) -> pd.DataFrame:
         """Enrich trading data with macroeconomic features.
 
         Args:
@@ -211,14 +227,18 @@ class MacroFeatureEngineer:
             # Add market regime features
             enriched_df = self._add_market_regime_features(enriched_df)
 
-            logger.info(f"Enriched trading data with {len(enriched_df.columns) - len(df.columns)} macro features")
+            logger.info(
+                f"Enriched trading data with {len(enriched_df.columns) - len(df.columns)} macro features"
+            )
             return enriched_df
 
         except Exception as e:
             logger.error(f"Error enriching trading data: {e}")
             return df
 
-    def _add_lagged_features(self, df: pd.DataFrame, macro_columns: List[str]) -> pd.DataFrame:
+    def _add_lagged_features(
+        self, df: pd.DataFrame, macro_columns: List[str]
+    ) -> pd.DataFrame:
         """Add lagged versions of macroeconomic features."""
         for col in macro_columns:
             if col in df.columns:
@@ -232,22 +252,28 @@ class MacroFeatureEngineer:
 
         return df
 
-    def _add_rolling_features(self, df: pd.DataFrame, macro_columns: List[str]) -> pd.DataFrame:
+    def _add_rolling_features(
+        self, df: pd.DataFrame, macro_columns: List[str]
+    ) -> pd.DataFrame:
         """Add rolling statistics for macroeconomic features."""
         for col in macro_columns:
             if col in df.columns:
                 # Rolling means
                 for window in [7, 30, 90]:
-                    df[f"{col}_rolling_mean_{window}"] = df[col].rolling(window=window).mean()
+                    df[f"{col}_rolling_mean_{window}"] = (
+                        df[col].rolling(window=window).mean()
+                    )
 
                 # Rolling standard deviations
                 for window in [30, 90]:
-                    df[f"{col}_rolling_std_{window}"] = df[col].rolling(window=window).std()
+                    df[f"{col}_rolling_std_{window}"] = (
+                        df[col].rolling(window=window).std()
+                    )
 
                 # Z-score (deviation from rolling mean)
-                df[f"{col}_zscore_30"] = (df[col] - df[col].rolling(window=30).mean()) / df[col].rolling(
-                    window=30
-                ).std()
+                df[f"{col}_zscore_30"] = (
+                    df[col] - df[col].rolling(window=30).mean()
+                ) / df[col].rolling(window=30).std()
 
         return df
 
@@ -256,7 +282,9 @@ class MacroFeatureEngineer:
         try:
             # Real interest rate (nominal - inflation)
             if "FEDFUNDS" in df.columns and "CPIAUCSL" in df.columns:
-                df["real_interest_rate"] = df["FEDFUNDS"] - df["CPIAUCSL"].pct_change(periods=12) * 100
+                df["real_interest_rate"] = (
+                    df["FEDFUNDS"] - df["CPIAUCSL"].pct_change(periods=12) * 100
+                )
 
             # Yield curve slope (10Y - 3M)
             if "GS10" in df.columns and "FEDFUNDS" in df.columns:
@@ -320,7 +348,9 @@ class MacroFeatureEngineer:
 
         return df
 
-    def _cache_macro_data(self, source: str, data: pd.DataFrame, start_date: str, end_date: str):
+    def _cache_macro_data(
+        self, source: str, data: pd.DataFrame, start_date: str, end_date: str
+    ):
         """Cache macroeconomic data to avoid repeated API calls."""
         try:
             cache_file = self.cache_dir / f"{source}_{start_date}_{end_date}.parquet"
@@ -329,7 +359,9 @@ class MacroFeatureEngineer:
         except Exception as e:
             logger.warning(f"Failed to cache {source} data: {e}")
 
-    def _get_cached_macro_data(self, source: str, start_date: str, end_date: str) -> pd.DataFrame:
+    def _get_cached_macro_data(
+        self, source: str, start_date: str, end_date: str
+    ) -> pd.DataFrame:
         """Retrieve cached macroeconomic data."""
         try:
             cache_file = self.cache_dir / f"{source}_{start_date}_{end_date}.parquet"
@@ -343,7 +375,9 @@ class MacroFeatureEngineer:
         # Return empty DataFrame if no cache available
         return pd.DataFrame()
 
-    def get_feature_importance(self, df: pd.DataFrame, target_col: str = "returns") -> Dict[str, float]:
+    def get_feature_importance(
+        self, df: pd.DataFrame, target_col: str = "returns"
+    ) -> Dict[str, float]:
         """Calculate feature importance for macroeconomic features."""
         try:
             from sklearn.ensemble import RandomForestRegressor
@@ -353,7 +387,17 @@ class MacroFeatureEngineer:
             feature_cols = [
                 col
                 for col in df.columns
-                if any(macro in col for macro in ["CPIAUCSL", "GDP", "UNRATE", "FEDFUNDS", "GS10", "VIXCLS"])
+                if any(
+                    macro in col
+                    for macro in [
+                        "CPIAUCSL",
+                        "GDP",
+                        "UNRATE",
+                        "FEDFUNDS",
+                        "GS10",
+                        "VIXCLS",
+                    ]
+                )
             ]
 
             if not feature_cols or target_col not in df.columns:

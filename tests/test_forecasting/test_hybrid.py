@@ -136,7 +136,11 @@ class TestHybridModel:
         assert all(0 <= w <= 1 for w in normalized_weights.values())
 
         # Check relative proportions are maintained
-        assert normalized_weights["arima"] > normalized_weights["lstm"] > normalized_weights["prophet"]
+        assert (
+            normalized_weights["arima"]
+            > normalized_weights["lstm"]
+            > normalized_weights["prophet"]
+        )
 
         # Test with zero weights
         zero_weights = {"arima": 0.0, "lstm": 0.0, "prophet": 0.0}
@@ -282,14 +286,20 @@ class TestHybridModel:
 
         print(f"Static weights MSE: {static_mse:.4f}")
         print(f"Dynamic weights MSE: {dynamic_mse:.4f}")
-        print(f"Weight improvement: {((static_mse - dynamic_mse) / static_mse * 100):.2f}%")
+        print(
+            f"Weight improvement: {((static_mse - dynamic_mse) / static_mse * 100):.2f}%"
+        )
 
     def test_ensemble_robustness(self, model, sample_data):
         """Test ensemble robustness to individual model failures."""
         model.fit(sample_data["close"])
 
         # Test with different subsets of models failing
-        original_models = {"arima": model.arima_model, "lstm": model.lstm_model, "prophet": model.prophet_model}
+        original_models = {
+            "arima": model.arima_model,
+            "lstm": model.lstm_model,
+            "prophet": model.prophet_model,
+        }
 
         for failing_model in ["arima", "lstm", "prophet"]:
             # Temporarily disable one model
@@ -305,7 +315,9 @@ class TestHybridModel:
                 forecast = model.forecast(steps=5)
                 assert len(forecast) == 5
                 assert not forecast.isnull().any()
-                print(f"Ensemble works correctly when {failing_model} model is disabled")
+                print(
+                    f"Ensemble works correctly when {failing_model} model is disabled"
+                )
 
             except Exception as e:
                 # Should fail gracefully with clear error message

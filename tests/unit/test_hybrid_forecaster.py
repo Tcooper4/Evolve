@@ -53,7 +53,9 @@ class TestHybridForecaster:
         high = close + np.random.uniform(0, 5, 100)
         low = close - np.random.uniform(0, 5, 100)
 
-        df = pd.DataFrame({"Close": close, "Volume": volume, "High": high, "Low": low}, index=dates)
+        df = pd.DataFrame(
+            {"Close": close, "Volume": volume, "High": high, "Low": low}, index=dates
+        )
 
         return df
 
@@ -140,7 +142,10 @@ class TestHybridForecaster:
         # Should fail gracefully with clear error message
         assert result["success"] is False
         assert "error" in result
-        assert any(keyword in result["error"].lower() for keyword in ["insufficient", "at least", "minimum", "data"])
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["insufficient", "at least", "minimum", "data"]
+        )
 
     def test_constant_series_handling(self, hybrid_model, constant_time_series):
         """Test handling of constant time series."""
@@ -154,7 +159,10 @@ class TestHybridForecaster:
             assert len(forecast_result["predictions"]) == 5
         else:
             # If it fails, should be due to constant series
-            assert any(keyword in result.get("error", "").lower() for keyword in ["constant", "variance", "unique"])
+            assert any(
+                keyword in result.get("error", "").lower()
+                for keyword in ["constant", "variance", "unique"]
+            )
 
     def test_nan_series_handling(self, hybrid_model, nan_time_series):
         """Test handling of time series with NaN values."""
@@ -163,7 +171,10 @@ class TestHybridForecaster:
         # Should fail gracefully with clear error message
         assert result["success"] is False
         assert "error" in result
-        assert any(keyword in result["error"].lower() for keyword in ["nan", "missing", "invalid"])
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["nan", "missing", "invalid"]
+        )
 
     def test_model_summary(self, hybrid_model, synthetic_time_series):
         """Test that model summary is generated correctly."""
@@ -210,7 +221,9 @@ class TestHybridForecaster:
         hybrid_model.fit(synthetic_time_series)
 
         if hasattr(hybrid_model, "get_individual_forecasts"):
-            individual_forecasts = hybrid_model.get_individual_forecasts(synthetic_time_series, horizon=5)
+            individual_forecasts = hybrid_model.get_individual_forecasts(
+                synthetic_time_series, horizon=5
+            )
             assert isinstance(individual_forecasts, dict)
             assert len(individual_forecasts) > 0
 
@@ -262,7 +275,9 @@ class TestHybridForecaster:
 
         assert forecast1["success"] is True
         assert forecast2["success"] is True
-        np.testing.assert_array_almost_equal(forecast1["predictions"], forecast2["predictions"], decimal=10)
+        np.testing.assert_array_almost_equal(
+            forecast1["predictions"], forecast2["predictions"], decimal=10
+        )
 
     def test_trend_detection(self, hybrid_model):
         """Test that model correctly identifies trends."""
@@ -293,7 +308,9 @@ class TestHybridForecaster:
             assert not np.isnan(forecast["predictions"]).any()
 
     @pytest.mark.parametrize("horizon", [1, 5, 10, 30])
-    def test_different_forecast_horizons(self, hybrid_model, synthetic_time_series, horizon):
+    def test_different_forecast_horizons(
+        self, hybrid_model, synthetic_time_series, horizon
+    ):
         """Test forecasting with different horizons."""
         hybrid_model.fit(synthetic_time_series)
 
@@ -319,7 +336,9 @@ class TestHybridForecaster:
         hybrid_model.fit(synthetic_time_series)
 
         if hasattr(hybrid_model, "select_best_models"):
-            best_models = hybrid_model.select_best_models(synthetic_time_series, n_models=2)
+            best_models = hybrid_model.select_best_models(
+                synthetic_time_series, n_models=2
+            )
             assert isinstance(best_models, list)
             assert len(best_models) <= 2
 
@@ -353,7 +372,9 @@ class TestHybridForecaster:
         hybrid_model.fit(synthetic_time_series)
 
         if hasattr(hybrid_model, "predict_with_confidence"):
-            result = hybrid_model.predict_with_confidence(synthetic_time_series, horizon=10)
+            result = hybrid_model.predict_with_confidence(
+                synthetic_time_series, horizon=10
+            )
             assert result["success"] is True
             assert "predictions" in result
             assert "lower" in result
@@ -386,7 +407,9 @@ class TestHybridForecaster:
         hybrid_model.fit(synthetic_time_series)
 
         # Test with noisy data
-        noisy_data = synthetic_time_series + np.random.normal(0, 5, len(synthetic_time_series))
+        noisy_data = synthetic_time_series + np.random.normal(
+            0, 5, len(synthetic_time_series)
+        )
         result = hybrid_model.predict(noisy_data, horizon=5)
         assert result["success"] is True
 

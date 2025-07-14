@@ -49,7 +49,10 @@ class SafeExecutorService(BaseService):
             self.memory = AgentMemory()
 
             logger.info("SafeExecutorService initialized")
-            return {"status": "success", "message": "SafeExecutorService initialized successfully"}
+            return {
+                "status": "success",
+                "message": "SafeExecutorService initialized successfully",
+            }
         except Exception as e:
             logger.error(f"Error initializing SafeExecutorService: {e}")
             return {
@@ -84,7 +87,11 @@ class SafeExecutorService(BaseService):
                 return self._handle_cleanup_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {"type": "error", "error": f"Unknown message type: {message_type}", "original_message": data}
+                return {
+                    "type": "error",
+                    "error": f"Unknown message type: {message_type}",
+                    "original_message": data,
+                }
 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
@@ -102,13 +109,19 @@ class SafeExecutorService(BaseService):
             model_type = execution_data.get("model_type", "custom")
 
             if not model_code or not model_name:
-                return {"type": "error", "error": "model_code and model_name are required"}
+                return {
+                    "type": "error",
+                    "error": "model_code and model_name are required",
+                }
 
             logger.info(f"Executing model: {model_name}")
 
             # Execute the model safely
             result = self.safe_executor.execute_model(
-                model_code=model_code, model_name=model_name, input_data=input_data, model_type=model_type
+                model_code=model_code,
+                model_name=model_name,
+                input_data=input_data,
+                model_type=model_type,
             )
 
             # Log to memory
@@ -154,13 +167,19 @@ class SafeExecutorService(BaseService):
             parameters = execution_data.get("parameters", {})
 
             if not strategy_code or not strategy_name:
-                return {"type": "error", "error": "strategy_code and strategy_name are required"}
+                return {
+                    "type": "error",
+                    "error": "strategy_code and strategy_name are required",
+                }
 
             logger.info(f"Executing strategy: {strategy_name}")
 
             # Execute the strategy safely
             result = self.safe_executor.execute_strategy(
-                strategy_code=strategy_code, strategy_name=strategy_name, market_data=market_data, parameters=parameters
+                strategy_code=strategy_code,
+                strategy_name=strategy_name,
+                market_data=market_data,
+                parameters=parameters,
             )
 
             # Log to memory
@@ -205,7 +224,10 @@ class SafeExecutorService(BaseService):
             parameters = execution_data.get("parameters", {})
 
             if not indicator_code or not indicator_name:
-                return {"type": "error", "error": "indicator_code and indicator_name are required"}
+                return {
+                    "type": "error",
+                    "error": "indicator_code and indicator_name are required",
+                }
 
             logger.info(f"Executing indicator: {indicator_name}")
 
@@ -297,7 +319,10 @@ class SafeExecutorService(BaseService):
             if hasattr(self, "safe_executor"):
                 self.safe_executor.cleanup()
             super().stop()
-            return {"status": "success", "message": "SafeExecutorService stopped successfully"}
+            return {
+                "status": "success",
+                "message": "SafeExecutorService stopped successfully",
+            }
         except Exception as e:
             logger.error(f"Error stopping SafeExecutorService: {e}")
             return {

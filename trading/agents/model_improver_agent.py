@@ -87,7 +87,9 @@ class ModelImproverAgent(BaseAgent):
     and market conditions to continuously improve model performance.
     """
 
-    def __init__(self, name: str = "model_improver", config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, name: str = "model_improver", config: Optional[Dict[str, Any]] = None
+    ):
         """
         Initialize the Model Improver Agent.
 
@@ -107,9 +109,17 @@ class ModelImproverAgent(BaseAgent):
         self.last_improvement: Dict[str, datetime] = {}
 
         # Configuration
-        self.improvement_interval = config.get("improvement_interval", 86400)  # 24 hours
+        self.improvement_interval = config.get(
+            "improvement_interval", 86400
+        )  # 24 hours
         self.performance_thresholds = config.get(
-            "performance_thresholds", {"min_sharpe": 0.8, "max_drawdown": 0.25, "min_accuracy": 0.55, "max_mse": 0.1}
+            "performance_thresholds",
+            {
+                "min_sharpe": 0.8,
+                "max_drawdown": 0.25,
+                "min_accuracy": 0.55,
+                "max_mse": 0.1,
+            },
         )
 
         # Optimization settings
@@ -121,7 +131,9 @@ class ModelImproverAgent(BaseAgent):
         self.bayesian_optimizer = BayesianOptimizer()
         self.genetic_optimizer = GeneticOptimizer()
 
-        logger.info(f"Initialized ModelImproverAgent with {self.optimization_method} optimization")
+        logger.info(
+            f"Initialized ModelImproverAgent with {self.optimization_method} optimization"
+        )
 
     async def execute(self, **kwargs) -> AgentResult:
         """
@@ -141,14 +153,21 @@ class ModelImproverAgent(BaseAgent):
             elif action == "improve_specific_model":
                 model_name = kwargs.get("model_name")
                 if not model_name:
-                    return AgentResult(success=False, error_message="Missing model_name")
+                    return AgentResult(
+                        success=False, error_message="Missing model_name"
+                    )
                 return await self._improve_specific_model(model_name)
             elif action == "get_improvement_history":
-                return AgentResult(success=True, data={"improvement_history": self.improvement_history[-10:]})
+                return AgentResult(
+                    success=True,
+                    data={"improvement_history": self.improvement_history[-10:]},
+                )
             elif action == "force_improvement":
                 return await self._force_improvement()
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
@@ -167,7 +186,9 @@ class ModelImproverAgent(BaseAgent):
                         if improvement.success:
                             improvements.append(improvement.data)
                         else:
-                            logger.warning(f"Failed to improve model {model_name}: {improvement.error_message}")
+                            logger.warning(
+                                f"Failed to improve model {model_name}: {improvement.error_message}"
+                            )
                 except Exception as e:
                     logger.error(f"Error improving model {model_name}: {str(e)}")
 
@@ -190,17 +211,24 @@ class ModelImproverAgent(BaseAgent):
             # Get current model
             model = self.model_registry.get_model(model_name)
             if not model:
-                return AgentResult(success=False, error_message=f"Model {model_name} not found")
+                return AgentResult(
+                    success=False, error_message=f"Model {model_name} not found"
+                )
 
             # Get recent performance
             performance = self._get_model_performance(model_name)
             if not performance:
-                return AgentResult(success=False, error_message=f"No performance data for {model_name}")
+                return AgentResult(
+                    success=False, error_message=f"No performance data for {model_name}"
+                )
 
             # Check if improvement is needed
             if not self._needs_improvement(performance):
                 return AgentResult(
-                    success=True, data={"message": f"Model {model_name} performing well, no improvement needed"}
+                    success=True,
+                    data={
+                        "message": f"Model {model_name} performing well, no improvement needed"
+                    },
                 )
 
             # Get current hyperparameters
@@ -214,7 +242,9 @@ class ModelImproverAgent(BaseAgent):
                     model.update_hyperparameters(hyperparams)
 
                     # Estimate performance improvement
-                    estimated_improvement = self._estimate_performance_improvement(model_name, hyperparams, performance)
+                    estimated_improvement = self._estimate_performance_improvement(
+                        model_name, hyperparams, performance
+                    )
 
                     # Return negative score (minimize)
                     return -estimated_improvement
@@ -228,9 +258,13 @@ class ModelImproverAgent(BaseAgent):
 
             # Run optimization
             if self.optimization_method == "bayesian":
-                best_params = await self._run_bayesian_optimization(objective, param_space, current_params)
+                best_params = await self._run_bayesian_optimization(
+                    objective, param_space, current_params
+                )
             else:
-                best_params = await self._run_genetic_optimization(objective, param_space, current_params)
+                best_params = await self._run_genetic_optimization(
+                    objective, param_space, current_params
+                )
 
             # Apply improvements
             if best_params:
@@ -252,7 +286,11 @@ class ModelImproverAgent(BaseAgent):
                 self.last_improvement[model_name] = datetime.now()
 
                 # Store in memory
-                self.memory.log_outcome(agent=self.name, run_type="model_improvement", outcome=improvement_record)
+                self.memory.log_outcome(
+                    agent=self.name,
+                    run_type="model_improvement",
+                    outcome=improvement_record,
+                )
 
                 logger.info(f"Improved model {model_name} with new hyperparameters")
 
@@ -266,7 +304,8 @@ class ModelImproverAgent(BaseAgent):
                 )
             else:
                 return AgentResult(
-                    success=False, error_message=f"Failed to find better hyperparameters for {model_name}"
+                    success=False,
+                    error_message=f"Failed to find better hyperparameters for {model_name}",
                 )
 
         except Exception as e:
@@ -278,7 +317,9 @@ class ModelImproverAgent(BaseAgent):
         try:
             # Check if enough time has passed since last improvement
             if model_name in self.last_improvement:
-                time_since_improvement = datetime.now() - self.last_improvement[model_name]
+                time_since_improvement = (
+                    datetime.now() - self.last_improvement[model_name]
+                )
                 if time_since_improvement.total_seconds() < self.improvement_interval:
                     return False
 
@@ -300,7 +341,9 @@ class ModelImproverAgent(BaseAgent):
             trust_level = self.model_monitor.get_model_trust(model_name)
 
             # Get recent predictions and outcomes
-            recent_data = self.memory.get_recent_outcomes(agent=model_name, run_type="prediction", limit=20)
+            recent_data = self.memory.get_recent_outcomes(
+                agent=model_name, run_type="prediction", limit=20
+            )
 
             if not recent_data:
                 return None
@@ -314,7 +357,9 @@ class ModelImproverAgent(BaseAgent):
 
             # Calculate performance metrics
             mse = np.mean((np.array(predictions) - np.array(actuals)) ** 2)
-            accuracy = np.mean(np.sign(np.array(predictions)) == np.sign(np.array(actuals)))
+            accuracy = np.mean(
+                np.sign(np.array(predictions)) == np.sign(np.array(actuals))
+            )
 
             # Calculate returns-based metrics
             returns = np.diff(actuals)
@@ -345,13 +390,22 @@ class ModelImproverAgent(BaseAgent):
                 return True
 
             # Check against thresholds
-            if performance.get("sharpe_ratio", 0) < self.performance_thresholds["min_sharpe"]:
+            if (
+                performance.get("sharpe_ratio", 0)
+                < self.performance_thresholds["min_sharpe"]
+            ):
                 return True
 
-            if performance.get("max_drawdown", 1) > self.performance_thresholds["max_drawdown"]:
+            if (
+                performance.get("max_drawdown", 1)
+                > self.performance_thresholds["max_drawdown"]
+            ):
                 return True
 
-            if performance.get("accuracy", 0) < self.performance_thresholds["min_accuracy"]:
+            if (
+                performance.get("accuracy", 0)
+                < self.performance_thresholds["min_accuracy"]
+            ):
                 return True
 
             if performance.get("mse", 1) > self.performance_thresholds["max_mse"]:
@@ -382,7 +436,12 @@ class ModelImproverAgent(BaseAgent):
                     "subsample": (0.6, 1.0),
                 }
             elif "transformer" in model_name.lower():
-                return {"d_model": (64, 512), "nhead": (4, 16), "num_layers": (2, 8), "dropout": (0.1, 0.5)}
+                return {
+                    "d_model": (64, 512),
+                    "nhead": (4, 16),
+                    "num_layers": (2, 8),
+                    "dropout": (0.1, 0.5),
+                }
             else:
                 # Default space
                 return {"learning_rate": (0.001, 0.1), "regularization": (0.01, 0.1)}
@@ -392,7 +451,10 @@ class ModelImproverAgent(BaseAgent):
             return {}
 
     def _estimate_performance_improvement(
-        self, model_name: str, hyperparams: Dict[str, Any], current_performance: Dict[str, Any]
+        self,
+        model_name: str,
+        hyperparams: Dict[str, Any],
+        current_performance: Dict[str, Any],
     ) -> float:
         """Estimate performance improvement from hyperparameter changes."""
         try:
@@ -431,7 +493,10 @@ class ModelImproverAgent(BaseAgent):
             return 0.0
 
     async def _run_bayesian_optimization(
-        self, objective: callable, param_space: Dict[str, Any], current_params: Dict[str, Any]
+        self,
+        objective: callable,
+        param_space: Dict[str, Any],
+        current_params: Dict[str, Any],
     ) -> Optional[Dict[str, Any]]:
         """Run Bayesian optimization for hyperparameter tuning."""
         try:
@@ -454,7 +519,10 @@ class ModelImproverAgent(BaseAgent):
             return None
 
     async def _run_genetic_optimization(
-        self, objective: callable, param_space: Dict[str, Any], current_params: Dict[str, Any]
+        self,
+        objective: callable,
+        param_space: Dict[str, Any],
+        current_params: Dict[str, Any],
     ) -> Optional[Dict[str, Any]]:
         """Run genetic optimization for hyperparameter tuning."""
         try:
@@ -497,8 +565,12 @@ class ModelImproverAgent(BaseAgent):
             return {
                 "total_improvements": len(self.improvement_history),
                 "recent_improvements": len(recent_improvements),
-                "models_improved": list(set(imp["model_name"] for imp in recent_improvements)),
-                "last_improvement": recent_improvements[-1]["timestamp"] if recent_improvements else None,
+                "models_improved": list(
+                    set(imp["model_name"] for imp in recent_improvements)
+                ),
+                "last_improvement": recent_improvements[-1]["timestamp"]
+                if recent_improvements
+                else None,
                 "average_improvement_score": np.mean(
                     [imp.get("estimated_improvement", 0) for imp in recent_improvements]
                 )

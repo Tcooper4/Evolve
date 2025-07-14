@@ -27,7 +27,9 @@ class ResearchService(BaseService):
     Handles research requests and communicates results via Redis.
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0) -> Dict[str, Any]:
+    def __init__(
+        self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0
+    ) -> Dict[str, Any]:
         """Initialize the ResearchService."""
         try:
             super().__init__("research", redis_host, redis_port, redis_db)
@@ -37,7 +39,10 @@ class ResearchService(BaseService):
             self.memory = AgentMemory()
 
             logger.info("ResearchService initialized")
-            return {"status": "success", "message": "ResearchService initialized successfully"}
+            return {
+                "status": "success",
+                "message": "ResearchService initialized successfully",
+            }
         except Exception as e:
             logger.error(f"Error initializing ResearchService: {e}")
             return {
@@ -72,7 +77,11 @@ class ResearchService(BaseService):
                 return self._handle_get_log(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {"type": "error", "error": f"Unknown message type: {message_type}", "original_message": data}
+                return {
+                    "type": "error",
+                    "error": f"Unknown message type: {message_type}",
+                    "original_message": data,
+                }
 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
@@ -94,7 +103,9 @@ class ResearchService(BaseService):
             logger.info(f"Searching GitHub for: {query}")
 
             # Search GitHub using the agent
-            results = self.agent.search_github(query=query, max_results=max_results, language=language)
+            results = self.agent.search_github(
+                query=query, max_results=max_results, language=language
+            )
 
             # Log to memory
             self.memory.log_decision(
@@ -108,7 +119,12 @@ class ResearchService(BaseService):
                 },
             )
 
-            return {"type": "github_search_results", "results": results, "query": query, "count": len(results)}
+            return {
+                "type": "github_search_results",
+                "results": results,
+                "query": query,
+                "count": len(results),
+            }
 
         except Exception as e:
             logger.error(f"Error searching GitHub: {e}")
@@ -130,7 +146,9 @@ class ResearchService(BaseService):
             logger.info(f"Searching arXiv for: {query}")
 
             # Search arXiv using the agent
-            results = self.agent.search_arxiv(query=query, max_results=max_results, category=category)
+            results = self.agent.search_arxiv(
+                query=query, max_results=max_results, category=category
+            )
 
             # Log to memory
             self.memory.log_decision(
@@ -144,7 +162,12 @@ class ResearchService(BaseService):
                 },
             )
 
-            return {"type": "arxiv_search_results", "results": results, "query": query, "count": len(results)}
+            return {
+                "type": "arxiv_search_results",
+                "results": results,
+                "query": query,
+                "count": len(results),
+            }
 
         except Exception as e:
             logger.error(f"Error searching arXiv: {e}")
@@ -170,7 +193,9 @@ class ResearchService(BaseService):
 
             # Summarize using the agent
             summary = self.agent.summarize_paper(
-                paper_url=paper_url, paper_title=paper_title, paper_abstract=paper_abstract
+                paper_url=paper_url,
+                paper_title=paper_title,
+                paper_abstract=paper_abstract,
             )
 
             # Log to memory
@@ -207,7 +232,9 @@ class ResearchService(BaseService):
 
             # Generate code using the agent
             code_suggestion = self.agent.generate_code_suggestion(
-                description=description, paper_reference=paper_reference, implementation_type=implementation_type
+                description=description,
+                paper_reference=paper_reference,
+                implementation_type=implementation_type,
             )
 
             # Log to memory
@@ -239,7 +266,12 @@ class ResearchService(BaseService):
             # Get research log
             research_log = self.agent.get_research_log(tags=tags, limit=limit)
 
-            return {"type": "research_log", "log": research_log, "tags": tags, "count": len(research_log)}
+            return {
+                "type": "research_log",
+                "log": research_log,
+                "tags": tags,
+                "count": len(research_log),
+            }
 
         except Exception as e:
             logger.error(f"Error getting research log: {e}")
@@ -252,7 +284,9 @@ class ResearchService(BaseService):
 
             # Get recent research activities
             recent_research = [
-                entry for entry in memory_stats.get("recent_decisions", []) if entry.get("agent_name") == "research"
+                entry
+                for entry in memory_stats.get("recent_decisions", [])
+                if entry.get("agent_name") == "research"
             ]
 
             # Count by type

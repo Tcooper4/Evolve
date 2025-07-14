@@ -15,9 +15,13 @@ logger.setLevel(logging.DEBUG)
 
 # Add file handler for debug logs
 try:
-    debug_handler = logging.FileHandler("trading/optimization/logs/optimization_debug.log")
+    debug_handler = logging.FileHandler(
+        "trading/optimization/logs/optimization_debug.log"
+    )
     debug_handler.setLevel(logging.DEBUG)
-    debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    debug_formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     debug_handler.setFormatter(debug_formatter)
     logger.addHandler(debug_handler)
 except Exception as e:
@@ -121,7 +125,10 @@ class PerformanceLogger:
             logger.error(f"Error logging metrics: {e}")
 
     def load_metrics(
-        self, strategy: Optional[str] = None, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None
+        self,
+        strategy: Optional[str] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
     ) -> List[PerformanceMetrics]:
         """Load performance metrics.
 
@@ -160,7 +167,9 @@ class PerformanceLogger:
             logger.error(f"Error loading metrics: {e}")
             return []
 
-    def get_strategy_performance(self, strategy: str, window_days: int = 30) -> pd.DataFrame:
+    def get_strategy_performance(
+        self, strategy: str, window_days: int = 30
+    ) -> pd.DataFrame:
         """Get performance metrics for a strategy.
 
         Args:
@@ -176,7 +185,9 @@ class PerformanceLogger:
             start_date = end_date - pd.Timedelta(days=window_days)
 
             # Load metrics
-            metrics = self.load_metrics(strategy=strategy, start_date=start_date, end_date=end_date)
+            metrics = self.load_metrics(
+                strategy=strategy, start_date=start_date, end_date=end_date
+            )
 
             if not metrics:
                 return pd.DataFrame()
@@ -222,7 +233,9 @@ class PerformanceLogger:
             logger.error(f"Error getting best config: {e}")
             return None
 
-    def analyze_performance(self, strategy: str, window_days: int = 30) -> Dict[str, Any]:
+    def analyze_performance(
+        self, strategy: str, window_days: int = 30
+    ) -> Dict[str, Any]:
         """Analyze strategy performance.
 
         Args:
@@ -250,7 +263,9 @@ class PerformanceLogger:
                 "worst_sharpe": df["sharpe_ratio"].min(),
                 "best_win_rate": df["win_rate"].max(),
                 "worst_drawdown": df["max_drawdown"].max(),
-                "regime_performance": df.groupby("regime")["sharpe_ratio"].mean().to_dict(),
+                "regime_performance": df.groupby("regime")["sharpe_ratio"]
+                .mean()
+                .to_dict(),
             }
 
             return analysis

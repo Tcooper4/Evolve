@@ -70,7 +70,12 @@ class ModelBuilderAgent(BaseAgent):
     description = "Builds and initializes various ML models including LSTM, XGBoost, and ensemble models"
     author = "Evolve Trading System"
     tags = ["model-building", "ml", "training"]
-    capabilities = ["lstm_building", "xgboost_building", "ensemble_building", "hyperparameter_tuning"]
+    capabilities = [
+        "lstm_building",
+        "xgboost_building",
+        "ensemble_building",
+        "hyperparameter_tuning",
+    ]
     dependencies = ["trading.models", "trading.data", "trading.feature_engineering"]
 
     def _setup(self) -> None:
@@ -92,7 +97,11 @@ class ModelBuilderAgent(BaseAgent):
 
         self.logger.info("ModelBuilderAgent initialized")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     async def execute(self, **kwargs) -> AgentResult:
         """Execute the model building logic.
@@ -105,10 +114,15 @@ class ModelBuilderAgent(BaseAgent):
         """
         request = kwargs.get("request")
         if not request:
-            return AgentResult(success=False, error_message="ModelBuildRequest is required")
+            return AgentResult(
+                success=False, error_message="ModelBuildRequest is required"
+            )
 
         if not isinstance(request, ModelBuildRequest):
-            return AgentResult(success=False, error_message="Request must be a ModelBuildRequest instance")
+            return AgentResult(
+                success=False,
+                error_message="Request must be a ModelBuildRequest instance",
+            )
 
         try:
             result = self.build_model(request)
@@ -125,7 +139,10 @@ class ModelBuilderAgent(BaseAgent):
                     },
                 )
             else:
-                return AgentResult(success=False, error_message=result.error_message or "Model building failed")
+                return AgentResult(
+                    success=False,
+                    error_message=result.error_message or "Model building failed",
+                )
 
         except Exception as e:
             # Log detailed error information
@@ -228,7 +245,9 @@ class ModelBuilderAgent(BaseAgent):
             # Update registry
             self.model_registry[request_id] = result
 
-            self.logger.info(f"Successfully built {request.model_type} model: {request_id}")
+            self.logger.info(
+                f"Successfully built {request.model_type} model: {request_id}"
+            )
             return result
 
         except Exception as e:
@@ -255,12 +274,16 @@ class ModelBuilderAgent(BaseAgent):
                 model_config={},
                 build_status="failed",
                 error_message=str(e),
-                source=self.author if hasattr(self, "author") else "Evolve Trading System",
+                source=self.author
+                if hasattr(self, "author")
+                else "Evolve Trading System",
                 version=self.version if hasattr(self, "version") else "1.0.0",
                 framework="unknown",
             )
 
-    def _load_and_preprocess_data(self, request: ModelBuildRequest) -> Tuple[pd.DataFrame, pd.Series]:
+    def _load_and_preprocess_data(
+        self, request: ModelBuildRequest
+    ) -> Tuple[pd.DataFrame, pd.Series]:
         """Load and preprocess data for model training.
 
         Args:
@@ -297,7 +320,10 @@ class ModelBuilderAgent(BaseAgent):
 
     @timer
     def _build_lstm_model(
-        self, request: ModelBuildRequest, data: Tuple[pd.DataFrame, pd.Series], request_id: str
+        self,
+        request: ModelBuildRequest,
+        data: Tuple[pd.DataFrame, pd.Series],
+        request_id: str,
     ) -> ModelBuildResult:
         """Build LSTM model.
 
@@ -364,7 +390,10 @@ class ModelBuilderAgent(BaseAgent):
 
     @timer
     def _build_xgboost_model(
-        self, request: ModelBuildRequest, data: Tuple[pd.DataFrame, pd.Series], request_id: str
+        self,
+        request: ModelBuildRequest,
+        data: Tuple[pd.DataFrame, pd.Series],
+        request_id: str,
     ) -> ModelBuildResult:
         """Build XGBoost model.
 
@@ -411,7 +440,7 @@ class ModelBuilderAgent(BaseAgent):
         }
 
         # Get feature importance
-        feature_importance = dict(zip(X.columns, model.model.feature_importances_))
+        dict(zip(X.columns, model.model.feature_importances_))
 
         # Save model
         model_id = f"xgboost_{request_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -433,7 +462,10 @@ class ModelBuilderAgent(BaseAgent):
 
     @timer
     def _build_ensemble_model(
-        self, request: ModelBuildRequest, data: Tuple[pd.DataFrame, pd.Series], request_id: str
+        self,
+        request: ModelBuildRequest,
+        data: Tuple[pd.DataFrame, pd.Series],
+        request_id: str,
     ) -> ModelBuildResult:
         """Build ensemble model.
 
@@ -496,7 +528,11 @@ class ModelBuilderAgent(BaseAgent):
         training_metrics = {
             "lstm_val_mse": lstm_result.training_metrics["val_mse"],
             "xgb_val_mse": xgb_result.training_metrics["val_mse"],
-            "ensemble_val_mse": (lstm_result.training_metrics["val_mse"] + xgb_result.training_metrics["val_mse"]) / 2,
+            "ensemble_val_mse": (
+                lstm_result.training_metrics["val_mse"]
+                + xgb_result.training_metrics["val_mse"]
+            )
+            / 2,
         }
 
         return ModelBuildResult(
@@ -590,7 +626,9 @@ class ModelBuilderAgent(BaseAgent):
             "status": "active",
             "last_update": datetime.now().isoformat(),
             "models_built": len(self.model_registry),
-            "current_model": self.model_registry.get(list(self.model_registry.keys())[-1])
+            "current_model": self.model_registry.get(
+                list(self.model_registry.keys())[-1]
+            )
             if self.model_registry
             else None,
         }

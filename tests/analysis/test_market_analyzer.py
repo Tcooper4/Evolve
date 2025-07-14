@@ -227,7 +227,9 @@ class TestMarketAnalyzer(unittest.TestCase):
         # Create sample data
         dates = pd.date_range(start="2024-01-01", periods=100)
         data = pd.DataFrame({"Close": np.random.normal(100, 10, 100)}, index=dates)
-        market_data = pd.DataFrame({"Close": np.random.normal(100, 10, 100)}, index=dates)
+        market_data = pd.DataFrame(
+            {"Close": np.random.normal(100, 10, 100)}, index=dates
+        )
 
         # Test correlation analysis
         result = self.analyzer.analyze_correlation(data, market_data)
@@ -242,7 +244,9 @@ class TestMarketAnalyzer(unittest.TestCase):
         # Create sample data
         dates = pd.date_range(start="2024-01-01", periods=100)
         data = pd.DataFrame({"Close": np.random.normal(100, 10, 100)}, index=dates)
-        market_data = pd.DataFrame({"Close": np.random.normal(100, 10, 100)}, index=dates)
+        market_data = pd.DataFrame(
+            {"Close": np.random.normal(100, 10, 100)}, index=dates
+        )
 
         # Test market conditions analysis
         result = self.analyzer.analyze_market_conditions(data, market_data)
@@ -316,7 +320,9 @@ class TestMarketAnalyzer(unittest.TestCase):
         # Test outlier detection
         outliers = self.analyzer._detect_outliers(outlier_data["Close"])
         self.assertIsInstance(outliers, pd.Series)
-        self.assertTrue(len(outliers) > 0, "Should detect outliers in data with extreme values")
+        self.assertTrue(
+            len(outliers) > 0, "Should detect outliers in data with extreme values"
+        )
         print(f"✅ Detected {outliers.sum()} outliers in the data")
 
         # Test missing data handling
@@ -324,12 +330,17 @@ class TestMarketAnalyzer(unittest.TestCase):
         self.assertIsInstance(missing_data_info, dict)
         self.assertIn("missing_percentage", missing_data_info)
         self.assertIn("missing_patterns", missing_data_info)
-        print(f"✅ Missing data analysis: {missing_data_info['missing_percentage']:.1f}% missing")
+        print(
+            f"✅ Missing data analysis: {missing_data_info['missing_percentage']:.1f}% missing"
+        )
 
         # Test data cleaning
         cleaned_data = self.analyzer._clean_data(outlier_data)
         self.assertIsInstance(cleaned_data, pd.DataFrame)
-        self.assertFalse(cleaned_data.isnull().all().any(), "Cleaned data should not have all-NaN columns")
+        self.assertFalse(
+            cleaned_data.isnull().all().any(),
+            "Cleaned data should not have all-NaN columns",
+        )
         print(f"✅ Data cleaning completed: {len(cleaned_data)} rows remaining")
 
         # Test analysis with cleaned data
@@ -337,7 +348,9 @@ class TestMarketAnalyzer(unittest.TestCase):
             trend_result = self.analyzer.analyze_trend(cleaned_data)
             self.assertIsInstance(trend_result, dict)
             self.assertIn("trend_direction", trend_result)
-            print(f"✅ Trend analysis with cleaned data: {trend_result['trend_direction']}")
+            print(
+                f"✅ Trend analysis with cleaned data: {trend_result['trend_direction']}"
+            )
         except Exception as e:
             print(f"⚠️ Trend analysis failed with cleaned data: {e}")
 
@@ -382,7 +395,10 @@ class TestMarketAnalyzer(unittest.TestCase):
     def _analyze_missing_data(self, data):
         """Analyze missing data patterns."""
         missing_info = {
-            "missing_percentage": (data.isnull().sum().sum() / (data.shape[0] * data.shape[1])) * 100,
+            "missing_percentage": (
+                data.isnull().sum().sum() / (data.shape[0] * data.shape[1])
+            )
+            * 100,
             "missing_patterns": {},
             "columns_with_missing": data.columns[data.isnull().any()].tolist(),
         }

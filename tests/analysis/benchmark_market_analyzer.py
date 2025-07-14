@@ -40,16 +40,33 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         self.logger.setLevel(logging.INFO)
         if not self.logger.handlers:
             handler = logging.FileHandler(self.benchmark_dir / "benchmark.log")
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
 
         # Test symbols
-        self.symbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA", "JPM", "V", "WMT"]
+        self.symbols = [
+            "AAPL",
+            "MSFT",
+            "GOOGL",
+            "AMZN",
+            "META",
+            "TSLA",
+            "NVDA",
+            "JPM",
+            "V",
+            "WMT",
+        ]
 
         # Initialize analyzer
         self.analyzer = MarketAnalyzer(
-            config={"debug_mode": False, "skip_pca": False, "results_dir": str(self.benchmark_dir / "results")}
+            config={
+                "debug_mode": False,
+                "skip_pca": False,
+                "results_dir": str(self.benchmark_dir / "results"),
+            }
         )
 
         # Initialize results storage
@@ -59,7 +76,11 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
             "batch_analysis": [],
             "memory_usage": [],
             "cache_performance": [],
-            "library_comparison": {"technical_indicators": [], "data_processing": [], "memory_efficiency": []},
+            "library_comparison": {
+                "technical_indicators": [],
+                "data_processing": [],
+                "memory_efficiency": [],
+            },
             "baseline_comparison": [],
         }
 
@@ -127,7 +148,12 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         self._add_interactive_traces(fig)
 
         # Update layout
-        fig.update_layout(height=1200, width=1600, title_text="Market Analyzer Performance Report", showlegend=True)
+        fig.update_layout(
+            height=1200,
+            width=1600,
+            title_text="Market Analyzer Performance Report",
+            showlegend=True,
+        )
 
         # Save as HTML
         fig.write_html(self.benchmark_dir / "interactive_report.html")
@@ -136,31 +162,60 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         """Add interactive traces to the report."""
         # Data fetching
         df_fetch = pd.DataFrame(self.results["data_fetching"])
-        fig.add_trace(go.Box(x=df_fetch["symbol"], y=df_fetch["time"], name="Data Fetching"), row=1, col=1)
+        fig.add_trace(
+            go.Box(x=df_fetch["symbol"], y=df_fetch["time"], name="Data Fetching"),
+            row=1,
+            col=1,
+        )
 
         # Single analysis
         df_single = pd.DataFrame(self.results["single_analysis"])
-        fig.add_trace(go.Box(x=df_single["symbol"], y=df_single["time"], name="Single Analysis"), row=1, col=2)
+        fig.add_trace(
+            go.Box(x=df_single["symbol"], y=df_single["time"], name="Single Analysis"),
+            row=1,
+            col=2,
+        )
 
         # Batch analysis
         df_batch = pd.DataFrame(self.results["batch_analysis"])
-        fig.add_trace(go.Box(x=df_batch["batch_size"], y=df_batch["time"], name="Batch Analysis"), row=2, col=1)
+        fig.add_trace(
+            go.Box(x=df_batch["batch_size"], y=df_batch["time"], name="Batch Analysis"),
+            row=2,
+            col=1,
+        )
 
         # Memory usage
         df_memory = pd.DataFrame(self.results["memory_usage"])
         fig.add_trace(
-            go.Scatter(x=df_memory["symbols"], y=df_memory["memory"], name="Memory Usage", mode="lines+markers"),
+            go.Scatter(
+                x=df_memory["symbols"],
+                y=df_memory["memory"],
+                name="Memory Usage",
+                mode="lines+markers",
+            ),
             row=2,
             col=2,
         )
 
         # Cache performance
         df_cache = pd.DataFrame(self.results["cache_performance"])
-        fig.add_trace(go.Box(x=df_cache["operation"], y=df_cache["time"], name="Cache Performance"), row=3, col=1)
+        fig.add_trace(
+            go.Box(
+                x=df_cache["operation"], y=df_cache["time"], name="Cache Performance"
+            ),
+            row=3,
+            col=1,
+        )
 
         # Library comparison
-        df_lib = pd.DataFrame(self.results["library_comparison"]["technical_indicators"])
-        fig.add_trace(go.Bar(x=df_lib["library"], y=df_lib["time"], name="Library Comparison"), row=3, col=2)
+        df_lib = pd.DataFrame(
+            self.results["library_comparison"]["technical_indicators"]
+        )
+        fig.add_trace(
+            go.Bar(x=df_lib["library"], y=df_lib["time"], name="Library Comparison"),
+            row=3,
+            col=2,
+        )
 
     def _plot_data_fetching(self):
         """Plot data fetching performance."""
@@ -196,7 +251,9 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
 
         # Create heatmap
         plt.figure(figsize=(12, 8))
-        pivot = df_single.pivot_table(values="time", index="symbol", columns="timestamp", aggfunc="mean")
+        pivot = df_single.pivot_table(
+            values="time", index="symbol", columns="timestamp", aggfunc="mean"
+        )
         sns.heatmap(pivot, annot=True, fmt=".2f", cmap="YlOrRd")
         plt.title("Analysis Time Heatmap")
         plt.tight_layout()
@@ -259,7 +316,9 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
     def _plot_library_comparison(self):
         """Plot library comparison."""
         plt.figure()
-        df_lib = pd.DataFrame(self.results["library_comparison"]["technical_indicators"])
+        df_lib = pd.DataFrame(
+            self.results["library_comparison"]["technical_indicators"]
+        )
 
         # Create bar plot
         sns.barplot(data=df_lib, x="library", y="time")
@@ -271,8 +330,12 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
         # Create radar plot
         fig = go.Figure()
         for metric in ["time", "memory", "accuracy"]:
-            fig.add_trace(go.Scatterpolar(r=df_lib[metric], theta=df_lib["library"], name=metric))
-        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 1])), showlegend=True)
+            fig.add_trace(
+                go.Scatterpolar(r=df_lib[metric], theta=df_lib["library"], name=metric)
+            )
+        fig.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[0, 1])), showlegend=True
+        )
         fig.write_image(self.benchmark_dir / "library_radar.png")
 
     def test_library_comparison(self):
@@ -316,7 +379,9 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                 }
             )
 
-            print(f"✅ pandas_ta: {ta_time:.3f}s, finta: {finta_time:.3f}s, custom: {custom_time:.3f}s")
+            print(
+                f"✅ pandas_ta: {ta_time:.3f}s, finta: {finta_time:.3f}s, custom: {custom_time:.3f}s"
+            )
 
     def test_baseline_metrics_comparison(self):
         """Compare new analyzers against baseline metrics (Sharpe, volatility)."""
@@ -370,7 +435,9 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                         actual_value = metrics[metric_name]
                         deviation = abs(actual_value - baseline_value) / baseline_value
 
-                        analyzer_results[analyzer_name]["baseline_comparison"][metric_name] = {
+                        analyzer_results[analyzer_name]["baseline_comparison"][
+                            metric_name
+                        ] = {
                             "actual": actual_value,
                             "baseline": baseline_value,
                             "deviation": deviation,
@@ -382,9 +449,15 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                         )
 
                 # Store in results
-                self.results["baseline_comparison"] = self.results.get("baseline_comparison", [])
+                self.results["baseline_comparison"] = self.results.get(
+                    "baseline_comparison", []
+                )
                 self.results["baseline_comparison"].append(
-                    {"symbol": symbol, "analyzer": analyzer_name, "results": analyzer_results[analyzer_name]}
+                    {
+                        "symbol": symbol,
+                        "analyzer": analyzer_name,
+                        "results": analyzer_results[analyzer_name],
+                    }
                 )
 
             # Determine best performing analyzer
@@ -450,7 +523,13 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
 
         # Plot metrics comparison
         plt.subplot(2, 2, 2)
-        metrics_to_plot = ["sharpe_ratio", "volatility", "max_drawdown", "win_rate", "profit_factor"]
+        metrics_to_plot = [
+            "sharpe_ratio",
+            "volatility",
+            "max_drawdown",
+            "win_rate",
+            "profit_factor",
+        ]
         for metric in metrics_to_plot:
             plt.subplot(2, 2, 2)  # This subplot will be overwritten
             sns.barplot(data=df_baseline, x="analyzer", y=f"results.metrics.{metric}")
@@ -482,7 +561,11 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                     end_time = time.time()
 
                     self.results["data_fetching"].append(
-                        {"symbol": symbol, "time": end_time - start_time, "timestamp": datetime.now().isoformat()}
+                        {
+                            "symbol": symbol,
+                            "time": end_time - start_time,
+                            "timestamp": datetime.now().isoformat(),
+                        }
                     )
                 except Exception as e:
                     self.logger.error(f"Error fetching data for {symbol}: {str(e)}")
@@ -499,7 +582,11 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                     end_time = time.time()
 
                     self.results["single_analysis"].append(
-                        {"symbol": symbol, "time": end_time - start_time, "timestamp": datetime.now().isoformat()}
+                        {
+                            "symbol": symbol,
+                            "time": end_time - start_time,
+                            "timestamp": datetime.now().isoformat(),
+                        }
                     )
                 except Exception as e:
                     self.logger.error(f"Error analyzing {symbol}: {str(e)}")
@@ -514,7 +601,11 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                 start_time = time.time()
                 try:
                     self.analyzer.analyze_batch(
-                        self.symbols[:batch_size], period="1y", interval="1d", batch_size=batch_size, max_workers=4
+                        self.symbols[:batch_size],
+                        period="1y",
+                        interval="1d",
+                        batch_size=batch_size,
+                        max_workers=4,
                     )
                     end_time = time.time()
 
@@ -526,7 +617,9 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                         }
                     )
                 except Exception as e:
-                    self.logger.error(f"Error in batch analysis with size {batch_size}: {str(e)}")
+                    self.logger.error(
+                        f"Error in batch analysis with size {batch_size}: {str(e)}"
+                    )
 
     def test_memory_usage(self):
         """Benchmark memory usage."""
@@ -539,13 +632,19 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                 memory_before = self._measure_memory()
 
                 # Run analysis
-                self.analyzer.analyze_batch(symbols, period="1y", interval="1d", batch_size=i, max_workers=4)
+                self.analyzer.analyze_batch(
+                    symbols, period="1y", interval="1d", batch_size=i, max_workers=4
+                )
 
                 # Measure memory after
                 memory_after = self._measure_memory()
 
                 self.results["memory_usage"].append(
-                    {"symbols": i, "memory": memory_after - memory_before, "timestamp": datetime.now().isoformat()}
+                    {
+                        "symbols": i,
+                        "memory": memory_after - memory_before,
+                        "timestamp": datetime.now().isoformat(),
+                    }
                 )
             except Exception as e:
                 self.logger.error(f"Error measuring memory for {i} symbols: {str(e)}")
@@ -566,7 +665,11 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                 end_time = time.time()
 
                 self.results["cache_performance"].append(
-                    {"operation": "write", "time": end_time - start_time, "timestamp": datetime.now().isoformat()}
+                    {
+                        "operation": "write",
+                        "time": end_time - start_time,
+                        "timestamp": datetime.now().isoformat(),
+                    }
                 )
             except Exception as e:
                 self.logger.error(f"Error in cache write: {str(e)}")
@@ -579,7 +682,11 @@ class MarketAnalyzerBenchmark(unittest.TestCase):
                 end_time = time.time()
 
                 self.results["cache_performance"].append(
-                    {"operation": "read", "time": end_time - start_time, "timestamp": datetime.now().isoformat()}
+                    {
+                        "operation": "read",
+                        "time": end_time - start_time,
+                        "timestamp": datetime.now().isoformat(),
+                    }
                 )
             except Exception as e:
                 self.logger.error(f"Error in cache read: {str(e)}")

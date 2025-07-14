@@ -67,7 +67,9 @@ def test_prompt_normalization():
         processor = PromptProcessor()
 
         # Test normalization
-        normalized = processor._normalize_prompt("  What STOCKS should I INVEST in TODAY?  ")
+        normalized = processor._normalize_prompt(
+            "  What STOCKS should I INVEST in TODAY?  "
+        )
         assert normalized == "what stocks should i invest in today?"
 
     except ImportError as e:
@@ -92,7 +94,9 @@ def test_investment_query_detection():
 
         for query in investment_queries:
             normalized = processor._normalize_prompt(query)
-            assert processor._is_investment_query(normalized), f"Failed to detect investment query: {query}"
+            assert processor._is_investment_query(
+                normalized
+            ), f"Failed to detect investment query: {query}"
 
     except ImportError as e:
         pytest.skip(f"PromptProcessor not available: {e}")
@@ -159,7 +163,9 @@ def test_confidence_calculation():
         processor = PromptProcessor()
 
         # Test high confidence for clear investment query
-        confidence = processor._calculate_confidence("What stocks should I invest in today?", RequestType.INVESTMENT)
+        confidence = processor._calculate_confidence(
+            "What stocks should I invest in today?", RequestType.INVESTMENT
+        )
         assert confidence > 0.5
 
         # Test low confidence for unclear query

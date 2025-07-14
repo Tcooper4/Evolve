@@ -46,7 +46,9 @@ class LogManager:
             handlers=[
                 logging.StreamHandler(sys.stdout),
                 logging.handlers.RotatingFileHandler(
-                    self.log_dir / "evolve.log", maxBytes=10 * 1024 * 1024, backupCount=5  # 10MB
+                    self.log_dir / "evolve.log",
+                    maxBytes=10 * 1024 * 1024,
+                    backupCount=5,  # 10MB
                 ),
             ],
         )
@@ -70,14 +72,20 @@ class LogManager:
             file_handler = logging.handlers.RotatingFileHandler(
                 component_log_file, maxBytes=5 * 1024 * 1024, backupCount=3  # 5MB
             )
-            file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+            file_handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                )
+            )
             logger.addHandler(file_handler)
 
             self.loggers[name] = logger
 
         return self.loggers[name]
 
-    def setup_component_logging(self, component_name: str, log_file: Optional[str] = None) -> logging.Logger:
+    def setup_component_logging(
+        self, component_name: str, log_file: Optional[str] = None
+    ) -> logging.Logger:
         """
         Setup logging for a specific component.
 
@@ -99,14 +107,18 @@ class LogManager:
 
         # Add console handler
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+        console_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
         logger.addHandler(console_handler)
 
         # Add file handler
         file_handler = logging.handlers.RotatingFileHandler(
             self.log_dir / log_file, maxBytes=5 * 1024 * 1024, backupCount=3  # 5MB
         )
-        file_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        )
         logger.addHandler(file_handler)
 
         self.loggers[component_name] = logger
@@ -182,11 +194,15 @@ class ModelLogger:
         handlers = [
             logging.StreamHandler(sys.stdout),
             logging.handlers.RotatingFileHandler(
-                self.log_dir / "model_operations.log", maxBytes=10 * 1024 * 1024, backupCount=5  # 10MB
+                self.log_dir / "model_operations.log",
+                maxBytes=10 * 1024 * 1024,
+                backupCount=5,  # 10MB
             ),
         ]
 
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
         for handler in handlers:
             handler.setFormatter(formatter)
@@ -199,7 +215,9 @@ class ModelLogger:
 
     def log_model_prediction(self, model_name: str, prediction: Any, confidence: float):
         """Log model prediction information."""
-        self.logger.info(f"Model prediction: {model_name} - Confidence: {confidence:.3f}")
+        self.logger.info(
+            f"Model prediction: {model_name} - Confidence: {confidence:.3f}"
+        )
         self.logger.debug(f"Prediction value: {prediction}")
 
     def log_model_error(self, model_name: str, error: Exception):
@@ -233,11 +251,15 @@ class DataLogger:
         handlers = [
             logging.StreamHandler(sys.stdout),
             logging.handlers.RotatingFileHandler(
-                self.log_dir / "data_operations.log", maxBytes=10 * 1024 * 1024, backupCount=5  # 10MB
+                self.log_dir / "data_operations.log",
+                maxBytes=10 * 1024 * 1024,
+                backupCount=5,  # 10MB
             ),
         ]
 
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
         for handler in handlers:
             handler.setFormatter(formatter)
@@ -278,11 +300,15 @@ class PerformanceLogger:
         handlers = [
             logging.StreamHandler(sys.stdout),
             logging.handlers.RotatingFileHandler(
-                self.log_dir / "performance.log", maxBytes=10 * 1024 * 1024, backupCount=5  # 10MB
+                self.log_dir / "performance.log",
+                maxBytes=10 * 1024 * 1024,
+                backupCount=5,  # 10MB
             ),
         ]
 
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
         for handler in handlers:
             handler.setFormatter(formatter)

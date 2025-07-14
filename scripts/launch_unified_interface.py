@@ -43,8 +43,12 @@ Examples:
         """,
     )
 
-    parser.add_argument("--streamlit", action="store_true", help="Launch Streamlit web interface")
-    parser.add_argument("--terminal", action="store_true", help="Launch terminal command-line interface")
+    parser.add_argument(
+        "--streamlit", action="store_true", help="Launch Streamlit web interface"
+    )
+    parser.add_argument(
+        "--terminal", action="store_true", help="Launch terminal command-line interface"
+    )
     parser.add_argument("--command", type=str, help="Execute a single command and exit")
     parser.add_argument("--config", type=str, help="Path to configuration file")
     parser.add_argument("--demo", action="store_true", help="Run demo commands")
@@ -173,7 +177,15 @@ def launch_streamlit():
         interface_file = Path(__file__).parent / "unified_interface.py"
 
         # Launch Streamlit
-        cmd = [sys.executable, "-m", "streamlit", "run", str(interface_file), "--server.port", "8501"]
+        cmd = [
+            sys.executable,
+            "-m",
+            "streamlit",
+            "run",
+            str(interface_file),
+            "--server.port",
+            "8501",
+        ]
 
         print("🔮 Launching Streamlit interface...")
         print("📱 Open your browser to: http://localhost:8501")

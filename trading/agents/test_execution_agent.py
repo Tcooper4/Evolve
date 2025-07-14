@@ -11,7 +11,9 @@ import sys
 from pathlib import Path
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Add project root to path
@@ -49,7 +51,11 @@ async def test_execution_agent():
         logger.info("\n📋 Testing signal validation...")
 
         valid_signal = TradeSignal(
-            symbol="AAPL", direction=TradeDirection.LONG, strategy="test", confidence=0.8, entry_price=150.00
+            symbol="AAPL",
+            direction=TradeDirection.LONG,
+            strategy="test",
+            confidence=0.8,
+            entry_price=150.00,
         )
 
         invalid_signal = TradeSignal(
@@ -65,7 +71,9 @@ async def test_execution_agent():
 
         # Test position limits
         logger.info("\n📊 Testing position limits...")
-        logger.info(f"  Position limit check: {agent._check_position_limits(valid_signal)}")
+        logger.info(
+            f"  Position limit check: {agent._check_position_limits(valid_signal)}"
+        )
 
         # Test execution price calculation
         logger.info("\n💰 Testing execution price calculation...")
@@ -74,7 +82,9 @@ async def test_execution_agent():
 
         logger.info(f"  Entry price: ${valid_signal.entry_price:.2f}")
         logger.info(f"  Execution price: ${execution_price:.2f}")
-        logger.info(f"  Slippage: {abs(execution_price - valid_signal.entry_price) / valid_signal.entry_price:.4f}")
+        logger.info(
+            f"  Slippage: {abs(execution_price - valid_signal.entry_price) / valid_signal.entry_price:.4f}"
+        )
 
         # Test trade execution
         logger.info("\n🔄 Testing trade execution...")

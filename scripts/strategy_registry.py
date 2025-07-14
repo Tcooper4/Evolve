@@ -20,7 +20,9 @@ class StrategyRegistry:
         self.strategy_configs = {}
         self.performance_history = {}
 
-    def register_strategy(self, strategy_name: str, strategy_config: Dict[str, Any]) -> bool:
+    def register_strategy(
+        self, strategy_name: str, strategy_config: Dict[str, Any]
+    ) -> bool:
         """Register a trading strategy.
 
         Args:
@@ -61,7 +63,9 @@ class StrategyRegistry:
         """
         return list(self.strategies.keys())
 
-    def update_performance(self, strategy_name: str, performance_metrics: Dict[str, Any]) -> bool:
+    def update_performance(
+        self, strategy_name: str, performance_metrics: Dict[str, Any]
+    ) -> bool:
         """Update performance metrics for a strategy.
 
         Args:
@@ -76,13 +80,18 @@ class StrategyRegistry:
                 self.performance_history[strategy_name] = []
 
             self.performance_history[strategy_name].append(
-                {"metrics": performance_metrics, "timestamp": datetime.now().isoformat()}
+                {
+                    "metrics": performance_metrics,
+                    "timestamp": datetime.now().isoformat(),
+                }
             )
 
             logger.info(f"Updated performance for strategy: {strategy_name}")
             return True
         except Exception as e:
-            logger.error(f"Failed to update performance for strategy {strategy_name}: {e}")
+            logger.error(
+                f"Failed to update performance for strategy {strategy_name}: {e}"
+            )
             return False
 
     def get_best_strategy(self, metric: str = "sharpe_ratio") -> Optional[str]:

@@ -26,7 +26,9 @@ from core.session_utils import (
 logger = logging.getLogger(__name__)
 if not logger.handlers:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
@@ -98,7 +100,9 @@ def run_system_initialization() -> Dict[str, Any]:
     success_count = sum(1 for status in module_status.values() if status == "SUCCESS")
     total_count = len(module_status)
 
-    logger.info(f"🎯 System initialization finished: {success_count}/{total_count} modules successful")
+    logger.info(
+        f"🎯 System initialization finished: {success_count}/{total_count} modules successful"
+    )
 
     return module_status
 
@@ -238,11 +242,15 @@ def run_complete_system() -> Dict[str, Any]:
 
     # Portfolio management
     portfolio_success = run_portfolio_management()
-    additional_status["portfolio_management"] = "SUCCESS" if portfolio_success else "FAILED"
+    additional_status["portfolio_management"] = (
+        "SUCCESS" if portfolio_success else "FAILED"
+    )
 
     # Performance tracking
     performance_success = run_performance_tracking()
-    additional_status["performance_tracking"] = "SUCCESS" if performance_success else "FAILED"
+    additional_status["performance_tracking"] = (
+        "SUCCESS" if performance_success else "FAILED"
+    )
 
     # Strategy logging
     strategy_success = run_strategy_logging()
@@ -259,7 +267,9 @@ def run_complete_system() -> Dict[str, Any]:
     success_count = sum(1 for status in complete_status.values() if status == "SUCCESS")
     total_count = len(complete_status)
 
-    logger.info(f"🎯 Complete system initialization finished: {success_count}/{total_count} components successful")
+    logger.info(
+        f"🎯 Complete system initialization finished: {success_count}/{total_count} components successful"
+    )
 
     return complete_status
 
@@ -283,9 +293,13 @@ def get_system_health() -> Dict[str, Any]:
         module_status = run_system_initialization()
 
         # Calculate health metrics
-        success_count = sum(1 for status in module_status.values() if status == "SUCCESS")
+        success_count = sum(
+            1 for status in module_status.values() if status == "SUCCESS"
+        )
         total_count = len(module_status)
-        health_percentage = (success_count / total_count) * 100 if total_count > 0 else 0
+        health_percentage = (
+            (success_count / total_count) * 100 if total_count > 0 else 0
+        )
 
         # Determine overall health status
         if health_percentage >= 90:

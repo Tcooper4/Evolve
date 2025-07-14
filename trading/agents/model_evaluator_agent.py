@@ -134,7 +134,8 @@ class ModelEvaluatorAgent(BaseAgent):
         self.evaluation_window = self.config_dict.get("evaluation_window", 30)
         self.min_data_points = self.config_dict.get("min_data_points", 100)
         self.performance_thresholds = self.config_dict.get(
-            "performance_thresholds", {"excellent": 0.8, "good": 0.6, "average": 0.4, "poor": 0.2}
+            "performance_thresholds",
+            {"excellent": 0.8, "good": 0.6, "average": 0.4, "poor": 0.2},
         )
 
         # Storage
@@ -163,7 +164,10 @@ class ModelEvaluatorAgent(BaseAgent):
                 performance_data = kwargs.get("performance_data")
 
                 if not model_id or not performance_data:
-                    return AgentResult(success=False, error_message="Missing model_id or performance_data")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing model_id or performance_data",
+                    )
 
                 result = await self.evaluate_model(model_id, performance_data)
                 return AgentResult(
@@ -178,7 +182,10 @@ class ModelEvaluatorAgent(BaseAgent):
             elif action == "get_evaluation_history":
                 model_id = kwargs.get("model_id")
                 history = self.get_evaluation_history(model_id)
-                return AgentResult(success=True, data={"evaluation_history": [eval.__dict__ for eval in history]})
+                return AgentResult(
+                    success=True,
+                    data={"evaluation_history": [eval.__dict__ for eval in history]},
+                )
 
             elif action == "get_model_status":
                 model_id = kwargs.get("model_id")
@@ -202,12 +209,16 @@ class ModelEvaluatorAgent(BaseAgent):
                 return AgentResult(success=True, data={"evaluation_report": report})
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
 
-    async def evaluate_model(self, model_id: str, performance_data: Dict[str, Any]) -> EvaluationResult:
+    async def evaluate_model(
+        self, model_id: str, performance_data: Dict[str, Any]
+    ) -> EvaluationResult:
         """
         Evaluate a model's performance.
 
@@ -219,7 +230,9 @@ class ModelEvaluatorAgent(BaseAgent):
             Evaluation result
         """
         try:
-            evaluation_id = f"eval_{model_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            evaluation_id = (
+                f"eval_{model_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            )
             self.current_evaluation_id = evaluation_id
 
             self.logger.info(f"Starting evaluation for model {model_id}")
@@ -230,14 +243,18 @@ class ModelEvaluatorAgent(BaseAgent):
                 predictions=np.array(performance_data.get("predictions", [])),
                 actual_values=np.array(performance_data.get("actual_values", [])),
                 timestamps=performance_data.get("timestamps", []),
-                confidence_scores=np.array(performance_data.get("confidence_scores", []))
+                confidence_scores=np.array(
+                    performance_data.get("confidence_scores", [])
+                )
                 if performance_data.get("confidence_scores")
                 else None,
             )
 
             # Validate data
             if len(performance.predictions) < self.min_data_points:
-                raise ValueError(f"Insufficient data points: {len(performance.predictions)} < {self.min_data_points}")
+                raise ValueError(
+                    f"Insufficient data points: {len(performance.predictions)} < {self.min_data_points}"
+                )
 
             # Calculate metrics
             metrics = self._calculate_metrics(performance)
@@ -274,7 +291,9 @@ class ModelEvaluatorAgent(BaseAgent):
             # Store in memory
             self._store_evaluation_result(result)
 
-            self.logger.info(f"Completed evaluation for model {model_id}: {status.value}")
+            self.logger.info(
+                f"Completed evaluation for model {model_id}: {status.value}"
+            )
 
             return result
 
@@ -338,7 +357,9 @@ class ModelEvaluatorAgent(BaseAgent):
 
             # Sortino ratio
             downside_returns = returns[returns < 0]
-            downside_std = np.std(downside_returns) if len(downside_returns) > 0 else 1.0
+            downside_std = (
+                np.std(downside_returns) if len(downside_returns) > 0 else 1.0
+            )
             sortino_ratio = np.mean(returns) / downside_std if downside_std > 0 else 0.0
 
             return {
@@ -414,7 +435,9 @@ class ModelEvaluatorAgent(BaseAgent):
             self.logger.error(f"Error determining model status: {str(e)}")
             return ModelStatus.FAILED
 
-    def _calculate_confidence_score(self, metrics: Dict[str, Any], performance: ModelPerformance) -> float:
+    def _calculate_confidence_score(
+        self, metrics: Dict[str, Any], performance: ModelPerformance
+    ) -> float:
         """Calculate confidence score for the evaluation."""
         try:
             confidence_score = 0.5  # Base confidence
@@ -441,22 +464,30 @@ class ModelEvaluatorAgent(BaseAgent):
             self.logger.error(f"Error calculating confidence score: {str(e)}")
             return 0.5
 
-    def _generate_recommendations(self, metrics: Dict[str, float], status: ModelStatus) -> List[str]:
+    def _generate_recommendations(
+        self, metrics: Dict[str, float], status: ModelStatus
+    ) -> List[str]:
         """Generate recommendations based on evaluation."""
         try:
             recommendations = []
 
             if status == ModelStatus.EXCELLENT:
-                recommendations.append("Model performing excellently - consider increasing position sizes")
+                recommendations.append(
+                    "Model performing excellently - consider increasing position sizes"
+                )
                 recommendations.append("Monitor for potential overfitting")
             elif status == ModelStatus.GOOD:
                 recommendations.append("Model performing well - continue monitoring")
                 recommendations.append("Consider fine-tuning for further improvement")
             elif status == ModelStatus.AVERAGE:
-                recommendations.append("Model performance is average - consider retraining")
+                recommendations.append(
+                    "Model performance is average - consider retraining"
+                )
                 recommendations.append("Review feature engineering and hyperparameters")
             elif status == ModelStatus.POOR:
-                recommendations.append("Model performance is poor - immediate retraining recommended")
+                recommendations.append(
+                    "Model performance is poor - immediate retraining recommended"
+                )
                 recommendations.append("Consider alternative model architectures")
             elif status == ModelStatus.FAILED:
                 recommendations.append("Model has failed - replace immediately")
@@ -464,10 +495,14 @@ class ModelEvaluatorAgent(BaseAgent):
 
             # Specific recommendations based on metrics
             if metrics.get("sharpe_ratio", 0) < 0.5:
-                recommendations.append("Low Sharpe ratio - optimize for risk-adjusted returns")
+                recommendations.append(
+                    "Low Sharpe ratio - optimize for risk-adjusted returns"
+                )
 
             if metrics.get("max_drawdown", 0) > 0.2:
-                recommendations.append("High drawdown - implement better risk management")
+                recommendations.append(
+                    "High drawdown - implement better risk management"
+                )
 
             if metrics.get("win_rate", 0) < 0.5:
                 recommendations.append("Low win rate - review prediction accuracy")
@@ -478,14 +513,20 @@ class ModelEvaluatorAgent(BaseAgent):
             self.logger.error(f"Error generating recommendations: {str(e)}")
             return ["Unable to generate recommendations"]
 
-    def _create_performance_summary(self, performance: ModelPerformance, metrics: Dict[str, float]) -> Dict[str, Any]:
+    def _create_performance_summary(
+        self, performance: ModelPerformance, metrics: Dict[str, float]
+    ) -> Dict[str, Any]:
         """Create performance summary."""
         try:
             return {
                 "data_points": len(performance.predictions),
                 "evaluation_period": {
-                    "start": performance.timestamps[0] if performance.timestamps else None,
-                    "end": performance.timestamps[-1] if performance.timestamps else None,
+                    "start": performance.timestamps[0]
+                    if performance.timestamps
+                    else None,
+                    "end": performance.timestamps[-1]
+                    if performance.timestamps
+                    else None,
                 },
                 "prediction_range": {
                     "min": float(np.min(performance.predictions)),
@@ -504,17 +545,23 @@ class ModelEvaluatorAgent(BaseAgent):
             self.logger.error(f"Error creating performance summary: {str(e)}")
             return {}
 
-    def get_evaluation_history(self, model_id: Optional[str] = None) -> List[EvaluationResult]:
+    def get_evaluation_history(
+        self, model_id: Optional[str] = None
+    ) -> List[EvaluationResult]:
         """Get evaluation history for a model or all models."""
         if model_id:
-            return [eval for eval in self.evaluation_history if eval.model_id == model_id]
+            return [
+                eval for eval in self.evaluation_history if eval.model_id == model_id
+            ]
         return self.evaluation_history.copy()
 
     def get_model_status(self, model_id: str) -> Optional[Dict[str, Any]]:
         """Get current status of a model."""
         try:
             # Get latest evaluation
-            model_evaluations = [eval for eval in self.evaluation_history if eval.model_id == model_id]
+            model_evaluations = [
+                eval for eval in self.evaluation_history if eval.model_id == model_id
+            ]
             if not model_evaluations:
                 return None
 
@@ -549,7 +596,11 @@ class ModelEvaluatorAgent(BaseAgent):
 
             # Add ranking
             if comparison:
-                ranked_models = sorted(comparison.items(), key=lambda x: x[1]["confidence_score"], reverse=True)
+                ranked_models = sorted(
+                    comparison.items(),
+                    key=lambda x: x[1]["confidence_score"],
+                    reverse=True,
+                )
                 comparison["ranking"] = [model_id for model_id, _ in ranked_models]
 
             return comparison
@@ -558,11 +609,17 @@ class ModelEvaluatorAgent(BaseAgent):
             self.logger.error(f"Error comparing models: {str(e)}")
             return {}
 
-    def generate_evaluation_report(self, model_id: Optional[str] = None) -> Dict[str, Any]:
+    def generate_evaluation_report(
+        self, model_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Generate comprehensive evaluation report."""
         try:
             if model_id:
-                evaluations = [eval for eval in self.evaluation_history if eval.model_id == model_id]
+                evaluations = [
+                    eval
+                    for eval in self.evaluation_history
+                    if eval.model_id == model_id
+                ]
             else:
                 evaluations = self.evaluation_history
 
@@ -629,7 +686,8 @@ class ModelEvaluatorAgent(BaseAgent):
         """Store evaluation result in memory."""
         try:
             self.memory.store(
-                f"evaluation_{result.evaluation_id}", {"result": result.__dict__, "timestamp": datetime.now()}
+                f"evaluation_{result.evaluation_id}",
+                {"result": result.__dict__, "timestamp": datetime.now()},
             )
         except Exception as e:
             self.logger.error(f"Error storing evaluation result: {str(e)}")
@@ -640,7 +698,9 @@ class ModelEvaluatorAgent(BaseAgent):
             # Load recent evaluations
             evaluation_data = self.memory.get("evaluation_history")
             if evaluation_data:
-                self.evaluation_history = [EvaluationResult(**eval) for eval in evaluation_data]
+                self.evaluation_history = [
+                    EvaluationResult(**eval) for eval in evaluation_data
+                ]
         except Exception as e:
             self.logger.error(f"Error loading evaluation history: {str(e)}")
 
@@ -651,5 +711,7 @@ class ModelEvaluatorAgent(BaseAgent):
             "last_update": datetime.now().isoformat(),
             "evaluations_completed": len(self.evaluation_history),
             "current_evaluation": self.current_evaluation_id,
-            "models_evaluated": len(set(eval.model_id for eval in self.evaluation_history)),
+            "models_evaluated": len(
+                set(eval.model_id for eval in self.evaluation_history)
+            ),
         }

@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 def calculate_sharpe_ratio(
-    returns: Union[pd.Series, np.ndarray, List[float]], risk_free_rate: float = 0.02, periods_per_year: int = 252
+    returns: Union[pd.Series, np.ndarray, List[float]],
+    risk_free_rate: float = 0.02,
+    periods_per_year: int = 252,
 ) -> float:
     """
     Calculate the Sharpe ratio for a series of returns.
@@ -53,7 +55,9 @@ def calculate_sharpe_ratio(
             logger.warning("Zero standard deviation in returns")
             return 0.0
 
-        sharpe_ratio = (excess_returns.mean() / excess_returns.std()) * np.sqrt(periods_per_year)
+        sharpe_ratio = (excess_returns.mean() / excess_returns.std()) * np.sqrt(
+            periods_per_year
+        )
 
         logger.debug(f"Calculated Sharpe ratio: {sharpe_ratio:.4f}")
         return sharpe_ratio
@@ -63,7 +67,9 @@ def calculate_sharpe_ratio(
         return 0.0
 
 
-def calculate_max_drawdown(equity_curve: Union[pd.Series, np.ndarray, List[float]]) -> Dict[str, float]:
+def calculate_max_drawdown(
+    equity_curve: Union[pd.Series, np.ndarray, List[float]]
+) -> Dict[str, float]:
     """
     Calculate maximum drawdown and related metrics.
 
@@ -107,7 +113,11 @@ def calculate_max_drawdown(equity_curve: Union[pd.Series, np.ndarray, List[float
         bottom_idx = drawdown.idxmin()
 
         if peak_idx <= bottom_idx:
-            drawdown_duration = (bottom_idx - peak_idx).days if hasattr(bottom_idx - peak_idx, "days") else 0
+            drawdown_duration = (
+                (bottom_idx - peak_idx).days
+                if hasattr(bottom_idx - peak_idx, "days")
+                else 0
+            )
         else:
             drawdown_duration = 0
 
@@ -126,7 +136,9 @@ def calculate_max_drawdown(equity_curve: Union[pd.Series, np.ndarray, List[float
         return {"max_drawdown": 0.0, "drawdown_duration": 0, "peak_value": 0.0}
 
 
-def calculate_win_rate(returns: Union[pd.Series, np.ndarray, List[float]], threshold: float = 0.0) -> Dict[str, float]:
+def calculate_win_rate(
+    returns: Union[pd.Series, np.ndarray, List[float]], threshold: float = 0.0
+) -> Dict[str, float]:
     """
     Calculate win rate and related trading statistics.
 
@@ -187,7 +199,9 @@ def calculate_win_rate(returns: Union[pd.Series, np.ndarray, List[float]], thres
         return {"win_rate": 0.0, "total_trades": 0, "wins": 0, "losses": 0}
 
 
-def calculate_profit_factor(returns: Union[pd.Series, np.ndarray, List[float]]) -> float:
+def calculate_profit_factor(
+    returns: Union[pd.Series, np.ndarray, List[float]]
+) -> float:
     """
     Calculate the profit factor (gross profit / gross loss).
 
@@ -232,7 +246,9 @@ def calculate_profit_factor(returns: Union[pd.Series, np.ndarray, List[float]]) 
         return 0.0
 
 
-def calculate_calmar_ratio(returns: Union[pd.Series, np.ndarray, List[float]], periods_per_year: int = 252) -> float:
+def calculate_calmar_ratio(
+    returns: Union[pd.Series, np.ndarray, List[float]], periods_per_year: int = 252
+) -> float:
     """
     Calculate the Calmar ratio (annual return / max drawdown).
 
@@ -286,7 +302,9 @@ def calculate_calmar_ratio(returns: Union[pd.Series, np.ndarray, List[float]], p
         return 0.0
 
 
-def calculate_volatility(returns: Union[pd.Series, np.ndarray, List[float]], periods_per_year: int = 252) -> float:
+def calculate_volatility(
+    returns: Union[pd.Series, np.ndarray, List[float]], periods_per_year: int = 252
+) -> float:
     """
     Calculate annualized volatility.
 
@@ -326,7 +344,8 @@ def calculate_volatility(returns: Union[pd.Series, np.ndarray, List[float]], per
 
 
 def calculate_beta(
-    returns: Union[pd.Series, np.ndarray, List[float]], market_returns: Union[pd.Series, np.ndarray, List[float]]
+    returns: Union[pd.Series, np.ndarray, List[float]],
+    market_returns: Union[pd.Series, np.ndarray, List[float]],
 ) -> float:
     """
     Calculate beta relative to market returns.
@@ -429,8 +448,12 @@ def calculate_alpha(
         beta = calculate_beta(portfolio_returns, market_returns_aligned)
 
         # Calculate alpha
-        portfolio_excess_return = portfolio_returns.mean() - (risk_free_rate / periods_per_year)
-        market_excess_return = market_returns_aligned.mean() - (risk_free_rate / periods_per_year)
+        portfolio_excess_return = portfolio_returns.mean() - (
+            risk_free_rate / periods_per_year
+        )
+        market_excess_return = market_returns_aligned.mean() - (
+            risk_free_rate / periods_per_year
+        )
 
         alpha = portfolio_excess_return - (beta * market_excess_return)
 

@@ -46,7 +46,9 @@ class FallbackDataProvider(BaseDataProvider):
         # Initialize providers in order of preference
         self._initialize_providers()
 
-        self.logger.info(f"Fallback data provider initialized with {len(self.providers)} providers")
+        self.logger.info(
+            f"Fallback data provider initialized with {len(self.providers)} providers"
+        )
 
     def _setup(self) -> None:
         """Setup method called during initialization."""
@@ -138,7 +140,9 @@ class FallbackDataProvider(BaseDataProvider):
                     self._update_status_on_success()
                     return data
                 else:
-                    self.logger.warning(f"{provider_name} returned empty data for {symbol}")
+                    self.logger.warning(
+                        f"{provider_name} returned empty data for {symbol}"
+                    )
 
             except Exception as e:
                 self.logger.warning(f"{provider_name} failed for {symbol}: {e}")
@@ -157,7 +161,9 @@ class FallbackDataProvider(BaseDataProvider):
             self._update_status_on_failure(error_msg)
             raise RuntimeError(error_msg)
 
-    def fetch_multiple(self, symbols: List[str], interval: str = "1d", **kwargs) -> Dict[str, pd.DataFrame]:
+    def fetch_multiple(
+        self, symbols: List[str], interval: str = "1d", **kwargs
+    ) -> Dict[str, pd.DataFrame]:
         """Fetch data for multiple symbols with fallback logic.
 
         Args:
@@ -191,7 +197,11 @@ class FallbackDataProvider(BaseDataProvider):
         return results
 
     def get_historical_data(
-        self, symbol: str, start_date: datetime, end_date: datetime, interval: str = "1d"
+        self,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime,
+        interval: str = "1d",
     ) -> pd.DataFrame:
         """Legacy method for backward compatibility.
 
@@ -227,12 +237,16 @@ class FallbackDataProvider(BaseDataProvider):
                         self._log_success(provider_name, symbol, "live_price")
                         return price
             except Exception as e:
-                self.logger.warning(f"{provider_name} failed for live price of {symbol}: {e}")
+                self.logger.warning(
+                    f"{provider_name} failed for live price of {symbol}: {e}"
+                )
                 self._log_failure(provider_name, symbol, str(e), "live_price")
                 continue
 
         # Return mock price as fallback
-        self.logger.error(f"All providers failed for live price of {symbol}, using mock price")
+        self.logger.error(
+            f"All providers failed for live price of {symbol}, using mock price"
+        )
         mock_provider = self.providers[-1][1]
         return mock_provider.get_live_price(symbol)
 
@@ -272,7 +286,9 @@ class FallbackDataProvider(BaseDataProvider):
 
         return results
 
-    def _log_success(self, provider_name: str, symbol: str, operation: str = "historical_data"):
+    def _log_success(
+        self, provider_name: str, symbol: str, operation: str = "historical_data"
+    ):
         """Log successful data retrieval."""
         log_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -284,7 +300,13 @@ class FallbackDataProvider(BaseDataProvider):
         }
         self.fallback_log.append(log_entry)
 
-    def _log_failure(self, provider_name: str, symbol: str, error: str, operation: str = "historical_data"):
+    def _log_failure(
+        self,
+        provider_name: str,
+        symbol: str,
+        error: str,
+        operation: str = "historical_data",
+    ):
         """Log failed data retrieval."""
         log_entry = {
             "timestamp": datetime.now().isoformat(),
@@ -313,7 +335,9 @@ class FallbackDataProvider(BaseDataProvider):
 
         # Calculate basic stats
         total_requests = len(self.fallback_log)
-        successful_requests = len([log for log in self.fallback_log if log["status"] == "success"])
+        successful_requests = len(
+            [log for log in self.fallback_log if log["status"] == "success"]
+        )
         failed_requests = total_requests - successful_requests
 
         # Calculate provider stats
@@ -329,7 +353,9 @@ class FallbackDataProvider(BaseDataProvider):
                 provider_stats[provider]["failure"] += 1
 
         # Get recent failures
-        recent_failures = [log for log in self.fallback_log[-10:] if log["status"] == "failure"]  # Last 10 entries
+        recent_failures = [
+            log for log in self.fallback_log[-10:] if log["status"] == "failure"
+        ]  # Last 10 entries
 
         return {
             "total_requests": total_requests,
@@ -432,7 +458,13 @@ class MockDataProvider(BaseDataProvider):
                 volume = np.random.uniform(1000000, 10000000)
 
                 data.append(
-                    {"Open": open_price, "High": high_price, "Low": low_price, "Close": close_price, "Volume": volume}
+                    {
+                        "Open": open_price,
+                        "High": high_price,
+                        "Low": low_price,
+                        "Close": close_price,
+                        "Volume": volume,
+                    }
                 )
 
             df = pd.DataFrame(data, index=date_range)
@@ -444,7 +476,9 @@ class MockDataProvider(BaseDataProvider):
             self._update_status_on_failure(error_msg)
             raise RuntimeError(error_msg)
 
-    def fetch_multiple(self, symbols: List[str], interval: str = "1d", **kwargs) -> Dict[str, pd.DataFrame]:
+    def fetch_multiple(
+        self, symbols: List[str], interval: str = "1d", **kwargs
+    ) -> Dict[str, pd.DataFrame]:
         """Generate mock data for multiple symbols.
 
         Args:
@@ -469,7 +503,11 @@ class MockDataProvider(BaseDataProvider):
         return results
 
     def get_historical_data(
-        self, symbol: str, start_date: datetime, end_date: datetime, interval: str = "1d"
+        self,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime,
+        interval: str = "1d",
     ) -> pd.DataFrame:
         """Legacy method for backward compatibility.
 

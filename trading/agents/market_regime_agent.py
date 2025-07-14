@@ -115,7 +115,10 @@ class MarketRegimeAgent(BaseAgent):
         custom_config = config.custom_config or {}
         self.lookback_period = custom_config.get("lookback_period", lookback_period)
         self.regime_threshold = custom_config.get("regime_threshold", regime_threshold)
-        self.model_path = custom_config.get("model_path", model_path) or "models/market_regime_classifier.pkl"
+        self.model_path = (
+            custom_config.get("model_path", model_path)
+            or "models/market_regime_classifier.pkl"
+        )
 
         # Initialize components
         self.scaler = StandardScaler()
@@ -168,7 +171,10 @@ class MarketRegimeAgent(BaseAgent):
                     data={
                         "market_data_shape": data.shape,
                         "market_data_columns": list(data.columns),
-                        "data_range": {"start": data.index[0].isoformat(), "end": data.index[-1].isoformat()},
+                        "data_range": {
+                            "start": data.index[0].isoformat(),
+                            "end": data.index[-1].isoformat(),
+                        },
                     },
                 )
 
@@ -176,7 +182,9 @@ class MarketRegimeAgent(BaseAgent):
                 data = kwargs.get("data")
 
                 if data is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: data")
+                    return AgentResult(
+                        success=False, error_message="Missing required parameter: data"
+                    )
 
                 metrics = self.calculate_regime_features(data)
                 return AgentResult(
@@ -198,14 +206,21 @@ class MarketRegimeAgent(BaseAgent):
                 confidence = kwargs.get("confidence", 0.7)
 
                 if regime_str is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: regime")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: regime",
+                    )
 
                 try:
                     regime = MarketRegime(regime_str)
                     strategies = self.get_recommended_strategies(regime, confidence)
-                    return AgentResult(success=True, data={"recommended_strategies": strategies})
+                    return AgentResult(
+                        success=True, data={"recommended_strategies": strategies}
+                    )
                 except ValueError:
-                    return AgentResult(success=False, error_message=f"Invalid regime: {regime_str}")
+                    return AgentResult(
+                        success=False, error_message=f"Invalid regime: {regime_str}"
+                    )
 
             elif action == "get_regime_summary":
                 summary = self.get_regime_summary()
@@ -216,7 +231,9 @@ class MarketRegimeAgent(BaseAgent):
                 return AgentResult(success=True, data={"regime_confidence": confidence})
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
@@ -374,16 +391,22 @@ class MarketRegimeAgent(BaseAgent):
 
             # Volume trend
             volume_ma = data["Volume"].rolling(20).mean()
-            volume_trend = (data["Volume"].iloc[-1] - volume_ma.iloc[-1]) / volume_ma.iloc[-1]
+            volume_trend = (
+                data["Volume"].iloc[-1] - volume_ma.iloc[-1]
+            ) / volume_ma.iloc[-1]
 
             # Correlation with market (using SPY as proxy)
             try:
-                spy_data = yf.download("SPY", start=data.index[0], end=data.index[-1], progress=False)
+                spy_data = yf.download(
+                    "SPY", start=data.index[0], end=data.index[-1], progress=False
+                )
                 if not spy_data.empty:
                     spy_returns = spy_data["Close"].pct_change().dropna()
                     common_dates = returns.index.intersection(spy_returns.index)
                     if len(common_dates) > 10:
-                        correlation = returns.loc[common_dates].corr(spy_returns.loc[common_dates])
+                        correlation = returns.loc[common_dates].corr(
+                            spy_returns.loc[common_dates]
+                        )
                     else:
                         correlation = 0.5
                 else:
@@ -393,7 +416,9 @@ class MarketRegimeAgent(BaseAgent):
                 correlation = 0.5
 
             # Regime confidence (based on feature consistency)
-            regime_confidence = min(1.0, abs(trend_strength) + abs(momentum) + abs(volume_trend))
+            regime_confidence = min(
+                1.0, abs(trend_strength) + abs(momentum) + abs(volume_trend)
+            )
 
             return RegimeMetrics(
                 volatility=volatility,
@@ -453,7 +478,9 @@ class MarketRegimeAgent(BaseAgent):
             logger.error(f"Error classifying regime: {e}")
             return MarketRegime.SIDEWAYS, 0.5
 
-    def get_recommended_strategies(self, regime: MarketRegime, confidence: float) -> List[Dict[str, Any]]:
+    def get_recommended_strategies(
+        self, regime: MarketRegime, confidence: float
+    ) -> List[Dict[str, Any]]:
         """Get recommended strategies for the current regime."""
         if regime not in self.strategy_registry:
             return []
@@ -503,8 +530,12 @@ class MarketRegimeAgent(BaseAgent):
                 "volatility_regime": "high" if metrics.volatility > 0.25 else "low",
                 "trend_direction": "up" if metrics.trend_strength > 0 else "down",
                 "momentum_status": "positive" if metrics.momentum > 0 else "negative",
-                "volume_status": "above_average" if metrics.volume_trend > 0 else "below_average",
-                "market_correlation": "high" if abs(metrics.correlation) > 0.7 else "low",
+                "volume_status": "above_average"
+                if metrics.volume_trend > 0
+                else "below_average",
+                "market_correlation": "high"
+                if abs(metrics.correlation) > 0.7
+                else "low",
             }
 
             # Create analysis result
@@ -521,14 +552,21 @@ class MarketRegimeAgent(BaseAgent):
 
             # Update regime history
             self.regime_history.append(
-                {"timestamp": datetime.now(), "regime": regime.value, "confidence": confidence, "symbol": symbol}
+                {
+                    "timestamp": datetime.now(),
+                    "regime": regime.value,
+                    "confidence": confidence,
+                    "symbol": symbol,
+                }
             )
 
             # Keep only last 1000 entries
             if len(self.regime_history) > 1000:
                 self.regime_history = self.regime_history[-1000:]
 
-            logger.info(f"Regime analysis completed: {regime.value} (confidence: {confidence:.2f})")
+            logger.info(
+                f"Regime analysis completed: {regime.value} (confidence: {confidence:.2f})"
+            )
 
             return analysis
 
@@ -550,7 +588,9 @@ class MarketRegimeAgent(BaseAgent):
 
         return duration
 
-    def _determine_risk_level(self, regime: MarketRegime, confidence: float, metrics: RegimeMetrics) -> str:
+    def _determine_risk_level(
+        self, regime: MarketRegime, confidence: float, metrics: RegimeMetrics
+    ) -> str:
         """Determine overall risk level based on regime and metrics."""
         base_risk = {
             MarketRegime.BULL: "medium",
@@ -624,7 +664,11 @@ class MarketRegimeAgent(BaseAgent):
                 "confidence": analysis.regime_confidence,
                 "risk_level": analysis.risk_level,
                 "recommended_strategies": [
-                    {"name": s["name"], "weight": s["weight"], "risk_level": s["risk_level"]}
+                    {
+                        "name": s["name"],
+                        "weight": s["weight"],
+                        "risk_level": s["risk_level"],
+                    }
                     for s in analysis.recommended_strategies
                 ],
                 "market_conditions": analysis.market_conditions,
@@ -694,9 +738,14 @@ class MarketRegimeAgent(BaseAgent):
                 return 0.5  # Default confidence if no classification performed
 
             # Calculate confidence based on classification probabilities
-            if hasattr(self, "last_probabilities") and self.last_probabilities is not None:
+            if (
+                hasattr(self, "last_probabilities")
+                and self.last_probabilities is not None
+            ):
                 # Use the highest probability as confidence
-                confidence = max(self.last_probabilities) if self.last_probabilities else 0.5
+                confidence = (
+                    max(self.last_probabilities) if self.last_probabilities else 0.5
+                )
             else:
                 # Fallback confidence calculation
                 confidence = 0.7

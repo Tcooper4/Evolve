@@ -22,7 +22,10 @@ def test_imports():
 
         # Test specific imports that were fixed
         test_imports = [
-            ("trading.optimization", ["StrategyOptimizer", "BaseOptimizer", "OptimizationVisualizer"]),
+            (
+                "trading.optimization",
+                ["StrategyOptimizer", "BaseOptimizer", "OptimizationVisualizer"],
+            ),
             ("trading.risk", ["RiskManager"]),
             ("trading.portfolio", ["PortfolioManager"]),
             ("trading.agents", ["get_prompt_router_agent", "get_model_builder_agent"]),

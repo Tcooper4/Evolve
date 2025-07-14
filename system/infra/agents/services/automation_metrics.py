@@ -88,7 +88,10 @@ class AutomationMetrics:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "metrics.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "metrics.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def setup_metrics(self):
@@ -100,17 +103,29 @@ class AutomationMetrics:
             self.disk_usage = Gauge("system_disk_usage", "Disk usage percentage")
 
             # Task metrics
-            self.task_counter = Counter("task_total", "Total number of tasks", ["type", "status"])
-            self.task_duration = Histogram("task_duration_seconds", "Task execution duration", ["type"])
+            self.task_counter = Counter(
+                "task_total", "Total number of tasks", ["type", "status"]
+            )
+            self.task_duration = Histogram(
+                "task_duration_seconds", "Task execution duration", ["type"]
+            )
             self.task_queue_size = Gauge("task_queue_size", "Number of tasks in queue")
 
             # Workflow metrics
-            self.workflow_counter = Counter("workflow_total", "Total number of workflows", ["status"])
-            self.workflow_duration = Histogram("workflow_duration_seconds", "Workflow execution duration")
-            self.workflow_queue_size = Gauge("workflow_queue_size", "Number of workflows in queue")
+            self.workflow_counter = Counter(
+                "workflow_total", "Total number of workflows", ["status"]
+            )
+            self.workflow_duration = Histogram(
+                "workflow_duration_seconds", "Workflow execution duration"
+            )
+            self.workflow_queue_size = Gauge(
+                "workflow_queue_size", "Number of workflows in queue"
+            )
 
             # Error metrics
-            self.error_counter = Counter("error_total", "Total number of errors", ["type"])
+            self.error_counter = Counter(
+                "error_total", "Total number of errors", ["type"]
+            )
 
         except Exception as e:
             logger.error(f"Failed to setup metrics: {str(e)}")
@@ -122,10 +137,22 @@ class AutomationMetrics:
 
     @sleep_and_retry
     @limits(calls=100, period=60)
-    async def record_metric(self, name: str, value: float, labels: Dict[str, str] = {}, metadata: Dict[str, Any] = {}):
+    async def record_metric(
+        self,
+        name: str,
+        value: float,
+        labels: Dict[str, str] = {},
+        metadata: Dict[str, Any] = {},
+    ):
         """Record a metric."""
         try:
-            metric = Metric(name=name, value=value, timestamp=datetime.now(), labels=labels, metadata=metadata)
+            metric = Metric(
+                name=name,
+                value=value,
+                timestamp=datetime.now(),
+                labels=labels,
+                metadata=metadata,
+            )
 
             async with self.lock:
                 if name not in self.metrics:
@@ -179,7 +206,11 @@ class AutomationMetrics:
                     metrics = [m for m in metrics if m.timestamp <= end_time]
 
                 if labels:
-                    metrics = [m for m in metrics if all(m.labels.get(k) == v for k, v in labels.items())]
+                    metrics = [
+                        m
+                        for m in metrics
+                        if all(m.labels.get(k) == v for k, v in labels.items())
+                    ]
 
                 return MetricSeries(
                     name=name,
@@ -253,11 +284,18 @@ class AutomationMetrics:
             fig = go.Figure()
 
             # Add trace
-            fig.add_trace(go.Scatter(x=series.timestamps, y=series.values, mode="lines", name=name))
+            fig.add_trace(
+                go.Scatter(
+                    x=series.timestamps, y=series.values, mode="lines", name=name
+                )
+            )
 
             # Update layout
             fig.update_layout(
-                title=title or name, xaxis_title="Time", yaxis_title=y_axis_title or "Value", showlegend=True
+                title=title or name,
+                xaxis_title="Time",
+                yaxis_title=y_axis_title or "Value",
+                showlegend=True,
             )
 
             # Convert to JSON
@@ -316,10 +354,18 @@ class AutomationMetrics:
 
             elif self.config.export_format == "html":
                 file_path = export_path / f"metrics_{timestamp}.html"
-                fig = make_subplots(rows=len(data), cols=1, subplot_titles=list(data.keys()))
+                fig = make_subplots(
+                    rows=len(data), cols=1, subplot_titles=list(data.keys())
+                )
 
                 for i, (name, series) in enumerate(data.items(), 1):
-                    fig.add_trace(go.Scatter(x=series["timestamps"], y=series["values"], name=name), row=i, col=1)
+                    fig.add_trace(
+                        go.Scatter(
+                            x=series["timestamps"], y=series["values"], name=name
+                        ),
+                        row=i,
+                        col=1,
+                    )
 
                 fig.update_layout(height=300 * len(data), showlegend=True)
 

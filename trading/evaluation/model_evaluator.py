@@ -15,9 +15,15 @@ class ModelEvaluator:
         self.predictions = {}
         self.actuals = {}
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
-    def evaluate_model(self, y_true: np.ndarray, y_pred: np.ndarray, model_name: str) -> Dict[str, float]:
+    def evaluate_model(
+        self, y_true: np.ndarray, y_pred: np.ndarray, model_name: str
+    ) -> Dict[str, float]:
         """Evaluate model performance."""
         metrics = {
             "mse": mean_squared_error(y_true, y_pred),
@@ -38,7 +44,9 @@ class ModelEvaluator:
 
         return metrics
 
-    def plot_predictions(self, model_name: str, save_path: Optional[str] = None) -> Dict[str, Any]:
+    def plot_predictions(
+        self, model_name: str, save_path: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Plot actual vs predicted values.
 
         Returns:
@@ -91,7 +99,9 @@ class ModelEvaluator:
                 "timestamp": datetime.now().isoformat(),
             }
 
-    def plot_residuals(self, model_name: str, save_path: Optional[str] = None) -> Dict[str, Any]:
+    def plot_residuals(
+        self, model_name: str, save_path: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Plot residuals.
 
         Returns:
@@ -148,7 +158,10 @@ class ModelEvaluator:
             }
 
     def plot_feature_importance(
-        self, feature_importance: pd.DataFrame, model_name: str, save_path: Optional[str] = None
+        self,
+        feature_importance: pd.DataFrame,
+        model_name: str,
+        save_path: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Plot feature importance.
 
@@ -246,9 +259,13 @@ class ModelEvaluator:
             return {
                 "success": True,
                 "num_models_evaluated": len(self.metrics),
-                "num_metrics_per_model": len(next(iter(self.metrics.values()))) if self.metrics else 0,
+                "num_metrics_per_model": len(next(iter(self.metrics.values())))
+                if self.metrics
+                else 0,
                 "model_names": list(self.metrics.keys()),
-                "total_predictions": sum(len(pred) for pred in self.predictions.values()),
+                "total_predictions": sum(
+                    len(pred) for pred in self.predictions.values()
+                ),
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:

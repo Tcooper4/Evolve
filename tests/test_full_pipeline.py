@@ -21,7 +21,7 @@ import pytest
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from trading.llm.agent import get_prompt_agent
+from agents.llm.agent import get_prompt_agent
 
 # Fix import path for forecast_router
 try:
@@ -77,7 +77,9 @@ def test_data_provider(fallback_provider):
 def test_forecast_router(forecast_router, sample_data):
     models = ["arima", "lstm", "xgboost"]
     for model in models:
-        result = forecast_router.get_forecast(data=sample_data, horizon=15, model_type=model)
+        result = forecast_router.get_forecast(
+            data=sample_data, horizon=15, model_type=model
+        )
         assert result and "forecast" in result, f"{model.upper()} forecast failed"
 
 

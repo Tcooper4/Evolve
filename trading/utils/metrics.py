@@ -1,12 +1,19 @@
 """Utility functions for calculating performance metrics."""
 
-from typing import Dict, Optional, Tuple
+import json
+import logging
+import os
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
 
 
-def _safe_divide(numerator: float, denominator: float, default_value: float = 0.0) -> float:
+def _safe_divide(
+    numerator: float, denominator: float, default_value: float = 0.0
+) -> float:
     """Safely divide two numbers, returning default_value if denominator is zero or NaN.
 
     Args:
@@ -49,10 +56,18 @@ def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float
     ss_residual = np.sum((y_true - y_pred) ** 2)
     r2 = 1 - (ss_residual / ss_total)
 
-    return {"mse": mse, "mae": mae, "rmse": rmse, "directional_accuracy": directional_accuracy, "r2": r2}
+    return {
+        "mse": mse,
+        "mae": mae,
+        "rmse": rmse,
+        "directional_accuracy": directional_accuracy,
+        "r2": r2,
+    }
 
 
-def calculate_trading_metrics(returns: np.ndarray, benchmark_returns: Optional[np.ndarray] = None) -> Dict[str, float]:
+def calculate_trading_metrics(
+    returns: np.ndarray, benchmark_returns: Optional[np.ndarray] = None
+) -> Dict[str, float]:
     """Calculate trading performance metrics.
 
     Args:
@@ -80,7 +95,11 @@ def calculate_trading_metrics(returns: np.ndarray, benchmark_returns: Optional[n
     # Calculate alpha and beta if benchmark provided
     if benchmark_returns is not None:
         benchmark_variance = np.var(benchmark_returns)
-        beta = _safe_divide(np.cov(returns, benchmark_returns)[0, 1], benchmark_variance, default_value=0.0)
+        beta = _safe_divide(
+            np.cov(returns, benchmark_returns)[0, 1],
+            benchmark_variance,
+            default_value=0.0,
+        )
         alpha = annualized_return - beta * np.mean(benchmark_returns) * 252
     else:
         alpha = None
@@ -102,7 +121,9 @@ def calculate_trading_metrics(returns: np.ndarray, benchmark_returns: Optional[n
     return metrics
 
 
-def calculate_regime_metrics(returns: np.ndarray, regime_labels: np.ndarray) -> Dict[str, Dict[str, float]]:
+def calculate_regime_metrics(
+    returns: np.ndarray, regime_labels: np.ndarray
+) -> Dict[str, Dict[str, float]]:
     """Calculate performance metrics for each market regime.
 
     Args:
@@ -122,7 +143,8 @@ def calculate_regime_metrics(returns: np.ndarray, regime_labels: np.ndarray) -> 
 
 
 def calculate_model_confidence(
-    predictions: np.ndarray, confidence_intervals: Optional[Tuple[np.ndarray, np.ndarray]] = None
+    predictions: np.ndarray,
+    confidence_intervals: Optional[Tuple[np.ndarray, np.ndarray]] = None,
 ) -> float:
     """Calculate model confidence score.
 

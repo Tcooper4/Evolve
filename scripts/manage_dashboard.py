@@ -37,7 +37,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import dash_bootstrap_components as dbc
-import docker
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -46,6 +45,7 @@ import yaml
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 
+import docker
 from kubernetes import client, config
 
 
@@ -96,7 +96,10 @@ class DashboardManager:
                         [
                             dbc.Col(
                                 [
-                                    html.H1("System Monitoring Dashboard", className="text-center mb-4"),
+                                    html.H1(
+                                        "System Monitoring Dashboard",
+                                        className="text-center mb-4",
+                                    ),
                                     html.Div(id="last-update"),
                                 ]
                             )
@@ -123,7 +126,9 @@ class DashboardManager:
                             ),
                         ]
                     ),
-                    dcc.Interval(id="interval-component", interval=5 * 1000, n_intervals=0),  # Update every 5 seconds
+                    dcc.Interval(
+                        id="interval-component", interval=5 * 1000, n_intervals=0
+                    ),  # Update every 5 seconds
                 ]
             )
 
@@ -146,52 +151,80 @@ class DashboardManager:
                 cpu_fig = go.Figure()
                 cpu_fig.add_trace(
                     go.Scatter(
-                        x=pd.date_range(start=datetime.now() - timedelta(minutes=5), periods=60, freq="5S"),
+                        x=pd.date_range(
+                            start=datetime.now() - timedelta(minutes=5),
+                            periods=60,
+                            freq="5S",
+                        ),
                         y=[psutil.cpu_percent() for _ in range(60)],
                         name="CPU Usage",
                     )
                 )
-                cpu_fig.update_layout(title="CPU Usage", xaxis_title="Time", yaxis_title="Usage (%)")
+                cpu_fig.update_layout(
+                    title="CPU Usage", xaxis_title="Time", yaxis_title="Usage (%)"
+                )
 
                 # Memory usage
                 memory_fig = go.Figure()
                 memory_fig.add_trace(
                     go.Scatter(
-                        x=pd.date_range(start=datetime.now() - timedelta(minutes=5), periods=60, freq="5S"),
+                        x=pd.date_range(
+                            start=datetime.now() - timedelta(minutes=5),
+                            periods=60,
+                            freq="5S",
+                        ),
                         y=[psutil.virtual_memory().percent for _ in range(60)],
                         name="Memory Usage",
                     )
                 )
-                memory_fig.update_layout(title="Memory Usage", xaxis_title="Time", yaxis_title="Usage (%)")
+                memory_fig.update_layout(
+                    title="Memory Usage", xaxis_title="Time", yaxis_title="Usage (%)"
+                )
 
                 # Disk usage
                 disk_fig = go.Figure()
                 disk_fig.add_trace(
                     go.Scatter(
-                        x=pd.date_range(start=datetime.now() - timedelta(minutes=5), periods=60, freq="5S"),
+                        x=pd.date_range(
+                            start=datetime.now() - timedelta(minutes=5),
+                            periods=60,
+                            freq="5S",
+                        ),
                         y=[psutil.disk_usage("/").percent for _ in range(60)],
                         name="Disk Usage",
                     )
                 )
-                disk_fig.update_layout(title="Disk Usage", xaxis_title="Time", yaxis_title="Usage (%)")
+                disk_fig.update_layout(
+                    title="Disk Usage", xaxis_title="Time", yaxis_title="Usage (%)"
+                )
 
                 # Network I/O
                 network_fig = go.Figure()
                 network_fig.add_trace(
                     go.Scatter(
-                        x=pd.date_range(start=datetime.now() - timedelta(minutes=5), periods=60, freq="5S"),
+                        x=pd.date_range(
+                            start=datetime.now() - timedelta(minutes=5),
+                            periods=60,
+                            freq="5S",
+                        ),
                         y=[psutil.net_io_counters().bytes_sent for _ in range(60)],
                         name="Bytes Sent",
                     )
                 )
                 network_fig.add_trace(
                     go.Scatter(
-                        x=pd.date_range(start=datetime.now() - timedelta(minutes=5), periods=60, freq="5S"),
+                        x=pd.date_range(
+                            start=datetime.now() - timedelta(minutes=5),
+                            periods=60,
+                            freq="5S",
+                        ),
                         y=[psutil.net_io_counters().bytes_recv for _ in range(60)],
                         name="Bytes Received",
                     )
                 )
-                network_fig.update_layout(title="Network I/O", xaxis_title="Time", yaxis_title="Bytes")
+                network_fig.update_layout(
+                    title="Network I/O", xaxis_title="Time", yaxis_title="Bytes"
+                )
 
                 # Process metrics
                 process_df = pd.DataFrame(
@@ -203,11 +236,17 @@ class DashboardManager:
                             "cpu_percent": proc.cpu_percent(),
                             "memory_percent": proc.memory_percent(),
                         }
-                        for proc in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"])
+                        for proc in psutil.process_iter(
+                            ["pid", "name", "cpu_percent", "memory_percent"]
+                        )
                     ]
                 )
                 process_fig = px.scatter(
-                    process_df, x="timestamp", y="cpu_percent", color="name", title="Process CPU Usage"
+                    process_df,
+                    x="timestamp",
+                    y="cpu_percent",
+                    color="name",
+                    title="Process CPU Usage",
                 )
 
                 # Container metrics
@@ -218,14 +257,22 @@ class DashboardManager:
                             {
                                 "timestamp": datetime.now(),
                                 "name": container.name,
-                                "cpu_usage": container.stats(stream=False)["cpu_stats"]["cpu_usage"]["total_usage"],
-                                "memory_usage": container.stats(stream=False)["memory_stats"]["usage"],
+                                "cpu_usage": container.stats(stream=False)["cpu_stats"][
+                                    "cpu_usage"
+                                ]["total_usage"],
+                                "memory_usage": container.stats(stream=False)[
+                                    "memory_stats"
+                                ]["usage"],
                             }
                             for container in docker_client.containers.list()
                         ]
                     )
                     container_fig = px.scatter(
-                        container_df, x="timestamp", y="cpu_usage", color="name", title="Container CPU Usage"
+                        container_df,
+                        x="timestamp",
+                        y="cpu_usage",
+                        color="name",
+                        title="Container CPU Usage",
                     )
                 except Exception as e:
                     self.logger.warning(f"Failed to collect container metrics: {e}")
@@ -243,21 +290,38 @@ class DashboardManager:
                                 "namespace": pod.metadata.namespace,
                                 "status": pod.status.phase,
                                 "containers": len(pod.status.container_statuses),
-                                "ready_containers": sum(1 for c in pod.status.container_statuses if c.ready),
+                                "ready_containers": sum(
+                                    1 for c in pod.status.container_statuses if c.ready
+                                ),
                             }
                             for pod in v1.list_pod_for_all_namespaces().items
                         ]
                     )
                     k8s_fig = px.scatter(
-                        k8s_df, x="timestamp", y="ready_containers", color="name", title="Kubernetes Pod Status"
+                        k8s_df,
+                        x="timestamp",
+                        y="ready_containers",
+                        color="name",
+                        title="Kubernetes Pod Status",
                     )
                 except Exception as e:
                     self.logger.warning(f"Failed to collect Kubernetes metrics: {e}")
                     k8s_fig = go.Figure()
 
-                last_update = f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                last_update = (
+                    f"Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+                )
 
-                return (cpu_fig, memory_fig, disk_fig, network_fig, process_fig, container_fig, k8s_fig, last_update)
+                return (
+                    cpu_fig,
+                    memory_fig,
+                    disk_fig,
+                    network_fig,
+                    process_fig,
+                    container_fig,
+                    k8s_fig,
+                    last_update,
+                )
 
             # Save dashboard
             dashboard_file = self.dashboard_dir / f"dashboard_{dashboard_type}.py"
@@ -298,7 +362,8 @@ class DashboardManager:
                     "min": min(metrics["cpu_percent"]),
                 },
                 "memory": {
-                    "mean": sum(metrics["memory_percent"]) / len(metrics["memory_percent"]),
+                    "mean": sum(metrics["memory_percent"])
+                    / len(metrics["memory_percent"]),
                     "max": max(metrics["memory_percent"]),
                     "min": min(metrics["memory_percent"]),
                 },
@@ -313,17 +378,27 @@ class DashboardManager:
             recommendations = []
 
             if stats["cpu"]["mean"] > 80:
-                recommendations.append("High CPU usage detected. Consider scaling up CPU resources.")
+                recommendations.append(
+                    "High CPU usage detected. Consider scaling up CPU resources."
+                )
             if stats["memory"]["mean"] > 80:
-                recommendations.append("High memory usage detected. Consider increasing memory allocation.")
+                recommendations.append(
+                    "High memory usage detected. Consider increasing memory allocation."
+                )
             if stats["disk"]["mean"] > 80:
-                recommendations.append("High disk usage detected. Consider cleaning up disk space.")
+                recommendations.append(
+                    "High disk usage detected. Consider cleaning up disk space."
+                )
 
             # Save analysis
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             analysis_file = self.metrics_dir / f"analysis_{timestamp}.json"
 
-            analysis = {"timestamp": timestamp, "statistics": stats, "recommendations": recommendations}
+            analysis = {
+                "timestamp": timestamp,
+                "statistics": stats,
+                "recommendations": recommendations,
+            }
 
             with open(analysis_file, "w") as f:
                 json.dump(analysis, f, indent=2)
@@ -338,8 +413,12 @@ class DashboardManager:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Dashboard Manager")
-    parser.add_argument("command", choices=["create", "run", "analyze"], help="Command to execute")
-    parser.add_argument("--dashboard-type", default="system", help="Type of dashboard to create")
+    parser.add_argument(
+        "command", choices=["create", "run", "analyze"], help="Command to execute"
+    )
+    parser.add_argument(
+        "--dashboard-type", default="system", help="Type of dashboard to create"
+    )
     parser.add_argument("--dashboard-file", help="Dashboard file to use")
     parser.add_argument("--metrics-file", help="Metrics file to use")
 

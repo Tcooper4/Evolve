@@ -11,7 +11,6 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -58,7 +57,11 @@ class TestReportGenerator(unittest.TestCase):
             "parameters": {"param1": 10},
         }
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def tearDown(self):
         """Clean up test fixtures."""
@@ -89,7 +92,9 @@ class TestReportGenerator(unittest.TestCase):
 
     def test_generate_fallback_reasoning(self):
         """Test fallback reasoning generation."""
-        reasoning = self.generator._generate_fallback_reasoning(self.sample_strategy_data)
+        reasoning = self.generator._generate_fallback_reasoning(
+            self.sample_strategy_data
+        )
 
         self.assertIsInstance(reasoning, StrategyReasoning)
         self.assertIsInstance(reasoning.summary, str)
@@ -99,7 +104,9 @@ class TestReportGenerator(unittest.TestCase):
 
     def test_generate_charts(self):
         """Test chart generation."""
-        charts = self.generator._generate_charts(self.sample_trade_data, self.sample_model_data, "AAPL")
+        charts = self.generator._generate_charts(
+            self.sample_trade_data, self.sample_model_data, "AAPL"
+        )
 
         self.assertIsInstance(charts, dict)
         # Charts should be base64 encoded strings
@@ -114,9 +121,15 @@ class TestReportGenerator(unittest.TestCase):
             "symbol": "AAPL",
             "timeframe": "1h",
             "period": "7d",
-            "trade_metrics": self.generator._calculate_trade_metrics(self.sample_trade_data),
-            "model_metrics": self.generator._calculate_model_metrics(self.sample_model_data),
-            "strategy_reasoning": self.generator._generate_fallback_reasoning(self.sample_strategy_data),
+            "trade_metrics": self.generator._calculate_trade_metrics(
+                self.sample_trade_data
+            ),
+            "model_metrics": self.generator._calculate_model_metrics(
+                self.sample_model_data
+            ),
+            "strategy_reasoning": self.generator._generate_fallback_reasoning(
+                self.sample_strategy_data
+            ),
             "charts": {},
         }
 
@@ -139,9 +152,15 @@ class TestReportGenerator(unittest.TestCase):
             "symbol": "AAPL",
             "timeframe": "1h",
             "period": "7d",
-            "trade_metrics": self.generator._calculate_trade_metrics(self.sample_trade_data),
-            "model_metrics": self.generator._calculate_model_metrics(self.sample_model_data),
-            "strategy_reasoning": self.generator._generate_fallback_reasoning(self.sample_strategy_data),
+            "trade_metrics": self.generator._calculate_trade_metrics(
+                self.sample_trade_data
+            ),
+            "model_metrics": self.generator._calculate_model_metrics(
+                self.sample_model_data
+            ),
+            "strategy_reasoning": self.generator._generate_fallback_reasoning(
+                self.sample_strategy_data
+            ),
             "charts": {},
         }
 
@@ -196,10 +215,17 @@ class TestReportClient(unittest.TestCase):
 
         # Sample data
         self.sample_trade_data = {
-            "trades": [{"pnl": 100, "duration": 3600}, {"pnl": -50, "duration": 1800}, {"pnl": 200, "duration": 7200}]
+            "trades": [
+                {"pnl": 100, "duration": 3600},
+                {"pnl": -50, "duration": 1800},
+                {"pnl": 200, "duration": 7200},
+            ]
         }
 
-        self.sample_model_data = {"predictions": [100, 102, 98, 105, 103], "actuals": [100, 101, 99, 104, 102]}
+        self.sample_model_data = {
+            "predictions": [100, 102, 98, 105, 103],
+            "actuals": [100, 101, 99, 104, 102],
+        }
 
         self.sample_strategy_data = {
             "strategy_name": "Test Strategy",
@@ -211,7 +237,11 @@ class TestReportClient(unittest.TestCase):
             "parameters": {"param1": 10},
         }
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def tearDown(self):
         """Clean up test fixtures."""
@@ -279,10 +309,17 @@ class TestConvenienceFunctions(unittest.TestCase):
 
         # Sample data
         self.sample_trade_data = {
-            "trades": [{"pnl": 100, "duration": 3600}, {"pnl": -50, "duration": 1800}, {"pnl": 200, "duration": 7200}]
+            "trades": [
+                {"pnl": 100, "duration": 3600},
+                {"pnl": -50, "duration": 1800},
+                {"pnl": 200, "duration": 7200},
+            ]
         }
 
-        self.sample_model_data = {"predictions": [100, 102, 98, 105, 103], "actuals": [100, 101, 99, 104, 102]}
+        self.sample_model_data = {
+            "predictions": [100, 102, 98, 105, 103],
+            "actuals": [100, 101, 99, 104, 102],
+        }
 
         self.sample_strategy_data = {
             "strategy_name": "Test Strategy",
@@ -294,7 +331,11 @@ class TestConvenienceFunctions(unittest.TestCase):
             "parameters": {"param1": 10},
         }
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def tearDown(self):
         """Clean up test fixtures."""
@@ -386,7 +427,12 @@ def run_tests():
     test_suite = unittest.TestSuite()
 
     # Add test classes
-    test_classes = [TestReportGenerator, TestReportClient, TestConvenienceFunctions, TestDataStructures]
+    test_classes = [
+        TestReportGenerator,
+        TestReportClient,
+        TestConvenienceFunctions,
+        TestDataStructures,
+    ]
 
     for test_class in test_classes:
         tests = unittest.TestLoader().loadTestsFromTestCase(test_class)

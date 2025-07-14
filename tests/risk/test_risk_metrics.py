@@ -58,7 +58,13 @@ class TestRiskMetrics(unittest.TestCase):
         self.assertEqual(len(metrics), len(self.returns))
 
         # Check columns
-        expected_columns = ["volatility", "sharpe_ratio", "sortino_ratio", "calmar_ratio", "max_drawdown"]
+        expected_columns = [
+            "volatility",
+            "sharpe_ratio",
+            "sortino_ratio",
+            "calmar_ratio",
+            "max_drawdown",
+        ]
         self.assertTrue(all(col in metrics.columns for col in expected_columns))
 
         # Check values
@@ -150,7 +156,9 @@ class TestRiskMetrics(unittest.TestCase):
             calculate_rolling_metrics(single_return)
 
         # All zeros
-        zero_returns = pd.Series([0] * 100, index=pd.date_range(start="2023-01-01", periods=100))
+        zero_returns = pd.Series(
+            [0] * 100, index=pd.date_range(start="2023-01-01", periods=100)
+        )
         metrics = calculate_rolling_metrics(zero_returns)
         self.assertTrue(metrics["volatility"].iloc[-1] == 0)
         self.assertTrue(np.isnan(metrics["sharpe_ratio"].iloc[-1]))
@@ -189,7 +197,11 @@ class TestRiskMetrics(unittest.TestCase):
             },
             {
                 "name": "Multiple Drawdowns",
-                "returns": [0.01] * 15 + [-0.15] * 3 + [0.01] * 10 + [-0.1] * 3 + [0.01] * 19,
+                "returns": [0.01] * 15
+                + [-0.15] * 3
+                + [0.01] * 10
+                + [-0.1] * 3
+                + [0.01] * 19,
                 "expected_dd_period": (15, 18),
                 "expected_sign_flips": 3,
             },
@@ -262,14 +274,18 @@ class TestRiskMetrics(unittest.TestCase):
                 print(f"    Intervals between flips: {flip_intervals}")
 
                 # Verify flips are not all at the beginning
-                self.assertGreater(np.mean(flip_intervals), 2, "Sign flips should be distributed")
+                self.assertGreater(
+                    np.mean(flip_intervals), 2, "Sign flips should be distributed"
+                )
 
         # Test edge cases with extreme values
         print(f"\n  ⚠️ Testing extreme value edge cases...")
 
         # Test with very large drawdown
         extreme_dates = pd.date_range(start="2023-01-01", periods=30)
-        extreme_returns = pd.Series([0.01] * 10 + [-0.8] * 5 + [0.01] * 15, index=extreme_dates)
+        extreme_returns = pd.Series(
+            [0.01] * 10 + [-0.8] * 5 + [0.01] * 15, index=extreme_dates
+        )
 
         extreme_metrics = calculate_rolling_metrics(extreme_returns, window=5)
 
@@ -277,11 +293,15 @@ class TestRiskMetrics(unittest.TestCase):
         extreme_max_dd = extreme_metrics["max_drawdown"].min()
         print(f"    Extreme max drawdown: {extreme_max_dd:.3f}")
 
-        self.assertLess(extreme_max_dd, -0.5, "Extreme drawdown should be properly calculated")
+        self.assertLess(
+            extreme_max_dd, -0.5, "Extreme drawdown should be properly calculated"
+        )
 
         # Test with very volatile returns
         volatile_dates = pd.date_range(start="2023-01-01", periods=50)
-        volatile_returns = pd.Series([0.2, -0.2, 0.3, -0.3, 0.1, -0.1] * 8 + [0.01] * 2, index=volatile_dates)
+        volatile_returns = pd.Series(
+            [0.2, -0.2, 0.3, -0.3, 0.1, -0.1] * 8 + [0.01] * 2, index=volatile_dates
+        )
 
         volatile_metrics = calculate_rolling_metrics(volatile_returns, window=5)
 
@@ -289,13 +309,17 @@ class TestRiskMetrics(unittest.TestCase):
         max_volatility = volatile_metrics["volatility"].max()
         print(f"    Max volatility: {max_volatility:.3f}")
 
-        self.assertGreater(max_volatility, 0.1, "High volatility should be properly calculated")
+        self.assertGreater(
+            max_volatility, 0.1, "High volatility should be properly calculated"
+        )
 
         # Test Sharpe ratio with zero volatility
         print(f"\n  🔍 Testing zero volatility edge case...")
 
         zero_vol_dates = pd.date_range(start="2023-01-01", periods=20)
-        zero_vol_returns = pd.Series([0.01] * 20, index=zero_vol_dates)  # Constant returns
+        zero_vol_returns = pd.Series(
+            [0.01] * 20, index=zero_vol_dates
+        )  # Constant returns
 
         zero_vol_metrics = calculate_rolling_metrics(zero_vol_returns, window=10)
 
@@ -313,7 +337,9 @@ class TestRiskMetrics(unittest.TestCase):
         print(f"\n  🔄 Testing drawdown recovery period...")
 
         recovery_dates = pd.date_range(start="2023-01-01", periods=60)
-        recovery_returns = pd.Series([0.01] * 20 + [-0.3] * 5 + [0.02] * 35, index=recovery_dates)
+        recovery_returns = pd.Series(
+            [0.01] * 20 + [-0.3] * 5 + [0.02] * 35, index=recovery_dates
+        )
 
         recovery_metrics = calculate_rolling_metrics(recovery_returns, window=15)
 
@@ -326,7 +352,9 @@ class TestRiskMetrics(unittest.TestCase):
 
         # Verify recovery occurred
         self.assertGreater(
-            recovery_period, recovery_metrics["max_drawdown"].min(), "Should show recovery from maximum drawdown"
+            recovery_period,
+            recovery_metrics["max_drawdown"].min(),
+            "Should show recovery from maximum drawdown",
         )
 
         # Test Sharpe ratio stability
@@ -334,7 +362,9 @@ class TestRiskMetrics(unittest.TestCase):
 
         # Create stable returns
         stable_dates = pd.date_range(start="2023-01-01", periods=100)
-        stable_returns = pd.Series([0.001] * 100, index=stable_dates)  # Small constant returns
+        stable_returns = pd.Series(
+            [0.001] * 100, index=stable_dates
+        )  # Small constant returns
 
         stable_metrics = calculate_rolling_metrics(stable_returns, window=20)
 
@@ -343,13 +373,17 @@ class TestRiskMetrics(unittest.TestCase):
         print(f"    Sharpe ratio variance: {sharpe_variance:.6f}")
 
         # Verify stability (low variance)
-        self.assertLess(sharpe_variance, 0.1, "Sharpe ratio should be stable with constant returns")
+        self.assertLess(
+            sharpe_variance, 0.1, "Sharpe ratio should be stable with constant returns"
+        )
 
         # Test period validation with different window sizes
         print(f"\n  🎯 Testing period validation with different windows...")
 
         test_dates = pd.date_range(start="2023-01-01", periods=40)
-        test_returns = pd.Series([0.01] * 15 + [-0.2] * 5 + [0.01] * 20, index=test_dates)
+        test_returns = pd.Series(
+            [0.01] * 15 + [-0.2] * 5 + [0.01] * 20, index=test_dates
+        )
 
         window_sizes = [5, 10, 15, 20]
 
@@ -364,7 +398,8 @@ class TestRiskMetrics(unittest.TestCase):
 
             # Verify drawdown period is reasonable
             self.assertTrue(
-                15 <= window_min_dd_period <= 20, f"Max drawdown should occur in expected period for window {window}"
+                15 <= window_min_dd_period <= 20,
+                f"Max drawdown should occur in expected period for window {window}",
             )
 
         # Test sign flip edge cases
@@ -383,22 +418,32 @@ class TestRiskMetrics(unittest.TestCase):
         print(f"    Alternating returns sign flips: {alternating_flips}")
 
         # Should have many sign flips with alternating returns
-        self.assertGreater(alternating_flips, 5, "Should have many sign flips with alternating returns")
+        self.assertGreater(
+            alternating_flips, 5, "Should have many sign flips with alternating returns"
+        )
 
         # Test with trend followed by reversal
         trend_reversal_dates = pd.date_range(start="2023-01-01", periods=50)
-        trend_reversal_returns = pd.Series([0.02] * 25 + [-0.02] * 25, index=trend_reversal_dates)
+        trend_reversal_returns = pd.Series(
+            [0.02] * 25 + [-0.02] * 25, index=trend_reversal_dates
+        )
 
-        trend_reversal_metrics = calculate_rolling_metrics(trend_reversal_returns, window=10)
+        trend_reversal_metrics = calculate_rolling_metrics(
+            trend_reversal_returns, window=10
+        )
 
         # Count sign flips
         trend_reversal_sharpe = trend_reversal_metrics["sharpe_ratio"]
-        trend_reversal_flips = np.sign(trend_reversal_sharpe).diff().fillna(0).abs().sum()
+        trend_reversal_flips = (
+            np.sign(trend_reversal_sharpe).diff().fillna(0).abs().sum()
+        )
 
         print(f"    Trend reversal sign flips: {trend_reversal_flips}")
 
         # Should have sign flip at trend reversal
-        self.assertGreaterEqual(trend_reversal_flips, 1, "Should have sign flip at trend reversal")
+        self.assertGreaterEqual(
+            trend_reversal_flips, 1, "Should have sign flip at trend reversal"
+        )
 
         print("✅ Max drawdown period and Sharpe sign flip edge cases test completed")
 

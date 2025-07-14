@@ -18,7 +18,9 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +49,15 @@ class ProductionCleanup:
         ]
 
         # Files to remove
-        self.remove_patterns = ["*.pyc", "__pycache__", "*.swp", "*.tmp", "*.log", ".DS_Store", "Thumbs.db"]
+        self.remove_patterns = [
+            "*.pyc",
+            "__pycache__",
+            "*.swp",
+            "*.tmp",
+            "*.log",
+            ".DS_Store",
+            "Thumbs.db",
+        ]
 
         # Legacy directories
         self.legacy_dirs = [
@@ -109,7 +119,6 @@ class ProductionCleanup:
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
 
-                original_content = content
                 modified = False
 
                 # Replace hardcoded patterns
@@ -118,7 +127,10 @@ class ProductionCleanup:
                     if matches:
                         # Replace with environment variable references
                         content = re.sub(
-                            pattern, lambda m: self._replace_with_env_var(m.group()), content, flags=re.IGNORECASE
+                            pattern,
+                            lambda m: self._replace_with_env_var(m.group()),
+                            content,
+                            flags=re.IGNORECASE,
                         )
                         modified = True
 
@@ -152,9 +164,18 @@ class ProductionCleanup:
         """Replace hardcoded file paths with relative paths."""
         # Common hardcoded path patterns
         path_patterns = [
-            (r'["\']/home/[^"\']+["\']', 'os.path.join(os.path.dirname(__file__), "data")'),
-            (r'["\']C:\\[^"\']+["\']', 'os.path.join(os.path.dirname(__file__), "data")'),
-            (r'["\']/Users/[^"\']+["\']', 'os.path.join(os.path.dirname(__file__), "data")'),
+            (
+                r'["\']/home/[^"\']+["\']',
+                'os.path.join(os.path.dirname(__file__), "data")',
+            ),
+            (
+                r'["\']C:\\[^"\']+["\']',
+                'os.path.join(os.path.dirname(__file__), "data")',
+            ),
+            (
+                r'["\']/Users/[^"\']+["\']',
+                'os.path.join(os.path.dirname(__file__), "data")',
+            ),
         ]
 
         for pattern, replacement in path_patterns:
@@ -238,7 +259,6 @@ class ProductionCleanup:
 
     def _add_logging_setup(self, content: str) -> str:
         """Add proper logging setup to file."""
-        import_pattern = r"import logging"
         logger_pattern = r"logger = logging\.getLogger\(__name__\)"
 
         # Add import if not present
@@ -248,7 +268,9 @@ class ProductionCleanup:
             import_index = -1
 
             for i, line in enumerate(lines):
-                if line.strip().startswith("import ") or line.strip().startswith("from "):
+                if line.strip().startswith("import ") or line.strip().startswith(
+                    "from "
+                ):
                     import_index = i
 
             if import_index >= 0:
@@ -262,7 +284,9 @@ class ProductionCleanup:
             # Find a good place to add logger (after imports)
             insert_index = 0
             for i, line in enumerate(lines):
-                if line.strip().startswith("import ") or line.strip().startswith("from "):
+                if line.strip().startswith("import ") or line.strip().startswith(
+                    "from "
+                ):
                     insert_index = i + 1
                 elif line.strip() and not line.strip().startswith("#"):
                     break
@@ -279,7 +303,9 @@ class ProductionCleanup:
 
         def replace_print(match):
             message = match.group(1)
-            if any(word in message.lower() for word in ["error", "failed", "exception"]):
+            if any(
+                word in message.lower() for word in ["error", "failed", "exception"]
+            ):
                 return f'logger.error("{message}")'
             elif any(word in message.lower() for word in ["warning", "warn"]):
                 return f'logger.warning("{message}")'
@@ -299,7 +325,11 @@ class ProductionCleanup:
 
         # Add logging to exception handlers
         except_pattern = r"except Exception as e:\s*\n\s*pass"
-        content = re.sub(except_pattern, 'except Exception as e:\n    logger.error(f"Error: {e}")', content)
+        content = re.sub(
+            except_pattern,
+            'except Exception as e:\n    logger.error(f"Error: {e}")',
+            content,
+        )
 
         return content
 
@@ -312,7 +342,9 @@ class ProductionCleanup:
         for file_path in python_files:
             try:
                 # Try to import the module
-                module_name = str(file_path.relative_to(self.project_root)).replace("/", ".").replace(".py", "")
+                str(file_path.relative_to(self.project_root)).replace("/", ".").replace(
+                    ".py", ""
+                )
 
                 # Skip __init__.py files
                 if file_path.name == "__init__.py":
@@ -325,7 +357,9 @@ class ProductionCleanup:
                 # Check for missing imports
                 missing_imports = self._check_missing_imports(content)
                 if missing_imports:
-                    logger.warning(f"Potential missing imports in {file_path}: {missing_imports}")
+                    logger.warning(
+                        f"Potential missing imports in {file_path}: {missing_imports}"
+                    )
 
             except Exception as e:
                 logger.error(f"Error validating imports in {file_path}: {e}")
@@ -348,7 +382,11 @@ class ProductionCleanup:
         ]
 
         for pattern, module in patterns:
-            if re.search(pattern, content) and f"import {module}" not in content and f"from {module}" not in content:
+            if (
+                re.search(pattern, content)
+                and f"import {module}" not in content
+                and f"from {module}" not in content
+            ):
                 missing_imports.append(module)
 
         return missing_imports

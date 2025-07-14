@@ -32,7 +32,9 @@ performance_data = []
 
 
 def log_strategy_performance(
-    strategy_name: str, performance_metrics: Dict[str, float], metadata: Optional[Dict[str, Any]] = None
+    strategy_name: str,
+    performance_metrics: Dict[str, float],
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Log strategy performance metrics.
 
@@ -55,7 +57,11 @@ def log_strategy_performance(
 
 
 def log_performance(
-    ticker: str, model: str, agentic: bool, metrics: Dict[str, float], metadata: Optional[Dict[str, Any]] = None
+    ticker: str,
+    model: str,
+    agentic: bool,
+    metrics: Dict[str, float],
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Log performance metrics for a specific ticker and model.
 
@@ -82,7 +88,10 @@ def log_performance(
 
 
 def get_performance_data(
-    strategy_name: Optional[str] = None, ticker: Optional[str] = None, model: Optional[str] = None, days_back: int = 30
+    strategy_name: Optional[str] = None,
+    ticker: Optional[str] = None,
+    model: Optional[str] = None,
+    days_back: int = 30,
 ) -> List[Dict[str, Any]]:
     """Get performance data with optional filtering.
 
@@ -187,7 +196,9 @@ def create_performance_trend_chart(
 
         # Format x-axis dates
         plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-        plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=max(1, days_back // 7)))
+        plt.gca().xaxis.set_major_locator(
+            mdates.DayLocator(interval=max(1, days_back // 7))
+        )
         plt.xticks(rotation=45)
 
         # Add trend line
@@ -230,9 +241,27 @@ def create_streamlit_performance_dashboard():
         st.sidebar.header("Filters")
 
         # Get unique values for filters
-        strategies = list(set(record.get("strategy") for record in performance_data if record.get("strategy")))
-        tickers = list(set(record.get("ticker") for record in performance_data if record.get("ticker")))
-        models = list(set(record.get("model") for record in performance_data if record.get("model")))
+        strategies = list(
+            set(
+                record.get("strategy")
+                for record in performance_data
+                if record.get("strategy")
+            )
+        )
+        tickers = list(
+            set(
+                record.get("ticker")
+                for record in performance_data
+                if record.get("ticker")
+            )
+        )
+        models = list(
+            set(
+                record.get("model")
+                for record in performance_data
+                if record.get("model")
+            )
+        )
 
         selected_strategy = st.sidebar.selectbox("Strategy", ["All"] + strategies)
         selected_ticker = st.sidebar.selectbox("Ticker", ["All"] + tickers)
@@ -244,7 +273,9 @@ def create_streamlit_performance_dashboard():
         ticker_filter = selected_ticker if selected_ticker != "All" else None
         model_filter = selected_model if selected_model != "All" else None
 
-        data = get_performance_data(strategy_filter, ticker_filter, model_filter, days_back)
+        data = get_performance_data(
+            strategy_filter, ticker_filter, model_filter, days_back
+        )
 
         if not data:
             st.warning("No performance data available for selected filters")
@@ -284,7 +315,11 @@ def create_streamlit_performance_dashboard():
 
         with col3:
             if not df.empty:
-                trend = df.groupby("metric")["value"].apply(lambda x: x.iloc[-1] - x.iloc[0]).mean()
+                trend = (
+                    df.groupby("metric")["value"]
+                    .apply(lambda x: x.iloc[-1] - x.iloc[0])
+                    .mean()
+                )
                 st.metric("Trend", f"{trend:+.4f}")
 
         # Performance trends by metric
@@ -302,7 +337,13 @@ def create_streamlit_performance_dashboard():
             for strategy in metric_data["strategy"].unique():
                 if strategy:
                     strategy_data = metric_data[metric_data["strategy"] == strategy]
-                    ax.plot(strategy_data["timestamp"], strategy_data["value"], marker="o", label=strategy, alpha=0.7)
+                    ax.plot(
+                        strategy_data["timestamp"],
+                        strategy_data["value"],
+                        marker="o",
+                        label=strategy,
+                        alpha=0.7,
+                    )
 
             ax.set_title(f"{selected_metric} Performance Trend")
             ax.set_xlabel("Time")
@@ -325,13 +366,19 @@ def create_streamlit_performance_dashboard():
             with col2:
                 st.write("**Recent Performance**")
                 recent_data = metric_data.tail(10)
-                st.dataframe(recent_data[["timestamp", "value", "strategy"]].set_index("timestamp"))
+                st.dataframe(
+                    recent_data[["timestamp", "value", "strategy"]].set_index(
+                        "timestamp"
+                    )
+                )
 
         # Performance comparison
         st.header("Performance Comparison")
 
         if len(metrics) > 1:
-            comparison_metric = st.selectbox("Select Metric for Comparison", metrics, key="comparison")
+            comparison_metric = st.selectbox(
+                "Select Metric for Comparison", metrics, key="comparison"
+            )
 
             comparison_data = df[df["metric"] == comparison_metric]
 

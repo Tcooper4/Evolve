@@ -44,7 +44,9 @@ logger.setLevel(logging.DEBUG)
 # Add file handler for debug logs
 debug_handler = logging.FileHandler("trading/nlp/logs/nlp_debug.log")
 debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+debug_formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 debug_handler.setFormatter(debug_formatter)
 logger.addHandler(debug_handler)
 
@@ -70,7 +72,9 @@ class PromptProcessor:
     def _load_entity_patterns(self) -> Dict[str, Any]:
         """Load entity patterns from configuration."""
         try:
-            config_path = os.path.join(os.path.dirname(__file__), "config", "entity_patterns.json")
+            config_path = os.path.join(
+                os.path.dirname(__file__), "config", "entity_patterns.json"
+            )
             with open(config_path, "r") as f:
                 return json.load(f)
         except Exception as e:
@@ -90,10 +94,17 @@ class PromptProcessor:
             entities = self._extract_entities(text)
             intent, confidence = self._determine_intent(text, entities)
 
-            return ProcessedPrompt(original_text=text, entities=entities, intent=intent, confidence=confidence)
+            return ProcessedPrompt(
+                original_text=text,
+                entities=entities,
+                intent=intent,
+                confidence=confidence,
+            )
         except Exception as e:
             self.logger.error(f"Error processing prompt: {e}")
-            return ProcessedPrompt(original_text=text, entities=[], intent="unknown", confidence=0.0)
+            return ProcessedPrompt(
+                original_text=text, entities=[], intent="unknown", confidence=0.0
+            )
 
     def _extract_entities(self, text: str) -> List[EntityMatch]:
         """Extract entities from text using regex patterns.
@@ -125,7 +136,9 @@ class PromptProcessor:
 
         return entities
 
-    def _determine_intent(self, text: str, entities: List[EntityMatch]) -> Tuple[str, float]:
+    def _determine_intent(
+        self, text: str, entities: List[EntityMatch]
+    ) -> Tuple[str, float]:
         """Determine the intent of the prompt.
 
         Args:
@@ -145,13 +158,21 @@ class PromptProcessor:
                     confidence = 0.5  # Base confidence for pattern match
 
                     # Boost confidence if relevant entities are present
-                    if intent == "forecast" and any(e.entity_type in ["timeframe", "asset"] for e in entities):
+                    if intent == "forecast" and any(
+                        e.entity_type in ["timeframe", "asset"] for e in entities
+                    ):
                         confidence += 0.3
-                    elif intent == "analyze" and any(e.entity_type in ["asset", "indicator"] for e in entities):
+                    elif intent == "analyze" and any(
+                        e.entity_type in ["asset", "indicator"] for e in entities
+                    ):
                         confidence += 0.3
-                    elif intent == "recommend" and any(e.entity_type in ["asset", "action"] for e in entities):
+                    elif intent == "recommend" and any(
+                        e.entity_type in ["asset", "action"] for e in entities
+                    ):
                         confidence += 0.3
-                    elif intent == "explain" and any(e.entity_type in ["topic", "concept"] for e in entities):
+                    elif intent == "explain" and any(
+                        e.entity_type in ["topic", "concept"] for e in entities
+                    ):
                         confidence += 0.3
 
                     if confidence > best_confidence:
@@ -172,7 +193,9 @@ class PromptProcessor:
         """
         return [e.value for e in prompt.entities if e.entity_type == entity_type]
 
-    def get_entity_by_type(self, prompt: ProcessedPrompt, entity_type: str) -> Optional[EntityMatch]:
+    def get_entity_by_type(
+        self, prompt: ProcessedPrompt, entity_type: str
+    ) -> Optional[EntityMatch]:
         """Get the first entity of a specific type from a processed prompt.
 
         Args:
@@ -242,7 +265,13 @@ class PromptProcessor:
 
     def _update_context(self, intent: str, entities: Dict[str, List[str]]):
         """Update context with new information."""
-        self.context.update({"last_intent": intent, "last_entities": entities, "timestamp": datetime.now().isoformat()})
+        self.context.update(
+            {
+                "last_intent": intent,
+                "last_entities": entities,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def get_context(self) -> Dict[str, Any]:
         """Get current context."""
@@ -317,7 +346,11 @@ Example response:
         return prompt
 
     def create_response_prompt(
-        self, query: str, intent: str, entities: Dict[str, Any], session_state: Optional[Dict[str, Any]] = None
+        self,
+        query: str,
+        intent: str,
+        entities: Dict[str, Any],
+        session_state: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Create prompt for response generation.
 
@@ -483,14 +516,21 @@ Example response:
                 confidence = 0.3
         routed = {"action": action, "reasoning": reasoning, "confidence": confidence}
         # Log to memory
-        self.log_memory(prompt=getattr(self, "last_prompt", None), entities=entities, routed=routed)
+        self.log_memory(
+            prompt=getattr(self, "last_prompt", None), entities=entities, routed=routed
+        )
         return routed
 
     def log_memory(self, prompt: str, entities: dict, routed: dict):
         """
         Append a memory log entry: prompt ➜ entities ➜ routed action/reasoning/confidence.
         """
-        entry = {"timestamp": datetime.utcnow().isoformat(), "prompt": prompt, "entities": entities, "routed": routed}
+        entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "prompt": prompt,
+            "entities": entities,
+            "routed": routed,
+        }
         try:
             with open(MEMORY_LOG_PATH, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
@@ -504,7 +544,9 @@ Example response:
         """
         self.last_prompt = prompt
         entities = self.extract_entities(prompt)
-        intent = self.classify_intent(prompt) if hasattr(self, "classify_intent") else None
+        intent = (
+            self.classify_intent(prompt) if hasattr(self, "classify_intent") else None
+        )
         routed = self.route_to_agent(entities, intent)
         return {"entities": entities, "intent": intent, "routed": routed}
 
@@ -514,11 +556,19 @@ Example response:
         Returns a string intent label.
         """
         prompt_lower = prompt.lower()
-        if any(word in prompt_lower for word in ["forecast", "predict", "projection", "outlook"]):
+        if any(
+            word in prompt_lower
+            for word in ["forecast", "predict", "projection", "outlook"]
+        ):
             return "forecast"
-        if any(word in prompt_lower for word in ["backtest", "historical performance", "simulate"]):
+        if any(
+            word in prompt_lower
+            for word in ["backtest", "historical performance", "simulate"]
+        ):
             return "backtest"
-        if any(word in prompt_lower for word in ["compare", "versus", "vs.", "better than"]):
+        if any(
+            word in prompt_lower for word in ["compare", "versus", "vs.", "better than"]
+        ):
             return "compare"
         if any(word in prompt_lower for word in ["interpret", "explain", "why", "how"]):
             return "interpret"

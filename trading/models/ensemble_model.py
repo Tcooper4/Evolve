@@ -80,7 +80,11 @@ class EnsembleModel(BaseModel):
             self.weights[model_name] = 1.0 / len(self.config["models"])
             self.performance_history[model_name] = []
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _update_weights(self, data: pd.DataFrame):
         """Update model weights based on recent performance using vectorized operations.
@@ -106,19 +110,29 @@ class EnsembleModel(BaseModel):
                     score = -np.mean((actual - preds) ** 2)  # Negative MSE
                 elif self.config["voting_method"] == "sharpe":
                     returns = np.diff(preds) / preds[:-1]
-                    score = np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0
+                    score = (
+                        np.mean(returns) / np.std(returns) if np.std(returns) > 0 else 0
+                    )
                 else:  # custom
                     score = self._calculate_custom_score(actual, preds)
 
                 # Get confidence
-                confidence = model.calculate_confidence(preds) if hasattr(model, "calculate_confidence") else 1.0
+                confidence = (
+                    model.calculate_confidence(preds)
+                    if hasattr(model, "calculate_confidence")
+                    else 1.0
+                )
 
                 model_scores[model_name] = score
                 model_confidences[model_name] = confidence
 
                 # Update performance history
                 self.performance_history[model_name].append(
-                    {"timestamp": datetime.now().isoformat(), "score": score, "confidence": confidence}
+                    {
+                        "timestamp": datetime.now().isoformat(),
+                        "score": score,
+                        "confidence": confidence,
+                    }
                 )
 
             except Exception as e:
@@ -128,10 +142,15 @@ class EnsembleModel(BaseModel):
                 model_confidences[model_name] = 0.0
 
         # Enhanced dynamic weighting with multiple factors
-        self.weights = self._calculate_dynamic_weights(model_scores, model_confidences, data)
+        self.weights = self._calculate_dynamic_weights(
+            model_scores, model_confidences, data
+        )
 
     def _calculate_dynamic_weights(
-        self, model_scores: Dict[str, float], model_confidences: Dict[str, float], data: pd.DataFrame
+        self,
+        model_scores: Dict[str, float],
+        model_confidences: Dict[str, float],
+        data: pd.DataFrame,
     ) -> Dict[str, float]:
         """Calculate dynamic weights using multiple performance factors.
 
@@ -210,8 +229,12 @@ class EnsembleModel(BaseModel):
         for model_name, history in self.performance_history.items():
             if len(history) > 0:
                 # Calculate weighted average of recent performance
-                recent_scores = [entry["score"] for entry in history[-10:]]  # Last 10 entries
-                weights = np.exp(np.linspace(0, 1, len(recent_scores)))  # Exponential weighting
+                recent_scores = [
+                    entry["score"] for entry in history[-10:]
+                ]  # Last 10 entries
+                weights = np.exp(
+                    np.linspace(0, 1, len(recent_scores))
+                )  # Exponential weighting
                 weighted_avg = np.average(recent_scores, weights=weights)
                 historical_scores[model_name] = weighted_avg
             else:
@@ -235,7 +258,9 @@ class EnsembleModel(BaseModel):
                 pred_trend = np.mean(pred_returns)
 
                 # Calculate trend alignment
-                trend_alignment = 1 - abs(market_trend - pred_trend) / (market_volatility + 1e-8)
+                trend_alignment = 1 - abs(market_trend - pred_trend) / (
+                    market_volatility + 1e-8
+                )
                 trend_alignment = np.clip(trend_alignment, 0, 1)
 
                 trend_weights[model_name] = trend_alignment
@@ -268,10 +293,14 @@ class EnsembleModel(BaseModel):
         for model_name in self.models.keys():
             if regime == "high_volatility":
                 # Prefer models that handle volatility well
-                volatility_weights[model_name] = 0.8 if "lstm" in model_name.lower() else 0.6
+                volatility_weights[model_name] = (
+                    0.8 if "lstm" in model_name.lower() else 0.6
+                )
             elif regime == "low_volatility":
                 # Prefer simpler models
-                volatility_weights[model_name] = 0.8 if "arima" in model_name.lower() else 0.6
+                volatility_weights[model_name] = (
+                    0.8 if "arima" in model_name.lower() else 0.6
+                )
             else:
                 # Normal regime - balanced weights
                 volatility_weights[model_name] = 0.7
@@ -327,11 +356,15 @@ class EnsembleModel(BaseModel):
             try:
                 preds = model.predict(data.iloc[-20:])  # Use last 20 points
                 confidences[model_name] = (
-                    model.calculate_confidence(preds) if hasattr(model, "calculate_confidence") else 1.0
+                    model.calculate_confidence(preds)
+                    if hasattr(model, "calculate_confidence")
+                    else 1.0
                 )
             except Exception as e:
                 logging.error(f"Error calculating confidence for {model_name}: {e}")
-                raise RuntimeError(f"Failed to calculate confidence for {model_name}: {e}")
+                raise RuntimeError(
+                    f"Failed to calculate confidence for {model_name}: {e}"
+                )
 
         # Update strategy patterns
         self.strategy_patterns[regime] = {
@@ -370,7 +403,7 @@ class EnsembleModel(BaseModel):
         self._update_weights(data)
 
         # Get strategy recommendations
-        strategy = self._get_strategy_recommendation(data)
+        self._get_strategy_recommendation(data)
 
         # Collect predictions from all models
         predictions = {}
@@ -379,7 +412,11 @@ class EnsembleModel(BaseModel):
         for model_name, model in self.models.items():
             try:
                 preds = model.predict(data)
-                confidence = model.calculate_confidence(preds) if hasattr(model, "calculate_confidence") else 1.0
+                confidence = (
+                    model.calculate_confidence(preds)
+                    if hasattr(model, "calculate_confidence")
+                    else 1.0
+                )
 
                 # Apply fallback logic
                 if confidence < self.config.get("fallback_threshold", 0.5):
@@ -397,7 +434,9 @@ class EnsembleModel(BaseModel):
             raise ValueError("All models failed to make predictions")
 
         # Calculate weighted ensemble
-        weights = np.array([self.weights[name] * confidences[name] for name in predictions.keys()])
+        weights = np.array(
+            [self.weights[name] * confidences[name] for name in predictions.keys()]
+        )
         weights = weights / np.sum(weights)  # Normalize
 
         ensemble_preds = np.zeros_like(next(iter(predictions.values())))
@@ -499,7 +538,9 @@ class EnsembleModel(BaseModel):
                     shap_values[model_name] = model.shap_interpret(data)
                 except Exception as e:
                     logging.error(f"Error getting SHAP values for {model_name}: {e}")
-                    raise RuntimeError(f"Failed to get SHAP values for {model_name}: {e}")
+                    raise RuntimeError(
+                        f"Failed to get SHAP values for {model_name}: {e}"
+                    )
 
         if not shap_values:
             raise ValueError("No models support SHAP interpretation")
@@ -523,7 +564,7 @@ class EnsembleModel(BaseModel):
         """
         try:
             # Make initial prediction
-            predictions = self.predict(data)
+            self.predict(data)
 
             # Generate multi-step forecast
             forecast_values = []
@@ -537,7 +578,9 @@ class EnsembleModel(BaseModel):
                 # Update data for next iteration
                 new_row = current_data.iloc[-1].copy()
                 new_row["close"] = pred[-1]  # Update with prediction
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                current_data = pd.concat(
+                    [current_data, pd.DataFrame([new_row])], ignore_index=True
+                )
                 current_data = current_data.iloc[1:]  # Remove oldest row
 
             return {
@@ -571,7 +614,12 @@ class EnsembleModel(BaseModel):
             # Plot 1: Historical vs Predicted
             plt.subplot(2, 2, 1)
             plt.plot(data.index, data["close"], label="Actual", color="blue")
-            plt.plot(data.index[-len(predictions) :], predictions, label="Predicted", color="red")
+            plt.plot(
+                data.index[-len(predictions) :],
+                predictions,
+                label="Predicted",
+                color="red",
+            )
             plt.title("Ensemble Model Predictions")
             plt.xlabel("Time")
             plt.ylabel("Value")

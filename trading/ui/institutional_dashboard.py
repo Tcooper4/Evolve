@@ -36,7 +36,10 @@ class InstitutionalDashboard:
 
         # Configure page
         st.set_page_config(
-            page_title="Institutional Trading System", page_icon="📈", layout="wide", initial_sidebar_state="expanded"
+            page_title="Institutional Trading System",
+            page_icon="📈",
+            layout="wide",
+            initial_sidebar_state="expanded",
         )
 
         # Custom CSS
@@ -54,7 +57,11 @@ class InstitutionalDashboard:
         else:
             self.system = None
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def setup_custom_css(self) -> Dict:
         """Setup custom CSS for professional appearance."""
@@ -105,7 +112,11 @@ class InstitutionalDashboard:
             """,
                 unsafe_allow_html=True,
             )
-            return {"status": "success", "message": "Custom CSS setup completed", "css_loaded": True}
+            return {
+                "status": "success",
+                "message": "Custom CSS setup completed",
+                "css_loaded": True,
+            }
         except Exception as e:
             return {
                 "success": True,
@@ -117,7 +128,10 @@ class InstitutionalDashboard:
     def run(self):
         """Run the institutional dashboard."""
         # Header
-        st.markdown('<h1 class="main-header">🏛️ Institutional Trading System</h1>', unsafe_allow_html=True)
+        st.markdown(
+            '<h1 class="main-header">🏛️ Institutional Trading System</h1>',
+            unsafe_allow_html=True,
+        )
 
         # Sidebar
         self.render_sidebar()
@@ -171,7 +185,15 @@ class InstitutionalDashboard:
             st.header("📊 Navigation")
             page = st.selectbox(
                 "Select Page",
-                ["Dashboard", "Market Regime", "Signals", "Risk Management", "Performance", "Reports", "Settings"],
+                [
+                    "Dashboard",
+                    "Market Regime",
+                    "Signals",
+                    "Risk Management",
+                    "Performance",
+                    "Reports",
+                    "Settings",
+                ],
             )
 
             st.divider()
@@ -290,7 +312,11 @@ class InstitutionalDashboard:
                     st.metric("Active Trades", metrics.active_trades, delta=None)
 
                 with col3:
-                    st.metric("Performance Score", f"{metrics.performance_score:.2f}", delta=None)
+                    st.metric(
+                        "Performance Score",
+                        f"{metrics.performance_score:.2f}",
+                        delta=None,
+                    )
 
                 with col4:
                     st.metric("Risk Score", f"{metrics.risk_score:.2f}", delta=None)
@@ -313,7 +339,13 @@ class InstitutionalDashboard:
         status_value = status.get("status", "unknown")
 
         # Status color mapping
-        status_colors = {"healthy": "🟢", "warning": "🟡", "error": "🔴", "unknown": "⚪", "fallback": "🟠"}
+        status_colors = {
+            "healthy": "🟢",
+            "warning": "🟡",
+            "error": "🔴",
+            "unknown": "⚪",
+            "fallback": "🟠",
+        }
 
         status_icon = status_colors.get(status_value, "⚪")
 
@@ -334,7 +366,9 @@ class InstitutionalDashboard:
         if self.system:
             # Get recent signals
             if "signal_center" in self.system.modules:
-                recent_signals = self.system.modules["signal_center"].get_recent_signals(hours=1)
+                recent_signals = self.system.modules[
+                    "signal_center"
+                ].get_recent_signals(hours=1)
 
                 if recent_signals:
                     st.subheader("Recent Signals")
@@ -391,7 +425,9 @@ class InstitutionalDashboard:
 
         if self.system:
             # Create tabs for different chart types
-            tab1, tab2, tab3, tab4 = st.tabs(["Performance", "Risk", "Regime", "Signals"])
+            tab1, tab2, tab3, tab4 = st.tabs(
+                ["Performance", "Risk", "Regime", "Signals"]
+            )
 
             with tab1:
                 self.render_performance_charts()
@@ -416,7 +452,9 @@ class InstitutionalDashboard:
             if performance_data:
                 # Performance metrics over time (simulated)
                 dates = pd.date_range(start="2024-01-01", end="2024-12-31", freq="D")
-                performance_series = np.cumsum(np.random.normal(0.001, 0.02, len(dates)))
+                performance_series = np.cumsum(
+                    np.random.normal(0.001, 0.02, len(dates))
+                )
 
                 fig = go.Figure()
                 fig.add_trace(
@@ -430,7 +468,10 @@ class InstitutionalDashboard:
                 )
 
                 fig.update_layout(
-                    title="Cumulative Performance Over Time", xaxis_title="Date", yaxis_title="Performance", height=400
+                    title="Cumulative Performance Over Time",
+                    xaxis_title="Date",
+                    yaxis_title="Performance",
+                    height=400,
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
@@ -450,9 +491,16 @@ class InstitutionalDashboard:
                 metrics = ["Volatility", "VaR", "Drawdown", "Beta"]
                 values = [0.15, 0.02, 0.05, 1.1]  # Simulated values
 
-                fig = go.Figure(data=[go.Bar(x=metrics, y=values, marker_color="#ff7f0e")])
+                fig = go.Figure(
+                    data=[go.Bar(x=metrics, y=values, marker_color="#ff7f0e")]
+                )
 
-                fig.update_layout(title="Risk Metrics", xaxis_title="Metric", yaxis_title="Value", height=400)
+                fig.update_layout(
+                    title="Risk Metrics",
+                    xaxis_title="Metric",
+                    yaxis_title="Value",
+                    height=400,
+                )
 
                 st.plotly_chart(fig, use_container_width=True)
             else:
@@ -492,16 +540,23 @@ class InstitutionalDashboard:
             signal_data = self.system._get_signal_data()
 
             if signal_data and "signal_center" in signal_data:
-                signal_summary = signal_data["signal_center"]
+                signal_data["signal_center"]
 
                 # Signal distribution
                 signal_types = ["Buy", "Sell", "Hold", "Strong Buy", "Strong Sell"]
                 signal_counts = [25, 15, 40, 10, 10]  # Simulated data
 
-                fig = go.Figure(data=[go.Bar(x=signal_types, y=signal_counts, marker_color="#2ca02c")])
+                fig = go.Figure(
+                    data=[
+                        go.Bar(x=signal_types, y=signal_counts, marker_color="#2ca02c")
+                    ]
+                )
 
                 fig.update_layout(
-                    title="Signal Distribution (24h)", xaxis_title="Signal Type", yaxis_title="Count", height=400
+                    title="Signal Distribution (24h)",
+                    xaxis_title="Signal Type",
+                    yaxis_title="Count",
+                    height=400,
                 )
 
                 st.plotly_chart(fig, use_container_width=True)
@@ -531,7 +586,9 @@ class InstitutionalDashboard:
                             if result.get("data"):
                                 st.json(result["data"])
                         else:
-                            st.error(f"Query failed: {result.get('error', 'Unknown error')}")
+                            st.error(
+                                f"Query failed: {result.get('error', 'Unknown error')}"
+                            )
 
     def render_settings(self):
         """Render system settings."""
@@ -569,7 +626,9 @@ class InstitutionalDashboard:
             st.subheader("System Information")
             st.write(f"**Name:** {help_info.get('system_name', 'Unknown')}")
             st.write(f"**Version:** {help_info.get('version', 'Unknown')}")
-            st.write(f"**Description:** {help_info.get('description', 'No description available')}")
+            st.write(
+                f"**Description:** {help_info.get('description', 'No description available')}"
+            )
 
             st.subheader("Available Modules")
             modules = help_info.get("modules", [])

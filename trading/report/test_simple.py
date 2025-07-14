@@ -32,10 +32,17 @@ def test_basic_report():
 
         # Sample data
         trade_data = {
-            "trades": [{"pnl": 100, "duration": 3600}, {"pnl": -50, "duration": 1800}, {"pnl": 200, "duration": 7200}]
+            "trades": [
+                {"pnl": 100, "duration": 3600},
+                {"pnl": -50, "duration": 1800},
+                {"pnl": 200, "duration": 7200},
+            ]
         }
 
-        model_data = {"predictions": [100, 102, 98, 105, 103], "actuals": [100, 101, 99, 104, 102]}
+        model_data = {
+            "predictions": [100, 102, 98, 105, 103],
+            "actuals": [100, 101, 99, 104, 102],
+        }
 
         strategy_data = {
             "strategy_name": "Test Strategy",
@@ -58,7 +65,9 @@ def test_basic_report():
         )
 
         logger.info(f"✅ Report generated successfully: {report_data['report_id']}")
-        logger.info(f"📊 Trade metrics: {report_data['trade_metrics'].total_trades} trades")
+        logger.info(
+            f"📊 Trade metrics: {report_data['trade_metrics'].total_trades} trades"
+        )
         logger.info(f"🤖 Model metrics: MSE = {report_data['model_metrics'].mse:.4f}")
         logger.info(f"📁 Files created: {list(report_data['files'].keys())}")
 
@@ -92,7 +101,11 @@ def main():
     logger.info("🧪 Testing Report Generation System")
     logger.info("=" * 50)
 
-    tests = [("Import Test", test_imports), ("Basic Report Test", test_basic_report), ("Client Test", test_client)]
+    tests = [
+        ("Import Test", test_imports),
+        ("Basic Report Test", test_basic_report),
+        ("Client Test", test_client),
+    ]
 
     passed = 0
     total = len(tests)

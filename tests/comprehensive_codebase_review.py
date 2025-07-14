@@ -69,7 +69,7 @@ def test_core_modules():
     try:
         from utils.config_loader import ConfigLoader
 
-        config = ConfigLoader()
+        ConfigLoader()
         results["config_loader"] = "✅ Working"
     except Exception as e:
         results["config_loader"] = f"❌ {e}"
@@ -112,7 +112,9 @@ def test_advanced_features():
         from rl.strategy_trainer import create_rl_strategy_trainer
 
         trainer = create_rl_strategy_trainer()
-        results["rl_engine"] = "✅ Available" if trainer["available"] else "⚠️ Dependencies missing"
+        results["rl_engine"] = (
+            "✅ Available" if trainer["available"] else "⚠️ Dependencies missing"
+        )
     except Exception as e:
         results["rl_engine"] = f"❌ {e}"
 
@@ -120,7 +122,7 @@ def test_advanced_features():
     try:
         from causal.causal_model import create_causal_model
 
-        model = create_causal_model()
+        create_causal_model()
         results["causal_inference"] = "✅ Available"
     except Exception as e:
         results["causal_inference"] = f"⚠️ {e}"
@@ -220,8 +222,10 @@ def test_ui_components():
     try:
         import importlib.util
 
-        spec = importlib.util.spec_from_file_location("dashboard", "pages/10_Strategy_Health_Dashboard.py")
-        module = importlib.util.module_from_spec(spec)
+        spec = importlib.util.spec_from_file_location(
+            "dashboard", "pages/10_Strategy_Health_Dashboard.py"
+        )
+        importlib.util.module_from_spec(spec)
         results["strategy_dashboard"] = "✅ Loadable"
     except Exception as e:
         results["strategy_dashboard"] = f"❌ {e}"
@@ -246,7 +250,11 @@ def test_configuration():
     import os
 
     # Check config files exist
-    config_files = ["config/optimizer_config.yaml", "config/app_config.yaml", "config/config.json"]
+    config_files = [
+        "config/optimizer_config.yaml",
+        "config/app_config.yaml",
+        "config/config.json",
+    ]
 
     for config_file in config_files:
         if os.path.exists(config_file):
@@ -259,7 +267,7 @@ def test_configuration():
         from utils.config_loader import ConfigLoader
 
         config = ConfigLoader()
-        settings = config.get_optimization_settings()
+        config.get_optimization_settings()
         results["config_loading"] = "✅ Working"
     except Exception as e:
         results["config_loading"] = f"❌ {e}"
@@ -354,7 +362,9 @@ def generate_summary(all_results: Dict[str, Dict[str, str]]):
     if failures == 0:
         print("\n🎉 EXCELLENT! All critical components are working!")
         if warnings > 0:
-            print(f"⚠️  {warnings} optional features have warnings but don't affect core functionality.")
+            print(
+                f"⚠️  {warnings} optional features have warnings but don't affect core functionality."
+            )
     elif failures <= 2:
         print("\n✅ GOOD! Most components are working. Minor issues detected.")
     else:

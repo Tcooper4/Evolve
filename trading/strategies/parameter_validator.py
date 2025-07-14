@@ -60,29 +60,57 @@ class StrategyParameterValidator:
         constraints = {
             "rsi": [
                 ParameterConstraint(
-                    name="period", min_value=1, max_value=100, data_type="int", description="RSI calculation period"
+                    name="period",
+                    min_value=1,
+                    max_value=100,
+                    data_type="int",
+                    description="RSI calculation period",
                 ),
                 ParameterConstraint(
-                    name="oversold", min_value=0, max_value=50, data_type="int", description="Oversold threshold"
+                    name="oversold",
+                    min_value=0,
+                    max_value=50,
+                    data_type="int",
+                    description="Oversold threshold",
                 ),
                 ParameterConstraint(
-                    name="overbought", min_value=50, max_value=100, data_type="int", description="Overbought threshold"
+                    name="overbought",
+                    min_value=50,
+                    max_value=100,
+                    data_type="int",
+                    description="Overbought threshold",
                 ),
             ],
             "macd": [
                 ParameterConstraint(
-                    name="fast_period", min_value=1, max_value=50, data_type="int", description="Fast EMA period"
+                    name="fast_period",
+                    min_value=1,
+                    max_value=50,
+                    data_type="int",
+                    description="Fast EMA period",
                 ),
                 ParameterConstraint(
-                    name="slow_period", min_value=1, max_value=100, data_type="int", description="Slow EMA period"
+                    name="slow_period",
+                    min_value=1,
+                    max_value=100,
+                    data_type="int",
+                    description="Slow EMA period",
                 ),
                 ParameterConstraint(
-                    name="signal_period", min_value=1, max_value=50, data_type="int", description="Signal line period"
+                    name="signal_period",
+                    min_value=1,
+                    max_value=50,
+                    data_type="int",
+                    description="Signal line period",
                 ),
             ],
             "bollinger": [
                 ParameterConstraint(
-                    name="period", min_value=1, max_value=100, data_type="int", description="Moving average period"
+                    name="period",
+                    min_value=1,
+                    max_value=100,
+                    data_type="int",
+                    description="Moving average period",
                 ),
                 ParameterConstraint(
                     name="std_dev",
@@ -110,30 +138,56 @@ class StrategyParameterValidator:
             ],
             "ema": [
                 ParameterConstraint(
-                    name="period", min_value=1, max_value=100, data_type="int", description="EMA period"
+                    name="period",
+                    min_value=1,
+                    max_value=100,
+                    data_type="int",
+                    description="EMA period",
                 ),
                 ParameterConstraint(
-                    name="alpha", min_value=0.01, max_value=1.0, data_type="float", description="Smoothing factor"
+                    name="alpha",
+                    min_value=0.01,
+                    max_value=1.0,
+                    data_type="float",
+                    description="Smoothing factor",
                 ),
             ],
             "stochastic": [
                 ParameterConstraint(
-                    name="k_period", min_value=1, max_value=50, data_type="int", description="%K period"
+                    name="k_period",
+                    min_value=1,
+                    max_value=50,
+                    data_type="int",
+                    description="%K period",
                 ),
                 ParameterConstraint(
-                    name="d_period", min_value=1, max_value=20, data_type="int", description="%D period"
+                    name="d_period",
+                    min_value=1,
+                    max_value=20,
+                    data_type="int",
+                    description="%D period",
                 ),
                 ParameterConstraint(
-                    name="oversold", min_value=0, max_value=50, data_type="int", description="Oversold threshold"
+                    name="oversold",
+                    min_value=0,
+                    max_value=50,
+                    data_type="int",
+                    description="Oversold threshold",
                 ),
                 ParameterConstraint(
-                    name="overbought", min_value=50, max_value=100, data_type="int", description="Overbought threshold"
+                    name="overbought",
+                    min_value=50,
+                    max_value=100,
+                    data_type="int",
+                    description="Overbought threshold",
                 ),
             ],
         }
         return constraints
 
-    def validate_parameters(self, strategy_name: str, parameters: Dict[str, Any]) -> List[ValidationResult]:
+    def validate_parameters(
+        self, strategy_name: str, parameters: Dict[str, Any]
+    ) -> List[ValidationResult]:
         """Validate parameters for a strategy.
 
         Args:
@@ -149,7 +203,9 @@ class StrategyParameterValidator:
             if strategy_name not in self.constraints:
                 results.append(
                     ValidationResult(
-                        is_valid=False, level=ValidationLevel.ERROR, message=f"Unknown strategy: {strategy_name}"
+                        is_valid=False,
+                        level=ValidationLevel.ERROR,
+                        message=f"Unknown strategy: {strategy_name}",
                     )
                 )
                 return results
@@ -177,7 +233,9 @@ class StrategyParameterValidator:
                 results.append(validation_result)
 
             # Validate parameter relationships
-            relationship_results = self._validate_parameter_relationships(strategy_name, parameters)
+            relationship_results = self._validate_parameter_relationships(
+                strategy_name, parameters
+            )
             results.extend(relationship_results)
 
             # Store validation history
@@ -195,10 +253,16 @@ class StrategyParameterValidator:
         except Exception as e:
             logger.error(f"Error validating parameters: {e}")
             return [
-                ValidationResult(is_valid=False, level=ValidationLevel.CRITICAL, message=f"Validation error: {str(e)}")
+                ValidationResult(
+                    is_valid=False,
+                    level=ValidationLevel.CRITICAL,
+                    message=f"Validation error: {str(e)}",
+                )
             ]
 
-    def _validate_parameter(self, value: Any, constraint: ParameterConstraint) -> ValidationResult:
+    def _validate_parameter(
+        self, value: Any, constraint: ParameterConstraint
+    ) -> ValidationResult:
         """Validate a single parameter against its constraint.
 
         Args:
@@ -222,7 +286,9 @@ class StrategyParameterValidator:
                             level=ValidationLevel.ERROR,
                             message=f"{param_name} must be an integer",
                             parameter_name=param_name,
-                            suggested_value=int(value) if isinstance(value, (int, float)) else 1,
+                            suggested_value=int(value)
+                            if isinstance(value, (int, float))
+                            else 1,
                         )
 
             elif constraint.data_type == "float":
@@ -235,7 +301,9 @@ class StrategyParameterValidator:
                             level=ValidationLevel.ERROR,
                             message=f"{param_name} must be a number",
                             parameter_name=param_name,
-                            suggested_value=float(value) if isinstance(value, (int, float)) else 0.0,
+                            suggested_value=float(value)
+                            if isinstance(value, (int, float))
+                            else 0.0,
                         )
 
             # Check allowed values
@@ -371,13 +439,17 @@ class StrategyParameterValidator:
             logger.error(f"Error validating parameter relationships: {e}")
             results.append(
                 ValidationResult(
-                    is_valid=False, level=ValidationLevel.CRITICAL, message=f"Relationship validation error: {str(e)}"
+                    is_valid=False,
+                    level=ValidationLevel.CRITICAL,
+                    message=f"Relationship validation error: {str(e)}",
                 )
             )
 
         return results
 
-    def fix_parameters(self, strategy_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+    def fix_parameters(
+        self, strategy_name: str, parameters: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Fix invalid parameters by applying suggested values.
 
         Args:
@@ -477,7 +549,11 @@ class StrategyParameterValidator:
             recent_validations = self.validation_history[-50:]  # Last 50 validations
 
             total_validations = len(recent_validations)
-            failed_validations = sum(1 for v in recent_validations if any(not r.is_valid for r in v["results"]))
+            failed_validations = sum(
+                1
+                for v in recent_validations
+                if any(not r.is_valid for r in v["results"])
+            )
 
             strategy_counts = {}
             error_counts = {}
@@ -488,17 +564,22 @@ class StrategyParameterValidator:
 
                 for result in validation["results"]:
                     if not result.is_valid:
-                        error_counts[result.level.value] = error_counts.get(result.level.value, 0) + 1
+                        error_counts[result.level.value] = (
+                            error_counts.get(result.level.value, 0) + 1
+                        )
 
             return {
                 "total_validations": total_validations,
                 "failed_validations": failed_validations,
-                "success_rate": (total_validations - failed_validations) / total_validations
+                "success_rate": (total_validations - failed_validations)
+                / total_validations
                 if total_validations > 0
                 else 0.0,
                 "strategy_counts": strategy_counts,
                 "error_counts": error_counts,
-                "last_validation": recent_validations[-1]["timestamp"] if recent_validations else None,
+                "last_validation": recent_validations[-1]["timestamp"]
+                if recent_validations
+                else None,
             }
 
         except Exception as e:
@@ -515,7 +596,9 @@ def get_parameter_validator() -> StrategyParameterValidator:
     return parameter_validator
 
 
-def validate_strategy_parameters(strategy_name: str, parameters: Dict[str, Any]) -> List[ValidationResult]:
+def validate_strategy_parameters(
+    strategy_name: str, parameters: Dict[str, Any]
+) -> List[ValidationResult]:
     """Convenience function to validate strategy parameters.
 
     Args:
@@ -528,7 +611,9 @@ def validate_strategy_parameters(strategy_name: str, parameters: Dict[str, Any])
     return parameter_validator.validate_parameters(strategy_name, parameters)
 
 
-def fix_strategy_parameters(strategy_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
+def fix_strategy_parameters(
+    strategy_name: str, parameters: Dict[str, Any]
+) -> Dict[str, Any]:
     """Convenience function to fix strategy parameters.
 
     Args:

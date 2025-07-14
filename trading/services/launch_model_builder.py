@@ -33,29 +33,40 @@ class LLMIdentityFilter(logging.Filter):
         return True
 
 
-log_format = "%(asctime)s - %(name)s - %(levelname)s - [LLM:%(llm_identity)s] - %(message)s"
+log_format = (
+    "%(asctime)s - %(name)s - %(levelname)s - [LLM:%(llm_identity)s] - %(message)s"
+)
 logging.basicConfig(
     level=logging.INFO,
     format=log_format,
-    handlers=[logging.FileHandler("logs/model_builder_service.log"), logging.StreamHandler()],
+    handlers=[
+        logging.FileHandler("logs/model_builder_service.log"),
+        logging.StreamHandler(),
+    ],
 )
 
 logger = logging.getLogger(__name__)
 logger.addFilter(LLMIdentityFilter())
 
 
-def system_health_check(redis_host="localhost", redis_port=6379, min_mem_gb=2, min_disk_gb=2):
+def system_health_check(
+    redis_host="localhost", redis_port=6379, min_mem_gb=2, min_disk_gb=2
+):
     """Perform a basic system health check before launching the service."""
     logger.info("Performing system health check...")
     # Check memory
     mem = psutil.virtual_memory()
     if mem.available < min_mem_gb * 1024**3:
-        logger.error(f"Insufficient memory: {mem.available / (1024 ** 3):.2f} GB available, {min_mem_gb} GB required.")
+        logger.error(
+            f"Insufficient memory: {mem.available / (1024 ** 3):.2f} GB available, {min_mem_gb} GB required."
+        )
         return False
     # Check disk
     disk = psutil.disk_usage(".")
     if disk.free < min_disk_gb * 1024**3:
-        logger.error(f"Insufficient disk space: {disk.free / (1024 ** 3):.2f} GB available, {min_disk_gb} GB required.")
+        logger.error(
+            f"Insufficient disk space: {disk.free / (1024 ** 3):.2f} GB available, {min_disk_gb} GB required."
+        )
         return False
     # Check Redis connectivity
     try:
@@ -68,7 +79,9 @@ def system_health_check(redis_host="localhost", redis_port=6379, min_mem_gb=2, m
     logger.info(
         f"System: {platform.system()} {platform.release()} | Host: {socket.gethostname()} | Python: {platform.python_version()}"
     )
-    logger.info(f"Memory: {mem.available / (1024 ** 3):.2f} GB available | Disk: {disk.free / (1024 ** 3):.2f} GB free")
+    logger.info(
+        f"Memory: {mem.available / (1024 ** 3):.2f} GB available | Disk: {disk.free / (1024 ** 3):.2f} GB free"
+    )
     logger.info(f"Redis: {redis_host}:{redis_port} reachable")
     logger.info(f"LLM Identity: {LLM_IDENTITY}")
     return True
@@ -92,11 +105,15 @@ def main():
 
         # System health check
         if not system_health_check():
-            logger.error(f"System health check failed. Aborting launch. [LLM:{LLM_IDENTITY}]")
+            logger.error(
+                f"System health check failed. Aborting launch. [LLM:{LLM_IDENTITY}]"
+            )
             sys.exit(2)
 
         # Initialize the service
-        service = ModelBuilderService(redis_host="localhost", redis_port=6379, redis_db=0)
+        service = ModelBuilderService(
+            redis_host="localhost", redis_port=6379, redis_db=0
+        )
 
         # Store service reference for signal handler
         signal_handler.service = service
@@ -109,7 +126,9 @@ def main():
         service.start()
 
         logger.info(f"ModelBuilderService started successfully [LLM:{LLM_IDENTITY}]")
-        logger.info(f"Listening on channels: {service.input_channel}, {service.control_channel} [LLM:{LLM_IDENTITY}]")
+        logger.info(
+            f"Listening on channels: {service.input_channel}, {service.control_channel} [LLM:{LLM_IDENTITY}]"
+        )
 
         # Keep the service running
         try:
@@ -118,7 +137,9 @@ def main():
 
                 time.sleep(1)
         except KeyboardInterrupt:
-            logger.info(f"Received keyboard interrupt, shutting down... [LLM:{LLM_IDENTITY}]")
+            logger.info(
+                f"Received keyboard interrupt, shutting down... [LLM:{LLM_IDENTITY}]"
+            )
             service.stop()
 
     except Exception as e:

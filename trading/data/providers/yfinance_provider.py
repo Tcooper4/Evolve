@@ -25,7 +25,9 @@ logger.setLevel(logging.INFO)
 log_file = Path("memory/logs/yfinance.log")
 log_file.parent.mkdir(parents=True, exist_ok=True)
 handler = logging.FileHandler(log_file)
-handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+)
 if not logger.hasHandlers():
     logger.addHandler(handler)
 
@@ -43,7 +45,12 @@ def log_data_request(symbol: str, success: bool, error: Optional[str] = None) ->
         success: Whether request was successful
         error: Optional error message
     """
-    log_entry = {"timestamp": datetime.now().isoformat(), "symbol": symbol, "success": success, "error": error}
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "symbol": symbol,
+        "success": success,
+        "error": error,
+    }
 
     log_path = Path("memory/logs/data_requests.log")
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -120,7 +127,9 @@ class YFinanceProvider(BaseDataProvider):
             )
 
         # Set delay attribute before calling super().__init__()
-        self.delay = config.custom_config.get("delay", 1.0) if config.custom_config else 1.0
+        self.delay = (
+            config.custom_config.get("delay", 1.0) if config.custom_config else 1.0
+        )
 
         super().__init__(config)
 
@@ -158,7 +167,9 @@ class YFinanceProvider(BaseDataProvider):
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry=retry_if_exception_type((requests.RequestException, ValueError, RuntimeError)),
+        retry=retry_if_exception_type(
+            (requests.RequestException, ValueError, RuntimeError)
+        ),
     )
     def fetch(self, symbol: str, interval: str = "1d", **kwargs) -> pd.DataFrame:
         """Fetch data for a given symbol and interval with retry logic.
@@ -198,7 +209,11 @@ class YFinanceProvider(BaseDataProvider):
 
             # Download data
             self.logger.info(f"Fetching data for {symbol}")
-            data = ticker.history(start=kwargs.get("start_date"), end=kwargs.get("end_date"), interval=interval)
+            data = ticker.history(
+                start=kwargs.get("start_date"),
+                end=kwargs.get("end_date"),
+                interval=interval,
+            )
 
             # Validate data
             self._validate_data(data)
@@ -220,7 +235,9 @@ class YFinanceProvider(BaseDataProvider):
             log_data_request(symbol, False, error_msg)
             raise RuntimeError(f"Error fetching data for {symbol}: {error_msg}")
 
-    def fetch_multiple(self, symbols: List[str], interval: str = "1d", **kwargs) -> Dict[str, pd.DataFrame]:
+    def fetch_multiple(
+        self, symbols: List[str], interval: str = "1d", **kwargs
+    ) -> Dict[str, pd.DataFrame]:
         """Fetch data for multiple symbols.
 
         Args:
@@ -254,7 +271,11 @@ class YFinanceProvider(BaseDataProvider):
         return results
 
     def get_data(
-        self, symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None, interval: str = "1d"
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        interval: str = "1d",
     ) -> pd.DataFrame:
         """Legacy method for backward compatibility.
 
@@ -276,7 +297,11 @@ class YFinanceProvider(BaseDataProvider):
         return self.fetch(symbol, interval, **kwargs)
 
     def get_multiple_data(
-        self, symbols: list, start_date: Optional[str] = None, end_date: Optional[str] = None, interval: str = "1d"
+        self,
+        symbols: list,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        interval: str = "1d",
     ) -> Dict[str, pd.DataFrame]:
         """Legacy method for backward compatibility.
 

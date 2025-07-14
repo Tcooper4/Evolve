@@ -162,7 +162,9 @@ EXECUTION_RETRY_ATTEMPTS = int(os.getenv("EXECUTION_RETRY_ATTEMPTS", "3"))
 FEATURE_WINDOW = int(os.getenv("FEATURE_WINDOW", "20"))
 FEATURE_SCALING = os.getenv("FEATURE_SCALING", "standard")  # standard, minmax, robust
 FEATURE_SELECTION_METHOD = os.getenv("FEATURE_SELECTION_METHOD", "correlation")
-FEATURE_CORRELATION_THRESHOLD = float(os.getenv("FEATURE_CORRELATION_THRESHOLD", "0.95"))
+FEATURE_CORRELATION_THRESHOLD = float(
+    os.getenv("FEATURE_CORRELATION_THRESHOLD", "0.95")
+)
 
 # Backtesting
 BACKTEST_START_DATE = os.getenv("BACKTEST_START_DATE", "")
@@ -212,7 +214,9 @@ STRATEGY_SWITCH_LOG_PATH = LOG_DIR / "strategy_switches.json"
 STRATEGY_REGISTRY_PATH = STRATEGY_DIR / "strategy_registry.json"
 STRATEGY_SWITCH_LOCK_TIMEOUT = int(os.getenv("STRATEGY_SWITCH_LOCK_TIMEOUT", "30"))
 STRATEGY_SWITCH_BACKEND = os.getenv("STRATEGY_SWITCH_BACKEND", "file")
-STRATEGY_SWITCH_API_ENDPOINT = os.getenv("STRATEGY_SWITCH_API_ENDPOINT", "http://localhost:8000/api/strategy-switches")
+STRATEGY_SWITCH_API_ENDPOINT = os.getenv(
+    "STRATEGY_SWITCH_API_ENDPOINT", "http://localhost:8000/api/strategy-switches"
+)
 
 # Data Provider Configuration
 DATA_PROVIDER = os.getenv("DATA_PROVIDER", "yahoo")
@@ -265,7 +269,11 @@ def get_config_dict() -> Dict[str, Any]:
     Returns:
         Dictionary of all configuration values
     """
-    return {key: value for key, value in globals().items() if key.isupper() and not key.startswith("_")}
+    return {
+        key: value
+        for key, value in globals().items()
+        if key.isupper() and not key.startswith("_")
+    }
 
 
 def validate_config() -> bool:
@@ -291,7 +299,15 @@ def validate_config() -> bool:
             errors.append("WEB_SECRET_KEY must be set in production")
 
     # Validate directories
-    for dir_path in [LOG_DIR, MODEL_DIR, DATA_DIR, CACHE_DIR, STRATEGY_DIR, MEMORY_DIR, REPORT_DIR]:
+    for dir_path in [
+        LOG_DIR,
+        MODEL_DIR,
+        DATA_DIR,
+        CACHE_DIR,
+        STRATEGY_DIR,
+        MEMORY_DIR,
+        REPORT_DIR,
+    ]:
         try:
             dir_path.mkdir(parents=True, exist_ok=True)
         except Exception as e:
@@ -340,7 +356,10 @@ def validate_config() -> bool:
             errors.append(f"Invalid {interval_name}: {interval_value}")
 
     if errors:
-        raise ValueError(f"Configuration validation failed:\n" + "\n".join(f"  - {error}" for error in errors))
+        raise ValueError(
+            f"Configuration validation failed:\n"
+            + "\n".join(f"  - {error}" for error in errors)
+        )
 
     return True
 

@@ -20,7 +20,10 @@ from services.research_service import ResearchService
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("logs/research_service.log"), logging.StreamHandler()],
+    handlers=[
+        logging.FileHandler("logs/research_service.log"),
+        logging.StreamHandler(),
+    ],
 )
 
 logger = logging.getLogger(__name__)
@@ -56,7 +59,9 @@ def main():
         service.start()
 
         logger.info("ResearchService started successfully")
-        logger.info(f"Listening on channels: {service.input_channel}, {service.control_channel}")
+        logger.info(
+            f"Listening on channels: {service.input_channel}, {service.control_channel}"
+        )
 
         # Keep the service running
         try:

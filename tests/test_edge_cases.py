@@ -59,7 +59,11 @@ def test_empty_data_handling(task_memory, model_builder):
         task_id=task_id,
         type="model_training",
         status=TaskStatus.PENDING,
-        metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "model_type": "lstm"},
+        metadata={
+            "agent": "model_builder",
+            "creation_time": datetime.now().isoformat(),
+            "model_type": "lstm",
+        },
         notes="Testing empty data handling",
     )
     task_memory.add_task(task)
@@ -68,7 +72,9 @@ def test_empty_data_handling(task_memory, model_builder):
         model_builder.run_lstm(empty_df)
     except Exception as e:
         task.status = TaskStatus.FAILED
-        task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+        task.metadata.update(
+            {"error": str(e), "completion_time": datetime.now().isoformat()}
+        )
         task_memory.update_task(task)
 
     # Verify task failure and error handling
@@ -87,7 +93,11 @@ def test_concurrent_task_handling(task_memory):
             task_id=task_id,
             type="model_training",
             status=TaskStatus.PENDING,
-            metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "model_type": "lstm"},
+            metadata={
+                "agent": "model_builder",
+                "creation_time": datetime.now().isoformat(),
+                "model_type": "lstm",
+            },
             notes=f"Concurrent task {i}",
         )
         task_memory.add_task(task)
@@ -100,7 +110,9 @@ def test_concurrent_task_handling(task_memory):
     for task_id in task_ids:
         task = task_memory.get_task(task_id)
         task.status = TaskStatus.COMPLETED
-        task.metadata.update({"completion_time": datetime.now().isoformat(), "duration": "1 minute"})
+        task.metadata.update(
+            {"completion_time": datetime.now().isoformat(), "duration": "1 minute"}
+        )
         task_memory.update_task(task)
 
     # Verify all tasks are updated
@@ -139,11 +151,17 @@ def test_large_data_handling(task_memory, model_builder):
         # Simulate processing large data
         task.status = TaskStatus.COMPLETED
         task.metadata.update(
-            {"completion_time": datetime.now().isoformat(), "duration": "10 minutes", "memory_usage": "1GB"}
+            {
+                "completion_time": datetime.now().isoformat(),
+                "duration": "10 minutes",
+                "memory_usage": "1GB",
+            }
         )
     except Exception as e:
         task.status = TaskStatus.FAILED
-        task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+        task.metadata.update(
+            {"error": str(e), "completion_time": datetime.now().isoformat()}
+        )
 
     task_memory.update_task(task)
 
@@ -161,14 +179,20 @@ def test_task_retry_mechanism(task_memory):
         task_id=task_id,
         type="model_training",
         status=TaskStatus.PENDING,
-        metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "model_type": "lstm"},
+        metadata={
+            "agent": "model_builder",
+            "creation_time": datetime.now().isoformat(),
+            "model_type": "lstm",
+        },
         notes="Initial task",
     )
     task_memory.add_task(task)
 
     # Simulate task failure
     task.status = TaskStatus.FAILED
-    task.metadata.update({"error": "Test error", "completion_time": datetime.now().isoformat()})
+    task.metadata.update(
+        {"error": "Test error", "completion_time": datetime.now().isoformat()}
+    )
     task_memory.update_task(task)
 
     # Create retry task
@@ -202,7 +226,11 @@ def test_invalid_task_states(task_memory):
         task_id=task_id,
         type="model_training",
         status=TaskStatus.PENDING,
-        metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "model_type": "lstm"},
+        metadata={
+            "agent": "model_builder",
+            "creation_time": datetime.now().isoformat(),
+            "model_type": "lstm",
+        },
         notes="Test task",
     )
     task_memory.add_task(task)
@@ -213,7 +241,11 @@ def test_invalid_task_states(task_memory):
 
     # Verify task is still in valid state
     updated_task = task_memory.get_task(task_id)
-    assert updated_task.status in [TaskStatus.PENDING, TaskStatus.COMPLETED, TaskStatus.FAILED]
+    assert updated_task.status in [
+        TaskStatus.PENDING,
+        TaskStatus.COMPLETED,
+        TaskStatus.FAILED,
+    ]
 
 
 def test_corrupted_task_data(task_memory):
@@ -247,7 +279,11 @@ def test_task_timeout_handling(task_memory):
         task_id=task_id,
         type="model_training",
         status=TaskStatus.PENDING,
-        metadata={"agent": "model_builder", "creation_time": datetime.now().isoformat(), "timeout": 300},  # 5 minutes
+        metadata={
+            "agent": "model_builder",
+            "creation_time": datetime.now().isoformat(),
+            "timeout": 300,
+        },  # 5 minutes
         notes="Testing timeout handling",
     )
     task_memory.add_task(task)
@@ -255,7 +291,11 @@ def test_task_timeout_handling(task_memory):
     # Simulate timeout
     task.status = TaskStatus.FAILED
     task.metadata.update(
-        {"error": "Task timeout", "completion_time": datetime.now().isoformat(), "duration": "300 seconds"}
+        {
+            "error": "Task timeout",
+            "completion_time": datetime.now().isoformat(),
+            "duration": "300 seconds",
+        }
     )
     task_memory.update_task(task)
 
@@ -293,7 +333,11 @@ def test_system_resource_limits(task_memory):
             {
                 "error": "Insufficient resources",
                 "completion_time": datetime.now().isoformat(),
-                "resource_status": {"memory_available": "1GB", "cpu_available": "50%", "gpu_available": "0"},
+                "resource_status": {
+                    "memory_available": "1GB",
+                    "cpu_available": "50%",
+                    "gpu_available": "0",
+                },
             }
         )
         task_memory.update_task(task)

@@ -61,7 +61,9 @@ class ForecastRegistry:
         """
         return list(self.forecast_models.keys())
 
-    def update_performance(self, model_name: str, performance_metrics: Dict[str, Any]) -> bool:
+    def update_performance(
+        self, model_name: str, performance_metrics: Dict[str, Any]
+    ) -> bool:
         """Update performance metrics for a model.
 
         Args:
@@ -76,7 +78,10 @@ class ForecastRegistry:
                 self.performance_history[model_name] = []
 
             self.performance_history[model_name].append(
-                {"metrics": performance_metrics, "timestamp": datetime.now().isoformat()}
+                {
+                    "metrics": performance_metrics,
+                    "timestamp": datetime.now().isoformat(),
+                }
             )
 
             logger.info(f"Updated performance for model: {model_name}")

@@ -118,14 +118,24 @@ class WalkForwardAgent(BaseAgent):
                 start_date = kwargs.get("start_date")
                 end_date = kwargs.get("end_date")
 
-                if data is None or target_column is None or feature_columns is None or model_factory is None:
+                if (
+                    data is None
+                    or target_column is None
+                    or feature_columns is None
+                    or model_factory is None
+                ):
                     return AgentResult(
                         success=False,
                         error_message="Missing required parameters: data, target_column, feature_columns, model_factory",
                     )
 
                 results = self.run_walk_forward_validation(
-                    data, target_column, feature_columns, model_factory, start_date, end_date
+                    data,
+                    target_column,
+                    feature_columns,
+                    model_factory,
+                    start_date,
+                    end_date,
                 )
                 return AgentResult(
                     success=True,
@@ -149,21 +159,34 @@ class WalkForwardAgent(BaseAgent):
                 threshold = kwargs.get("threshold", 0.1)
 
                 if current_performance is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: current_performance")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: current_performance",
+                    )
 
                 should_retrain = self.should_retrain(current_performance, threshold)
-                return AgentResult(success=True, data={"should_retrain": should_retrain, "threshold": threshold})
+                return AgentResult(
+                    success=True,
+                    data={"should_retrain": should_retrain, "threshold": threshold},
+                )
 
             elif action == "export_results":
                 filepath = kwargs.get("filepath", "logs/walk_forward_results.json")
                 success = self.export_results(filepath)
                 if success:
-                    return AgentResult(success=True, data={"message": f"Results exported to {filepath}"})
+                    return AgentResult(
+                        success=True,
+                        data={"message": f"Results exported to {filepath}"},
+                    )
                 else:
-                    return AgentResult(success=False, error_message="Failed to export results")
+                    return AgentResult(
+                        success=False, error_message="Failed to export results"
+                    )
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
@@ -218,23 +241,31 @@ class WalkForwardAgent(BaseAgent):
                 test_end = current_date + test_window
 
                 # Extract train and test data
-                train_data = data[(data.index >= train_start) & (data.index < train_end)]
+                train_data = data[
+                    (data.index >= train_start) & (data.index < train_end)
+                ]
                 test_data = data[(data.index >= test_start) & (data.index < test_end)]
 
                 # Check minimum data requirements
                 if len(train_data) < self.walk_forward_config.min_train_samples:
-                    logger.warning(f"Insufficient training data for period {train_start} to {train_end}")
+                    logger.warning(
+                        f"Insufficient training data for period {train_start} to {train_end}"
+                    )
                     current_date += step_size
                     continue
 
                 # Train model
-                model, train_metrics = self._train_model(train_data, target_column, feature_columns, model_factory)
+                model, train_metrics = self._train_model(
+                    train_data, target_column, feature_columns, model_factory
+                )
 
                 # Make predictions
                 predictions = self._make_predictions(model, test_data, feature_columns)
 
                 # Calculate performance metrics
-                performance = self._calculate_performance(predictions, test_data[target_column])
+                performance = self._calculate_performance(
+                    predictions, test_data[target_column]
+                )
 
                 # Store results
                 result = WalkForwardResult(
@@ -273,7 +304,11 @@ class WalkForwardAgent(BaseAgent):
             return []
 
     def _train_model(
-        self, train_data: pd.DataFrame, target_column: str, feature_columns: List[str], model_factory: Callable
+        self,
+        train_data: pd.DataFrame,
+        target_column: str,
+        feature_columns: List[str],
+        model_factory: Callable,
     ) -> Tuple[Any, Dict[str, float]]:
         """Train model on training data.
 
@@ -304,7 +339,9 @@ class WalkForwardAgent(BaseAgent):
 
                 # Validate on validation set
                 val_pred = model.predict(X_val)
-                train_metrics = self._calculate_performance(pd.Series(val_pred, index=y_val.index), y_val)
+                train_metrics = self._calculate_performance(
+                    pd.Series(val_pred, index=y_val.index), y_val
+                )
             else:
                 train_metrics = {}
 
@@ -313,7 +350,9 @@ class WalkForwardAgent(BaseAgent):
         except Exception as e:
             logger.error(f"Error training model: {e}")
 
-    def _make_predictions(self, model: Any, test_data: pd.DataFrame, feature_columns: List[str]) -> pd.Series:
+    def _make_predictions(
+        self, model: Any, test_data: pd.DataFrame, feature_columns: List[str]
+    ) -> pd.Series:
         """Make predictions using trained model.
 
         Args:
@@ -345,7 +384,9 @@ class WalkForwardAgent(BaseAgent):
                 "timestamp": datetime.now().isoformat(),
             }
 
-    def _calculate_performance(self, predictions: pd.Series, actual: pd.Series) -> Dict[str, float]:
+    def _calculate_performance(
+        self, predictions: pd.Series, actual: pd.Series
+    ) -> Dict[str, float]:
         """Calculate performance metrics.
 
         Args:
@@ -360,7 +401,9 @@ class WalkForwardAgent(BaseAgent):
                 return {}
 
             # Align series
-            aligned_data = pd.DataFrame({"pred": predictions, "actual": actual}).dropna()
+            aligned_data = pd.DataFrame(
+                {"pred": predictions, "actual": actual}
+            ).dropna()
 
             if len(aligned_data) == 0:
                 return {}
@@ -381,13 +424,18 @@ class WalkForwardAgent(BaseAgent):
                 "mae": np.mean(np.abs(actual - pred)),
                 "rmse": np.sqrt(np.mean((actual - pred) ** 2)),
                 "mape": np.mean(np.abs((actual - pred) / actual)) * 100,
-                "r2": 1 - np.sum((actual - pred) ** 2) / np.sum((actual - actual.mean()) ** 2),
+                "r2": 1
+                - np.sum((actual - pred) ** 2) / np.sum((actual - actual.mean()) ** 2),
                 "mean_return": returns.mean(),
                 "volatility": returns.std(),
-                "sharpe_ratio": returns.mean() / returns.std() if returns.std() > 0 else 0,
+                "sharpe_ratio": returns.mean() / returns.std()
+                if returns.std() > 0
+                else 0,
                 "max_drawdown": self._calculate_max_drawdown(returns),
                 "win_rate": (returns > 0).mean(),
-                "profit_factor": abs(returns[returns > 0].sum() / returns[returns < 0].sum())
+                "profit_factor": abs(
+                    returns[returns > 0].sum() / returns[returns < 0].sum()
+                )
                 if returns[returns < 0].sum() != 0
                 else float("inf"),
             }
@@ -417,7 +465,9 @@ class WalkForwardAgent(BaseAgent):
             logger.warning(f"Error calculating max drawdown: {e}")
             return 0.0
 
-    def _update_performance_tracker(self, performance: Dict[str, float], test_start: datetime):
+    def _update_performance_tracker(
+        self, performance: Dict[str, float], test_start: datetime
+    ):
         """Update performance tracking.
 
         Args:
@@ -427,7 +477,9 @@ class WalkForwardAgent(BaseAgent):
         for metric, value in performance.items():
             if metric not in self.performance_tracker:
                 self.performance_tracker[metric] = []
-            self.performance_tracker[metric].append({"date": test_start, "value": value})
+            self.performance_tracker[metric].append(
+                {"date": test_start, "value": value}
+            )
 
     def get_performance_summary(self) -> Dict[str, Any]:
         """Get summary of walk-forward performance.
@@ -450,12 +502,16 @@ class WalkForwardAgent(BaseAgent):
                 summary[f"{metric}_max"] = np.max(values)
 
         # Performance stability
-        sharpe_values = [r.model_performance.get("sharpe_ratio", 0) for r in self.results_history]
+        sharpe_values = [
+            r.model_performance.get("sharpe_ratio", 0) for r in self.results_history
+        ]
         if sharpe_values:
             summary["performance_stability"] = np.std(sharpe_values)
             summary["positive_periods"] = sum(1 for s in sharpe_values if s > 0)
             summary["total_periods"] = len(sharpe_values)
-            summary["success_rate"] = summary["positive_periods"] / summary["total_periods"]
+            summary["success_rate"] = (
+                summary["positive_periods"] / summary["total_periods"]
+            )
 
         # Model metadata
         summary["total_models_trained"] = len(self.results_history)
@@ -481,7 +537,9 @@ class WalkForwardAgent(BaseAgent):
 
         return trends
 
-    def should_retrain(self, current_performance: Dict[str, float], threshold: float = 0.1) -> bool:
+    def should_retrain(
+        self, current_performance: Dict[str, float], threshold: float = 0.1
+    ) -> bool:
         """Determine if model should be retrained based on performance degradation.
 
         Args:
@@ -499,13 +557,17 @@ class WalkForwardAgent(BaseAgent):
         if not recent_results:
             return True
 
-        recent_sharpe = [r.model_performance.get("sharpe_ratio", 0) for r in recent_results]
+        recent_sharpe = [
+            r.model_performance.get("sharpe_ratio", 0) for r in recent_results
+        ]
         avg_recent_sharpe = np.mean(recent_sharpe)
 
         current_sharpe = current_performance.get("sharpe_ratio", 0)
 
         # Check for performance degradation
-        if avg_recent_sharpe > 0 and current_sharpe < avg_recent_sharpe * (1 - threshold):
+        if avg_recent_sharpe > 0 and current_sharpe < avg_recent_sharpe * (
+            1 - threshold
+        ):
             logger.info(
                 f"Performance degradation detected. Recent avg: {avg_recent_sharpe:.3f}, "
                 f"Current: {current_sharpe:.3f}. Retraining recommended."

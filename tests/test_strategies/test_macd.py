@@ -115,20 +115,32 @@ class TestMACDStrategy:
         signals = strategy.generate_signals(sample_data)
 
         # Get non-NaN values
-        mask = macd_result["MACD_12_26_9"].notna() & macd_result["MACDs_12_26_9"].notna() & signals.notna()
+        mask = (
+            macd_result["MACD_12_26_9"].notna()
+            & macd_result["MACDs_12_26_9"].notna()
+            & signals.notna()
+        )
         macd_line = macd_result.loc[mask, "MACD_12_26_9"]
         signal_line = macd_result.loc[mask, "MACDs_12_26_9"]
         signal_values = signals[mask]
 
         # Check bullish crossover (MACD line crosses above signal line)
-        bullish_mask = (macd_line > signal_line) & (macd_line.shift(1) <= signal_line.shift(1))
+        bullish_mask = (macd_line > signal_line) & (
+            macd_line.shift(1) <= signal_line.shift(1)
+        )
         if bullish_mask.any():
-            assert (signal_values[bullish_mask] == 1).all(), "Bullish crossover should generate buy signals"
+            assert (
+                signal_values[bullish_mask] == 1
+            ).all(), "Bullish crossover should generate buy signals"
 
         # Check bearish crossover (MACD line crosses below signal line)
-        bearish_mask = (macd_line < signal_line) & (macd_line.shift(1) >= signal_line.shift(1))
+        bearish_mask = (macd_line < signal_line) & (
+            macd_line.shift(1) >= signal_line.shift(1)
+        )
         if bearish_mask.any():
-            assert (signal_values[bearish_mask] == -1).all(), "Bearish crossover should generate sell signals"
+            assert (
+                signal_values[bearish_mask] == -1
+            ).all(), "Bearish crossover should generate sell signals"
 
     def test_strategy_configuration(self, strategy):
         """Test that strategy configuration is correct."""
@@ -174,7 +186,13 @@ class TestMACDStrategy:
 
         # Check performance metrics
         assert isinstance(performance, dict)
-        required_metrics = ["returns", "sharpe_ratio", "max_drawdown", "win_rate", "total_trades"]
+        required_metrics = [
+            "returns",
+            "sharpe_ratio",
+            "max_drawdown",
+            "win_rate",
+            "total_trades",
+        ]
 
         for metric in required_metrics:
             assert metric in performance

@@ -39,11 +39,46 @@ class FallbackModelMonitor:
             Dict[str, Dict[str, float]]: Mock performance metrics
         """
         return {
-            "lstm": {"mse": 0.15, "mae": 0.12, "rmse": 0.39, "accuracy": 0.65, "sharpe": 0.8, "trust_level": 0.7},
-            "xgboost": {"mse": 0.12, "mae": 0.10, "rmse": 0.35, "accuracy": 0.68, "sharpe": 0.85, "trust_level": 0.75},
-            "prophet": {"mse": 0.18, "mae": 0.14, "rmse": 0.42, "accuracy": 0.62, "sharpe": 0.75, "trust_level": 0.65},
-            "arima": {"mse": 0.20, "mae": 0.16, "rmse": 0.45, "accuracy": 0.60, "sharpe": 0.70, "trust_level": 0.60},
-            "ensemble": {"mse": 0.10, "mae": 0.08, "rmse": 0.32, "accuracy": 0.72, "sharpe": 0.90, "trust_level": 0.85},
+            "lstm": {
+                "mse": 0.15,
+                "mae": 0.12,
+                "rmse": 0.39,
+                "accuracy": 0.65,
+                "sharpe": 0.8,
+                "trust_level": 0.7,
+            },
+            "xgboost": {
+                "mse": 0.12,
+                "mae": 0.10,
+                "rmse": 0.35,
+                "accuracy": 0.68,
+                "sharpe": 0.85,
+                "trust_level": 0.75,
+            },
+            "prophet": {
+                "mse": 0.18,
+                "mae": 0.14,
+                "rmse": 0.42,
+                "accuracy": 0.62,
+                "sharpe": 0.75,
+                "trust_level": 0.65,
+            },
+            "arima": {
+                "mse": 0.20,
+                "mae": 0.16,
+                "rmse": 0.45,
+                "accuracy": 0.60,
+                "sharpe": 0.70,
+                "trust_level": 0.60,
+            },
+            "ensemble": {
+                "mse": 0.10,
+                "mae": 0.08,
+                "rmse": 0.32,
+                "accuracy": 0.72,
+                "sharpe": 0.90,
+                "trust_level": 0.85,
+            },
         }
 
     def get_model_trust_levels(self) -> Dict[str, float]:
@@ -55,7 +90,10 @@ class FallbackModelMonitor:
         """
         try:
             logger.debug("Getting model trust levels from fallback monitor")
-            return {model: data["trust_level"] for model, data in self._mock_performance.items()}
+            return {
+                model: data["trust_level"]
+                for model, data in self._mock_performance.items()
+            }
         except Exception as e:
             logger.error(f"Error getting model trust levels: {e}")
             return {"fallback_model": 0.5}
@@ -109,7 +147,9 @@ class FallbackModelMonitor:
                 "error": str(e),
             }
 
-    def update_model_performance(self, model_name: str, metrics: Dict[str, float]) -> bool:
+    def update_model_performance(
+        self, model_name: str, metrics: Dict[str, float]
+    ) -> bool:
         """
         Update model performance metrics (fallback implementation).
 
@@ -128,7 +168,9 @@ class FallbackModelMonitor:
                 logger.info(f"Updated performance for {model_name}")
                 return True
             else:
-                logger.warning(f"Unknown model {model_name} - cannot update performance")
+                logger.warning(
+                    f"Unknown model {model_name} - cannot update performance"
+                )
                 return False
 
         except Exception as e:
@@ -185,4 +227,9 @@ class FallbackModelMonitor:
             }
         except Exception as e:
             logger.error(f"Error getting fallback model monitor health: {e}")
-            return {"status": "error", "monitored_models": 0, "fallback_mode": True, "error": str(e)}
+            return {
+                "status": "error",
+                "monitored_models": 0,
+                "fallback_mode": True,
+                "error": str(e),
+            }

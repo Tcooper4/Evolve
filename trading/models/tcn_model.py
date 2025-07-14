@@ -42,22 +42,45 @@ class TemporalBlock(nn.Module):
         """
         super().__init__()
         self.conv1 = nn.utils.weight_norm(
-            nn.Conv1d(n_inputs, n_outputs, kernel_size, stride=stride, padding=padding, dilation=dilation)
+            nn.Conv1d(
+                n_inputs,
+                n_outputs,
+                kernel_size,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+            )
         )
         self.bn1 = nn.BatchNorm1d(n_outputs)
         self.dropout1 = nn.Dropout(dropout)
 
         self.conv2 = nn.utils.weight_norm(
-            nn.Conv1d(n_outputs, n_outputs, kernel_size, stride=stride, padding=padding, dilation=dilation)
+            nn.Conv1d(
+                n_outputs,
+                n_outputs,
+                kernel_size,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+            )
         )
         self.bn2 = nn.BatchNorm1d(n_outputs)
         self.dropout2 = nn.Dropout(dropout)
 
         self.net = nn.Sequential(
-            self.conv1, self.bn1, nn.ReLU(), self.dropout1, self.conv2, self.bn2, nn.ReLU(), self.dropout2
+            self.conv1,
+            self.bn1,
+            nn.ReLU(),
+            self.dropout1,
+            self.conv2,
+            self.bn2,
+            nn.ReLU(),
+            self.dropout2,
         )
 
-        self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
+        self.downsample = (
+            nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
+        )
         self.relu = nn.ReLU()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -117,7 +140,11 @@ class TCNModel(BaseModel):
         super().__init__(default_config)
         self._validate_config()
         self._setup_model()
-        return {"success": True, "message": "TCNModel initialized", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "TCNModel initialized",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _validate_config(self) -> None:
         """Validate model configuration.
@@ -167,7 +194,11 @@ class TCNModel(BaseModel):
         num_levels = len(self.config["num_channels"])
         for i in range(num_levels):
             dilation = 2**i
-            in_channels = self.config["input_size"] if i == 0 else self.config["num_channels"][i - 1]
+            in_channels = (
+                self.config["input_size"]
+                if i == 0
+                else self.config["num_channels"][i - 1]
+            )
             out_channels = self.config["num_channels"][i]
             layers += [
                 TemporalBlock(
@@ -182,7 +213,9 @@ class TCNModel(BaseModel):
             ]
 
         self.tcn = nn.Sequential(*layers)
-        self.linear = nn.Linear(self.config["num_channels"][-1], self.config["output_size"])
+        self.linear = nn.Linear(
+            self.config["num_channels"][-1], self.config["output_size"]
+        )
         self.model = nn.Sequential(self.tcn, self.linear)
         self.model = self.model.to(self.device)
 
@@ -201,7 +234,9 @@ class TCNModel(BaseModel):
         x = self.linear(x[:, -1, :])  # Take last time step
         return x
 
-    def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _prepare_data(
+        self, data: pd.DataFrame, is_training: bool
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare data for training or prediction.
 
         Args:
@@ -218,7 +253,9 @@ class TCNModel(BaseModel):
             raise ValidationError("Data contains missing values")
 
         # Check if all required columns exist
-        missing_cols = [col for col in self.config["feature_columns"] if col not in data.columns]
+        missing_cols = [
+            col for col in self.config["feature_columns"] if col not in data.columns
+        ]
         if missing_cols:
             raise ValidationError(f"Missing required columns: {missing_cols}")
 
@@ -263,7 +300,9 @@ class TCNModel(BaseModel):
         try:
             import shap
         except ImportError:
-            logger.warning("SHAP is not installed. Please install it with 'pip install shap'.")
+            logger.warning(
+                "SHAP is not installed. Please install it with 'pip install shap'."
+            )
             return
         explainer = shap.DeepExplainer(self.model, X_sample)
         shap_values = explainer.shap_values(X_sample)
@@ -271,11 +310,17 @@ class TCNModel(BaseModel):
 
     def test_synthetic(self):
         """Test model on synthetic data - DEPRECATED."""
-        st.warning("Synthetic data testing is deprecated. Use real market data for testing.")
+        st.warning(
+            "Synthetic data testing is deprecated. Use real market data for testing."
+        )
         return
 
     def fit(
-        self, data: pd.DataFrame, epochs: int = 100, batch_size: int = 32, learning_rate: float = 0.001
+        self,
+        data: pd.DataFrame,
+        epochs: int = 100,
+        batch_size: int = 32,
+        learning_rate: float = 0.001,
     ) -> Dict[str, List[float]]:
         """Fit the TCN model to the data.
 
@@ -364,7 +409,7 @@ class TCNModel(BaseModel):
         """
         try:
             # Make initial prediction
-            predictions = self.predict(data)
+            self.predict(data)
 
             # Generate multi-step forecast
             forecast_values = []
@@ -379,7 +424,9 @@ class TCNModel(BaseModel):
                 # In a production system, you might want more sophisticated handling
                 new_row = current_data.iloc[-1].copy()
                 new_row["close"] = pred[-1]  # Update with prediction
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                current_data = pd.concat(
+                    [current_data, pd.DataFrame([new_row])], ignore_index=True
+                )
                 current_data = current_data.iloc[1:]  # Remove oldest row
 
             return {
@@ -412,8 +459,18 @@ class TCNModel(BaseModel):
                 predictions = self.predict(data)
 
             plt.figure(figsize=(12, 6))
-            plt.plot(data.index, data[self.config["target_column"]], label="Actual", color="blue")
-            plt.plot(data.index[self.config["sequence_length"] :], predictions, label="Predicted", color="red")
+            plt.plot(
+                data.index,
+                data[self.config["target_column"]],
+                label="Actual",
+                color="blue",
+            )
+            plt.plot(
+                data.index[self.config["sequence_length"] :],
+                predictions,
+                label="Predicted",
+                color="red",
+            )
             plt.title("TCN Model Predictions")
             plt.xlabel("Time")
             plt.ylabel("Value")

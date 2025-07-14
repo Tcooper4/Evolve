@@ -158,7 +158,9 @@ class ForecastRouter:
                 model_name = model_file.stem.replace("_model", "")
                 if model_name not in self.model_registry:
                     try:
-                        model_class = self._get_model_class(f"models.{model_name}_model.{model_name.title()}Model")
+                        model_class = self._get_model_class(
+                            f"models.{model_name}_model.{model_name.title()}Model"
+                        )
                         if model_class:
                             self.model_registry[model_name] = model_class
                             logger.info(f"Discovered model {model_name}")
@@ -180,7 +182,9 @@ class ForecastRouter:
             logger.warning(f"Failed to load model class {class_path}: {e}")
             return None
 
-    def register_model(self, name: str, model_class, config: Optional[Dict[str, Any]] = None):
+    def register_model(
+        self, name: str, model_class, config: Optional[Dict[str, Any]] = None
+    ):
         """Register a new model dynamically.
 
         Args:
@@ -264,7 +268,9 @@ class ForecastRouter:
         # Implement trend detection
         return False
 
-    def _select_model(self, data: pd.DataFrame, model_type: Optional[str] = None) -> str:
+    def _select_model(
+        self, data: pd.DataFrame, model_type: Optional[str] = None
+    ) -> str:
         """Select appropriate model based on data and preferences.
 
         Args:
@@ -291,7 +297,11 @@ class ForecastRouter:
             return "lstm"
 
     def get_forecast(
-        self, data: pd.DataFrame, horizon: int = 30, model_type: Optional[str] = None, **kwargs
+        self,
+        data: pd.DataFrame,
+        horizon: int = 30,
+        model_type: Optional[str] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
         """Get forecast for time series data.
 
@@ -314,7 +324,9 @@ class ForecastRouter:
                 data = self._generate_fallback_data()
 
             if horizon is None or horizon <= 0:
-                logger.warning(f"Invalid horizon {horizon}, using default horizon of 30")
+                logger.warning(
+                    f"Invalid horizon {horizon}, using default horizon of 30"
+                )
                 horizon = 30
 
             # Validate data structure
@@ -323,10 +335,16 @@ class ForecastRouter:
                 raise ValueError("Data must be pandas DataFrame")
 
             # Check for required columns
-            required_columns = ["close", "volume"] if "close" in data.columns else ["price"]
-            missing_columns = [col for col in required_columns if col not in data.columns]
+            required_columns = (
+                ["close", "volume"] if "close" in data.columns else ["price"]
+            )
+            missing_columns = [
+                col for col in required_columns if col not in data.columns
+            ]
             if missing_columns:
-                logger.warning(f"Missing columns {missing_columns}, using available columns")
+                logger.warning(
+                    f"Missing columns {missing_columns}, using available columns"
+                )
                 # Use first numeric column as target
                 numeric_columns = data.select_dtypes(include=[np.number]).columns
                 if len(numeric_columns) > 0:
@@ -350,7 +368,9 @@ class ForecastRouter:
             # For LSTM, only pass valid constructor args
             if selected_model == "lstm":
                 # Determine input_dim and output_dim from data
-                input_dim = prepared_data.shape[1] if hasattr(prepared_data, "shape") else 1
+                input_dim = (
+                    prepared_data.shape[1] if hasattr(prepared_data, "shape") else 1
+                )
                 output_dim = 1
                 lstm_args = {
                     "input_dim": input_dim,
@@ -374,7 +394,9 @@ class ForecastRouter:
             # Fit model with error handling
             try:
                 if selected_model == "lstm":
-                    model.train_model(prepared_data, prepared_data.iloc[:, 0], **fit_args)
+                    model.train_model(
+                        prepared_data, prepared_data.iloc[:, 0], **fit_args
+                    )
                 else:
                     model.fit(prepared_data)
                 logger.info(f"Successfully fitted {selected_model}")

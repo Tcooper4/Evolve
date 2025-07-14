@@ -13,11 +13,11 @@ from .risk_metrics import calculate_advanced_metrics, calculate_rolling_metrics
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler('trading/risk/logs/risk_logger.log'),
-        logging.StreamHandler()
-    ]
+        logging.FileHandler("trading/risk/logs/risk_logger.log"),
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -27,8 +27,8 @@ class RiskLogger:
 
     def __init__(
         self,
-        log_path: str = 'trading/risk/logs/risk_metrics.jsonl',
-        update_interval: int = 900  # 15 minutes in seconds
+        log_path: str = "trading/risk/logs/risk_metrics.jsonl",
+        update_interval: int = 900,  # 15 minutes in seconds
     ):
         """Initialize risk logger.
 
@@ -52,7 +52,7 @@ class RiskLogger:
         model_name: str,
         forecast_confidence: float,
         historical_error: float,
-        additional_metrics: Optional[Dict] = None
+        additional_metrics: Optional[Dict] = None,
     ):
         """Log risk metrics.
 
@@ -70,36 +70,40 @@ class RiskLogger:
 
             # Prepare log entry
             log_entry = {
-                'timestamp': datetime.now().isoformat(),
-                'model_name': model_name,
-                'forecast_confidence': forecast_confidence,
-                'historical_error': historical_error,
-                'metrics': {
-                    **rolling_metrics.iloc[-1].to_dict(),
-                    **advanced_metrics
-                }
+                "timestamp": datetime.now().isoformat(),
+                "model_name": model_name,
+                "forecast_confidence": forecast_confidence,
+                "historical_error": historical_error,
+                "metrics": {**rolling_metrics.iloc[-1].to_dict(), **advanced_metrics},
             }
 
             # Add additional metrics if provided
             if additional_metrics:
-                log_entry['additional_metrics'] = additional_metrics
+                log_entry["additional_metrics"] = additional_metrics
 
             # Write to JSONL file
-            with open(self.log_path, 'a') as f:
-                f.write(json.dumps(log_entry) + '\n')
+            with open(self.log_path, "a") as f:
+                f.write(json.dumps(log_entry) + "\n")
 
             self.last_update = datetime.now()
             logger.info(f"Logged risk metrics for {model_name}")
-            return {"status": "metrics_logged", "model_name": model_name, "timestamp": self.last_update.isoformat()}
+            return {
+                "status": "metrics_logged",
+                "model_name": model_name,
+                "timestamp": self.last_update.isoformat(),
+            }
 
         except Exception as e:
             logger.error(f"Error logging risk metrics: {e}")
-            return {'success': True, 'result': {"status": "logging_failed", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": {"status": "logging_failed", "error": str(e)},
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_recent_metrics(
-        self,
-        model_name: Optional[str] = None,
-        n_entries: int = 100
+        self, model_name: Optional[str] = None, n_entries: int = 100
     ) -> pd.DataFrame:
         """Get recent risk metrics.
 
@@ -113,18 +117,18 @@ class RiskLogger:
         try:
             # Read JSONL file
             entries = []
-            with open(self.log_path, 'r') as f:
+            with open(self.log_path, "r") as f:
                 for line in f:
                     entry = json.loads(line)
-                    if model_name is None or entry['model_name'] == model_name:
+                    if model_name is None or entry["model_name"] == model_name:
                         entries.append(entry)
 
             # Convert to DataFrame
             df = pd.DataFrame(entries)
 
             # Sort by timestamp and get recent entries
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-            df = df.sort_values('timestamp', ascending=False)
+            df["timestamp"] = pd.to_datetime(df["timestamp"])
+            df = df.sort_values("timestamp", ascending=False)
 
             return df.head(n_entries)
 
@@ -141,9 +145,7 @@ class RiskLogger:
         if self.last_update is None:
             return True
 
-        time_since_update = (
-            datetime.now() - self.last_update
-        ).total_seconds()
+        time_since_update = (datetime.now() - self.last_update).total_seconds()
 
         return time_since_update >= self.update_interval
 
@@ -156,37 +158,45 @@ class RiskLogger:
         try:
             # Read all entries
             entries = []
-            with open(self.log_path, 'r') as f:
+            with open(self.log_path, "r") as f:
                 for line in f:
                     entries.append(json.loads(line))
 
             # Filter recent entries
             cutoff_date = datetime.now() - pd.Timedelta(days=max_age_days)
             recent_entries = [
-                entry for entry in entries
-                if pd.to_datetime(entry['timestamp']) > cutoff_date
+                entry
+                for entry in entries
+                if pd.to_datetime(entry["timestamp"]) > cutoff_date
             ]
 
             # Write back recent entries
-            with open(self.log_path, 'w') as f:
+            with open(self.log_path, "w") as f:
                 for entry in recent_entries:
-                    f.write(json.dumps(entry) + '\n')
+                    f.write(json.dumps(entry) + "\n")
 
             logger.info(f"Cleaned up logs older than {max_age_days} days")
-            return {"status": "cleanup_completed", "entries_removed": len(entries) - len(recent_entries)}
+            return {
+                "status": "cleanup_completed",
+                "entries_removed": len(entries) - len(recent_entries),
+            }
 
         except Exception as e:
             logger.error(f"Error cleaning up logs: {e}")
-            return {'success': True, 'result': {"status": "cleanup_failed", "error": str(e)}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": {"status": "cleanup_failed", "error": str(e)},
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def export_metrics(
         self,
         output_path: str,
-        format: str = 'csv',
+        format: str = "csv",
         model_name: Optional[str] = None,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
-
+        end_date: Optional[datetime] = None,
     ):
         """Export risk metrics.
 
@@ -203,15 +213,15 @@ class RiskLogger:
 
             # Apply date filters
             if start_date:
-                df = df[df['timestamp'] >= start_date]
+                df = df[df["timestamp"] >= start_date]
             if end_date:
-                df = df[df['timestamp'] <= end_date]
+                df = df[df["timestamp"] <= end_date]
 
             # Export
-            if format == 'csv':
+            if format == "csv":
                 df.to_csv(output_path, index=False)
-            elif format == 'json':
-                df.to_json(output_path, orient='records', indent=2)
+            elif format == "json":
+                df.to_json(output_path, orient="records", indent=2)
             else:
                 raise ValueError(f"Unsupported format: {format}")
 

@@ -40,7 +40,16 @@ class QueryParser:
 
         # Trading system context
         self.trading_context = {
-            "available_symbols": ["BTCUSDT", "ETHUSDT", "NVDA", "TSLA", "AAPL", "GOOGL", "MSFT", "AMZN"],
+            "available_symbols": [
+                "BTCUSDT",
+                "ETHUSDT",
+                "NVDA",
+                "TSLA",
+                "AAPL",
+                "GOOGL",
+                "MSFT",
+                "AMZN",
+            ],
             "available_timeframes": ["1m", "5m", "15m", "1h", "4h", "1d"],
             "available_periods": ["7d", "14d", "30d", "90d", "180d", "1y"],
             "available_models": ["lstm", "xgboost", "ensemble", "transformer", "tcn"],
@@ -48,8 +57,22 @@ class QueryParser:
 
         # Intent keywords mapping
         self.intent_keywords = {
-            "model_recommendation": ["best", "model", "recommend", "which model", "top model"],
-            "trading_signal": ["long", "short", "buy", "sell", "trade", "signal", "position"],
+            "model_recommendation": [
+                "best",
+                "model",
+                "recommend",
+                "which model",
+                "top model",
+            ],
+            "trading_signal": [
+                "long",
+                "short",
+                "buy",
+                "sell",
+                "trade",
+                "signal",
+                "position",
+            ],
             "market_analysis": ["analyze", "analysis", "market", "trend", "technical"],
             "general_query": ["what", "how", "when", "why", "explain", "show"],
         }
@@ -96,7 +119,10 @@ class QueryParser:
 
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
-                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": query}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": query},
+                ],
                 temperature=0.1,
                 max_tokens=200,
             )
@@ -162,19 +188,31 @@ class QueryParser:
                 parsed[field] = None
 
         # Validate symbol
-        if parsed["symbol"] and parsed["symbol"] not in self.trading_context["available_symbols"]:
+        if (
+            parsed["symbol"]
+            and parsed["symbol"] not in self.trading_context["available_symbols"]
+        ):
             parsed["symbol"] = None
 
         # Validate timeframe
-        if parsed["timeframe"] and parsed["timeframe"] not in self.trading_context["available_timeframes"]:
+        if (
+            parsed["timeframe"]
+            and parsed["timeframe"] not in self.trading_context["available_timeframes"]
+        ):
             parsed["timeframe"] = "1h"
 
         # Validate period
-        if parsed["period"] and parsed["period"] not in self.trading_context["available_periods"]:
+        if (
+            parsed["period"]
+            and parsed["period"] not in self.trading_context["available_periods"]
+        ):
             parsed["period"] = "30d"
 
         # Validate model type
-        if parsed.get("model_type") and parsed["model_type"] not in self.trading_context["available_models"]:
+        if (
+            parsed.get("model_type")
+            and parsed["model_type"] not in self.trading_context["available_models"]
+        ):
             parsed["model_type"] = None
 
         # Set default confidence if not provided

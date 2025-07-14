@@ -43,7 +43,9 @@ class MetaStrategyResult:
 class MetaStrategyAgent(BaseAgent):
     """Agent responsible for managing and coordinating multiple trading strategies."""
 
-    def __init__(self, name: str = "meta_strategy", config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self, name: str = "meta_strategy", config: Optional[Dict[str, Any]] = None
+    ):
         """Initialize the Meta Strategy Agent."""
         super().__init__(name, config)
         logger.info(f"Initialized MetaStrategyAgent: {name}")
@@ -60,7 +62,9 @@ class MetaStrategyAgent(BaseAgent):
             elif operation == "update":
                 return await self._update_meta_strategy()
             else:
-                return AgentResult(success=False, error_message=f"Unknown operation: {operation}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown operation: {operation}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
@@ -74,7 +78,10 @@ class MetaStrategyAgent(BaseAgent):
                 strategy_name="meta_strategy",
                 operation_type="evaluate",
                 result_data={"status": "evaluation_complete"},
-                recommendations=["Consider rebalancing portfolio", "Monitor market conditions"],
+                recommendations=[
+                    "Consider rebalancing portfolio",
+                    "Monitor market conditions",
+                ],
             )
 
             return AgentResult(success=True, data=result)

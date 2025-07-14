@@ -85,22 +85,108 @@ class EnhancedPromptRouterAgent:
 
         # Enhanced intent keywords for regex fallback with ambiguous prompt handling
         self.intent_keywords = {
-            "forecasting": ["forecast", "predict", "projection", "future", "price", "trend", "outlook"],
-            "backtesting": ["backtest", "historical", "simulate", "performance", "past", "test", "simulation"],
-            "tuning": ["tune", "optimize", "hyperparameter", "search", "bayesian", "parameter", "improve"],
-            "research": ["research", "find", "paper", "github", "arxiv", "summarize", "analyze", "study"],
-            "portfolio": ["portfolio", "position", "holdings", "allocation", "balance", "asset"],
-            "risk": ["risk", "volatility", "drawdown", "var", "sharpe", "danger", "exposure"],
-            "sentiment": ["sentiment", "news", "social", "twitter", "reddit", "emotion", "mood"],
-            "compare_strategies": ["compare", "comparison", "versus", "vs", "against", "different", "strategy"],
-            "optimize_model": ["optimize", "improve", "enhance", "tune", "model", "performance"],
-            "debug_forecast": ["debug", "fix", "error", "issue", "problem", "forecast", "prediction"],
+            "forecasting": [
+                "forecast",
+                "predict",
+                "projection",
+                "future",
+                "price",
+                "trend",
+                "outlook",
+            ],
+            "backtesting": [
+                "backtest",
+                "historical",
+                "simulate",
+                "performance",
+                "past",
+                "test",
+                "simulation",
+            ],
+            "tuning": [
+                "tune",
+                "optimize",
+                "hyperparameter",
+                "search",
+                "bayesian",
+                "parameter",
+                "improve",
+            ],
+            "research": [
+                "research",
+                "find",
+                "paper",
+                "github",
+                "arxiv",
+                "summarize",
+                "analyze",
+                "study",
+            ],
+            "portfolio": [
+                "portfolio",
+                "position",
+                "holdings",
+                "allocation",
+                "balance",
+                "asset",
+            ],
+            "risk": [
+                "risk",
+                "volatility",
+                "drawdown",
+                "var",
+                "sharpe",
+                "danger",
+                "exposure",
+            ],
+            "sentiment": [
+                "sentiment",
+                "news",
+                "social",
+                "twitter",
+                "reddit",
+                "emotion",
+                "mood",
+            ],
+            "compare_strategies": [
+                "compare",
+                "comparison",
+                "versus",
+                "vs",
+                "against",
+                "different",
+                "strategy",
+            ],
+            "optimize_model": [
+                "optimize",
+                "improve",
+                "enhance",
+                "tune",
+                "model",
+                "performance",
+            ],
+            "debug_forecast": [
+                "debug",
+                "fix",
+                "error",
+                "issue",
+                "problem",
+                "forecast",
+                "prediction",
+            ],
         }
 
         # Named intent templates for specific actions
         self.named_intent_templates = {
             "compare_strategies": {
-                "keywords": ["compare", "comparison", "versus", "vs", "against", "different"],
+                "keywords": [
+                    "compare",
+                    "comparison",
+                    "versus",
+                    "vs",
+                    "against",
+                    "different",
+                ],
                 "required_args": ["strategies"],
                 "optional_args": ["timeframe", "metrics", "period"],
             },
@@ -147,7 +233,10 @@ class EnhancedPromptRouterAgent:
                 tokenizer.pad_token = tokenizer.eos_token
 
             self.hf_pipeline = pipeline(
-                "text-generation", model=model, tokenizer=tokenizer, device=0 if torch.cuda.is_available() else -1
+                "text-generation",
+                model=model,
+                tokenizer=tokenizer,
+                device=0 if torch.cuda.is_available() else -1,
             )
         except Exception as e:
             logger.error(f"Failed to initialize HuggingFace: {e}")
@@ -181,11 +270,16 @@ class EnhancedPromptRouterAgent:
 
         try:
             # Use enhanced template for intent classification
-            system_prompt = format_template("enhanced_intent_classification", query=prompt)
+            system_prompt = format_template(
+                "enhanced_intent_classification", query=prompt
+            )
 
             response = openai.ChatCompletion.create(
                 model="gpt-4",
-                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": prompt}],
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
                 max_tokens=300,
                 temperature=0.1,
             )
@@ -246,10 +340,16 @@ class EnhancedPromptRouterAgent:
 
         try:
             # Use enhanced template for intent extraction
-            structured_prompt = format_template("enhanced_intent_extraction", user_input=prompt)
+            structured_prompt = format_template(
+                "enhanced_intent_extraction", user_input=prompt
+            )
 
             response = self.hf_pipeline(
-                structured_prompt, max_length=150, num_return_sequences=1, temperature=0.1, do_sample=True
+                structured_prompt,
+                max_length=150,
+                num_return_sequences=1,
+                temperature=0.1,
+                do_sample=True,
             )
 
             generated_text = response[0]["generated_text"]
@@ -287,7 +387,9 @@ class EnhancedPromptRouterAgent:
 
         # Check named intent templates first
         for intent_name, template in self.named_intent_templates.items():
-            keyword_matches = sum(1 for keyword in template["keywords"] if keyword in prompt_lower)
+            keyword_matches = sum(
+                1 for keyword in template["keywords"] if keyword in prompt_lower
+            )
             if keyword_matches > best_score:
                 best_score = keyword_matches
                 best_intent = intent_name
@@ -381,17 +483,26 @@ class EnhancedPromptRouterAgent:
         for pattern in period_patterns:
             matches = re.findall(pattern, prompt.lower())
             if matches:
-                args["period"] = matches[0] if isinstance(matches[0], str) else " ".join(matches[0])
+                args["period"] = (
+                    matches[0] if isinstance(matches[0], str) else " ".join(matches[0])
+                )
                 break
 
         # Extract comparison context
-        if any(word in prompt.lower() for word in ["compare", "versus", "vs", "against"]):
+        if any(
+            word in prompt.lower() for word in ["compare", "versus", "vs", "against"]
+        ):
             args["comparison_mode"] = True
             # Try to extract what's being compared
-            comparison_pattern = r"(compare|versus|vs|against)\s+([^,]+?)\s+(?:with|to|and)\s+([^,]+)"
+            comparison_pattern = (
+                r"(compare|versus|vs|against)\s+([^,]+?)\s+(?:with|to|and)\s+([^,]+)"
+            )
             comp_match = re.search(comparison_pattern, prompt.lower())
             if comp_match:
-                args["compare_items"] = [comp_match.group(2).strip(), comp_match.group(3).strip()]
+                args["compare_items"] = [
+                    comp_match.group(2).strip(),
+                    comp_match.group(3).strip(),
+                ]
 
         return args
 
@@ -411,19 +522,25 @@ class EnhancedPromptRouterAgent:
         if openai and self.openai_api_key:
             result = self.parse_intent_openai(prompt)
             if result and result.intent != "unknown":
-                logger.info(f"✅ OpenAI parsed intent: {result.intent} (confidence: {result.confidence})")
+                logger.info(
+                    f"✅ OpenAI parsed intent: {result.intent} (confidence: {result.confidence})"
+                )
                 return result
 
         # Try HuggingFace second
         if self.hf_pipeline:
             result = self.parse_intent_huggingface(prompt)
             if result and result.intent != "unknown":
-                logger.info(f"✅ HuggingFace parsed intent: {result.intent} (confidence: {result.confidence})")
+                logger.info(
+                    f"✅ HuggingFace parsed intent: {result.intent} (confidence: {result.confidence})"
+                )
                 return result
 
         # Fallback to enhanced regex
         result = self.parse_intent_regex(prompt)
-        logger.info(f"✅ Regex parsed intent: {result.intent} (confidence: {result.confidence})")
+        logger.info(
+            f"✅ Regex parsed intent: {result.intent} (confidence: {result.confidence})"
+        )
         return result
 
     def route(self, prompt: str, agents: Dict[str, Any]) -> Dict[str, Any]:
@@ -439,7 +556,9 @@ class EnhancedPromptRouterAgent:
         """
         parsed_intent = self.parse_intent(prompt)
 
-        logger.info(f"Routing intent: {parsed_intent.intent}, args: {parsed_intent.args}")
+        logger.info(
+            f"Routing intent: {parsed_intent.intent}, args: {parsed_intent.args}"
+        )
 
         # Route to appropriate agent
         result = {

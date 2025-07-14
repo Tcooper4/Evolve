@@ -44,7 +44,6 @@ import requests
 import yaml
 
 
-
 class IncidentManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
         """Initialize the incident manager."""
@@ -192,13 +191,19 @@ class IncidentManager:
             issues = []
 
             # Check application processes
-            for proc in psutil.process_iter(["pid", "name", "cpu_percent", "memory_percent"]):
+            for proc in psutil.process_iter(
+                ["pid", "name", "cpu_percent", "memory_percent"]
+            ):
                 try:
                     if proc.info["name"] in self.config["app"]["processes"]:
                         if proc.info["cpu_percent"] > 90:
-                            issues.append(f"High CPU usage for {proc.info['name']}: {proc.info['cpu_percent']}%")
+                            issues.append(
+                                f"High CPU usage for {proc.info['name']}: {proc.info['cpu_percent']}%"
+                            )
                         if proc.info["memory_percent"] > 90:
-                            issues.append(f"High memory usage for {proc.info['name']}: {proc.info['memory_percent']}%")
+                            issues.append(
+                                f"High memory usage for {proc.info['name']}: {proc.info['memory_percent']}%"
+                            )
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     issues.append(f"Process {proc.info['name']} not accessible")
 
@@ -235,7 +240,9 @@ class IncidentManager:
             # Check Redis memory usage
             info = redis_client.info()
             if info["used_memory"] > info["maxmemory"] * 0.9:
-                issues.append(f"High Redis memory usage: {info['used_memory'] / info['maxmemory'] * 100}%")
+                issues.append(
+                    f"High Redis memory usage: {info['used_memory'] / info['maxmemory'] * 100}%"
+                )
 
             return {"healthy": len(issues) == 0, "issues": issues}
         except Exception as e:
@@ -257,7 +264,9 @@ class IncidentManager:
                 try:
                     response = requests.get(endpoint["url"], timeout=5)
                     if response.status_code != 200:
-                        issues.append(f"API endpoint {endpoint['url']} returned {response.status_code}")
+                        issues.append(
+                            f"API endpoint {endpoint['url']} returned {response.status_code}"
+                        )
                 except requests.RequestException as e:
                     issues.append(f"API endpoint {endpoint['url']} failed: {e}")
 
@@ -301,19 +310,31 @@ class IncidentManager:
 
         try:
             # Create incident response
-            response = {"timestamp": datetime.now().isoformat(), "incident": incident, "actions": []}
+            response = {
+                "timestamp": datetime.now().isoformat(),
+                "incident": incident,
+                "actions": [],
+            }
 
             # Handle based on incident type
             if incident["type"] == "system_health":
                 response["actions"].extend(await self._handle_system_incident(incident))
             elif incident["type"] == "application_health":
-                response["actions"].extend(await self._handle_application_incident(incident))
+                response["actions"].extend(
+                    await self._handle_application_incident(incident)
+                )
             elif incident["type"] == "database_health":
-                response["actions"].extend(await self._handle_database_incident(incident))
+                response["actions"].extend(
+                    await self._handle_database_incident(incident)
+                )
             elif incident["type"] == "network_health":
-                response["actions"].extend(await self._handle_network_incident(incident))
+                response["actions"].extend(
+                    await self._handle_network_incident(incident)
+                )
             elif incident["type"] == "security_health":
-                response["actions"].extend(await self._handle_security_incident(incident))
+                response["actions"].extend(
+                    await self._handle_security_incident(incident)
+                )
 
             # Save response
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -328,23 +349,33 @@ class IncidentManager:
             self.logger.error(f"Failed to handle incident: {e}")
             raise
 
-    async def _handle_system_incident(self, incident: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _handle_system_incident(
+        self, incident: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Handle system health incident."""
         actions = []
 
         # Scale up resources
         if "High CPU usage" in incident["details"]:
-            actions.append({"action": "scale_cpu", "details": "Scaling up CPU resources"})
+            actions.append(
+                {"action": "scale_cpu", "details": "Scaling up CPU resources"}
+            )
 
         if "High memory usage" in incident["details"]:
-            actions.append({"action": "scale_memory", "details": "Scaling up memory resources"})
+            actions.append(
+                {"action": "scale_memory", "details": "Scaling up memory resources"}
+            )
 
         if "High disk usage" in incident["details"]:
-            actions.append({"action": "cleanup_disk", "details": "Cleaning up disk space"})
+            actions.append(
+                {"action": "cleanup_disk", "details": "Cleaning up disk space"}
+            )
 
         return actions
 
-    async def _handle_application_incident(self, incident: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _handle_application_incident(
+        self, incident: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Handle application health incident."""
         actions = []
 
@@ -352,7 +383,12 @@ class IncidentManager:
         for issue in incident["details"]:
             if "High CPU usage" in issue or "High memory usage" in issue:
                 process_name = issue.split(" for ")[1].split(":")[0]
-                actions.append({"action": "restart_process", "details": f"Restarting process {process_name}"})
+                actions.append(
+                    {
+                        "action": "restart_process",
+                        "details": f"Restarting process {process_name}",
+                    }
+                )
 
         # Rotate logs
         if "Large log file" in incident["details"]:
@@ -360,36 +396,53 @@ class IncidentManager:
 
         return actions
 
-    async def _handle_database_incident(self, incident: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _handle_database_incident(
+        self, incident: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Handle database health incident."""
         actions = []
 
         # Restart Redis
         if "Redis connection failed" in incident["details"]:
-            actions.append({"action": "restart_redis", "details": "Restarting Redis server"})
+            actions.append(
+                {"action": "restart_redis", "details": "Restarting Redis server"}
+            )
 
         # Clear Redis cache
         if "High Redis memory usage" in incident["details"]:
-            actions.append({"action": "clear_redis_cache", "details": "Clearing Redis cache"})
+            actions.append(
+                {"action": "clear_redis_cache", "details": "Clearing Redis cache"}
+            )
 
         return actions
 
-    async def _handle_network_incident(self, incident: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _handle_network_incident(
+        self, incident: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Handle network health incident."""
         actions = []
 
         # Restart network interfaces
         if "Network errors" in incident["details"]:
-            actions.append({"action": "restart_network", "details": "Restarting network interfaces"})
+            actions.append(
+                {
+                    "action": "restart_network",
+                    "details": "Restarting network interfaces",
+                }
+            )
 
         # Restart API services
         for issue in incident["details"]:
             if "API endpoint" in issue:
-                actions.append({"action": "restart_api", "details": "Restarting API services"})
+                actions.append(
+                    {"action": "restart_api", "details": "Restarting API services"}
+                )
 
         return actions
 
-    async def _handle_security_incident(self, incident: Dict[str, Any]) -> List[Dict[str, Any]]:
+    async def _handle_security_incident(
+        self, incident: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Handle security health incident."""
         actions = []
 
@@ -397,14 +450,22 @@ class IncidentManager:
         for issue in incident["details"]:
             if "Insecure file permissions" in issue:
                 file_path = issue.split(": ")[1]
-                actions.append({"action": "fix_permissions", "details": f"Fixing permissions for {file_path}"})
+                actions.append(
+                    {
+                        "action": "fix_permissions",
+                        "details": f"Fixing permissions for {file_path}",
+                    }
+                )
 
         # Remove sensitive data
         for issue in incident["details"]:
             if "Sensitive data found" in issue:
                 file_path = issue.split(" in ")[1]
                 actions.append(
-                    {"action": "remove_sensitive_data", "details": f"Removing sensitive data from {file_path}"}
+                    {
+                        "action": "remove_sensitive_data",
+                        "details": f"Removing sensitive data from {file_path}",
+                    }
                 )
 
         return actions
@@ -429,21 +490,29 @@ class IncidentManager:
             for incident in incidents:
                 # Count by type
                 incident_type = incident["type"]
-                stats["incidents_by_type"][incident_type] = stats["incidents_by_type"].get(incident_type, 0) + 1
+                stats["incidents_by_type"][incident_type] = (
+                    stats["incidents_by_type"].get(incident_type, 0) + 1
+                )
 
                 # Count by severity
                 severity = incident["severity"]
-                stats["incidents_by_severity"][severity] = stats["incidents_by_severity"].get(severity, 0) + 1
+                stats["incidents_by_severity"][severity] = (
+                    stats["incidents_by_severity"].get(severity, 0) + 1
+                )
 
                 # Count by time
                 hour = datetime.fromisoformat(incident["timestamp"]).hour
-                stats["incidents_by_time"][hour] = stats["incidents_by_time"].get(hour, 0) + 1
+                stats["incidents_by_time"][hour] = (
+                    stats["incidents_by_time"].get(hour, 0) + 1
+                )
 
             # Generate recommendations
             recommendations = []
 
             if stats["incidents_by_type"].get("system_health", 0) > 0:
-                recommendations.append("System health incidents detected. Consider scaling up resources.")
+                recommendations.append(
+                    "System health incidents detected. Consider scaling up resources."
+                )
 
             if stats["incidents_by_type"].get("application_health", 0) > 0:
                 recommendations.append(
@@ -451,19 +520,29 @@ class IncidentManager:
                 )
 
             if stats["incidents_by_type"].get("database_health", 0) > 0:
-                recommendations.append("Database health incidents detected. Consider optimizing database performance.")
+                recommendations.append(
+                    "Database health incidents detected. Consider optimizing database performance."
+                )
 
             if stats["incidents_by_type"].get("network_health", 0) > 0:
-                recommendations.append("Network health incidents detected. Consider improving network reliability.")
+                recommendations.append(
+                    "Network health incidents detected. Consider improving network reliability."
+                )
 
             if stats["incidents_by_type"].get("security_health", 0) > 0:
-                recommendations.append("Security health incidents detected. Consider improving security measures.")
+                recommendations.append(
+                    "Security health incidents detected. Consider improving security measures."
+                )
 
             # Save analysis
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             analysis_file = self.incidents_dir / f"analysis_{timestamp}.json"
 
-            analysis = {"timestamp": timestamp, "statistics": stats, "recommendations": recommendations}
+            analysis = {
+                "timestamp": timestamp,
+                "statistics": stats,
+                "recommendations": recommendations,
+            }
 
             with open(analysis_file, "w") as f:
                 json.dump(analysis, f, indent=2)
@@ -478,8 +557,12 @@ class IncidentManager:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Incident Manager")
-    parser.add_argument("command", choices=["monitor", "analyze"], help="Command to execute")
-    parser.add_argument("--duration", type=int, default=300, help="Duration for monitoring in seconds")
+    parser.add_argument(
+        "command", choices=["monitor", "analyze"], help="Command to execute"
+    )
+    parser.add_argument(
+        "--duration", type=int, default=300, help="Duration for monitoring in seconds"
+    )
     parser.add_argument("--incidents-file", help="Incidents file to use")
 
     args = parser.parse_args()

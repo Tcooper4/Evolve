@@ -16,9 +16,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List
 
-
 # Add project root to path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 # from trading.meta_agents.agents.model_builder import ModelBuilder  # Removed - meta_agents deleted
 from config.settings import Settings
@@ -50,7 +51,9 @@ class UpgraderAgent:
         self.settings = Settings(config_path)
         self.task_memory = TaskMemory()
         self.model_builder = ModelBuilder()
-        self.scheduler = UpgradeScheduler(check_interval=self.settings.get("upgrade_interval", 24))
+        self.scheduler = UpgradeScheduler(
+            check_interval=self.settings.get("upgrade_interval", 24)
+        )
 
         # Setup logging
         self.init_status = self._setup_logging()
@@ -78,32 +81,58 @@ class UpgraderAgent:
                 level=logging.INFO,
                 format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
                 handlers=[
-                    logging.handlers.RotatingFileHandler(log_file, maxBytes=10 * 1024 * 1024, backupCount=5),  # 10MB
+                    logging.handlers.RotatingFileHandler(
+                        log_file, maxBytes=10 * 1024 * 1024, backupCount=5
+                    ),  # 10MB
                     logging.StreamHandler(),
                 ],
             )
 
-            return {"success": True, "message": "Logging setup completed", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "Logging setup completed",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def start(self) -> dict:
         """Start the upgrader agent with scheduled checks."""
         try:
             logger.info("Starting UpgraderAgent")
             self.scheduler.start(self.check_for_upgrades)
-            return {"success": True, "message": "UpgraderAgent started", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "UpgraderAgent started",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def stop(self) -> dict:
         """Stop the upgrader agent."""
         try:
             logger.info("Stopping UpgraderAgent")
             self.scheduler.stop()
-            return {"success": True, "message": "UpgraderAgent stopped", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "UpgraderAgent stopped",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def run_once(self) -> dict:
         """
@@ -122,7 +151,11 @@ class UpgraderAgent:
                 "timestamp": datetime.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def check_for_upgrades(self) -> List[Task]:
         """
@@ -147,7 +180,9 @@ class UpgraderAgent:
                 for model_id, future in model_futures:
                     needs_upgrade, reason = future.result()
                     if needs_upgrade:
-                        task = self._create_upgrade_task("model_upgrade", model_id=model_id, reason=reason)
+                        task = self._create_upgrade_task(
+                            "model_upgrade", model_id=model_id, reason=reason
+                        )
                         upgrade_tasks.append(task)
 
             # Check pipeline components in parallel
@@ -160,7 +195,9 @@ class UpgraderAgent:
                 for component, future in component_futures:
                     needs_upgrade, reason = future.result()
                     if needs_upgrade:
-                        task = self._create_upgrade_task("pipeline_upgrade", component=component, reason=reason)
+                        task = self._create_upgrade_task(
+                            "pipeline_upgrade", component=component, reason=reason
+                        )
                         upgrade_tasks.append(task)
 
             logger.info(f"Found {len(upgrade_tasks)} items requiring upgrade")
@@ -187,7 +224,11 @@ class UpgraderAgent:
             task_id=task_id,
             type=task_type,
             status=TaskStatus.PENDING,
-            metadata={"agent": "upgrader", "creation_time": datetime.now().isoformat(), **kwargs},
+            metadata={
+                "agent": "upgrader",
+                "creation_time": datetime.now().isoformat(),
+                **kwargs,
+            },
             notes=f"Upgrade required: {kwargs.get('reason', 'Unknown reason')}",
         )
 
@@ -218,7 +259,12 @@ class UpgraderAgent:
                 if success:
                     task.status = TaskStatus.COMPLETED
                     duration = datetime.now() - start_time
-                    task.metadata.update({"completion_time": datetime.now().isoformat(), "duration": str(duration)})
+                    task.metadata.update(
+                        {
+                            "completion_time": datetime.now().isoformat(),
+                            "duration": str(duration),
+                        }
+                    )
 
                     # Record in upgrade history
                     self.upgrade_history.append(
@@ -241,7 +287,9 @@ class UpgraderAgent:
                     time.sleep(self.retry_delay)
                 else:
                     task.status = TaskStatus.FAILED
-                    task.metadata.update({"error": str(e), "completion_time": datetime.now().isoformat()})
+                    task.metadata.update(
+                        {"error": str(e), "completion_time": datetime.now().isoformat()}
+                    )
                     self.failed_upgrades.add(task.task_id)
 
                     # Record in upgrade history
@@ -343,12 +391,18 @@ class UpgraderAgent:
             logger.info(f"Received upgrade prompt: {prompt}")
 
             # Create upgrade task
-            task = self._create_upgrade_task("manual_upgrade", prompt=prompt, reason="Manual upgrade requested")
+            task = self._create_upgrade_task(
+                "manual_upgrade", prompt=prompt, reason="Manual upgrade requested"
+            )
 
             # Process the upgrade
             success = self.process_upgrade_task(task)
 
-            return {"task_id": task.task_id, "success": success, "status": task.status.name}
+            return {
+                "task_id": task.task_id,
+                "success": success,
+                "status": task.status.name,
+            }
 
         except Exception as e:
             logger.error(f"Error handling prompt: {str(e)}")
@@ -364,7 +418,9 @@ class UpgraderAgent:
         return {
             "success": True,
             "result": {
-                "last_upgrade_check": self.last_upgrade_check.isoformat() if self.last_upgrade_check else None,
+                "last_upgrade_check": self.last_upgrade_check.isoformat()
+                if self.last_upgrade_check
+                else None,
                 "failed_upgrades": list(self.failed_upgrades),
                 "upgrade_history_count": len(self.upgrade_history),
                 "max_retries": self.max_retries,

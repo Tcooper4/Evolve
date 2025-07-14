@@ -115,7 +115,9 @@ class CausalDriverAnalyzer:
                     "method": method,
                 }
 
-                logger.info(f"Identified causal structure with {len(causal_structure['edges'])} edges")
+                logger.info(
+                    f"Identified causal structure with {len(causal_structure['edges'])} edges"
+                )
                 return causal_structure
 
             else:
@@ -126,7 +128,9 @@ class CausalDriverAnalyzer:
             logger.error(f"Error in causal structure identification: {e}")
             return {}
 
-    def _extract_edges(self, adj_matrix: np.ndarray, variables: List[str]) -> List[Dict]:
+    def _extract_edges(
+        self, adj_matrix: np.ndarray, variables: List[str]
+    ) -> List[Dict]:
         """Extract edges from adjacency matrix."""
         edges = []
         for i in range(len(variables)):
@@ -136,13 +140,19 @@ class CausalDriverAnalyzer:
                         {
                             "from": variables[i],
                             "to": variables[j],
-                            "type": "directed" if adj_matrix[i, j] == 1 else "undirected",
+                            "type": "directed"
+                            if adj_matrix[i, j] == 1
+                            else "undirected",
                         }
                     )
         return edges
 
     def estimate_causal_effects(
-        self, data: pd.DataFrame, treatment: str, outcome: str, common_causes: List[str] = None
+        self,
+        data: pd.DataFrame,
+        treatment: str,
+        outcome: str,
+        common_causes: List[str] = None,
     ) -> Dict[str, Any]:
         """Estimate causal effects using DoWhy."""
         if not DOWHY_AVAILABLE:
@@ -155,14 +165,21 @@ class CausalDriverAnalyzer:
 
             # Create causal model
             model = CausalModel(
-                data=analysis_data, treatment=treatment, outcome=outcome, common_causes=common_causes or []
+                data=analysis_data,
+                treatment=treatment,
+                outcome=outcome,
+                common_causes=common_causes or [],
             )
 
             # Identify causal effect
-            identified_estimand = model.identify_effect(proceed_when_unidentifiable=True)
+            identified_estimand = model.identify_effect(
+                proceed_when_unidentifiable=True
+            )
 
             # Estimate causal effect
-            estimate = model.estimate_effect(identified_estimand, method_name="backdoor.linear_regression")
+            estimate = model.estimate_effect(
+                identified_estimand, method_name="backdoor.linear_regression"
+            )
 
             # Refute results
             refutation_results = {}
@@ -177,7 +194,9 @@ class CausalDriverAnalyzer:
             }
 
             # Data subset test
-            subset_refuter = model.refute_estimate(identified_estimand, estimate, method_name="data_subset_refuter")
+            subset_refuter = model.refute_estimate(
+                identified_estimand, estimate, method_name="data_subset_refuter"
+            )
             refutation_results["subset_test"] = {
                 "new_effect": subset_refuter.new_effect,
                 "p_value": subset_refuter.refutation_result["p_value"],
@@ -193,7 +212,9 @@ class CausalDriverAnalyzer:
                 "model_summary": str(estimate),
             }
 
-            logger.info(f"Estimated causal effect: {treatment} -> {outcome} = {estimate.value:.4f}")
+            logger.info(
+                f"Estimated causal effect: {treatment} -> {outcome} = {estimate.value:.4f}"
+            )
             return results
 
         except Exception as e:
@@ -201,14 +222,22 @@ class CausalDriverAnalyzer:
             return {}
 
     def analyze_market_drivers(
-        self, data: pd.DataFrame, target_variable: str = "returns", key_drivers: List[str] = None
+        self,
+        data: pd.DataFrame,
+        target_variable: str = "returns",
+        key_drivers: List[str] = None,
     ) -> Dict[str, Any]:
         """Comprehensive market driver analysis."""
 
         if key_drivers is None:
             key_drivers = ["volatility", "volume_ratio", "rsi", "ma_5", "ma_20"]
 
-        analysis_results = {"causal_structure": {}, "causal_effects": {}, "driver_importance": {}, "summary": {}}
+        analysis_results = {
+            "causal_structure": {},
+            "causal_effects": {},
+            "driver_importance": {},
+            "summary": {},
+        }
 
         # Identify causal structure
         causal_structure = self.identify_causal_structure(data, target_variable)
@@ -232,13 +261,17 @@ class CausalDriverAnalyzer:
                 driver_importance[driver] = abs(effect["estimated_effect"])
 
         # Sort by importance
-        sorted_drivers = sorted(driver_importance.items(), key=lambda x: x[1], reverse=True)
+        sorted_drivers = sorted(
+            driver_importance.items(), key=lambda x: x[1], reverse=True
+        )
         analysis_results["driver_importance"] = dict(sorted_drivers)
 
         # Create summary
         analysis_results["summary"] = {
             "total_drivers_analyzed": len(key_drivers),
-            "significant_drivers": len([d for d in driver_importance.values() if d > 0.01]),
+            "significant_drivers": len(
+                [d for d in driver_importance.values() if d > 0.01]
+            ),
             "top_driver": sorted_drivers[0][0] if sorted_drivers else None,
             "analysis_date": pd.Timestamp.now().isoformat(),
         }
@@ -259,7 +292,9 @@ class CausalDriverAnalyzer:
 
         # Create edges
         for edge in causal_structure.get("edges", []):
-            edges.append({"source": edge["from"], "target": edge["to"], "type": edge["type"]})
+            edges.append(
+                {"source": edge["from"], "target": edge["to"], "type": edge["type"]}
+            )
 
         return {
             "nodes": nodes,
@@ -285,8 +320,12 @@ class CausalDriverAnalyzer:
             refutation_results = effect.get("refutation_results", {})
 
             # Check refutation tests
-            placebo_p_value = refutation_results.get("placebo_test", {}).get("p_value", 1.0)
-            subset_p_value = refutation_results.get("subset_test", {}).get("p_value", 1.0)
+            placebo_p_value = refutation_results.get("placebo_test", {}).get(
+                "p_value", 1.0
+            )
+            subset_p_value = refutation_results.get("subset_test", {}).get(
+                "p_value", 1.0
+            )
 
             # Calculate confidence score (0-1)
             confidence = 0.0
@@ -311,7 +350,11 @@ class CausalDriverAnalyzer:
 
         return confidence_scores
 
-    def save_analysis(self, analysis_results: Dict[str, Any], filepath: str = "reports/causal_analysis.json") -> bool:
+    def save_analysis(
+        self,
+        analysis_results: Dict[str, Any],
+        filepath: str = "reports/causal_analysis.json",
+    ) -> bool:
         """Save causal analysis results."""
         try:
             import json

@@ -48,7 +48,10 @@ class ServiceIntegrationTest:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "service_integration_test.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "service_integration_test.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def log_test_result(self, test_name: str, success: bool, details: str = ""):
@@ -74,15 +77,23 @@ class ServiceIntegrationTest:
             assert isinstance(agent_types, dict), "Agent types should be a dictionary"
             assert len(agent_types) > 0, "Should have at least one agent type"
 
-            self.log_test_result("Agent Registry - Get Available Types", True, f"Found {len(agent_types)} agent types")
+            self.log_test_result(
+                "Agent Registry - Get Available Types",
+                True,
+                f"Found {len(agent_types)} agent types",
+            )
 
             # Test getting agent description
             for agent_type in agent_types.keys():
                 description = self.agent_registry.get_agent_description(agent_type)
-                assert description is not None, f"Description should exist for {agent_type}"
+                assert (
+                    description is not None
+                ), f"Description should exist for {agent_type}"
 
             self.log_test_result(
-                "Agent Registry - Get Descriptions", True, f"Retrieved descriptions for {len(agent_types)} agent types"
+                "Agent Registry - Get Descriptions",
+                True,
+                f"Retrieved descriptions for {len(agent_types)} agent types",
             )
 
         except Exception as e:
@@ -97,27 +108,39 @@ class ServiceIntegrationTest:
             agent_id = self.agent_manager.create_agent(config)
             assert agent_id is not None, "Agent ID should be returned"
 
-            self.log_test_result("Agent Manager - Create Agent", True, f"Created agent with ID: {agent_id}")
+            self.log_test_result(
+                "Agent Manager - Create Agent",
+                True,
+                f"Created agent with ID: {agent_id}",
+            )
 
             # Test getting the agent
             agent = self.agent_manager.get_agent(agent_id)
             assert agent is not None, "Agent should be retrievable"
             assert agent.agent_type == "model_builder", "Agent type should match"
 
-            self.log_test_result("Agent Manager - Get Agent", True, f"Retrieved agent: {agent_id}")
+            self.log_test_result(
+                "Agent Manager - Get Agent", True, f"Retrieved agent: {agent_id}"
+            )
 
             # Test getting all agents
             all_agents = self.agent_manager.get_all_agents()
             assert isinstance(all_agents, dict), "All agents should be a dictionary"
             assert agent_id in all_agents, "Created agent should be in all agents"
 
-            self.log_test_result("Agent Manager - Get All Agents", True, f"Found {len(all_agents)} total agents")
+            self.log_test_result(
+                "Agent Manager - Get All Agents",
+                True,
+                f"Found {len(all_agents)} total agents",
+            )
 
             # Test removing the agent
             success = self.agent_manager.remove_agent(agent_id)
             assert success, "Agent removal should succeed"
 
-            self.log_test_result("Agent Manager - Remove Agent", True, f"Removed agent: {agent_id}")
+            self.log_test_result(
+                "Agent Manager - Remove Agent", True, f"Removed agent: {agent_id}"
+            )
 
         except Exception as e:
             self.log_test_result("Agent Manager", False, str(e))
@@ -126,7 +149,9 @@ class ServiceIntegrationTest:
         """Test agent execution functionality."""
         try:
             # Create a test agent
-            config = AgentConfig(agent_type="model_builder", name="test_execution_agent")
+            config = AgentConfig(
+                agent_type="model_builder", name="test_execution_agent"
+            )
 
             agent_id = self.agent_manager.create_agent(config)
             agent = self.agent_manager.get_agent(agent_id)
@@ -144,9 +169,11 @@ class ServiceIntegrationTest:
 
             # Note: This will fail due to missing test data, but we're testing the interface
             try:
-                result = await agent.execute(task_data)
+                await agent.execute(task_data)
                 self.log_test_result(
-                    "Agent Execution - Execute Method", True, f"Execution completed for agent: {agent_id}"
+                    "Agent Execution - Execute Method",
+                    True,
+                    f"Execution completed for agent: {agent_id}",
                 )
             except Exception as exec_error:
                 # Expected to fail due to missing test data, but interface should work
@@ -169,13 +196,19 @@ class ServiceIntegrationTest:
             status = self.service_manager.get_service_status()
             assert isinstance(status, dict), "Service status should be a dictionary"
 
-            self.log_test_result("Service Manager - Get Status", True, f"Retrieved status for {len(status)} services")
+            self.log_test_result(
+                "Service Manager - Get Status",
+                True,
+                f"Retrieved status for {len(status)} services",
+            )
 
             # Test getting manager stats
             stats = self.service_manager.get_manager_stats()
             assert isinstance(stats, dict), "Manager stats should be a dictionary"
 
-            self.log_test_result("Service Manager - Get Stats", True, "Retrieved manager statistics")
+            self.log_test_result(
+                "Service Manager - Get Stats", True, "Retrieved manager statistics"
+            )
 
         except Exception as e:
             self.log_test_result("Service Manager", False, str(e))
@@ -187,23 +220,41 @@ class ServiceIntegrationTest:
             self.agent_api_service = AgentAPIService()
 
             # Test that the service has required components
-            assert hasattr(self.agent_api_service, "agent_registry"), "Should have agent registry"
-            assert hasattr(self.agent_api_service, "agent_manager"), "Should have agent manager"
-            assert hasattr(self.agent_api_service, "websocket_service"), "Should have WebSocket service"
+            assert hasattr(
+                self.agent_api_service, "agent_registry"
+            ), "Should have agent registry"
+            assert hasattr(
+                self.agent_api_service, "agent_manager"
+            ), "Should have agent manager"
+            assert hasattr(
+                self.agent_api_service, "websocket_service"
+            ), "Should have WebSocket service"
             assert hasattr(self.agent_api_service, "app"), "Should have FastAPI app"
 
             self.log_test_result(
-                "Agent API Service - Initialization", True, "Service initialized with all required components"
+                "Agent API Service - Initialization",
+                True,
+                "Service initialized with all required components",
             )
 
             # Test that routes are set up
             routes = [route.path for route in self.agent_api_service.app.routes]
-            expected_routes = ["/health", "/agents", "/agents/types", "/system/status", "/ws"]
+            expected_routes = [
+                "/health",
+                "/agents",
+                "/agents/types",
+                "/system/status",
+                "/ws",
+            ]
 
             for route in expected_routes:
                 assert route in routes, f"Expected route {route} not found"
 
-            self.log_test_result("Agent API Service - Routes", True, f"All expected routes found: {expected_routes}")
+            self.log_test_result(
+                "Agent API Service - Routes",
+                True,
+                f"All expected routes found: {expected_routes}",
+            )
 
         except Exception as e:
             self.log_test_result("Agent API Service", False, str(e))
@@ -252,7 +303,9 @@ class ServiceIntegrationTest:
                         "total_tests": total_tests,
                         "passed_tests": passed_tests,
                         "failed_tests": failed_tests,
-                        "success_rate": (passed_tests / total_tests) * 100 if total_tests > 0 else 0,
+                        "success_rate": (passed_tests / total_tests) * 100
+                        if total_tests > 0
+                        else 0,
                     },
                     "results": self.test_results,
                     "timestamp": datetime.now().isoformat(),

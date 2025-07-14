@@ -99,7 +99,9 @@ class AgentManager:
         # Agent health monitoring and restart logic
         self.agent_health: Dict[str, Dict[str, Any]] = {}
         self.agent_restart_count: Dict[str, int] = {}
-        self.max_restart_attempts = self.config.max_concurrent_agents  # Use as max restarts
+        self.max_restart_attempts = (
+            self.config.max_concurrent_agents
+        )  # Use as max restarts
         self.restart_delay = 30  # seconds
         self.health_check_interval = 60  # seconds
         self.agent_timeout_threshold = 300  # seconds
@@ -125,7 +127,9 @@ class AgentManager:
             return
 
         self._restart_monitor_running = True
-        self._restart_monitor_thread = threading.Thread(target=self._restart_monitor_loop, daemon=True)
+        self._restart_monitor_thread = threading.Thread(
+            target=self._restart_monitor_loop, daemon=True
+        )
         self._restart_monitor_thread.start()
         self.logger.info("Agent restart monitor started")
 
@@ -180,24 +184,32 @@ class AgentManager:
                 is_responsive = self._is_agent_responsive(agent_entry.instance)
                 if not is_responsive:
                     health["error_count"] += 1
-                    self.logger.warning(f"Agent {agent_name} is not responsive (error count: {health['error_count']})")
+                    self.logger.warning(
+                        f"Agent {agent_name} is not responsive (error count: {health['error_count']})"
+                    )
                 else:
                     health["last_heartbeat"] = current_time
                     health["error_count"] = 0
 
             # Check for timeout conditions
             if health["last_execution"]:
-                time_since_execution = (current_time - health["last_execution"]).total_seconds()
+                time_since_execution = (
+                    current_time - health["last_execution"]
+                ).total_seconds()
                 if time_since_execution > self.agent_timeout_threshold:
                     health["error_count"] += 1
-                    self.logger.warning(f"Agent {agent_name} has exceeded timeout threshold")
+                    self.logger.warning(
+                        f"Agent {agent_name} has exceeded timeout threshold"
+                    )
 
             # Determine if restart is needed
             if health["error_count"] >= 3:  # 3 consecutive errors
                 if health["restart_count"] < self.max_restart_attempts:
                     self._restart_agent(agent_name)
                 else:
-                    self.logger.error(f"Agent {agent_name} exceeded maximum restart attempts")
+                    self.logger.error(
+                        f"Agent {agent_name} exceeded maximum restart attempts"
+                    )
                     health["status"] = "failed"
 
         except Exception as e:
@@ -233,7 +245,9 @@ class AgentManager:
             agent_entry = self.agent_registry[agent_name]
             health = self.agent_health[agent_name]
 
-            self.logger.info(f"Restarting agent {agent_name} (attempt {health['restart_count'] + 1})")
+            self.logger.info(
+                f"Restarting agent {agent_name} (attempt {health['restart_count'] + 1})"
+            )
 
             # Stop current instance if running
             if agent_entry.instance:
@@ -291,14 +305,21 @@ class AgentManager:
 
         health = self.agent_health[agent_name].copy()
         health["agent_name"] = agent_name
-        health["last_heartbeat"] = health["last_heartbeat"].isoformat() if health["last_heartbeat"] else None
-        health["last_execution"] = health["last_execution"].isoformat() if health["last_execution"] else None
+        health["last_heartbeat"] = (
+            health["last_heartbeat"].isoformat() if health["last_heartbeat"] else None
+        )
+        health["last_execution"] = (
+            health["last_execution"].isoformat() if health["last_execution"] else None
+        )
 
         return health
 
     def get_all_agent_health_statuses(self) -> Dict[str, Dict[str, Any]]:
         """Get health status for all agents."""
-        return {agent_name: self.get_agent_health_status(agent_name) for agent_name in self.agent_registry.keys()}
+        return {
+            agent_name: self.get_agent_health_status(agent_name)
+            for agent_name in self.agent_registry.keys()
+        }
 
     def reset_agent_health_tracking(self, agent_name: str) -> bool:
         """Reset health tracking for a specific agent."""
@@ -315,7 +336,9 @@ class AgentManager:
                 return True
             return False
         except Exception as e:
-            self.logger.error(f"Error resetting health tracking for agent {agent_name}: {e}")
+            self.logger.error(
+                f"Error resetting health tracking for agent {agent_name}: {e}"
+            )
             return False
 
     def _load_config(self) -> None:
@@ -409,7 +432,12 @@ class AgentManager:
         for agent_name, agent_class in default_agents.items():
             self.register_agent(agent_name, agent_class)
 
-    def register_agent(self, name: str, agent_class: Type[BaseAgent], config: Optional[AgentConfig] = None) -> None:
+    def register_agent(
+        self,
+        name: str,
+        agent_class: Type[BaseAgent],
+        config: Optional[AgentConfig] = None,
+    ) -> None:
         """Register an agent with the manager.
 
         Args:
@@ -442,7 +470,9 @@ class AgentManager:
             agent_class=agent_class,
             config=config,
             instance=instance,
-            metadata=agent_class.get_metadata() if hasattr(agent_class, "get_metadata") else None,
+            metadata=agent_class.get_metadata()
+            if hasattr(agent_class, "get_metadata")
+            else None,
         )
         self.agent_registry[name] = entry
         self.logger.info(f"Registered agent: {name}")
@@ -521,7 +551,9 @@ class AgentManager:
         """
         agent = self.get_agent(name)
         if not agent:
-            return AgentResult(success=False, error_message=f"Agent {name} not found or disabled")
+            return AgentResult(
+                success=False, error_message=f"Agent {name} not found or disabled"
+            )
 
         try:
             result = await agent.run(**kwargs)
@@ -532,7 +564,9 @@ class AgentManager:
             return result
 
         except Exception as e:
-            error_result = AgentResult(success=False, error_message=str(e), timestamp=datetime.now())
+            error_result = AgentResult(
+                success=False, error_message=str(e), timestamp=datetime.now()
+            )
             self._record_execution(name, error_result)
             return error_result
 
@@ -572,7 +606,9 @@ class AgentManager:
         else:
             metrics["failed_executions"] += 1
 
-        metrics["avg_execution_time"] = metrics["total_execution_time"] / metrics["total_executions"]
+        metrics["avg_execution_time"] = (
+            metrics["total_execution_time"] / metrics["total_executions"]
+        )
 
         # Update leaderboard
         self.leaderboard.update_performance(
@@ -673,7 +709,9 @@ class AgentManager:
             "result": {
                 "agent_metrics": self.agent_metrics,
                 "total_executions": len(self.execution_history),
-                "recent_executions": self.execution_history[-10:] if self.execution_history else [],
+                "recent_executions": self.execution_history[-10:]
+                if self.execution_history
+                else [],
             },
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
@@ -757,7 +795,9 @@ class AgentManager:
             extra_metrics=extra_metrics,
         )
 
-    def get_leaderboard(self, top_n: int = 10, sort_by: str = "sharpe_ratio") -> List[Dict[str, Any]]:
+    def get_leaderboard(
+        self, top_n: int = 10, sort_by: str = "sharpe_ratio"
+    ) -> List[Dict[str, Any]]:
         """Expose leaderboard data for dashboard/reporting."""
         return self.leaderboard.get_leaderboard(top_n=top_n, sort_by=sort_by)
 
@@ -790,7 +830,9 @@ def get_agent_manager() -> AgentManager:
     return _agent_manager
 
 
-def register_agent(name: str, agent_class: Type[BaseAgent], config: Optional[AgentConfig] = None) -> None:
+def register_agent(
+    name: str, agent_class: Type[BaseAgent], config: Optional[AgentConfig] = None
+) -> None:
     """Register an agent with the global agent manager.
 
     Args:

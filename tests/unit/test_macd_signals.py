@@ -47,7 +47,10 @@ class TestMACDSignals:
         low = close_prices - np.random.uniform(0, 3, 100)
         volume = np.random.uniform(1000000, 5000000, 100)
 
-        df = pd.DataFrame({"Close": close_prices, "High": high, "Low": low, "Volume": volume}, index=dates)
+        df = pd.DataFrame(
+            {"Close": close_prices, "High": high, "Low": low, "Volume": volume},
+            index=dates,
+        )
 
         return df
 
@@ -169,10 +172,19 @@ class TestMACDSignals:
         if not MACD_AVAILABLE:
             pytest.skip("MACD not available")
 
-        result_df = generate_macd_signals(synthetic_price_data, fast_period=12, slow_period=26, signal_period=9)
+        result_df = generate_macd_signals(
+            synthetic_price_data, fast_period=12, slow_period=26, signal_period=9
+        )
 
         # Check required columns exist
-        required_columns = ["signal", "macd", "macd_signal", "macd_histogram", "returns", "strategy_returns"]
+        required_columns = [
+            "signal",
+            "macd",
+            "macd_signal",
+            "macd_histogram",
+            "returns",
+            "strategy_returns",
+        ]
         for col in required_columns:
             assert col in result_df.columns
 
@@ -181,7 +193,9 @@ class TestMACDSignals:
         if not MACD_AVAILABLE:
             pytest.skip("MACD not available")
 
-        result_df = generate_macd_signals(synthetic_price_data, fast_period=12, slow_period=26, signal_period=9)
+        result_df = generate_macd_signals(
+            synthetic_price_data, fast_period=12, slow_period=26, signal_period=9
+        )
 
         # Signals should be 1 (buy), -1 (sell), or 0 (hold)
         valid_signals = result_df["signal"].dropna()
@@ -193,7 +207,9 @@ class TestMACDSignals:
         if not MACD_AVAILABLE:
             pytest.skip("MACD not available")
 
-        result_df = generate_macd_signals(synthetic_price_data, fast_period=12, slow_period=26, signal_period=9)
+        result_df = generate_macd_signals(
+            synthetic_price_data, fast_period=12, slow_period=26, signal_period=9
+        )
 
         # Signal column should not contain NaN values
         assert not result_df["signal"].isna().any()
@@ -205,20 +221,27 @@ class TestMACDSignals:
 
         # Should handle short data gracefully
         try:
-            result_df = generate_macd_signals(short_price_data, fast_period=12, slow_period=26, signal_period=9)
+            result_df = generate_macd_signals(
+                short_price_data, fast_period=12, slow_period=26, signal_period=9
+            )
             # If it succeeds, check structure
             assert "signal" in result_df.columns
             assert "macd" in result_df.columns
         except Exception as e:
             # If it fails, should be due to insufficient data
-            assert any(keyword in str(e).lower() for keyword in ["insufficient", "at least", "minimum", "period"])
+            assert any(
+                keyword in str(e).lower()
+                for keyword in ["insufficient", "at least", "minimum", "period"]
+            )
 
     def test_constant_data_handling(self, constant_price_data):
         """Test handling of constant price data."""
         if not MACD_AVAILABLE:
             pytest.skip("MACD not available")
 
-        result_df = generate_macd_signals(constant_price_data, fast_period=12, slow_period=26, signal_period=9)
+        result_df = generate_macd_signals(
+            constant_price_data, fast_period=12, slow_period=26, signal_period=9
+        )
 
         # Should handle constant data gracefully
         assert "signal" in result_df.columns
@@ -237,12 +260,16 @@ class TestMACDSignals:
 
         # Should handle NaN data gracefully
         try:
-            result_df = generate_macd_signals(nan_price_data, fast_period=12, slow_period=26, signal_period=9)
+            result_df = generate_macd_signals(
+                nan_price_data, fast_period=12, slow_period=26, signal_period=9
+            )
             assert "signal" in result_df.columns
             assert "macd" in result_df.columns
         except Exception as e:
             # If it fails, should be due to NaN values
-            assert any(keyword in str(e).lower() for keyword in ["nan", "missing", "invalid"])
+            assert any(
+                keyword in str(e).lower() for keyword in ["nan", "missing", "invalid"]
+            )
 
     def test_different_periods(self, synthetic_price_data):
         """Test MACD calculation with different periods."""
@@ -257,7 +284,10 @@ class TestMACDSignals:
 
         for fast_period, slow_period, signal_period in period_combinations:
             result_df = generate_macd_signals(
-                synthetic_price_data, fast_period=fast_period, slow_period=slow_period, signal_period=signal_period
+                synthetic_price_data,
+                fast_period=fast_period,
+                slow_period=slow_period,
+                signal_period=signal_period,
             )
             assert "signal" in result_df.columns
             assert "macd" in result_df.columns
@@ -272,7 +302,9 @@ class TestMACDSignals:
         if not MACD_AVAILABLE:
             pytest.skip("MACD not available")
 
-        result_df = generate_macd_signals(trending_price_data, fast_period=12, slow_period=26, signal_period=9)
+        result_df = generate_macd_signals(
+            trending_price_data, fast_period=12, slow_period=26, signal_period=9
+        )
 
         assert "signal" in result_df.columns
         assert "macd" in result_df.columns
@@ -286,7 +318,9 @@ class TestMACDSignals:
         if not MACD_AVAILABLE:
             pytest.skip("MACD not available")
 
-        result_df = generate_macd_signals(synthetic_price_data, fast_period=12, slow_period=26, signal_period=9)
+        result_df = generate_macd_signals(
+            synthetic_price_data, fast_period=12, slow_period=26, signal_period=9
+        )
 
         # Check returns columns
         assert "returns" in result_df.columns
@@ -306,7 +340,9 @@ class TestMACDSignals:
         if not MACD_AVAILABLE:
             pytest.skip("MACD not available")
 
-        result_df = generate_macd_signals(synthetic_price_data, fast_period=12, slow_period=26, signal_period=9)
+        result_df = generate_macd_signals(
+            synthetic_price_data, fast_period=12, slow_period=26, signal_period=9
+        )
 
         # Check cumulative returns columns
         assert "cumulative_returns" in result_df.columns
@@ -314,11 +350,13 @@ class TestMACDSignals:
 
         # Cumulative returns should be monotonically increasing or decreasing
         cum_returns = result_df["cumulative_returns"].dropna()
-        strategy_cum_returns = result_df["strategy_cumulative_returns"].dropna()
+        result_df["strategy_cumulative_returns"].dropna()
 
         if len(cum_returns) > 1:
             # Should be monotonically increasing (for positive returns)
-            assert (cum_returns.diff().dropna() >= 0).all() or (cum_returns.diff().dropna() <= 0).all()
+            assert (cum_returns.diff().dropna() >= 0).all() or (
+                cum_returns.diff().dropna() <= 0
+            ).all()
 
     def test_strategy_parameters(self, macd_strategy):
         """Test MACD strategy parameters."""
@@ -360,12 +398,17 @@ class TestMACDSignals:
         empty_df = pd.DataFrame()
 
         try:
-            result_df = generate_macd_signals(empty_df, fast_period=12, slow_period=26, signal_period=9)
+            result_df = generate_macd_signals(
+                empty_df, fast_period=12, slow_period=26, signal_period=9
+            )
             # Should handle empty data gracefully
             assert len(result_df) == 0
         except Exception as e:
             # If it fails, should be due to empty data
-            assert any(keyword in str(e).lower() for keyword in ["empty", "no data", "insufficient"])
+            assert any(
+                keyword in str(e).lower()
+                for keyword in ["empty", "no data", "insufficient"]
+            )
 
     def test_edge_case_missing_columns(self):
         """Test handling of data with missing columns."""
@@ -384,7 +427,9 @@ class TestMACDSignals:
         )
 
         try:
-            result_df = generate_macd_signals(df, fast_period=12, slow_period=26, signal_period=9)
+            result_df = generate_macd_signals(
+                df, fast_period=12, slow_period=26, signal_period=9
+            )
             # Should handle missing columns gracefully
         except Exception as e:
             # If it fails, should be due to missing 'Close' column
@@ -395,7 +440,9 @@ class TestMACDSignals:
         if not MACD_AVAILABLE:
             pytest.skip("MACD not available")
 
-        result_df = generate_macd_signals(synthetic_price_data, fast_period=12, slow_period=26, signal_period=9)
+        result_df = generate_macd_signals(
+            synthetic_price_data, fast_period=12, slow_period=26, signal_period=9
+        )
 
         # Calculate basic performance metrics
         if "strategy_returns" in result_df.columns:
@@ -413,10 +460,16 @@ class TestMACDSignals:
         if not MACD_AVAILABLE:
             pytest.skip("MACD not available")
 
-        result_df = generate_macd_signals(synthetic_price_data, fast_period=12, slow_period=26, signal_period=9)
+        result_df = generate_macd_signals(
+            synthetic_price_data, fast_period=12, slow_period=26, signal_period=9
+        )
 
         # Validate signal logic
-        if "signal" in result_df.columns and "macd" in result_df.columns and "macd_signal" in result_df.columns:
+        if (
+            "signal" in result_df.columns
+            and "macd" in result_df.columns
+            and "macd_signal" in result_df.columns
+        ):
             signals = result_df["signal"]
             macd_values = result_df["macd"]
             macd_signal = result_df["macd_signal"]
@@ -427,7 +480,7 @@ class TestMACDSignals:
                 buy_indices = buy_signals[buy_signals].index
                 for idx in buy_indices:
                     if idx > 0:  # Need previous value for comparison
-                        prev_idx = result_df.index[result_df.index.get_loc(idx) - 1]
+                        result_df.index[result_df.index.get_loc(idx) - 1]
                         # MACD should be above signal line at buy signal
                         assert macd_values.loc[idx] > macd_signal.loc[idx]
 
@@ -437,7 +490,7 @@ class TestMACDSignals:
                 sell_indices = sell_signals[sell_signals].index
                 for idx in sell_indices:
                     if idx > 0:  # Need previous value for comparison
-                        prev_idx = result_df.index[result_df.index.get_loc(idx) - 1]
+                        result_df.index[result_df.index.get_loc(idx) - 1]
                         # MACD should be below signal line at sell signal
                         assert macd_values.loc[idx] < macd_signal.loc[idx]
 
@@ -446,7 +499,9 @@ class TestMACDSignals:
         if not MACD_AVAILABLE:
             pytest.skip("MACD not available")
 
-        result_df = generate_macd_signals(synthetic_price_data, fast_period=12, slow_period=26, signal_period=9)
+        result_df = generate_macd_signals(
+            synthetic_price_data, fast_period=12, slow_period=26, signal_period=9
+        )
 
         # Check histogram column
         assert "macd_histogram" in result_df.columns
@@ -460,7 +515,9 @@ class TestMACDSignals:
             if len(macd_values) > 0 and len(macd_signal) > 0 and len(histogram) > 0:
                 # Histogram should equal MACD - Signal
                 expected_histogram = macd_values - macd_signal
-                np.testing.assert_array_almost_equal(histogram, expected_histogram, decimal=10)
+                np.testing.assert_array_almost_equal(
+                    histogram, expected_histogram, decimal=10
+                )
 
 
 if __name__ == "__main__":

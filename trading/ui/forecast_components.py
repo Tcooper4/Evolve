@@ -58,16 +58,22 @@ def create_forecast_form(
     if selected_model:
         model_config = registry.get_model_config(selected_model)
         if model_config:
-            parameters = create_parameter_inputs(model_config.parameters, key_prefix=f"{key_prefix}_model")
+            parameters = create_parameter_inputs(
+                model_config.parameters, key_prefix=f"{key_prefix}_model"
+            )
 
     # Get asset selection
     selected_asset = create_asset_selector(
-        assets=["BTC/USD", "ETH/USD", "AAPL", "MSFT", "GOOGL"], default_asset=default_asset, key=f"{key_prefix}_asset"
+        assets=["BTC/USD", "ETH/USD", "AAPL", "MSFT", "GOOGL"],
+        default_asset=default_asset,
+        key=f"{key_prefix}_asset",
     )
 
     # Get timeframe selection
     selected_timeframe = create_timeframe_selector(
-        timeframes=["1h", "4h", "1d", "1w"], default_timeframe=default_timeframe, key=f"{key_prefix}_timeframe"
+        timeframes=["1h", "4h", "1d", "1w"],
+        default_timeframe=default_timeframe,
+        key=f"{key_prefix}_timeframe",
     )
 
     # Log form submission for agentic monitoring
@@ -85,7 +91,10 @@ def create_forecast_form(
 
 
 def create_forecast_chart(
-    data: pd.DataFrame, model_config: ModelConfig, show_confidence: bool = True, show_benchmark: bool = True
+    data: pd.DataFrame,
+    model_config: ModelConfig,
+    show_confidence: bool = True,
+    show_benchmark: bool = True,
 ) -> go.Figure:
     """Create an interactive forecast chart with optional features.
 
@@ -101,35 +110,70 @@ def create_forecast_chart(
     fig = go.Figure()
 
     # Add main forecast line
-    fig.add_trace(go.Scatter(x=data.index, y=data["prediction"], name="Forecast", line=dict(color="blue")))
+    fig.add_trace(
+        go.Scatter(
+            x=data.index, y=data["prediction"], name="Forecast", line=dict(color="blue")
+        )
+    )
 
     # Add confidence intervals if available and requested
-    if show_confidence and model_config.confidence_available and "std_error" in data.columns:
+    if (
+        show_confidence
+        and model_config.confidence_available
+        and "std_error" in data.columns
+    ):
         lower, upper = create_confidence_interval(data)
         fig.add_trace(
             go.Scatter(
-                x=data.index, y=upper, fill=None, mode="lines", line_color="rgba(0,100,80,0.2)", name="Upper Bound"
+                x=data.index,
+                y=upper,
+                fill=None,
+                mode="lines",
+                line_color="rgba(0,100,80,0.2)",
+                name="Upper Bound",
             )
         )
         fig.add_trace(
             go.Scatter(
-                x=data.index, y=lower, fill="tonexty", mode="lines", line_color="rgba(0,100,80,0.2)", name="Lower Bound"
+                x=data.index,
+                y=lower,
+                fill="tonexty",
+                mode="lines",
+                line_color="rgba(0,100,80,0.2)",
+                name="Lower Bound",
             )
         )
 
     # Add benchmark overlay if available and requested
-    if show_benchmark and model_config.benchmark_support and "benchmark" in data.columns:
+    if (
+        show_benchmark
+        and model_config.benchmark_support
+        and "benchmark" in data.columns
+    ):
         fig.add_trace(
-            go.Scatter(x=data.index, y=data["benchmark"], name="Benchmark", line=dict(color="gray", dash="dash"))
+            go.Scatter(
+                x=data.index,
+                y=data["benchmark"],
+                name="Benchmark",
+                line=dict(color="gray", dash="dash"),
+            )
         )
 
     # Add actual values if available
     if "actual" in data.columns:
-        fig.add_trace(go.Scatter(x=data.index, y=data["actual"], name="Actual", line=dict(color="green")))
+        fig.add_trace(
+            go.Scatter(
+                x=data.index, y=data["actual"], name="Actual", line=dict(color="green")
+            )
+        )
 
     # Update layout
     fig.update_layout(
-        title="Price Forecast", xaxis_title="Date", yaxis_title="Price", hovermode="x unified", showlegend=True
+        title="Price Forecast",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        hovermode="x unified",
+        showlegend=True,
     )
 
     # Add range slider
@@ -141,7 +185,9 @@ def create_forecast_chart(
     return fig
 
 
-def create_forecast_metrics(data: pd.DataFrame, model_config: ModelConfig) -> Dict[str, float]:
+def create_forecast_metrics(
+    data: pd.DataFrame, model_config: ModelConfig
+) -> Dict[str, float]:
     """Calculate and display forecast performance metrics.
 
     Args:
@@ -157,7 +203,10 @@ def create_forecast_metrics(data: pd.DataFrame, model_config: ModelConfig) -> Di
         # Calculate error metrics
         mae = np.mean(np.abs(data["actual"] - data["prediction"]))
         rmse = np.sqrt(np.mean((data["actual"] - data["prediction"]) ** 2))
-        mape = np.mean(np.abs((data["actual"] - data["prediction"]) / data["actual"])) * 100
+        mape = (
+            np.mean(np.abs((data["actual"] - data["prediction"]) / data["actual"]))
+            * 100
+        )
 
         metrics = {"MAE": mae, "RMSE": rmse, "MAPE": mape}
 
@@ -178,7 +227,9 @@ def create_forecast_metrics(data: pd.DataFrame, model_config: ModelConfig) -> Di
     return metrics
 
 
-def create_forecast_export(data: pd.DataFrame, model_config: ModelConfig, metrics: Dict[str, float]) -> Dict[str, Any]:
+def create_forecast_export(
+    data: pd.DataFrame, model_config: ModelConfig, metrics: Dict[str, float]
+) -> Dict[str, Any]:
     """Create export options for forecast results.
 
     Args:
@@ -193,7 +244,9 @@ def create_forecast_export(data: pd.DataFrame, model_config: ModelConfig, metric
         st.subheader("Export Results")
 
         # Create export options
-        export_format = st.radio("Select Export Format", ["CSV", "JSON", "Excel"], key=os.getenv("KEY", ""))
+        export_format = st.radio(
+            "Select Export Format", ["CSV", "JSON", "Excel"], key=os.getenv("KEY", "")
+        )
 
         if st.button("Export"):
             # Prepare export data

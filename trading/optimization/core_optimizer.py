@@ -52,7 +52,9 @@ class OptimizationResult:
 class OptimizerConfig(BaseModel):
     """Configuration for optimizers."""
 
-    optimizer_type: str = Field(..., description="Type of optimizer (bayesian, genetic, grid, etc.)")
+    optimizer_type: str = Field(
+        ..., description="Type of optimizer (bayesian, genetic, grid, etc.)"
+    )
     max_iterations: int = Field(100, description="Maximum optimization iterations")
     timeout: Optional[int] = Field(None, description="Timeout in seconds")
     n_jobs: int = Field(1, description="Number of parallel jobs")
@@ -61,9 +63,15 @@ class OptimizerConfig(BaseModel):
 
     # Parallelization settings
     use_parallel: bool = Field(True, description="Whether to use parallel processing")
-    parallel_backend: str = Field("joblib", description="Parallel backend (joblib, concurrent.futures)")
-    parallel_chunk_size: int = Field(10, description="Chunk size for parallel processing")
-    parallel_timeout: Optional[int] = Field(300, description="Timeout for parallel jobs (seconds)")
+    parallel_backend: str = Field(
+        "joblib", description="Parallel backend (joblib, concurrent.futures)"
+    )
+    parallel_chunk_size: int = Field(
+        10, description="Chunk size for parallel processing"
+    )
+    parallel_timeout: Optional[int] = Field(
+        300, description="Timeout for parallel jobs (seconds)"
+    )
 
     # Bayesian optimization specific
     n_initial_points: int = Field(10, description="Number of initial random points")
@@ -97,10 +105,17 @@ class ParallelProcessor:
         # Check availability
         if config.use_parallel:
             if config.parallel_backend == "joblib" and not JOBLIB_AVAILABLE:
-                self.logger.warning("joblib not available, falling back to sequential processing")
+                self.logger.warning(
+                    "joblib not available, falling back to sequential processing"
+                )
                 config.use_parallel = False
-            elif config.parallel_backend == "concurrent.futures" and not CONCURRENT_FUTURES_AVAILABLE:
-                self.logger.warning("concurrent.futures not available, falling back to sequential processing")
+            elif (
+                config.parallel_backend == "concurrent.futures"
+                and not CONCURRENT_FUTURES_AVAILABLE
+            ):
+                self.logger.warning(
+                    "concurrent.futures not available, falling back to sequential processing"
+                )
                 config.use_parallel = False
 
     def parallel_map(self, func: Callable, iterable: List, **kwargs) -> List:
@@ -139,7 +154,9 @@ class ParallelProcessor:
             self.logger.info("Falling back to sequential processing")
             return [func(item, **kwargs) for item in iterable]
 
-    def _concurrent_futures_parallel_map(self, func: Callable, iterable: List, **kwargs) -> List:
+    def _concurrent_futures_parallel_map(
+        self, func: Callable, iterable: List, **kwargs
+    ) -> List:
         """Use concurrent.futures for parallel processing."""
         try:
             # Choose executor based on function type
@@ -151,10 +168,14 @@ class ParallelProcessor:
             results = []
             with executor_class(max_workers=self.config.n_jobs) as executor:
                 # Submit all tasks
-                future_to_item = {executor.submit(func, item, **kwargs): item for item in iterable}
+                future_to_item = {
+                    executor.submit(func, item, **kwargs): item for item in iterable
+                }
 
                 # Collect results
-                for future in as_completed(future_to_item, timeout=self.config.parallel_timeout):
+                for future in as_completed(
+                    future_to_item, timeout=self.config.parallel_timeout
+                ):
                     try:
                         result = future.result()
                         results.append(result)
@@ -191,7 +212,9 @@ class BaseOptimizer(ABC):
         self.optimization_end_time = None
 
     @abstractmethod
-    def optimize(self, objective_function, param_space: Dict[str, Any], data: pd.DataFrame) -> OptimizationResult:
+    def optimize(
+        self, objective_function, param_space: Dict[str, Any], data: pd.DataFrame
+    ) -> OptimizationResult:
         """Optimize the objective function over the parameter space."""
 
     def get_best_params(self) -> Optional[Dict[str, Any]]:
@@ -226,7 +249,9 @@ class BaseOptimizer(ABC):
 class BayesianOptimizer(BaseOptimizer):
     """Bayesian optimization using scikit-optimize."""
 
-    def optimize(self, objective_function, param_space: Dict[str, Any], data: pd.DataFrame) -> OptimizationResult:
+    def optimize(
+        self, objective_function, param_space: Dict[str, Any], data: pd.DataFrame
+    ) -> OptimizationResult:
         """Run Bayesian optimization."""
         try:
             from skopt import gp_minimize
@@ -240,7 +265,9 @@ class BayesianOptimizer(BaseOptimizer):
 
             for name, bounds in param_space.items():
                 if isinstance(bounds, (list, tuple)):
-                    if len(bounds) == 2 and all(isinstance(x, (int, float)) for x in bounds):
+                    if len(bounds) == 2 and all(
+                        isinstance(x, (int, float)) for x in bounds
+                    ):
                         if all(isinstance(x, int) for x in bounds):
                             dimensions.append(Integer(bounds[0], bounds[1], name=name))
                         else:
@@ -255,7 +282,13 @@ class BayesianOptimizer(BaseOptimizer):
                 param_dict = dict(zip(param_names, params))
                 try:
                     score = objective_function(param_dict, data)
-                    self.history.append({"params": param_dict, "score": score, "timestamp": datetime.now()})
+                    self.history.append(
+                        {
+                            "params": param_dict,
+                            "score": score,
+                            "timestamp": datetime.now(),
+                        }
+                    )
                     return -score  # Minimize negative score (maximize score)
                 except Exception as e:
                     logger.error(f"Objective function error: {e}")
@@ -281,7 +314,8 @@ class BayesianOptimizer(BaseOptimizer):
                 optimization_history=self.history,
                 metadata={
                     "n_iterations": len(result.x_iters),
-                    "optimization_time": self.optimization_end_time - self.optimization_start_time,
+                    "optimization_time": self.optimization_end_time
+                    - self.optimization_start_time,
                 },
                 timestamp=datetime.now(),
                 optimizer_type="bayesian",
@@ -299,7 +333,9 @@ class BayesianOptimizer(BaseOptimizer):
 class GeneticOptimizer(BaseOptimizer):
     """Genetic algorithm optimization."""
 
-    def optimize(self, objective_function, param_space: Dict[str, Any], data: pd.DataFrame) -> OptimizationResult:
+    def optimize(
+        self, objective_function, param_space: Dict[str, Any], data: pd.DataFrame
+    ) -> OptimizationResult:
         """Run genetic algorithm optimization."""
         try:
             import random
@@ -326,7 +362,9 @@ class GeneticOptimizer(BaseOptimizer):
             def create_individual():
                 return [random.uniform(bounds[0], bounds[1]) for bounds in param_bounds]
 
-            toolbox.register("individual", tools.initIterate, creator.Individual, create_individual)
+            toolbox.register(
+                "individual", tools.initIterate, creator.Individual, create_individual
+            )
             toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
             # Define evaluation function
@@ -334,7 +372,13 @@ class GeneticOptimizer(BaseOptimizer):
                 param_dict = dict(zip(param_names, individual))
                 try:
                     score = objective_function(param_dict, data)
-                    self.history.append({"params": param_dict, "score": score, "timestamp": datetime.now()})
+                    self.history.append(
+                        {
+                            "params": param_dict,
+                            "score": score,
+                            "timestamp": datetime.now(),
+                        }
+                    )
                     return (score,)
                 except Exception as e:
                     logger.error(f"Objective function error: {e}")
@@ -371,7 +415,8 @@ class GeneticOptimizer(BaseOptimizer):
                 metadata={
                     "n_generations": self.config.n_generations,
                     "population_size": self.config.population_size,
-                    "optimization_time": self.optimization_end_time - self.optimization_start_time,
+                    "optimization_time": self.optimization_end_time
+                    - self.optimization_start_time,
                 },
                 timestamp=datetime.now(),
                 optimizer_type="genetic",
@@ -389,7 +434,9 @@ class GeneticOptimizer(BaseOptimizer):
 class GridOptimizer(BaseOptimizer):
     """Grid search optimization with parallel processing."""
 
-    def optimize(self, objective_function, param_space: Dict[str, Any], data: pd.DataFrame) -> OptimizationResult:
+    def optimize(
+        self, objective_function, param_space: Dict[str, Any], data: pd.DataFrame
+    ) -> OptimizationResult:
         """Run grid search optimization with parallel processing."""
         try:
             from itertools import product
@@ -404,20 +451,33 @@ class GridOptimizer(BaseOptimizer):
             grid_combinations = list(product(*param_values))
 
             if self.config.verbose:
-                logger.info(f"Grid search: {len(grid_combinations)} combinations to evaluate")
+                logger.info(
+                    f"Grid search: {len(grid_combinations)} combinations to evaluate"
+                )
 
             # Define evaluation function for parallel processing
             def evaluate_combination(combination):
                 param_dict = dict(zip(param_names, combination))
                 try:
                     score = objective_function(param_dict, data)
-                    return {"params": param_dict, "score": score, "timestamp": datetime.now()}
+                    return {
+                        "params": param_dict,
+                        "score": score,
+                        "timestamp": datetime.now(),
+                    }
                 except Exception as e:
                     logger.error(f"Error evaluating combination {param_dict}: {e}")
-                    return {"params": param_dict, "score": float("-inf"), "timestamp": datetime.now(), "error": str(e)}
+                    return {
+                        "params": param_dict,
+                        "score": float("-inf"),
+                        "timestamp": datetime.now(),
+                        "error": str(e),
+                    }
 
             # Run evaluations in parallel
-            results = self.parallel_processor.parallel_map(evaluate_combination, grid_combinations)
+            results = self.parallel_processor.parallel_map(
+                evaluate_combination, grid_combinations
+            )
 
             # Filter out None results and update history
             valid_results = []
@@ -452,7 +512,8 @@ class GridOptimizer(BaseOptimizer):
                 optimization_history=self.history,
                 metadata={
                     "n_combinations": len(grid_combinations),
-                    "optimization_time": self.optimization_end_time - self.optimization_start_time,
+                    "optimization_time": self.optimization_end_time
+                    - self.optimization_start_time,
                     "parallel_efficiency": len(valid_results) / len(grid_combinations),
                 },
                 timestamp=datetime.now(),
@@ -462,9 +523,13 @@ class GridOptimizer(BaseOptimizer):
             )
 
             if self.config.verbose:
-                logger.info(f"Grid search completed: {len(valid_results)}/{len(grid_combinations)} valid results")
+                logger.info(
+                    f"Grid search completed: {len(valid_results)}/{len(grid_combinations)} valid results"
+                )
                 logger.info(f"Best score: {best_score:.4f}")
-                logger.info(f"Optimization time: {self.optimization_end_time - self.optimization_start_time:.2f}s")
+                logger.info(
+                    f"Optimization time: {self.optimization_end_time - self.optimization_start_time:.2f}s"
+                )
 
             return self.best_result
 
@@ -476,7 +541,9 @@ class GridOptimizer(BaseOptimizer):
 class RandomSearchOptimizer(BaseOptimizer):
     """Random search optimization with parallel processing."""
 
-    def optimize(self, objective_function, param_space: Dict[str, Any], data: pd.DataFrame) -> OptimizationResult:
+    def optimize(
+        self, objective_function, param_space: Dict[str, Any], data: pd.DataFrame
+    ) -> OptimizationResult:
         """Run random search optimization."""
         try:
             import random
@@ -509,13 +576,24 @@ class RandomSearchOptimizer(BaseOptimizer):
             def evaluate_combination(combination):
                 try:
                     score = objective_function(combination, data)
-                    return {"params": combination, "score": score, "timestamp": datetime.now()}
+                    return {
+                        "params": combination,
+                        "score": score,
+                        "timestamp": datetime.now(),
+                    }
                 except Exception as e:
                     logger.error(f"Error evaluating combination {combination}: {e}")
-                    return {"params": combination, "score": float("-inf"), "timestamp": datetime.now(), "error": str(e)}
+                    return {
+                        "params": combination,
+                        "score": float("-inf"),
+                        "timestamp": datetime.now(),
+                        "error": str(e),
+                    }
 
             # Run evaluations in parallel
-            results = self.parallel_processor.parallel_map(evaluate_combination, param_combinations)
+            results = self.parallel_processor.parallel_map(
+                evaluate_combination, param_combinations
+            )
 
             # Filter out None results and update history
             valid_results = []
@@ -550,7 +628,8 @@ class RandomSearchOptimizer(BaseOptimizer):
                 optimization_history=self.history,
                 metadata={
                     "n_iterations": len(param_combinations),
-                    "optimization_time": self.optimization_end_time - self.optimization_start_time,
+                    "optimization_time": self.optimization_end_time
+                    - self.optimization_start_time,
                     "success_rate": len(valid_results) / len(param_combinations),
                 },
                 timestamp=datetime.now(),
@@ -560,9 +639,13 @@ class RandomSearchOptimizer(BaseOptimizer):
             )
 
             if self.config.verbose:
-                logger.info(f"Random search completed: {len(valid_results)}/{len(param_combinations)} valid results")
+                logger.info(
+                    f"Random search completed: {len(valid_results)}/{len(param_combinations)} valid results"
+                )
                 logger.info(f"Best score: {best_score:.4f}")
-                logger.info(f"Optimization time: {self.optimization_end_time - self.optimization_start_time:.2f}s")
+                logger.info(
+                    f"Optimization time: {self.optimization_end_time - self.optimization_start_time:.2f}s"
+                )
 
             return self.best_result
 
@@ -582,7 +665,9 @@ class OptimizerFactory:
     }
 
     @classmethod
-    def create(cls, optimizer_type: str, config: Optional[OptimizerConfig] = None) -> BaseOptimizer:
+    def create(
+        cls, optimizer_type: str, config: Optional[OptimizerConfig] = None
+    ) -> BaseOptimizer:
         """Create an optimizer instance."""
         if optimizer_type not in cls._optimizers:
             raise ValueError(f"Unknown optimizer type: {optimizer_type}")
@@ -623,18 +708,30 @@ class StrategyOptimizer:
                     "threshold": [0.01, 0.02, 0.05],
                 }
             },
-            "rsi": {"param_space": {"period": [14, 20, 30], "overbought": [70, 75, 80], "oversold": [20, 25, 30]}},
+            "rsi": {
+                "param_space": {
+                    "period": [14, 20, 30],
+                    "overbought": [70, 75, 80],
+                    "oversold": [20, 25, 30],
+                }
+            },
         }
 
     def optimize_strategy(
-        self, strategy_name: str, data: pd.DataFrame, optimizer_type: str = "bayesian", **kwargs
+        self,
+        strategy_name: str,
+        data: pd.DataFrame,
+        optimizer_type: str = "bayesian",
+        **kwargs,
     ) -> OptimizationResult:
         """Optimize a specific strategy."""
         if strategy_name not in self.strategies:
             raise ValueError(f"Strategy {strategy_name} not found")
 
         # Create optimizer config
-        optimizer_config = OptimizerConfig(optimizer_type=optimizer_type, **{**self.config, **kwargs})
+        optimizer_config = OptimizerConfig(
+            optimizer_type=optimizer_type, **{**self.config, **kwargs}
+        )
 
         # Create optimizer
         optimizer = OptimizerFactory.create(optimizer_type, optimizer_config)
@@ -652,7 +749,9 @@ class StrategyOptimizer:
 
         return result
 
-    def _evaluate_strategy(self, strategy_name: str, params: Dict[str, Any], data: pd.DataFrame) -> float:
+    def _evaluate_strategy(
+        self, strategy_name: str, params: Dict[str, Any], data: pd.DataFrame
+    ) -> float:
         """Evaluate strategy performance."""
         try:
             # This would integrate with actual strategy evaluation
@@ -676,7 +775,9 @@ class StrategyOptimizer:
         return self.strategies[strategy_name]["param_space"]
 
 
-def create_genetic_optimizer(config: Optional[Dict[str, Any]] = None) -> GeneticOptimizer:
+def create_genetic_optimizer(
+    config: Optional[Dict[str, Any]] = None
+) -> GeneticOptimizer:
     """Create a genetic optimizer with default configuration."""
     optimizer_config = OptimizerConfig(optimizer_type="genetic", **(config or {}))
     return GeneticOptimizer(optimizer_config)
@@ -688,13 +789,17 @@ def create_grid_optimizer(config: Optional[Dict[str, Any]] = None) -> GridOptimi
     return GridOptimizer(optimizer_config)
 
 
-def create_bayesian_optimizer(config: Optional[Dict[str, Any]] = None) -> BayesianOptimizer:
+def create_bayesian_optimizer(
+    config: Optional[Dict[str, Any]] = None
+) -> BayesianOptimizer:
     """Create a Bayesian optimizer with default configuration."""
     optimizer_config = OptimizerConfig(optimizer_type="bayesian", **(config or {}))
     return BayesianOptimizer(optimizer_config)
 
 
-def create_random_search_optimizer(config: Optional[Dict[str, Any]] = None) -> RandomSearchOptimizer:
+def create_random_search_optimizer(
+    config: Optional[Dict[str, Any]] = None
+) -> RandomSearchOptimizer:
     """Create a random search optimizer with default configuration."""
     optimizer_config = OptimizerConfig(optimizer_type="random_search", **(config or {}))
     return RandomSearchOptimizer(optimizer_config)

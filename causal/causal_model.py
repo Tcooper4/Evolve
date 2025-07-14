@@ -81,12 +81,18 @@ class CausalModel:
             if confounders:
                 for confounder in confounders:
                     for var in all_vars:
-                        if confounder != var and confounder in data.columns and var in data.columns:
+                        if (
+                            confounder != var
+                            and confounder in data.columns
+                            and var in data.columns
+                        ):
                             corr = data[confounder].corr(data[var])
                             if abs(corr) > 0.1:
                                 self.graph.add_edge(confounder, var, weight=corr)
 
-            logger.info(f"Built causal graph with {len(self.graph.nodes)} nodes and {len(self.graph.edges)} edges")
+            logger.info(
+                f"Built causal graph with {len(self.graph.nodes)} nodes and {len(self.graph.edges)} edges"
+            )
             return self.graph
 
         except Exception as e:
@@ -94,7 +100,11 @@ class CausalModel:
             return nx.DiGraph()
 
     def estimate_causal_effect(
-        self, data: pd.DataFrame, treatment: str, outcome: str, method: str = "linear_regression"
+        self,
+        data: pd.DataFrame,
+        treatment: str,
+        outcome: str,
+        method: str = "linear_regression",
     ) -> Dict[str, float]:
         """Estimate causal effect using various methods.
 
@@ -109,7 +119,9 @@ class CausalModel:
         """
         try:
             if treatment not in data.columns or outcome not in data.columns:
-                raise ValueError(f"Treatment {treatment} or outcome {outcome} not in data")
+                raise ValueError(
+                    f"Treatment {treatment} or outcome {outcome} not in data"
+                )
 
             # Prepare data
             X = data[[treatment]].copy()
@@ -167,7 +179,11 @@ class CausalModel:
             return {}
 
     def perform_intervention(
-        self, data: pd.DataFrame, treatment: str, intervention_value: float, outcome: str
+        self,
+        data: pd.DataFrame,
+        treatment: str,
+        intervention_value: float,
+        outcome: str,
     ) -> Dict[str, float]:
         """Perform causal intervention (do-calculus).
 
@@ -182,7 +198,9 @@ class CausalModel:
         """
         try:
             if treatment not in data.columns or outcome not in data.columns:
-                raise ValueError(f"Treatment {treatment} or outcome {outcome} not in data")
+                raise ValueError(
+                    f"Treatment {treatment} or outcome {outcome} not in data"
+                )
 
             # Create intervention data
             intervention_data = data.copy()
@@ -223,7 +241,9 @@ class CausalModel:
                 "original_mean": np.mean(y_pred_original),
                 "intervention_mean": np.mean(y_pred_intervention),
                 "average_effect": avg_effect,
-                "effect_size": abs(avg_effect) / np.std(y_original) if np.std(y_original) > 0 else 0,
+                "effect_size": abs(avg_effect) / np.std(y_original)
+                if np.std(y_original) > 0
+                else 0,
             }
 
             # Store results
@@ -257,7 +277,8 @@ class CausalModel:
             feature_cols = [
                 col
                 for col in market_data.columns
-                if col != target_variable and market_data[col].dtype in ["float64", "int64"]
+                if col != target_variable
+                and market_data[col].dtype in ["float64", "int64"]
             ]
 
             if len(feature_cols) < 2:
@@ -274,7 +295,10 @@ class CausalModel:
             effects = {}
             for feature in feature_cols[:5]:
                 effect = self.estimate_causal_effect(
-                    data=market_data, treatment=feature, outcome=target_variable, method="linear_regression"
+                    data=market_data,
+                    treatment=feature,
+                    outcome=target_variable,
+                    method="linear_regression",
                 )
                 if effect:
                     effects[feature] = effect
@@ -288,7 +312,10 @@ class CausalModel:
                 intervention_val = mean_val + std_val
 
                 intervention = self.perform_intervention(
-                    data=market_data, treatment=feature, intervention_value=intervention_val, outcome=target_variable
+                    data=market_data,
+                    treatment=feature,
+                    intervention_value=intervention_val,
+                    outcome=target_variable,
                 )
                 if intervention:
                     interventions[feature] = intervention
@@ -329,7 +356,8 @@ class CausalModel:
             param_cols = [
                 col
                 for col in strategy_data.columns
-                if col != performance_metric and strategy_data[col].dtype in ["float64", "int64"]
+                if col != performance_metric
+                and strategy_data[col].dtype in ["float64", "int64"]
             ]
 
             if len(param_cols) < 2:
@@ -339,7 +367,10 @@ class CausalModel:
             effects = {}
             for param in param_cols:
                 effect = self.estimate_causal_effect(
-                    data=strategy_data, treatment=param, outcome=performance_metric, method="linear_regression"
+                    data=strategy_data,
+                    treatment=param,
+                    outcome=performance_metric,
+                    method="linear_regression",
                 )
                 if effect:
                     effects[param] = effect
@@ -367,11 +398,15 @@ class CausalModel:
                 "parameter_effects": effects,
                 "optimal_ranges": optimal_ranges,
                 "top_parameters": sorted(
-                    effects.keys(), key=lambda x: abs(effects[x].get("coefficient", 0)), reverse=True
+                    effects.keys(),
+                    key=lambda x: abs(effects[x].get("coefficient", 0)),
+                    reverse=True,
                 )[:3],
             }
 
-            logger.info(f"Strategy insights generated: {len(effects)} parameter effects")
+            logger.info(
+                f"Strategy insights generated: {len(effects)} parameter effects"
+            )
             return insights
 
         except Exception as e:
@@ -454,8 +489,12 @@ class CausalAnalysisResult:
                 "num_effects": len(self.causal_effects),
                 "num_interventions": len(self.intervention_results),
                 "graph_size": len(self.graph.nodes()),
-                "avg_effect": np.mean(list(self.causal_effects.values())) if self.causal_effects else 0,
-                "max_effect": max(self.causal_effects.values()) if self.causal_effects else 0,
+                "avg_effect": np.mean(list(self.causal_effects.values()))
+                if self.causal_effects
+                else 0,
+                "max_effect": max(self.causal_effects.values())
+                if self.causal_effects
+                else 0,
                 "timestamp": self.timestamp.isoformat(),
             },
             "message": "Operation completed successfully",

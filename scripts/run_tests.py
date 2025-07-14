@@ -36,7 +36,12 @@ def validate_environment():
     """Validate required environment variables."""
     required_vars = ["PYTHONPATH", "PYTEST_ADDOPTS"]
 
-    optional_vars = ["ALPHA_VANTAGE_API_KEY", "FINNHUB_API_KEY", "POLYGON_API_KEY", "OPENAI_API_KEY"]
+    optional_vars = [
+        "ALPHA_VANTAGE_API_KEY",
+        "FINNHUB_API_KEY",
+        "POLYGON_API_KEY",
+        "OPENAI_API_KEY",
+    ]
 
     # Check required variables
     for var in required_vars:

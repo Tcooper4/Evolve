@@ -42,7 +42,9 @@ class ReasoningDisplay:
         """
         self.logger = reasoning_logger
 
-    def display_decision_terminal(self, decision: AgentDecision, show_explanation: bool = True):
+    def display_decision_terminal(
+        self, decision: AgentDecision, show_explanation: bool = True
+    ):
         """
         Display a decision in the terminal.
 
@@ -60,7 +62,9 @@ class ReasoningDisplay:
         logger.info(f"📈 Symbol: {decision.context.symbol}")
         logger.info(f"⏱️  Timeframe: {decision.context.timeframe}")
         logger.info(f"🎯 Action: {decision.action_taken}")
-        logger.info(f"🎯 Confidence: {decision.confidence_level.value.replace('_', ' ').title()}")
+        logger.info(
+            f"🎯 Confidence: {decision.confidence_level.value.replace('_', ' ').title()}"
+        )
 
         # Reasoning
         logger.info(f"\n🧠 REASONING:")
@@ -100,7 +104,9 @@ class ReasoningDisplay:
 
         logger.info("=" * 80 + "\n")
 
-    def display_recent_decisions_terminal(self, limit: int = 10, agent_name: str = None):
+    def display_recent_decisions_terminal(
+        self, limit: int = 10, agent_name: str = None
+    ):
         """
         Display recent decisions in the terminal.
 
@@ -127,7 +133,9 @@ class ReasoningDisplay:
             logger.info("No decisions found.")
 
         for i, decision in enumerate(decisions, 1):
-            logger.info(f"\n{i}. {decision.agent_name} - {decision.decision_type.value}")
+            logger.info(
+                f"\n{i}. {decision.agent_name} - {decision.decision_type.value}"
+            )
             logger.info(f"   📈 {decision.context.symbol} | {decision.action_taken}")
             logger.info(f"   🎯 {decision.reasoning.primary_reason}")
             logger.info(f"   ⏰ {decision.timestamp}")
@@ -157,7 +165,9 @@ class ReasoningDisplay:
 
         logger.info(f"\nRecent Activity:")
         for activity in stats["recent_activity"][:5]:
-            logger.info(f"  {activity['agent_name']} - {activity['decision_type']} - {activity['symbol']}")
+            logger.info(
+                f"  {activity['agent_name']} - {activity['decision_type']} - {activity['symbol']}"
+            )
 
     def display_decision_streamlit(self, decision: AgentDecision):
         """
@@ -178,7 +188,9 @@ class ReasoningDisplay:
 
         with col2:
             st.metric("Type", decision.decision_type.value.replace("_", " ").title())
-            st.metric("Confidence", decision.confidence_level.value.replace("_", " ").title())
+            st.metric(
+                "Confidence", decision.confidence_level.value.replace("_", " ").title()
+            )
 
         with col3:
             st.metric("Timestamp", decision.timestamp[:19])  # Remove microseconds
@@ -211,7 +223,10 @@ class ReasoningDisplay:
         # Market conditions
         if decision.context.market_conditions:
             st.subheader("📊 Market Conditions")
-            market_df = pd.DataFrame(list(decision.context.market_conditions.items()), columns=["Condition", "Value"])
+            market_df = pd.DataFrame(
+                list(decision.context.market_conditions.items()),
+                columns=["Condition", "Value"],
+            )
             st.dataframe(market_df, use_container_width=True)
 
         # Chat explanation
@@ -220,7 +235,9 @@ class ReasoningDisplay:
             st.subheader("💬 Chat Explanation")
             st.text_area("Explanation", explanation, height=200, disabled=True)
 
-    def display_recent_decisions_streamlit(self, limit: int = 10, agent_name: str = None):
+    def display_recent_decisions_streamlit(
+        self, limit: int = 10, agent_name: str = None
+    ):
         """
         Display recent decisions in Streamlit.
 
@@ -255,7 +272,9 @@ class ReasoningDisplay:
                     "Action": decision.action_taken[:50] + "..."
                     if len(decision.action_taken) > 50
                     else decision.action_taken,
-                    "Confidence": decision.confidence_level.value.replace("_", " ").title(),
+                    "Confidence": decision.confidence_level.value.replace(
+                        "_", " "
+                    ).title(),
                     "Timestamp": decision.timestamp[:19],
                 }
             )
@@ -299,19 +318,27 @@ class ReasoningDisplay:
         # Decisions by agent
         if stats["decisions_by_agent"]:
             st.subheader("Decisions by Agent")
-            agent_df = pd.DataFrame(list(stats["decisions_by_agent"].items()), columns=["Agent", "Decisions"])
+            agent_df = pd.DataFrame(
+                list(stats["decisions_by_agent"].items()),
+                columns=["Agent", "Decisions"],
+            )
             st.bar_chart(agent_df.set_index("Agent"))
 
         # Decisions by type
         if stats["decisions_by_type"]:
             st.subheader("Decisions by Type")
-            type_df = pd.DataFrame(list(stats["decisions_by_type"].items()), columns=["Type", "Count"])
+            type_df = pd.DataFrame(
+                list(stats["decisions_by_type"].items()), columns=["Type", "Count"]
+            )
             st.bar_chart(type_df.set_index("Type"))
 
         # Confidence distribution
         if stats["confidence_distribution"]:
             st.subheader("Confidence Distribution")
-            conf_df = pd.DataFrame(list(stats["confidence_distribution"].items()), columns=["Confidence", "Count"])
+            conf_df = pd.DataFrame(
+                list(stats["confidence_distribution"].items()),
+                columns=["Confidence", "Count"],
+            )
             st.bar_chart(conf_df.set_index("Confidence"))
 
         # Recent activity
@@ -329,17 +356,23 @@ class ReasoningDisplay:
         agent_names = list(stats["decisions_by_agent"].keys())
 
         if agent_names:
-            selected_agent = st.sidebar.selectbox("Filter by Agent:", ["All Agents"] + agent_names)
+            selected_agent = st.sidebar.selectbox(
+                "Filter by Agent:", ["All Agents"] + agent_names
+            )
         else:
             selected_agent = "All Agents"
 
         # Decision type filter
         decision_types = [dt.value for dt in DecisionType]
-        selected_type = st.sidebar.selectbox("Filter by Type:", ["All Types"] + decision_types)
+        selected_type = st.sidebar.selectbox(
+            "Filter by Type:", ["All Types"] + decision_types
+        )
 
         # Confidence filter
         confidence_levels = [cl.value for cl in ConfidenceLevel]
-        selected_confidence = st.sidebar.selectbox("Filter by Confidence:", ["All Levels"] + confidence_levels)
+        selected_confidence = st.sidebar.selectbox(
+            "Filter by Confidence:", ["All Levels"] + confidence_levels
+        )
 
         # Limit
         limit = st.sidebar.slider("Number of decisions to show:", 5, 50, 10)
@@ -351,7 +384,9 @@ class ReasoningDisplay:
         return {
             "agent": selected_agent if selected_agent != "All Agents" else None,
             "type": selected_type if selected_type != "All Types" else None,
-            "confidence": selected_confidence if selected_confidence != "All Levels" else None,
+            "confidence": selected_confidence
+            if selected_confidence != "All Levels"
+            else None,
             "limit": limit,
         }
 
@@ -371,8 +406,12 @@ class ReasoningDisplay:
             for decision_data in recent_decisions:
                 decision = self.logger.get_decision(decision_data["decision_id"])
                 if decision:
-                    feed_text += f"**{decision.agent_name}** ({decision.timestamp[:19]})\n"
-                    feed_text += f"📈 {decision.context.symbol} | {decision.action_taken}\n"
+                    feed_text += (
+                        f"**{decision.agent_name}** ({decision.timestamp[:19]})\n"
+                    )
+                    feed_text += (
+                        f"📈 {decision.context.symbol} | {decision.action_taken}\n"
+                    )
                     feed_text += f"🎯 {decision.reasoning.primary_reason}\n"
                     feed_text += "---\n"
 
@@ -397,13 +436,17 @@ def create_reasoning_page_streamlit():
     filters = display.create_streamlit_sidebar()
 
     # Main content
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Statistics", "📋 Recent Decisions", "🔴 Live Feed", "📄 Decision Details"])
+    tab1, tab2, tab3, tab4 = st.tabs(
+        ["📊 Statistics", "📋 Recent Decisions", "🔴 Live Feed", "📄 Decision Details"]
+    )
 
     with tab1:
         display.display_statistics_streamlit()
 
     with tab2:
-        display.display_recent_decisions_streamlit(limit=filters["limit"], agent_name=filters["agent"])
+        display.display_recent_decisions_streamlit(
+            limit=filters["limit"], agent_name=filters["agent"]
+        )
 
     with tab3:
         display.display_live_feed_streamlit()

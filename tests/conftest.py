@@ -165,8 +165,17 @@ def mock_agent():
 def mock_router():
     """Create a mock router for testing."""
     mock = Mock()
-    mock.route_intent.return_value = {"intent": "buy", "entity": "AAPL", "confidence": 0.9, "strategy": "RSI"}
-    mock.detect_intent.return_value = {"intent": "buy", "confidence": 0.85, "entities": ["AAPL"]}
+    mock.route_intent.return_value = {
+        "intent": "buy",
+        "entity": "AAPL",
+        "confidence": 0.9,
+        "strategy": "RSI",
+    }
+    mock.detect_intent.return_value = {
+        "intent": "buy",
+        "confidence": 0.85,
+        "entities": ["AAPL"],
+    }
     return mock
 
 
@@ -245,9 +254,9 @@ def pytest_configure(config):
 @pytest.fixture(autouse=True)
 def mock_external_apis():
     """Automatically mock external APIs for all tests."""
-    with patch("yfinance.download") as mock_yf, patch("requests.get") as mock_requests, patch(
-        "openai.ChatCompletion.create"
-    ) as mock_openai:
+    with patch("yfinance.download") as mock_yf, patch(
+        "requests.get"
+    ) as mock_requests, patch("openai.ChatCompletion.create") as mock_openai:
         # Mock yfinance
         mock_yf.return_value = pd.DataFrame(
             {
@@ -275,7 +284,13 @@ def mock_external_apis():
 
         # Mock OpenAI
         mock_openai.return_value = {
-            "choices": [{"message": {"content": "Based on analysis, BUY signal with 75% confidence."}}]
+            "choices": [
+                {
+                    "message": {
+                        "content": "Based on analysis, BUY signal with 75% confidence."
+                    }
+                }
+            ]
         }
 
         yield

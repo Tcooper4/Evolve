@@ -77,7 +77,9 @@ def calculate_bollinger_bands(
         return empty_series, empty_series, empty_series
 
 
-def calculate_stochastic(data: pd.DataFrame, k_window: int = 14, d_window: int = 3) -> Tuple[pd.Series, pd.Series]:
+def calculate_stochastic(
+    data: pd.DataFrame, k_window: int = 14, d_window: int = 3
+) -> Tuple[pd.Series, pd.Series]:
     """Calculate Stochastic Oscillator."""
     try:
         low_min = data["Low"].rolling(window=k_window).min()
@@ -133,7 +135,9 @@ def calculate_volatility(data: pd.Series, window: int = 20) -> pd.Series:
         return pd.Series(dtype=float)
 
 
-def calculate_beta(asset_returns: pd.Series, market_returns: pd.Series, window: int = 252) -> pd.Series:
+def calculate_beta(
+    asset_returns: pd.Series, market_returns: pd.Series, window: int = 252
+) -> pd.Series:
     """Calculate Rolling Beta."""
     try:
         covariance = asset_returns.rolling(window=window).cov(market_returns)
@@ -145,7 +149,9 @@ def calculate_beta(asset_returns: pd.Series, market_returns: pd.Series, window: 
         return pd.Series(dtype=float)
 
 
-def calculate_sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.02, window: int = 252) -> pd.Series:
+def calculate_sharpe_ratio(
+    returns: pd.Series, risk_free_rate: float = 0.02, window: int = 252
+) -> pd.Series:
     """Calculate Rolling Sharpe Ratio."""
     try:
         excess_returns = returns - risk_free_rate / 252
@@ -169,7 +175,9 @@ def calculate_max_drawdown(equity_curve: pd.Series) -> pd.Series:
         return pd.Series(dtype=float)
 
 
-def calculate_support_resistance(data: pd.Series, window: int = 20) -> Tuple[pd.Series, pd.Series]:
+def calculate_support_resistance(
+    data: pd.Series, window: int = 20
+) -> Tuple[pd.Series, pd.Series]:
     """Calculate Support and Resistance levels."""
     try:
         resistance = data.rolling(window=window).max()
@@ -217,7 +225,15 @@ def calculate_pivot_points(data: pd.DataFrame) -> Dict[str, float]:
         s2 = pivot - (high - low)
         s3 = low - 2 * (high - pivot)
 
-        return {"pivot": pivot, "r1": r1, "r2": r2, "r3": r3, "s1": s1, "s2": s2, "s3": s3}
+        return {
+            "pivot": pivot,
+            "r1": r1,
+            "r2": r2,
+            "r3": r3,
+            "s1": s1,
+            "s2": s2,
+            "s3": s3,
+        }
     except Exception as e:
         logger.error(f"Error calculating Pivot Points: {e}")
         return {}
@@ -240,12 +256,20 @@ def calculate_ichimoku(data: pd.DataFrame) -> Dict[str, pd.Series]:
         senkou_a = ((tenkan + kijun) / 2).shift(26)
 
         # Senkou Span B (Leading Span B)
-        senkou_b = ((high.rolling(window=52).max() + low.rolling(window=52).min()) / 2).shift(26)
+        senkou_b = (
+            (high.rolling(window=52).max() + low.rolling(window=52).min()) / 2
+        ).shift(26)
 
         # Chikou Span (Lagging Span)
         chikou = close.shift(-26)
 
-        return {"tenkan": tenkan, "kijun": kijun, "senkou_a": senkou_a, "senkou_b": senkou_b, "chikou": chikou}
+        return {
+            "tenkan": tenkan,
+            "kijun": kijun,
+            "senkou_a": senkou_a,
+            "senkou_b": senkou_b,
+            "chikou": chikou,
+        }
     except Exception as e:
         logger.error(f"Error calculating Ichimoku: {e}")
         empty_series = pd.Series(dtype=float)

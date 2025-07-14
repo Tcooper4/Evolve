@@ -27,7 +27,9 @@ class ServiceManager:
     Provides centralized control and monitoring of all services.
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0):
+    def __init__(
+        self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0
+    ):
         """
         Initialize the ServiceManager.
 
@@ -143,7 +145,9 @@ class ServiceManager:
 
         # Start monitoring thread
         self.is_running = True
-        self.monitor_thread = threading.Thread(target=self._monitor_services, daemon=True)
+        self.monitor_thread = threading.Thread(
+            target=self._monitor_services, daemon=True
+        )
         self.monitor_thread.start()
 
     def _monitor_services(self):
@@ -174,7 +178,9 @@ class ServiceManager:
                     self.services[service_name]["status"] = "stopped"
                     logger.info(f"{service_name} service stopped")
                 elif message_type == "status":
-                    self.services[service_name]["status"] = data.get("status", "unknown")
+                    self.services[service_name]["status"] = data.get(
+                        "status", "unknown"
+                    )
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to decode service message: {e}")
@@ -204,7 +210,10 @@ class ServiceManager:
             script_path = Path(__file__).parent / service_config["script"]
 
             if not script_path.exists():
-                return {"success": False, "error": f"Service script not found: {script_path}"}
+                return {
+                    "success": False,
+                    "error": f"Service script not found: {script_path}",
+                }
 
             # Start the service process
             process = subprocess.Popen(
@@ -221,7 +230,12 @@ class ServiceManager:
 
             logger.info(f"Started {service_name} service (PID: {process.pid})")
 
-            return {"success": True, "service_name": service_name, "pid": process.pid, "status": "starting"}
+            return {
+                "success": True,
+                "service_name": service_name,
+                "pid": process.pid,
+                "status": "starting",
+            }
 
         except Exception as e:
             logger.error(f"Error starting {service_name} service: {e}")
@@ -247,7 +261,9 @@ class ServiceManager:
 
         try:
             # Send stop command via Redis
-            self.redis_client.publish(f"{service_name}_control", json.dumps({"type": "stop"}))
+            self.redis_client.publish(
+                f"{service_name}_control", json.dumps({"type": "stop"})
+            )
 
             # Wait a bit for graceful shutdown
             time.sleep(2)
@@ -326,11 +342,17 @@ class ServiceManager:
             }
         else:
             return {
-                service_name: {"status": config["status"], "pid": config["pid"], "description": config["description"]}
+                service_name: {
+                    "status": config["status"],
+                    "pid": config["pid"],
+                    "description": config["description"],
+                }
                 for service_name, config in self.services.items()
             }
 
-    def send_message(self, service_name: str, message_type: str, data: Dict[str, Any]) -> bool:
+    def send_message(
+        self, service_name: str, message_type: str, data: Dict[str, Any]
+    ) -> bool:
         """
         Send a message to a specific service.
 
@@ -355,7 +377,9 @@ class ServiceManager:
 
     def get_manager_stats(self) -> Dict[str, Any]:
         """Get manager statistics."""
-        running_services = sum(1 for config in self.services.values() if config["status"] == "running")
+        running_services = sum(
+            1 for config in self.services.values() if config["status"] == "running"
+        )
 
         return {
             "total_services": len(self.services),
@@ -378,7 +402,11 @@ class ServiceManager:
             self.pubsub.close()
 
             logger.info("ServiceManager shutdown complete")
-            return {"status": "success", "message": "ServiceManager shutdown complete", "stop_results": stop_results}
+            return {
+                "status": "success",
+                "message": "ServiceManager shutdown complete",
+                "stop_results": stop_results,
+            }
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
             return {
@@ -413,7 +441,11 @@ def main():
         if args.action == "start":
             if not args.service:
                 logger.error("Error: --service is required for start action")
-                return {"status": "failed", "action": "start", "error": "Missing service parameter"}
+                return {
+                    "status": "failed",
+                    "action": "start",
+                    "error": "Missing service parameter",
+                }
             result = manager.start_service(args.service)
             logger.info(json.dumps(result, indent=2))
             return {"status": "completed", "action": "start", "result": result}
@@ -421,7 +453,11 @@ def main():
         elif args.action == "stop":
             if not args.service:
                 logger.error("Error: --service is required for stop action")
-                return {"status": "failed", "action": "stop", "error": "Missing service parameter"}
+                return {
+                    "status": "failed",
+                    "action": "stop",
+                    "error": "Missing service parameter",
+                }
             result = manager.stop_service(args.service)
             logger.info(json.dumps(result, indent=2))
             return {"status": "completed", "action": "stop", "result": result}
