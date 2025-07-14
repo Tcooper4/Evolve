@@ -12,52 +12,28 @@ from typing import Any, Dict, Optional
 import numpy as np
 import pandas as pd
 
+# Import our custom performance metrics
+from utils.performance_metrics import (
+    sharpe_ratio,
+    sortino_ratio,
+    max_drawdown,
+    calmar_ratio,
+    avg_drawdown,
+    drawdown_details,
+    value_at_risk,
+    conditional_value_at_risk,
+    omega_ratio,
+    information_ratio,
+    treynor_ratio,
+    jensen_alpha,
+    downside_deviation,
+    gain_loss_ratio,
+    profit_factor,
+    recovery_factor,
+    risk_reward_ratio
+)
+
 logger = logging.getLogger(__name__)
-
-# Try to import empyrical, with fallback
-try:
-    import empyrical as ep
-
-    EMPYRICAL_AVAILABLE = True
-except ImportError:
-    EMPYRICAL_AVAILABLE = False
-
-    class EmpyricalFallback:
-        @staticmethod
-        def sharpe_ratio(returns, risk_free=0.0, period=252):
-            excess_returns = returns - risk_free
-            if len(excess_returns) == 0 or excess_returns.std() == 0:
-                return 0.0
-            return (excess_returns.mean() * period) / (
-                excess_returns.std() * np.sqrt(period)
-            )
-
-        @staticmethod
-        def sortino_ratio(returns, risk_free=0.0, period=252):
-            excess_returns = returns - risk_free
-            downside_returns = excess_returns[excess_returns < 0]
-            if len(downside_returns) == 0 or downside_returns.std() == 0:
-                return 0.0
-            return (excess_returns.mean() * period) / (
-                downside_returns.std() * np.sqrt(period)
-            )
-
-        @staticmethod
-        def max_drawdown(returns):
-            cumulative = (1 + returns).cumprod()
-            running_max = cumulative.expanding().max()
-            drawdown = (cumulative - running_max) / running_max
-            return drawdown.min()
-
-        @staticmethod
-        def calmar_ratio(returns, risk_free=0.0, period=252):
-            max_dd = EmpyricalFallback.max_drawdown(returns)
-            if max_dd == 0:
-                return 0.0
-            annual_return = (1 + returns.mean()) ** period - 1
-            return annual_return / abs(max_dd)
-
-    ep = EmpyricalFallback()
 
 
 class RiskMetric(Enum):
@@ -126,14 +102,14 @@ class RiskMetricsEngine:
         """Calculate a comprehensive set of risk metrics for a return series."""
         metrics = {}
         try:
-            metrics["sharpe_ratio"] = ep.sharpe_ratio(
+            metrics["sharpe_ratio"] = sharpe_ratio(
                 returns, risk_free=self.risk_free_rate, period=self.period
             )
-            metrics["sortino_ratio"] = ep.sortino_ratio(
+            metrics["sortino_ratio"] = sortino_ratio(
                 returns, risk_free=self.risk_free_rate, period=self.period
             )
-            metrics["max_drawdown"] = ep.max_drawdown(returns)
-            metrics["calmar_ratio"] = ep.calmar_ratio(
+            metrics["max_drawdown"] = max_drawdown(returns)
+            metrics["calmar_ratio"] = calmar_ratio(
                 returns, risk_free=self.risk_free_rate, period=self.period
             )
             metrics["volatility"] = returns.std() * np.sqrt(self.period)
@@ -143,12 +119,14 @@ class RiskMetricsEngine:
             metrics["std_return"] = returns.std() * np.sqrt(self.period)
             metrics["min_return"] = returns.min()
             metrics["max_return"] = returns.max()
-            metrics["value_at_risk"] = np.percentile(returns, 5)
-            metrics["conditional_var"] = (
-                returns[returns <= metrics["value_at_risk"]].mean()
-                if len(returns[returns <= metrics["value_at_risk"]]) > 0
-                else np.nan
-            )
+            metrics["value_at_risk"] = value_at_risk(returns, confidence_level=0.95)
+            metrics["conditional_var"] = conditional_value_at_risk(returns, confidence_level=0.95)
+            metrics["gain_loss_ratio"] = gain_loss_ratio(returns)
+            metrics["profit_factor"] = profit_factor(returns)
+            metrics["recovery_factor"] = recovery_factor(returns)
+            metrics["risk_reward_ratio"] = risk_reward_ratio(returns)
+            metrics["omega_ratio"] = omega_ratio(returns)
+            metrics["downside_deviation"] = downside_deviation(returns)
         except Exception as e:
             logger.warning(f"Risk metric calculation failed: {e}")
         return metrics
