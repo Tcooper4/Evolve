@@ -612,6 +612,66 @@ class ReportGenerator:
             logger.error(f"Error generating charts: {e}")
         return charts
 
+    def export_signals(
+        self, 
+        signals_df: pd.DataFrame, 
+        output_path: str, 
+        buy_col: str = 'Buy', 
+        sell_col: str = 'Sell'
+    ) -> bool:
+        """
+        Export signals DataFrame with defensive checks.
+        
+        Args:
+            signals_df: DataFrame containing signals
+            output_path: Path to save the exported file
+            buy_col: Column name for buy signals (default: 'Buy')
+            sell_col: Column name for sell signals (default: 'Sell')
+            
+        Returns:
+            bool: True if export successful, False otherwise
+        """
+        try:
+            # Defensive check: if signals DataFrame is empty or malformed, skip export
+            if signals_df is None or signals_df.empty:
+                logger.warning("Signals DataFrame is empty or None, skipping export")
+                return False
+            
+            # Check for required columns
+            required_cols = [buy_col, sell_col]
+            missing_cols = [col for col in required_cols if col not in signals_df.columns]
+            if missing_cols:
+                logger.warning(f"Missing required columns: {missing_cols}, skipping export")
+                return False
+            
+            # Check for data quality issues
+            if signals_df[buy_col].isna().all() and signals_df[sell_col].isna().all():
+                logger.warning("All signal columns contain only NaN values, skipping export")
+                return False
+            
+            # Create output directory if it doesn't exist
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Export based on file extension
+            if output_path.suffix.lower() == '.csv':
+                signals_df.to_csv(output_path, index=True)
+            elif output_path.suffix.lower() == '.json':
+                signals_df.to_json(output_path, orient='records')
+            elif output_path.suffix.lower() == '.parquet':
+                signals_df.to_parquet(output_path, index=True)
+            else:
+                # Default to CSV
+                output_path = output_path.with_suffix('.csv')
+                signals_df.to_csv(output_path, index=True)
+            
+            logger.info(f"Successfully exported signals to {output_path}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error exporting signals: {e}")
+            return False
+
     def _generate_markdown_report(self, report_data: Dict[str, Any]) -> Path:
         """Generate Markdown report."""
         try:

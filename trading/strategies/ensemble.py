@@ -55,21 +55,21 @@ class WeightedEnsembleStrategy:
         self.positions = None
         self.performance_history = []
         self.last_rebalance = None
+        self.last_successful_signals = None # Added for fallback
 
     def validate_weights(self, weights: Dict[str, float]) -> bool:
         """Validate that strategy weights sum to approximately 1.0."""
         total_weight = sum(weights.values())
         return abs(total_weight - 1.0) < 0.01
 
-    def normalize_weights(self, weights: Dict[str, float]) -> Dict[str, float]:
-        """Normalize weights to sum to 1.0."""
+    def normalize_weights(self, weights: Dict[str, float], epsilon: float = 1e-8) -> Dict[str, float]:
+        """Normalize weights to sum to 1.0, with epsilon to prevent NaNs."""
         total_weight = sum(weights.values())
-        if total_weight == 0:
-            # Equal weighting if all weights are zero
+        if abs(total_weight) < epsilon:
+            # Equal weighting if all weights are zero or near zero
             num_strategies = len(weights)
             return {strategy: 1.0 / num_strategies for strategy in weights}
-        
-        return {strategy: weight / total_weight for strategy, weight in weights.items()}
+        return {strategy: weight / (total_weight + epsilon) for strategy, weight in weights.items()}
 
     def combine_signals(
         self, 
@@ -103,6 +103,17 @@ class WeightedEnsembleStrategy:
             weights = {k: v for k, v in weights.items() if k in available_strategies}
             weights = self.normalize_weights(weights)
 
+        # Fallback: If all models return None, return last successful forecast
+        all_none = all(
+            df is None or df.isnull().all().all() for df in strategy_signals.values()
+        )
+        if all_none:
+            if hasattr(self, 'last_successful_signals') and self.last_successful_signals is not None:
+                logger.warning("All models returned None. Using last successful forecast as fallback.")
+                return self.last_successful_signals.copy()
+            else:
+                raise ValueError("All models returned None and no fallback available.")
+
         # Get common index
         common_index = strategy_signals[available_strategies[0]].index
         for strategy in available_strategies[1:]:
@@ -129,6 +140,9 @@ class WeightedEnsembleStrategy:
         else:
             raise ValueError(f"Unknown combination method: {method}")
 
+        # Clip confidence scores to [0.0, 1.0]
+        combined_signals["confidence"] = combined_signals["confidence"].clip(0.0, 1.0)
+
         # Apply confidence threshold
         low_confidence_mask = combined_signals["confidence"] < self.config.confidence_threshold
         combined_signals.loc[low_confidence_mask, "signal"] = 0
@@ -138,6 +152,8 @@ class WeightedEnsembleStrategy:
         combined_signals["strong_signal"] = combined_signals["signal"] * consensus_mask
 
         self.signals = combined_signals
+        # Save last successful signals for fallback
+        self.last_successful_signals = combined_signals.copy()
         return combined_signals
 
     def _combine_weighted_average(

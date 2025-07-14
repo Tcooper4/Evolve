@@ -105,6 +105,15 @@ class AgentManager:
         self.restart_delay = 30  # seconds
         self.health_check_interval = 60  # seconds
         self.agent_timeout_threshold = 300  # seconds
+        
+        # Callback system
+        self.callbacks: Dict[str, List[callable]] = {
+            'agent_started': [],
+            'agent_completed': [],
+            'agent_failed': [],
+            'agent_restarted': [],
+            'agent_timeout': []
+        }
 
         # Restart monitoring
         self._restart_monitor_running = False
@@ -119,6 +128,7 @@ class AgentManager:
         self._register_default_agents()
 
         self.logger.info("AgentManager initialized")
+        self.status = 'idle'  # AgentManager status: 'idle' | 'running' | 'failed'
 
     def start_restart_monitor(self) -> None:
         """Start the agent restart monitoring system."""
@@ -540,7 +550,7 @@ class AgentManager:
             return False
 
     async def execute_agent(self, name: str, **kwargs) -> AgentResult:
-        """Execute an agent.
+        """Execute an agent with timeout and comprehensive logging.
 
         Args:
             name: Name of the agent to execute
@@ -555,18 +565,97 @@ class AgentManager:
                 success=False, error_message=f"Agent {name} not found or disabled"
             )
 
+        start_time = datetime.now()
+        
+        # Update health tracking
+        if name in self.agent_health:
+            self.agent_health[name]["last_execution"] = start_time
+        
         try:
-            result = await agent.run(**kwargs)
-
+            # Extract timeout from kwargs or use default
+            timeout = kwargs.pop('timeout', self.config.execution_timeout)
+            
+            # Execute with timeout using asyncio.wait_for
+            result = await asyncio.wait_for(
+                agent.run(**kwargs),
+                timeout=timeout
+            )
+            
+            execution_time = (datetime.now() - start_time).total_seconds()
+            result.execution_time = execution_time
+            
+            # Log successful execution with duration
+            self.logger.info(
+                f"Agent '{name}' executed successfully in {execution_time:.3f}s"
+            )
+            
+            # Update health status
+            if name in self.agent_health:
+                self.agent_health[name]["status"] = "running"
+                self.agent_health[name]["error_count"] = 0
+            
+            # Trigger completion callback
+            self._trigger_callbacks('agent_completed', 
+                                  agent_name=name, 
+                                  execution_time=execution_time, 
+                                  result=result)
+            
             # Record execution
             self._record_execution(name, result)
 
             return result
 
-        except Exception as e:
+        except asyncio.TimeoutError:
+            execution_time = (datetime.now() - start_time).total_seconds()
             error_result = AgentResult(
-                success=False, error_message=str(e), timestamp=datetime.now()
+                success=False, 
+                error_message=f"Agent '{name}' execution timed out after {timeout}s",
+                timestamp=datetime.now(),
+                execution_time=execution_time
             )
+            
+            self.logger.error(
+                f"Agent '{name}' execution timed out after {execution_time:.3f}s"
+            )
+            
+            # Update health status for timeout
+            if name in self.agent_health:
+                self.agent_health[name]["error_count"] += 1
+                self.agent_health[name]["status"] = "timeout"
+            
+            # Trigger timeout callback
+            self._trigger_callbacks('agent_timeout', 
+                                  agent_name=name, 
+                                  execution_time=execution_time, 
+                                  timeout=timeout)
+            
+            self._record_execution(name, error_result)
+            return error_result
+
+        except Exception as e:
+            execution_time = (datetime.now() - start_time).total_seconds()
+            error_result = AgentResult(
+                success=False, 
+                error_message=str(e), 
+                timestamp=datetime.now(),
+                execution_time=execution_time
+            )
+            
+            self.logger.error(
+                f"Agent '{name}' execution failed after {execution_time:.3f}s: {e}"
+            )
+            
+            # Update health status for error
+            if name in self.agent_health:
+                self.agent_health[name]["error_count"] += 1
+                self.agent_health[name]["status"] = "error"
+            
+            # Trigger failure callback
+            self._trigger_callbacks('agent_failed', 
+                                  agent_name=name, 
+                                  execution_time=execution_time, 
+                                  error=str(e))
+            
             self._record_execution(name, error_result)
             return error_result
 
@@ -749,32 +838,35 @@ class AgentManager:
         self.logger.info(f"Saved agent configuration to {config_path}")
 
     def start(self) -> None:
-        """Start the agent manager."""
-        if self.running:
-            self.logger.warning("Agent manager is already running")
-            return
-
-        self.running = True
-        self.logger.info("Agent manager started")
-
-        if self.config.auto_start:
-            # Enable all agents that should be auto-started
-            for name, entry in self.agent_registry.items():
-                if entry.config.enabled:
-                    self.enable_agent(name)
+        self.logger.info("AgentManager starting...")
+        self.status = 'running'
+        self._trigger_callbacks('agent_started', manager=self)
+        try:
+            if self.config.auto_start:
+                # Enable all agents that should be auto-started
+                for name, entry in self.agent_registry.items():
+                    if entry.config.enabled:
+                        self.enable_agent(name)
+            self.logger.info("AgentManager started.")
+        except Exception as e:
+            self.status = 'failed'
+            self.logger.error(f"AgentManager failed to start: {e}")
+            self._trigger_callbacks('agent_failed', manager=self, exception=e)
+            raise
 
     def stop(self) -> None:
-        """Stop the agent manager."""
-        if not self.running:
-            return
-
-        self.running = False
-
-        # Disable all agents
-        for name in self.agent_registry.keys():
-            self.disable_agent(name)
-
-        self.logger.info("Agent manager stopped")
+        self.logger.info("AgentManager stopping...")
+        try:
+            # Disable all agents
+            for name in self.agent_registry.keys():
+                self.disable_agent(name)
+            self.logger.info("AgentManager stopped.")
+            self._trigger_callbacks('agent_completed', manager=self)
+        except Exception as e:
+            self.status = 'failed'
+            self.logger.error(f"AgentManager failed to stop: {e}")
+            self._trigger_callbacks('agent_failed', manager=self, exception=e)
+            raise
 
     def log_agent_performance(
         self,
@@ -812,6 +904,21 @@ class AgentManager:
 
     def get_leaderboard_dataframe(self):
         return self.leaderboard.as_dataframe()
+
+    def register_callback(self, event_name: str, handler_fn):
+        """Register a callback handler for a specific event."""
+        if event_name not in self.callbacks:
+            self.callbacks[event_name] = []
+        self.callbacks[event_name].append(handler_fn)
+        self.logger.info(f"Callback registered for event: {event_name}")
+
+    def _trigger_callbacks(self, event_name: str, **kwargs):
+        """Trigger all callbacks for a given event."""
+        for handler in self.callbacks.get(event_name, []):
+            try:
+                handler(**kwargs)
+            except Exception as e:
+                self.logger.error(f"Callback for {event_name} failed: {e}")
 
 
 # Global agent manager instance
