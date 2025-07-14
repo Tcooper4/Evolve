@@ -12,6 +12,15 @@ from .model_generator_agent import (
 )
 from .model_generator_agent import ModelImplementationGenerator as MIGenerator
 from .model_generator_agent import ResearchPaper, run_model_evolution
+from .model_innovation_agent import (
+    ModelInnovationAgent,
+    InnovationConfig,
+    ModelCandidate as InnovationModelCandidate,
+    ModelEvaluation,
+    create_model_innovation_agent,
+)
+from .prompt_agent import PromptAgent, create_prompt_agent
+from .strategy_research_agent import StrategyResearchAgent
 from .registry import (
     ALL_AGENTS,
     AgentRegistry,
@@ -35,6 +44,17 @@ __all__ = [
     "ModelCandidate",
     "BenchmarkResult",
     "run_model_evolution",
+    # Model Innovation Agent
+    "ModelInnovationAgent",
+    "InnovationConfig",
+    "InnovationModelCandidate",
+    "ModelEvaluation",
+    "create_model_innovation_agent",
+    # Prompt Agent
+    "PromptAgent",
+    "create_prompt_agent",
+    # Strategy Research Agent
+    "StrategyResearchAgent",
     # New registry system
     "AgentRegistry",
     "get_registry",

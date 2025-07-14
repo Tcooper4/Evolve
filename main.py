@@ -11,6 +11,7 @@ import argparse
 import logging
 import os
 import sys
+import asyncio
 from datetime import datetime
 from typing import Any, Dict
 
@@ -40,6 +41,8 @@ Examples:
   python main.py --command "forecast AAPL 7d"   # Execute specific command
   python main.py --api                          # Launch API server
   python main.py --health                       # Check system health
+  python main.py --orchestrator                 # Launch Task Orchestrator
+  python main.py --orchestrator --monitor       # Launch with monitoring
         """,
     )
 
@@ -55,6 +58,20 @@ Examples:
         "--unified",
         action="store_true",
         help="Launch unified interface with multiple access methods",
+    )
+
+    # Task Orchestrator options
+    parser.add_argument(
+        "--orchestrator", action="store_true", help="Launch Task Orchestrator"
+    )
+    parser.add_argument(
+        "--monitor", action="store_true", help="Enable real-time monitoring"
+    )
+    parser.add_argument(
+        "--orchestrator-config",
+        type=str,
+        default="config/task_schedule.yaml",
+        help="Path to orchestrator configuration file",
     )
 
     # Command execution
@@ -100,6 +117,10 @@ Examples:
         if args.command:
             return execute_command(args.command)
 
+        # Launch Task Orchestrator
+        if args.orchestrator:
+            return launch_task_orchestrator(args.orchestrator_config, args.monitor)
+
         # Launch interface
         if args.streamlit:
             return launch_streamlit_interface()
@@ -125,6 +146,74 @@ Examples:
         }
 
 
+def launch_task_orchestrator(config_path: str, monitor: bool = False) -> Dict[str, Any]:
+    """
+    Launch the Task Orchestrator.
+
+    Args:
+        config_path: Path to orchestrator configuration file
+        monitor: Enable real-time monitoring
+
+    Returns:
+        Dict[str, Any]: Orchestrator status
+    """
+    try:
+        logger.info("Launching Task Orchestrator...")
+        
+        # Import orchestrator
+        try:
+            from core.task_orchestrator import start_orchestrator
+        except ImportError as e:
+            logger.error(f"Failed to import TaskOrchestrator: {e}")
+            return {
+                "status": "error",
+                "error": f"TaskOrchestrator not available: {e}",
+                "timestamp": datetime.now().isoformat(),
+            }
+
+        async def run_orchestrator():
+            """Run the orchestrator with monitoring if enabled"""
+            try:
+                # Start orchestrator
+                orchestrator = await start_orchestrator(config_path)
+                logger.info("Task Orchestrator started successfully")
+                
+                if monitor:
+                    logger.info("Starting real-time monitoring...")
+                    # Run monitoring for a period
+                    await asyncio.sleep(300)  # Monitor for 5 minutes
+                else:
+                    # Keep running indefinitely
+                    while True:
+                        await asyncio.sleep(60)  # Check every minute
+                        
+            except KeyboardInterrupt:
+                logger.info("Stopping Task Orchestrator...")
+                await orchestrator.stop()
+                logger.info("Task Orchestrator stopped")
+            except Exception as e:
+                logger.error(f"Orchestrator error: {e}")
+                if 'orchestrator' in locals():
+                    await orchestrator.stop()
+
+        # Run the orchestrator
+        asyncio.run(run_orchestrator())
+        
+        return {
+            "status": "success",
+            "message": "Task Orchestrator completed",
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"Error launching Task Orchestrator: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+
 def check_system_health() -> Dict[str, Any]:
     """
     Check system health and component status.
@@ -134,6 +223,27 @@ def check_system_health() -> Dict[str, Any]:
     """
     try:
         logger.info("Checking system health")
+
+        # Check Task Orchestrator availability
+        orchestrator_health = {
+            "status": "unknown",
+            "message": "Task Orchestrator not checked"
+        }
+        
+        try:
+            from core.task_orchestrator import TaskOrchestrator
+            orchestrator = TaskOrchestrator()
+            status = orchestrator.get_system_status()
+            orchestrator_health = {
+                "status": "healthy" if status['total_tasks'] > 0 else "warning",
+                "message": f"Found {status['total_tasks']} configured tasks",
+                "overall_health": status['performance_metrics']['overall_health']
+            }
+        except Exception as e:
+            orchestrator_health = {
+                "status": "error",
+                "message": f"Task Orchestrator error: {e}"
+            }
 
         from interface.unified_interface import UnifiedInterface
 
@@ -153,7 +263,12 @@ def check_system_health() -> Dict[str, Any]:
 
         print("\nComponent Status:")
         print("-" * 40)
-        for name, component_health in health["components"].items():
+        
+        # Add Task Orchestrator to component status
+        components = health["components"].copy()
+        components["Task Orchestrator"] = orchestrator_health
+        
+        for name, component_health in components.items():
             status = component_health.get("status", "unknown")
             status_icon = {
                 "healthy": "✅",
@@ -172,6 +287,7 @@ def check_system_health() -> Dict[str, Any]:
         return {
             "status": "success",
             "health": health,
+            "orchestrator_health": orchestrator_health,
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -200,55 +316,20 @@ def execute_command(command: str) -> Dict[str, Any]:
         from interface.unified_interface import UnifiedInterface
 
         interface = UnifiedInterface()
+        result = interface.process_command(command)
 
-        # Parse command
-        parts = command.lower().split()
-
-        if len(parts) < 2:
-            return {
-                "status": "error",
-                "error": "Invalid command format. Use: <action> <symbol> [parameters]",
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        action = parts[0]
-        symbol = parts[1].upper()
-
-        if action == "forecast":
-            days = int(parts[2]) if len(parts) > 2 else 7
-            model = parts[3] if len(parts) > 3 else "ensemble"
-
-            result = interface._generate_forecast(symbol, "1d", model, days)
-
-            print(f"\nForecast for {symbol}:")
-            print(f"Model: {result.get('model', 'Unknown')}")
-            print(f"Confidence: {result.get('confidence', 0):.1%}")
-            print(f"Status: {result.get('status', 'Unknown')}")
-
-            if "forecast_values" in result:
-                print(f"Forecast values: {result['forecast_values'][:5]}...")
-
-            return {
-                "status": "success",
-                "command": command,
-                "result": result,
-                "timestamp": datetime.now().isoformat(),
-            }
-
-        elif action == "health":
-            return check_system_health()
-
-        else:
-            return {
-                "status": "error",
-                "error": f"Unknown command: {action}",
-                "timestamp": datetime.now().isoformat(),
-            }
+        return {
+            "status": "success",
+            "command": command,
+            "result": result,
+            "timestamp": datetime.now().isoformat(),
+        }
 
     except Exception as e:
         logger.error(f"Error executing command: {e}")
         return {
             "status": "error",
+            "command": command,
             "error": str(e),
             "timestamp": datetime.now().isoformat(),
         }
@@ -256,38 +337,36 @@ def execute_command(command: str) -> Dict[str, Any]:
 
 def launch_streamlit_interface() -> Dict[str, Any]:
     """
-    Launch the Streamlit web interface.
+    Launch Streamlit web interface.
 
     Returns:
-        Dict[str, Any]: Interface launch results
+        Dict[str, Any]: Interface status
     """
     try:
-        logger.info("Launching Streamlit interface")
+        logger.info("Launching Streamlit interface...")
 
         import subprocess
         import sys
 
-        # Launch Streamlit
-        cmd = [
-            sys.executable,
-            "-m",
-            "streamlit",
-            "run",
-            "interface/unified_interface.py",
-        ]
+        # Launch Streamlit app
+        result = subprocess.run(
+            [sys.executable, "-m", "streamlit", "run", "app.py"],
+            capture_output=True,
+            text=True,
+        )
 
-        print("🚀 Launching Evolve Trading Platform...")
-        print("📊 Streamlit interface will open in your browser")
-        print("🔗 URL: http://localhost:8501")
-        print("\nPress Ctrl+C to stop the server")
-
-        subprocess.run(cmd)
-
-        return {
-            "status": "success",
-            "interface": "streamlit",
-            "timestamp": datetime.now().isoformat(),
-        }
+        if result.returncode == 0:
+            return {
+                "status": "success",
+                "message": "Streamlit interface launched successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
+        else:
+            return {
+                "status": "error",
+                "error": f"Streamlit failed: {result.stderr}",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     except Exception as e:
         logger.error(f"Error launching Streamlit interface: {e}")
@@ -300,44 +379,22 @@ def launch_streamlit_interface() -> Dict[str, Any]:
 
 def launch_terminal_interface() -> Dict[str, Any]:
     """
-    Launch the terminal interface.
+    Launch terminal interface.
 
     Returns:
-        Dict[str, Any]: Interface launch results
+        Dict[str, Any]: Interface status
     """
     try:
-        logger.info("Launching terminal interface")
+        logger.info("Launching terminal interface...")
 
-        print("🚀 Evolve Trading Platform - Terminal Interface")
-        print("=" * 50)
+        from interface.unified_interface import UnifiedInterface
 
-        # Simple terminal interface
-        while True:
-            print("\nAvailable commands:")
-            print("1. forecast <symbol> [days] [model] - Generate forecast")
-            print("2. health - Check system health")
-            print("3. quit - Exit")
-
-            try:
-                command = input("\nEnter command: ").strip()
-
-                if command.lower() in ["quit", "exit", "q"]:
-                    break
-                elif command.lower() == "health":
-                    check_system_health()
-                elif command.lower().startswith("forecast"):
-                    execute_command(command)
-                else:
-                    print("Unknown command. Type 'quit' to exit.")
-
-            except KeyboardInterrupt:
-                break
-            except Exception as e:
-                print(f"Error: {e}")
+        interface = UnifiedInterface()
+        interface.run_terminal()
 
         return {
             "status": "success",
-            "interface": "terminal",
+            "message": "Terminal interface completed",
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -352,61 +409,44 @@ def launch_terminal_interface() -> Dict[str, Any]:
 
 def launch_api_interface() -> Dict[str, Any]:
     """
-    Launch the REST API interface.
+    Launch REST API server.
 
     Returns:
-        Dict[str, Any]: Interface launch results
+        Dict[str, Any]: Interface status
     """
     try:
-        logger.info("Launching API interface")
+        logger.info("Launching API server...")
 
-        print("🚀 Evolve Trading Platform - API Interface")
-        print("📡 REST API server starting...")
-        print("🔗 API will be available at: http://localhost:8000")
-        print("\nPress Ctrl+C to stop the server")
+        from fastapi import FastAPI
+        import uvicorn
+        from interface.unified_interface import UnifiedInterface
 
-        # Implement API server
-        try:
-            import uvicorn
-            from fastapi import FastAPI
-            from fastapi.middleware.cors import CORSMiddleware
+        app = FastAPI(title="Evolve Trading Platform API")
+        interface = UnifiedInterface()
 
-            app = FastAPI(title="Evolve AI Trading API", version="1.0.0")
+        @app.get("/")
+        async def root():
+            return {"message": "Evolve Trading Platform API", "status": "running"}
 
-            # Add CORS middleware
-            app.add_middleware(
-                CORSMiddleware,
-                allow_origins=["*"],
-                allow_credentials=True,
-                allow_methods=["*"],
-                allow_headers=["*"],
-            )
+        @app.get("/health")
+        async def health_check():
+            return interface.system_health
 
-            # Add API routes here
-            @app.get("/")
-            async def root():
-                return {"message": "Evolve AI Trading API", "status": "running"}
+        @app.post("/command")
+        async def execute_command(command: str):
+            return interface.process_command(command)
 
-            @app.get("/health")
-            async def health_check():
-                return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
-            # Start server
-            uvicorn.run(app, host="0.0.0.0", port=8000)
-
-        except ImportError:
-            logger.warning("FastAPI/uvicorn not available, skipping API server")
-        except Exception as e:
-            logger.error(f"Failed to start API server: {e}")
+        # Run the API server
+        uvicorn.run(app, host="0.0.0.0", port=8000)
 
         return {
-            "status": "not_implemented",
-            "interface": "api",
+            "status": "success",
+            "message": "API server launched successfully",
             "timestamp": datetime.now().isoformat(),
         }
 
     except Exception as e:
-        logger.error(f"Error launching API interface: {e}")
+        logger.error(f"Error launching API server: {e}")
         return {
             "status": "error",
             "error": str(e),
@@ -416,23 +456,22 @@ def launch_api_interface() -> Dict[str, Any]:
 
 def launch_unified_interface() -> Dict[str, Any]:
     """
-    Launch the unified interface.
+    Launch unified interface with multiple access methods.
 
     Returns:
-        Dict[str, Any]: Interface launch results
+        Dict[str, Any]: Interface status
     """
     try:
-        logger.info("Launching unified interface")
+        logger.info("Launching unified interface...")
 
         from interface.unified_interface import UnifiedInterface
 
         interface = UnifiedInterface()
-        result = interface.run()
+        interface.run()
 
         return {
             "status": "success",
-            "interface": "unified",
-            "result": result,
+            "message": "Unified interface completed",
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -447,10 +486,5 @@ def launch_unified_interface() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     result = main()
-
-    if result.get("status") == "error":
+    if isinstance(result, dict) and result.get("status") == "error":
         sys.exit(1)
-    elif result.get("status") == "interrupted":
-        sys.exit(0)
-    else:
-        sys.exit(0)

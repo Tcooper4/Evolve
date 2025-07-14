@@ -2,7 +2,7 @@
 """
 Test Execution Agent
 
-This script tests the execution agent functionality.
+This script tests the execution agent functionality using the new modular structure.
 """
 
 import asyncio
@@ -21,31 +21,27 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from trading.agents.base_agent_interface import AgentConfig
-from trading.agents.execution_agent import ExecutionAgent, TradeDirection, TradeSignal
+from trading.agents.execution import ExecutionAgent, create_execution_agent
+from trading.portfolio.portfolio_manager import TradeDirection
+from trading.agents.execution.trade_signals import TradeSignal
 
 
 async def test_execution_agent():
     """Test execution agent functionality."""
-    logger.info("🧪 Testing Execution Agent")
+    logger.info("🧪 Testing Execution Agent (Modular)")
     logger.info("=" * 50)
 
     try:
-        # Create execution agent
+        # Create execution agent using factory function
         config = {
-            "name": "test_execution_agent",
-            "enabled": True,
-            "custom_config": {
-                "execution_mode": "simulation",
-                "max_positions": 3,
-                "min_confidence": 0.6,
-                "max_slippage": 0.002,
-            },
+            "execution_mode": "simulation",
+            "max_positions": 3,
+            "min_confidence": 0.6,
+            "max_slippage": 0.002,
         }
 
-        agent_config = AgentConfig(**config)
-        agent = ExecutionAgent(agent_config)
-
-        logger.info("✅ ExecutionAgent created successfully")
+        agent = create_execution_agent(config)
+        logger.info("✅ ExecutionAgent created successfully using factory function")
 
         # Test signal validation
         logger.info("\n📋 Testing signal validation...")
@@ -77,7 +73,7 @@ async def test_execution_agent():
 
         # Test execution price calculation
         logger.info("\n💰 Testing execution price calculation...")
-        market_data = {"AAPL": {"price": 150.50, "volume": 1000000}}
+        market_data = {"AAPL_price": 150.50, "AAPL_volume": 1000000}
         execution_price = agent._calculate_execution_price(valid_signal, market_data)
 
         logger.info(f"  Entry price: ${valid_signal.entry_price:.2f}")
@@ -89,26 +85,17 @@ async def test_execution_agent():
         # Test trade execution
         logger.info("\n🔄 Testing trade execution...")
 
-        result = await agent.execute(signals=[valid_signal], market_data=market_data)
+        result = await agent.execute(signal=valid_signal, market_data=market_data)
 
         if result.success:
             logger.info("✅ Trade execution successful")
             logger.info(f"  Message: {result.message}")
 
-            # Test execution summary
-            summary = agent.get_execution_summary()
-            logger.info(f"  Success rate: {summary['success_rate']:.2%}")
-            logger.info(f"  Total slippage: ${summary['total_slippage']:.2f}")
-            logger.info(f"  Total fees: ${summary['total_fees']:.2f}")
+            # Test portfolio status
+            portfolio_status = agent.get_portfolio_status()
+            logger.info(f"  Portfolio status: {portfolio_status}")
         else:
             logger.error(f"❌ Trade execution failed: {result.message}")
-
-        # Test portfolio status
-        logger.info("\n📈 Testing portfolio status...")
-        portfolio_status = await agent.portfolio_manager.get_portfolio_status()
-        logger.info(f"  Cash: ${portfolio_status['cash']:.2f}")
-        logger.info(f"  Equity: ${portfolio_status['equity']:.2f}")
-        logger.info(f"  Open positions: {len(portfolio_status['open_positions'])}")
 
         # Test execution history
         logger.info("\n📜 Testing execution history...")
@@ -120,10 +107,25 @@ async def test_execution_agent():
         trade_log = agent.get_trade_log()
         logger.info(f"  Trade log entries: {len(trade_log)}")
 
+        # Test modular components
+        logger.info("\n🔧 Testing modular components...")
+        
+        # Test risk controls
+        from trading.agents.execution.risk_controls import create_default_risk_controls
+        risk_controls = create_default_risk_controls()
+        logger.info(f"  Risk controls created: {risk_controls.max_position_size}")
+        
+        # Test position manager
+        position_manager = agent.position_manager
+        risk_summary = position_manager.get_risk_summary()
+        logger.info(f"  Risk summary: {risk_summary}")
+
         logger.info("\n✅ All tests completed!")
 
     except Exception as e:
         logger.error(f"Test failed: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
