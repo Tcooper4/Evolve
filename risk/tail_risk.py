@@ -14,14 +14,17 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# Financial risk imports
-try:
-    import empyrical
-
-    EMPYRICAL_AVAILABLE = True
-except ImportError as e:
-    logging.warning(f"empyrical not available: {e}")
-    EMPYRICAL_AVAILABLE = False
+# Import our custom performance metrics
+from utils.performance_metrics import (
+    sharpe_ratio,
+    sortino_ratio,
+    max_drawdown,
+    calmar_ratio,
+    avg_drawdown,
+    drawdown_details,
+    value_at_risk,
+    conditional_value_at_risk
+)
 
 logger = logging.getLogger(__name__)
 
@@ -195,90 +198,39 @@ class TailRiskEngine:
 
     def _calculate_sharpe_ratio(self, returns: pd.Series) -> float:
         """Calculate Sharpe ratio."""
-        if returns.std() == 0:
-            return 0.0
-
-        excess_returns = returns - (self.risk_free_rate / self.annualization_factor)
-        return (excess_returns.mean() / returns.std()) * np.sqrt(
-            self.annualization_factor
-        )
+        return sharpe_ratio(returns, risk_free=self.risk_free_rate, period=self.annualization_factor)
 
     def _calculate_sortino_ratio(self, returns: pd.Series) -> float:
         """Calculate Sortino ratio."""
-        if EMPYRICAL_AVAILABLE:
-            return empyrical.sortino_ratio(returns, risk_free=0.0)
-        else:
-            # Manual calculation
-            downside_returns = returns[returns < 0]
-            if len(downside_returns) == 0 or downside_returns.std() == 0:
-                return 0.0
-
-            excess_returns = returns - (self.risk_free_rate / self.annualization_factor)
-            return (excess_returns.mean() / downside_returns.std()) * np.sqrt(
-                self.annualization_factor
-            )
+        return sortino_ratio(returns, risk_free=self.risk_free_rate, period=self.annualization_factor)
 
     def _calculate_calmar_ratio(self, returns: pd.Series) -> float:
         """Calculate Calmar ratio."""
-        if EMPYRICAL_AVAILABLE:
-            max_dd = empyrical.max_drawdown(returns)
-            if max_dd == 0:
-                return 0.0
-            return empyrical.calmar_ratio(returns)
-        else:
-            # Manual calculation
-            cumulative_returns = (1 + returns).cumprod()
-            running_max = cumulative_returns.expanding().max()
-            drawdown = (cumulative_returns - running_max) / running_max
-            max_drawdown = abs(drawdown.min())
-
-            if max_drawdown == 0:
-                return 0.0
-
-            annual_return = returns.mean() * self.annualization_factor
-            return annual_return / max_drawdown
+        return calmar_ratio(returns, risk_free=self.risk_free_rate, period=self.annualization_factor)
 
     def _calculate_var(self, returns: pd.Series) -> Tuple[float, float]:
         """Calculate Value at Risk."""
-        var_95 = np.percentile(returns, 5)
-        var_99 = np.percentile(returns, 1)
+        var_95 = value_at_risk(returns, confidence_level=0.95)
+        var_99 = value_at_risk(returns, confidence_level=0.99)
         return var_95, var_99
 
     def _calculate_cvar(self, returns: pd.Series) -> Tuple[float, float]:
         """Calculate Conditional Value at Risk (Expected Shortfall)."""
-        var_95 = np.percentile(returns, 5)
-        var_99 = np.percentile(returns, 1)
-
-        cvar_95 = returns[returns <= var_95].mean()
-        cvar_99 = returns[returns <= var_99].mean()
-
+        cvar_95 = conditional_value_at_risk(returns, confidence_level=0.95)
+        cvar_99 = conditional_value_at_risk(returns, confidence_level=0.99)
         return cvar_95, cvar_99
 
     def _calculate_drawdown_metrics(
         self, returns: pd.Series
     ) -> Tuple[float, float, int]:
         """Calculate drawdown metrics."""
-        if EMPYRICAL_AVAILABLE:
-            max_dd = empyrical.max_drawdown(returns)
-            avg_dd = empyrical.avg_drawdown(returns)
-            dd_duration = empyrical.drawdown_details(returns)["days"].max()
-        else:
-            # Manual calculation
-            cumulative_returns = (1 + returns).cumprod()
-            running_max = cumulative_returns.expanding().max()
-            drawdown = (cumulative_returns - running_max) / running_max
-
-            max_dd = abs(drawdown.min())
-            avg_dd = abs(drawdown.mean())
-
-            # Calculate drawdown duration
-            dd_periods = (drawdown < 0).astype(int)
-            dd_duration = (
-                dd_periods.groupby((dd_periods != dd_periods.shift()).cumsum())
-                .sum()
-                .max()
-            )
-
+        max_dd = abs(max_drawdown(returns))
+        avg_dd = abs(avg_drawdown(returns))
+        
+        # Get drawdown details for duration
+        dd_details = drawdown_details(returns)
+        dd_duration = dd_details['days'].max() if not dd_details.empty else 0
+        
         return max_dd, avg_dd, dd_duration
 
     def _calculate_tail_dependence(self, returns: pd.Series) -> float:
