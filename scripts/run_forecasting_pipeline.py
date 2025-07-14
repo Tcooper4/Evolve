@@ -141,18 +141,7 @@ class ForecastingPipelineLauncher:
                 trade_logger.add_notifier(slack_notifier)
                 logger.info("✅ Slack notifications configured")
 
-            # Setup email alerts
-            if os.getenv("EMAIL_PASSWORD"):
-                from trading.utils.notifications import EmailNotifier
-
-                email_notifier = EmailNotifier(
-                    host=os.getenv("EMAIL_HOST", "smtp.gmail.com"),
-                    port=int(os.getenv("EMAIL_PORT", "587")),
-                    user=os.getenv("EMAIL_USER"),
-                    password=os.getenv("EMAIL_PASSWORD"),
-                )
-                trade_logger.add_notifier(email_notifier)
-                logger.info("✅ Email notifications configured")
+            # Email notifications removed for production cleanup
 
             logger.info("✅ Live trade logging configured")
 

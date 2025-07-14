@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from .base_model import BaseModel, ModelRegistry
+from utils.model_cache import cache_model_operation, get_model_cache
 
 # @ModelRegistry.register('Ensemble')
 
@@ -552,6 +553,7 @@ class EnsembleModel(BaseModel):
 
         return weighted_shap
 
+    @cache_model_operation
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
 

@@ -82,31 +82,6 @@ class SlackNotifier(BaseNotifier):
             logger.warning("⚠️ Slack webhook URL not provided")
 
 
-class EmailNotifier(BaseNotifier):
-    """Email notification system."""
-
-    def __init__(self, host: str, port: int, user: str, password: str):
-        """Initialize email notifier.
-
-        Args:
-            host: SMTP host
-            port: SMTP port
-            user: Email username
-            password: Email password
-        """
-        super().__init__()
-        self.host = host
-        self.port = port
-        self.user = user
-        self.password = password
-        self.enabled = bool(password and password != "dev-email-password")
-
-        if self.enabled:
-            logger.info("✅ Email notifications enabled")
-        else:
-            logger.warning("⚠️ Email password not configured")
-
-
 class TradeLogger:
     """Centralized trade logging with notification capabilities."""
 
