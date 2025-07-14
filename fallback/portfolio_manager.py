@@ -92,7 +92,13 @@ class FallbackPortfolioManager:
 
         except Exception as e:
             logger.error(f"Error getting position summary: {e}")
-            return {"positions": [], "total_value": 0, "cash": 100000, "fallback_mode": True, "error": str(e)}
+            return {
+                "positions": [],
+                "total_value": 0,
+                "cash": 100000,
+                "fallback_mode": True,
+                "error": str(e),
+            }
 
     def get_risk_metrics(self) -> Dict[str, Any]:
         """
@@ -106,7 +112,7 @@ class FallbackPortfolioManager:
 
             # Calculate basic risk metrics
             total_value = self._mock_portfolio["total_value"]
-            cash = self._mock_portfolio["cash"]
+            self._mock_portfolio["cash"]
 
             # Mock risk metrics
             risk_metrics = {
@@ -181,7 +187,8 @@ class FallbackPortfolioManager:
                 # Update existing position
                 new_quantity = existing_position["quantity"] + quantity
                 new_avg_price = (
-                    existing_position["quantity"] * existing_position["avg_price"] + quantity * price
+                    existing_position["quantity"] * existing_position["avg_price"]
+                    + quantity * price
                 ) / new_quantity
 
                 # Update the position in mock portfolio
@@ -279,4 +286,10 @@ class FallbackPortfolioManager:
             }
         except Exception as e:
             logger.error(f"Error getting fallback portfolio manager health: {e}")
-            return {"status": "error", "total_positions": 0, "total_value": 0, "fallback_mode": True, "error": str(e)}
+            return {
+                "status": "error",
+                "total_positions": 0,
+                "total_value": 0,
+                "fallback_mode": True,
+                "error": str(e),
+            }

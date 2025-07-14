@@ -22,7 +22,11 @@ class TestHyperparameterOptimizer:
         """Create sample data for testing."""
         np.random.seed(42)
         X = pd.DataFrame(
-            {"feature1": np.random.randn(100), "feature2": np.random.randn(100), "feature3": np.random.randn(100)}
+            {
+                "feature1": np.random.randn(100),
+                "feature2": np.random.randn(100),
+                "feature3": np.random.randn(100),
+            }
         )
         y = pd.Series(np.random.randn(100))
         return X, y
@@ -241,7 +245,9 @@ class TestHyperparameterOptimizer:
         }
 
         # Mock XGBRegressor
-        with patch("trading.optimization.optuna_optimizer.xgb.XGBRegressor") as mock_xgb:
+        with patch(
+            "trading.optimization.optuna_optimizer.xgb.XGBRegressor"
+        ) as mock_xgb:
             mock_model = Mock()
             mock_model.fit.return_value = None
             mock_model.predict.return_value = np.array([0.1, 0.2, 0.3])

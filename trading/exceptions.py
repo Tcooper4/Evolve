@@ -11,7 +11,12 @@ from typing import Any, Dict, Optional
 class TradingSystemError(Exception):
     """Base exception for all trading system errors."""
 
-    def __init__(self, message: str, error_code: Optional[str] = None, context: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        message: str,
+        error_code: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ):
         super().__init__(message)
         self.message = message
         self.error_code = error_code
@@ -36,30 +41,24 @@ class AgentInitializationError(AgentError):
     """Raised when an agent fails to initialize properly."""
 
 
-
 class AgentExecutionError(AgentError):
     """Raised when an agent fails during execution."""
-
 
 
 class AgentCommunicationError(AgentError):
     """Raised when agents fail to communicate with each other."""
 
 
-
 class AgentTimeoutError(AgentError):
     """Raised when an agent operation times out."""
-
 
 
 class AgentValidationError(AgentError):
     """Raised when agent input validation fails."""
 
 
-
 class AgentRegistryError(TradingSystemError):
     """Raised when there are issues with agent registry operations."""
-
 
 
 class ModelError(TradingSystemError):
@@ -80,25 +79,20 @@ class ModelInitializationError(ModelError):
     """Raised when a model fails to initialize."""
 
 
-
 class ModelTrainingError(ModelError):
     """Raised when model training fails."""
-
 
 
 class ModelPredictionError(ModelError):
     """Raised when model prediction fails."""
 
 
-
 class ModelValidationError(ModelError):
     """Raised when model validation fails."""
 
 
-
 class ModelDeploymentError(ModelError):
     """Raised when model deployment fails."""
-
 
 
 class DataError(TradingSystemError):
@@ -119,20 +113,16 @@ class DataConnectionError(DataError):
     """Raised when data connection fails."""
 
 
-
 class DataValidationError(DataError):
     """Raised when data validation fails."""
-
 
 
 class DataProcessingError(DataError):
     """Raised when data processing fails."""
 
 
-
 class DataNotFoundError(DataError):
     """Raised when requested data is not found."""
-
 
 
 class DataIntegrityError(DataError):
@@ -182,15 +172,12 @@ class StrategyInitializationError(StrategyError):
     """Raised when strategy initialization fails."""
 
 
-
 class StrategyExecutionError(StrategyError):
     """Raised when strategy execution fails."""
 
 
-
 class StrategyValidationError(StrategyError):
     """Raised when strategy validation fails."""
-
 
 
 class ExecutionError(TradingSystemError):
@@ -211,10 +198,8 @@ class OrderExecutionError(ExecutionError):
     """Raised when order execution fails."""
 
 
-
 class PositionError(ExecutionError):
     """Raised when position management fails."""
-
 
 
 class RiskError(TradingSystemError):
@@ -235,45 +220,36 @@ class RiskLimitExceededError(RiskError):
     """Raised when risk limits are exceeded."""
 
 
-
 class RiskValidationError(RiskError):
     """Raised when risk validation fails."""
-
 
 
 class ConfigurationError(TradingSystemError):
     """Raised when configuration is invalid or missing."""
 
 
-
 class AuthenticationError(TradingSystemError):
     """Raised when authentication fails."""
-
 
 
 class AuthorizationError(TradingSystemError):
     """Raised when authorization fails."""
 
 
-
 class NetworkError(TradingSystemError):
     """Raised when network operations fail."""
-
 
 
 class TimeoutError(TradingSystemError):
     """Raised when operations timeout."""
 
 
-
 class ResourceError(TradingSystemError):
     """Raised when resource allocation fails."""
 
 
-
 class MemoryError(TradingSystemError):
     """Raised when memory operations fail."""
-
 
 
 class FileError(TradingSystemError):
@@ -292,7 +268,6 @@ class FileError(TradingSystemError):
 
 class DatabaseError(TradingSystemError):
     """Raised when database operations fail."""
-
 
 
 class APIError(TradingSystemError):
@@ -315,20 +290,16 @@ class ValidationError(TradingSystemError):
     """Raised when general validation fails."""
 
 
-
 class StateError(TradingSystemError):
     """Raised when system state is invalid."""
-
 
 
 class CircularDependencyError(TradingSystemError):
     """Raised when circular dependencies are detected."""
 
 
-
 class VersionError(TradingSystemError):
     """Raised when version compatibility issues occur."""
-
 
 
 # Error code constants

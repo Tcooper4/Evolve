@@ -46,7 +46,12 @@ class TestModelParameterTuner:
 
     def test_parameter_validation_invalid_range(self, tuner):
         """Test parameter validation with invalid range."""
-        invalid_params = {"d_model": 64, "nhead": 4, "num_layers": 10, "dropout": 0.2}  # Too many layers
+        invalid_params = {
+            "d_model": 64,
+            "nhead": 4,
+            "num_layers": 10,
+            "dropout": 0.2,
+        }  # Too many layers
 
         result = tuner._validate_parameters("transformer", invalid_params)
         assert result["valid"] is False
@@ -183,8 +188,16 @@ class TestModelParameterTuner:
                 "expected_valid": True,
             },
             # LSTM boundary tests
-            {"model": "lstm", "params": {"hidden_size": 257}, "expected_valid": False},  # Above limit
-            {"model": "lstm", "params": {"hidden_size": 256}, "expected_valid": True},  # At limit
+            {
+                "model": "lstm",
+                "params": {"hidden_size": 257},
+                "expected_valid": False,
+            },  # Above limit
+            {
+                "model": "lstm",
+                "params": {"hidden_size": 256},
+                "expected_valid": True,
+            },  # At limit
         ]
 
         for test in boundary_tests:
@@ -248,15 +261,22 @@ class TestModelParameterTuner:
 
         # Mock the tuning process
         with patch.object(tuner, "_run_optimization") as mock_optimize:
-            mock_optimize.return_value = {"best_params": tuning_params, "best_score": 0.95}
+            mock_optimize.return_value = {
+                "best_params": tuning_params,
+                "best_score": 0.95,
+            }
 
             # Run tuning
-            result = tuner.tune_parameters("lstm", {"hidden_size": [64, 128], "layers": [2, 3]})
+            result = tuner.tune_parameters(
+                "lstm", {"hidden_size": [64, 128], "layers": [2, 3]}
+            )
 
         # Verify that original configuration is preserved
         # Load the saved configuration
         with patch("builtins.open", create=True) as mock_open:
-            mock_open.return_value.__enter__.return_value.read.return_value = json.dumps(initial_config)
+            mock_open.return_value.__enter__.return_value.read.return_value = (
+                json.dumps(initial_config)
+            )
             saved_config = tuner._load_configuration("initial_config.json")
 
         # Check that original values are preserved
@@ -280,16 +300,27 @@ class TestModelParameterTuner:
         assert restored_config["lstm"]["hidden_size"] == 64  # Restored original value
 
         # Test that multiple tuning runs don't interfere
-        second_tuning_params = {"lstm": {"hidden_size": 256, "layers": 4, "dropout": 0.4}}
+        second_tuning_params = {
+            "lstm": {"hidden_size": 256, "layers": 4, "dropout": 0.4}
+        }
 
         with patch.object(tuner, "_run_optimization") as mock_optimize:
-            mock_optimize.return_value = {"best_params": second_tuning_params, "best_score": 0.97}
+            mock_optimize.return_value = {
+                "best_params": second_tuning_params,
+                "best_score": 0.97,
+            }
 
-            second_result = tuner.tune_parameters("lstm", {"hidden_size": [128, 256], "layers": [3, 4]})
+            second_result = tuner.tune_parameters(
+                "lstm", {"hidden_size": [128, 256], "layers": [3, 4]}
+            )
 
         # Verify all configurations are preserved
-        assert second_result["best_params"]["lstm"]["hidden_size"] == 256  # Second tuning
-        assert result["best_params"]["lstm"]["hidden_size"] == 128  # First tuning preserved
+        assert (
+            second_result["best_params"]["lstm"]["hidden_size"] == 256
+        )  # Second tuning
+        assert (
+            result["best_params"]["lstm"]["hidden_size"] == 128
+        )  # First tuning preserved
         assert saved_config["lstm"]["hidden_size"] == 64  # Original preserved
 
         # Test configuration backup before tuning

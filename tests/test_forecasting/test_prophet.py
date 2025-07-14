@@ -11,7 +11,11 @@ class TestProphetModel:
     @pytest.fixture
     def model(self):
         """Create a Prophet model instance for testing."""
-        return ProphetModel(changepoint_prior_scale=0.05, seasonality_prior_scale=10.0, holidays_prior_scale=10.0)
+        return ProphetModel(
+            changepoint_prior_scale=0.05,
+            seasonality_prior_scale=10.0,
+            holidays_prior_scale=10.0,
+        )
 
     @pytest.fixture
     def sample_data(self, sample_price_data):
@@ -125,7 +129,9 @@ class TestProphetModel:
         """Test that model detects seasonality correctly."""
         # Create data with clear seasonality
         dates = pd.date_range(start="2020-01-01", periods=365, freq="D")
-        seasonal_data = pd.Series(100 + 10 * np.sin(np.linspace(0, 4 * np.pi, 365)), index=dates)
+        seasonal_data = pd.Series(
+            100 + 10 * np.sin(np.linspace(0, 4 * np.pi, 365)), index=dates
+        )
 
         model.fit(seasonal_data)
         forecast, components = model.forecast_with_components(steps=30)
@@ -197,7 +203,10 @@ class TestProphetModel:
         yearly_pattern = 5 * np.sin(np.linspace(0, 4 * np.pi, 730))  # 2 years
 
         # Combine patterns
-        data = pd.Series(100 + weekly_pattern + yearly_pattern + np.random.normal(0, 1, 730), index=dates)
+        data = pd.Series(
+            100 + weekly_pattern + yearly_pattern + np.random.normal(0, 1, 730),
+            index=dates,
+        )
 
         try:
             model.fit(data)
@@ -254,7 +263,10 @@ class TestProphetModel:
         """Test that changepoint control parameters work correctly."""
         # Test different changepoint prior scales
         for changepoint_scale in [0.01, 0.05, 0.1]:
-            config = {"changepoint_prior_scale": changepoint_scale, "seasonality_prior_scale": 10.0}
+            config = {
+                "changepoint_prior_scale": changepoint_scale,
+                "seasonality_prior_scale": 10.0,
+            }
 
             try:
                 test_model = ProphetModel(config)
@@ -274,4 +286,6 @@ class TestProphetModel:
 
             except Exception as e:
                 # Changepoint control should work
-                assert "changepoint" in str(e).lower(), f"Changepoint control should work, got: {e}"
+                assert (
+                    "changepoint" in str(e).lower()
+                ), f"Changepoint control should work, got: {e}"

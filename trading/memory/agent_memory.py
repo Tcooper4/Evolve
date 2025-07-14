@@ -20,7 +20,11 @@ class MemoryChunk:
     """Represents a memory chunk with expiration and size tracking."""
 
     def __init__(
-        self, data: Any, ttl_seconds: Optional[int] = None, max_size_bytes: Optional[int] = None, priority: int = 1
+        self,
+        data: Any,
+        ttl_seconds: Optional[int] = None,
+        max_size_bytes: Optional[int] = None,
+        priority: int = 1,
     ):
         self.data = data
         self.created_at = datetime.now()
@@ -83,7 +87,12 @@ class MemoryChunk:
 class MemoryManager:
     """Manages memory chunks with expiration and overflow prevention."""
 
-    def __init__(self, max_memory_mb: int = 100, max_entries: int = 10000, cleanup_interval_seconds: int = 300):
+    def __init__(
+        self,
+        max_memory_mb: int = 100,
+        max_entries: int = 10000,
+        cleanup_interval_seconds: int = 300,
+    ):
         self.max_memory_bytes = max_memory_mb * 1024 * 1024
         self.max_entries = max_entries
         self.cleanup_interval_seconds = cleanup_interval_seconds
@@ -123,7 +132,9 @@ class MemoryManager:
 
             # Check size limit
             if max_size_bytes and chunk_size > max_size_bytes:
-                logger.warning(f"Chunk size {chunk_size} exceeds max_size_bytes {max_size_bytes}")
+                logger.warning(
+                    f"Chunk size {chunk_size} exceeds max_size_bytes {max_size_bytes}"
+                )
                 return False
 
             # Check if we need to evict to make space
@@ -187,7 +198,10 @@ class MemoryManager:
 
     def _can_fit_chunk(self, chunk_size: int) -> bool:
         """Check if a chunk can fit in memory."""
-        return self.total_memory_usage + chunk_size <= self.max_memory_bytes and self.entry_count < self.max_entries
+        return (
+            self.total_memory_usage + chunk_size <= self.max_memory_bytes
+            and self.entry_count < self.max_entries
+        )
 
     def _evict_to_make_space(self, required_size: int) -> bool:
         """Evict chunks to make space for new chunk."""
@@ -201,7 +215,9 @@ class MemoryManager:
                 chunks_to_evict.append((key, chunk, 0))  # Expired chunks first
             else:
                 # Calculate eviction score (lower = more likely to evict)
-                time_factor = (datetime.now() - chunk.last_accessed).total_seconds() / 3600  # hours
+                time_factor = (
+                    datetime.now() - chunk.last_accessed
+                ).total_seconds() / 3600  # hours
                 access_factor = max(1, chunk.access_count)
                 eviction_score = time_factor / (access_factor * chunk.priority)
                 chunks_to_evict.append((key, chunk, eviction_score))
@@ -230,7 +246,9 @@ class MemoryManager:
     def cleanup(self) -> Dict[str, int]:
         """Clean up expired chunks and return statistics."""
         with self.lock:
-            expired_keys = [key for key, chunk in self.chunks.items() if chunk.is_expired()]
+            expired_keys = [
+                key for key, chunk in self.chunks.items() if chunk.is_expired()
+            ]
 
             for key in expired_keys:
                 self._remove_chunk(key, "expired")
@@ -245,7 +263,9 @@ class MemoryManager:
     def get_stats(self) -> Dict[str, Any]:
         """Get memory manager statistics."""
         with self.lock:
-            hit_rate = (self.stats["cache_hits"] / max(1, self.stats["total_accesses"])) * 100
+            hit_rate = (
+                self.stats["cache_hits"] / max(1, self.stats["total_accesses"])
+            ) * 100
 
             return {
                 **self.stats,
@@ -253,7 +273,10 @@ class MemoryManager:
                 "total_chunks": len(self.chunks),
                 "total_memory_mb": self.total_memory_usage / (1024 * 1024),
                 "max_memory_mb": self.max_memory_bytes / (1024 * 1024),
-                "memory_usage_percent": (self.total_memory_usage / self.max_memory_bytes) * 100,
+                "memory_usage_percent": (
+                    self.total_memory_usage / self.max_memory_bytes
+                )
+                * 100,
                 "entry_count": self.entry_count,
                 "max_entries": self.max_entries,
             }
@@ -279,7 +302,9 @@ class AgentMemory:
 
         # Memory manager for short-term chunks
         self.memory_manager = MemoryManager(
-            max_memory_mb=max_memory_mb, max_entries=max_entries, cleanup_interval_seconds=cleanup_interval_seconds
+            max_memory_mb=max_memory_mb,
+            max_entries=max_entries,
+            cleanup_interval_seconds=cleanup_interval_seconds,
         )
 
         # Default TTL settings
@@ -307,7 +332,11 @@ class AgentMemory:
             temp_path.replace(self.path)
 
     def log_outcome(
-        self, agent: str, run_type: str, outcome: Dict[str, Any], memory_type: str = "medium_term"
+        self,
+        agent: str,
+        run_type: str,
+        outcome: Dict[str, Any],
+        memory_type: str = "medium_term",
     ) -> Dict[str, Any]:
         """
         Log an outcome for an agent with memory type classification.
@@ -452,7 +481,12 @@ class AgentMemory:
             }
 
     def get_recent_performance(
-        self, agent: str, run_type: str, metric: str, window: int = 10, memory_type: Optional[str] = None
+        self,
+        agent: str,
+        run_type: str,
+        metric: str,
+        window: int = 10,
+        memory_type: Optional[str] = None,
     ) -> dict:
         """
         Get recent values of a performance metric for trend analysis.
@@ -505,7 +539,12 @@ class AgentMemory:
             }
 
     def is_improving(
-        self, agent: str, run_type: str, metric: str, window: int = 10, memory_type: Optional[str] = None
+        self,
+        agent: str,
+        run_type: str,
+        metric: str,
+        window: int = 10,
+        memory_type: Optional[str] = None,
     ) -> dict:
         """
         Detect if a metric is improving (increasing or decreasing, depending on metric).
@@ -519,7 +558,9 @@ class AgentMemory:
             Dictionary with improvement analysis and status
         """
         try:
-            performance_result = self.get_recent_performance(agent, run_type, metric, window, memory_type)
+            performance_result = self.get_recent_performance(
+                agent, run_type, metric, window, memory_type
+            )
             if not performance_result.get("success"):
                 return {
                     "success": False,
@@ -570,7 +611,15 @@ class AgentMemory:
             # Determine if higher or lower is better based on metric name
             higher_is_better = any(
                 keyword in metric.lower()
-                for keyword in ["accuracy", "precision", "recall", "f1", "sharpe", "return", "profit"]
+                for keyword in [
+                    "accuracy",
+                    "precision",
+                    "recall",
+                    "f1",
+                    "sharpe",
+                    "return",
+                    "profit",
+                ]
             )
 
             if higher_is_better:
@@ -591,7 +640,9 @@ class AgentMemory:
                 "trend": trend,
                 "first_half_avg": first_avg,
                 "second_half_avg": second_avg,
-                "improvement_pct": ((second_avg - first_avg) / abs(first_avg)) * 100 if first_avg != 0 else 0,
+                "improvement_pct": ((second_avg - first_avg) / abs(first_avg)) * 100
+                if first_avg != 0
+                else 0,
                 "values": values,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -641,9 +692,13 @@ class AgentMemory:
                             if isinstance(data[agent][run_type], list):
                                 original_count = len(data[agent][run_type])
                                 data[agent][run_type] = [
-                                    entry for entry in data[agent][run_type] if entry.get("memory_type") != memory_type
+                                    entry
+                                    for entry in data[agent][run_type]
+                                    if entry.get("memory_type") != memory_type
                                 ]
-                                cleared_count += original_count - len(data[agent][run_type])
+                                cleared_count += original_count - len(
+                                    data[agent][run_type]
+                                )
                     self._save(data)
 
             return {
@@ -673,8 +728,14 @@ class AgentMemory:
             data = self._load()
             persistent_stats = {
                 "total_agents": len(data),
-                "total_entries": sum(len(entries) for entries in data.values() if isinstance(entries, list)),
-                "file_size_mb": self.path.stat().st_size / (1024 * 1024) if self.path.exists() else 0,
+                "total_entries": sum(
+                    len(entries)
+                    for entries in data.values()
+                    if isinstance(entries, list)
+                ),
+                "file_size_mb": self.path.stat().st_size / (1024 * 1024)
+                if self.path.exists()
+                else 0,
             }
 
             return {
@@ -686,7 +747,11 @@ class AgentMemory:
 
         except Exception as e:
             logger.error(f"Error getting memory stats: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def cleanup_expired(self) -> Dict[str, Any]:
         """Clean up expired memory chunks."""
@@ -694,8 +759,16 @@ class AgentMemory:
             # Clean memory manager
             mm_cleanup = self.memory_manager.cleanup()
 
-            return {"success": True, "memory_manager_cleanup": mm_cleanup, "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "memory_manager_cleanup": mm_cleanup,
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
             logger.error(f"Error cleaning up expired memory: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }

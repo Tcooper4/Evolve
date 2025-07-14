@@ -40,7 +40,9 @@ try:
     PANDAS_TA_AVAILABLE = True
     logger.info("pandas_ta successfully imported with compatibility patches")
 except ImportError as e:
-    warnings.warn(f"pandas_ta import failed: {e}. Technical indicators may not be available.")
+    warnings.warn(
+        f"pandas_ta import failed: {e}. Technical indicators may not be available."
+    )
     ta = None
     PANDAS_TA_AVAILABLE = False
 except Exception as e:
@@ -83,13 +85,20 @@ class MarketIndicators:
         self.logger = logging.getLogger(self.__class__.__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
         # Initialize performance tracking
-        self.performance_metrics = {"total_calculations": 0, "gpu_calculations": 0, "cpu_calculations": 0, "errors": 0}
+        self.performance_metrics = {
+            "total_calculations": 0,
+            "gpu_calculations": 0,
+            "cpu_calculations": 0,
+            "errors": 0,
+        }
 
         # Check for GPU availability
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -105,16 +114,28 @@ class MarketIndicators:
             if field not in self.config:
                 raise ValueError(f"Missing required config field: {field}")
 
-        if not isinstance(self.config["rsi_window"], int) or self.config["rsi_window"] <= 0:
+        if (
+            not isinstance(self.config["rsi_window"], int)
+            or self.config["rsi_window"] <= 0
+        ):
             raise ValueError("rsi_window must be a positive integer")
 
-        if not isinstance(self.config["macd_fast"], int) or self.config["macd_fast"] <= 0:
+        if (
+            not isinstance(self.config["macd_fast"], int)
+            or self.config["macd_fast"] <= 0
+        ):
             raise ValueError("macd_fast must be a positive integer")
 
-        if not isinstance(self.config["macd_slow"], int) or self.config["macd_slow"] <= 0:
+        if (
+            not isinstance(self.config["macd_slow"], int)
+            or self.config["macd_slow"] <= 0
+        ):
             raise ValueError("macd_slow must be a positive integer")
 
-        if not isinstance(self.config["macd_signal"], int) or self.config["macd_signal"] <= 0:
+        if (
+            not isinstance(self.config["macd_signal"], int)
+            or self.config["macd_signal"] <= 0
+        ):
             raise ValueError("macd_signal must be a positive integer")
 
     def _validate_data(self, data: pd.DataFrame) -> None:
@@ -142,7 +163,9 @@ class MarketIndicators:
 
         # Check for missing values
         if data.isnull().any().any():
-            warnings.warn("Data contains missing values. Consider handling them before calculation.")
+            warnings.warn(
+                "Data contains missing values. Consider handling them before calculation."
+            )
 
         # Check for infinite values
         if np.isinf(data.select_dtypes(include=np.number)).any().any():
@@ -184,7 +207,9 @@ class MarketIndicators:
 
         return rsi
 
-    def calculate_rsi(self, data: pd.DataFrame, window: Optional[int] = None) -> pd.Series:
+    def calculate_rsi(
+        self, data: pd.DataFrame, window: Optional[int] = None
+    ) -> pd.Series:
         """Calculate Relative Strength Index (RSI).
 
         Args:
@@ -406,7 +431,9 @@ class MarketIndicators:
             self.logger.error(f"Error calculating Bollinger Bands: {str(e)}")
             raise
 
-    def calculate_all_indicators(self, data: pd.DataFrame) -> Dict[str, Union[pd.Series, Dict[str, pd.Series]]]:
+    def calculate_all_indicators(
+        self, data: pd.DataFrame
+    ) -> Dict[str, Union[pd.Series, Dict[str, pd.Series]]]:
         """Calculate all technical indicators for the given data.
 
         Args:
@@ -456,7 +483,9 @@ class MarketIndicators:
         """Get performance metrics for indicator calculations."""
         return self.performance_metrics.copy()
 
-    def calculate_stochastic(self, data: pd.DataFrame, k_period: int = 14, d_period: int = 3) -> pd.DataFrame:
+    def calculate_stochastic(
+        self, data: pd.DataFrame, k_period: int = 14, d_period: int = 3
+    ) -> pd.DataFrame:
         """Calculate Stochastic Oscillator.
 
         Args:
@@ -471,7 +500,9 @@ class MarketIndicators:
             self._validate_data(data)
 
             start_time = datetime.now()
-            stoch = ta.stoch(data["High"], data["Low"], data["Close"], k=k_period, d=d_period)
+            stoch = ta.stoch(
+                data["High"], data["Low"], data["Close"], k=k_period, d=d_period
+            )
             calculation_time = (datetime.now() - start_time).total_seconds()
 
             self.performance_metrics["total_calculations"] += 1

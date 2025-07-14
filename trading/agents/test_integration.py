@@ -11,7 +11,9 @@ import sys
 from pathlib import Path
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Add project root to path
@@ -33,16 +35,21 @@ async def test_agent_integration():
         leaderboard = AgentLeaderboard()
         agent_manager = AgentManager()
 
-        # Register leaderboard with agent manager
-        agent_manager.register_callback(EventType.PERFORMANCE_IMPROVEMENT, leaderboard.update_agent_performance)
-
-        logger.info("✅ AgentManager initialized with leaderboard")
+        logger.info("✅ AgentManager initialized")
 
         # Add sample agents
         sample_agents = [
-            AgentConfig(agent_id="agent_1", name="RSI Strategy", agent_type=AgentType.TRADING),
-            AgentConfig(agent_id="agent_2", name="MACD Strategy", agent_type=AgentType.TRADING),
-            AgentConfig(agent_id="agent_3", name="Bollinger Strategy", agent_type=AgentType.TRADING),
+            AgentConfig(
+                agent_id="agent_1", name="RSI Strategy", agent_type=AgentType.TRADING
+            ),
+            AgentConfig(
+                agent_id="agent_2", name="MACD Strategy", agent_type=AgentType.TRADING
+            ),
+            AgentConfig(
+                agent_id="agent_3",
+                name="Bollinger Strategy",
+                agent_type=AgentType.TRADING,
+            ),
         ]
 
         for agent_config in sample_agents:
@@ -52,9 +59,24 @@ async def test_agent_integration():
 
         # Add sample performance data
         performance_data = [
-            {"agent_name": "RSI Strategy", "sharpe_ratio": 1.2, "max_drawdown": 0.15, "win_rate": 0.65},
-            {"agent_name": "MACD Strategy", "sharpe_ratio": 0.9, "max_drawdown": 0.20, "win_rate": 0.58},
-            {"agent_name": "Bollinger Strategy", "sharpe_ratio": 1.5, "max_drawdown": 0.12, "win_rate": 0.72},
+            {
+                "agent_name": "RSI Strategy",
+                "sharpe_ratio": 1.2,
+                "max_drawdown": 0.15,
+                "win_rate": 0.65,
+            },
+            {
+                "agent_name": "MACD Strategy",
+                "sharpe_ratio": 0.9,
+                "max_drawdown": 0.20,
+                "win_rate": 0.58,
+            },
+            {
+                "agent_name": "Bollinger Strategy",
+                "sharpe_ratio": 1.5,
+                "max_drawdown": 0.12,
+                "win_rate": 0.72,
+            },
         ]
 
         for data in performance_data:
@@ -75,7 +97,9 @@ async def test_agent_integration():
         top_agents = leaderboard.get_top_agents(limit=3, sort_by="sharpe_ratio")
         logger.info(f"  Top 3 agents by Sharpe ratio:")
         for i, agent in enumerate(top_agents, 1):
-            logger.info(f"    {i}. {agent['agent_name']}: Sharpe={agent['sharpe_ratio']:.2f}")
+            logger.info(
+                f"    {i}. {agent['agent_name']}: Sharpe={agent['sharpe_ratio']:.2f}"
+            )
 
         # Get deprecated agents
         deprecated = leaderboard.get_deprecated_agents()

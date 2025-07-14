@@ -27,7 +27,9 @@ class PromptRouterService(BaseService):
     Handles prompt routing and intent detection requests and communicates results via Redis.
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0):
+    def __init__(
+        self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0
+    ):
         """Initialize the PromptRouterService."""
         super().__init__("prompt_router", redis_host, redis_port, redis_db)
 
@@ -60,7 +62,11 @@ class PromptRouterService(BaseService):
                 return self._handle_history_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {"type": "error", "error": f"Unknown message type: {message_type}", "original_message": data}
+                return {
+                    "type": "error",
+                    "error": f"Unknown message type: {message_type}",
+                    "original_message": data,
+                }
 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
@@ -93,7 +99,9 @@ class PromptRouterService(BaseService):
 
             # Route the prompt using the agent
             result = self.agent.route_prompt(
-                user_prompt=user_prompt, context=context, available_agents=available_agents
+                user_prompt=user_prompt,
+                context=context,
+                available_agents=available_agents,
             )
 
             # Log to memory
@@ -139,7 +147,9 @@ class PromptRouterService(BaseService):
             logger.info(f"Detecting intent for: {user_prompt[:50]}...")
 
             # Detect intent using the agent
-            result = self.agent.detect_intent(user_prompt=user_prompt, use_openai=use_openai)
+            result = self.agent.detect_intent(
+                user_prompt=user_prompt, use_openai=use_openai
+            )
 
             # Log to memory
             self.memory.log_decision(
@@ -185,7 +195,9 @@ class PromptRouterService(BaseService):
             logger.info(f"Parsing arguments for intent: {intent}")
 
             # Parse arguments using the agent
-            result = self.agent.parse_arguments(user_prompt=user_prompt, intent=intent, use_openai=use_openai)
+            result = self.agent.parse_arguments(
+                user_prompt=user_prompt, intent=intent, use_openai=use_openai
+            )
 
             # Log to memory
             self.memory.log_decision(
@@ -217,7 +229,12 @@ class PromptRouterService(BaseService):
             # Get routing history
             history = self.agent.get_routing_history(intent=intent, limit=limit)
 
-            return {"type": "routing_history", "history": history, "intent": intent, "count": len(history)}
+            return {
+                "type": "routing_history",
+                "history": history,
+                "intent": intent,
+                "count": len(history),
+            }
 
         except Exception as e:
             logger.error(f"Error getting routing history: {e}")

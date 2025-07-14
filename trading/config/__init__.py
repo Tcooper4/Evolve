@@ -76,10 +76,8 @@ from .settings import (
     WEB_HOST,
     WEB_PORT,
     WEB_SECRET_KEY,
-    Settings,
     get_config_dict,
     get_config_value,
-    settings,
     validate_config,
 )
 
@@ -176,8 +174,6 @@ __all__ = [
     "PerformanceConfig",
     # Configuration instance
     "config",
-    "Settings",
-    "settings",
     # Utility functions
     "get_config_value",
     "get_config_dict",

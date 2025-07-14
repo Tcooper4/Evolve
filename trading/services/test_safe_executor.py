@@ -26,7 +26,12 @@ def test_direct_safe_executor():
 
     try:
         # Initialize SafeExecutor
-        executor = SafeExecutor(timeout_seconds=30, memory_limit_mb=512, enable_sandbox=True, log_executions=True)
+        executor = SafeExecutor(
+            timeout_seconds=30,
+            memory_limit_mb=512,
+            enable_sandbox=True,
+            log_executions=True,
+        )
 
         # Test 1: Valid model execution
         logger.info("\n📝 Test 1: Valid Model Execution")
@@ -38,7 +43,10 @@ def main(input_data):
 """
 
         result = executor.execute_model(
-            model_code=valid_code, model_name="test_model", input_data={"test": "data"}, model_type="test"
+            model_code=valid_code,
+            model_name="test_model",
+            input_data={"test": "data"},
+            model_type="test",
         )
 
         logger.info(f"Status: {result.status.value}")
@@ -64,7 +72,10 @@ def main(input_data):
 """
 
         result = executor.execute_model(
-            model_code=dangerous_code, model_name="dangerous_model", input_data={}, model_type="test"
+            model_code=dangerous_code,
+            model_name="dangerous_model",
+            input_data={},
+            model_type="test",
         )
 
         logger.info(f"Status: {result.status.value}")
@@ -72,7 +83,9 @@ def main(input_data):
         if result.status == ExecutionStatus.VALIDATION_ERROR:
             logger.info("✅ Dangerous code validation test passed")
         else:
-            logger.error(f"❌ Dangerous code validation test failed: {result.status.value}")
+            logger.error(
+                f"❌ Dangerous code validation test failed: {result.status.value}"
+            )
 
         # Test 3: Timeout handling
         logger.info("\n📝 Test 3: Timeout Handling")
@@ -87,7 +100,10 @@ def main(input_data):
 """
 
         result = executor.execute_model(
-            model_code=timeout_code, model_name="timeout_model", input_data={}, model_type="test"
+            model_code=timeout_code,
+            model_name="timeout_model",
+            input_data={},
+            model_type="test",
         )
 
         logger.info(f"Status: {result.status.value}")
@@ -108,7 +124,10 @@ def main(input_data):
 """
 
         result = executor.execute_model(
-            model_code=syntax_error_code, model_name="syntax_error_model", input_data={}, model_type="test"
+            model_code=syntax_error_code,
+            model_name="syntax_error_model",
+            input_data={},
+            model_type="test",
         )
 
         logger.info(f"Status: {result.status.value}")
@@ -137,7 +156,10 @@ def main(input_data):
         market_data = {"prices": [100, 101, 102, 103, 104]}
 
         result = executor.execute_strategy(
-            strategy_code=strategy_code, strategy_name="test_strategy", market_data=market_data, parameters={}
+            strategy_code=strategy_code,
+            strategy_name="test_strategy",
+            market_data=market_data,
+            parameters={},
         )
 
         logger.info(f"Status: {result.status.value}")
@@ -168,7 +190,10 @@ def main(input_data):
         price_data = {"prices": [100, 101, 102, 103, 104, 105]}
 
         result = executor.execute_indicator(
-            indicator_code=indicator_code, indicator_name="test_indicator", price_data=price_data, parameters={}
+            indicator_code=indicator_code,
+            indicator_name="test_indicator",
+            price_data=price_data,
+            parameters={},
         )
 
         logger.info(f"Status: {result.status.value}")
@@ -231,14 +256,18 @@ def main(input_data):
             status = execution_result.get("status")
 
             logger.info(f"Status: {status}")
-            logger.info(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
+            logger.info(
+                f"Execution Time: {execution_result.get('execution_time', 0):.2f}s"
+            )
 
             if status == "success":
                 return_value = execution_result.get("return_value")
                 logger.info(f"Return Value: {return_value}")
                 logger.info("✅ Service model execution test passed")
             else:
-                logger.error(f"❌ Service model execution test failed: {execution_result.get('error')}")
+                logger.error(
+                    f"❌ Service model execution test failed: {execution_result.get('error')}"
+                )
         else:
             logger.error("❌ No response from service")
 
@@ -258,7 +287,10 @@ def main(input_data):
         market_data = {"prices": [100, 101, 102, 103, 104]}
 
         result = client.execute_strategy_safely(
-            strategy_code=strategy_code, strategy_name="service_test_strategy", market_data=market_data, parameters={}
+            strategy_code=strategy_code,
+            strategy_name="service_test_strategy",
+            market_data=market_data,
+            parameters={},
         )
 
         if result and result.get("type") == "strategy_executed":
@@ -266,14 +298,18 @@ def main(input_data):
             status = execution_result.get("status")
 
             logger.info(f"Status: {status}")
-            logger.info(f"Execution Time: {execution_result.get('execution_time', 0):.2f}s")
+            logger.info(
+                f"Execution Time: {execution_result.get('execution_time', 0):.2f}s"
+            )
 
             if status == "success":
                 return_value = execution_result.get("return_value")
                 logger.info(f"Strategy Result: {return_value}")
                 logger.info("✅ Service strategy execution test passed")
             else:
-                logger.error(f"❌ Service strategy execution test failed: {execution_result.get('error')}")
+                logger.error(
+                    f"❌ Service strategy execution test failed: {execution_result.get('error')}"
+                )
         else:
             logger.error("❌ No response from service")
 
@@ -285,7 +321,9 @@ def main(input_data):
         if stats_result and stats_result.get("type") == "statistics":
             stats = stats_result.get("statistics", {})
             logger.info(f"Total Executions: {stats.get('total_executions', 0)}")
-            logger.info(f"Successful Executions: {stats.get('successful_executions', 0)}")
+            logger.info(
+                f"Successful Executions: {stats.get('successful_executions', 0)}"
+            )
             logger.info(f"Failed Executions: {stats.get('failed_executions', 0)}")
             logger.info(f"Success Rate: {stats.get('success_rate', 0):.1%}")
             logger.info("✅ Service statistics test passed")
@@ -316,11 +354,16 @@ def test_security_features():
     logger.info("=" * 50)
 
     try:
-        executor = SafeExecutor(timeout_seconds=10, memory_limit_mb=256, enable_sandbox=True)
+        executor = SafeExecutor(
+            timeout_seconds=10, memory_limit_mb=256, enable_sandbox=True
+        )
 
         # Test dangerous imports
         dangerous_tests = [
-            {"name": "OS Import", "code": 'import os\ndef main(input_data): return {"status": "dangerous"}'},
+            {
+                "name": "OS Import",
+                "code": 'import os\ndef main(input_data): return {"status": "dangerous"}',
+            },
             {
                 "name": "Subprocess Import",
                 "code": 'import subprocess\ndef main(input_data): return {"status": "dangerous"}',
@@ -357,7 +400,9 @@ def test_security_features():
                 logger.info("✅ Security test passed - dangerous code blocked")
                 passed_tests += 1
             else:
-                logger.error(f"❌ Security test failed - dangerous code allowed: {result.status.value}")
+                logger.error(
+                    f"❌ Security test failed - dangerous code allowed: {result.status.value}"
+                )
 
         logger.info(f"\n📊 Security Test Results: {passed_tests}/{total_tests} passed")
 

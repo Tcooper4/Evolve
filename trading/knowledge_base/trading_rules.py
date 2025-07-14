@@ -93,7 +93,10 @@ class TradingRules:
 
         rule_id = str(uuid4())
         metadata = RuleMetadata(
-            created_by=created_by, modified_by=created_by, agent_id=agent_id, agent_confidence=agent_confidence
+            created_by=created_by,
+            modified_by=created_by,
+            agent_id=agent_id,
+            agent_confidence=agent_confidence,
         )
 
         self.rules[rule_id] = {
@@ -114,7 +117,9 @@ class TradingRules:
         logger.info(f"Added new rule: {rule_name} (ID: {rule_id})")
         return rule_id
 
-    def update_rule(self, rule_id: str, updates: Dict[str, Any], modified_by: str) -> None:
+    def update_rule(
+        self, rule_id: str, updates: Dict[str, Any], modified_by: str
+    ) -> None:
         """Update an existing rule.
 
         Args:
@@ -149,7 +154,11 @@ class TradingRules:
         Returns:
             Dict[str, Dict[str, Any]]: Dictionary of rules with the specified tag.
         """
-        return {rule_id: rule for rule_id, rule in self.rules.items() if tag in rule.get("tags", [])}
+        return {
+            rule_id: rule
+            for rule_id, rule in self.rules.items()
+            if tag in rule.get("tags", [])
+        }
 
     def snooze_rule(self, rule_id: str, duration_minutes: int) -> None:
         """Snooze a rule for a specified duration.
@@ -165,7 +174,9 @@ class TradingRules:
         rule["status"] = RuleStatus.SNOOZED.value
         rule["snooze_until"] = datetime.now() + timedelta(minutes=duration_minutes)
         self._log_rule_change(rule_id, "snoozed")
-        logger.info(f"Snoozed rule: {rule['name']} (ID: {rule_id}) for {duration_minutes} minutes")
+        logger.info(
+            f"Snoozed rule: {rule['name']} (ID: {rule_id}) for {duration_minutes} minutes"
+        )
 
     def archive_rule(self, rule_id: str) -> None:
         """Archive a rule.
@@ -205,7 +216,9 @@ class TradingRules:
 
         # Check dependencies if any
         if rule["dependencies"]:
-            dependency_results = [self.is_rule_active(dep_id) for dep_id in rule["dependencies"]]
+            dependency_results = [
+                self.is_rule_active(dep_id) for dep_id in rule["dependencies"]
+            ]
 
             if rule["logical_operator"] == LogicalOperator.AND.value:
                 return all(dependency_results)
@@ -223,7 +236,13 @@ class TradingRules:
         triggered_actions = []
         for rule_id, rule in self.rules.items():
             if self.is_rule_active(rule_id) and rule.get("action"):
-                triggered_actions.append({"rule_id": rule_id, "rule_name": rule["name"], "action": rule["action"]})
+                triggered_actions.append(
+                    {
+                        "rule_id": rule_id,
+                        "rule_name": rule["name"],
+                        "action": rule["action"],
+                    }
+                )
         return triggered_actions
 
     def test_rule(self, rule_id: str, df: pd.DataFrame) -> Dict[str, Any]:
@@ -272,7 +291,12 @@ class TradingRules:
             action (str): The type of change.
         """
         self.rule_audit_log.append(
-            {"timestamp": datetime.now(), "rule_id": rule_id, "action": action, "rule_state": self.rules[rule_id]}
+            {
+                "timestamp": datetime.now(),
+                "rule_id": rule_id,
+                "action": action,
+                "rule_state": self.rules[rule_id],
+            }
         )
 
     def __str__(self) -> str:
@@ -311,7 +335,9 @@ class TradingRules:
         if rule_id in self.rules:
             self.rules[rule_id]["status"] = RuleStatus.ACTIVE.value
             self._log_rule_change(rule_id, "activated")
-            logger.info(f"Activated rule: {self.rules[rule_id]['name']} (ID: {rule_id})")
+            logger.info(
+                f"Activated rule: {self.rules[rule_id]['name']} (ID: {rule_id})"
+            )
 
     def deactivate_rule(self, rule_id: str) -> None:
         """Deactivate a trading rule.
@@ -322,7 +348,9 @@ class TradingRules:
         if rule_id in self.rules:
             self.rules[rule_id]["status"] = RuleStatus.INACTIVE.value
             self._log_rule_change(rule_id, "deactivated")
-            logger.info(f"Deactivated rule: {self.rules[rule_id]['name']} (ID: {rule_id})")
+            logger.info(
+                f"Deactivated rule: {self.rules[rule_id]['name']} (ID: {rule_id})"
+            )
 
     def export_rules(self, filename: str) -> None:
         """Export rules to a file.
@@ -354,9 +382,15 @@ class TradingRules:
                     modified_by=rule.get("modified_by", "system"),
                 )
                 rule["metadata"] = asdict(metadata)
-                rule["status"] = RuleStatus.ACTIVE.value if rule.get("active", True) else RuleStatus.INACTIVE.value
+                rule["status"] = (
+                    RuleStatus.ACTIVE.value
+                    if rule.get("active", True)
+                    else RuleStatus.INACTIVE.value
+                )
                 rule["tags"] = rule.get("tags", [])
-                rule["logical_operator"] = rule.get("logical_operator", LogicalOperator.AND.value)
+                rule["logical_operator"] = rule.get(
+                    "logical_operator", LogicalOperator.AND.value
+                )
                 rule["action"] = rule.get("action", None)
                 rule["snooze_until"] = None
 
@@ -386,7 +420,9 @@ class TradingRules:
                             priority=value.get("priority", 0),
                             dependencies=value.get("dependencies", []),
                             tags=value.get("tags", []),
-                            logical_operator=LogicalOperator(value.get("logical_operator", LogicalOperator.AND.value)),
+                            logical_operator=LogicalOperator(
+                                value.get("logical_operator", LogicalOperator.AND.value)
+                            ),
                             action=value.get("action", None),
                             agent_id=value.get("agent_id"),
                             agent_confidence=value.get("agent_confidence"),

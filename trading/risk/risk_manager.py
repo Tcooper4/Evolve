@@ -5,7 +5,7 @@ import logging
 import os
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,7 @@ from scipy.optimize import minimize
 @dataclass
 class RiskMetrics:
     """Risk metrics data class."""
+
     sharpe_ratio: float
     sortino_ratio: float
     var_95: float
@@ -38,6 +39,7 @@ class RiskMetrics:
 @dataclass
 class StressTestResult:
     """Stress test result data class."""
+
     scenario_name: str
     portfolio_value_change: float
     var_change: float
@@ -71,24 +73,27 @@ class RiskManager:
         # Add file handler for debug logs if no handlers exist
         if not self.logger.handlers:
             try:
-                os.makedirs('trading/risk/logs', exist_ok=True)
+                os.makedirs("trading/risk/logs", exist_ok=True)
             except Exception as e:
                 self.logger.error(f"Failed to create trading/risk/logs: {e}")
             try:
-                os.makedirs('trading/risk/results', exist_ok=True)
+                os.makedirs("trading/risk/results", exist_ok=True)
             except Exception as e:
                 self.logger.error(f"Failed to create trading/risk/results: {e}")
 
-            debug_handler = logging.FileHandler('trading/risk/logs/risk_debug.log')
+            debug_handler = logging.FileHandler("trading/risk/logs/risk_debug.log")
             debug_handler.setLevel(logging.DEBUG)
-            debug_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            debug_formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             debug_handler.setFormatter(debug_formatter)
             self.logger.addHandler(debug_handler)
 
         self.logger.info(f"Initialized RiskManager with config: {self.config}")
 
-
-    def update_returns(self, returns: pd.Series, benchmark_returns: Optional[pd.Series] = None) -> None:
+    def update_returns(
+        self, returns: pd.Series, benchmark_returns: Optional[pd.Series] = None
+    ) -> None:
         """Update returns data.
 
         Args:
@@ -110,15 +115,23 @@ class RiskManager:
 
         # Calculate basic metrics
         volatility = self.returns.std() * np.sqrt(252)
-        excess_returns = self.returns - (self.config.get('risk_free_rate', 0.02) / 252)
+        excess_returns = self.returns - (self.config.get("risk_free_rate", 0.02) / 252)
 
         # Calculate Sharpe ratio
-        sharpe_ratio = np.sqrt(252) * excess_returns.mean() / volatility if volatility != 0 else 0
+        sharpe_ratio = (
+            np.sqrt(252) * excess_returns.mean() / volatility if volatility != 0 else 0
+        )
 
         # Calculate Sortino ratio
         downside_returns = self.returns[self.returns < 0]
-        downside_vol = downside_returns.std() * np.sqrt(252) if len(downside_returns) > 0 else 0
-        sortino_ratio = np.sqrt(252) * excess_returns.mean() / downside_vol if downside_vol != 0 else 0
+        downside_vol = (
+            downside_returns.std() * np.sqrt(252) if len(downside_returns) > 0 else 0
+        )
+        sortino_ratio = (
+            np.sqrt(252) * excess_returns.mean() / downside_vol
+            if downside_vol != 0
+            else 0
+        )
 
         # Calculate VaR and CVaR at different confidence levels
         var_95 = np.percentile(self.returns, 5)
@@ -131,7 +144,9 @@ class RiskManager:
 
         # Calculate Tail Risk (probability of extreme losses)
         tail_threshold = np.percentile(self.returns, 1)
-        tail_risk = len(self.returns[self.returns <= tail_threshold]) / len(self.returns)
+        tail_risk = len(self.returns[self.returns <= tail_threshold]) / len(
+            self.returns
+        )
 
         # Calculate higher moments
         skewness = self.returns.skew()
@@ -145,7 +160,9 @@ class RiskManager:
 
         # Calculate beta and correlation
         if self.benchmark_returns is not None and not self.benchmark_returns.empty:
-            beta = self.returns.cov(self.benchmark_returns) / self.benchmark_returns.var()
+            beta = (
+                self.returns.cov(self.benchmark_returns) / self.benchmark_returns.var()
+            )
             correlation = self.returns.corr(self.benchmark_returns)
         else:
             beta = 1.0
@@ -153,9 +170,21 @@ class RiskManager:
 
         # Calculate Kelly fraction
         win_rate = len(self.returns[self.returns > 0]) / len(self.returns)
-        avg_win = self.returns[self.returns > 0].mean() if len(self.returns[self.returns > 0]) > 0 else 0
-        avg_loss = abs(self.returns[self.returns < 0].mean()) if len(self.returns[self.returns < 0]) > 0 else 0
-        kelly_fraction = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win if avg_win != 0 else 0
+        avg_win = (
+            self.returns[self.returns > 0].mean()
+            if len(self.returns[self.returns > 0]) > 0
+            else 0
+        )
+        avg_loss = (
+            abs(self.returns[self.returns < 0].mean())
+            if len(self.returns[self.returns < 0]) > 0
+            else 0
+        )
+        kelly_fraction = (
+            (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
+            if avg_win != 0
+            else 0
+        )
 
         # Create metrics object
         self.current_metrics = RiskMetrics(
@@ -174,7 +203,7 @@ class RiskManager:
             tail_risk=tail_risk,
             skewness=skewness,
             kurtosis=kurtosis,
-            timestamp=datetime.utcnow().isoformat()
+            timestamp=datetime.utcnow().isoformat(),
         )
 
         # Add to history
@@ -182,7 +211,9 @@ class RiskManager:
 
         self.logger.info(f"Calculated metrics: {self.current_metrics}")
 
-    def calculate_historical_var(self, confidence_level: float = 0.95, window: int = 252) -> float:
+    def calculate_historical_var(
+        self, confidence_level: float = 0.95, window: int = 252
+    ) -> float:
         """Calculate historical VaR.
 
         Args:
@@ -198,8 +229,9 @@ class RiskManager:
         percentile = (1 - confidence_level) * 100
         return np.percentile(self.returns, percentile)
 
-    def calculate_parametric_var(self, confidence_level: float = 0.95,
-                               window: int = 252) -> float:
+    def calculate_parametric_var(
+        self, confidence_level: float = 0.95, window: int = 252
+    ) -> float:
         """Calculate parametric VaR assuming normal distribution.
 
         Args:
@@ -218,13 +250,17 @@ class RiskManager:
 
         # Z-score for confidence level
         from scipy.stats import norm
+
         z_score = norm.ppf(1 - confidence_level)
 
         return mean_return + z_score * rolling_vol
 
-    def calculate_monte_carlo_var(self, confidence_level: float = 0.95,
-                                n_simulations: int = 10000,
-                                time_horizon: int = 1) -> float:
+    def calculate_monte_carlo_var(
+        self,
+        confidence_level: float = 0.95,
+        n_simulations: int = 10000,
+        time_horizon: int = 1,
+    ) -> float:
         """Calculate VaR using Monte Carlo simulation.
 
         Args:
@@ -247,14 +283,16 @@ class RiskManager:
         simulated_returns = np.random.normal(
             mean_return * time_horizon,
             volatility * np.sqrt(time_horizon),
-            n_simulations
+            n_simulations,
         )
 
         # Calculate VaR
         percentile = (1 - confidence_level) * 100
         return np.percentile(simulated_returns, percentile)
 
-    def run_stress_tests(self, portfolio_value: float = 1000000.0) -> List[StressTestResult]:
+    def run_stress_tests(
+        self, portfolio_value: float = 1000000.0
+    ) -> List[StressTestResult]:
         """Run comprehensive stress tests.
 
         Args:
@@ -268,14 +306,17 @@ class RiskManager:
             return []
 
         stress_scenarios = {
-            'Market Crash': {'return_shock': -0.20, 'volatility_multiplier': 2.0},
-            'Interest Rate Hike': {'return_shock': -0.10, 'volatility_multiplier': 1.5},
-            'Liquidity Crisis': {'return_shock': -0.15, 'volatility_multiplier': 2.5},
-            'Currency Crisis': {'return_shock': -0.25, 'volatility_multiplier': 3.0},
-            'Geopolitical Risk': {'return_shock': -0.12, 'volatility_multiplier': 1.8},
-            'Economic Recession': {'return_shock': -0.18, 'volatility_multiplier': 2.2},
-            'Technology Bubble Burst': {'return_shock': -0.30, 'volatility_multiplier': 2.8},
-            'Oil Price Shock': {'return_shock': -0.08, 'volatility_multiplier': 1.6}
+            "Market Crash": {"return_shock": -0.20, "volatility_multiplier": 2.0},
+            "Interest Rate Hike": {"return_shock": -0.10, "volatility_multiplier": 1.5},
+            "Liquidity Crisis": {"return_shock": -0.15, "volatility_multiplier": 2.5},
+            "Currency Crisis": {"return_shock": -0.25, "volatility_multiplier": 3.0},
+            "Geopolitical Risk": {"return_shock": -0.12, "volatility_multiplier": 1.8},
+            "Economic Recession": {"return_shock": -0.18, "volatility_multiplier": 2.2},
+            "Technology Bubble Burst": {
+                "return_shock": -0.30,
+                "volatility_multiplier": 2.8,
+            },
+            "Oil Price Shock": {"return_shock": -0.08, "volatility_multiplier": 1.6},
         }
 
         results = []
@@ -283,12 +324,17 @@ class RiskManager:
 
         for scenario_name, scenario_params in stress_scenarios.items():
             # Apply stress scenario
-            stressed_returns = self.returns * scenario_params['volatility_multiplier'] + scenario_params['return_shock']
+            stressed_returns = (
+                self.returns * scenario_params["volatility_multiplier"]
+                + scenario_params["return_shock"]
+            )
 
             # Calculate stressed metrics
             stressed_volatility = stressed_returns.std() * np.sqrt(252)
             stressed_var_95 = np.percentile(stressed_returns, 5)
-            stressed_cvar_95 = stressed_returns[stressed_returns <= stressed_var_95].mean()
+            stressed_cvar_95 = stressed_returns[
+                stressed_returns <= stressed_var_95
+            ].mean()
 
             # Calculate portfolio value change
             portfolio_return = stressed_returns.mean() * 252
@@ -301,9 +347,13 @@ class RiskManager:
             stressed_max_drawdown = drawdowns.min()
 
             # Calculate Sharpe ratio change
-            risk_free_rate = self.config.get('risk_free_rate', 0.02)
+            risk_free_rate = self.config.get("risk_free_rate", 0.02)
             excess_returns = stressed_returns - (risk_free_rate / 252)
-            stressed_sharpe = np.sqrt(252) * excess_returns.mean() / stressed_volatility if stressed_volatility != 0 else 0
+            stressed_sharpe = (
+                np.sqrt(252) * excess_returns.mean() / stressed_volatility
+                if stressed_volatility != 0
+                else 0
+            )
 
             result = StressTestResult(
                 scenario_name=scenario_name,
@@ -312,7 +362,7 @@ class RiskManager:
                 cvar_change=stressed_cvar_95 - base_metrics.cvar_95,
                 max_drawdown_change=stressed_max_drawdown - base_metrics.max_drawdown,
                 sharpe_ratio_change=stressed_sharpe - base_metrics.sharpe_ratio,
-                timestamp=datetime.utcnow().isoformat()
+                timestamp=datetime.utcnow().isoformat(),
             )
             results.append(result)
 
@@ -362,8 +412,8 @@ class RiskManager:
             return {}
 
         # Get base limits from config
-        max_position_size = self.config.get('max_position_size', 0.2)
-        max_leverage = self.config.get('max_leverage', 1.0)
+        max_position_size = self.config.get("max_position_size", 0.2)
+        max_leverage = self.config.get("max_leverage", 1.0)
 
         # Adjust based on risk metrics
         volatility_factor = 1.0 / (1.0 + self.current_metrics.volatility)
@@ -371,17 +421,20 @@ class RiskManager:
         kelly_factor = min(self.current_metrics.kelly_fraction, 0.5)  # Cap at 0.5
 
         # Calculate final limits
-        position_limit = max_position_size * volatility_factor * drawdown_factor * kelly_factor
+        position_limit = (
+            max_position_size * volatility_factor * drawdown_factor * kelly_factor
+        )
         leverage_limit = max_leverage * volatility_factor * drawdown_factor
 
         return {
-            'position_limit': position_limit,
-            'leverage_limit': leverage_limit,
-            'kelly_fraction': kelly_factor
+            "position_limit": position_limit,
+            "leverage_limit": leverage_limit,
+            "kelly_fraction": kelly_factor,
         }
 
-    def optimize_position_sizes(self, expected_returns: pd.Series,
-                              covariance: pd.DataFrame) -> pd.Series:
+    def optimize_position_sizes(
+        self, expected_returns: pd.Series, covariance: pd.DataFrame
+    ) -> pd.Series:
         """Optimize position sizes using SLSQP.
 
         Args:
@@ -397,11 +450,23 @@ class RiskManager:
         def objective(weights):
             portfolio_return = np.sum(weights * expected_returns)
             portfolio_vol = np.sqrt(np.dot(weights.T, np.dot(covariance, weights)))
-            return {'success': True, 'result': {'success': True, 'result': -portfolio_return / portfolio_vol if portfolio_vol != 0 else 0, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}, 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": {
+                    "success": True,
+                    "result": -portfolio_return / portfolio_vol
+                    if portfolio_vol != 0
+                    else 0,
+                    "message": "Operation completed successfully",
+                    "timestamp": datetime.now().isoformat(),
+                },
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         # Define constraints
         constraints = [
-            {'type': 'eq', 'fun': lambda x: np.sum(x) - 1.0}  # weights sum to 1
+            {"type": "eq", "fun": lambda x: np.sum(x) - 1.0}  # weights sum to 1
         ]
 
         # Define bounds
@@ -412,11 +477,7 @@ class RiskManager:
 
         # Optimize
         result = minimize(
-            objective,
-            x0,
-            method='SLSQP',
-            bounds=bounds,
-            constraints=constraints
+            objective, x0, method="SLSQP", bounds=bounds, constraints=constraints
         )
 
         return pd.Series(result.x, index=expected_returns.index)
@@ -434,8 +495,8 @@ class RiskManager:
         fig = make_subplots(
             rows=3,
             cols=1,
-            subplot_titles=('Sharpe Ratio', 'Volatility', 'Drawdown'),
-            vertical_spacing=0.1
+            subplot_titles=("Sharpe Ratio", "Volatility", "Drawdown"),
+            vertical_spacing=0.1,
         )
 
         # Extract metrics
@@ -446,25 +507,20 @@ class RiskManager:
 
         # Add traces
         fig.add_trace(
-            go.Scatter(x=timestamps, y=sharpe_ratios, name='Sharpe Ratio'),
-            row=1, col=1
+            go.Scatter(x=timestamps, y=sharpe_ratios, name="Sharpe Ratio"), row=1, col=1
         )
 
         fig.add_trace(
-            go.Scatter(x=timestamps, y=volatilities, name='Volatility'),
-            row=2, col=1
+            go.Scatter(x=timestamps, y=volatilities, name="Volatility"), row=2, col=1
         )
 
         fig.add_trace(
-            go.Scatter(x=timestamps, y=drawdowns, name='Drawdown'),
-            row=3, col=1
+            go.Scatter(x=timestamps, y=drawdowns, name="Drawdown"), row=3, col=1
         )
 
         # Update layout
         fig.update_layout(
-            height=900,
-            showlegend=True,
-            title_text='Risk Metrics History'
+            height=900, showlegend=True, title_text="Risk Metrics History"
         )
 
         return fig
@@ -479,12 +535,12 @@ class RiskManager:
             Dictionary with cleanup status and details
         """
         try:
-            results_dir = 'trading/risk/results'
+            results_dir = "trading/risk/results"
 
             # Get all result files
             result_files = []
             for file in os.listdir(results_dir):
-                if file.endswith(('.json', '.csv')):
+                if file.endswith((".json", ".csv")):
                     path = os.path.join(results_dir, file)
                     result_files.append((path, os.path.getmtime(path)))
 
@@ -502,21 +558,21 @@ class RiskManager:
                     self.logger.error(f"Failed to remove file {path}: {e}")
 
             return {
-                'success': True,
-                'message': f'Cleanup completed. Removed {len(removed_files)} files',
-                'removed_files': removed_files,
-                'files_retained': len(result_files) - len(removed_files),
-                'max_files': max_files,
-                'timestamp': datetime.utcnow().isoformat()
+                "success": True,
+                "message": f"Cleanup completed. Removed {len(removed_files)} files",
+                "removed_files": removed_files,
+                "files_retained": len(result_files) - len(removed_files),
+                "max_files": max_files,
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}")
             return {
-                'success': False,
-                'message': f'Error during cleanup: {str(e)}',
-                'max_files': max_files,
-                'timestamp': datetime.utcnow().isoformat()
+                "success": False,
+                "message": f"Error during cleanup: {str(e)}",
+                "max_files": max_files,
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
     def export_risk_report(self, filepath: str) -> Dict[str, Any]:
@@ -531,10 +587,10 @@ class RiskManager:
         try:
             if not self.metrics_history:
                 return {
-                    'success': False,
-                    'message': 'No metrics history available for export',
-                    'filepath': filepath,
-                    'timestamp': datetime.utcnow().isoformat()
+                    "success": False,
+                    "message": "No metrics history available for export",
+                    "filepath": filepath,
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
 
             # Calculate additional risk measures
@@ -551,70 +607,83 @@ class RiskManager:
 
             # Prepare comprehensive data
             report_data = {
-                'config': self.config,
-                'metrics_history': [asdict(m) for m in self.metrics_history],
-                'current_metrics': asdict(self.current_metrics) if self.current_metrics else None,
-                'additional_risk_measures': {
-                    'historical_var_95': historical_var_95,
-                    'historical_var_99': historical_var_99,
-                    'parametric_var_95': parametric_var_95,
-                    'monte_carlo_var_95': monte_carlo_var_95,
-                    'conditional_var_95': self.calculate_conditional_var(0.95),
-                    'expected_shortfall_95': self.calculate_expected_shortfall(0.95)
+                "config": self.config,
+                "metrics_history": [asdict(m) for m in self.metrics_history],
+                "current_metrics": asdict(self.current_metrics)
+                if self.current_metrics
+                else None,
+                "additional_risk_measures": {
+                    "historical_var_95": historical_var_95,
+                    "historical_var_99": historical_var_99,
+                    "parametric_var_95": parametric_var_95,
+                    "monte_carlo_var_95": monte_carlo_var_95,
+                    "conditional_var_95": self.calculate_conditional_var(0.95),
+                    "expected_shortfall_95": self.calculate_expected_shortfall(0.95),
                 },
-                'stress_test_results': [asdict(result) for result in stress_test_results],
-                'risk_summary': risk_summary,
-                'returns_summary': {
-                    'mean': float(self.returns.mean()),
-                    'std': float(self.returns.std()),
-                    'min': float(self.returns.min()),
-                    'max': float(self.returns.max()),
-                    'skewness': float(self.returns.skew()),
-                    'kurtosis': float(self.returns.kurtosis())
-                } if self.returns is not None else None,
-                'data_summary': {
-                    'total_observations': len(self.returns) if self.returns is not None else 0,
-                    'date_range': {
-                        'start': self.returns.index[0].isoformat() if self.returns is not None and len(self.returns) > 0 else None,
-                        'end': self.returns.index[-1].isoformat() if self.returns is not None and len(self.returns) > 0 else None
-                    }
+                "stress_test_results": [
+                    asdict(result) for result in stress_test_results
+                ],
+                "risk_summary": risk_summary,
+                "returns_summary": {
+                    "mean": float(self.returns.mean()),
+                    "std": float(self.returns.std()),
+                    "min": float(self.returns.min()),
+                    "max": float(self.returns.max()),
+                    "skewness": float(self.returns.skew()),
+                    "kurtosis": float(self.returns.kurtosis()),
                 }
+                if self.returns is not None
+                else None,
+                "data_summary": {
+                    "total_observations": len(self.returns)
+                    if self.returns is not None
+                    else 0,
+                    "date_range": {
+                        "start": self.returns.index[0].isoformat()
+                        if self.returns is not None and len(self.returns) > 0
+                        else None,
+                        "end": self.returns.index[-1].isoformat()
+                        if self.returns is not None and len(self.returns) > 0
+                        else None,
+                    },
+                },
             }
 
             # Export based on file extension
-            if filepath.endswith('.json'):
-                with open(filepath, 'w') as f:
+            if filepath.endswith(".json"):
+                with open(filepath, "w") as f:
                     json.dump(report_data, f, indent=2)
-            elif filepath.endswith('.csv'):
+            elif filepath.endswith(".csv"):
                 # Convert metrics history to DataFrame
                 df = pd.DataFrame([asdict(m) for m in self.metrics_history])
                 df.to_csv(filepath, index=False)
             else:
                 return {
-                    'success': False,
-                    'message': 'Unsupported file format. Use .json or .csv',
-                    'filepath': filepath,
-                    'timestamp': datetime.utcnow().isoformat()
+                    "success": False,
+                    "message": "Unsupported file format. Use .json or .csv",
+                    "filepath": filepath,
+                    "timestamp": datetime.utcnow().isoformat(),
                 }
 
             self.logger.info(f"Exported risk report to {filepath}")
 
             return {
-                'success': True,
-                'message': f'Risk report exported successfully to {filepath}',
-                'filepath': filepath,
-                'file_size': os.path.getsize(filepath),
-                'metrics_count': len(self.metrics_history),
-                'timestamp': datetime.utcnow().isoformat()
+                "success": True,
+                "message": f"Risk report exported successfully to {filepath}",
+                "filepath": filepath,
+                "file_size": os.path.getsize(filepath),
+                "metrics_count": len(self.metrics_history),
+                "timestamp": datetime.utcnow().isoformat(),
             }
 
         except Exception as e:
             self.logger.error(f"Error exporting risk report: {e}")
             return {
-                'success': False,
-                'message': f'Error exporting risk report: {str(e)}',
-                'filepath': filepath,
-                'timestamp': datetime.utcnow().isoformat()
+                "success": False,
+                "message": f"Error exporting risk report: {str(e)}",
+                "filepath": filepath,
+                "timestamp": datetime.utcnow().isoformat(),
             }
+
 
 __all__ = ["RiskManager", "RiskMetrics"]

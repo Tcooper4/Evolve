@@ -14,7 +14,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 
 
-
 class SizingStrategy(Enum):
     """Position sizing strategy enum."""
 
@@ -175,9 +174,15 @@ class PositionSizer:
         self.config = default_config
         self.sizing_history: List[Dict[str, Any]] = []
 
-        self.logger.info(f"PositionSizer initialized with strategy: {self.config['default_strategy'].value}")
+        self.logger.info(
+            f"PositionSizer initialized with strategy: {self.config['default_strategy'].value}"
+        )
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def calculate_position_size(
         self,
@@ -211,7 +216,12 @@ class PositionSizer:
 
             # Calculate base position size based on strategy
             base_size = self._calculate_base_size(
-                entry_price, stop_loss_price, market_context, signal_context, portfolio_context, params
+                entry_price,
+                stop_loss_price,
+                market_context,
+                signal_context,
+                portfolio_context,
+                params,
             )
 
             # Apply adjustments
@@ -220,7 +230,9 @@ class PositionSizer:
             )
 
             # Apply final constraints
-            final_size = self._apply_constraints(adjusted_size, portfolio_context, params)
+            final_size = self._apply_constraints(
+                adjusted_size, portfolio_context, params
+            )
 
             # Create sizing details
             sizing_details = {
@@ -229,9 +241,11 @@ class PositionSizer:
                 "adjusted_size": adjusted_size,
                 "final_size": final_size,
                 "risk_amount": abs(entry_price - stop_loss_price) * final_size,
-                "risk_percentage": (abs(entry_price - stop_loss_price) * final_size) / portfolio_context.total_capital,
+                "risk_percentage": (abs(entry_price - stop_loss_price) * final_size)
+                / portfolio_context.total_capital,
                 "position_value": entry_price * final_size,
-                "position_percentage": (entry_price * final_size) / portfolio_context.total_capital,
+                "position_percentage": (entry_price * final_size)
+                / portfolio_context.total_capital,
                 "market_context": market_context.to_dict(),
                 "signal_context": signal_context.to_dict(),
                 "portfolio_context": portfolio_context.to_dict(),
@@ -283,22 +297,32 @@ class PositionSizer:
             return self._fixed_percentage_size(portfolio_context, params)
 
         elif params.strategy == SizingStrategy.KELLY_CRITERION:
-            return self._kelly_criterion_size(signal_context, risk_per_share, portfolio_context, params)
+            return self._kelly_criterion_size(
+                signal_context, risk_per_share, portfolio_context, params
+            )
 
         elif params.strategy == SizingStrategy.VOLATILITY_BASED:
-            return self._volatility_based_size(market_context, risk_per_share, portfolio_context, params)
+            return self._volatility_based_size(
+                market_context, risk_per_share, portfolio_context, params
+            )
 
         elif params.strategy == SizingStrategy.RISK_PARITY:
             return self._risk_parity_size(market_context, portfolio_context, params)
 
         elif params.strategy == SizingStrategy.CONFIDENCE_BASED:
-            return self._confidence_based_size(signal_context, risk_per_share, portfolio_context, params)
+            return self._confidence_based_size(
+                signal_context, risk_per_share, portfolio_context, params
+            )
 
         elif params.strategy == SizingStrategy.FORECAST_CERTAINTY:
-            return self._forecast_certainty_size(signal_context, risk_per_share, portfolio_context, params)
+            return self._forecast_certainty_size(
+                signal_context, risk_per_share, portfolio_context, params
+            )
 
         elif params.strategy == SizingStrategy.OPTIMAL_F:
-            return self._optimal_f_size(signal_context, risk_per_share, portfolio_context, params)
+            return self._optimal_f_size(
+                signal_context, risk_per_share, portfolio_context, params
+            )
 
         elif params.strategy == SizingStrategy.MARTINGALE:
             return self._martingale_size(portfolio_context, params)
@@ -315,7 +339,9 @@ class PositionSizer:
                 "timestamp": datetime.now().isoformat(),
             }
 
-    def _fixed_percentage_size(self, portfolio_context: PortfolioContext, params: SizingParameters) -> float:
+    def _fixed_percentage_size(
+        self, portfolio_context: PortfolioContext, params: SizingParameters
+    ) -> float:
         """Calculate fixed percentage position size.
 
         Args:
@@ -366,7 +392,9 @@ class PositionSizer:
         kelly_fraction *= params.kelly_fraction
 
         # Convert to position size
-        position_size = kelly_fraction * portfolio_context.total_capital / risk_per_share
+        position_size = (
+            kelly_fraction * portfolio_context.total_capital / risk_per_share
+        )
 
         return max(0, min(position_size, params.max_position_size))
 
@@ -389,7 +417,9 @@ class PositionSizer:
             Volatility-based position size
         """
         # Inverse relationship with volatility
-        volatility_factor = 1.0 / (1.0 + market_context.volatility * params.volatility_multiplier)
+        volatility_factor = 1.0 / (
+            1.0 + market_context.volatility * params.volatility_multiplier
+        )
 
         # Base size adjusted by volatility
         base_size = params.base_position_size * volatility_factor
@@ -405,7 +435,10 @@ class PositionSizer:
         }
 
     def _risk_parity_size(
-        self, market_context: MarketContext, portfolio_context: PortfolioContext, params: SizingParameters
+        self,
+        market_context: MarketContext,
+        portfolio_context: PortfolioContext,
+        params: SizingParameters,
     ) -> float:
         """Calculate risk parity position size.
 
@@ -486,7 +519,9 @@ class PositionSizer:
             Forecast certainty-based position size
         """
         # Scale position size by forecast certainty
-        certainty_factor = signal_context.forecast_certainty * params.confidence_multiplier
+        certainty_factor = (
+            signal_context.forecast_certainty * params.confidence_multiplier
+        )
 
         # Base size adjusted by certainty
         base_size = params.base_position_size * certainty_factor
@@ -537,7 +572,9 @@ class PositionSizer:
 
         return max(0, min(position_size, params.max_position_size))
 
-    def _martingale_size(self, portfolio_context: PortfolioContext, params: SizingParameters) -> float:
+    def _martingale_size(
+        self, portfolio_context: PortfolioContext, params: SizingParameters
+    ) -> float:
         """Calculate Martingale position size (increasing after losses).
 
         Args:
@@ -559,7 +596,9 @@ class PositionSizer:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def _anti_martingale_size(self, portfolio_context: PortfolioContext, params: SizingParameters) -> float:
+    def _anti_martingale_size(
+        self, portfolio_context: PortfolioContext, params: SizingParameters
+    ) -> float:
         """Calculate Anti-Martingale position size (increasing after wins).
 
         Args:
@@ -605,15 +644,21 @@ class PositionSizer:
 
         # Risk adjustment
         if self.config["enable_risk_adjustment"]:
-            adjusted_size = self._apply_risk_adjustment(adjusted_size, signal_context, portfolio_context)
+            adjusted_size = self._apply_risk_adjustment(
+                adjusted_size, signal_context, portfolio_context
+            )
 
         # Correlation adjustment
         if self.config["enable_correlation_adjustment"]:
-            adjusted_size = self._apply_correlation_adjustment(adjusted_size, market_context, portfolio_context)
+            adjusted_size = self._apply_correlation_adjustment(
+                adjusted_size, market_context, portfolio_context
+            )
 
         # Volatility adjustment
         if self.config["enable_volatility_adjustment"]:
-            adjusted_size = self._apply_volatility_adjustment(adjusted_size, market_context)
+            adjusted_size = self._apply_volatility_adjustment(
+                adjusted_size, market_context
+            )
 
         # Liquidity adjustment
         adjusted_size = self._apply_liquidity_adjustment(adjusted_size, market_context)
@@ -621,7 +666,10 @@ class PositionSizer:
         return adjusted_size
 
     def _apply_risk_adjustment(
-        self, size: float, signal_context: SignalContext, portfolio_context: PortfolioContext
+        self,
+        size: float,
+        signal_context: SignalContext,
+        portfolio_context: PortfolioContext,
     ) -> float:
         """Apply risk-based adjustments.
 
@@ -649,7 +697,10 @@ class PositionSizer:
         return size
 
     def _apply_correlation_adjustment(
-        self, size: float, market_context: MarketContext, portfolio_context: PortfolioContext
+        self,
+        size: float,
+        market_context: MarketContext,
+        portfolio_context: PortfolioContext,
     ) -> float:
         """Apply correlation-based adjustments.
 
@@ -668,7 +719,9 @@ class PositionSizer:
 
         return size
 
-    def _apply_volatility_adjustment(self, size: float, market_context: MarketContext) -> float:
+    def _apply_volatility_adjustment(
+        self, size: float, market_context: MarketContext
+    ) -> float:
         """Apply volatility-based adjustments.
 
         Args:
@@ -685,7 +738,9 @@ class PositionSizer:
 
         return size
 
-    def _apply_liquidity_adjustment(self, size: float, market_context: MarketContext) -> float:
+    def _apply_liquidity_adjustment(
+        self, size: float, market_context: MarketContext
+    ) -> float:
         """Apply liquidity-based adjustments.
 
         Args:
@@ -706,7 +761,9 @@ class PositionSizer:
 
         return size
 
-    def _apply_constraints(self, size: float, portfolio_context: PortfolioContext, params: SizingParameters) -> float:
+    def _apply_constraints(
+        self, size: float, portfolio_context: PortfolioContext, params: SizingParameters
+    ) -> float:
         """Apply final constraints to position size.
 
         Args:
@@ -721,7 +778,9 @@ class PositionSizer:
         size = min(size, params.max_position_size)
 
         # Available capital constraint
-        max_size_by_capital = portfolio_context.available_capital / portfolio_context.total_capital
+        max_size_by_capital = (
+            portfolio_context.available_capital / portfolio_context.total_capital
+        )
         size = min(size, max_size_by_capital)
 
         # Minimum position size
@@ -730,7 +789,9 @@ class PositionSizer:
 
         return size
 
-    def _calculate_conservative_size(self, portfolio_context: PortfolioContext) -> float:
+    def _calculate_conservative_size(
+        self, portfolio_context: PortfolioContext
+    ) -> float:
         """Calculate conservative position size as fallback.
 
         Args:
@@ -741,7 +802,10 @@ class PositionSizer:
         """
         return {
             "success": True,
-            "result": min(0.01, portfolio_context.available_capital / portfolio_context.total_capital),
+            "result": min(
+                0.01,
+                portfolio_context.available_capital / portfolio_context.total_capital,
+            ),
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
@@ -752,7 +816,9 @@ class PositionSizer:
         Args:
             sizing_details: Sizing details to log
         """
-        self.sizing_history.append({"timestamp": pd.Timestamp.now().isoformat(), **sizing_details})
+        self.sizing_history.append(
+            {"timestamp": pd.Timestamp.now().isoformat(), **sizing_details}
+        )
 
         # Keep only recent history (last 1000)
         if len(self.sizing_history) > 1000:

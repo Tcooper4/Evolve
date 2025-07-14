@@ -33,11 +33,7 @@ except ImportError:
 try:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-    from reportlab.platypus import (
-        Paragraph,
-        SimpleDocTemplate,
-        Spacer,
-    )
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
     PDF_AVAILABLE = True
 except ImportError:
@@ -82,7 +78,12 @@ class ReportConfig:
 class ReportExportEngine:
     """Advanced report generation and export engine."""
 
-    def __init__(self, output_dir: str = "reports", template_dir: str = "templates", chart_dir: str = "charts"):
+    def __init__(
+        self,
+        output_dir: str = "reports",
+        template_dir: str = "templates",
+        chart_dir: str = "charts",
+    ):
         """Initialize the report export engine.
 
         Args:
@@ -103,7 +104,9 @@ class ReportExportEngine:
         try:
             os.makedirs(self.template_dir, exist_ok=True)
         except Exception as e:
-            logger.error(f"Failed to create template directory {self.template_dir}: {e}")
+            logger.error(
+                f"Failed to create template directory {self.template_dir}: {e}"
+            )
 
         try:
             os.makedirs(self.chart_dir, exist_ok=True)
@@ -202,7 +205,9 @@ class ReportExportEngine:
 """,
         }
 
-    def generate_comprehensive_report(self, config: ReportConfig, data: Dict[str, Any]) -> str:
+    def generate_comprehensive_report(
+        self, config: ReportConfig, data: Dict[str, Any]
+    ) -> str:
         """Generate comprehensive trading report."""
         try:
             logger.info(f"Generating comprehensive report: {config.title}")
@@ -224,17 +229,25 @@ class ReportExportEngine:
 
             # Market Regime Analysis
             if "regime_data" in data:
-                sections.append(self._generate_market_regime_analysis(data["regime_data"]))
+                sections.append(
+                    self._generate_market_regime_analysis(data["regime_data"])
+                )
 
             # Risk Management
             if "risk_data" in data:
-                sections.append(self._generate_risk_management_analysis(data["risk_data"]))
+                sections.append(
+                    self._generate_risk_management_analysis(data["risk_data"])
+                )
 
             # Custom sections
             if config.custom_sections:
                 for section_name in config.custom_sections:
                     if section_name in data:
-                        sections.append(self._generate_custom_section(section_name, data[section_name]))
+                        sections.append(
+                            self._generate_custom_section(
+                                section_name, data[section_name]
+                            )
+                        )
 
             # Generate charts if requested
             if config.include_charts and PLOTTING_AVAILABLE:
@@ -275,15 +288,24 @@ class ReportExportEngine:
                 recommendations=recommendations,
             )
 
-            return ReportSection(title="Executive Summary", content=content, section_type="summary", data=metrics)
+            return ReportSection(
+                title="Executive Summary",
+                content=content,
+                section_type="summary",
+                data=metrics,
+            )
 
         except Exception as e:
             logger.error(f"Error generating executive summary: {e}")
             return ReportSection(
-                title="Executive Summary", content="Error generating executive summary", section_type="summary"
+                title="Executive Summary",
+                content="Error generating executive summary",
+                section_type="summary",
             )
 
-    def _generate_strategy_analysis(self, strategy_data: Dict[str, Any]) -> ReportSection:
+    def _generate_strategy_analysis(
+        self, strategy_data: Dict[str, Any]
+    ) -> ReportSection:
         """Generate strategy analysis section."""
         try:
             strategy_overview = self._format_strategy_overview(strategy_data)
@@ -299,16 +321,23 @@ class ReportExportEngine:
             )
 
             return ReportSection(
-                title="Strategy Analysis", content=content, section_type="strategy", data=strategy_data
+                title="Strategy Analysis",
+                content=content,
+                section_type="strategy",
+                data=strategy_data,
             )
 
         except Exception as e:
             logger.error(f"Error generating strategy analysis: {e}")
             return ReportSection(
-                title="Strategy Analysis", content="Error generating strategy analysis", section_type="strategy"
+                title="Strategy Analysis",
+                content="Error generating strategy analysis",
+                section_type="strategy",
             )
 
-    def _generate_backtest_results(self, backtest_data: Dict[str, Any]) -> ReportSection:
+    def _generate_backtest_results(
+        self, backtest_data: Dict[str, Any]
+    ) -> ReportSection:
         """Generate backtest results section."""
         try:
             performance_summary = self._format_performance_summary(backtest_data)
@@ -323,15 +352,24 @@ class ReportExportEngine:
                 trade_analysis=trade_analysis,
             )
 
-            return ReportSection(title="Backtest Results", content=content, section_type="backtest", data=backtest_data)
+            return ReportSection(
+                title="Backtest Results",
+                content=content,
+                section_type="backtest",
+                data=backtest_data,
+            )
 
         except Exception as e:
             logger.error(f"Error generating backtest results: {e}")
             return ReportSection(
-                title="Backtest Results", content="Error generating backtest results", section_type="backtest"
+                title="Backtest Results",
+                content="Error generating backtest results",
+                section_type="backtest",
             )
 
-    def _generate_market_regime_analysis(self, regime_data: Dict[str, Any]) -> ReportSection:
+    def _generate_market_regime_analysis(
+        self, regime_data: Dict[str, Any]
+    ) -> ReportSection:
         """Generate market regime analysis section."""
         try:
             current_regime = self._format_current_regime(regime_data)
@@ -347,16 +385,23 @@ class ReportExportEngine:
             )
 
             return ReportSection(
-                title="Market Regime Analysis", content=content, section_type="regime", data=regime_data
+                title="Market Regime Analysis",
+                content=content,
+                section_type="regime",
+                data=regime_data,
             )
 
         except Exception as e:
             logger.error(f"Error generating market regime analysis: {e}")
             return ReportSection(
-                title="Market Regime Analysis", content="Error generating market regime analysis", section_type="regime"
+                title="Market Regime Analysis",
+                content="Error generating market regime analysis",
+                section_type="regime",
             )
 
-    def _generate_risk_management_analysis(self, risk_data: Dict[str, Any]) -> ReportSection:
+    def _generate_risk_management_analysis(
+        self, risk_data: Dict[str, Any]
+    ) -> ReportSection:
         """Generate risk management analysis section."""
         try:
             position_sizing = self._format_position_sizing(risk_data)
@@ -371,15 +416,24 @@ class ReportExportEngine:
                 risk_metrics=risk_metrics,
             )
 
-            return ReportSection(title="Risk Management", content=content, section_type="risk", data=risk_data)
+            return ReportSection(
+                title="Risk Management",
+                content=content,
+                section_type="risk",
+                data=risk_data,
+            )
 
         except Exception as e:
             logger.error(f"Error generating risk management analysis: {e}")
             return ReportSection(
-                title="Risk Management", content="Error generating risk management analysis", section_type="risk"
+                title="Risk Management",
+                content="Error generating risk management analysis",
+                section_type="risk",
             )
 
-    def _generate_custom_section(self, section_name: str, section_data: Dict[str, Any]) -> ReportSection:
+    def _generate_custom_section(
+        self, section_name: str, section_data: Dict[str, Any]
+    ) -> ReportSection:
         """Generate custom report section."""
         try:
             content = f"# {section_name.title()}\n\n"
@@ -390,12 +444,19 @@ class ReportExportEngine:
             else:
                 content += str(section_data)
 
-            return ReportSection(title=section_name.title(), content=content, section_type="custom", data=section_data)
+            return ReportSection(
+                title=section_name.title(),
+                content=content,
+                section_type="custom",
+                data=section_data,
+            )
 
         except Exception as e:
             logger.error(f"Error generating custom section {section_name}: {e}")
             return ReportSection(
-                title=section_name.title(), content=f"Error generating {section_name} section", section_type="custom"
+                title=section_name.title(),
+                content=f"Error generating {section_name} section",
+                section_type="custom",
             )
 
     def _format_key_findings(self, data: Dict[str, Any]) -> str:
@@ -408,29 +469,47 @@ class ReportExportEngine:
             # Performance findings
             total_return = metrics.get("total_return", 0.0)
             if total_return > 0.1:
-                findings.append(f"Strong positive performance with {total_return:.1%} total return")
+                findings.append(
+                    f"Strong positive performance with {total_return:.1%} total return"
+                )
             elif total_return > 0:
-                findings.append(f"Moderate positive performance with {total_return:.1%} total return")
+                findings.append(
+                    f"Moderate positive performance with {total_return:.1%} total return"
+                )
             else:
-                findings.append(f"Negative performance with {total_return:.1%} total return")
+                findings.append(
+                    f"Negative performance with {total_return:.1%} total return"
+                )
 
             # Risk findings
             sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
             if sharpe_ratio > 1.0:
-                findings.append(f"Excellent risk-adjusted returns with Sharpe ratio of {sharpe_ratio:.2f}")
+                findings.append(
+                    f"Excellent risk-adjusted returns with Sharpe ratio of {sharpe_ratio:.2f}"
+                )
             elif sharpe_ratio > 0.5:
-                findings.append(f"Good risk-adjusted returns with Sharpe ratio of {sharpe_ratio:.2f}")
+                findings.append(
+                    f"Good risk-adjusted returns with Sharpe ratio of {sharpe_ratio:.2f}"
+                )
             else:
-                findings.append(f"Poor risk-adjusted returns with Sharpe ratio of {sharpe_ratio:.2f}")
+                findings.append(
+                    f"Poor risk-adjusted returns with Sharpe ratio of {sharpe_ratio:.2f}"
+                )
 
             # Drawdown findings
             max_drawdown = metrics.get("max_drawdown", 0.0)
             if max_drawdown < -0.2:
-                findings.append(f"Significant drawdown of {max_drawdown:.1%} indicates high risk")
+                findings.append(
+                    f"Significant drawdown of {max_drawdown:.1%} indicates high risk"
+                )
             elif max_drawdown < -0.1:
-                findings.append(f"Moderate drawdown of {max_drawdown:.1%} within acceptable range")
+                findings.append(
+                    f"Moderate drawdown of {max_drawdown:.1%} within acceptable range"
+                )
             else:
-                findings.append(f"Low drawdown of {max_drawdown:.1%} indicates good risk management")
+                findings.append(
+                    f"Low drawdown of {max_drawdown:.1%} indicates good risk management"
+                )
 
             return "\n".join([f"- {finding}" for finding in findings])
 
@@ -448,7 +527,9 @@ class ReportExportEngine:
             # Performance-based recommendations
             total_return = metrics.get("total_return", 0.0)
             if total_return < 0:
-                recommendations.append("Consider strategy optimization or risk reduction")
+                recommendations.append(
+                    "Consider strategy optimization or risk reduction"
+                )
 
             sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
             if sharpe_ratio < 0.5:
@@ -463,7 +544,9 @@ class ReportExportEngine:
             if regime_data:
                 current_regime = regime_data.get("current_regime", "unknown")
                 if current_regime == "bear":
-                    recommendations.append("Consider defensive positioning in bear market")
+                    recommendations.append(
+                        "Consider defensive positioning in bear market"
+                    )
                 elif current_regime == "volatile":
                     recommendations.append("Reduce position sizes in volatile market")
 
@@ -601,7 +684,10 @@ class ReportExportEngine:
             plt.grid(True, alpha=0.3)
 
             # Save chart
-            chart_path = os.path.join(self.chart_dir, f"equity_curve_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+            chart_path = os.path.join(
+                self.chart_dir,
+                f"equity_curve_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
+            )
             plt.savefig(chart_path, dpi=300, bbox_inches="tight")
             plt.close()
 
@@ -737,7 +823,9 @@ class ReportExportEngine:
                 to_regime = transition.get("to", "Unknown")
                 date = transition.get("date", "Unknown")
                 probability = transition.get("probability", 0.0)
-                formatted.append(f"| {from_regime} | {to_regime} | {date} | {probability:.2f} |")
+                formatted.append(
+                    f"| {from_regime} | {to_regime} | {date} | {probability:.2f} |"
+                )
 
             return "\n".join(formatted)
 
@@ -861,7 +949,8 @@ class ReportExportEngine:
                 plt.grid(True, alpha=0.3)
 
                 chart_path = os.path.join(
-                    self.chart_dir, f"equity_curve_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                    self.chart_dir,
+                    f"equity_curve_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
                 )
                 plt.savefig(chart_path, dpi=300, bbox_inches="tight")
                 plt.close()
@@ -870,13 +959,18 @@ class ReportExportEngine:
             drawdown = backtest_data.get("drawdown_series", pd.Series())
             if not drawdown.empty:
                 plt.figure(figsize=(12, 6))
-                plt.fill_between(drawdown.index, drawdown.values, 0, alpha=0.3, color="red")
+                plt.fill_between(
+                    drawdown.index, drawdown.values, 0, alpha=0.3, color="red"
+                )
                 plt.title("Drawdown")
                 plt.xlabel("Date")
                 plt.ylabel("Drawdown")
                 plt.grid(True, alpha=0.3)
 
-                chart_path = os.path.join(self.chart_dir, f"drawdown_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+                chart_path = os.path.join(
+                    self.chart_dir,
+                    f"drawdown_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
+                )
                 plt.savefig(chart_path, dpi=300, bbox_inches="tight")
                 plt.close()
 
@@ -909,7 +1003,8 @@ class ReportExportEngine:
                 plt.grid(True, alpha=0.3)
 
                 chart_path = os.path.join(
-                    self.chart_dir, f"risk_metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                    self.chart_dir,
+                    f"risk_metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
                 )
                 plt.savefig(chart_path, dpi=300, bbox_inches="tight")
                 plt.close()
@@ -917,7 +1012,9 @@ class ReportExportEngine:
         except Exception as e:
             logger.error(f"Error generating risk charts: {e}")
 
-    def _export_report(self, config: ReportConfig, sections: List[ReportSection], data: Dict[str, Any]) -> str:
+    def _export_report(
+        self, config: ReportConfig, sections: List[ReportSection], data: Dict[str, Any]
+    ) -> str:
         """Export report in specified format."""
         try:
             if config.format == ReportFormat.MARKDOWN:
@@ -929,7 +1026,9 @@ class ReportExportEngine:
             elif config.format == ReportFormat.HTML:
                 return self._export_html(config, sections, data)
             else:
-                logger.warning(f"Format {config.format.value} not supported, falling back to markdown")
+                logger.warning(
+                    f"Format {config.format.value} not supported, falling back to markdown"
+                )
                 return {
                     "success": True,
                     "result": self._export_markdown(config, sections, data),
@@ -941,7 +1040,9 @@ class ReportExportEngine:
             logger.error(f"Error exporting report: {e}")
             return ""
 
-    def _export_markdown(self, config: ReportConfig, sections: List[ReportSection], data: Dict[str, Any]) -> str:
+    def _export_markdown(
+        self, config: ReportConfig, sections: List[ReportSection], data: Dict[str, Any]
+    ) -> str:
         """Export report as markdown."""
         try:
             # Create report header
@@ -969,8 +1070,14 @@ class ReportExportEngine:
             logger.error(f"Error exporting markdown: {e}")
             return ""
 
-    def _export_pdf(self, config: ReportConfig, sections: List[ReportSection], data: Dict[str, Any]) -> str:
+    def _export_pdf(
+        self, config: ReportConfig, sections: List[ReportSection], data: Dict[str, Any]
+    ) -> str:
         """Export report as PDF."""
+        if not PDF_AVAILABLE:
+            logger.error("PDF export not available: ReportLab not installed")
+            return ""
+
         try:
             filename = f"report_{config.date.strftime('%Y%m%d_%H%M%S')}.pdf"
             filepath = os.path.join(self.output_dir, filename)
@@ -980,12 +1087,19 @@ class ReportExportEngine:
             story = []
 
             # Title
-            title_style = ParagraphStyle("CustomTitle", parent=styles["Heading1"], fontSize=16, spaceAfter=30)
+            title_style = ParagraphStyle(
+                "CustomTitle", parent=styles["Heading1"], fontSize=16, spaceAfter=30
+            )
             story.append(Paragraph(config.title, title_style))
 
             # Author and date
             story.append(Paragraph(f"Author: {config.author}", styles["Normal"]))
-            story.append(Paragraph(f"Date: {config.date.strftime('%Y-%m-%d %H:%M:%S')}", styles["Normal"]))
+            story.append(
+                Paragraph(
+                    f"Date: {config.date.strftime('%Y-%m-%d %H:%M:%S')}",
+                    styles["Normal"],
+                )
+            )
             story.append(Spacer(1, 20))
 
             # Sections
@@ -1001,7 +1115,9 @@ class ReportExportEngine:
             logger.error(f"Error exporting PDF: {e}")
             return ""
 
-    def _export_json(self, config: ReportConfig, sections: List[ReportSection], data: Dict[str, Any]) -> str:
+    def _export_json(
+        self, config: ReportConfig, sections: List[ReportSection], data: Dict[str, Any]
+    ) -> str:
         """Export report as JSON."""
         try:
             report_data = {
@@ -1033,7 +1149,9 @@ class ReportExportEngine:
             logger.error(f"Error exporting JSON: {e}")
             return ""
 
-    def _export_html(self, config: ReportConfig, sections: List[ReportSection], data: Dict[str, Any]) -> str:
+    def _export_html(
+        self, config: ReportConfig, sections: List[ReportSection], data: Dict[str, Any]
+    ) -> str:
         """Export report as HTML."""
         try:
             content = []
@@ -1046,7 +1164,9 @@ class ReportExportEngine:
             content.append("h1 { color: #333; }")
             content.append("h2 { color: #666; }")
             content.append("table { border-collapse: collapse; width: 100%; }")
-            content.append("th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }")
+            content.append(
+                "th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }"
+            )
             content.append("th { background-color: #f2f2f2; }")
             content.append("</style>")
             content.append("</head>")
@@ -1054,7 +1174,9 @@ class ReportExportEngine:
 
             content.append(f"<h1>{config.title}</h1>")
             content.append(f"<p><strong>Author:</strong> {config.author}</p>")
-            content.append(f"<p><strong>Date:</strong> {config.date.strftime('%Y-%m-%d %H:%M:%S')}</p>")
+            content.append(
+                f"<p><strong>Date:</strong> {config.date.strftime('%Y-%m-%d %H:%M:%S')}</p>"
+            )
 
             for section in sections:
                 content.append(f"<h2>{section.title}</h2>")
@@ -1105,11 +1227,14 @@ class ReportExportEngine:
                     [
                         r
                         for r in self.report_history
-                        if datetime.fromisoformat(r["timestamp"]) > datetime.now() - timedelta(days=7)
+                        if datetime.fromisoformat(r["timestamp"])
+                        > datetime.now() - timedelta(days=7)
                     ]
                 ),
                 "formats_used": list(set(r["format"] for r in self.report_history)),
-                "latest_report": self.report_history[-1] if self.report_history else None,
+                "latest_report": self.report_history[-1]
+                if self.report_history
+                else None,
             }
 
         except Exception as e:

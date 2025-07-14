@@ -20,7 +20,10 @@ from services.performance_critic_service import PerformanceCriticService
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("logs/performance_critic_service.log"), logging.StreamHandler()],
+    handlers=[
+        logging.FileHandler("logs/performance_critic_service.log"),
+        logging.StreamHandler(),
+    ],
 )
 
 logger = logging.getLogger(__name__)
@@ -43,7 +46,9 @@ def main():
         logger.info("Starting PerformanceCriticService...")
 
         # Initialize the service
-        service = PerformanceCriticService(redis_host="localhost", redis_port=6379, redis_db=0)
+        service = PerformanceCriticService(
+            redis_host="localhost", redis_port=6379, redis_db=0
+        )
 
         # Store service reference for signal handler
         signal_handler.service = service
@@ -56,7 +61,9 @@ def main():
         service.start()
 
         logger.info("PerformanceCriticService started successfully")
-        logger.info(f"Listening on channels: {service.input_channel}, {service.control_channel}")
+        logger.info(
+            f"Listening on channels: {service.input_channel}, {service.control_channel}"
+        )
 
         # Keep the service running
         try:

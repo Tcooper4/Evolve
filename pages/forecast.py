@@ -9,7 +9,6 @@ from pathlib import Path
 # Third-party imports
 import streamlit as st
 
-
 # Local imports
 from trading.ui.components import (
     create_forecast_chart,
@@ -66,7 +65,9 @@ def render_forecast_page():
                         "No forecast results available. Try a more specific prompt like 'Show me the best forecast for AAPL'."
                     )
             else:
-                st.error("Forecast system not available. Please check system configuration.")
+                st.error(
+                    "Forecast system not available. Please check system configuration."
+                )
 
         except Exception as e:
             st.error(f"Error generating forecast: {str(e)}")
@@ -109,14 +110,18 @@ def _extract_forecast_from_response(response, prompt: str) -> dict:
                 {
                     "date": date.strftime("%Y-%m-%d"),
                     "price": round(price, 2),
-                    "confidence": max(0.6, 0.9 - i * 0.01),  # Decreasing confidence over time
+                    "confidence": max(
+                        0.6, 0.9 - i * 0.01
+                    ),  # Decreasing confidence over time
                 }
             )
 
         # Update metrics based on forecast quality
         forecast_results["metrics"]["accuracy"] = 0.85
         forecast_results["metrics"]["mse"] = 0.02
-        forecast_results["metrics"]["trend"] = "bullish" if forecast_prices[-1] > base_price else "bearish"
+        forecast_results["metrics"]["trend"] = (
+            "bullish" if forecast_prices[-1] > base_price else "bearish"
+        )
 
         return forecast_results
 

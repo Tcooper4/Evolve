@@ -9,10 +9,11 @@ goal evaluation, and performance trend analysis.
 import json
 import logging
 import os
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -98,12 +99,21 @@ class LeaderboardConfig:
     time_window_days: Optional[int] = None
     include_trends: bool = True
     group_by: Optional[str] = None  # 'model', 'ticker', 'strategy'
-    sort_ascending: bool = False  # True for metrics where lower is better (e.g., drawdown)
+    sort_ascending: bool = (
+        False  # True for metrics where lower is better (e.g., drawdown)
+    )
 
 
 # --- Default Values ---
 DEFAULT_METRICS = PerformanceMetrics()
-DEFAULT_TARGETS = {"sharpe": 1.3, "drawdown": 0.25, "mse": 0.05, "r2": 0.5, "precision": 0.7, "recall": 0.7}
+DEFAULT_TARGETS = {
+    "sharpe": 1.3,
+    "drawdown": 0.25,
+    "mse": 0.05,
+    "r2": 0.5,
+    "precision": 0.7,
+    "recall": 0.7,
+}
 
 # --- File Paths ---
 
@@ -299,7 +309,9 @@ class MetricsCalculator:
     """Calculates various performance metrics."""
 
     @staticmethod
-    def calculate_rolling_metrics(df: pd.DataFrame, window: int = 7) -> Dict[str, float]:
+    def calculate_rolling_metrics(
+        df: pd.DataFrame, window: int = 7
+    ) -> Dict[str, float]:
         """Calculate rolling performance metrics.
 
         Args:
@@ -314,30 +326,40 @@ class MetricsCalculator:
                 return {}
 
             # Sort by timestamp
-            df_sorted = df.sort_values("timestamp")
+            df.sort_values("timestamp")
 
             # Calculate rolling metrics
             rolling_metrics = {}
 
             # Rolling Sharpe (assuming we have returns data)
             if "sharpe" in df.columns and not df["sharpe"].isna().all():
-                rolling_metrics["rolling_sharpe"] = df["sharpe"].rolling(window=window).mean().iloc[-1]
+                rolling_metrics["rolling_sharpe"] = (
+                    df["sharpe"].rolling(window=window).mean().iloc[-1]
+                )
 
             # Rolling drawdown
             if "drawdown" in df.columns and not df["drawdown"].isna().all():
-                rolling_metrics["rolling_drawdown"] = df["drawdown"].rolling(window=window).max().iloc[-1]
+                rolling_metrics["rolling_drawdown"] = (
+                    df["drawdown"].rolling(window=window).max().iloc[-1]
+                )
 
             # Rolling accuracy
             if "accuracy" in df.columns and not df["accuracy"].isna().all():
-                rolling_metrics["rolling_accuracy"] = df["accuracy"].rolling(window=window).mean().iloc[-1]
+                rolling_metrics["rolling_accuracy"] = (
+                    df["accuracy"].rolling(window=window).mean().iloc[-1]
+                )
 
             # Rolling MSE
             if "mse" in df.columns and not df["mse"].isna().all():
-                rolling_metrics["rolling_mse"] = df["mse"].rolling(window=window).mean().iloc[-1]
+                rolling_metrics["rolling_mse"] = (
+                    df["mse"].rolling(window=window).mean().iloc[-1]
+                )
 
             # Rolling R2
             if "r2" in df.columns and not df["r2"].isna().all():
-                rolling_metrics["rolling_r2"] = df["r2"].rolling(window=window).mean().iloc[-1]
+                rolling_metrics["rolling_r2"] = (
+                    df["r2"].rolling(window=window).mean().iloc[-1]
+                )
 
             return rolling_metrics
 
@@ -405,7 +427,9 @@ class MetricsCalculator:
 
     @staticmethod
     def evaluate_against_targets(
-        metrics: Dict[str, float], targets: Dict[str, float], use_classification: bool = False
+        metrics: Dict[str, float],
+        targets: Dict[str, float],
+        use_classification: bool = False,
     ) -> tuple[str, List[str]]:
         """Evaluate performance metrics against targets.
 
@@ -422,32 +446,44 @@ class MetricsCalculator:
         # Check Sharpe ratio
         if "sharpe" in metrics and "sharpe" in targets:
             if metrics["sharpe"] < targets["sharpe"]:
-                issues.append(f"Sharpe ratio {metrics['sharpe']:.3f} below target {targets['sharpe']:.3f}")
+                issues.append(
+                    f"Sharpe ratio {metrics['sharpe']:.3f} below target {targets['sharpe']:.3f}"
+                )
 
         # Check drawdown
         if "drawdown" in metrics and "drawdown" in targets:
             if abs(metrics["drawdown"]) > targets["drawdown"]:
-                issues.append(f"Drawdown {abs(metrics['drawdown']):.3f} above target {targets['drawdown']:.3f}")
+                issues.append(
+                    f"Drawdown {abs(metrics['drawdown']):.3f} above target {targets['drawdown']:.3f}"
+                )
 
         # Check MSE
         if "mse" in metrics and "mse" in targets:
             if metrics["mse"] > targets["mse"]:
-                issues.append(f"MSE {metrics['mse']:.3f} above target {targets['mse']:.3f}")
+                issues.append(
+                    f"MSE {metrics['mse']:.3f} above target {targets['mse']:.3f}"
+                )
 
         # Check R2
         if "r2" in metrics and "r2" in targets:
             if metrics["r2"] < targets["r2"]:
-                issues.append(f"R² {metrics['r2']:.3f} below target {targets['r2']:.3f}")
+                issues.append(
+                    f"R² {metrics['r2']:.3f} below target {targets['r2']:.3f}"
+                )
 
         # Check classification metrics if enabled
         if use_classification:
             if "precision" in metrics and "precision" in targets:
                 if metrics["precision"] < targets["precision"]:
-                    issues.append(f"Precision {metrics['precision']:.3f} below target {targets['precision']:.3f}")
+                    issues.append(
+                        f"Precision {metrics['precision']:.3f} below target {targets['precision']:.3f}"
+                    )
 
             if "recall" in metrics and "recall" in targets:
                 if metrics["recall"] < targets["recall"]:
-                    issues.append(f"Recall {metrics['recall']:.3f} below target {targets['recall']:.3f}")
+                    issues.append(
+                        f"Recall {metrics['recall']:.3f} below target {targets['recall']:.3f}"
+                    )
 
         # Determine overall status
         if len(issues) == 0:
@@ -502,8 +538,12 @@ class PerformanceEvaluator:
                     values = latest_data[metric].dropna()
                     if not values.empty:
                         current_metrics[f"avg_{metric}"] = values.mean()
-                        current_metrics[f"best_{metric}"] = values.max() if metric != "drawdown" else values.min()
-                        current_metrics[f"worst_{metric}"] = values.min() if metric != "drawdown" else values.max()
+                        current_metrics[f"best_{metric}"] = (
+                            values.max() if metric != "drawdown" else values.min()
+                        )
+                        current_metrics[f"worst_{metric}"] = (
+                            values.min() if metric != "drawdown" else values.max()
+                        )
 
             # Add classification metrics if enabled
             if classification:
@@ -516,7 +556,9 @@ class PerformanceEvaluator:
                             current_metrics[f"worst_{metric}"] = values.min()
 
             # Evaluate against targets
-            status, issues = MetricsCalculator.evaluate_against_targets(current_metrics, targets, classification)
+            status, issues = MetricsCalculator.evaluate_against_targets(
+                current_metrics, targets, classification
+            )
 
             # Create status report
             status_report = {
@@ -574,7 +616,9 @@ class PerformanceEvaluator:
     @staticmethod
     def _handle_underperformance(status_report: Dict[str, Any]) -> None:
         """Handle underperformance by logging and potentially triggering alerts."""
-        logger.warning(f"Performance underperformance detected: {status_report['issues']}")
+        logger.warning(
+            f"Performance underperformance detected: {status_report['issues']}"
+        )
 
         # Alerting mechanism implementation
         try:
@@ -599,7 +643,6 @@ class PerformanceEvaluator:
     def _send_email_alert(email: str, status_report: Dict[str, Any]) -> None:
         """Send email alert for performance issues."""
         try:
-            import smtplib
             from email.mime.multipart import MIMEMultipart
             from email.mime.text import MIMEText
 
@@ -653,11 +696,25 @@ class PerformanceEvaluator:
                 "text": f"🚨 Performance Alert: {status_report['status']}",
                 "attachments": [
                     {
-                        "color": "danger" if status_report["status"] == "error" else "warning",
+                        "color": "danger"
+                        if status_report["status"] == "error"
+                        else "warning",
                         "fields": [
-                            {"title": "Message", "value": status_report["message"], "short": False},
-                            {"title": "Issues", "value": ", ".join(status_report["issues"]), "short": False},
-                            {"title": "Timestamp", "value": status_report["timestamp"], "short": True},
+                            {
+                                "title": "Message",
+                                "value": status_report["message"],
+                                "short": False,
+                            },
+                            {
+                                "title": "Issues",
+                                "value": ", ".join(status_report["issues"]),
+                                "short": False,
+                            },
+                            {
+                                "title": "Timestamp",
+                                "value": status_report["timestamp"],
+                                "short": True,
+                            },
                         ],
                     }
                 ],
@@ -684,11 +741,16 @@ class PerformanceEvaluator:
             if not endpoint or not api_key:
                 return
 
-            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
 
             payload = {
                 "alert_type": "performance_underperformance",
-                "severity": "warning" if status_report["status"] == "warning" else "critical",
+                "severity": "warning"
+                if status_report["status"] == "warning"
+                else "critical",
                 "message": status_report["message"],
                 "details": status_report,
                 "timestamp": datetime.now().isoformat(),
@@ -755,22 +817,30 @@ class PerformanceVisualizer:
 
             # Plot 1: Sharpe Ratio
             if "sharpe" in df.columns:
-                df.groupby("timestamp")["sharpe"].mean().plot(ax=axes[0, 0], title="Average Sharpe Ratio")
+                df.groupby("timestamp")["sharpe"].mean().plot(
+                    ax=axes[0, 0], title="Average Sharpe Ratio"
+                )
                 axes[0, 0].set_ylabel("Sharpe Ratio")
 
             # Plot 2: Drawdown
             if "drawdown" in df.columns:
-                df.groupby("timestamp")["drawdown"].mean().plot(ax=axes[0, 1], title="Average Drawdown")
+                df.groupby("timestamp")["drawdown"].mean().plot(
+                    ax=axes[0, 1], title="Average Drawdown"
+                )
                 axes[0, 1].set_ylabel("Drawdown")
 
             # Plot 3: Accuracy
             if "accuracy" in df.columns:
-                df.groupby("timestamp")["accuracy"].mean().plot(ax=axes[1, 0], title="Average Accuracy")
+                df.groupby("timestamp")["accuracy"].mean().plot(
+                    ax=axes[1, 0], title="Average Accuracy"
+                )
                 axes[1, 0].set_ylabel("Accuracy")
 
             # Plot 4: MSE
             if "mse" in df.columns:
-                df.groupby("timestamp")["mse"].mean().plot(ax=axes[1, 1], title="Average MSE")
+                df.groupby("timestamp")["mse"].mean().plot(
+                    ax=axes[1, 1], title="Average MSE"
+                )
                 axes[1, 1].set_ylabel("MSE")
 
             plt.tight_layout()
@@ -845,18 +915,30 @@ class LeaderboardManager:
             # Group data if specified
             if group_by and group_by in df_clean.columns:
                 # Calculate aggregate metrics for each group
-                grouped_data = df_clean.groupby(group_by)[metric_name].agg(["mean", "std", "count"]).reset_index()
-                grouped_data = grouped_data[grouped_data["count"] >= 3]  # Minimum 3 data points for confidence
+                grouped_data = (
+                    df_clean.groupby(group_by)[metric_name]
+                    .agg(["mean", "std", "count"])
+                    .reset_index()
+                )
+                grouped_data = grouped_data[
+                    grouped_data["count"] >= 3
+                ]  # Minimum 3 data points for confidence
 
                 # Calculate confidence based on standard deviation and sample size
-                grouped_data["confidence"] = 1 / (1 + grouped_data["std"] / grouped_data["mean"].abs())
+                grouped_data["confidence"] = 1 / (
+                    1 + grouped_data["std"] / grouped_data["mean"].abs()
+                )
                 grouped_data["confidence"] = grouped_data["confidence"].clip(0, 1)
 
                 # Filter by confidence
-                grouped_data = grouped_data[grouped_data["confidence"] >= min_confidence]
+                grouped_data = grouped_data[
+                    grouped_data["confidence"] >= min_confidence
+                ]
 
                 # Sort by metric value
-                grouped_data = grouped_data.sort_values("mean", ascending=sort_ascending)
+                grouped_data = grouped_data.sort_values(
+                    "mean", ascending=sort_ascending
+                )
 
                 # Get top N
                 top_data = grouped_data.head(top_n)
@@ -884,7 +966,9 @@ class LeaderboardManager:
                         metric_name=metric_name,
                         timestamp=datetime.now().isoformat(),
                         rank=idx + 1,
-                        percentile=float((len(grouped_data) - idx) / len(grouped_data) * 100),
+                        percentile=float(
+                            (len(grouped_data) - idx) / len(grouped_data) * 100
+                        ),
                         trend=trend,
                         confidence=float(row["confidence"]),
                     )
@@ -895,16 +979,24 @@ class LeaderboardManager:
             else:
                 # Individual entries ranking
                 # Get latest entry for each model/ticker/strategy combination
-                latest_data = df_clean.groupby(["model", "ticker", "strategy"]).last().reset_index()
+                latest_data = (
+                    df_clean.groupby(["model", "ticker", "strategy"])
+                    .last()
+                    .reset_index()
+                )
 
                 # Calculate confidence based on data quality
-                latest_data["confidence"] = 0.8  # Default confidence for individual entries
+                latest_data[
+                    "confidence"
+                ] = 0.8  # Default confidence for individual entries
 
                 # Filter by confidence
                 latest_data = latest_data[latest_data["confidence"] >= min_confidence]
 
                 # Sort by metric value
-                latest_data = latest_data.sort_values(metric_name, ascending=sort_ascending)
+                latest_data = latest_data.sort_values(
+                    metric_name, ascending=sort_ascending
+                )
 
                 # Get top N
                 top_data = latest_data.head(top_n)
@@ -938,7 +1030,9 @@ class LeaderboardManager:
                         if hasattr(row["timestamp"], "isoformat")
                         else str(row["timestamp"]),
                         rank=idx + 1,
-                        percentile=float((len(latest_data) - idx) / len(latest_data) * 100),
+                        percentile=float(
+                            (len(latest_data) - idx) / len(latest_data) * 100
+                        ),
                         trend=trend,
                         confidence=float(row["confidence"]),
                     )
@@ -976,7 +1070,9 @@ class LeaderboardManager:
                     else str(df["timestamp"].max()),
                 },
                 "available_metrics": [
-                    col for col in df.columns if col not in ["timestamp", "ticker", "model", "strategy", "notes"]
+                    col
+                    for col in df.columns
+                    if col not in ["timestamp", "ticker", "model", "strategy", "notes"]
                 ],
                 "top_models_by_metric": {},
             }
@@ -984,9 +1080,15 @@ class LeaderboardManager:
             # Get top models for each metric
             for metric in summary["available_metrics"]:
                 try:
-                    top_models = LeaderboardManager.get_top_n_models_by_metric(metric, top_n=5)
+                    top_models = LeaderboardManager.get_top_n_models_by_metric(
+                        metric, top_n=5
+                    )
                     summary["top_models_by_metric"][metric] = [
-                        {"model": entry.model_name, "value": entry.metric_value, "rank": entry.rank}
+                        {
+                            "model": entry.model_name,
+                            "value": entry.metric_value,
+                            "rank": entry.rank,
+                        }
                         for entry in top_models
                     ]
                 except Exception as e:
@@ -1011,7 +1113,11 @@ class LeaderboardManager:
             cache_path = PerformancePaths.get_leaderboard_cache()
             cache_path.parent.mkdir(parents=True, exist_ok=True)
 
-            cache_data = {"summary": summary, "cached_at": datetime.now().isoformat(), "cache_version": "1.0"}
+            cache_data = {
+                "summary": summary,
+                "cached_at": datetime.now().isoformat(),
+                "cache_version": "1.0",
+            }
 
             with open(cache_path, "w") as f:
                 json.dump(cache_data, f, indent=4)
@@ -1111,7 +1217,13 @@ class PerformanceTracker:
             List of ModelLeaderboardEntry objects
         """
         return self.leaderboard_manager.get_top_n_models_by_metric(
-            metric_name, top_n, time_window_days, min_confidence, include_trends, group_by, sort_ascending
+            metric_name,
+            top_n,
+            time_window_days,
+            min_confidence,
+            include_trends,
+            group_by,
+            sort_ascending,
         )
 
     def get_leaderboard_summary(self) -> Dict[str, Any]:
@@ -1175,5 +1287,11 @@ def get_top_n_models_by_metric(
 ) -> List[ModelLeaderboardEntry]:
     """Get top N models by metric."""
     return LeaderboardManager.get_top_n_models_by_metric(
-        metric_name, top_n, time_window_days, min_confidence, include_trends, group_by, sort_ascending
+        metric_name,
+        top_n,
+        time_window_days,
+        min_confidence,
+        include_trends,
+        group_by,
+        sort_ascending,
     )

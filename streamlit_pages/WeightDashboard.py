@@ -55,14 +55,24 @@ def main():
         df.index = pd.to_datetime(df.index)
 
         # Create line plot
-        fig = px.line(df, labels={"value": "Weight", "index": "Timestamp"}, title=f"{ticker} Model Weights")
-        fig.update_layout(xaxis_title="Timestamp", yaxis_title="Weight", hovermode="x unified")
+        fig = px.line(
+            df,
+            labels={"value": "Weight", "index": "Timestamp"},
+            title=f"{ticker} Model Weights",
+        )
+        fig.update_layout(
+            xaxis_title="Timestamp", yaxis_title="Weight", hovermode="x unified"
+        )
         st.plotly_chart(fig, use_container_width=True)
 
         # Show current weights
         st.subheader("Current Weights")
         latest_weights = df.iloc[-1].sort_values(ascending=False)
-        fig2 = px.bar(x=latest_weights.index, y=latest_weights.values, title="Latest Weight Distribution")
+        fig2 = px.bar(
+            x=latest_weights.index,
+            y=latest_weights.values,
+            title="Latest Weight Distribution",
+        )
         st.plotly_chart(fig2, use_container_width=True)
 
     with tab2:
@@ -74,7 +84,12 @@ def main():
 
         # Plot drift
         fig3 = px.line(weight_changes, title="Weight Changes Over Time")
-        fig3.add_hline(y=drift_threshold, line_dash="dash", line_color="red", annotation_text="Drift Threshold")
+        fig3.add_hline(
+            y=drift_threshold,
+            line_dash="dash",
+            line_color="red",
+            annotation_text="Drift Threshold",
+        )
         st.plotly_chart(fig3, use_container_width=True)
 
         # Show models with significant drift
@@ -99,7 +114,9 @@ def main():
 
             # Display audit entries
             for _, entry in audit_df.iterrows():
-                with st.expander(f"Update at {entry['time'].strftime('%Y-%m-%d %H:%M:%S')}"):
+                with st.expander(
+                    f"Update at {entry['time'].strftime('%Y-%m-%d %H:%M:%S')}"
+                ):
                     st.write("Weights:", entry["weights"])
                     st.write("Justification:", entry["justification"])
         else:

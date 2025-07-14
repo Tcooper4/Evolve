@@ -28,21 +28,25 @@ def main():
         monitor_services = st.checkbox("Services", value=True)
 
         # Time range
-        time_range = st.selectbox("Time Range", ["1H", "6H", "1D", "1W", "1M"])
+        st.selectbox("Time Range", ["1H", "6H", "1D", "1W", "1M"])
 
         # Alert thresholds
         st.subheader("Alert Thresholds")
-        cpu_threshold = st.slider("CPU Threshold (%)", 50, 95, 80)
-        memory_threshold = st.slider("Memory Threshold (%)", 50, 95, 85)
-        disk_threshold = st.slider("Disk Threshold (%)", 50, 95, 90)
+        st.slider("CPU Threshold (%)", 50, 95, 80)
+        st.slider("Memory Threshold (%)", 50, 95, 85)
+        st.slider("Disk Threshold (%)", 50, 95, 90)
 
     # Main content
     st.subheader("📊 System Overview")
-    st.info("System monitoring requires connection to real system metrics. Please implement actual monitoring.")
+    st.info(
+        "System monitoring requires connection to real system metrics. Please implement actual monitoring."
+    )
 
     # System health
     st.subheader("❤️ System Health")
-    st.warning("Real system health metrics will appear here after connecting to actual monitoring system.")
+    st.warning(
+        "Real system health metrics will appear here after connecting to actual monitoring system."
+    )
 
     # Performance metrics
     st.subheader("📈 Performance Metrics")

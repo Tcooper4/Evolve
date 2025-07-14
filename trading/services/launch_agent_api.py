@@ -36,7 +36,9 @@ class APILoggingMiddleware:
         def decorator(func: Callable) -> Callable:
             @functools.wraps(func)
             async def async_wrapper(*args, **kwargs):
-                return await self._log_execution(func, endpoint, method, *args, **kwargs)
+                return await self._log_execution(
+                    func, endpoint, method, *args, **kwargs
+                )
 
             @functools.wraps(func)
             def sync_wrapper(*args, **kwargs):
@@ -50,19 +52,25 @@ class APILoggingMiddleware:
 
         return decorator
 
-    async def _log_execution(self, func: Callable, endpoint: str, method: str, *args, **kwargs):
+    async def _log_execution(
+        self, func: Callable, endpoint: str, method: str, *args, **kwargs
+    ):
         """Log execution of async function."""
         start_time = time.time()
         request_id = self._generate_request_id()
 
         # Log request start
-        self.logger.info(f"🚀 API Request Started | ID: {request_id} | {method} {endpoint}")
+        self.logger.info(
+            f"🚀 API Request Started | ID: {request_id} | {method} {endpoint}"
+        )
 
         try:
             # Extract request details if available
             request_details = self._extract_request_details(args, kwargs)
             if request_details:
-                self.logger.debug(f"📋 Request Details | ID: {request_id} | {json.dumps(request_details, default=str)}")
+                self.logger.debug(
+                    f"📋 Request Details | ID: {request_id} | {json.dumps(request_details, default=str)}"
+                )
 
             # Execute function
             result = await func(*args, **kwargs)
@@ -94,19 +102,25 @@ class APILoggingMiddleware:
 
             raise
 
-    def _log_execution_sync(self, func: Callable, endpoint: str, method: str, *args, **kwargs):
+    def _log_execution_sync(
+        self, func: Callable, endpoint: str, method: str, *args, **kwargs
+    ):
         """Log execution of sync function."""
         start_time = time.time()
         request_id = self._generate_request_id()
 
         # Log request start
-        self.logger.info(f"🚀 API Request Started | ID: {request_id} | {method} {endpoint}")
+        self.logger.info(
+            f"🚀 API Request Started | ID: {request_id} | {method} {endpoint}"
+        )
 
         try:
             # Extract request details if available
             request_details = self._extract_request_details(args, kwargs)
             if request_details:
-                self.logger.debug(f"📋 Request Details | ID: {request_id} | {json.dumps(request_details, default=str)}")
+                self.logger.debug(
+                    f"📋 Request Details | ID: {request_id} | {json.dumps(request_details, default=str)}"
+                )
 
             # Execute function
             result = func(*args, **kwargs)
@@ -166,7 +180,9 @@ class APILoggingMiddleware:
 
         return details if details else None
 
-    def _update_stats(self, endpoint: str, method: str, execution_time: float, success: bool):
+    def _update_stats(
+        self, endpoint: str, method: str, execution_time: float, success: bool
+    ):
         """Update endpoint statistics."""
         key = f"{method} {endpoint}"
 
@@ -202,9 +218,13 @@ class APILoggingMiddleware:
         for endpoint, stats in self.endpoint_stats.items():
             summary["endpoints"][endpoint] = {
                 "total_calls": stats["total_calls"],
-                "success_rate": stats["successful_calls"] / stats["total_calls"] if stats["total_calls"] > 0 else 0,
+                "success_rate": stats["successful_calls"] / stats["total_calls"]
+                if stats["total_calls"] > 0
+                else 0,
                 "avg_response_time": stats["avg_time"],
-                "min_response_time": stats["min_time"] if stats["min_time"] != float("inf") else 0,
+                "min_response_time": stats["min_time"]
+                if stats["min_time"] != float("inf")
+                else 0,
                 "max_response_time": stats["max_time"],
                 "last_called": stats["last_called"],
             }
@@ -236,7 +256,9 @@ def setup_logging():
     log_path.mkdir(parents=True, exist_ok=True)
 
     # Create formatter
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
 
     # File handler with rotation
     file_handler = logging.FileHandler(log_path / "agent_api_launch.log")

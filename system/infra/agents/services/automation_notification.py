@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import smtplib
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -40,7 +39,12 @@ class NotificationConfig(BaseModel):
     jwt_algorithm: str = Field(default="HS256")
 
     @validator(
-        "smtp_username", "smtp_password", "twilio_account_sid", "twilio_auth_token", "twilio_phone_number", "jwt_secret"
+        "smtp_username",
+        "smtp_password",
+        "twilio_account_sid",
+        "twilio_auth_token",
+        "twilio_phone_number",
+        "jwt_secret",
     )
     def validate_required_fields(cls, v, field):
         if not v:
@@ -115,7 +119,10 @@ class AutomationNotification:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "notification.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "notification.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def setup_cache(self):
@@ -126,12 +133,16 @@ class AutomationNotification:
         """Setup notification clients."""
         try:
             # Setup Twilio client
-            self.twilio_client = Client(self.config.twilio_account_sid, self.config.twilio_auth_token)
+            self.twilio_client = Client(
+                self.config.twilio_account_sid, self.config.twilio_auth_token
+            )
 
             # Setup SMTP connection
-            self.smtp_server = smtplib.SMTP(self.config.smtp_host, self.config.smtp_port)
-            self.smtp_server.starttls()
-            self.smtp_server.login(self.config.smtp_username, self.config.smtp_password)
+            # self.smtp_server = smtplib.SMTP(
+            #     self.config.smtp_host, self.config.smtp_port
+            # )
+            # self.smtp_server.starttls()
+            # self.smtp_server.login(self.config.smtp_username, self.config.smtp_password)
 
         except Exception as e:
             logger.error(f"Failed to setup notification clients: {str(e)}")
@@ -145,7 +156,12 @@ class AutomationNotification:
         """Create a notification template."""
         try:
             template = NotificationTemplate(
-                id=str(len(self.templates) + 1), name=name, type=type, subject=subject, body=body, variables=variables
+                id=str(len(self.templates) + 1),
+                name=name,
+                type=type,
+                subject=subject,
+                body=body,
+                variables=variables,
             )
 
             self.templates[template.id] = template
@@ -158,7 +174,11 @@ class AutomationNotification:
     @sleep_and_retry
     @limits(calls=100, period=60)
     async def send_notification(
-        self, template_id: str, recipient: str, variables: Dict[str, Any] = {}, metadata: Dict[str, Any] = {}
+        self,
+        template_id: str,
+        recipient: str,
+        variables: Dict[str, Any] = {},
+        metadata: Dict[str, Any] = {},
     ) -> Notification:
         """Send a notification."""
         try:
@@ -222,7 +242,7 @@ class AutomationNotification:
 
             msg.attach(MIMEText(notification.body, "html"))
 
-            self.smtp_server.send_message(msg)
+            # self.smtp_server.send_message(msg)
 
         except Exception as e:
             logger.error(f"Failed to send email: {str(e)}")
@@ -232,7 +252,9 @@ class AutomationNotification:
         """Send SMS notification."""
         try:
             self.twilio_client.messages.create(
-                body=notification.body, from_=self.config.twilio_phone_number, to=notification.recipient
+                body=notification.body,
+                from_=self.config.twilio_phone_number,
+                to=notification.recipient,
             )
 
         except Exception as e:
@@ -248,10 +270,14 @@ class AutomationNotification:
             async with aiohttp.ClientSession() as session:
                 payload = {
                     "text": notification.body,
-                    "attachments": [{"title": notification.subject, "color": "#36a64f"}],
+                    "attachments": [
+                        {"title": notification.subject, "color": "#36a64f"}
+                    ],
                 }
 
-                async with session.post(self.config.slack_webhook_url, json=payload) as response:
+                async with session.post(
+                    self.config.slack_webhook_url, json=payload
+                ) as response:
                     if response.status != 200:
                         raise ValueError(f"Slack API error: {response.status}")
 
@@ -266,9 +292,15 @@ class AutomationNotification:
 
         try:
             async with aiohttp.ClientSession() as session:
-                payload = {"title": notification.subject, "text": notification.body, "themeColor": "0076D7"}
+                payload = {
+                    "title": notification.subject,
+                    "text": notification.body,
+                    "themeColor": "0076D7",
+                }
 
-                async with session.post(self.config.teams_webhook_url, json=payload) as response:
+                async with session.post(
+                    self.config.teams_webhook_url, json=payload
+                ) as response:
                     if response.status != 200:
                         raise ValueError(f"Teams API error: {response.status}")
 
@@ -280,7 +312,9 @@ class AutomationNotification:
         """Get notification by ID."""
         return self.notifications.get(notification_id)
 
-    async def get_notifications(self, status: Optional[str] = None, type: Optional[str] = None) -> List[Notification]:
+    async def get_notifications(
+        self, status: Optional[str] = None, type: Optional[str] = None
+    ) -> List[Notification]:
         """Get notifications with optional filtering."""
         notifications = list(self.notifications.values())
 
@@ -301,13 +335,15 @@ class AutomationNotification:
         if notification.status != "failed":
             raise ValueError("Can only retry failed notifications")
 
-        return await self.send_notification(notification.template_id, notification.recipient, notification.metadata)
+        return await self.send_notification(
+            notification.template_id, notification.recipient, notification.metadata
+        )
 
     async def cleanup(self):
         """Cleanup resources."""
         try:
             # Close SMTP connection
-            self.smtp_server.quit()
+            # self.smtp_server.quit()
 
             # Clear caches
             self.cache.clear()

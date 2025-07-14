@@ -35,7 +35,12 @@ class UserManager:
         self.logger = logging.getLogger(__name__)
 
     async def create_user(
-        self, email: str, username: str, password: str, role: str = "user", metadata: Optional[Dict] = None
+        self,
+        email: str,
+        username: str,
+        password: str,
+        role: str = "user",
+        metadata: Optional[Dict] = None,
     ) -> User:
         """Create a new user."""
         try:
@@ -145,7 +150,9 @@ class UserManager:
                 user.username = username
 
             if password is not None:
-                user.password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+                user.password_hash = bcrypt.hashpw(
+                    password.encode(), bcrypt.gensalt()
+                ).decode()
 
             if role is not None:
                 user.role = role
@@ -224,7 +231,11 @@ class UserManager:
             self.logger.error(f"Error updating last login: {str(e)}")
 
     async def list_users(
-        self, role: Optional[str] = None, is_active: Optional[bool] = None, limit: int = 50, offset: int = 0
+        self,
+        role: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> List[User]:
         """List users with optional filtering."""
         try:
@@ -265,7 +276,9 @@ class UserManager:
         """Verify password with timing attack protection."""
         try:
             # Use hmac.compare_digest for constant-time comparison
-            return hmac.compare_digest(hashlib.sha256(password.encode()).hexdigest(), hashed_password)
+            return hmac.compare_digest(
+                hashlib.sha256(password.encode()).hexdigest(), hashed_password
+            )
         except Exception:
             return False
 

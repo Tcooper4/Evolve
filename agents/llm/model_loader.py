@@ -49,7 +49,11 @@ class ModelLoader:
 
     def initialize(self) -> Dict[str, Any]:
         """Initialize the model loader."""
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _load_config(self, config_path: Optional[str]) -> None:
         """Load model configurations from file."""
@@ -61,8 +65,12 @@ class ModelLoader:
         else:
             # Default configurations
             self.configs = {
-                "gpt-3.5-turbo": ModelConfig(name="gpt-3.5-turbo", provider="openai", model_type="chat"),
-                "gpt2": ModelConfig(name="gpt2", provider="huggingface", model_type="causal"),
+                "gpt-3.5-turbo": ModelConfig(
+                    name="gpt-3.5-turbo", provider="openai", model_type="chat"
+                ),
+                "gpt2": ModelConfig(
+                    name="gpt2", provider="huggingface", model_type="causal"
+                ),
             }
 
     async def load_model(self, model_name: str, api_key: Optional[str] = None) -> None:
@@ -103,7 +111,9 @@ class ModelLoader:
                         logger.info(f"Successfully loaded fallback model: {fallback}")
                         return
                     except Exception as fallback_error:
-                        logger.error(f"Failed to load fallback model {fallback}: {str(fallback_error)}")
+                        logger.error(
+                            f"Failed to load fallback model {fallback}: {str(fallback_error)}"
+                        )
             raise
 
     async def _load_openai_model(self, config: ModelConfig) -> None:
@@ -117,12 +127,18 @@ class ModelLoader:
     async def _load_huggingface_model(self, config: ModelConfig) -> None:
         """Load a HuggingFace model."""
         try:
-            tokenizer = AutoTokenizer.from_pretrained(config.name, cache_dir=config.cache_dir)
+            tokenizer = AutoTokenizer.from_pretrained(
+                config.name, cache_dir=config.cache_dir
+            )
 
             if config.model_type == "causal":
-                model = AutoModelForCausalLM.from_pretrained(config.name, cache_dir=config.cache_dir)
+                model = AutoModelForCausalLM.from_pretrained(
+                    config.name, cache_dir=config.cache_dir
+                )
             else:
-                model = AutoModelForSequenceClassification.from_pretrained(config.name, cache_dir=config.cache_dir)
+                model = AutoModelForSequenceClassification.from_pretrained(
+                    config.name, cache_dir=config.cache_dir
+                )
 
             model.to(config.device)
 

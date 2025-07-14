@@ -123,7 +123,9 @@ class SystemResilience:
         # Try primary handler
         for attempt in range(config.retry_attempts):
             try:
-                logger.info(f"Attempting primary handler for {component} (attempt {attempt + 1})")
+                logger.info(
+                    f"Attempting primary handler for {component} (attempt {attempt + 1})"
+                )
                 result = config.primary_handler(*args, **kwargs)
 
                 # Check if result is valid
@@ -131,10 +133,14 @@ class SystemResilience:
                     logger.info(f"Primary handler for {component} succeeded")
                     return result
                 else:
-                    logger.warning(f"Primary handler for {component} returned invalid result")
+                    logger.warning(
+                        f"Primary handler for {component} returned invalid result"
+                    )
 
             except Exception as e:
-                logger.warning(f"Primary handler for {component} failed (attempt {attempt + 1}): {e}")
+                logger.warning(
+                    f"Primary handler for {component} failed (attempt {attempt + 1}): {e}"
+                )
 
                 if attempt < config.retry_attempts - 1:
                     time.sleep(config.retry_delay)
@@ -149,7 +155,9 @@ class SystemResilience:
                 logger.info(f"Fallback handler for {component} succeeded")
                 return result
             else:
-                logger.error(f"Fallback handler for {component} returned invalid result")
+                logger.error(
+                    f"Fallback handler for {component} returned invalid result"
+                )
                 return None
 
         except Exception as e:
@@ -167,7 +175,11 @@ class SystemResilience:
     def register_health_check(self, component: str, health_check: Callable):
         """Register a health check for a component."""
         self.health_status[component] = HealthStatus(
-            component=component, status="unknown", message="Health check not run", timestamp=datetime.now(), metrics={}
+            component=component,
+            status="unknown",
+            message="Health check not run",
+            timestamp=datetime.now(),
+            metrics={},
         )
         logger.info(f"Registered health check for component: {component}")
 
@@ -183,7 +195,9 @@ class SystemResilience:
             return
 
         self.monitoring_active = True
-        self.monitoring_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
+        self.monitoring_thread = threading.Thread(
+            target=self._monitoring_loop, daemon=True
+        )
         self.monitoring_thread.start()
         logger.info("System monitoring started")
 
@@ -219,11 +233,15 @@ class SystemResilience:
         try:
             # CPU usage
             cpu_percent = psutil.cpu_percent(interval=1)
-            self.performance_metrics["cpu_usage"].append({"timestamp": datetime.now(), "value": cpu_percent})
+            self.performance_metrics["cpu_usage"].append(
+                {"timestamp": datetime.now(), "value": cpu_percent}
+            )
 
             # Memory usage
             memory = psutil.virtual_memory()
-            self.performance_metrics["memory_usage"].append({"timestamp": datetime.now(), "value": memory.percent})
+            self.performance_metrics["memory_usage"].append(
+                {"timestamp": datetime.now(), "value": memory.percent}
+            )
 
             # Disk usage
             disk = psutil.disk_usage("/")
@@ -234,13 +252,19 @@ class SystemResilience:
             # Network I/O
             network = psutil.net_io_counters()
             self.performance_metrics["network_io"].append(
-                {"timestamp": datetime.now(), "bytes_sent": network.bytes_sent, "bytes_recv": network.bytes_recv}
+                {
+                    "timestamp": datetime.now(),
+                    "bytes_sent": network.bytes_sent,
+                    "bytes_recv": network.bytes_recv,
+                }
             )
 
             # Keep only last 1000 metrics
             for key in self.performance_metrics:
                 if len(self.performance_metrics[key]) > 1000:
-                    self.performance_metrics[key] = self.performance_metrics[key][-1000:]
+                    self.performance_metrics[key] = self.performance_metrics[key][
+                        -1000:
+                    ]
 
         except Exception as e:
             logger.error(f"Error collecting performance metrics: {e}")
@@ -306,7 +330,11 @@ class SystemResilience:
             }
 
             return HealthStatus(
-                component="system", status=status, message=message, timestamp=datetime.now(), metrics=metrics
+                component="system",
+                status=status,
+                message=message,
+                timestamp=datetime.now(),
+                metrics=metrics,
             )
 
         except Exception as e:
@@ -346,10 +374,16 @@ class SystemResilience:
             # Check MongoDB connection
             mongo_healthy = False
             try:
-                client = pymongo.MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=5000)
+                client = pymongo.MongoClient(
+                    "mongodb://localhost:27017/", serverSelectionTimeoutMS=5000
+                )
                 client.admin.command("ping")
                 mongo_healthy = True
-            except (pymongo.errors.ConnectionFailure, pymongo.errors.ServerSelectionTimeoutError, Exception) as e:
+            except (
+                pymongo.errors.ConnectionFailure,
+                pymongo.errors.ServerSelectionTimeoutError,
+                Exception,
+            ) as e:
                 logger.debug(f"MongoDB connection failed: {e}")
 
             # Determine overall status
@@ -366,7 +400,11 @@ class SystemResilience:
             metrics = {"redis_healthy": redis_healthy, "mongo_healthy": mongo_healthy}
 
             return HealthStatus(
-                component="database", status=status, message=message, timestamp=datetime.now(), metrics=metrics
+                component="database",
+                status=status,
+                message=message,
+                timestamp=datetime.now(),
+                metrics=metrics,
             )
 
         except Exception as e:
@@ -383,7 +421,9 @@ class SystemResilience:
         try:
             # Check if main application is responding
             try:
-                response = requests.get("http://localhost:8501/_stcore/health", timeout=5)
+                response = requests.get(
+                    "http://localhost:8501/_stcore/health", timeout=5
+                )
                 if response.status_code == 200:
                     status = "healthy"
                     message = "API responding normally"
@@ -395,12 +435,18 @@ class SystemResilience:
                 message = "API not responding"
 
             metrics = {
-                "response_time": response.elapsed.total_seconds() if "response" in locals() else None,
+                "response_time": response.elapsed.total_seconds()
+                if "response" in locals()
+                else None,
                 "status_code": response.status_code if "response" in locals() else None,
             }
 
             return HealthStatus(
-                component="api", status=status, message=message, timestamp=datetime.now(), metrics=metrics
+                component="api",
+                status=status,
+                message=message,
+                timestamp=datetime.now(),
+                metrics=metrics,
             )
 
         except Exception as e:
@@ -443,7 +489,11 @@ class SystemResilience:
             }
 
             return HealthStatus(
-                component="models", status=status, message=message, timestamp=datetime.now(), metrics=metrics
+                component="models",
+                status=status,
+                message=message,
+                timestamp=datetime.now(),
+                metrics=metrics,
             )
 
         except Exception as e:
@@ -483,10 +533,17 @@ class SystemResilience:
                 status = "error"
                 message = "No agents available"
 
-            metrics = {"available_agents": available_agents, "total_agents": len(agent_modules)}
+            metrics = {
+                "available_agents": available_agents,
+                "total_agents": len(agent_modules),
+            }
 
             return HealthStatus(
-                component="agents", status=status, message=message, timestamp=datetime.now(), metrics=metrics
+                component="agents",
+                status=status,
+                message=message,
+                timestamp=datetime.now(),
+                metrics=metrics,
             )
 
         except Exception as e:
@@ -543,7 +600,9 @@ class SystemResilience:
         try:
             import pymongo
 
-            client = pymongo.MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=5000)
+            client = pymongo.MongoClient(
+                "mongodb://localhost:27017/", serverSelectionTimeoutMS=5000
+            )
             client.admin.command("ping")
             logger.info("MongoDB reconnected")
         except Exception as e:
@@ -604,7 +663,9 @@ class SystemResilience:
                 for k, v in self.health_status.items()
             },
             "issues": issues,
-            "performance_metrics": {k: v[-10:] if v else [] for k, v in self.performance_metrics.items()},
+            "performance_metrics": {
+                k: v[-10:] if v else [] for k, v in self.performance_metrics.items()
+            },
         }
 
     def get_performance_report(self) -> Dict[str, Any]:
@@ -613,12 +674,12 @@ class SystemResilience:
             return {"error": "No performance data available"}
 
         # Calculate averages
-        cpu_avg = sum(m["value"] for m in self.performance_metrics["cpu_usage"][-100:]) / len(
-            self.performance_metrics["cpu_usage"][-100:]
-        )
-        memory_avg = sum(m["value"] for m in self.performance_metrics["memory_usage"][-100:]) / len(
-            self.performance_metrics["memory_usage"][-100:]
-        )
+        cpu_avg = sum(
+            m["value"] for m in self.performance_metrics["cpu_usage"][-100:]
+        ) / len(self.performance_metrics["cpu_usage"][-100:])
+        memory_avg = sum(
+            m["value"] for m in self.performance_metrics["memory_usage"][-100:]
+        ) / len(self.performance_metrics["memory_usage"][-100:])
 
         return {
             "cpu_usage_avg": cpu_avg,

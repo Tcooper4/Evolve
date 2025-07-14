@@ -55,7 +55,12 @@ class DataFeedWatchdog:
         self.max_history_size = 100
 
         # Statistics
-        self.stats = {"total_alerts": 0, "stall_alerts": 0, "gap_alerts": 0, "recovery_events": 0}
+        self.stats = {
+            "total_alerts": 0,
+            "stall_alerts": 0,
+            "gap_alerts": 0,
+            "recovery_events": 0,
+        }
 
     def register_feed(self, feed_name: str):
         """Register a data feed for monitoring.
@@ -109,7 +114,12 @@ class DataFeedWatchdog:
             Dictionary with feed status information
         """
         current_time = time.time()
-        status = {"timestamp": current_time, "feeds": {}, "alerts": [], "overall_health": "healthy"}
+        status = {
+            "timestamp": current_time,
+            "feeds": {},
+            "alerts": [],
+            "overall_health": "healthy",
+        }
 
         for feed_name in self.last_data_times:
             time_since_last = current_time - self.last_data_times[feed_name]
@@ -202,14 +212,25 @@ class DataFeedWatchdog:
         return {
             "stats": self.stats.copy(),
             "feed_count": len(self.last_data_times),
-            "healthy_feeds": sum(1 for health in self.feed_health.values() if health == "healthy"),
-            "warning_feeds": sum(1 for health in self.feed_health.values() if health == "warning"),
-            "stalled_feeds": sum(1 for health in self.feed_health.values() if health == "stalled"),
+            "healthy_feeds": sum(
+                1 for health in self.feed_health.values() if health == "healthy"
+            ),
+            "warning_feeds": sum(
+                1 for health in self.feed_health.values() if health == "warning"
+            ),
+            "stalled_feeds": sum(
+                1 for health in self.feed_health.values() if health == "stalled"
+            ),
         }
 
     def reset_statistics(self):
         """Reset watchdog statistics."""
-        self.stats = {"total_alerts": 0, "stall_alerts": 0, "gap_alerts": 0, "recovery_events": 0}
+        self.stats = {
+            "total_alerts": 0,
+            "stall_alerts": 0,
+            "gap_alerts": 0,
+            "recovery_events": 0,
+        }
         logger.info("Watchdog statistics reset")
 
 
@@ -243,7 +264,9 @@ class DataListener:
         if enable_watchdog:
             watchdog_config = watchdog_config or {}
             self.watchdog = DataFeedWatchdog(
-                stall_threshold_seconds=watchdog_config.get("stall_threshold_seconds", 30.0),
+                stall_threshold_seconds=watchdog_config.get(
+                    "stall_threshold_seconds", 30.0
+                ),
                 gap_threshold_seconds=watchdog_config.get("gap_threshold_seconds", 5.0),
                 max_gap_count=watchdog_config.get("max_gap_count", 10),
                 alert_callback=watchdog_config.get("alert_callback"),
@@ -261,7 +284,9 @@ class DataListener:
                     try:
                         status = self.watchdog.check_feeds()
                         if status["overall_health"] != "healthy":
-                            logger.warning(f"Data feed health issues detected: {status['overall_health']}")
+                            logger.warning(
+                                f"Data feed health issues detected: {status['overall_health']}"
+                            )
                         time.sleep(5)  # Check every 5 seconds
                     except Exception as e:
                         logger.error(f"Error in watchdog monitoring: {e}")
@@ -296,15 +321,21 @@ class DataListener:
                     self.watchdog.register_feed("news_feed")
 
             if binance:
-                threading.Thread(target=self._run_binance_ws, args=(symbols,), daemon=True).start()
+                threading.Thread(
+                    target=self._run_binance_ws, args=(symbols,), daemon=True
+                ).start()
                 started_listeners.append("binance")
 
             if polygon:
-                threading.Thread(target=self._run_polygon_ws, args=(symbols,), daemon=True).start()
+                threading.Thread(
+                    target=self._run_polygon_ws, args=(symbols,), daemon=True
+                ).start()
                 started_listeners.append("polygon")
 
             if news:
-                threading.Thread(target=self._run_news_listener, args=(news_keywords,), daemon=True).start()
+                threading.Thread(
+                    target=self._run_news_listener, args=(news_keywords,), daemon=True
+                ).start()
                 started_listeners.append("news")
 
             return {
@@ -352,19 +383,33 @@ class DataListener:
 
         except Exception as e:
             logger.error(f"Error stopping data listeners: {e}")
-            return {"success": False, "message": f"Error stopping data listeners: {str(e)}", "timestamp": time.time()}
+            return {
+                "success": False,
+                "message": f"Error stopping data listeners: {str(e)}",
+                "timestamp": time.time(),
+            }
 
     def _run_binance_ws(self, symbols: List[str]):
         """Run Binance WebSocket listener."""
         try:
             if not websockets:
-                logger.warning("websockets package not available for Binance streaming.")
-                return {"success": False, "error": "websockets package not available", "timestamp": time.time()}
+                logger.warning(
+                    "websockets package not available for Binance streaming."
+                )
+                return {
+                    "success": False,
+                    "error": "websockets package not available",
+                    "timestamp": time.time(),
+                }
 
             url = f"wss://stream.binance.com:9443/stream?streams={'/'.join([s.lower()+'usdt@trade' for s in symbols])}"
             asyncio.run(self._binance_ws_loop(url))
 
-            return {"success": True, "message": "Binance WebSocket listener started", "timestamp": time.time()}
+            return {
+                "success": True,
+                "message": "Binance WebSocket listener started",
+                "timestamp": time.time(),
+            }
 
         except Exception as e:
             logger.error(f"Error in Binance WebSocket: {e}")
@@ -379,7 +424,9 @@ class DataListener:
                         msg = await ws.recv()
                         data = json.loads(msg)
                         price = float(data["data"]["p"])
-                        timestamp = data["data"].get("T", time.time() * 1000) / 1000  # Convert to seconds
+                        timestamp = (
+                            data["data"].get("T", time.time() * 1000) / 1000
+                        )  # Convert to seconds
 
                         # Update watchdog
                         if self.watchdog:
@@ -395,7 +442,11 @@ class DataListener:
                         logger.error(f"Error processing message: {e}")
                         continue
 
-            return {"success": True, "message": "Binance WebSocket loop completed", "timestamp": time.time()}
+            return {
+                "success": True,
+                "message": "Binance WebSocket loop completed",
+                "timestamp": time.time(),
+            }
 
         except Exception as e:
             logger.error(f"Error in Binance WebSocket loop: {e}")
@@ -413,7 +464,11 @@ class DataListener:
                     self.watchdog.update_feed("polygon_price", time.time())
                     time.sleep(1)
 
-            return {"success": True, "message": "Polygon WebSocket listener placeholder", "timestamp": time.time()}
+            return {
+                "success": True,
+                "message": "Polygon WebSocket listener placeholder",
+                "timestamp": time.time(),
+            }
 
         except Exception as e:
             logger.error(f"Error in Polygon WebSocket: {e}")
@@ -431,16 +486,25 @@ class DataListener:
 
             # Volatility check
             if len(self.last_prices) == self.price_window:
-                returns = [self.last_prices[i + 1] / self.last_prices[i] - 1 for i in range(self.price_window - 1)]
+                returns = [
+                    self.last_prices[i + 1] / self.last_prices[i] - 1
+                    for i in range(self.price_window - 1)
+                ]
                 volatility = (sum((r) ** 2 for r in returns) / len(returns)) ** 0.5
 
                 if volatility > self.volatility_threshold:
                     self.paused = True
-                    logger.warning(f"Volatility spike detected: {volatility:.4f}. Pausing trading.")
+                    logger.warning(
+                        f"Volatility spike detected: {volatility:.4f}. Pausing trading."
+                    )
                 else:
                     self.paused = False
 
-            return {"success": True, "message": "Price handled successfully", "timestamp": time.time()}
+            return {
+                "success": True,
+                "message": "Price handled successfully",
+                "timestamp": time.time(),
+            }
 
         except Exception as e:
             logger.error(f"Error handling price: {e}")
@@ -470,7 +534,11 @@ class DataListener:
 
                 time.sleep(60)  # Check news every minute
 
-            return {"success": True, "message": "News listener completed", "timestamp": time.time()}
+            return {
+                "success": True,
+                "message": "News listener completed",
+                "timestamp": time.time(),
+            }
 
         except Exception as e:
             logger.error(f"Error in news listener: {e}")
@@ -485,7 +553,11 @@ class DataListener:
         if not self.watchdog:
             return None
 
-        return {"enabled": True, "status": self.watchdog.check_feeds(), "statistics": self.watchdog.get_statistics()}
+        return {
+            "enabled": True,
+            "status": self.watchdog.check_feeds(),
+            "statistics": self.watchdog.get_statistics(),
+        }
 
     def reset_watchdog_statistics(self):
         """Reset watchdog statistics."""
@@ -514,7 +586,12 @@ class DataListener:
                 if resp.status_code == 200:
                     items = resp.json().get("news", [])
                     news_items = [
-                        {"title": n.get("title"), "summary": n.get("summary", ""), "source": "yahoo"} for n in items
+                        {
+                            "title": n.get("title"),
+                            "summary": n.get("summary", ""),
+                            "source": "yahoo",
+                        }
+                        for n in items
                     ]
 
                     return {
@@ -541,7 +618,13 @@ class DataListener:
 
         except Exception as e:
             logger.error(f"Error fetching news: {e}")
-            return {"success": False, "error": str(e), "news_items": [], "keywords": keywords, "timestamp": time.time()}
+            return {
+                "success": False,
+                "error": str(e),
+                "news_items": [],
+                "keywords": keywords,
+                "timestamp": time.time(),
+            }
 
     def _is_significant_news(self, news_item: Dict[str, Any]) -> bool:
         """Check if news is significant enough to pause trading.
@@ -612,10 +695,17 @@ class DataListener:
 
             # Calculate current volatility if we have enough prices
             if len(self.last_prices) >= 2:
-                returns = [self.last_prices[i + 1] / self.last_prices[i] - 1 for i in range(len(self.last_prices) - 1)]
-                current_volatility = (sum((r) ** 2 for r in returns) / len(returns)) ** 0.5
+                returns = [
+                    self.last_prices[i + 1] / self.last_prices[i] - 1
+                    for i in range(len(self.last_prices) - 1)
+                ]
+                current_volatility = (
+                    sum((r) ** 2 for r in returns) / len(returns)
+                ) ** 0.5
                 status["current_volatility"] = current_volatility
-                status["volatility_exceeded"] = current_volatility > self.volatility_threshold
+                status["volatility_exceeded"] = (
+                    current_volatility > self.volatility_threshold
+                )
 
             return {
                 "success": True,
@@ -639,7 +729,11 @@ class DataListener:
         """
         try:
             if threshold <= 0:
-                return {"success": False, "error": "Volatility threshold must be positive", "timestamp": time.time()}
+                return {
+                    "success": False,
+                    "error": "Volatility threshold must be positive",
+                    "timestamp": time.time(),
+                }
 
             self.volatility_threshold = threshold
             logger.info(f"Volatility threshold updated to {threshold}")
@@ -664,7 +758,11 @@ class DataListener:
             self.last_prices.clear()
             logger.info("Price history cleared")
 
-            return {"success": True, "message": "Price history cleared", "timestamp": time.time()}
+            return {
+                "success": True,
+                "message": "Price history cleared",
+                "timestamp": time.time(),
+            }
 
         except Exception as e:
             logger.error(f"Error clearing price history: {e}")
@@ -680,7 +778,11 @@ class DataListener:
             self.paused = False
             logger.info("Trading resumed")
 
-            return {"success": True, "message": "Trading resumed", "timestamp": time.time()}
+            return {
+                "success": True,
+                "message": "Trading resumed",
+                "timestamp": time.time(),
+            }
 
         except Exception as e:
             logger.error(f"Error resuming trading: {e}")
@@ -716,7 +818,9 @@ class RealTimeDataFeed:
         try:
             result = self.data_listener.start(
                 symbols=self.symbols,
-                news_keywords=kwargs.get("news_keywords", ["crypto", "stock", "market"]),
+                news_keywords=kwargs.get(
+                    "news_keywords", ["crypto", "stock", "market"]
+                ),
                 binance=kwargs.get("binance", True),
                 polygon=kwargs.get("polygon", False),
                 news=kwargs.get("news", True),

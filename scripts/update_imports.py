@@ -23,7 +23,10 @@ FILES_TO_UPDATE: List[str] = [
 
 # Import replacements
 IMPORT_REPLACEMENTS: List[Tuple[str, str]] = [
-    (r"from trading\.agents\.router import AgentRouter", "from core.agents.router import AgentRouter"),
+    (
+        r"from trading\.agents\.router import AgentRouter",
+        "from core.agents.router import AgentRouter",
+    ),
     (
         r"from trading\.agents\.self_improving_agent import SelfImprovingAgent",
         "from core.agents.self_improving_agent import SelfImprovingAgent",

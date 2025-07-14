@@ -37,7 +37,9 @@ def main():
     ticker = st.selectbox("Select a Ticker", options=tickers)
 
     # Create tabs for different views
-    tab1, tab2, tab3 = st.tabs(["Strategy Priorities", "Drift Detection", "Weight History"])
+    tab1, tab2, tab3 = st.tabs(
+        ["Strategy Priorities", "Drift Detection", "Weight History"]
+    )
 
     with tab1:
         st.subheader("📊 Strategy Priorities")
@@ -50,7 +52,10 @@ def main():
 
                     # Create bar chart of weights
                     weights_df = pd.DataFrame(
-                        {"Model": list(priorities["weights"].keys()), "Weight": list(priorities["weights"].values())}
+                        {
+                            "Model": list(priorities["weights"].keys()),
+                            "Weight": list(priorities["weights"].values()),
+                        }
                     )
                     fig = px.bar(
                         weights_df,
@@ -71,7 +76,11 @@ def main():
     with tab2:
         st.subheader("🔍 Drift Detection")
         threshold = st.slider(
-            "Drift Threshold", 0.01, 0.3, 0.2, help="Threshold for detecting significant weight changes"
+            "Drift Threshold",
+            0.01,
+            0.3,
+            0.2,
+            help="Threshold for detecting significant weight changes",
         )
 
         if st.button("Detect Model Drift", key=os.getenv("KEY", "")):
@@ -102,19 +111,31 @@ def main():
     with tab3:
         st.subheader("📈 Weight History")
         if history and ticker in [t for v in history.values() for t in v]:
-            records = {ts: entry[ticker] for ts, entry in history.items() if ticker in entry}
+            records = {
+                ts: entry[ticker] for ts, entry in history.items() if ticker in entry
+            }
             df = pd.DataFrame.from_dict(records, orient="index").sort_index()
             df.index = pd.to_datetime(df.index)
 
             # Create line plot
-            fig = px.line(df, title=f"{ticker} Model Weights Over Time", labels={"value": "Weight", "index": "Time"})
-            fig.update_layout(xaxis_title="Time", yaxis_title="Weight", hovermode="x unified")
+            fig = px.line(
+                df,
+                title=f"{ticker} Model Weights Over Time",
+                labels={"value": "Weight", "index": "Time"},
+            )
+            fig.update_layout(
+                xaxis_title="Time", yaxis_title="Weight", hovermode="x unified"
+            )
             st.plotly_chart(fig, use_container_width=True)
 
             # Show current weights
             st.subheader("Current Weights")
             latest_weights = df.iloc[-1].sort_values(ascending=False)
-            fig2 = px.bar(x=latest_weights.index, y=latest_weights.values, title="Latest Weight Distribution")
+            fig2 = px.bar(
+                x=latest_weights.index,
+                y=latest_weights.values,
+                title="Latest Weight Distribution",
+            )
             st.plotly_chart(fig2, use_container_width=True)
         else:
             st.info("No weight history available for this ticker.")

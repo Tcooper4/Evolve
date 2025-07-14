@@ -6,4 +6,10 @@ from .metrics import (
 )
 from .model_evaluator import ModelEvaluator
 
-__all__ = ["ModelEvaluator", "RegressionMetrics", "ClassificationMetrics", "TimeSeriesMetrics", "RiskMetrics"]
+__all__ = [
+    "ModelEvaluator",
+    "RegressionMetrics",
+    "ClassificationMetrics",
+    "TimeSeriesMetrics",
+    "RiskMetrics",
+]

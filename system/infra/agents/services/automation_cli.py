@@ -12,11 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 from typer import Option, Typer
 
-from system.infra.agents.core.models.task import (
-    TaskPriority,
-    TaskStatus,
-    TaskType,
-)
+from system.infra.agents.core.models.task import TaskPriority, TaskStatus, TaskType
 from trading.automation_api import AutomationAPI
 from trading.automation_core import AutomationCore
 from trading.automation_monitoring import AutomationMonitoring
@@ -84,12 +80,17 @@ class AutomationCLI:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "cli.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "cli.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def setup_cli(self):
         """Setup CLI application."""
-        self.app = Typer(name="automation", help="Automation system CLI", add_completion=False)
+        self.app = Typer(
+            name="automation", help="Automation system CLI", add_completion=False
+        )
         # Add commands
         self._add_commands()
 
@@ -105,7 +106,9 @@ class AutomationCLI:
             """List tasks."""
             try:
                 tasks = asyncio.run(self.tasks.list_tasks(status, task_type))
-                table = Table(title="Tasks", show_header=True, header_style="bold magenta")
+                table = Table(
+                    title="Tasks", show_header=True, header_style="bold magenta"
+                )
                 table.add_column("ID", style="dim")
                 table.add_column("Name")
                 table.add_column("Type")
@@ -135,7 +138,12 @@ class AutomationCLI:
             """Create a new task."""
             try:
                 task = asyncio.run(
-                    self.tasks.schedule_task(name=name, description=description, task_type=task_type, priority=priority)
+                    self.tasks.schedule_task(
+                        name=name,
+                        description=description,
+                        task_type=task_type,
+                        priority=priority,
+                    )
                 )
                 self.console.print(
                     Panel(
@@ -160,7 +168,9 @@ class AutomationCLI:
             """List workflows."""
             try:
                 workflows = asyncio.run(self.workflows.get_workflows(status))
-                table = Table(title="Workflows", show_header=True, header_style="bold magenta")
+                table = Table(
+                    title="Workflows", show_header=True, header_style="bold magenta"
+                )
                 table.add_column("ID", style="dim")
                 table.add_column("Name")
                 table.add_column("Status")
@@ -180,23 +190,32 @@ class AutomationCLI:
 
         @self.app.command()
         def create_workflow(
-            name: str = Option(..., help="Workflow name"), description: str = Option(..., help="Workflow description")
+            name: str = Option(..., help="Workflow name"),
+            description: str = Option(..., help="Workflow description"),
         ):
             """Create a new workflow."""
             try:
                 # Get steps interactively
                 steps = []
                 while True:
-                    step_name = questionary.text("Enter step name (or press Enter to finish):").ask()
+                    step_name = questionary.text(
+                        "Enter step name (or press Enter to finish):"
+                    ).ask()
 
                     if not step_name:
                         break
 
-                    task_type = questionary.select("Select task type:", choices=[t.value for t in TaskType]).ask()
+                    task_type = questionary.select(
+                        "Select task type:", choices=[t.value for t in TaskType]
+                    ).ask()
 
                     steps.append({"name": step_name, "task_type": TaskType(task_type)})
 
-                workflow = asyncio.run(self.workflows.create_workflow(name=name, description=description, steps=steps))
+                workflow = asyncio.run(
+                    self.workflows.create_workflow(
+                        name=name, description=description, steps=steps
+                    )
+                )
 
                 self.console.print(
                     Panel(
@@ -251,9 +270,13 @@ class AutomationCLI:
         ):
             """List schedules."""
             try:
-                schedules = asyncio.run(self.scheduler.get_schedules(enabled, task_type))
+                schedules = asyncio.run(
+                    self.scheduler.get_schedules(enabled, task_type)
+                )
 
-                table = Table(title="Schedules", show_header=True, header_style="bold magenta")
+                table = Table(
+                    title="Schedules", show_header=True, header_style="bold magenta"
+                )
 
                 table.add_column("ID", style="dim")
                 table.add_column("Name")

@@ -46,7 +46,11 @@ class UpgradeScheduler:
         """
         if self.running:
             logger.warning("Scheduler is already running")
-            return {"success": False, "error": "Scheduler is already running", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": "Scheduler is already running",
+                "timestamp": datetime.now().isoformat(),
+            }
         self.running = True
         # Schedule regular upgrade checks
         schedule.every(self.check_interval).hours.do(check_callback)
@@ -70,12 +74,20 @@ class UpgradeScheduler:
         """Stop the scheduler."""
         if not self.running:
             logger.warning("Scheduler is not running")
-            return {"success": False, "error": "Scheduler is not running", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": "Scheduler is not running",
+                "timestamp": datetime.now().isoformat(),
+            }
         self.running = False
         if self.scheduler_thread:
             self.scheduler_thread.join(timeout=5)
         logger.info("Scheduler stopped")
-        return {"success": True, "message": "Scheduler stopped", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Scheduler stopped",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def run_check(self, check_callback: Callable) -> dict:
         """
@@ -95,7 +107,11 @@ class UpgradeScheduler:
             }
         except Exception as e:
             logger.error(f"Error during manual upgrade check: {str(e)}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_status(self) -> dict:
         """
@@ -110,7 +126,9 @@ class UpgradeScheduler:
                 "running": self.running,
                 "check_interval": self.check_interval,
                 "last_check": self.last_check.isoformat() if self.last_check else None,
-                "next_check": schedule.next_run().isoformat() if schedule.jobs else None,
+                "next_check": schedule.next_run().isoformat()
+                if schedule.jobs
+                else None,
             },
             "message": "Scheduler status retrieved",
             "timestamp": datetime.now().isoformat(),

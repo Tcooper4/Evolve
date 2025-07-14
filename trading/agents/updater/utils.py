@@ -89,13 +89,22 @@ def detect_model_drift(model_id: str, recent_data: pd.DataFrame) -> Tuple[bool, 
 
         # 1. Performance drift (prediction accuracy)
         if len(historical_predictions) > 0:
-            historical_mae = np.mean(np.abs(np.array(historical_predictions) - np.array(historical_actuals)))
-            recent_mae = np.mean(np.abs(recent_data["predictions"] - recent_data["actuals"]))
-            performance_drift = abs(recent_mae - historical_mae) / (historical_mae + 1e-8)
+            historical_mae = np.mean(
+                np.abs(np.array(historical_predictions) - np.array(historical_actuals))
+            )
+            recent_mae = np.mean(
+                np.abs(recent_data["predictions"] - recent_data["actuals"])
+            )
+            performance_drift = abs(recent_mae - historical_mae) / (
+                historical_mae + 1e-8
+            )
             drift_metrics["performance"] = performance_drift
 
         # 2. Distribution drift (if we have feature data)
-        if "features" in recent_data.columns and len(historical_data.get("features", [])) > 0:
+        if (
+            "features" in recent_data.columns
+            and len(historical_data.get("features", [])) > 0
+        ):
             historical_features = np.array(historical_data["features"])
             recent_features = recent_data["features"].values
 
@@ -110,7 +119,9 @@ def detect_model_drift(model_id: str, recent_data: pd.DataFrame) -> Tuple[bool, 
                 recent_norm = scaler.transform(recent_features)
 
                 # Calculate distribution drift using histogram comparison
-                hist_old, _ = np.histogram(historical_norm.flatten(), bins=20, density=True)
+                hist_old, _ = np.histogram(
+                    historical_norm.flatten(), bins=20, density=True
+                )
                 hist_new, _ = np.histogram(recent_norm.flatten(), bins=20, density=True)
 
                 # Add small epsilon to avoid division by zero
@@ -141,7 +152,9 @@ def detect_model_drift(model_id: str, recent_data: pd.DataFrame) -> Tuple[bool, 
             drift_score = np.mean(list(drift_metrics.values()))
             has_drifted = drift_score > 0.5  # Threshold for drift detection
 
-            logger.info(f"Drift detection for model {model_id}: score={drift_score:.3f}, drifted={has_drifted}")
+            logger.info(
+                f"Drift detection for model {model_id}: score={drift_score:.3f}, drifted={has_drifted}"
+            )
             logger.debug(f"Drift metrics: {drift_metrics}")
 
             return has_drifted, drift_score
@@ -182,7 +195,9 @@ def validate_update_result(result: Dict) -> bool:
         return False
 
 
-def calculate_reweighting_factors(performance_metrics: Dict[str, float]) -> Dict[str, float]:
+def calculate_reweighting_factors(
+    performance_metrics: Dict[str, float]
+) -> Dict[str, float]:
     """
     Calculate reweighting factors based on model performance metrics.
 
@@ -195,9 +210,15 @@ def calculate_reweighting_factors(performance_metrics: Dict[str, float]) -> Dict
     try:
         total_score = sum(performance_metrics.values())
         if total_score == 0:
-            return {model_id: 1.0 / len(performance_metrics) for model_id in performance_metrics}
+            return {
+                model_id: 1.0 / len(performance_metrics)
+                for model_id in performance_metrics
+            }
 
-        return {model_id: score / total_score for model_id, score in performance_metrics.items()}
+        return {
+            model_id: score / total_score
+            for model_id, score in performance_metrics.items()
+        }
 
     except Exception as e:
         logger.error(f"Error calculating reweighting factors: {str(e)}")

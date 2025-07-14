@@ -97,32 +97,51 @@ class MetaLearnerAgent(BaseAgent):
                 performance = kwargs.get("performance")
                 metadata = kwargs.get("metadata")
 
-                if context is None or action_taken is None or outcome is None or performance is None:
+                if (
+                    context is None
+                    or action_taken is None
+                    or outcome is None
+                    or performance is None
+                ):
                     return AgentResult(
                         success=False,
                         error_message="Missing required parameters: context, action_taken, outcome, performance",
                     )
 
-                self.store_experience(context, action_taken, outcome, performance, metadata)
+                self.store_experience(
+                    context, action_taken, outcome, performance, metadata
+                )
                 return AgentResult(
                     success=True,
-                    data={"message": "Experience stored successfully", "total_experiences": len(self.experiences)},
+                    data={
+                        "message": "Experience stored successfully",
+                        "total_experiences": len(self.experiences),
+                    },
                 )
 
             elif action == "learn_from_experiences":
                 insights = self.learn_from_experiences()
                 return AgentResult(
-                    success=True, data={"learning_insights": insights, "meta_models_count": len(self.meta_models)}
+                    success=True,
+                    data={
+                        "learning_insights": insights,
+                        "meta_models_count": len(self.meta_models),
+                    },
                 )
 
             elif action == "get_recommendation":
                 context = kwargs.get("context")
 
                 if context is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: context")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: context",
+                    )
 
                 recommendation = self.get_recommendation(context)
-                return AgentResult(success=True, data={"recommendation": recommendation})
+                return AgentResult(
+                    success=True, data={"recommendation": recommendation}
+                )
 
             elif action == "get_learning_summary":
                 summary = self.get_learning_summary()
@@ -134,7 +153,9 @@ class MetaLearnerAgent(BaseAgent):
                 return AgentResult(success=True, data={"meta_learning_result": result})
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
@@ -191,7 +212,9 @@ class MetaLearnerAgent(BaseAgent):
 
         # Analyze performance trends
         recent_performance = (
-            self.performance_history[-100:] if len(self.performance_history) >= 100 else self.performance_history
+            self.performance_history[-100:]
+            if len(self.performance_history) >= 100
+            else self.performance_history
         )
         performance_trend = (
             np.mean(recent_performance) - np.mean(self.performance_history[:-100])
@@ -200,8 +223,12 @@ class MetaLearnerAgent(BaseAgent):
         )
 
         # Identify successful patterns
-        successful_experiences = [exp for exp in self.experiences if exp.performance > 0.7]
-        unsuccessful_experiences = [exp for exp in self.experiences if exp.performance < 0.3]
+        successful_experiences = [
+            exp for exp in self.experiences if exp.performance > 0.7
+        ]
+        unsuccessful_experiences = [
+            exp for exp in self.experiences if exp.performance < 0.3
+        ]
 
         # Extract common patterns
         successful_patterns = self._extract_patterns(successful_experiences)
@@ -222,12 +249,18 @@ class MetaLearnerAgent(BaseAgent):
         logger.info(f"Meta-learning completed: {insights}")
         return insights
 
-    def _extract_patterns(self, experiences: List[MetaLearningExperience]) -> Dict[str, Any]:
+    def _extract_patterns(
+        self, experiences: List[MetaLearningExperience]
+    ) -> Dict[str, Any]:
         """Extract common patterns from experiences."""
         if not experiences:
             return {}
 
-        patterns = {"common_contexts": {}, "common_actions": {}, "performance_correlations": {}}
+        patterns = {
+            "common_contexts": {},
+            "common_actions": {},
+            "performance_correlations": {},
+        }
 
         # Analyze contexts
         for exp in experiences:
@@ -247,11 +280,15 @@ class MetaLearnerAgent(BaseAgent):
             for key, value in exp.context.items():
                 if key not in patterns["performance_correlations"]:
                     patterns["performance_correlations"][key] = []
-                patterns["performance_correlations"][key].append((value, exp.performance))
+                patterns["performance_correlations"][key].append(
+                    (value, exp.performance)
+                )
 
         return patterns
 
-    def _update_meta_models(self, successful_patterns: Dict[str, Any], unsuccessful_patterns: Dict[str, Any]) -> None:
+    def _update_meta_models(
+        self, successful_patterns: Dict[str, Any], unsuccessful_patterns: Dict[str, Any]
+    ) -> None:
         """Update meta-models based on patterns."""
         # Update action success rates
         if "action_success_rates" not in self.meta_models:
@@ -262,8 +299,12 @@ class MetaLearnerAgent(BaseAgent):
         )
 
         for action in all_actions:
-            successful_count = successful_patterns.get("common_actions", {}).get(action, 0)
-            unsuccessful_count = unsuccessful_patterns.get("common_actions", {}).get(action, 0)
+            successful_count = successful_patterns.get("common_actions", {}).get(
+                action, 0
+            )
+            unsuccessful_count = unsuccessful_patterns.get("common_actions", {}).get(
+                action, 0
+            )
             total_count = successful_count + unsuccessful_count
 
             if total_count > 0:
@@ -274,7 +315,9 @@ class MetaLearnerAgent(BaseAgent):
         if "context_performance" not in self.meta_models:
             self.meta_models["context_performance"] = {}
 
-        for context_key, correlations in successful_patterns.get("performance_correlations", {}).items():
+        for context_key, correlations in successful_patterns.get(
+            "performance_correlations", {}
+        ).items():
             if correlations:
                 avg_performance = np.mean([corr[1] for corr in correlations])
                 self.meta_models["context_performance"][context_key] = avg_performance
@@ -304,23 +347,35 @@ class MetaLearnerAgent(BaseAgent):
             Dictionary with recommendation and confidence
         """
         if not self.meta_models:
-            return {"recommendation": "no_data", "confidence": 0.0, "reasoning": "No learning data available"}
+            return {
+                "recommendation": "no_data",
+                "confidence": 0.0,
+                "reasoning": "No learning data available",
+            }
 
         # Score actions based on context
         action_scores = {}
-        for action, success_rate in self.meta_models.get("action_success_rates", {}).items():
+        for action, success_rate in self.meta_models.get(
+            "action_success_rates", {}
+        ).items():
             score = success_rate
 
             # Adjust score based on context performance
             for context_key, context_value in context.items():
                 if context_key in self.meta_models.get("context_performance", {}):
-                    context_performance = self.meta_models["context_performance"][context_key]
+                    context_performance = self.meta_models["context_performance"][
+                        context_key
+                    ]
                     score += context_performance * 0.1  # Small adjustment
 
             action_scores[action] = score
 
         if not action_scores:
-            return {"recommendation": "no_data", "confidence": 0.0, "reasoning": "No action data available"}
+            return {
+                "recommendation": "no_data",
+                "confidence": 0.0,
+                "reasoning": "No action data available",
+            }
 
         # Get best action
         best_action = max(action_scores, key=action_scores.get)
@@ -337,11 +392,17 @@ class MetaLearnerAgent(BaseAgent):
         """Get summary of learning progress."""
         return {
             "total_experiences": len(self.experiences),
-            "average_performance": np.mean(self.performance_history) if self.performance_history else 0,
+            "average_performance": np.mean(self.performance_history)
+            if self.performance_history
+            else 0,
             "learning_progress": self._calculate_learning_progress(),
             "meta_models": {
-                "action_success_rates": len(self.meta_models.get("action_success_rates", {})),
-                "context_performance": len(self.meta_models.get("context_performance", {})),
+                "action_success_rates": len(
+                    self.meta_models.get("action_success_rates", {})
+                ),
+                "context_performance": len(
+                    self.meta_models.get("context_performance", {})
+                ),
             },
             "recent_performance_trend": self._get_recent_trend(),
         }
@@ -352,7 +413,11 @@ class MetaLearnerAgent(BaseAgent):
             return "insufficient_data"
 
         recent = np.mean(self.performance_history[-10:])
-        previous = np.mean(self.performance_history[-20:-10]) if len(self.performance_history) >= 20 else recent
+        previous = (
+            np.mean(self.performance_history[-20:-10])
+            if len(self.performance_history) >= 20
+            else recent
+        )
 
         if recent > previous * 1.1:
             return "improving"
@@ -393,7 +458,11 @@ class MetaLearnerAgent(BaseAgent):
 
         except Exception as e:
             logger.error(f"Error in meta-learning agent: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
 
 # Alias for backward compatibility

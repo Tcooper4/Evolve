@@ -8,7 +8,11 @@ from pydantic import BaseModel, Field
 from system.infra.agents.config.config import load_config
 from system.infra.agents.core.orchestrator import Orchestrator
 
-app = FastAPI(title="Automation Task API", description="API for managing automation tasks", version="1.0.0")
+app = FastAPI(
+    title="Automation Task API",
+    description="API for managing automation tasks",
+    version="1.0.0",
+)
 
 # CORS middleware
 app.add_middleware(
@@ -24,10 +28,14 @@ app.add_middleware(
 
 class TaskCreate(BaseModel):
     name: str = Field(..., description="Name of the task")
-    task_type: str = Field(..., description="Type of task (data_collection, model_training, etc.)")
+    task_type: str = Field(
+        ..., description="Type of task (data_collection, model_training, etc.)"
+    )
     priority: int = Field(default=1, description="Task priority (1-5)")
     parameters: Dict[str, Any] = Field(default={}, description="Task parameters")
-    dependencies: List[str] = Field(default_factory=list, description="List of task IDs this task depends on")
+    dependencies: List[str] = Field(
+        default_factory=list, description="List of task IDs this task depends on"
+    )
 
 
 class TaskResponse(BaseModel):
@@ -63,7 +71,9 @@ def get_orchestrator():
 
 
 @app.post("/tasks", response_model=TaskResponse)
-async def create_task(task: TaskCreate, orchestrator: Orchestrator = Depends(get_orchestrator)):
+async def create_task(
+    task: TaskCreate, orchestrator: Orchestrator = Depends(get_orchestrator)
+):
     """Create a new task."""
     try:
         task_id = await orchestrator.create_task(

@@ -20,7 +20,10 @@ from .risk_metrics import (
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("trading/risk/logs/risk_analyzer.log"), logging.StreamHandler()],
+    handlers=[
+        logging.FileHandler("trading/risk/logs/risk_analyzer.log"),
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -42,7 +45,9 @@ class RiskAnalyzer:
     """Agent for analyzing and interpreting risk metrics."""
 
     def __init__(
-        self, openai_api_key: Optional[str] = None, memory_path: str = "trading/risk/memory/risk_assessments.json"
+        self,
+        openai_api_key: Optional[str] = None,
+        memory_path: str = "trading/risk/memory/risk_assessments.json",
     ):
         """Initialize risk analyzer.
 
@@ -64,7 +69,9 @@ class RiskAnalyzer:
         if self.openai_api_key:
             openai.api_key = self.openai_api_key
 
-    def analyze_risk(self, returns: pd.Series, forecast_confidence: float, historical_error: float) -> RiskAssessment:
+    def analyze_risk(
+        self, returns: pd.Series, forecast_confidence: float, historical_error: float
+    ) -> RiskAssessment:
         """Analyze risk metrics and generate assessment.
 
         Args:
@@ -76,18 +83,22 @@ class RiskAnalyzer:
             RiskAssessment object
         """
         # Calculate metrics
-        rolling_metrics = calculate_rolling_metrics(returns)
+        calculate_rolling_metrics(returns)
         advanced_metrics = calculate_advanced_metrics(returns)
         regime_metrics = calculate_regime_metrics(returns)
 
         # Calculate forecast risk score
-        forecast_risk_score = self._calculate_forecast_risk(forecast_confidence, historical_error, regime_metrics)
+        forecast_risk_score = self._calculate_forecast_risk(
+            forecast_confidence, historical_error, regime_metrics
+        )
 
         # Determine risk level
         risk_level = self._determine_risk_level(forecast_risk_score, regime_metrics)
 
         # Generate explanation
-        explanation = self._generate_risk_explanation(risk_level, regime_metrics, forecast_risk_score)
+        explanation = self._generate_risk_explanation(
+            risk_level, regime_metrics, forecast_risk_score
+        )
 
         # Generate recommendations
         recommendations = self._generate_recommendations(risk_level, regime_metrics)
@@ -110,7 +121,10 @@ class RiskAnalyzer:
         return assessment
 
     def _calculate_forecast_risk(
-        self, forecast_confidence: float, historical_error: float, regime_metrics: Dict[str, float]
+        self,
+        forecast_confidence: float,
+        historical_error: float,
+        regime_metrics: Dict[str, float],
     ) -> float:
         """Calculate forecast risk score.
 
@@ -128,7 +142,9 @@ class RiskAnalyzer:
         regime_weight = 0.3
 
         # Regime risk factor
-        regime_risk = {"bull": 0.2, "neutral": 0.5, "bear": 0.8}[regime_metrics["regime"]]
+        regime_risk = {"bull": 0.2, "neutral": 0.5, "bear": 0.8}[
+            regime_metrics["regime"]
+        ]
 
         # Calculate weighted score
         risk_score = (
@@ -144,7 +160,9 @@ class RiskAnalyzer:
             "timestamp": datetime.now().isoformat(),
         }
 
-    def _determine_risk_level(self, forecast_risk_score: float, regime_metrics: Dict[str, float]) -> str:
+    def _determine_risk_level(
+        self, forecast_risk_score: float, regime_metrics: Dict[str, float]
+    ) -> str:
         """Determine risk level based on metrics.
 
         Args:
@@ -162,7 +180,10 @@ class RiskAnalyzer:
             return "low"
 
     def _generate_risk_explanation(
-        self, risk_level: str, regime_metrics: Dict[str, float], forecast_risk_score: float
+        self,
+        risk_level: str,
+        regime_metrics: Dict[str, float],
+        forecast_risk_score: float,
     ) -> str:
         """Generate risk explanation using LLM.
 
@@ -175,7 +196,9 @@ class RiskAnalyzer:
             Risk explanation string
         """
         if not self.openai_api_key:
-            return self._generate_basic_explanation(risk_level, regime_metrics, forecast_risk_score)
+            return self._generate_basic_explanation(
+                risk_level, regime_metrics, forecast_risk_score
+            )
 
         try:
             prompt = f"""
@@ -195,7 +218,10 @@ class RiskAnalyzer:
             response = openai.ChatCompletion.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "You are a professional risk analyst."},
+                    {
+                        "role": "system",
+                        "content": "You are a professional risk analyst.",
+                    },
                     {"role": "user", "content": prompt},
                 ],
                 max_tokens=200,
@@ -205,10 +231,15 @@ class RiskAnalyzer:
 
         except Exception as e:
             logger.error(f"Error generating LLM explanation: {e}")
-            return self._generate_basic_explanation(risk_level, regime_metrics, forecast_risk_score)
+            return self._generate_basic_explanation(
+                risk_level, regime_metrics, forecast_risk_score
+            )
 
     def _generate_basic_explanation(
-        self, risk_level: str, regime_metrics: Dict[str, float], forecast_risk_score: float
+        self,
+        risk_level: str,
+        regime_metrics: Dict[str, float],
+        forecast_risk_score: float,
     ) -> str:
         """Generate basic risk explanation without LLM.
 
@@ -227,7 +258,9 @@ class RiskAnalyzer:
             f"Forecast risk score is {forecast_risk_score:.2f}."
         )
 
-    def _generate_recommendations(self, risk_level: str, regime_metrics: Dict[str, float]) -> List[str]:
+    def _generate_recommendations(
+        self, risk_level: str, regime_metrics: Dict[str, float]
+    ) -> List[str]:
         """Generate risk-based recommendations.
 
         Args:

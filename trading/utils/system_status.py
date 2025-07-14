@@ -29,19 +29,30 @@ class HealthProbe:
         self.health_checks = deque(maxlen=history_size)
         self._lock = threading.Lock()
 
-    def record_error(self, error_type: str, error_message: str, component: str = "unknown"):
+    def record_error(
+        self, error_type: str, error_message: str, component: str = "unknown"
+    ):
         """Record an error occurrence."""
         with self._lock:
             self.error_history.append(
-                {"timestamp": datetime.now(), "type": error_type, "message": error_message, "component": component}
+                {
+                    "timestamp": datetime.now(),
+                    "type": error_type,
+                    "message": error_message,
+                    "component": component,
+                }
             )
 
     def record_queue_size(self, queue_name: str, size: int):
         """Record queue size for a specific queue."""
         with self._lock:
-            self.queue_sizes[queue_name].append({"timestamp": datetime.now(), "size": size})
+            self.queue_sizes[queue_name].append(
+                {"timestamp": datetime.now(), "size": size}
+            )
 
-    def record_response_time(self, endpoint: str, response_time: float, status_code: int = 200):
+    def record_response_time(
+        self, endpoint: str, response_time: float, status_code: int = 200
+    ):
         """Record response time for an endpoint."""
         with self._lock:
             self.response_times.append(
@@ -53,11 +64,18 @@ class HealthProbe:
                 }
             )
 
-    def record_health_check(self, component: str, status: str, details: Dict[str, Any] = None):
+    def record_health_check(
+        self, component: str, status: str, details: Dict[str, Any] = None
+    ):
         """Record health check result."""
         with self._lock:
             self.health_checks.append(
-                {"timestamp": datetime.now(), "component": component, "status": status, "details": details or {}}
+                {
+                    "timestamp": datetime.now(),
+                    "component": component,
+                    "status": status,
+                    "details": details or {},
+                }
             )
 
     def get_uptime(self) -> float:
@@ -68,10 +86,17 @@ class HealthProbe:
         """Calculate error rate over a time window."""
         with self._lock:
             cutoff_time = datetime.now() - timedelta(minutes=window_minutes)
-            recent_errors = [e for e in self.error_history if e["timestamp"] > cutoff_time]
+            recent_errors = [
+                e for e in self.error_history if e["timestamp"] > cutoff_time
+            ]
 
             if not recent_errors:
-                return {"error_rate": 0.0, "total_errors": 0, "error_types": {}, "window_minutes": window_minutes}
+                return {
+                    "error_rate": 0.0,
+                    "total_errors": 0,
+                    "error_types": {},
+                    "window_minutes": window_minutes,
+                }
 
             # Count errors by type
             error_types = defaultdict(int)
@@ -113,11 +138,15 @@ class HealthProbe:
                     all_metrics[name] = self.get_queue_metrics(name)
                 return all_metrics
 
-    def get_response_time_metrics(self, endpoint: Optional[str] = None) -> Dict[str, Any]:
+    def get_response_time_metrics(
+        self, endpoint: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Get response time metrics."""
         with self._lock:
             if endpoint:
-                endpoint_data = [r for r in self.response_times if r["endpoint"] == endpoint]
+                endpoint_data = [
+                    r for r in self.response_times if r["endpoint"] == endpoint
+                ]
                 if not endpoint_data:
                     return {"endpoint": endpoint, "status": "no_data"}
 
@@ -129,7 +158,8 @@ class HealthProbe:
                     "average_response_time": sum(response_times) / len(response_times),
                     "max_response_time": max(response_times),
                     "min_response_time": min(response_times),
-                    "success_rate": sum(1 for code in status_codes if code < 400) / len(status_codes),
+                    "success_rate": sum(1 for code in status_codes if code < 400)
+                    / len(status_codes),
                     "total_requests": len(response_times),
                     "recent_requests": endpoint_data[-10:],  # Last 10 requests
                 }
@@ -150,7 +180,9 @@ class HealthProbe:
                 "error_metrics": self.get_error_rate(),
                 "queue_metrics": self.get_queue_metrics(),
                 "response_time_metrics": self.get_response_time_metrics(),
-                "health_check_history": list(self.health_checks)[-20:],  # Last 20 health checks
+                "health_check_history": list(self.health_checks)[
+                    -20:
+                ],  # Last 20 health checks
                 "system_load": {
                     "cpu_percent": psutil.cpu_percent(),
                     "memory_percent": psutil.virtual_memory().percent,
@@ -173,7 +205,11 @@ def check_disk_space() -> Dict[str, Any]:
         disk = psutil.disk_usage("/")
         status = "operational" if disk.percent < 90 else "degraded"
 
-        result = {"status": status, "percent_used": disk.percent, "free_gb": disk.free / (1024**3)}
+        result = {
+            "status": status,
+            "percent_used": disk.percent,
+            "free_gb": disk.free / (1024**3),
+        }
 
         health_probe.record_health_check("disk", status, result)
         return result
@@ -194,7 +230,11 @@ def check_memory_usage() -> Dict[str, Any]:
         memory = psutil.virtual_memory()
         status = "operational" if memory.percent < 90 else "degraded"
 
-        result = {"status": status, "percent_used": memory.percent, "free_gb": memory.available / (1024**3)}
+        result = {
+            "status": status,
+            "percent_used": memory.percent,
+            "free_gb": memory.available / (1024**3),
+        }
 
         health_probe.record_health_check("memory", status, result)
         return result
@@ -214,7 +254,9 @@ def check_model_health() -> Dict[str, Any]:
     try:
         model_dir = Path("models")
         if not model_dir.exists():
-            health_probe.record_error("model_check", "Model directory not found", "models")
+            health_probe.record_error(
+                "model_check", "Model directory not found", "models"
+            )
             return {"status": "down", "error": "Model directory not found"}
 
         # Check if models directory has any Python files (more flexible than requiring specific files)
@@ -277,7 +319,12 @@ def get_system_status() -> Dict[str, Any]:
         data_status = check_data_health()
 
         # Determine overall status
-        statuses = [disk_status["status"], memory_status["status"], model_status["status"], data_status["status"]]
+        statuses = [
+            disk_status["status"],
+            memory_status["status"],
+            model_status["status"],
+            data_status["status"],
+        ]
 
         if "down" in statuses:
             overall_status = "down"
@@ -288,20 +335,31 @@ def get_system_status() -> Dict[str, Any]:
 
         # Record overall health check
         health_probe.record_health_check(
-            "system", overall_status, {"component_statuses": statuses, "timestamp": datetime.now().isoformat()}
+            "system",
+            overall_status,
+            {"component_statuses": statuses, "timestamp": datetime.now().isoformat()},
         )
 
         return {
             "status": overall_status,
             "timestamp": datetime.now().isoformat(),
-            "components": {"disk": disk_status, "memory": memory_status, "models": model_status, "data": data_status},
+            "components": {
+                "disk": disk_status,
+                "memory": memory_status,
+                "models": model_status,
+                "data": data_status,
+            },
             "health_probe": health_probe.get_health_summary(),
         }
 
     except Exception as e:
         logger.error(f"Error getting system status: {str(e)}")
         health_probe.record_error("system_status", str(e), "system")
-        return {"status": "down", "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "status": "down",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def build_health_probe_endpoint() -> Dict[str, Any]:
@@ -322,7 +380,8 @@ def build_health_probe_endpoint() -> Dict[str, Any]:
             "system_status": get_system_status(),
         },
         "alerts": {
-            "high_error_rate": health_probe.get_error_rate()["error_rate"] > 1.0,  # > 1 error per minute
+            "high_error_rate": health_probe.get_error_rate()["error_rate"]
+            > 1.0,  # > 1 error per minute
             "high_queue_size": any(
                 metrics.get("current_size", 0) > 1000
                 for metrics in health_probe.get_queue_metrics().values()

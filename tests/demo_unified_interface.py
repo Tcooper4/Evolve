@@ -39,12 +39,21 @@ def demo_unified_interface():
         # Demo commands
         demo_commands = [
             {"command": "help", "description": "Get help information"},
-            {"command": "forecast AAPL 7d", "description": "Generate 7-day forecast for AAPL"},
-            {"command": "tune model lstm AAPL", "description": "Tune LSTM model for AAPL"},
+            {
+                "command": "forecast AAPL 7d",
+                "description": "Generate 7-day forecast for AAPL",
+            },
+            {
+                "command": "tune model lstm AAPL",
+                "description": "Tune LSTM model for AAPL",
+            },
             {"command": "strategy list", "description": "List available strategies"},
             {"command": "agent list", "description": "List available agents"},
             {"command": "portfolio status", "description": "Get portfolio status"},
-            {"command": "What's the best model for TSLA?", "description": "Natural language query via QuantGPT"},
+            {
+                "command": "What's the best model for TSLA?",
+                "description": "Natural language query via QuantGPT",
+            },
             {"command": "status", "description": "Check system status"},
         ]
 
@@ -89,9 +98,15 @@ def demo_unified_interface():
         print("1. Launch Streamlit interface: streamlit run app.py")
         print("2. Use terminal interface: python unified_interface.py --terminal")
         print("3. Execute commands: python unified_interface.py --command 'help'")
-        print("4. Ask questions: python unified_interface.py --command 'What is the best model for AAPL?'")
+        print(
+            "4. Ask questions: python unified_interface.py --command 'What is the best model for AAPL?'"
+        )
 
-        return {"status": "demo_completed", "results": results, "commands_executed": len(demo_commands)}
+        return {
+            "status": "demo_completed",
+            "results": results,
+            "commands_executed": len(demo_commands),
+        }
 
     except ImportError as e:
         print(f"❌ Import error: {e}")
@@ -108,13 +123,26 @@ def show_usage_examples():
     print("=" * 60)
 
     examples = [
-        {"category": "Basic Commands", "examples": ["help", "status", "forecast AAPL 7d", "tune model lstm AAPL"]},
+        {
+            "category": "Basic Commands",
+            "examples": ["help", "status", "forecast AAPL 7d", "tune model lstm AAPL"],
+        },
         {
             "category": "Strategy Commands",
-            "examples": ["strategy list", "strategy run bollinger AAPL", "backtest macd TSLA"],
+            "examples": [
+                "strategy list",
+                "strategy run bollinger AAPL",
+                "backtest macd TSLA",
+            ],
         },
-        {"category": "Agent Commands", "examples": ["agent list", "agent status", "start agent model_builder"]},
-        {"category": "Portfolio Commands", "examples": ["portfolio status", "portfolio rebalance", "risk analysis"]},
+        {
+            "category": "Agent Commands",
+            "examples": ["agent list", "agent status", "start agent model_builder"],
+        },
+        {
+            "category": "Portfolio Commands",
+            "examples": ["portfolio status", "portfolio rebalance", "risk analysis"],
+        },
         {
             "category": "Natural Language Queries",
             "examples": [
@@ -133,7 +161,11 @@ def show_usage_examples():
             print(f"  {example}")
             total_examples += 1
 
-    return {"status": "examples_displayed", "total_examples": total_examples, "categories": len(examples)}
+    return {
+        "status": "examples_displayed",
+        "total_examples": total_examples,
+        "categories": len(examples),
+    }
 
 
 def main():
@@ -141,7 +173,11 @@ def main():
     demo_result = demo_unified_interface()
     examples_result = show_usage_examples()
 
-    return {"status": "main_completed", "demo": demo_result, "examples": examples_result}
+    return {
+        "status": "main_completed",
+        "demo": demo_result,
+        "examples": examples_result,
+    }
 
 
 if __name__ == "__main__":

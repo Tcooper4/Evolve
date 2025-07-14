@@ -47,21 +47,33 @@ class ModelRetrainingLogger:
 
         # File handler for retraining failures
         file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        )
         self.retraining_logger.addHandler(file_handler)
 
     def log_retraining_attempt(
-        self, model_id: str, model_type: str, attempt_number: int, context: Dict[str, Any] = None
+        self,
+        model_id: str,
+        model_type: str,
+        attempt_number: int,
+        context: Dict[str, Any] = None,
     ):
         """Log a model re-training attempt."""
-        timestamp = datetime.now().isoformat()
-        logger.info(f"🔄 Model re-training attempt | Model: {model_id} | Type: {model_type} | Attempt: {attempt_number}")
+        datetime.now().isoformat()
+        logger.info(
+            f"🔄 Model re-training attempt | Model: {model_id} | Type: {model_type} | Attempt: {attempt_number}"
+        )
 
         if context:
             logger.debug(f"📋 Retraining context: {context}")
 
     def log_retraining_success(
-        self, model_id: str, model_type: str, execution_time: float, metrics: Dict[str, Any] = None
+        self,
+        model_id: str,
+        model_type: str,
+        execution_time: float,
+        metrics: Dict[str, Any] = None,
     ):
         """Log a successful model re-training."""
         timestamp = datetime.now().isoformat()
@@ -98,7 +110,9 @@ class ModelRetrainingLogger:
             traceback_str = traceback.format_exc()
 
         # Log to main logger
-        logger.error(f"❌ Model re-training failed | Model: {model_id} | Type: {model_type} | Attempt: {attempt_number}")
+        logger.error(
+            f"❌ Model re-training failed | Model: {model_id} | Type: {model_type} | Attempt: {attempt_number}"
+        )
         logger.error(f"💥 Error: {str(error)}")
 
         # Log detailed failure to dedicated file
@@ -128,7 +142,13 @@ class ModelRetrainingLogger:
         # Also log to main logger with reduced detail
         logger.error(f"📝 Full failure details logged to: {self.log_file}")
 
-    def log_retraining_timeout(self, model_id: str, model_type: str, timeout_duration: float, attempt_number: int = 1):
+    def log_retraining_timeout(
+        self,
+        model_id: str,
+        model_type: str,
+        timeout_duration: float,
+        attempt_number: int = 1,
+    ):
         """Log a model re-training timeout."""
         timestamp = datetime.now().isoformat()
         self.failure_count += 1
@@ -145,7 +165,9 @@ class ModelRetrainingLogger:
             f"Timestamp: {timestamp}"
         )
 
-    def log_retraining_abandoned(self, model_id: str, model_type: str, max_attempts: int, total_failures: int):
+    def log_retraining_abandoned(
+        self, model_id: str, model_type: str, max_attempts: int, total_failures: int
+    ):
         """Log when model re-training is abandoned after max attempts."""
         timestamp = datetime.now().isoformat()
 
@@ -167,7 +189,8 @@ class ModelRetrainingLogger:
             "total_attempts": self.success_count + self.failure_count,
             "successful_attempts": self.success_count,
             "failed_attempts": self.failure_count,
-            "success_rate": self.success_count / (self.success_count + self.failure_count)
+            "success_rate": self.success_count
+            / (self.success_count + self.failure_count)
             if (self.success_count + self.failure_count) > 0
             else 0,
             "failure_log_file": self.log_file,
@@ -212,7 +235,10 @@ def main():
 
         # Initialize the service with retraining logger
         service = UpdaterService(
-            redis_host="localhost", redis_port=6379, redis_db=0, retraining_logger=retraining_logger
+            redis_host="localhost",
+            redis_port=6379,
+            redis_db=0,
+            retraining_logger=retraining_logger,
         )
 
         # Store references for signal handler
@@ -227,7 +253,9 @@ def main():
         service.start()
 
         logger.info("UpdaterService started successfully")
-        logger.info(f"Listening on channels: {service.input_channel}, {service.control_channel}")
+        logger.info(
+            f"Listening on channels: {service.input_channel}, {service.control_channel}"
+        )
         logger.info("Model re-training failure logging enabled")
 
         # Keep the service running

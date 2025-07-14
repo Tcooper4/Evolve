@@ -1,6 +1,9 @@
+import json
 import logging
+import os
 import sys
 import traceback
+from datetime import datetime
 from functools import wraps
 from typing import Any, Callable, Optional, Type
 
@@ -9,30 +12,24 @@ class TradingError(Exception):
     """Base class for trading system errors."""
 
 
-
 class DataError(TradingError):
     """Error related to data processing."""
-
 
 
 class ModelError(TradingError):
     """Error related to model operations."""
 
 
-
 class StrategyError(TradingError):
     """Error related to strategy execution."""
-
 
 
 class RiskError(TradingError):
     """Error related to risk management."""
 
 
-
 class PortfolioError(TradingError):
     """Error related to portfolio management."""
-
 
 
 def handle_exceptions(
@@ -85,7 +82,10 @@ def handle_exceptions(
 
 
 def retry(
-    max_attempts: int = 3, delay: float = 1.0, backoff: float = 2.0, logger: Optional[logging.Logger] = None
+    max_attempts: int = 3,
+    delay: float = 1.0,
+    backoff: float = 2.0,
+    logger: Optional[logging.Logger] = None,
 ) -> Callable:
     """Decorator for retrying functions on failure.
 
@@ -128,12 +128,15 @@ def retry(
                 except Exception as e:
                     if attempt == max_attempts:
                         if logger:
-                            logger.error(f"Failed after {max_attempts} attempts: {str(e)}")
+                            logger.error(
+                                f"Failed after {max_attempts} attempts: {str(e)}"
+                            )
                         raise
 
                     if logger:
                         logger.warning(
-                            f"Attempt {attempt} failed: {str(e)}. " f"Retrying in {current_delay:.1f} seconds..."
+                            f"Attempt {attempt} failed: {str(e)}. "
+                            f"Retrying in {current_delay:.1f} seconds..."
                         )
 
                     time.sleep(current_delay)
@@ -177,7 +180,8 @@ def validate_input(func: Callable) -> Callable:
             if param.annotation is not inspect.Parameter.empty:
                 if not isinstance(value, param.annotation):
                     raise TypeError(
-                        f"Argument '{name}' must be of type {param.annotation.__name__}, " f"got {type(value).__name__}"
+                        f"Argument '{name}' must be of type {param.annotation.__name__}, "
+                        f"got {type(value).__name__}"
                     )
 
         return {
@@ -215,7 +219,9 @@ def log_execution_time(logger: Optional[logging.Logger] = None) -> Callable:
             end_time = time.time()
 
             if logger:
-                logger.info(f"{func.__name__} executed in {end_time - start_time:.2f} seconds")
+                logger.info(
+                    f"{func.__name__} executed in {end_time - start_time:.2f} seconds"
+                )
 
             return {
                 "success": True,

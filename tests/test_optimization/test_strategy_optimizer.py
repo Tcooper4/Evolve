@@ -122,7 +122,9 @@ class TestGeneticAlgorithm:
             # Simple objective function
             return params["window"] * params["threshold"] + len(data)
 
-        result = ga.optimize(objective, param_space, sample_data, population_size=10, n_generations=5)
+        result = ga.optimize(
+            objective, param_space, sample_data, population_size=10, n_generations=5
+        )
 
         assert isinstance(result, OptimizationResult)
         assert result.best_params is not None
@@ -139,7 +141,9 @@ class TestGeneticAlgorithm:
             # Objective that improves quickly then plateaus
             return 1.0 / (1.0 + params["window"])
 
-        result = ga.optimize(objective, param_space, sample_data, population_size=5, n_generations=20)
+        result = ga.optimize(
+            objective, param_space, sample_data, population_size=5, n_generations=20
+        )
 
         # Should converge before max generations
         assert result.n_iterations <= 20
@@ -154,7 +158,9 @@ class TestGeneticAlgorithm:
                 raise ValueError("Window too large")
             return params["window"]
 
-        result = ga.optimize(objective, param_space, sample_data, population_size=10, n_generations=5)
+        result = ga.optimize(
+            objective, param_space, sample_data, population_size=10, n_generations=5
+        )
 
         # Should handle errors gracefully
         assert result.best_params is not None
@@ -223,7 +229,9 @@ class TestParticleSwarmOptimization:
             # Simple objective function
             return params["window"] * params["threshold"] + len(data)
 
-        result = pso.optimize(objective, param_space, sample_data, n_particles=10, n_iterations=5)
+        result = pso.optimize(
+            objective, param_space, sample_data, n_particles=10, n_iterations=5
+        )
 
         assert isinstance(result, OptimizationResult)
         assert result.best_params is not None
@@ -240,7 +248,9 @@ class TestParticleSwarmOptimization:
             # Objective that improves quickly then plateaus
             return 1.0 / (1.0 + params["window"])
 
-        result = pso.optimize(objective, param_space, sample_data, n_particles=5, n_iterations=20)
+        result = pso.optimize(
+            objective, param_space, sample_data, n_particles=5, n_iterations=20
+        )
 
         # Should converge before max iterations
         assert result.n_iterations <= 20
@@ -289,7 +299,9 @@ class TestParticleSwarmOptimization:
                 raise ValueError("Window too large")
             return params["window"]
 
-        result = pso.optimize(objective, param_space, sample_data, n_particles=10, n_iterations=5)
+        result = pso.optimize(
+            objective, param_space, sample_data, n_particles=10, n_iterations=5
+        )
 
         # Should handle errors gracefully
         assert result.best_params is not None
@@ -323,7 +335,9 @@ class TestStrategyOptimizer:
                 self.params = params
 
             def generate_signals(self, data):
-                return pd.Series(np.random.choice([-1, 0, 1], len(data)), index=data.index)
+                return pd.Series(
+                    np.random.choice([-1, 0, 1], len(data)), index=data.index
+                )
 
             def evaluate_performance(self, signals, data):
                 class MockMetrics:
@@ -499,7 +513,9 @@ class TestStrategyOptimizer:
         def failing_objective(params, data):
             raise ValueError("Optimization failed")
 
-        with patch.object(optimizer, "_objective_wrapper", return_value=failing_objective):
+        with patch.object(
+            optimizer, "_objective_wrapper", return_value=failing_objective
+        ):
             with pytest.raises(ValueError, match="Optimization failed"):
                 optimizer.optimize(mock_strategy, sample_data)
 
@@ -557,11 +573,33 @@ class TestStrategyOptimizer:
 
         # Mock the optimization method with convergence data
         with patch.object(optimizer.optimizer, "optimize") as mock_optimize:
-            convergence_history = [-0.5, -0.6, -0.7, -0.75, -0.8, -0.8, -0.8, -0.8, -0.8, -0.8]
+            convergence_history = [
+                -0.5,
+                -0.6,
+                -0.7,
+                -0.75,
+                -0.8,
+                -0.8,
+                -0.8,
+                -0.8,
+                -0.8,
+                -0.8,
+            ]
             mock_optimize.return_value = OptimizationResult(
                 best_params={"window": 20, "threshold": 0.05},
                 best_score=-0.8,
-                all_scores=[-0.5, -0.6, -0.7, -0.75, -0.8, -0.8, -0.8, -0.8, -0.8, -0.8],
+                all_scores=[
+                    -0.5,
+                    -0.6,
+                    -0.7,
+                    -0.75,
+                    -0.8,
+                    -0.8,
+                    -0.8,
+                    -0.8,
+                    -0.8,
+                    -0.8,
+                ],
                 all_params=[{}] * 10,
                 optimization_time=2.0,
                 n_iterations=10,
@@ -576,5 +614,6 @@ class TestStrategyOptimizer:
             assert len(mock_optimize.return_value.convergence_history) == 10
             # Should show improvement over iterations
             assert (
-                mock_optimize.return_value.convergence_history[0] > mock_optimize.return_value.convergence_history[-1]
+                mock_optimize.return_value.convergence_history[0]
+                > mock_optimize.return_value.convergence_history[-1]
             )

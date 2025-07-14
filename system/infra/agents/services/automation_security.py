@@ -118,7 +118,10 @@ class AutomationSecurity:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "security.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "security.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def setup_crypto(self):
@@ -128,7 +131,9 @@ class AutomationSecurity:
             self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
             # Generate RSA key pair
-            self.private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+            self.private_key = rsa.generate_private_key(
+                public_exponent=65537, key_size=2048
+            )
             self.public_key = self.private_key.public_key()
 
         except Exception as e:
@@ -179,7 +184,9 @@ class AutomationSecurity:
     def _validate_password(self, password: str):
         """Validate password strength."""
         if len(password) < self.config.password_min_length:
-            raise ValueError(f"Password must be at least {self.config.password_min_length} characters")
+            raise ValueError(
+                f"Password must be at least {self.config.password_min_length} characters"
+            )
 
         if self.config.password_require_uppercase and not re.search(r"[A-Z]", password):
             raise ValueError("Password must contain uppercase letters")
@@ -190,7 +197,9 @@ class AutomationSecurity:
         if self.config.password_require_digits and not re.search(r"\d", password):
             raise ValueError("Password must contain digits")
 
-        if self.config.password_require_special and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        if self.config.password_require_special and not re.search(
+            r'[!@#$%^&*(),.?":{}|<>]', password
+        ):
             raise ValueError("Password must contain special characters")
 
     def _hash_password(self, password: str) -> str:
@@ -203,7 +212,9 @@ class AutomationSecurity:
 
     @sleep_and_retry
     @limits(calls=100, period=60)
-    async def authenticate_user(self, username: str, password: str, ip_address: str) -> Optional[User]:
+    async def authenticate_user(
+        self, username: str, password: str, ip_address: str
+    ) -> Optional[User]:
         """Authenticate user."""
         try:
             # Check IP
@@ -227,7 +238,9 @@ class AutomationSecurity:
 
                 # Check if should lock
                 if user.failed_login_attempts >= self.config.max_login_attempts:
-                    user.locked_until = datetime.now() + timedelta(minutes=self.config.lockout_duration_minutes)
+                    user.locked_until = datetime.now() + timedelta(
+                        minutes=self.config.lockout_duration_minutes
+                    )
 
                 return None
 
@@ -249,25 +262,36 @@ class AutomationSecurity:
 
         try:
             ip = ipaddress.ip_address(ip_address)
-            return any(ip in ipaddress.ip_network(allowed_ip) for allowed_ip in self.config.allowed_ips)
+            return any(
+                ip in ipaddress.ip_network(allowed_ip)
+                for allowed_ip in self.config.allowed_ips
+            )
         except ValueError:
             return False
 
     @sleep_and_retry
     @limits(calls=100, period=60)
-    async def create_token(self, user: User, expires_delta: Optional[timedelta] = None) -> Token:
+    async def create_token(
+        self, user: User, expires_delta: Optional[timedelta] = None
+    ) -> Token:
         """Create access token."""
         try:
             if expires_delta:
                 expire = datetime.utcnow() + expires_delta
             else:
-                expire = datetime.utcnow() + timedelta(minutes=self.config.jwt_expire_minutes)
+                expire = datetime.utcnow() + timedelta(
+                    minutes=self.config.jwt_expire_minutes
+                )
 
             to_encode = {"sub": user.username, "scopes": user.scopes, "exp": expire}
 
-            encoded_jwt = jwt.encode(to_encode, self.config.jwt_secret, algorithm=self.config.jwt_algorithm)
+            encoded_jwt = jwt.encode(
+                to_encode, self.config.jwt_secret, algorithm=self.config.jwt_algorithm
+            )
 
-            return Token(access_token=encoded_jwt, token_type="bearer", expires_at=expire)
+            return Token(
+                access_token=encoded_jwt, token_type="bearer", expires_at=expire
+            )
 
         except Exception as e:
             logger.error(f"Failed to create token: {str(e)}")
@@ -278,7 +302,9 @@ class AutomationSecurity:
     async def verify_token(self, token: str) -> TokenData:
         """Verify access token."""
         try:
-            payload = jwt.decode(token, self.config.jwt_secret, algorithms=[self.config.jwt_algorithm])
+            payload = jwt.decode(
+                token, self.config.jwt_secret, algorithms=[self.config.jwt_algorithm]
+            )
 
             username: str = payload.get("sub")
             if username is None:
@@ -299,7 +325,11 @@ class AutomationSecurity:
         try:
             encrypted = self.public_key.encrypt(
                 data.encode(),
-                padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None),
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None,
+                ),
             )
             return base64.b64encode(encrypted).decode()
 
@@ -315,7 +345,11 @@ class AutomationSecurity:
             encrypted = base64.b64decode(encrypted_data)
             decrypted = self.private_key.decrypt(
                 encrypted,
-                padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None),
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None,
+                ),
             )
             return decrypted.decode()
 

@@ -40,7 +40,14 @@ class AutoformerModel(BaseModel):
             "timestamp": datetime.now().isoformat(),
         }
 
-    def fit(self, train_data: pd.DataFrame, val_data=None, epochs=10, batch_size=32, **kwargs) -> Dict[str, Any]:
+    def fit(
+        self,
+        train_data: pd.DataFrame,
+        val_data=None,
+        epochs=10,
+        batch_size=32,
+        **kwargs,
+    ) -> Dict[str, Any]:
         """Fit the Autoformer model to training data.
 
         Args:
@@ -81,7 +88,9 @@ class AutoformerModel(BaseModel):
                         X_val_tensor = torch.tensor(X_val)
                         y_val_tensor = torch.tensor(y_val)
                         y_val_pred = self.model(X_val_tensor.unsqueeze(0))
-                        val_loss = torch.nn.functional.mse_loss(y_val_pred.squeeze(), y_val_tensor)
+                        val_loss = torch.nn.functional.mse_loss(
+                            y_val_pred.squeeze(), y_val_tensor
+                        )
                         val_losses.append(val_loss.item())
                     self.model.train()
 
@@ -98,7 +107,11 @@ class AutoformerModel(BaseModel):
                 "final_val_loss": val_losses[-1] if val_losses else None,
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def predict(self, data: pd.DataFrame, horizon: int = 1) -> Dict[str, Any]:
         """Make predictions using the fitted model.
@@ -124,7 +137,9 @@ class AutoformerModel(BaseModel):
 
             self.model.eval()
             with torch.no_grad():
-                y_pred = self.model(X_tensor.unsqueeze(0), attention_mask=mask.unsqueeze(0))
+                y_pred = self.model(
+                    X_tensor.unsqueeze(0), attention_mask=mask.unsqueeze(0)
+                )
 
             predictions = y_pred.squeeze().cpu().numpy()
 
@@ -137,7 +152,11 @@ class AutoformerModel(BaseModel):
                 "input_shape": X.shape,
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def summary(self) -> Dict[str, Any]:
         """Generate model summary.
@@ -159,7 +178,11 @@ class AutoformerModel(BaseModel):
                 "fitted": self.fitted,
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def infer(self) -> Dict[str, Any]:
         """Set model to inference mode.
@@ -169,9 +192,17 @@ class AutoformerModel(BaseModel):
         """
         try:
             self.model.eval()
-            return {"success": True, "message": "Model set to inference mode", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "Model set to inference mode",
+                "timestamp": datetime.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def shap_interpret(self, X_sample) -> Dict[str, Any]:
         """Generate SHAP interpretation for the model.
@@ -183,7 +214,9 @@ class AutoformerModel(BaseModel):
             Dictionary containing interpretation results
         """
         try:
-            logger.warning("SHAP not directly supported for Autoformer. Showing attention weights if available.")
+            logger.warning(
+                "SHAP not directly supported for Autoformer. Showing attention weights if available."
+            )
             # If the model exposes attention weights, plot them here
             if hasattr(self.model, "get_attention_weights"):
                 attn = self.model.get_attention_weights(X_sample)
@@ -209,7 +242,11 @@ class AutoformerModel(BaseModel):
                     "attention_weights_available": False,
                 }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def save(self, path: str) -> Dict[str, Any]:
         """Save the model to disk.
@@ -222,7 +259,9 @@ class AutoformerModel(BaseModel):
         """
         try:
             os.makedirs(path, exist_ok=True)
-            torch.save(self.model.state_dict(), os.path.join(path, "autoformer_model.pt"))
+            torch.save(
+                self.model.state_dict(), os.path.join(path, "autoformer_model.pt")
+            )
             with open(os.path.join(path, "config.json"), "w") as f:
                 json.dump(self.config, f)
 
@@ -233,7 +272,11 @@ class AutoformerModel(BaseModel):
                 "save_path": path,
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def load(self, path: str) -> Dict[str, Any]:
         """Load the model from disk.
@@ -245,7 +288,9 @@ class AutoformerModel(BaseModel):
             Dictionary containing load operation status
         """
         try:
-            self.model.load_state_dict(torch.load(os.path.join(path, "autoformer_model.pt")))
+            self.model.load_state_dict(
+                torch.load(os.path.join(path, "autoformer_model.pt"))
+            )
             with open(os.path.join(path, "config.json"), "r") as f:
                 self.config = json.load(f)
             self.fitted = True
@@ -257,7 +302,11 @@ class AutoformerModel(BaseModel):
                 "load_path": path,
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
@@ -288,7 +337,9 @@ class AutoformerModel(BaseModel):
                 # Update data for next iteration
                 new_row = current_data.iloc[-1].copy()
                 new_row[self.target_column] = pred[-1]  # Update with prediction
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                current_data = pd.concat(
+                    [current_data, pd.DataFrame([new_row])], ignore_index=True
+                )
                 current_data = current_data.iloc[1:]  # Remove oldest row
 
             return {
@@ -304,7 +355,9 @@ class AutoformerModel(BaseModel):
             logger.error(f"Error in Autoformer model forecast: {e}")
             raise RuntimeError(f"Autoformer model forecasting failed: {e}")
 
-    def plot_results(self, data: pd.DataFrame, predictions: np.ndarray = None) -> Dict[str, Any]:
+    def plot_results(
+        self, data: pd.DataFrame, predictions: np.ndarray = None
+    ) -> Dict[str, Any]:
         """Plot Autoformer model results and predictions.
 
         Args:
@@ -329,7 +382,12 @@ class AutoformerModel(BaseModel):
             # Plot 1: Historical vs Predicted
             plt.subplot(2, 2, 1)
             plt.plot(data.index, data[self.target_column], label="Actual", color="blue")
-            plt.plot(data.index[-len(predictions) :], predictions, label="Predicted", color="red")
+            plt.plot(
+                data.index[-len(predictions) :],
+                predictions,
+                label="Predicted",
+                color="red",
+            )
             plt.title("Autoformer Model Predictions")
             plt.xlabel("Time")
             plt.ylabel("Value")
@@ -367,7 +425,14 @@ class AutoformerModel(BaseModel):
                 plt.ylabel("Residual")
                 plt.grid(True)
             else:
-                plt.text(0.5, 0.5, "Residuals not available", ha="center", va="center", transform=plt.gca().transAxes)
+                plt.text(
+                    0.5,
+                    0.5,
+                    "Residuals not available",
+                    ha="center",
+                    va="center",
+                    transform=plt.gca().transAxes,
+                )
                 plt.title("Prediction Residuals")
 
             # Plot 4: Model architecture info
@@ -389,4 +454,8 @@ class AutoformerModel(BaseModel):
                 "plots_generated": 4,
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }

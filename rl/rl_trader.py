@@ -58,7 +58,9 @@ class TradingEnvironment:
         # Define action and observation spaces
         if GYMNASIUM_AVAILABLE:
             self.action_space = spaces.Discrete(3)  # Buy, Sell, Hold
-            self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(15,), dtype=np.float32)
+            self.observation_space = spaces.Box(
+                low=-np.inf, high=np.inf, shape=(15,), dtype=np.float32
+            )
         else:
             self.action_space = None
             self.observation_space = None
@@ -196,9 +198,17 @@ class TradingEnvironment:
         # Technical indicators
         if self.current_step >= 20:
             # Moving averages
-            ma_5 = self.data.iloc[self.current_step - 5 : self.current_step]["Close"].mean()
-            ma_20 = self.data.iloc[self.current_step - 20 : self.current_step]["Close"].mean()
-            ma_features = [current_price / ma_5 - 1, current_price / ma_20 - 1, ma_5 / ma_20 - 1]
+            ma_5 = self.data.iloc[self.current_step - 5 : self.current_step][
+                "Close"
+            ].mean()
+            ma_20 = self.data.iloc[self.current_step - 20 : self.current_step][
+                "Close"
+            ].mean()
+            ma_features = [
+                current_price / ma_5 - 1,
+                current_price / ma_20 - 1,
+                ma_5 / ma_20 - 1,
+            ]
         else:
             ma_features = [0, 0, 0]
 
@@ -215,7 +225,12 @@ class TradingEnvironment:
         # Risk features
         if len(self.returns) >= 10:
             recent_returns = self.returns[-10:]
-            risk_features = [np.std(recent_returns), np.mean(recent_returns), min(recent_returns), max(recent_returns)]
+            risk_features = [
+                np.std(recent_returns),
+                np.mean(recent_returns),
+                min(recent_returns),
+                max(recent_returns),
+            ]
         else:
             risk_features = [0, 0, 0, 0]
 
@@ -248,7 +263,9 @@ class TradingEnvironment:
             else 0,
             "volatility": returns_series.std() * np.sqrt(252),
             "max_drawdown": self._calculate_max_drawdown(),
-            "win_rate": len([r for r in self.returns if r > 0]) / len(self.returns) if self.returns else 0,
+            "win_rate": len([r for r in self.returns if r > 0]) / len(self.returns)
+            if self.returns
+            else 0,
             "num_trades": len(self.trades),
         }
 
@@ -340,7 +357,11 @@ class RLTrader:
         """Train RL model."""
         if not STABLE_BASELINES3_AVAILABLE:
             logger.error("Stable-baselines3 not available")
-            return {"success": False, "error": "Stable-baselines3 not available", "metrics": {}}
+            return {
+                "success": False,
+                "error": "Stable-baselines3 not available",
+                "metrics": {},
+            }
 
         try:
             # Create environment
@@ -378,7 +399,12 @@ class RLTrader:
             self.last_training_metrics = training_metrics
 
             logger.info(f"Trained {algorithm} model for {total_timesteps} timesteps")
-            return {"success": True, "algorithm": algorithm, "timesteps": total_timesteps, "metrics": training_metrics}
+            return {
+                "success": True,
+                "algorithm": algorithm,
+                "timesteps": total_timesteps,
+                "metrics": training_metrics,
+            }
 
         except Exception as e:
             logger.error(f"Error training RL model: {e}")
@@ -412,7 +438,9 @@ class RLTrader:
             logger.error(f"Error predicting action: {e}")
             return 2, {"confidence": 0.0, "model_available": False, "error": str(e)}
 
-    def evaluate_model(self, data: pd.DataFrame, num_episodes: int = 10) -> Dict[str, Any]:
+    def evaluate_model(
+        self, data: pd.DataFrame, num_episodes: int = 10
+    ) -> Dict[str, Any]:
         """Evaluate trained model."""
         if self.model is None:
             return {"success": False, "error": "Model not trained", "metrics": {}}
@@ -459,13 +487,19 @@ class RLTrader:
                 "mean_return": np.mean(total_returns),
                 "std_return": np.std(total_returns),
                 "mean_final_value": np.mean(final_values),
-                "sharpe_ratio": np.mean(total_returns) / np.std(total_returns) if np.std(total_returns) > 0 else 0,
+                "sharpe_ratio": np.mean(total_returns) / np.std(total_returns)
+                if np.std(total_returns) > 0
+                else 0,
             }
 
             evaluation_metrics.update(avg_metrics)
 
             logger.info(f"RL model evaluation: {evaluation_metrics}")
-            return {"success": True, "episodes": num_episodes, "metrics": evaluation_metrics}
+            return {
+                "success": True,
+                "episodes": num_episodes,
+                "metrics": evaluation_metrics,
+            }
 
         except Exception as e:
             logger.error(f"Error evaluating RL model: {e}")
@@ -480,7 +514,11 @@ class RLTrader:
         try:
             self.model.save(filepath)
             logger.info(f"Saved model to {filepath}")
-            return {"success": True, "filepath": filepath, "model_type": type(self.model).__name__}
+            return {
+                "success": True,
+                "filepath": filepath,
+                "model_type": type(self.model).__name__,
+            }
         except Exception as e:
             logger.error(f"Error saving model: {e}")
             return {"success": False, "error": str(e)}
@@ -526,12 +564,17 @@ class RLTrader:
         """Get overall system health."""
         return {
             "overall_status": "healthy"
-            if (self.model is not None and GYMNASIUM_AVAILABLE and STABLE_BASELINES3_AVAILABLE)
+            if (
+                self.model is not None
+                and GYMNASIUM_AVAILABLE
+                and STABLE_BASELINES3_AVAILABLE
+            )
             else "degraded",
             "model_available": self.model is not None,
             "gymnasium_available": GYMNASIUM_AVAILABLE,
             "stable_baselines3_available": STABLE_BASELINES3_AVAILABLE,
-            "last_training_success": self.last_training_metrics.get("total_return", 0) > 0
+            "last_training_success": self.last_training_metrics.get("total_return", 0)
+            > 0
             if self.last_training_metrics
             else False,
         }

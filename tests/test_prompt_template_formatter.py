@@ -64,7 +64,9 @@ class TestPromptTemplateFormatter:
         assert len(formatted) > len(template)  # Should be longer after formatting
 
         # Test intent classification template
-        formatted_intent = format_template("intent_classification", query="Forecast AAPL")
+        formatted_intent = format_template(
+            "intent_classification", query="Forecast AAPL"
+        )
         assert isinstance(formatted_intent, str)
         assert "Forecast AAPL" in formatted_intent
 
@@ -279,7 +281,11 @@ class TestPromptTemplateFormatter:
         problematic_vars = [
             {"symbol": "AAPL"},  # Minimal variables
             {"symbol": "AAPL", "timeframe": "1 week"},  # Some variables
-            {"symbol": "AAPL", "timeframe": "1 week", "model_type": "LSTM"},  # More variables
+            {
+                "symbol": "AAPL",
+                "timeframe": "1 week",
+                "model_type": "LSTM",
+            },  # More variables
             sample_variables,  # All variables
         ]
 
@@ -319,7 +325,9 @@ class TestPromptTemplateFormatter:
             {
                 "large_text": "A" * 10000,  # 10KB text
                 "large_list": list(range(1000)),  # 1000 numbers
-                "large_dict": {f"key_{i}": f"value_{i}" for i in range(100)},  # 100 key-value pairs
+                "large_dict": {
+                    f"key_{i}": f"value_{i}" for i in range(100)
+                },  # 100 key-value pairs
             }
         )
 
@@ -357,9 +365,15 @@ class TestPromptTemplateFormatter:
             assert isinstance(formatted, str)
 
             # Check that dangerous content is properly escaped or handled
-            assert "DROP TABLE" not in formatted or "DROP TABLE" in formatted  # Should be escaped
-            assert "{{7*7}}" not in formatted or "{{7*7}}" in formatted  # Should be escaped
-            assert "<script>" not in formatted or "<script>" in formatted  # Should be escaped
+            assert (
+                "DROP TABLE" not in formatted or "DROP TABLE" in formatted
+            )  # Should be escaped
+            assert (
+                "{{7*7}}" not in formatted or "{{7*7}}" in formatted
+            )  # Should be escaped
+            assert (
+                "<script>" not in formatted or "<script>" in formatted
+            )  # Should be escaped
         except Exception as e:
             # Should handle dangerous content gracefully
             assert isinstance(e, (ValueError, SecurityError))
@@ -384,7 +398,9 @@ class TestPromptTemplateFormatter:
             assert isinstance(formatted, str)
             assert "AAPL" in formatted
             # International characters should be preserved
-            assert any(char in formatted for char in ["中", "文", "Facteurs", "Tendencia"])
+            assert any(
+                char in formatted for char in ["中", "文", "Facteurs", "Tendencia"]
+            )
         except Exception as e:
             # Should handle international characters gracefully
             assert isinstance(e, (UnicodeError, ValueError))

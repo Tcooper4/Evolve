@@ -20,7 +20,10 @@ def main():
         st.header("Risk Configuration")
 
         # Portfolio selection
-        portfolio = st.selectbox("Portfolio", ["All Portfolios", "Main Portfolio", "Conservative", "Aggressive"])
+        st.selectbox(
+            "Portfolio",
+            ["All Portfolios", "Main Portfolio", "Conservative", "Aggressive"],
+        )
 
         # Risk metrics
         st.subheader("Risk Metrics")
@@ -31,18 +34,22 @@ def main():
         show_max_drawdown = st.checkbox("Maximum Drawdown", value=True)
 
         # Time period
-        time_period = st.selectbox("Time Period", ["1D", "1W", "1M", "3M", "6M", "1Y"])
+        st.selectbox("Time Period", ["1D", "1W", "1M", "3M", "6M", "1Y"])
 
         # Confidence level
-        confidence_level = st.slider("Confidence Level (%)", 90, 99, 95)
+        st.slider("Confidence Level (%)", 90, 99, 95)
 
     # Main content
     st.subheader("📊 Risk Overview")
-    st.info("Risk analysis requires real portfolio data. Please connect to a portfolio management system.")
+    st.info(
+        "Risk analysis requires real portfolio data. Please connect to a portfolio management system."
+    )
 
     # Risk metrics display
     st.subheader("📈 Risk Metrics")
-    st.warning("Real risk metrics will appear here after connecting to actual portfolio data.")
+    st.warning(
+        "Real risk metrics will appear here after connecting to actual portfolio data."
+    )
 
     # Risk decomposition
     st.subheader("🔍 Risk Decomposition")

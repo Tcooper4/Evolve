@@ -16,12 +16,13 @@ from scipy import stats
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tsa.stattools import adfuller, coint
 
-warnings.filterwarnings('ignore')
+warnings.filterwarnings("ignore")
 
 
 @dataclass
 class CointegrationResult:
     """Cointegration test result."""
+
     symbol1: str
     symbol2: str
     is_cointegrated: bool
@@ -37,6 +38,7 @@ class CointegrationResult:
 @dataclass
 class PairsSignal:
     """Pairs trading signal."""
+
     timestamp: datetime
     symbol1: str
     symbol2: str
@@ -67,13 +69,13 @@ class PairsTradingEngine:
         self.logger = logging.getLogger(__name__)
 
         # Configuration
-        self.lookback_period = self.config.get('lookback_period', 252)  # 1 year
-        self.z_score_threshold = self.config.get('z_score_threshold', 2.0)
-        self.z_score_exit = self.config.get('z_score_exit', 0.5)
-        self.min_correlation = self.config.get('min_correlation', 0.7)
-        self.max_p_value = self.config.get('max_p_value', 0.05)
-        self.rolling_window = self.config.get('rolling_window', 60)
-        self.min_spread_std = self.config.get('min_spread_std', 0.01)
+        self.lookback_period = self.config.get("lookback_period", 252)  # 1 year
+        self.z_score_threshold = self.config.get("z_score_threshold", 2.0)
+        self.z_score_exit = self.config.get("z_score_exit", 0.5)
+        self.min_correlation = self.config.get("min_correlation", 0.7)
+        self.max_p_value = self.config.get("max_p_value", 0.05)
+        self.rolling_window = self.config.get("rolling_window", 60)
+        self.min_spread_std = self.config.get("min_spread_std", 0.01)
 
         # Storage
         self.cointegration_results: Dict[str, CointegrationResult] = {}
@@ -81,10 +83,9 @@ class PairsTradingEngine:
         self.hedge_ratios: Dict[str, pd.Series] = {}
         self.active_pairs: Dict[str, Dict[str, Any]] = {}
 
-            return {'success': True, 'message': 'Initialization completed', 'timestamp': datetime.now().isoformat()}
-    def find_cointegrated_pairs(self,
-                               price_data: Dict[str, pd.DataFrame],
-                               symbols: List[str]) -> List[Tuple[str, str, CointegrationResult]]:
+    def find_cointegrated_pairs(
+        self, price_data: Dict[str, pd.DataFrame], symbols: List[str]
+    ) -> List[Tuple[str, str, CointegrationResult]]:
         """
         Find cointegrated pairs from a list of symbols.
 
@@ -103,8 +104,8 @@ class PairsTradingEngine:
             # Get price series
             price_series = {}
             for symbol in symbols:
-                if symbol in price_data and 'close' in price_data[symbol].columns:
-                    price_series[symbol] = price_data[symbol]['close']
+                if symbol in price_data and "close" in price_data[symbol].columns:
+                    price_series[symbol] = price_data[symbol]["close"]
 
             if len(price_series) < 2:
                 self.logger.warning("Insufficient price data for cointegration testing")
@@ -112,9 +113,11 @@ class PairsTradingEngine:
 
             # Test all possible pairs
             for i, symbol1 in enumerate(symbols):
-                for symbol2 in symbols[i+1:]:
+                for symbol2 in symbols[i + 1 :]:
                     if symbol1 in price_series and symbol2 in price_series:
-                        result = self._test_cointegration(symbol1, symbol2, price_series)
+                        result = self._test_cointegration(
+                            symbol1, symbol2, price_series
+                        )
 
                         if result.is_cointegrated:
                             cointegrated_pairs.append((symbol1, symbol2, result))
@@ -123,8 +126,10 @@ class PairsTradingEngine:
                             pair_key = f"{symbol1}_{symbol2}"
                             self.cointegration_results[pair_key] = result
 
-                            self.logger.info(f"Found cointegrated pair: {symbol1} - {symbol2} "
-                                           f"(p-value: {result.p_value:.4f})")
+                            self.logger.info(
+                                f"Found cointegrated pair: {symbol1} - {symbol2} "
+                                f"(p-value: {result.p_value:.4f})"
+                            )
 
             self.logger.info(f"Found {len(cointegrated_pairs)} cointegrated pairs")
             return cointegrated_pairs
@@ -133,10 +138,9 @@ class PairsTradingEngine:
             self.logger.error(f"Error finding cointegrated pairs: {str(e)}")
             return []
 
-    def _test_cointegration(self,
-                           symbol1: str,
-                           symbol2: str,
-                           price_series: Dict[str, pd.Series]) -> CointegrationResult:
+    def _test_cointegration(
+        self, symbol1: str, symbol2: str, price_series: Dict[str, pd.Series]
+    ) -> CointegrationResult:
         """Test cointegration between two symbols using Engle-Granger test."""
         try:
             # Get aligned price series
@@ -157,14 +161,18 @@ class PairsTradingEngine:
                 return self._create_no_cointegration_result(symbol1, symbol2)
 
             # Perform Engle-Granger cointegration test
-            test_statistic, p_value, critical_values = coint(series1_aligned, series2_aligned)
+            test_statistic, p_value, critical_values = coint(
+                series1_aligned, series2_aligned
+            )
 
             # Determine if cointegrated
             is_cointegrated = p_value < self.max_p_value
 
             if is_cointegrated:
                 # Calculate hedge ratio using OLS regression
-                hedge_ratio = self._calculate_hedge_ratio(series1_aligned, series2_aligned)
+                hedge_ratio = self._calculate_hedge_ratio(
+                    series1_aligned, series2_aligned
+                )
 
                 # Calculate spread
                 spread = series1_aligned - hedge_ratio * series2_aligned
@@ -188,16 +196,23 @@ class PairsTradingEngine:
                     hedge_ratio=hedge_ratio,
                     spread_mean=spread_mean,
                     spread_std=spread_std,
-                    confidence_level=confidence_level
+                    confidence_level=confidence_level,
                 )
             else:
                 return self._create_no_cointegration_result(symbol1, symbol2)
 
         except Exception as e:
             self.logger.error(f"Error testing cointegration: {str(e)}")
-            return {'success': True, 'result': self._create_no_cointegration_result(symbol1, symbol2), 'message': 'Operation completed successfully', 'timestamp': datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": self._create_no_cointegration_result(symbol1, symbol2),
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def _create_no_cointegration_result(self, symbol1: str, symbol2: str) -> CointegrationResult:
+    def _create_no_cointegration_result(
+        self, symbol1: str, symbol2: str
+    ) -> CointegrationResult:
         """Create result for non-cointegrated pair."""
         return CointegrationResult(
             symbol1=symbol1,
@@ -209,7 +224,7 @@ class PairsTradingEngine:
             hedge_ratio=0.0,
             spread_mean=0.0,
             spread_std=0.0,
-            confidence_level=0.0
+            confidence_level=0.0,
         )
 
     def _calculate_hedge_ratio(self, series1: pd.Series, series2: pd.Series) -> float:
@@ -229,9 +244,11 @@ class PairsTradingEngine:
             self.logger.error(f"Error calculating hedge ratio: {str(e)}")
             return 1.0
 
-    def update_hedge_ratios(self,
-                           price_data: Dict[str, pd.DataFrame],
-                           pairs: List[Tuple[str, str, CointegrationResult]]):
+    def update_hedge_ratios(
+        self,
+        price_data: Dict[str, pd.DataFrame],
+        pairs: List[Tuple[str, str, CointegrationResult]],
+    ):
         """Update hedge ratios using rolling window."""
         try:
             self.logger.info("Updating hedge ratios for active pairs")
@@ -243,12 +260,14 @@ class PairsTradingEngine:
                 pair_key = f"{symbol1}_{symbol2}"
 
                 # Get recent price data
-                if (symbol1 in price_data and symbol2 in price_data and
-                    'close' in price_data[symbol1].columns and
-                    'close' in price_data[symbol2].columns):
-
-                    series1 = price_data[symbol1]['close']
-                    series2 = price_data[symbol2]['close']
+                if (
+                    symbol1 in price_data
+                    and symbol2 in price_data
+                    and "close" in price_data[symbol1].columns
+                    and "close" in price_data[symbol2].columns
+                ):
+                    series1 = price_data[symbol1]["close"]
+                    series2 = price_data[symbol2]["close"]
 
                     # Calculate rolling hedge ratio
                     rolling_ratios = self._calculate_rolling_hedge_ratio(
@@ -263,23 +282,24 @@ class PairsTradingEngine:
                         self.cointegration_results[pair_key].hedge_ratio = latest_ratio
 
                         # Update spread
-                        latest_spread = series1.iloc[-1] - latest_ratio * series2.iloc[-1]
+                        latest_spread = (
+                            series1.iloc[-1] - latest_ratio * series2.iloc[-1]
+                        )
                         self.cointegration_results[pair_key].spread_mean = latest_spread
 
         except Exception as e:
             self.logger.error(f"Error updating hedge ratios: {str(e)}")
 
-    def _calculate_rolling_hedge_ratio(self,
-                                     series1: pd.Series,
-                                     series2: pd.Series,
-                                     window: int) -> pd.Series:
+    def _calculate_rolling_hedge_ratio(
+        self, series1: pd.Series, series2: pd.Series, window: int
+    ) -> pd.Series:
         """Calculate rolling hedge ratio."""
         try:
             ratios = pd.Series(index=series1.index, dtype=float)
 
             for i in range(window, len(series1)):
-                window_series1 = series1.iloc[i-window:i]
-                window_series2 = series2.iloc[i-window:i]
+                window_series1 = series1.iloc[i - window : i]
+                window_series2 = series2.iloc[i - window : i]
 
                 try:
                     X = sm.add_constant(window_series2)
@@ -289,7 +309,7 @@ class PairsTradingEngine:
                 except (ValueError, TypeError, np.linalg.LinAlgError) as e:
                     # Use previous ratio if regression fails
                     self.logger.debug(f"Regression failed for window {i}: {e}")
-                    ratios.iloc[i] = ratios.iloc[i-1] if i > window else 1.0
+                    ratios.iloc[i] = ratios.iloc[i - 1] if i > window else 1.0
 
             return ratios
 
@@ -297,9 +317,11 @@ class PairsTradingEngine:
             self.logger.error(f"Error calculating rolling hedge ratio: {str(e)}")
             return pd.Series(dtype=float)
 
-    def generate_signals(self,
-                        price_data: Dict[str, pd.DataFrame],
-                        pairs: List[Tuple[str, str, CointegrationResult]]) -> List[PairsSignal]:
+    def generate_signals(
+        self,
+        price_data: Dict[str, pd.DataFrame],
+        pairs: List[Tuple[str, str, CointegrationResult]],
+    ) -> List[PairsSignal]:
         """
         Generate trading signals for cointegrated pairs.
 
@@ -320,28 +342,39 @@ class PairsTradingEngine:
                 pair_key = f"{symbol1}_{symbol2}"
 
                 # Get current prices
-                if (symbol1 in price_data and symbol2 in price_data and
-                    'close' in price_data[symbol1].columns and
-                    'close' in price_data[symbol2].columns):
-
-                    current_price1 = price_data[symbol1]['close'].iloc[-1]
-                    current_price2 = price_data[symbol2]['close'].iloc[-1]
+                if (
+                    symbol1 in price_data
+                    and symbol2 in price_data
+                    and "close" in price_data[symbol1].columns
+                    and "close" in price_data[symbol2].columns
+                ):
+                    current_price1 = price_data[symbol1]["close"].iloc[-1]
+                    current_price2 = price_data[symbol2]["close"].iloc[-1]
 
                     # Get current hedge ratio
                     current_hedge_ratio = coint_result.hedge_ratio
-                    if pair_key in self.hedge_ratios and not self.hedge_ratios[pair_key].empty:
+                    if (
+                        pair_key in self.hedge_ratios
+                        and not self.hedge_ratios[pair_key].empty
+                    ):
                         current_hedge_ratio = self.hedge_ratios[pair_key].iloc[-1]
 
                     # Calculate current spread
-                    current_spread = current_price1 - current_hedge_ratio * current_price2
+                    current_spread = (
+                        current_price1 - current_hedge_ratio * current_price2
+                    )
 
                     # Calculate z-score
                     z_score = self._calculate_z_score(pair_key, current_spread)
 
                     # Generate signal based on z-score
                     signal = self._generate_signal_from_zscore(
-                        symbol1, symbol2, z_score, current_hedge_ratio,
-                        current_spread, coint_result
+                        symbol1,
+                        symbol2,
+                        z_score,
+                        current_hedge_ratio,
+                        current_spread,
+                        coint_result,
                     )
 
                     if signal:
@@ -377,13 +410,15 @@ class PairsTradingEngine:
             self.logger.error(f"Error calculating z-score: {str(e)}")
             return 0.0
 
-    def _generate_signal_from_zscore(self,
-                                   symbol1: str,
-                                   symbol2: str,
-                                   z_score: float,
-                                   hedge_ratio: float,
-                                   spread: float,
-                                   coint_result: CointegrationResult) -> Optional[PairsSignal]:
+    def _generate_signal_from_zscore(
+        self,
+        symbol1: str,
+        symbol2: str,
+        z_score: float,
+        hedge_ratio: float,
+        spread: float,
+        coint_result: CointegrationResult,
+    ) -> Optional[PairsSignal]:
         """Generate trading signal based on z-score."""
         try:
             timestamp = datetime.now()
@@ -395,12 +430,12 @@ class PairsTradingEngine:
                     timestamp=timestamp,
                     symbol1=symbol1,
                     symbol2=symbol2,
-                    signal_type='short_long',  # Short symbol1, Long symbol2
+                    signal_type="short_long",  # Short symbol1, Long symbol2
                     z_score=z_score,
                     hedge_ratio=hedge_ratio,
                     spread_value=spread,
                     confidence=confidence,
-                    position_size=self._calculate_position_size(z_score, confidence)
+                    position_size=self._calculate_position_size(z_score, confidence),
                 )
 
             # Short-long signal (spread is low, expect mean reversion)
@@ -409,12 +444,14 @@ class PairsTradingEngine:
                     timestamp=timestamp,
                     symbol1=symbol1,
                     symbol2=symbol2,
-                    signal_type='long_short',  # Long symbol1, Short symbol2
+                    signal_type="long_short",  # Long symbol1, Short symbol2
                     z_score=z_score,
                     hedge_ratio=hedge_ratio,
                     spread_value=spread,
                     confidence=confidence,
-                    position_size=self._calculate_position_size(abs(z_score), confidence)
+                    position_size=self._calculate_position_size(
+                        abs(z_score), confidence
+                    ),
                 )
 
             # Close signal (spread has reverted to mean)
@@ -423,12 +460,12 @@ class PairsTradingEngine:
                     timestamp=timestamp,
                     symbol1=symbol1,
                     symbol2=symbol2,
-                    signal_type='close',
+                    signal_type="close",
                     z_score=z_score,
                     hedge_ratio=hedge_ratio,
                     spread_value=spread,
                     confidence=confidence,
-                    position_size=0.0
+                    position_size=0.0,
                 )
 
             return None
@@ -457,10 +494,9 @@ class PairsTradingEngine:
             self.logger.error(f"Error calculating position size: {str(e)}")
             return 0.5
 
-    def validate_pair_stability(self,
-                              symbol1: str,
-                              symbol2: str,
-                              price_data: Dict[str, pd.DataFrame]) -> bool:
+    def validate_pair_stability(
+        self, symbol1: str, symbol2: str, price_data: Dict[str, pd.DataFrame]
+    ) -> bool:
         """Validate that a pair remains stable over time."""
         try:
             pair_key = f"{symbol1}_{symbol2}"
@@ -473,13 +509,16 @@ class PairsTradingEngine:
                 return False
 
             # Get recent data
-            if (symbol1 not in price_data or symbol2 not in price_data or
-                'close' not in price_data[symbol1].columns or
-                'close' not in price_data[symbol2].columns):
+            if (
+                symbol1 not in price_data
+                or symbol2 not in price_data
+                or "close" not in price_data[symbol1].columns
+                or "close" not in price_data[symbol2].columns
+            ):
                 return False
 
-            series1 = price_data[symbol1]['close']
-            series2 = price_data[symbol2]['close']
+            series1 = price_data[symbol1]["close"]
+            series2 = price_data[symbol2]["close"]
 
             # Align series
             common_index = series1.index.intersection(series2.index)
@@ -500,7 +539,9 @@ class PairsTradingEngine:
             # Check correlation
             correlation = series1_aligned.corr(series2_aligned)
             if abs(correlation) < self.min_correlation:
-                self.logger.warning(f"Pair {symbol1}-{symbol2} correlation too low: {correlation:.3f}")
+                self.logger.warning(
+                    f"Pair {symbol1}-{symbol2} correlation too low: {correlation:.3f}"
+                )
                 return False
 
             # Check spread stability
@@ -509,7 +550,9 @@ class PairsTradingEngine:
                 spread_std = spread.std()
 
                 if spread_std < self.min_spread_std:
-                    self.logger.warning(f"Pair {symbol1}-{symbol2} spread too stable: {spread_std:.4f}")
+                    self.logger.warning(
+                        f"Pair {symbol1}-{symbol2} spread too stable: {spread_std:.4f}"
+                    )
                     return False
 
             return True
@@ -518,7 +561,9 @@ class PairsTradingEngine:
             self.logger.error(f"Error validating pair stability: {str(e)}")
             return False
 
-    def get_pair_statistics(self, symbol1: str, symbol2: str) -> Optional[Dict[str, Any]]:
+    def get_pair_statistics(
+        self, symbol1: str, symbol2: str
+    ) -> Optional[Dict[str, Any]]:
         """Get statistics for a specific pair."""
         try:
             pair_key = f"{symbol1}_{symbol2}"
@@ -529,34 +574,40 @@ class PairsTradingEngine:
             coint_result = self.cointegration_results[pair_key]
 
             stats = {
-                'symbol1': symbol1,
-                'symbol2': symbol2,
-                'is_cointegrated': coint_result.is_cointegrated,
-                'p_value': coint_result.p_value,
-                'confidence_level': coint_result.confidence_level,
-                'hedge_ratio': coint_result.hedge_ratio,
-                'spread_mean': coint_result.spread_mean,
-                'spread_std': coint_result.spread_std
+                "symbol1": symbol1,
+                "symbol2": symbol2,
+                "is_cointegrated": coint_result.is_cointegrated,
+                "p_value": coint_result.p_value,
+                "confidence_level": coint_result.confidence_level,
+                "hedge_ratio": coint_result.hedge_ratio,
+                "spread_mean": coint_result.spread_mean,
+                "spread_std": coint_result.spread_std,
             }
 
             # Add spread statistics if available
             if pair_key in self.spread_history:
                 spread = self.spread_history[pair_key]
-                stats.update({
-                    'spread_min': spread.min(),
-                    'spread_max': spread.max(),
-                    'spread_current': spread.iloc[-1] if not spread.empty else 0.0,
-                    'spread_observations': len(spread)
-                })
+                stats.update(
+                    {
+                        "spread_min": spread.min(),
+                        "spread_max": spread.max(),
+                        "spread_current": spread.iloc[-1] if not spread.empty else 0.0,
+                        "spread_observations": len(spread),
+                    }
+                )
 
             # Add hedge ratio statistics if available
             if pair_key in self.hedge_ratios:
                 ratios = self.hedge_ratios[pair_key]
-                stats.update({
-                    'hedge_ratio_mean': ratios.mean(),
-                    'hedge_ratio_std': ratios.std(),
-                    'hedge_ratio_current': ratios.iloc[-1] if not ratios.empty else coint_result.hedge_ratio
-                })
+                stats.update(
+                    {
+                        "hedge_ratio_mean": ratios.mean(),
+                        "hedge_ratio_std": ratios.std(),
+                        "hedge_ratio_current": ratios.iloc[-1]
+                        if not ratios.empty
+                        else coint_result.hedge_ratio,
+                    }
+                )
 
             return stats
 
@@ -569,7 +620,7 @@ class PairsTradingEngine:
             pairs_to_remove = []
 
             for pair_key in self.cointegration_results.keys():
-                symbol1, symbol2 = pair_key.split('_')
+                symbol1, symbol2 = pair_key.split("_")
 
                 if symbol1 not in active_symbols or symbol2 not in active_symbols:
                     pairs_to_remove.append(pair_key)
@@ -593,7 +644,9 @@ class PairsTradingEngine:
 
             for pair_key, coint_result in self.cointegration_results.items():
                 if coint_result.is_cointegrated:
-                    pair_stats = self.get_pair_statistics(coint_result.symbol1, coint_result.symbol2)
+                    pair_stats = self.get_pair_statistics(
+                        coint_result.symbol1, coint_result.symbol2
+                    )
                     if pair_stats:
                         summary.append(pair_stats)
 

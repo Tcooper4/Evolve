@@ -23,7 +23,6 @@ from pathlib import Path
 from queue import Queue
 from typing import Any, Dict, List, Optional
 
-
 from trading.agents.base_agent_interface import AgentConfig
 
 # Local imports
@@ -79,7 +78,9 @@ class AgentLoopManager:
 
         # Initialize agents with AgentConfig
         self.model_builder = ModelBuilderAgent(AgentConfig(name="ModelBuilderAgent"))
-        self.performance_critic = PerformanceCriticAgent(AgentConfig(name="PerformanceCriticAgent"))
+        self.performance_critic = PerformanceCriticAgent(
+            AgentConfig(name="PerformanceCriticAgent")
+        )
         self.updater = UpdaterAgent(AgentConfig(name="UpdaterAgent"))
 
         # Initialize memory
@@ -110,7 +111,9 @@ class AgentLoopManager:
         self._execution_lock = asyncio.Lock()
         self._communication_lock = asyncio.Lock()
         self._concurrent_operations = 0
-        self._max_concurrent_operations = self.config.get("max_concurrent_operations", 3)
+        self._max_concurrent_operations = self.config.get(
+            "max_concurrent_operations", 3
+        )
         self._operation_semaphore = asyncio.Semaphore(self._max_concurrent_operations)
 
         # State consistency tracking
@@ -138,7 +141,9 @@ class AgentLoopManager:
             volatility_threshold=self.config.get("volatility_threshold", 0.05),
         )
         self.data_listener_symbols = self.config.get("data_listener_symbols", ["BTC"])
-        self.data_listener_keywords = self.config.get("data_listener_keywords", ["bitcoin", "fed", "market"])
+        self.data_listener_keywords = self.config.get(
+            "data_listener_keywords", ["bitcoin", "fed", "market"]
+        )
         self.data_listener_enabled = self.config.get("data_listener_enabled", True)
 
         self.logger.info("AgentLoopManager initialized")
@@ -153,10 +158,14 @@ class AgentLoopManager:
 
         # Start DataListener if enabled
         if self.data_listener_enabled:
-            self.data_listener.start(self.data_listener_symbols, self.data_listener_keywords)
+            self.data_listener.start(
+                self.data_listener_symbols, self.data_listener_keywords
+            )
 
         # Start communication handler
-        communication_thread = threading.Thread(target=self._handle_communications, daemon=True)
+        communication_thread = threading.Thread(
+            target=self._handle_communications, daemon=True
+        )
         communication_thread.start()
 
         # Set up signal handlers
@@ -168,7 +177,9 @@ class AgentLoopManager:
                 if not self.paused and not self.data_listener.paused:
                     await self._execute_cycle()
                 else:
-                    self.logger.info("Agent loop paused due to manual pause or real-time data event.")
+                    self.logger.info(
+                        "Agent loop paused due to manual pause or real-time data event."
+                    )
 
                 # Wait for next cycle
                 await asyncio.sleep(self.cycle_interval)
@@ -282,7 +293,9 @@ class AgentLoopManager:
 
                     self.logger.info(f"Evaluated model {model_id}")
                 else:
-                    self._record_failed_operation("model_evaluation", result.error_message)
+                    self._record_failed_operation(
+                        "model_evaluation", result.error_message
+                    )
 
             except Exception as e:
                 self.logger.error(f"Error evaluating model {model_id}: {str(e)}")
@@ -302,7 +315,9 @@ class AgentLoopManager:
                     and comm.to_agent == "updater"
                     and comm.message_type == "model_evaluated"
                 ):
-                    evaluation_result = ModelEvaluationResult(**comm.data["evaluation_result"])
+                    evaluation_result = ModelEvaluationResult(
+                        **comm.data["evaluation_result"]
+                    )
 
                     # Process evaluation and determine if update is needed
                     update_request = self.updater.process_evaluation(evaluation_result)
@@ -316,12 +331,18 @@ class AgentLoopManager:
 
                             # Update active models list
                             if result.original_model_id in self.state.active_models:
-                                self.state.active_models.remove(result.original_model_id)
+                                self.state.active_models.remove(
+                                    result.original_model_id
+                                )
                             self.state.active_models.append(result.new_model_id)
 
-                            self.logger.info(f"Updated model {result.original_model_id} -> {result.new_model_id}")
+                            self.logger.info(
+                                f"Updated model {result.original_model_id} -> {result.new_model_id}"
+                            )
                         else:
-                            self._record_failed_operation("model_update", result.error_message)
+                            self._record_failed_operation(
+                                "model_update", result.error_message
+                            )
 
             except Exception as e:
                 self.logger.error(f"Error in updater phase: {str(e)}")
@@ -379,7 +400,11 @@ class AgentLoopManager:
                 "colsample_bytree": 0.8,
             }
         elif model_type == "ensemble":
-            return {"models": ["lstm", "xgboost"], "weights": [0.5, 0.5], "voting_method": "weighted_average"}
+            return {
+                "models": ["lstm", "xgboost"],
+                "weights": [0.5, 0.5],
+                "voting_method": "weighted_average",
+            }
         else:
             return {}
 
@@ -395,7 +420,9 @@ class AgentLoopManager:
             # Check if model needs evaluation based on time or performance
             last_evaluation = self._get_last_evaluation_time(model_id)
 
-            if last_evaluation is None or self._should_evaluate_model(model_id, last_evaluation):
+            if last_evaluation is None or self._should_evaluate_model(
+                model_id, last_evaluation
+            ):
                 models_to_evaluate.append(model_id)
 
         return models_to_evaluate
@@ -437,7 +464,9 @@ class AgentLoopManager:
         # This should be configurable and dynamic
         return "data/latest_market_data.csv"
 
-    def _send_communication(self, from_agent: str, to_agent: str, message_type: str, data: Dict[str, Any]) -> None:
+    def _send_communication(
+        self, from_agent: str, to_agent: str, message_type: str, data: Dict[str, Any]
+    ) -> None:
         """Send communication between agents.
 
         Args:
@@ -611,7 +640,9 @@ class AgentLoopManager:
                 },
                 "performance_critic": {
                     "models_evaluated": self.state.total_models_evaluated,
-                    "evaluation_history": len(self.performance_critic.evaluation_history),
+                    "evaluation_history": len(
+                        self.performance_critic.evaluation_history
+                    ),
                 },
                 "updater": {
                     "models_updated": self.state.total_models_updated,
@@ -641,10 +672,16 @@ async def main():
     """Main entry point for the agent loop."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Autonomous Model Management Agent Loop")
+    parser = argparse.ArgumentParser(
+        description="Autonomous Model Management Agent Loop"
+    )
     parser.add_argument("--config", help="Configuration file path")
-    parser.add_argument("--cycle-interval", type=int, default=3600, help="Cycle interval in seconds")
-    parser.add_argument("--max-models", type=int, default=10, help="Maximum number of active models")
+    parser.add_argument(
+        "--cycle-interval", type=int, default=3600, help="Cycle interval in seconds"
+    )
+    parser.add_argument(
+        "--max-models", type=int, default=10, help="Maximum number of active models"
+    )
 
     args = parser.parse_args()
 
@@ -654,7 +691,9 @@ async def main():
         with open(args.config, "r") as f:
             config = json.load(f)
 
-    config.update({"cycle_interval": args.cycle_interval, "max_models": args.max_models})
+    config.update(
+        {"cycle_interval": args.cycle_interval, "max_models": args.max_models}
+    )
 
     # Create and start agent loop manager
     manager = AgentLoopManager(config)

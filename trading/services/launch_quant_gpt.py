@@ -20,7 +20,10 @@ from services.quant_gpt import QuantGPT
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("logs/quant_gpt_service.log"), logging.StreamHandler()],
+    handlers=[
+        logging.FileHandler("logs/quant_gpt_service.log"),
+        logging.StreamHandler(),
+    ],
 )
 
 logger = logging.getLogger(__name__)
@@ -45,10 +48,17 @@ def main():
         # Get OpenAI API key from environment
         openai_key = os.getenv("OPENAI_API_KEY")
         if not openai_key:
-            logger.warning("OPENAI_API_KEY not found in environment. GPT commentary will be disabled.")
+            logger.warning(
+                "OPENAI_API_KEY not found in environment. GPT commentary will be disabled."
+            )
 
         # Initialize QuantGPT
-        quant_gpt = QuantGPT(openai_api_key=openai_key, redis_host="localhost", redis_port=6379, redis_db=0)
+        quant_gpt = QuantGPT(
+            openai_api_key=openai_key,
+            redis_host="localhost",
+            redis_port=6379,
+            redis_db=0,
+        )
 
         # Store reference for signal handler
         signal_handler.quant_gpt = quant_gpt
@@ -108,8 +118,12 @@ def main():
                     if action == "model_recommendation":
                         best_model = results.get("best_model")
                         if best_model:
-                            logger.info(f"Best Model: {best_model['model_type'].upper()}")
-                            logger.info(f"Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}")
+                            logger.info(
+                                f"Best Model: {best_model['model_type'].upper()}"
+                            )
+                            logger.info(
+                                f"Model Score: {best_model['evaluation'].get('overall_score', 0):.2f}"
+                            )
 
                     elif action == "trading_signal":
                         signal = results.get("signal", {})

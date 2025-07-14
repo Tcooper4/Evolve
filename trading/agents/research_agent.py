@@ -66,7 +66,9 @@ class ResearchAgent(BaseAgent):
 
         # Extract config from custom_config or use defaults
         custom_config = config.custom_config or {}
-        self.openai_api_key = custom_config.get("openai_api_key") or (openai.api_key if openai else None)
+        self.openai_api_key = custom_config.get("openai_api_key") or (
+            openai.api_key if openai else None
+        )
         self.log_path = Path(custom_config.get("log_path", "research_log.json"))
 
         if not self.log_path.exists():
@@ -92,11 +94,18 @@ class ResearchAgent(BaseAgent):
                 max_results = kwargs.get("max_results", 3)
 
                 if topic is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: topic")
+                    return AgentResult(
+                        success=False, error_message="Missing required parameter: topic"
+                    )
 
                 findings = self.research(topic, max_results)
                 return AgentResult(
-                    success=True, data={"findings": findings, "findings_count": len(findings), "topic": topic}
+                    success=True,
+                    data={
+                        "findings": findings,
+                        "findings_count": len(findings),
+                        "topic": topic,
+                    },
                 )
 
             elif action == "search_github":
@@ -104,27 +113,39 @@ class ResearchAgent(BaseAgent):
                 max_results = kwargs.get("max_results", 5)
 
                 if query is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: query")
+                    return AgentResult(
+                        success=False, error_message="Missing required parameter: query"
+                    )
 
                 results = self.search_github(query, max_results)
-                return AgentResult(success=True, data={"github_results": results, "results_count": len(results)})
+                return AgentResult(
+                    success=True,
+                    data={"github_results": results, "results_count": len(results)},
+                )
 
             elif action == "search_arxiv":
                 query = kwargs.get("query")
                 max_results = kwargs.get("max_results", 5)
 
                 if query is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: query")
+                    return AgentResult(
+                        success=False, error_message="Missing required parameter: query"
+                    )
 
                 results = self.search_arxiv(query, max_results)
-                return AgentResult(success=True, data={"arxiv_results": results, "results_count": len(results)})
+                return AgentResult(
+                    success=True,
+                    data={"arxiv_results": results, "results_count": len(results)},
+                )
 
             elif action == "summarize":
                 text = kwargs.get("text")
                 custom_prompt = kwargs.get("prompt")
 
                 if text is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: text")
+                    return AgentResult(
+                        success=False, error_message="Missing required parameter: text"
+                    )
 
                 # Use centralized template if no custom prompt provided
                 if custom_prompt is None:
@@ -133,19 +154,32 @@ class ResearchAgent(BaseAgent):
                     prompt = custom_prompt
 
                 summary = self.summarize_with_openai(text, prompt)
-                return AgentResult(success=True, data={"summary": summary, "text_length": len(text)})
+                return AgentResult(
+                    success=True, data={"summary": summary, "text_length": len(text)}
+                )
 
             elif action == "code_suggestion":
                 description = kwargs.get("description")
 
                 if description is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: description")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: description",
+                    )
 
                 code = self.code_suggestion_with_openai(description)
-                return AgentResult(success=True, data={"code_suggestion": code, "description_length": len(description)})
+                return AgentResult(
+                    success=True,
+                    data={
+                        "code_suggestion": code,
+                        "description_length": len(description),
+                    },
+                )
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
@@ -164,7 +198,9 @@ class ResearchAgent(BaseAgent):
                     "description": item["description"],
                     "stars": item["stargazers_count"],
                     "language": item["language"],
-                    "tag": "model" if "model" in item["description"].lower() else "strategy",
+                    "tag": "model"
+                    if "model" in item["description"].lower()
+                    else "strategy",
                 }
                 for item in items
             ]
@@ -194,7 +230,9 @@ class ResearchAgent(BaseAgent):
                 title = entry.find("arxiv:title", ns).text.strip()
                 summary = entry.find("arxiv:summary", ns).text.strip()
                 link = entry.find("arxiv:id", ns).text.strip()
-                entries.append({"title": title, "summary": summary, "url": link, "tag": "paper"})
+                entries.append(
+                    {"title": title, "summary": summary, "url": link, "tag": "paper"}
+                )
             return entries
         else:
             logger.warning(f"arXiv search failed: {resp.status_code}")
@@ -211,7 +249,10 @@ class ResearchAgent(BaseAgent):
 
         response = openai.ChatCompletion.create(
             model="gpt-4",
-            messages=[{"role": "system", "content": prompt}, {"role": "user", "content": text}],
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": text},
+            ],
             max_tokens=300,
         )
         return response.choices[0].message["content"].strip()
@@ -226,7 +267,10 @@ class ResearchAgent(BaseAgent):
 
         response = openai.ChatCompletion.create(
             model="gpt-4",
-            messages=[{"role": "system", "content": prompt}, {"role": "user", "content": description}],
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": description},
+            ],
             max_tokens=300,
         )
         return response.choices[0].message["content"].strip()

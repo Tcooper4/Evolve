@@ -102,7 +102,9 @@ def get_cache_stats() -> Dict[str, Any]:
     return {"cache_size": len(_rsi_cache), "cache_keys": list(_rsi_cache.keys())}
 
 
-def calculate_rsi(prices: pd.Series, period: int = 14, use_cache: bool = True) -> pd.Series:
+def calculate_rsi(
+    prices: pd.Series, period: int = 14, use_cache: bool = True
+) -> pd.Series:
     """Calculate RSI using the most efficient available method with caching.
 
     Args:
@@ -123,7 +125,9 @@ def calculate_rsi(prices: pd.Series, period: int = 14, use_cache: bool = True) -
             raise ValueError("Period must be positive")
 
         if len(prices) < period:
-            logger.warning(f"Insufficient data: {len(prices)} points, need at least {period}")
+            logger.warning(
+                f"Insufficient data: {len(prices)} points, need at least {period}"
+            )
             return pd.Series([np.nan] * len(prices), index=prices.index)
 
         # Check cache if enabled
@@ -252,11 +256,15 @@ def generate_rsi_signals_core(
     df["signal"] = 0
 
     # Buy signal when RSI crosses below buy threshold with tolerance
-    buy_condition = (df["rsi"] < buy_threshold) & (df["rsi"].shift(1) >= buy_threshold + tolerance)
+    buy_condition = (df["rsi"] < buy_threshold) & (
+        df["rsi"].shift(1) >= buy_threshold + tolerance
+    )
     df.loc[buy_condition, "signal"] = 1
 
     # Sell signal when RSI crosses above sell threshold with tolerance
-    sell_condition = (df["rsi"] > sell_threshold) & (df["rsi"].shift(1) <= sell_threshold - tolerance)
+    sell_condition = (df["rsi"] > sell_threshold) & (
+        df["rsi"].shift(1) <= sell_threshold - tolerance
+    )
     df.loc[sell_condition, "signal"] = -1
 
     # Calculate returns with error handling
@@ -277,7 +285,9 @@ def generate_rsi_signals_core(
     return df
 
 
-def validate_rsi_parameters(period: int, buy_threshold: float, sell_threshold: float) -> Tuple[bool, Optional[str]]:
+def validate_rsi_parameters(
+    period: int, buy_threshold: float, sell_threshold: float
+) -> Tuple[bool, Optional[str]]:
     """Validate RSI parameters.
 
     Args:
@@ -318,7 +328,13 @@ def get_default_rsi_parameters() -> Dict[str, Any]:
     Returns:
         Dictionary of default parameters
     """
-    return {"period": 14, "buy_threshold": 30, "sell_threshold": 70, "tolerance": 0.0, "use_cache": True}
+    return {
+        "period": 14,
+        "buy_threshold": 30,
+        "sell_threshold": 70,
+        "tolerance": 0.0,
+        "use_cache": True,
+    }
 
 
 def get_rsi_statistics(rsi_series: pd.Series) -> Dict[str, float]:

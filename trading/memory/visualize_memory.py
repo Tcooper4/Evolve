@@ -52,7 +52,9 @@ class TaskProgressTracker:
             "message": "Initializing...",
         }
 
-    def update_task_progress(self, task_id: str, current_step: int, message: str = None, status: str = None) -> None:
+    def update_task_progress(
+        self, task_id: str, current_step: int, message: str = None, status: str = None
+    ) -> None:
         """Update task progress.
 
         Args:
@@ -75,14 +77,18 @@ class TaskProgressTracker:
             # Put update in queue for real-time display
             self.progress_queue.put({"task_id": task_id, "update": task.copy()})
 
-    def complete_task(self, task_id: str, message: str = "Task completed successfully") -> None:
+    def complete_task(
+        self, task_id: str, message: str = "Task completed successfully"
+    ) -> None:
         """Mark task as completed.
 
         Args:
             task_id: Task identifier
             message: Completion message
         """
-        self.update_task_progress(task_id, self.tasks[task_id]["total_steps"], message, "completed")
+        self.update_task_progress(
+            task_id, self.tasks[task_id]["total_steps"], message, "completed"
+        )
 
     def fail_task(self, task_id: str, error_message: str) -> None:
         """Mark task as failed.
@@ -91,7 +97,12 @@ class TaskProgressTracker:
             task_id: Task identifier
             error_message: Error description
         """
-        self.update_task_progress(task_id, self.tasks[task_id]["current_step"], f"Failed: {error_message}", "failed")
+        self.update_task_progress(
+            task_id,
+            self.tasks[task_id]["current_step"],
+            f"Failed: {error_message}",
+            "failed",
+        )
 
     def _update_progress(self) -> None:
         """Background thread for updating progress."""
@@ -138,7 +149,10 @@ class TaskProgressTracker:
         tasks_to_remove = []
 
         for task_id, task in self.tasks.items():
-            if task["status"] in ["completed", "failed"] and task["last_update"] < cutoff_time:
+            if (
+                task["status"] in ["completed", "failed"]
+                and task["last_update"] < cutoff_time
+            ):
                 tasks_to_remove.append(task_id)
 
         for task_id in tasks_to_remove:
@@ -306,7 +320,9 @@ def main():
         fig_sharpe, ax_sharpe = plt.subplots(figsize=(8, 4))
         for model in df["model"].unique():
             subset = df[df["model"] == model]
-            ax_sharpe.plot(subset["timestamp"], subset["sharpe"], marker="o", label=model)
+            ax_sharpe.plot(
+                subset["timestamp"], subset["sharpe"], marker="o", label=model
+            )
         ax_sharpe.set_title("Sharpe Ratio Over Time")
         ax_sharpe.set_xlabel("Timestamp")
         ax_sharpe.set_ylabel("Sharpe Ratio")
@@ -319,7 +335,9 @@ def main():
         fig_win, ax_win = plt.subplots(figsize=(8, 4))
         for model in df["model"].unique():
             subset = df[df["model"] == model]
-            ax_win.plot(subset["timestamp"], subset["win_rate"], marker="o", label=model)
+            ax_win.plot(
+                subset["timestamp"], subset["win_rate"], marker="o", label=model
+            )
         ax_win.set_title("Win Rate Over Time")
         ax_win.set_xlabel("Timestamp")
         ax_win.set_ylabel("Win Rate")
@@ -343,8 +361,12 @@ def main():
 
     # Show dataset statistics
     st.subheader("📈 Dataset Statistics")
-    dataset_stats = df.groupby("model")["dataset_size"].agg(["mean", "min", "max"]).reset_index()
-    st.dataframe(dataset_stats.style.format({"mean": "{:.0f}", "min": "{:.0f}", "max": "{:.0f}"}))
+    dataset_stats = (
+        df.groupby("model")["dataset_size"].agg(["mean", "min", "max"]).reset_index()
+    )
+    st.dataframe(
+        dataset_stats.style.format({"mean": "{:.0f}", "min": "{:.0f}", "max": "{:.0f}"})
+    )
 
 
 if __name__ == "__main__":

@@ -15,7 +15,6 @@ def quick_audit():
     print("=" * 60)
 
     violations = defaultdict(list)
-    total_files = 0
     total_functions = 0
     functions_with_returns = 0
 
@@ -24,7 +23,12 @@ def quick_audit():
     for root, dirs, files in os.walk("."):
         # Skip excluded directories
         dirs[:] = [
-            d for d in dirs if not any(exclude in d for exclude in ["__pycache__", ".git", ".venv", "venv", "env"])
+            d
+            for d in dirs
+            if not any(
+                exclude in d
+                for exclude in ["__pycache__", ".git", ".venv", "venv", "env"]
+            )
         ]
 
         for file in files:
@@ -48,7 +52,9 @@ def quick_audit():
                 total_functions += 1
 
                 # Find function body
-                func_pattern = rf"def\s+{re.escape(func_name)}\s*\([^)]*\)\s*:(.*?)(?=def|\Z)"
+                func_pattern = (
+                    rf"def\s+{re.escape(func_name)}\s*\([^)]*\)\s*:(.*?)(?=def|\Z)"
+                )
                 match = re.search(func_pattern, content, re.DOTALL)
 
                 if match:
@@ -83,25 +89,43 @@ def quick_audit():
                             # Determine priority
                             file_str = str(file_path).lower()
                             if any(
-                                keyword in file_str for keyword in ["agent", "model", "strategy", "service", "core"]
+                                keyword in file_str
+                                for keyword in [
+                                    "agent",
+                                    "model",
+                                    "strategy",
+                                    "service",
+                                    "core",
+                                ]
                             ):
                                 priority = "critical"
-                            elif any(keyword in file_str for keyword in ["ui", "log", "config", "util"]):
+                            elif any(
+                                keyword in file_str
+                                for keyword in ["ui", "log", "config", "util"]
+                            ):
                                 priority = "high"
-                            elif any(keyword in file_str for keyword in ["test", "example"]):
+                            elif any(
+                                keyword in file_str for keyword in ["test", "example"]
+                            ):
                                 priority = "medium"
                             else:
                                 priority = "low"
 
                             violations[priority].append(
-                                {"file": str(file_path), "function": func_name, "reason": "Has side effects"}
+                                {
+                                    "file": str(file_path),
+                                    "function": func_name,
+                                    "reason": "Has side effects",
+                                }
                             )
 
         except Exception as e:
             print(f"Error reading {file_path}: {e}")
 
     # Calculate compliance
-    compliance_rate = (functions_with_returns / total_functions * 100) if total_functions > 0 else 0
+    compliance_rate = (
+        (functions_with_returns / total_functions * 100) if total_functions > 0 else 0
+    )
 
     # Print results
     print(f"\n📊 RESULTS:")

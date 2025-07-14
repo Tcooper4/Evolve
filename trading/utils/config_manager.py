@@ -37,7 +37,9 @@ class ConfigManager:
 
         try:
             with open(self.config_path, "r") as f:
-                if self.config_path.endswith(".yaml") or self.config_path.endswith(".yml"):
+                if self.config_path.endswith(".yaml") or self.config_path.endswith(
+                    ".yml"
+                ):
                     self.config = yaml.safe_load(f)
                 elif self.config_path.endswith(".json"):
                     self.config = json.load(f)
@@ -65,7 +67,9 @@ class ConfigManager:
             os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
 
             with open(self.config_path, "w") as f:
-                if self.config_path.endswith(".yaml") or self.config_path.endswith(".yml"):
+                if self.config_path.endswith(".yaml") or self.config_path.endswith(
+                    ".yml"
+                ):
                     yaml.dump(self.config, f, default_flow_style=False)
                 elif self.config_path.endswith(".json"):
                     json.dump(self.config, f, indent=2)
@@ -150,7 +154,9 @@ class ConfigValidator:
         for key, schema_info in schema.items():
             if key not in data:
                 if schema_info.get("required", False):
-                    self.validation_errors.append(f"Missing required field: {path}.{key}")
+                    self.validation_errors.append(
+                        f"Missing required field: {path}.{key}"
+                    )
                 continue
 
             value = data[key]
@@ -166,7 +172,9 @@ class ConfigValidator:
                 self._validate_dict(value, schema_info["schema"], f"{path}.{key}")
             elif expected_type == list and "item_schema" in schema_info:
                 for i, item in enumerate(value):
-                    self._validate_dict(item, schema_info["item_schema"], f"{path}.{key}[{i}]")
+                    self._validate_dict(
+                        item, schema_info["item_schema"], f"{path}.{key}[{i}]"
+                    )
 
     def get_validation_errors(self) -> list:
         """Get validation errors."""

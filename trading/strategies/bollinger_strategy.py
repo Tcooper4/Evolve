@@ -30,7 +30,9 @@ class BollingerStrategy:
         self.signals = None
         self.positions = None
 
-    def calculate_bands(self, data: pd.DataFrame) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    def calculate_bands(
+        self, data: pd.DataFrame
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Calculate Bollinger Bands for the given data."""
         if "close" not in data.columns:
             raise ValueError("Data must contain 'close' column")
@@ -123,7 +125,11 @@ class BollingerStrategy:
             self.config = BollingerConfig(**params)
             self.signals = None
             self.positions = None
-            return {"status": "success", "parameters_updated": True, "config": self.get_parameters()}
+            return {
+                "status": "success",
+                "parameters_updated": True,
+                "config": self.get_parameters(),
+            }
         except Exception as e:
             return {
                 "success": True,

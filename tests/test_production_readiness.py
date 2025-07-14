@@ -38,7 +38,13 @@ def sample_price_data():
     prices = 100 + np.cumsum(np.random.normal(0, 1, len(dates)))
     volumes = np.random.uniform(1000000, 5000000, len(dates))
     return pd.DataFrame(
-        {"Open": prices * 0.99, "High": prices * 1.02, "Low": prices * 0.98, "Close": prices, "Volume": volumes},
+        {
+            "Open": prices * 0.99,
+            "High": prices * 1.02,
+            "Low": prices * 0.98,
+            "Close": prices,
+            "Volume": volumes,
+        },
         index=dates,
     )
 
@@ -180,7 +186,9 @@ class TestProductionReadiness:
         backtester = Backtester()
 
         # Test RSI backtest
-        rsi_backtest = backtester.run_backtest(self.sample_data, "RSI", initial_capital=100000)
+        rsi_backtest = backtester.run_backtest(
+            self.sample_data, "RSI", initial_capital=100000
+        )
         assert rsi_backtest is not None
         assert "returns" in rsi_backtest
         assert "sharpe_ratio" in rsi_backtest
@@ -188,7 +196,9 @@ class TestProductionReadiness:
         assert "win_rate" in rsi_backtest
 
         # Test MACD backtest
-        macd_backtest = backtester.run_backtest(self.sample_data, "MACD", initial_capital=100000)
+        macd_backtest = backtester.run_backtest(
+            self.sample_data, "MACD", initial_capital=100000
+        )
         assert macd_backtest is not None
         assert "returns" in macd_backtest
 
@@ -239,7 +249,9 @@ class TestProductionReadiness:
         optimizer = StrategyOptimizer("RSI")
 
         # Test parameter optimization
-        optimization_result = optimizer.optimize(self.sample_data, n_trials=10, timeout=60)
+        optimization_result = optimizer.optimize(
+            self.sample_data, n_trials=10, timeout=60
+        )
         assert optimization_result is not None
         assert "best_params" in optimization_result
         assert "best_score" in optimization_result
@@ -259,13 +271,20 @@ class TestProductionReadiness:
 
         # Test commentary generation
         commentary = agent.generate_commentary(
-            {"symbol": "AAPL", "action": "BUY", "confidence": 0.85, "reasoning": "Strong technical indicators"}
+            {
+                "symbol": "AAPL",
+                "action": "BUY",
+                "confidence": 0.85,
+                "reasoning": "Strong technical indicators",
+            }
         )
         assert commentary is not None
         assert len(commentary) > 0
 
         # Test decision explanation
-        explanation = agent.explain_decision({"strategy": "RSI", "signal": "BUY", "parameters": {"rsi_window": 14}})
+        explanation = agent.explain_decision(
+            {"strategy": "RSI", "signal": "BUY", "parameters": {"rsi_window": 14}}
+        )
         assert explanation is not None
         assert len(explanation) > 0
 
@@ -377,7 +396,12 @@ class TestProductionReadiness:
     def test_configuration_loading(self):
         """Test configuration loading and validation."""
         # Test valid configuration
-        valid_config = {"rsi_window": 14, "macd_fast": 12, "macd_slow": 26, "macd_signal": 9}
+        valid_config = {
+            "rsi_window": 14,
+            "macd_fast": 12,
+            "macd_slow": 26,
+            "macd_signal": 9,
+        }
 
         # Validate configuration
         assert "rsi_window" in valid_config
@@ -388,7 +412,11 @@ class TestProductionReadiness:
     def test_data_persistence(self):
         """Test data persistence functionality."""
         # Test JSON serialization
-        test_data = {"forecast": [100.0, 101.0, 102.0], "confidence": 0.85, "timestamp": datetime.now().isoformat()}
+        test_data = {
+            "forecast": [100.0, 101.0, 102.0],
+            "confidence": 0.85,
+            "timestamp": datetime.now().isoformat(),
+        }
 
         # Serialize
         json_str = json.dumps(test_data)

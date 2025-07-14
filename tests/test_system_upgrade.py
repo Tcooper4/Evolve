@@ -17,12 +17,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -73,7 +74,10 @@ class SystemUpgradeTester:
 
             # Test system health
             health = agent_hub.get_system_health()
-            self.assert_test("AgentHub System Health", isinstance(health, dict) and "overall_status" in health)
+            self.assert_test(
+                "AgentHub System Health",
+                isinstance(health, dict) and "overall_status" in health,
+            )
 
             # Test agent status
             status = agent_hub.get_agent_status()
@@ -81,7 +85,9 @@ class SystemUpgradeTester:
 
             # Test recent interactions
             interactions = agent_hub.get_recent_interactions()
-            self.assert_test("AgentHub Recent Interactions", isinstance(interactions, list))
+            self.assert_test(
+                "AgentHub Recent Interactions", isinstance(interactions, list)
+            )
 
             logger.info("✅ AgentHub tests passed")
 
@@ -101,7 +107,10 @@ class SystemUpgradeTester:
 
             # Test system health
             health = get_system_health()
-            self.assert_test("CapabilityRouter Health", isinstance(health, dict) and "overall_status" in health)
+            self.assert_test(
+                "CapabilityRouter Health",
+                isinstance(health, dict) and "overall_status" in health,
+            )
 
             logger.info("✅ CapabilityRouter tests passed")
 
@@ -122,16 +131,23 @@ class SystemUpgradeTester:
             result = agent.parse_intent("Forecast AAPL for next week")
             self.assert_test(
                 "PromptRouter Intent Parsing",
-                hasattr(result, "intent") and result.intent in ["forecasting", "forecast"],
+                hasattr(result, "intent")
+                and result.intent in ["forecasting", "forecast"],
             )
 
             # Test provider status
             providers = agent.get_available_providers()
-            self.assert_test("PromptRouter Providers", isinstance(providers, list) and len(providers) > 0)
+            self.assert_test(
+                "PromptRouter Providers",
+                isinstance(providers, list) and len(providers) > 0,
+            )
 
             # Test system health
             health = agent.get_system_health()
-            self.assert_test("PromptRouter Health", isinstance(health, dict) and "overall_status" in health)
+            self.assert_test(
+                "PromptRouter Health",
+                isinstance(health, dict) and "overall_status" in health,
+            )
 
             logger.info("✅ PromptRouterAgent tests passed")
 
@@ -153,14 +169,25 @@ class SystemUpgradeTester:
 
             # Test system health
             health = data_feed.get_system_health()
-            self.assert_test("Data Feed Health", isinstance(health, dict) and "overall_status" in health)
+            self.assert_test(
+                "Data Feed Health",
+                isinstance(health, dict) and "overall_status" in health,
+            )
 
             # Test fallback data generation
-            fallback_data = data_feed._get_fallback_historical_data("AAPL", "2023-01-01", "2023-01-31")
-            self.assert_test("Data Feed Fallback Historical", fallback_data is not None and not fallback_data.empty)
+            fallback_data = data_feed._get_fallback_historical_data(
+                "AAPL", "2023-01-01", "2023-01-31"
+            )
+            self.assert_test(
+                "Data Feed Fallback Historical",
+                fallback_data is not None and not fallback_data.empty,
+            )
 
             fallback_live = data_feed._get_fallback_live_data("AAPL")
-            self.assert_test("Data Feed Fallback Live", isinstance(fallback_live, dict) and "symbol" in fallback_live)
+            self.assert_test(
+                "Data Feed Fallback Live",
+                isinstance(fallback_live, dict) and "symbol" in fallback_live,
+            )
 
             logger.info("✅ Data Feed tests passed")
 
@@ -182,7 +209,10 @@ class SystemUpgradeTester:
 
             # Test system health
             health = rl_trader.get_system_health()
-            self.assert_test("RL Trader Health", isinstance(health, dict) and "overall_status" in health)
+            self.assert_test(
+                "RL Trader Health",
+                isinstance(health, dict) and "overall_status" in health,
+            )
 
             # Test training method returns proper result
             import pandas as pd
@@ -198,7 +228,10 @@ class SystemUpgradeTester:
             )
 
             train_result = rl_trader.train_model(dummy_data, total_timesteps=100)
-            self.assert_test("RL Trader Training Result", isinstance(train_result, dict) and "success" in train_result)
+            self.assert_test(
+                "RL Trader Training Result",
+                isinstance(train_result, dict) and "success" in train_result,
+            )
 
             logger.info("✅ RL Trader tests passed")
 
@@ -217,19 +250,24 @@ class SystemUpgradeTester:
 
             # Test system health
             health = interface.get_system_health()
-            self.assert_test("Unified Interface Health", isinstance(health, dict) and "overall_status" in health)
+            self.assert_test(
+                "Unified Interface Health",
+                isinstance(health, dict) and "overall_status" in health,
+            )
 
             # Test query processing
             result = interface.process_natural_language_query("Forecast AAPL")
             self.assert_test(
-                "Unified Interface Query Processing", hasattr(result, "success") and hasattr(result, "data")
+                "Unified Interface Query Processing",
+                hasattr(result, "success") and hasattr(result, "data"),
             )
 
             # Test report export
             report_file = interface.export_report("test")
             self.assert_test(
                 "Unified Interface Report Export",
-                isinstance(report_file, str) and report_file != "report_generation_failed",
+                isinstance(report_file, str)
+                and report_file != "report_generation_failed",
             )
 
             logger.info("✅ Unified Interface tests passed")
@@ -264,10 +302,15 @@ class SystemUpgradeTester:
                     if hasattr(instance, "get_system_health"):
                         health = instance.get_system_health()
                         self.assert_test(
-                            f"{name} Health Method", isinstance(health, dict) and "overall_status" in health
+                            f"{name} Health Method",
+                            isinstance(health, dict) and "overall_status" in health,
                         )
                     else:
-                        self.assert_test(f"{name} Health Method", False, "No get_system_health method")
+                        self.assert_test(
+                            f"{name} Health Method",
+                            False,
+                            "No get_system_health method",
+                        )
 
             except Exception as e:
                 self.assert_test(f"{name} Health Check", False, str(e))
@@ -293,7 +336,9 @@ class SystemUpgradeTester:
                 "total_tests": self.total_tests,
                 "passed_tests": self.passed_tests,
                 "failed_tests": self.failed_tests,
-                "success_rate": (self.passed_tests / self.total_tests * 100) if self.total_tests > 0 else 0,
+                "success_rate": (self.passed_tests / self.total_tests * 100)
+                if self.total_tests > 0
+                else 0,
             },
             "test_results": self.test_results,
             "upgrade_status": "COMPLETE" if self.failed_tests == 0 else "PARTIAL",

@@ -114,7 +114,11 @@ class APIManager:
             template = env.get_template("api_docs.md.j2")
 
             # Generate documentation
-            docs = template.render(version=version, openapi=openapi_schema, timestamp=datetime.now().isoformat())
+            docs = template.render(
+                version=version,
+                openapi=openapi_schema,
+                timestamp=datetime.now().isoformat(),
+            )
 
             # Save documentation
             docs_file = self.docs_dir / f"api_docs_{version}.md"
@@ -143,7 +147,11 @@ class APIManager:
             template = env.get_template("api_tests.py.j2")
 
             # Generate tests
-            tests = template.render(version=version, openapi=openapi_schema, timestamp=datetime.now().isoformat())
+            tests = template.render(
+                version=version,
+                openapi=openapi_schema,
+                timestamp=datetime.now().isoformat(),
+            )
 
             # Save tests
             tests_file = self.tests_dir / f"test_api_{version}.py"
@@ -184,14 +192,24 @@ class APIManager:
                                     )
                             except Exception as e:
                                 results.append(
-                                    {"endpoint": f"{method.upper()} {path}", "error": str(e), "success": False}
+                                    {
+                                        "endpoint": f"{method.upper()} {path}",
+                                        "error": str(e),
+                                        "success": False,
+                                    }
                                 )
 
             # Save results
             results_file = self.api_dir / f"test_results_{version}.json"
             with open(results_file, "w") as f:
                 json.dump(
-                    {"timestamp": datetime.now().isoformat(), "version": version, "results": results}, f, indent=2
+                    {
+                        "timestamp": datetime.now().isoformat(),
+                        "version": version,
+                        "results": results,
+                    },
+                    f,
+                    indent=2,
                 )
 
             # Print results
@@ -202,7 +220,9 @@ class APIManager:
             self.logger.error(f"Failed to test endpoints: {e}")
             raise
 
-    def monitor_endpoints(self, base_url: str, version: str = "1.0.0", duration: int = 300):
+    def monitor_endpoints(
+        self, base_url: str, version: str = "1.0.0", duration: int = 300
+    ):
         """Monitor API endpoints."""
         self.logger.info(f"Monitoring API endpoints for version {version}")
 
@@ -312,18 +332,28 @@ class APIManager:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="API Manager")
-    parser.add_argument("command", choices=["generate", "test", "monitor"], help="Command to execute")
+    parser.add_argument(
+        "command", choices=["generate", "test", "monitor"], help="Command to execute"
+    )
     parser.add_argument("--version", default="1.0.0", help="API version")
     parser.add_argument("--base-url", help="Base URL for API testing and monitoring")
-    parser.add_argument("--duration", type=int, default=300, help="Duration for monitoring in seconds")
+    parser.add_argument(
+        "--duration", type=int, default=300, help="Duration for monitoring in seconds"
+    )
 
     args = parser.parse_args()
     manager = APIManager()
 
     commands = {
-        "generate": lambda: manager.generate_docs(manager.generate_openapi(FastAPI(), args.version), args.version),
-        "test": lambda: asyncio.run(manager.test_endpoints(args.base_url, args.version)),
-        "monitor": lambda: manager.monitor_endpoints(args.base_url, args.version, args.duration),
+        "generate": lambda: manager.generate_docs(
+            manager.generate_openapi(FastAPI(), args.version), args.version
+        ),
+        "test": lambda: asyncio.run(
+            manager.test_endpoints(args.base_url, args.version)
+        ),
+        "monitor": lambda: manager.monitor_endpoints(
+            args.base_url, args.version, args.duration
+        ),
     }
 
     if args.command in commands:

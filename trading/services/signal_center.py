@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-
 warnings.filterwarnings("ignore")
 
 # Try to import webhook libraries
@@ -197,7 +196,10 @@ class SignalCenter:
             self.signal_history.append(signal)
 
             # Check if signal should trigger alert
-            if self.webhook_config["enable_alerts"] and confidence >= self.webhook_config["alert_confidence_threshold"]:
+            if (
+                self.webhook_config["enable_alerts"]
+                and confidence >= self.webhook_config["alert_confidence_threshold"]
+            ):
                 self._send_alert(signal)
 
             # Clean up old signals
@@ -212,10 +214,17 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error adding signal: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def update_signal_status(
-        self, signal_id: str, status: SignalStatus, metadata: Optional[Dict[str, Any]] = None
+        self,
+        signal_id: str,
+        status: SignalStatus,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Update signal status.
 
@@ -229,7 +238,11 @@ class SignalCenter:
         """
         try:
             if signal_id not in self.active_signals:
-                return {"success": False, "error": "Signal not found", "timestamp": datetime.now().isoformat()}
+                return {
+                    "success": False,
+                    "error": "Signal not found",
+                    "timestamp": datetime.now().isoformat(),
+                }
 
             signal = self.active_signals[signal_id]
             signal.status = status
@@ -247,7 +260,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error updating signal status: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def add_trade(
         self,
@@ -296,13 +313,23 @@ class SignalCenter:
             self.active_trades[trade_id] = trade
             self.trade_history.append(trade)
 
-            logger.info(f"Added trade {trade_id}: {side} {quantity} {symbol} at {entry_price:.2f}")
+            logger.info(
+                f"Added trade {trade_id}: {side} {quantity} {symbol} at {entry_price:.2f}"
+            )
 
-            return {"success": True, "message": "Trade added successfully", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "Trade added successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
             logger.error(f"Error adding trade: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def update_trade_price(self, trade_id: str, current_price: float) -> Dict[str, Any]:
         """Update trade current price and P&L.
@@ -316,7 +343,11 @@ class SignalCenter:
         """
         try:
             if trade_id not in self.active_trades:
-                return {"success": False, "error": "Trade not found", "timestamp": datetime.now().isoformat()}
+                return {
+                    "success": False,
+                    "error": "Trade not found",
+                    "timestamp": datetime.now().isoformat(),
+                }
 
             trade = self.active_trades[trade_id]
             trade.current_price = current_price
@@ -337,9 +368,15 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error updating trade price: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def close_trade(self, trade_id: str, exit_price: float, exit_reason: str = "manual") -> Dict[str, Any]:
+    def close_trade(
+        self, trade_id: str, exit_price: float, exit_reason: str = "manual"
+    ) -> Dict[str, Any]:
         """Close an active trade.
 
         Args:
@@ -352,7 +389,11 @@ class SignalCenter:
         """
         try:
             if trade_id not in self.active_trades:
-                return {"success": False, "error": "Trade not found", "timestamp": datetime.now().isoformat()}
+                return {
+                    "success": False,
+                    "error": "Trade not found",
+                    "timestamp": datetime.now().isoformat(),
+                }
 
             trade = self.active_trades[trade_id]
 
@@ -370,13 +411,23 @@ class SignalCenter:
             # Remove from active trades
             del self.active_trades[trade_id]
 
-            logger.info(f"Closed trade {trade_id}: P&L {final_pnl:.2f} ({final_pnl_pct:.2%})")
+            logger.info(
+                f"Closed trade {trade_id}: P&L {final_pnl:.2f} ({final_pnl_pct:.2%})"
+            )
 
-            return {"success": True, "message": "Trade closed successfully", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "Trade closed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
             logger.error(f"Error closing trade: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_active_signals(self, symbol: Optional[str] = None) -> List[Signal]:
         """Get active signals.
@@ -389,7 +440,9 @@ class SignalCenter:
         """
         try:
             if symbol:
-                signals = [s for s in self.active_signals.values() if s.symbol == symbol]
+                signals = [
+                    s for s in self.active_signals.values() if s.symbol == symbol
+                ]
             else:
                 signals = list(self.active_signals.values())
 
@@ -402,7 +455,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error getting active signals: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_active_trades(self, symbol: Optional[str] = None) -> List[ActiveTrade]:
         """Get active trades.
@@ -428,7 +485,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error getting active trades: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_signal_summary(self) -> Dict[str, Any]:
         """Get signal summary statistics.
@@ -444,7 +505,9 @@ class SignalCenter:
 
             # Calculate performance metrics
             if self.trade_history:
-                total_pnl = sum(trade.pnl for trade in self.trade_history if hasattr(trade, "pnl"))
+                total_pnl = sum(
+                    trade.pnl for trade in self.trade_history if hasattr(trade, "pnl")
+                )
                 avg_pnl = total_pnl / len(self.trade_history)
             else:
                 total_pnl = 0
@@ -469,9 +532,15 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error getting signal summary: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def get_signal_performance(self, strategy: Optional[str] = None, days: int = 30) -> Dict[str, Any]:
+    def get_signal_performance(
+        self, strategy: Optional[str] = None, days: int = 30
+    ) -> Dict[str, Any]:
         """Get signal performance metrics.
 
         Args:
@@ -485,7 +554,9 @@ class SignalCenter:
             cutoff_date = datetime.now() - timedelta(days=days)
 
             # Filter signals by date and strategy
-            recent_signals = [s for s in self.signal_history if s.timestamp >= cutoff_date]
+            recent_signals = [
+                s for s in self.signal_history if s.timestamp >= cutoff_date
+            ]
 
             if strategy:
                 recent_signals = [s for s in recent_signals if s.strategy == strategy]
@@ -526,7 +597,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error getting signal performance: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _send_alert(self, signal: Signal):
         """Send alert for signal."""
@@ -545,14 +620,26 @@ class SignalCenter:
 
             # Log alert
             self.alert_history.append(
-                {"signal_id": signal.signal_id, "message": message, "timestamp": datetime.now().isoformat()}
+                {
+                    "signal_id": signal.signal_id,
+                    "message": message,
+                    "timestamp": datetime.now().isoformat(),
+                }
             )
 
-            return {"success": True, "message": "Alert sent successfully", "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "message": "Alert sent successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
             logger.error(f"Error sending alert: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _create_alert_message(self, signal: Signal) -> str:
         """Create alert message for signal."""
@@ -575,7 +662,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error creating alert message: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _send_discord_alert(self, message: str, signal: Signal):
         """Send Discord alert."""
@@ -609,7 +700,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error sending Discord alert: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _send_email_alert(self, message: str, signal: Signal):
         """Send email alert."""
@@ -646,7 +741,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error sending email alert: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _send_slack_alert(self, message: str, signal: Signal):
         """Send Slack alert."""
@@ -680,7 +779,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error sending Slack alert: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _cleanup_expired_signals(self):
         """Clean up expired signals."""
@@ -707,7 +810,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error cleaning up expired signals: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _update_performance_tracking(self, trade: ActiveTrade, final_pnl_pct: float):
         """Update performance tracking for trade."""
@@ -739,7 +846,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error updating performance tracking: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def export_signal_report(self, filepath: str) -> Dict[str, Any]:
         """Export signal report to file.
@@ -754,8 +865,12 @@ class SignalCenter:
             report = {
                 "timestamp": datetime.now().isoformat(),
                 "summary": self.get_signal_summary(),
-                "active_signals": [self._signal_to_dict(s) for s in self.active_signals.values()],
-                "active_trades": [self._trade_to_dict(t) for t in self.active_trades.values()],
+                "active_signals": [
+                    self._signal_to_dict(s) for s in self.active_signals.values()
+                ],
+                "active_trades": [
+                    self._trade_to_dict(t) for t in self.active_trades.values()
+                ],
                 "strategy_performance": self.strategy_performance,
                 "alert_history": self.alert_history[-100:],  # Last 100 alerts
             }
@@ -773,7 +888,11 @@ class SignalCenter:
 
         except Exception as e:
             logger.error(f"Error exporting signal report: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def _signal_to_dict(self, signal: Signal) -> Dict[str, Any]:
         """Convert signal to dictionary."""
@@ -829,4 +948,8 @@ def get_signal_center() -> Dict[str, Any]:
 
     except Exception as e:
         logger.error(f"Error creating signal center: {e}")
-        return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }

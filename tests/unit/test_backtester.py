@@ -188,7 +188,9 @@ class TestBacktester:
 
         # Equity curve should be monotonically increasing or decreasing
         # (depending on strategy performance)
-        assert (equity_curve.diff().dropna() >= 0).all() or (equity_curve.diff().dropna() <= 0).all()
+        assert (equity_curve.diff().dropna() >= 0).all() or (
+            equity_curve.diff().dropna() <= 0
+        ).all()
 
     def test_returns_calculation(self, backtester, synthetic_data):
         """Test returns calculation."""
@@ -288,7 +290,10 @@ class TestBacktester:
 
         assert result["success"] is False
         assert "error" in result
-        assert any(keyword in result["error"].lower() for keyword in ["empty", "no data", "insufficient"])
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["empty", "no data", "insufficient"]
+        )
 
     def test_no_signals_handling(self, backtester, no_signals_data):
         """Test handling of data with no signals."""
@@ -303,7 +308,10 @@ class TestBacktester:
             assert total_return == 0  # No return without trading
         else:
             # If it fails, should be due to no signals
-            assert any(keyword in result["error"].lower() for keyword in ["no signals", "no trades", "no activity"])
+            assert any(
+                keyword in result["error"].lower()
+                for keyword in ["no signals", "no trades", "no activity"]
+            )
 
     def test_transaction_costs(self, backtester, synthetic_data):
         """Test backtest with transaction costs."""
@@ -360,7 +368,8 @@ class TestBacktester:
         """Test performance analyzer functionality."""
         # Create sample backtest results
         equity_curve = pd.Series(
-            [10000, 10100, 10200, 10150, 10300], index=pd.date_range("2023-01-01", periods=5, freq="D")
+            [10000, 10100, 10200, 10150, 10300],
+            index=pd.date_range("2023-01-01", periods=5, freq="D"),
         )
 
         metrics = performance_analyzer.calculate_metrics(equity_curve)
@@ -437,7 +446,9 @@ class TestBacktester:
     def test_data_validation(self, backtester):
         """Test data validation."""
         # Test with missing required columns
-        invalid_data = pd.DataFrame({"Close": [100, 101, 102], "Volume": [1000000, 1000000, 1000000]})
+        invalid_data = pd.DataFrame(
+            {"Close": [100, 101, 102], "Volume": [1000000, 1000000, 1000000]}
+        )
 
         result = backtester.run_backtest(invalid_data)
         assert result["success"] is False
@@ -447,7 +458,13 @@ class TestBacktester:
         """Test various edge cases."""
         # Test with single data point
         single_point = pd.DataFrame(
-            {"Close": [100], "High": [101], "Low": [99], "Volume": [1000000], "signal": [0]},
+            {
+                "Close": [100],
+                "High": [101],
+                "Low": [99],
+                "Volume": [1000000],
+                "signal": [0],
+            },
             index=[pd.Timestamp("2023-01-01")],
         )
 

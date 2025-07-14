@@ -113,7 +113,7 @@ class DebugManager:
 
         try:
             # Set up debugger
-            debugger = ipdb.set_trace
+            ipdb.set_trace
 
             # Run function with debugger
             result = func(*args, **kwargs)
@@ -145,7 +145,11 @@ class DebugManager:
                     for line in f:
                         if "ERROR" in line:
                             errors.append(
-                                {"timestamp": line.split()[0], "message": line.split("ERROR")[-1].strip(), "file": file}
+                                {
+                                    "timestamp": line.split()[0],
+                                    "message": line.split("ERROR")[-1].strip(),
+                                    "file": file,
+                                }
                             )
 
             # Analyze errors
@@ -233,7 +237,11 @@ class DebugManager:
 
             with open(monitoring_file, "w") as f:
                 json.dump(
-                    {"start_time": start_time.isoformat(), "end_time": end_time.isoformat(), "errors": errors},
+                    {
+                        "start_time": start_time.isoformat(),
+                        "end_time": end_time.isoformat(),
+                        "errors": errors,
+                    },
                     f,
                     indent=2,
                 )
@@ -315,7 +323,14 @@ class DebugManager:
             suggestions_file = self.reports_dir / f"error_fixes_{timestamp}.json"
 
             with open(suggestions_file, "w") as f:
-                json.dump({"timestamp": datetime.now().isoformat(), "suggestions": suggestions}, f, indent=2)
+                json.dump(
+                    {
+                        "timestamp": datetime.now().isoformat(),
+                        "suggestions": suggestions,
+                    },
+                    f,
+                    indent=2,
+                )
 
             # Print suggestions
             self._print_fix_suggestions(suggestions)
@@ -374,7 +389,11 @@ class DebugManager:
 
             # Error types distribution
             plt.figure(figsize=(10, 6))
-            plt.pie(analysis["error_types"].values(), labels=analysis["error_types"].keys(), autopct="%1.1f%%")
+            plt.pie(
+                analysis["error_types"].values(),
+                labels=analysis["error_types"].keys(),
+                autopct="%1.1f%%",
+            )
             plt.title("Error Types Distribution")
             plt.tight_layout()
             plt.savefig(plots_dir / "error_types_distribution.png")
@@ -418,7 +437,9 @@ class DebugManager:
         }
 
         if function_name not in safe_functions:
-            raise ValueError(f"Function '{function_name}' is not in the safe functions list")
+            raise ValueError(
+                f"Function '{function_name}' is not in the safe functions list"
+            )
 
         return safe_functions[function_name]
 
@@ -452,7 +473,12 @@ class DebugManager:
         """
         return {
             "success": True,
-            "result": {"status": "success", "function": "test_strategy", "args": args, "kwargs": kwargs},
+            "result": {
+                "status": "success",
+                "function": "test_strategy",
+                "args": args,
+                "kwargs": kwargs,
+            },
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
@@ -469,7 +495,12 @@ class DebugManager:
         """
         return {
             "success": True,
-            "result": {"status": "success", "function": "analyze_data", "args": args, "kwargs": kwargs},
+            "result": {
+                "status": "success",
+                "function": "analyze_data",
+                "args": args,
+                "kwargs": kwargs,
+            },
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
@@ -486,7 +517,12 @@ class DebugManager:
         """
         return {
             "success": True,
-            "result": {"status": "success", "function": "validate_model", "args": args, "kwargs": kwargs},
+            "result": {
+                "status": "success",
+                "function": "validate_model",
+                "args": args,
+                "kwargs": kwargs,
+            },
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
@@ -495,12 +531,22 @@ class DebugManager:
 def main() -> None:
     """Main function for the debug manager script."""
     parser = argparse.ArgumentParser(description="Debug Manager")
-    parser.add_argument("command", choices=["debug", "analyze", "monitor", "fix"], help="Command to execute")
-    parser.add_argument("--function", help="Function to debug (must be in safe functions list)")
+    parser.add_argument(
+        "command",
+        choices=["debug", "analyze", "monitor", "fix"],
+        help="Command to execute",
+    )
+    parser.add_argument(
+        "--function", help="Function to debug (must be in safe functions list)"
+    )
     parser.add_argument("--log-files", nargs="+", help="Log files to analyze")
-    parser.add_argument("--duration", type=int, default=300, help="Duration for monitoring in seconds")
+    parser.add_argument(
+        "--duration", type=int, default=300, help="Duration for monitoring in seconds"
+    )
     parser.add_argument("--args", help="Arguments for the function (as string)")
-    parser.add_argument("--kwargs", type=json.loads, help="Keyword arguments for the function")
+    parser.add_argument(
+        "--kwargs", type=json.loads, help="Keyword arguments for the function"
+    )
 
     args = parser.parse_args()
     manager = DebugManager()

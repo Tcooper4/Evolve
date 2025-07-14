@@ -110,7 +110,11 @@ def get_config_dict() -> Dict[str, Any]:
     Returns:
         Dictionary of all configuration values
     """
-    return {key: value for key, value in globals().items() if key.isupper() and not key.startswith("_")}
+    return {
+        key: value
+        for key, value in globals().items()
+        if key.isupper() and not key.startswith("_")
+    }
 
 
 def validate_config() -> bool:

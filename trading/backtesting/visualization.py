@@ -34,7 +34,9 @@ class BacktestVisualizer:
     def __init__(self):
         pass
 
-    def plot_equity_curve(self, df: pd.DataFrame, use_plotly: bool = True) -> Optional[Any]:
+    def plot_equity_curve(
+        self, df: pd.DataFrame, use_plotly: bool = True
+    ) -> Optional[Any]:
         """Plot the equity curve of the backtest."""
         if use_plotly and PLOTLY_AVAILABLE:
             return self._plot_equity_curve_plotly(df)
@@ -46,8 +48,14 @@ class BacktestVisualizer:
 
     def _plot_equity_curve_plotly(self, df: pd.DataFrame):
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df.index, y=df["equity_curve"], mode="lines", name="Equity Curve"))
-        fig.update_layout(title="Equity Curve", xaxis_title="Date", yaxis_title="Portfolio Value")
+        fig.add_trace(
+            go.Scatter(
+                x=df.index, y=df["equity_curve"], mode="lines", name="Equity Curve"
+            )
+        )
+        fig.update_layout(
+            title="Equity Curve", xaxis_title="Date", yaxis_title="Portfolio Value"
+        )
         fig.show()
         return fig
 
@@ -62,7 +70,9 @@ class BacktestVisualizer:
         plt.show()
         return plt
 
-    def plot_trades(self, df: pd.DataFrame, trades: pd.DataFrame, use_plotly: bool = True) -> Optional[Any]:
+    def plot_trades(
+        self, df: pd.DataFrame, trades: pd.DataFrame, use_plotly: bool = True
+    ) -> Optional[Any]:
         """Plot trades on the price chart."""
         if use_plotly and PLOTLY_AVAILABLE:
             return self._plot_trades_plotly(df, trades)
@@ -96,7 +106,9 @@ class BacktestVisualizer:
                     name="Sell",
                 )
             )
-        fig.update_layout(title="Trades on Price Chart", xaxis_title="Date", yaxis_title="Price")
+        fig.update_layout(
+            title="Trades on Price Chart", xaxis_title="Date", yaxis_title="Price"
+        )
         fig.show()
         return fig
 
@@ -106,8 +118,16 @@ class BacktestVisualizer:
         if not trades.empty:
             buys = trades[trades["type"] == "buy"]
             sells = trades[trades["type"] == "sell"]
-            plt.scatter(buys["timestamp"], buys["price"], marker="^", color="green", label="Buy")
-            plt.scatter(sells["timestamp"], sells["price"], marker="v", color="red", label="Sell")
+            plt.scatter(
+                buys["timestamp"], buys["price"], marker="^", color="green", label="Buy"
+            )
+            plt.scatter(
+                sells["timestamp"],
+                sells["price"],
+                marker="v",
+                color="red",
+                label="Sell",
+            )
         plt.title("Trades on Price Chart")
         plt.xlabel("Date")
         plt.ylabel("Price")
@@ -116,7 +136,9 @@ class BacktestVisualizer:
         plt.show()
         return plt
 
-    def plot_risk_metrics(self, risk_metrics: Dict[str, Any], use_plotly: bool = True) -> Optional[Any]:
+    def plot_risk_metrics(
+        self, risk_metrics: Dict[str, Any], use_plotly: bool = True
+    ) -> Optional[Any]:
         """Plot risk metrics as a bar chart."""
         if use_plotly and PLOTLY_AVAILABLE:
             return self._plot_risk_metrics_plotly(risk_metrics)
@@ -127,8 +149,12 @@ class BacktestVisualizer:
             return None
 
     def _plot_risk_metrics_plotly(self, risk_metrics: Dict[str, Any]):
-        fig = go.Figure([go.Bar(x=list(risk_metrics.keys()), y=list(risk_metrics.values()))])
-        fig.update_layout(title="Risk Metrics", xaxis_title="Metric", yaxis_title="Value")
+        fig = go.Figure(
+            [go.Bar(x=list(risk_metrics.keys()), y=list(risk_metrics.values()))]
+        )
+        fig.update_layout(
+            title="Risk Metrics", xaxis_title="Metric", yaxis_title="Value"
+        )
         fig.show()
         return fig
 

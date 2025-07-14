@@ -27,7 +27,9 @@ class MultimodalService(BaseService):
     Handles plotting and vision analysis requests and communicates results via Redis.
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0):
+    def __init__(
+        self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0
+    ):
         """Initialize the MultimodalService."""
         super().__init__("multimodal", redis_host, redis_port, redis_db)
 
@@ -60,7 +62,11 @@ class MultimodalService(BaseService):
                 return self._handle_history_request(data)
             else:
                 logger.warning(f"Unknown message type: {message_type}")
-                return {"type": "error", "error": f"Unknown message type: {message_type}", "original_message": data}
+                return {
+                    "type": "error",
+                    "error": f"Unknown message type: {message_type}",
+                    "original_message": data,
+                }
 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
@@ -78,13 +84,19 @@ class MultimodalService(BaseService):
             save_path = plot_data.get("save_path")
 
             if not plot_type or not data_source:
-                return {"type": "error", "error": "plot_type and data_source are required"}
+                return {
+                    "type": "error",
+                    "error": "plot_type and data_source are required",
+                }
 
             logger.info(f"Generating {plot_type} plot")
 
             # Generate plot using the agent
             result = self.agent.generate_plot(
-                plot_type=plot_type, data_source=data_source, plot_config=plot_config, save_path=save_path
+                plot_type=plot_type,
+                data_source=data_source,
+                plot_config=plot_config,
+                save_path=save_path,
             )
 
             # Log to memory
@@ -125,7 +137,11 @@ class MultimodalService(BaseService):
             logger.info(f"Analyzing image: {image_path}")
 
             # Analyze image using the agent
-            result = self.agent.analyze_image(image_path=image_path, analysis_type=analysis_type, model_name=model_name)
+            result = self.agent.analyze_image(
+                image_path=image_path,
+                analysis_type=analysis_type,
+                model_name=model_name,
+            )
 
             # Log to memory
             self.memory.log_decision(
@@ -162,7 +178,9 @@ class MultimodalService(BaseService):
 
             # Generate insights using the agent
             result = self.agent.generate_insights(
-                data_source=data_source, insight_type=insight_type, include_plots=include_plots
+                data_source=data_source,
+                insight_type=insight_type,
+                include_plots=include_plots,
             )
 
             # Log to memory
@@ -195,7 +213,12 @@ class MultimodalService(BaseService):
             # Get plot history
             history = self.agent.get_plot_history(plot_type=plot_type, limit=limit)
 
-            return {"type": "plot_history", "history": history, "plot_type": plot_type, "count": len(history)}
+            return {
+                "type": "plot_history",
+                "history": history,
+                "plot_type": plot_type,
+                "count": len(history),
+            }
 
         except Exception as e:
             logger.error(f"Error getting plot history: {e}")
@@ -208,7 +231,9 @@ class MultimodalService(BaseService):
 
             # Get recent multimodal activities
             recent_activities = [
-                entry for entry in memory_stats.get("recent_decisions", []) if entry.get("agent_name") == "multimodal"
+                entry
+                for entry in memory_stats.get("recent_decisions", [])
+                if entry.get("agent_name") == "multimodal"
             ]
 
             # Count by type

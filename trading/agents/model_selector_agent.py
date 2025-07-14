@@ -23,7 +23,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
 logger = logging.getLogger(__name__)
@@ -97,7 +96,9 @@ class ModelCapability:
 class ModelSelectorAgent(BaseAgent):
     """Agent for dynamic model selection based on market conditions and requirements."""
 
-    def __init__(self, config_path: Optional[str] = None, config: Optional[AgentConfig] = None):
+    def __init__(
+        self, config_path: Optional[str] = None, config: Optional[AgentConfig] = None
+    ):
         """Initialize the Model Selector Agent."""
         if config is None:
             config = AgentConfig(
@@ -112,7 +113,9 @@ class ModelSelectorAgent(BaseAgent):
 
         super().__init__(config)
 
-        self.config_path = config_path or config.custom_config.get("config_path", "config/model_selector_config.json")
+        self.config_path = config_path or config.custom_config.get(
+            "config_path", "config/model_selector_config.json"
+        )
         self.model_registry: Dict[str, Dict] = {}
         self.performance_history: Dict[str, List[ModelPerformance]] = {}
         self.capability_profiles: Dict[str, ModelCapability] = {}
@@ -152,11 +155,17 @@ class ModelSelectorAgent(BaseAgent):
 
                 if not horizon or not market_regime:
                     return AgentResult(
-                        success=False, error_message="Missing required parameters: horizon and market_regime"
+                        success=False,
+                        error_message="Missing required parameters: horizon and market_regime",
                     )
 
                 selected_model, confidence = self.select_model(
-                    horizon, market_regime, data_length, required_features, performance_weight, capability_weight
+                    horizon,
+                    market_regime,
+                    data_length,
+                    required_features,
+                    performance_weight,
+                    capability_weight,
                 )
 
                 return AgentResult(
@@ -164,7 +173,9 @@ class ModelSelectorAgent(BaseAgent):
                     data={
                         "selected_model": selected_model,
                         "confidence": confidence,
-                        "recommendations": self.get_model_recommendations(horizon, market_regime),
+                        "recommendations": self.get_model_recommendations(
+                            horizon, market_regime
+                        ),
                     },
                 )
 
@@ -174,19 +185,26 @@ class ModelSelectorAgent(BaseAgent):
 
                 if not model_id or not performance_data:
                     return AgentResult(
-                        success=False, error_message="Missing required parameters: model_id and performance"
+                        success=False,
+                        error_message="Missing required parameters: model_id and performance",
                     )
 
                 performance = ModelPerformance(**performance_data)
                 self.update_model_performance(model_id, performance)
 
-                return AgentResult(success=True, data={"message": f"Updated performance for model {model_id}"})
+                return AgentResult(
+                    success=True,
+                    data={"message": f"Updated performance for model {model_id}"},
+                )
 
             elif action == "detect_regime":
                 price_data = kwargs.get("price_data")
 
                 if price_data is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: price_data")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: price_data",
+                    )
 
                 regime = self.detect_market_regime(price_data)
 
@@ -199,15 +217,22 @@ class ModelSelectorAgent(BaseAgent):
 
                 if not horizon or not market_regime:
                     return AgentResult(
-                        success=False, error_message="Missing required parameters: horizon and market_regime"
+                        success=False,
+                        error_message="Missing required parameters: horizon and market_regime",
                     )
 
-                recommendations = self.get_model_recommendations(horizon, market_regime, top_k)
+                recommendations = self.get_model_recommendations(
+                    horizon, market_regime, top_k
+                )
 
-                return AgentResult(success=True, data={"recommendations": recommendations})
+                return AgentResult(
+                    success=True, data={"recommendations": recommendations}
+                )
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
@@ -232,7 +257,11 @@ class ModelSelectorAgent(BaseAgent):
             "lstm_short": {
                 "type": ModelType.LSTM,
                 "horizons": [ForecastingHorizon.SHORT_TERM],
-                "regimes": [MarketRegime.TRENDING_UP, MarketRegime.TRENDING_DOWN, MarketRegime.VOLATILE],
+                "regimes": [
+                    MarketRegime.TRENDING_UP,
+                    MarketRegime.TRENDING_DOWN,
+                    MarketRegime.VOLATILE,
+                ],
                 "min_data": 100,
                 "max_horizon": 7,
                 "complexity": "medium",
@@ -240,7 +269,11 @@ class ModelSelectorAgent(BaseAgent):
             "transformer_medium": {
                 "type": ModelType.TRANSFORMER,
                 "horizons": [ForecastingHorizon.MEDIUM_TERM],
-                "regimes": [MarketRegime.TRENDING_UP, MarketRegime.TRENDING_DOWN, MarketRegime.MEAN_REVERTING],
+                "regimes": [
+                    MarketRegime.TRENDING_UP,
+                    MarketRegime.TRENDING_DOWN,
+                    MarketRegime.MEAN_REVERTING,
+                ],
                 "min_data": 200,
                 "max_horizon": 28,
                 "complexity": "high",
@@ -248,14 +281,21 @@ class ModelSelectorAgent(BaseAgent):
             "prophet_long": {
                 "type": ModelType.PROPHET,
                 "horizons": [ForecastingHorizon.LONG_TERM],
-                "regimes": [MarketRegime.TRENDING_UP, MarketRegime.TRENDING_DOWN, MarketRegime.SIDEWAYS],
+                "regimes": [
+                    MarketRegime.TRENDING_UP,
+                    MarketRegime.TRENDING_DOWN,
+                    MarketRegime.SIDEWAYS,
+                ],
                 "min_data": 365,
                 "max_horizon": 365,
                 "complexity": "low",
             },
             "xgboost_ensemble": {
                 "type": ModelType.ENSEMBLE,
-                "horizons": [ForecastingHorizon.SHORT_TERM, ForecastingHorizon.MEDIUM_TERM],
+                "horizons": [
+                    ForecastingHorizon.SHORT_TERM,
+                    ForecastingHorizon.MEDIUM_TERM,
+                ],
                 "regimes": [MarketRegime.MEAN_REVERTING, MarketRegime.VOLATILE],
                 "min_data": 150,
                 "max_horizon": 14,
@@ -300,7 +340,9 @@ class ModelSelectorAgent(BaseAgent):
             # Keep only recent performance data
             cutoff_date = datetime.now() - timedelta(days=self.performance_window)
             self.performance_history[model_id] = [
-                p for p in self.performance_history[model_id] if p.last_updated > cutoff_date
+                p
+                for p in self.performance_history[model_id]
+                if p.last_updated > cutoff_date
             ]
 
             logger.info(f"Updated performance for model: {model_id}")
@@ -383,14 +425,18 @@ class ModelSelectorAgent(BaseAgent):
         """
         try:
             # Filter candidate models
-            candidates = self._filter_candidates(horizon, market_regime, data_length, required_features)
+            candidates = self._filter_candidates(
+                horizon, market_regime, data_length, required_features
+            )
 
             if not candidates:
                 self.logger.warning(
                     f"No models meet strict criteria for horizon={horizon.value}, regime={market_regime.value}"
                 )
                 # Fallback: relax criteria and try again
-                candidates = self._filter_candidates_fallback(horizon, market_regime, data_length, required_features)
+                candidates = self._filter_candidates_fallback(
+                    horizon, market_regime, data_length, required_features
+                )
 
                 if not candidates:
                     self.logger.error("No models available even with relaxed criteria")
@@ -399,11 +445,16 @@ class ModelSelectorAgent(BaseAgent):
             # Calculate scores for all candidates
             model_scores = []
             for model_id in candidates:
-                capability_score = self._calculate_capability_score(model_id, horizon, market_regime, data_length)
+                capability_score = self._calculate_capability_score(
+                    model_id, horizon, market_regime, data_length
+                )
                 performance_score = self._calculate_performance_score(model_id)
 
                 # Combined score
-                combined_score = capability_score * capability_weight + performance_score * performance_weight
+                combined_score = (
+                    capability_score * capability_weight
+                    + performance_score * performance_weight
+                )
 
                 model_scores.append(
                     {
@@ -411,7 +462,9 @@ class ModelSelectorAgent(BaseAgent):
                         "capability_score": capability_score,
                         "performance_score": performance_score,
                         "combined_score": combined_score,
-                        "model_type": self.model_registry.get(model_id, {}).get("model_type", "unknown"),
+                        "model_type": self.model_registry.get(model_id, {}).get(
+                            "model_type", "unknown"
+                        ),
                     }
                 )
 
@@ -437,7 +490,11 @@ class ModelSelectorAgent(BaseAgent):
         # TODO: Specify exception type instead of using bare except
 
     def _filter_candidates_fallback(
-        self, horizon: ForecastingHorizon, market_regime: MarketRegime, data_length: int, required_features: List[str]
+        self,
+        horizon: ForecastingHorizon,
+        market_regime: MarketRegime,
+        data_length: int,
+        required_features: List[str],
     ) -> List[str]:
         """
         Filter candidates with relaxed criteria when strict filtering fails.
@@ -479,17 +536,25 @@ class ModelSelectorAgent(BaseAgent):
 
             # Check feature requirements (relaxed)
             if required_features and capability.feature_requirements:
-                missing_features = set(required_features) - set(capability.feature_requirements)
-                if len(missing_features) > len(required_features) * 0.3:  # Allow 30% missing features
+                missing_features = set(required_features) - set(
+                    capability.feature_requirements
+                )
+                if (
+                    len(missing_features) > len(required_features) * 0.3
+                ):  # Allow 30% missing features
                     meets_criteria = False
 
             if meets_criteria:
                 candidates.append(model_id)
 
-        self.logger.info(f"Fallback filtering found {len(candidates)} candidates with relaxed criteria")
+        self.logger.info(
+            f"Fallback filtering found {len(candidates)} candidates with relaxed criteria"
+        )
         return candidates
 
-    def _has_similar_horizon_support(self, capability: ModelCapability, target_horizon: ForecastingHorizon) -> bool:
+    def _has_similar_horizon_support(
+        self, capability: ModelCapability, target_horizon: ForecastingHorizon
+    ) -> bool:
         """
         Check if model supports similar horizons to the target.
 
@@ -502,17 +567,25 @@ class ModelSelectorAgent(BaseAgent):
         """
         # Define horizon similarity mapping
         horizon_similarity = {
-            ForecastingHorizon.SHORT_TERM: [ForecastingHorizon.SHORT_TERM, ForecastingHorizon.MEDIUM_TERM],
+            ForecastingHorizon.SHORT_TERM: [
+                ForecastingHorizon.SHORT_TERM,
+                ForecastingHorizon.MEDIUM_TERM,
+            ],
             ForecastingHorizon.MEDIUM_TERM: [
                 ForecastingHorizon.SHORT_TERM,
                 ForecastingHorizon.MEDIUM_TERM,
                 ForecastingHorizon.LONG_TERM,
             ],
-            ForecastingHorizon.LONG_TERM: [ForecastingHorizon.MEDIUM_TERM, ForecastingHorizon.LONG_TERM],
+            ForecastingHorizon.LONG_TERM: [
+                ForecastingHorizon.MEDIUM_TERM,
+                ForecastingHorizon.LONG_TERM,
+            ],
         }
 
         similar_horizons = horizon_similarity.get(target_horizon, [])
-        return any(horizon in capability.supported_horizons for horizon in similar_horizons)
+        return any(
+            horizon in capability.supported_horizons for horizon in similar_horizons
+        )
 
     def _get_fallback_model(self) -> str:
         """
@@ -533,7 +606,11 @@ class ModelSelectorAgent(BaseAgent):
         return "default_model"
 
     def _log_top_models(
-        self, model_scores: List[Dict], horizon: ForecastingHorizon, market_regime: MarketRegime, top_n: int = 5
+        self,
+        model_scores: List[Dict],
+        horizon: ForecastingHorizon,
+        market_regime: MarketRegime,
+        top_n: int = 5,
     ):
         """
         Log top N models with their scores for debugging and analysis.
@@ -546,7 +623,9 @@ class ModelSelectorAgent(BaseAgent):
         """
         top_models = model_scores[:top_n]
 
-        self.logger.info(f"Top {len(top_models)} models for horizon={horizon.value}, regime={market_regime.value}:")
+        self.logger.info(
+            f"Top {len(top_models)} models for horizon={horizon.value}, regime={market_regime.value}:"
+        )
 
         for i, model in enumerate(top_models, 1):
             self.logger.info(
@@ -581,7 +660,11 @@ class ModelSelectorAgent(BaseAgent):
             self.selection_history = self.selection_history[-1000:]
 
     def _filter_candidates(
-        self, horizon: ForecastingHorizon, market_regime: MarketRegime, data_length: int, required_features: List[str]
+        self,
+        horizon: ForecastingHorizon,
+        market_regime: MarketRegime,
+        data_length: int,
+        required_features: List[str],
     ) -> List[str]:
         """Filter models based on basic requirements."""
         candidates = []
@@ -601,7 +684,9 @@ class ModelSelectorAgent(BaseAgent):
 
             # Check feature requirements
             if required_features:
-                missing_features = set(required_features) - set(capability.feature_requirements)
+                missing_features = set(required_features) - set(
+                    capability.feature_requirements
+                )
                 if missing_features:
                     continue
 
@@ -610,7 +695,11 @@ class ModelSelectorAgent(BaseAgent):
         return candidates
 
     def _calculate_capability_score(
-        self, model_id: str, horizon: ForecastingHorizon, market_regime: MarketRegime, data_length: int
+        self,
+        model_id: str,
+        horizon: ForecastingHorizon,
+        market_regime: MarketRegime,
+        data_length: int,
     ) -> float:
         """Calculate capability-based score for a model."""
         capability = self.capability_profiles[model_id]
@@ -630,7 +719,10 @@ class ModelSelectorAgent(BaseAgent):
 
     def _calculate_performance_score(self, model_id: str) -> float:
         """Calculate performance-based score for a model."""
-        if model_id not in self.performance_history or not self.performance_history[model_id]:
+        if (
+            model_id not in self.performance_history
+            or not self.performance_history[model_id]
+        ):
             return 0.5  # Default score for new models
 
         recent_performance = self.performance_history[model_id]
@@ -646,12 +738,18 @@ class ModelSelectorAgent(BaseAgent):
         drawdown_score = 1.0 - min(avg_drawdown, 1.0)  # Invert drawdown
 
         # Weighted combination
-        performance_score = 0.4 * accuracy_score + 0.4 * sharpe_score + 0.2 * drawdown_score
+        performance_score = (
+            0.4 * accuracy_score + 0.4 * sharpe_score + 0.2 * drawdown_score
+        )
 
         return performance_score
 
     def _log_selection(
-        self, model_id: str, horizon: ForecastingHorizon, market_regime: MarketRegime, confidence: float
+        self,
+        model_id: str,
+        horizon: ForecastingHorizon,
+        market_regime: MarketRegime,
+        confidence: float,
     ):
         """Log model selection for analysis."""
         selection = {
@@ -674,11 +772,15 @@ class ModelSelectorAgent(BaseAgent):
     ) -> List[Dict[str, Any]]:
         """Get top-k model recommendations with explanations."""
         try:
-            candidates = self._filter_candidates(horizon, market_regime, 1000, [])  # Assume sufficient data
+            candidates = self._filter_candidates(
+                horizon, market_regime, 1000, []
+            )  # Assume sufficient data
 
             recommendations = []
             for model_id in candidates:
-                capability_score = self._calculate_capability_score(model_id, horizon, market_regime, 1000)
+                capability_score = self._calculate_capability_score(
+                    model_id, horizon, market_regime, 1000
+                )
                 performance_score = self._calculate_performance_score(model_id)
 
                 capability = self.capability_profiles[model_id]
@@ -689,9 +791,15 @@ class ModelSelectorAgent(BaseAgent):
                     "capability_score": capability_score,
                     "performance_score": performance_score,
                     "total_score": 0.4 * capability_score + 0.6 * performance_score,
-                    "strengths": self._get_model_strengths(model_id, horizon, market_regime),
-                    "weaknesses": self._get_model_weaknesses(model_id, horizon, market_regime),
-                    "recent_performance": self._get_recent_performance_summary(model_id),
+                    "strengths": self._get_model_strengths(
+                        model_id, horizon, market_regime
+                    ),
+                    "weaknesses": self._get_model_weaknesses(
+                        model_id, horizon, market_regime
+                    ),
+                    "recent_performance": self._get_recent_performance_summary(
+                        model_id
+                    ),
                 }
 
                 recommendations.append(recommendation)
@@ -741,7 +849,10 @@ class ModelSelectorAgent(BaseAgent):
 
     def _get_recent_performance_summary(self, model_id: str) -> Dict[str, Any]:
         """Get recent performance summary for a model."""
-        if model_id not in self.performance_history or not self.performance_history[model_id]:
+        if (
+            model_id not in self.performance_history
+            or not self.performance_history[model_id]
+        ):
             return {"status": "No recent performance data"}
 
         recent = self.performance_history[model_id][-5:]  # Last 5 evaluations
@@ -803,8 +914,12 @@ class ModelSelectorAgent(BaseAgent):
                 capability = ModelCapability(
                     model_id=cp_data["model_id"],
                     model_type=ModelType(cp_data["model_type"]),
-                    supported_horizons=[ForecastingHorizon(h) for h in cp_data["supported_horizons"]],
-                    supported_regimes=[MarketRegime(r) for r in cp_data["supported_regimes"]],
+                    supported_horizons=[
+                        ForecastingHorizon(h) for h in cp_data["supported_horizons"]
+                    ],
+                    supported_regimes=[
+                        MarketRegime(r) for r in cp_data["supported_regimes"]
+                    ],
                     min_data_points=cp_data["min_data_points"],
                     max_forecast_horizon=cp_data["max_forecast_horizon"],
                     feature_requirements=cp_data["feature_requirements"],
@@ -816,7 +931,9 @@ class ModelSelectorAgent(BaseAgent):
             # Restore performance history
             self.performance_history = {}
             for model_id, performances in state["performance_history"].items():
-                self.performance_history[model_id] = [ModelPerformance(**p) for p in performances]
+                self.performance_history[model_id] = [
+                    ModelPerformance(**p) for p in performances
+                ]
 
             # Restore other state
             self.selection_history = state["selection_history"]

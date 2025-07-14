@@ -94,9 +94,14 @@ class Backtester:
 
         # Initialize modular components
         self.position_sizing_engine = PositionSizingEngine(
-            cash=initial_cash, risk_per_trade=risk_per_trade, risk_free_rate=risk_free_rate, max_leverage=max_leverage
+            cash=initial_cash,
+            risk_per_trade=risk_per_trade,
+            risk_free_rate=risk_free_rate,
+            max_leverage=max_leverage,
         )
-        self.risk_metrics_engine = RiskMetricsEngine(risk_free_rate=risk_free_rate, period=TRADING_DAYS_PER_YEAR)
+        self.risk_metrics_engine = RiskMetricsEngine(
+            risk_free_rate=risk_free_rate, period=TRADING_DAYS_PER_YEAR
+        )
         self.performance_analyzer = PerformanceAnalyzer()
         self.visualizer = BacktestVisualizer()
 
@@ -108,12 +113,16 @@ class Backtester:
         self.logger = logging.getLogger(self.__class__.__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
 
-    def _calculate_position_size(self, asset: str, price: float, strategy: str, signal: float) -> float:
+    def _calculate_position_size(
+        self, asset: str, price: float, strategy: str, signal: float
+    ) -> float:
         """Calculate position size using the position sizing engine."""
         return self.position_sizing_engine.calculate_position_size(
             method=PositionSizing.EQUAL_WEIGHTED,  # Default method
@@ -125,7 +134,9 @@ class Backtester:
             positions=self.positions,
         )
 
-    def _calculate_risk_metrics(self, asset: str, price: float, quantity: float) -> Dict[str, float]:
+    def _calculate_risk_metrics(
+        self, asset: str, price: float, quantity: float
+    ) -> Dict[str, float]:
         """Calculate risk metrics using the risk metrics engine."""
         if asset not in self.data.columns:
             return {}
@@ -241,10 +252,14 @@ class Backtester:
 
             # Update positions
             if trade.type == TradeType.BUY:
-                current_positions[trade.asset] = current_positions.get(trade.asset, 0) + trade.quantity
+                current_positions[trade.asset] = (
+                    current_positions.get(trade.asset, 0) + trade.quantity
+                )
                 current_cash -= trade.calculate_total_cost()
             elif trade.type == TradeType.SELL:
-                current_positions[trade.asset] = current_positions.get(trade.asset, 0) - trade.quantity
+                current_positions[trade.asset] = (
+                    current_positions.get(trade.asset, 0) - trade.quantity
+                )
                 current_cash += trade.calculate_total_cost()
 
             # Calculate portfolio value
@@ -253,7 +268,9 @@ class Backtester:
                 if asset in self.data.columns and quantity != 0:
                     # Find closest price to trade date
                     asset_data = self.data[asset]
-                    closest_date = asset_data.index[asset_data.index.get_indexer([trade_date], method="ffill")[0]]
+                    closest_date = asset_data.index[
+                        asset_data.index.get_indexer([trade_date], method="ffill")[0]
+                    ]
                     price = asset_data.loc[closest_date]
                     portfolio_value += quantity * price
 
@@ -281,7 +298,12 @@ class Backtester:
         # Plot trades if we have price data
         if not equity_curve.empty and len(self.data.columns) > 0:
             asset = list(self.data.columns)[0]  # Use first asset
-            price_data = pd.DataFrame({"close": self.data[asset], "equity_curve": equity_curve["equity_curve"]})
+            price_data = pd.DataFrame(
+                {
+                    "close": self.data[asset],
+                    "equity_curve": equity_curve["equity_curve"],
+                }
+            )
             trade_log_df = pd.DataFrame(self.trade_log)
             self.visualizer.plot_trades(price_data, trade_log_df, use_plotly=use_plotly)
 
@@ -367,7 +389,9 @@ def run_backtest(
         Tuple of (equity_curve, trade_log, metrics)
     """
     # This is a placeholder - actual implementation would depend on strategy definitions
-    logger.warning("run_backtest function is a placeholder - use Backtester class directly")
+    logger.warning(
+        "run_backtest function is a placeholder - use Backtester class directly"
+    )
 
     # Return empty results
     empty_df = pd.DataFrame()

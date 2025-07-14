@@ -14,7 +14,6 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-
 from .base_agent_interface import AgentConfig, AgentResult, BaseAgent
 
 logger = logging.getLogger(__name__)
@@ -152,12 +151,20 @@ class ExecutionRiskControlAgent(BaseAgent):
 
         # Load configuration from config or use defaults
         custom_config = config.custom_config or {}
-        self.max_position_size = custom_config.get("max_position_size", max_position_size)
+        self.max_position_size = custom_config.get(
+            "max_position_size", max_position_size
+        )
         self.max_daily_trades = custom_config.get("max_daily_trades", max_daily_trades)
         self.max_daily_loss = custom_config.get("max_daily_loss", max_daily_loss)
-        self.cooling_period_minutes = custom_config.get("cooling_period_minutes", cooling_period_minutes)
-        self.correlation_threshold = custom_config.get("correlation_threshold", correlation_threshold)
-        self.volatility_threshold = custom_config.get("volatility_threshold", volatility_threshold)
+        self.cooling_period_minutes = custom_config.get(
+            "cooling_period_minutes", cooling_period_minutes
+        )
+        self.correlation_threshold = custom_config.get(
+            "correlation_threshold", correlation_threshold
+        )
+        self.volatility_threshold = custom_config.get(
+            "volatility_threshold", volatility_threshold
+        )
 
         # Initialize tracking
         self.trade_history = []
@@ -224,7 +231,10 @@ class ExecutionRiskControlAgent(BaseAgent):
                 risk_summary = self.get_risk_summary()
                 return AgentResult(success=True, data={"risk_summary": risk_summary})
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action} or missing trade_request")
+                return AgentResult(
+                    success=False,
+                    error_message=f"Unknown action: {action} or missing trade_request",
+                )
 
         except Exception as e:
             return self.handle_error(e)
@@ -239,9 +249,21 @@ class ExecutionRiskControlAgent(BaseAgent):
                     "max_sector_exposure": 0.4,
                     "max_correlation_exposure": 0.6,
                 },
-                "trade_limits": {"max_trade_size": 0.1, "min_trade_size": 0.001, "max_slippage": 0.02},
-                "risk_limits": {"max_drawdown": 0.15, "max_var_95": 0.03, "max_beta": 1.5},
-                "timing_limits": {"market_hours_only": True, "avoid_earnings": True, "avoid_high_impact_news": True},
+                "trade_limits": {
+                    "max_trade_size": 0.1,
+                    "min_trade_size": 0.001,
+                    "max_slippage": 0.02,
+                },
+                "risk_limits": {
+                    "max_drawdown": 0.15,
+                    "max_var_95": 0.03,
+                    "max_beta": 1.5,
+                },
+                "timing_limits": {
+                    "market_hours_only": True,
+                    "avoid_earnings": True,
+                    "avoid_high_impact_news": True,
+                },
             },
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
@@ -341,16 +363,22 @@ class ExecutionRiskControlAgent(BaseAgent):
                 warnings.append(correlation_check["warning"])
 
             # Determine risk level
-            risk_level = self._determine_risk_level(violations, warnings, trade_request.risk_score)
+            risk_level = self._determine_risk_level(
+                violations, warnings, trade_request.risk_score
+            )
 
             # Calculate max allowed quantity
-            max_quantity = self._calculate_max_allowed_quantity(trade_request, violations)
+            max_quantity = self._calculate_max_allowed_quantity(
+                trade_request, violations
+            )
 
             # Calculate cooling period remaining
             cooling_remaining = self._calculate_cooling_remaining(trade_request.symbol)
 
             # Generate recommendations
-            recommendations = self._generate_recommendations(violations, warnings, trade_request)
+            recommendations = self._generate_recommendations(
+                violations, warnings, trade_request
+            )
 
             # Check if trade passes
             passed = len(violations) == 0
@@ -382,13 +410,17 @@ class ExecutionRiskControlAgent(BaseAgent):
         try:
             current_position = self.position_tracker.get(trade_request.symbol, 0.0)
             new_position = current_position + (
-                trade_request.quantity if trade_request.side == "buy" else -trade_request.quantity
+                trade_request.quantity
+                if trade_request.side == "buy"
+                else -trade_request.quantity
             )
 
             # Check single position limit
             position_value = abs(new_position) * trade_request.price
             portfolio_value = self._get_portfolio_value()
-            position_ratio = position_value / portfolio_value if portfolio_value > 0 else 0
+            position_ratio = (
+                position_value / portfolio_value if portfolio_value > 0 else 0
+            )
 
             if position_ratio > self.max_position_size:
                 return {
@@ -398,7 +430,10 @@ class ExecutionRiskControlAgent(BaseAgent):
 
             # Warning for large positions
             if position_ratio > self.max_position_size * 0.8:
-                return {"passed": True, "warning": f"Large position size: {position_ratio:.2%}"}
+                return {
+                    "passed": True,
+                    "warning": f"Large position size: {position_ratio:.2%}",
+                }
 
             return {"passed": True}
 
@@ -414,7 +449,10 @@ class ExecutionRiskControlAgent(BaseAgent):
             # Check daily trade count
             daily_trades = self.daily_trade_count.get(today, 0)
             if daily_trades >= self.max_daily_trades:
-                return {"passed": False, "reason": f"Daily trade limit {self.max_daily_trades} exceeded"}
+                return {
+                    "passed": False,
+                    "reason": f"Daily trade limit {self.max_daily_trades} exceeded",
+                }
 
             # Check daily loss limit
             daily_loss = abs(self.daily_pnl.get(today, 0.0))
@@ -422,7 +460,10 @@ class ExecutionRiskControlAgent(BaseAgent):
             loss_ratio = daily_loss / portfolio_value if portfolio_value > 0 else 0
 
             if loss_ratio > self.max_daily_loss:
-                return {"passed": False, "reason": f"Daily loss limit {self.max_daily_loss:.2%} exceeded"}
+                return {
+                    "passed": False,
+                    "reason": f"Daily loss limit {self.max_daily_loss:.2%} exceeded",
+                }
 
             # Warning for approaching limits
             if daily_trades >= self.max_daily_trades * 0.8:
@@ -462,10 +503,16 @@ class ExecutionRiskControlAgent(BaseAgent):
         """Check trade risk score."""
         try:
             if trade_request.risk_score > 0.8:
-                return {"passed": False, "reason": f"Risk score {trade_request.risk_score:.2f} too high"}
+                return {
+                    "passed": False,
+                    "reason": f"Risk score {trade_request.risk_score:.2f} too high",
+                }
 
             if trade_request.risk_score > 0.6:
-                return {"passed": True, "warning": f"High risk score: {trade_request.risk_score:.2f}"}
+                return {
+                    "passed": True,
+                    "warning": f"High risk score: {trade_request.risk_score:.2f}",
+                }
 
             return {"passed": True}
 
@@ -500,7 +547,9 @@ class ExecutionRiskControlAgent(BaseAgent):
         try:
             # Simplified correlation check
             # In practice, this would calculate actual correlations
-            existing_positions = [sym for sym, pos in self.position_tracker.items() if abs(pos) > 0]
+            existing_positions = [
+                sym for sym, pos in self.position_tracker.items() if abs(pos) > 0
+            ]
 
             if len(existing_positions) > 0:
                 # Assume some correlation risk for demonstration
@@ -518,7 +567,9 @@ class ExecutionRiskControlAgent(BaseAgent):
             logger.error(f"Error checking correlation risk: {e}")
             return {}
 
-    def _determine_risk_level(self, violations: List[str], warnings: List[str], risk_score: float) -> RiskLevel:
+    def _determine_risk_level(
+        self, violations: List[str], warnings: List[str], risk_score: float
+    ) -> RiskLevel:
         """Determine overall risk level."""
         try:
             if violations:
@@ -534,7 +585,9 @@ class ExecutionRiskControlAgent(BaseAgent):
             logger.error(f"Error determining risk level: {e}")
             return RiskLevel.CRITICAL
 
-    def _calculate_max_allowed_quantity(self, trade_request: TradeRequest, violations: List[str]) -> float:
+    def _calculate_max_allowed_quantity(
+        self, trade_request: TradeRequest, violations: List[str]
+    ) -> float:
         """Calculate maximum allowed quantity based on violations."""
         try:
             if violations:
@@ -631,7 +684,9 @@ class ExecutionRiskControlAgent(BaseAgent):
                 )
 
             # Adjust quantity if needed
-            actual_quantity = min(trade_request.quantity, risk_check.max_allowed_quantity)
+            actual_quantity = min(
+                trade_request.quantity, risk_check.max_allowed_quantity
+            )
 
             # Simulate execution
             execution_price = self._simulate_execution(trade_request, actual_quantity)
@@ -642,7 +697,9 @@ class ExecutionRiskControlAgent(BaseAgent):
             self._update_trade_tracking(trade_request, actual_quantity, execution_price)
 
             # Calculate risk metrics
-            risk_metrics = self._calculate_execution_risk_metrics(trade_request, actual_quantity, execution_price)
+            risk_metrics = self._calculate_execution_risk_metrics(
+                trade_request, actual_quantity, execution_price
+            )
 
             # Create execution result
             result = ExecutionResult(
@@ -687,7 +744,9 @@ class ExecutionRiskControlAgent(BaseAgent):
                 metadata={"error": str(e)},
             )
 
-    def _simulate_execution(self, trade_request: TradeRequest, quantity: float) -> float:
+    def _simulate_execution(
+        self, trade_request: TradeRequest, quantity: float
+    ) -> float:
         """Simulate trade execution with slippage."""
         try:
             base_price = trade_request.price
@@ -734,7 +793,9 @@ class ExecutionRiskControlAgent(BaseAgent):
             logger.error(f"Error calculating commission: {e}")
             return 0.0
 
-    def _update_trade_tracking(self, trade_request: TradeRequest, quantity: float, price: float):
+    def _update_trade_tracking(
+        self, trade_request: TradeRequest, quantity: float, price: float
+    ):
         """Update trade tracking data."""
         try:
             # Update position tracker
@@ -767,7 +828,9 @@ class ExecutionRiskControlAgent(BaseAgent):
 
             return {
                 "trade_value": trade_value,
-                "portfolio_exposure": trade_value / portfolio_value if portfolio_value > 0 else 0,
+                "portfolio_exposure": trade_value / portfolio_value
+                if portfolio_value > 0
+                else 0,
                 "position_risk": trade_request.risk_score * trade_value,
                 "slippage_cost": abs(price - trade_request.price) * quantity,
                 "commission_cost": self._calculate_commission(quantity, price),
@@ -819,12 +882,22 @@ class ExecutionRiskControlAgent(BaseAgent):
         try:
             # Calculate risk metrics
             total_trades = len(self.trade_history)
-            executed_trades = len([t for t in self.trade_history if t["status"] == "executed"])
-            rejected_trades = len([t for t in self.trade_history if t["status"] == "rejected"])
+            executed_trades = len(
+                [t for t in self.trade_history if t["status"] == "executed"]
+            )
+            rejected_trades = len(
+                [t for t in self.trade_history if t["status"] == "rejected"]
+            )
 
             # Position summary
-            total_positions = len([p for p in self.position_tracker.values() if abs(p) > 0])
-            largest_position = max([abs(p) for p in self.position_tracker.values()]) if self.position_tracker else 0
+            total_positions = len(
+                [p for p in self.position_tracker.values() if abs(p) > 0]
+            )
+            largest_position = (
+                max([abs(p) for p in self.position_tracker.values()])
+                if self.position_tracker
+                else 0
+            )
 
             # Daily summary
             today = datetime.now().date().isoformat()
@@ -835,7 +908,9 @@ class ExecutionRiskControlAgent(BaseAgent):
                 "total_trades": total_trades,
                 "executed_trades": executed_trades,
                 "rejected_trades": rejected_trades,
-                "execution_rate": executed_trades / total_trades if total_trades > 0 else 0,
+                "execution_rate": executed_trades / total_trades
+                if total_trades > 0
+                else 0,
                 "total_positions": total_positions,
                 "largest_position": largest_position,
                 "daily_trades": daily_trades,

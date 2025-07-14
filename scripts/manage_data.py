@@ -221,7 +221,9 @@ class DataManager:
                             try:
                                 df[col] = pd.to_numeric(df[col], errors="ignore")
                             except Exception as e:
-                                self.logger.warning(f"⚠️ Could not convert column {col} to numeric: {e}")
+                                self.logger.warning(
+                                    f"⚠️ Could not convert column {col} to numeric: {e}"
+                                )
                                 continue
 
                     # Save optimized CSV
@@ -268,10 +270,14 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Data Manager")
     parser.add_argument(
-        "command", choices=["backup", "restore", "clean", "validate", "optimize", "list"], help="Command to execute"
+        "command",
+        choices=["backup", "restore", "clean", "validate", "optimize", "list"],
+        help="Command to execute",
     )
     parser.add_argument("--backup-name", help="Name of backup to create or restore")
-    parser.add_argument("--days", type=int, default=30, help="Number of days for cleaning old data")
+    parser.add_argument(
+        "--days", type=int, default=30, help="Number of days for cleaning old data"
+    )
     parser.add_argument("--pattern", help="File pattern for listing data")
 
     args = parser.parse_args()
@@ -279,7 +285,9 @@ def main():
 
     commands = {
         "backup": lambda: manager.backup_data(args.backup_name),
-        "restore": lambda: manager.restore_data(args.backup_name) if args.backup_name else False,
+        "restore": lambda: manager.restore_data(args.backup_name)
+        if args.backup_name
+        else False,
         "clean": lambda: manager.clean_data(args.days),
         "validate": manager.validate_data,
         "optimize": manager.optimize_data,

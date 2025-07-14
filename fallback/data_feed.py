@@ -37,7 +37,9 @@ class FallbackDataFeed:
         self._last_data_request = None
         logger.info("FallbackDataFeed initialized")
 
-    def get_historical_data(self, symbol: str, start_date: str, end_date: str, interval: str = "1d") -> pd.DataFrame:
+    def get_historical_data(
+        self, symbol: str, start_date: str, end_date: str, interval: str = "1d"
+    ) -> pd.DataFrame:
         """
         Get historical data for a symbol (fallback implementation).
 
@@ -51,7 +53,9 @@ class FallbackDataFeed:
             pd.DataFrame: Historical price data
         """
         try:
-            logger.info(f"Getting historical data for {symbol} from {start_date} to {end_date}")
+            logger.info(
+                f"Getting historical data for {symbol} from {start_date} to {end_date}"
+            )
             self._last_data_request = {
                 "symbol": symbol,
                 "start_date": start_date,
@@ -64,7 +68,9 @@ class FallbackDataFeed:
             try:
                 data = self._get_yfinance_data(symbol, start_date, end_date, interval)
                 if data is not None and not data.empty:
-                    logger.info(f"Successfully retrieved data from yfinance for {symbol}")
+                    logger.info(
+                        f"Successfully retrieved data from yfinance for {symbol}"
+                    )
                     return data
             except Exception as e:
                 logger.warning(f"yfinance fallback failed for {symbol}: {e}")
@@ -77,7 +83,9 @@ class FallbackDataFeed:
             logger.error(f"Error getting historical data for {symbol}: {e}")
             return self._generate_mock_data(symbol, start_date, end_date, interval)
 
-    def _get_yfinance_data(self, symbol: str, start_date: str, end_date: str, interval: str) -> Optional[pd.DataFrame]:
+    def _get_yfinance_data(
+        self, symbol: str, start_date: str, end_date: str, interval: str
+    ) -> Optional[pd.DataFrame]:
         """
         Get data from yfinance as a fallback source.
 
@@ -111,7 +119,9 @@ class FallbackDataFeed:
             logger.warning(f"yfinance data retrieval failed for {symbol}: {e}")
             return None
 
-    def _generate_mock_data(self, symbol: str, start_date: str, end_date: str, interval: str) -> pd.DataFrame:
+    def _generate_mock_data(
+        self, symbol: str, start_date: str, end_date: str, interval: str
+    ) -> pd.DataFrame:
         """
         Generate mock historical data for testing purposes.
 
@@ -207,7 +217,12 @@ class FallbackDataFeed:
             }
         except Exception as e:
             logger.error(f"Error getting fallback data feed health: {e}")
-            return {"status": "error", "available_providers": 0, "fallback_mode": True, "error": str(e)}
+            return {
+                "status": "error",
+                "available_providers": 0,
+                "fallback_mode": True,
+                "error": str(e),
+            }
 
     def get_available_symbols(self) -> List[str]:
         """

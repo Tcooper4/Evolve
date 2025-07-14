@@ -30,7 +30,11 @@ async def test_live_market_runner(mock_get_prices):
     # Create runner
     config = {
         "symbols": ["AAPL", "TSLA"],
-        "market_data_config": {"cache_size": 100, "update_threshold": 5, "max_retries": 3},
+        "market_data_config": {
+            "cache_size": 100,
+            "update_threshold": 5,
+            "max_retries": 3,
+        },
     }
 
     runner = create_live_market_runner(config)
@@ -51,7 +55,9 @@ async def test_live_market_runner(mock_get_prices):
     logger.info(f"   Trigger configs: {list(runner.trigger_configs.keys())}")
 
     for agent_name, config in runner.trigger_configs.items():
-        logger.info(f"   {agent_name}: {config.trigger_type.value}, enabled: {config.enabled}")
+        logger.info(
+            f"   {agent_name}: {config.trigger_type.value}, enabled: {config.enabled}"
+        )
 
     # Test forecast tracking
     logger.info(f"\n📈 Testing forecast tracking...")
@@ -133,7 +139,9 @@ async def test_forecast_tracking():
     logger.info(f"🍎 AAPL accuracy: {aapl_accuracy['avg_accuracy']:.2%}")
 
     # Test model-specific accuracy
-    model_forecasts = [f for f in runner.forecast_results if f.model_name == "model_builder"]
+    model_forecasts = [
+        f for f in runner.forecast_results if f.model_name == "model_builder"
+    ]
     logger.info(f"🤖 Model builder forecasts: {len(model_forecasts)}")
 
     logger.info("✅ Forecast tracking tests completed!")
@@ -153,19 +161,27 @@ async def test_agent_triggering():
     from trading.live_market_runner import TriggerConfig, TriggerType
 
     # Test time-based trigger
-    time_config = TriggerConfig(trigger_type=TriggerType.TIME_BASED, interval_seconds=60)
+    time_config = TriggerConfig(
+        trigger_type=TriggerType.TIME_BASED, interval_seconds=60
+    )
 
     # Should trigger (no previous trigger)
-    should_trigger = await runner._should_trigger_agent("test_agent", time_config, datetime.utcnow())
+    should_trigger = await runner._should_trigger_agent(
+        "test_agent", time_config, datetime.utcnow()
+    )
     logger.info(f"   Time-based trigger (no previous): {should_trigger}")
 
     # Should not trigger (recent trigger)
     runner.last_triggers["test_agent"] = datetime.utcnow() - timedelta(seconds=30)
-    should_trigger = await runner._should_trigger_agent("test_agent", time_config, datetime.utcnow())
+    should_trigger = await runner._should_trigger_agent(
+        "test_agent", time_config, datetime.utcnow()
+    )
     logger.info(f"   Time-based trigger (recent): {should_trigger}")
 
     # Test price move trigger
-    price_config = TriggerConfig(trigger_type=TriggerType.PRICE_MOVE, price_move_threshold=0.01)
+    price_config = TriggerConfig(
+        trigger_type=TriggerType.PRICE_MOVE, price_move_threshold=0.01
+    )
 
     # Simulate price data
     runner.live_data["AAPL"] = {
@@ -175,12 +191,16 @@ async def test_agent_triggering():
         "price_change": 0.015,  # 1.5% change
     }
 
-    should_trigger = await runner._should_trigger_agent("test_agent", price_config, datetime.utcnow())
+    should_trigger = await runner._should_trigger_agent(
+        "test_agent", price_config, datetime.utcnow()
+    )
     logger.info(f"   Price move trigger (1.5% change): {should_trigger}")
 
     # Test small price change
     runner.live_data["AAPL"]["price_change"] = 0.005  # 0.5% change
-    should_trigger = await runner._should_trigger_agent("test_agent", price_config, datetime.utcnow())
+    should_trigger = await runner._should_trigger_agent(
+        "test_agent", price_config, datetime.utcnow()
+    )
     logger.info(f"   Price move trigger (0.5% change): {should_trigger}")
 
     logger.info("✅ Agent triggering tests completed!")
@@ -194,7 +214,11 @@ async def test_live_trade_execution():
     # Create runner with test configuration
     config = {
         "symbols": ["AAPL", "TSLA", "NVDA"],
-        "market_data_config": {"cache_size": 100, "update_threshold": 5, "max_retries": 3},
+        "market_data_config": {
+            "cache_size": 100,
+            "update_threshold": 5,
+            "max_retries": 3,
+        },
         "test_mode": True,  # Enable test mode for safe execution
     }
 
@@ -257,7 +281,9 @@ async def test_live_trade_execution():
                         logger.info(f"   ✅ {action} {quantity} {symbol} @ ${price:.2f}")
                     else:
                         trade["execution_status"] = "failed"
-                        logger.info(f"   ❌ {action} {quantity} {symbol} @ ${price:.2f} (failed)")
+                        logger.info(
+                            f"   ❌ {action} {quantity} {symbol} @ ${price:.2f} (failed)"
+                        )
 
         # Brief pause between cycles
         await asyncio.sleep(0.1)
@@ -267,7 +293,11 @@ async def test_live_trade_execution():
     logger.info(f"   Total trades executed: {len(executed_trades)}")
     logger.info(f"   Successful trades: {successful_trades}")
     logger.info(f"   Failed trades: {len(executed_trades) - successful_trades}")
-    logger.info(f"   Success rate: {successful_trades / len(executed_trades) * 100:.1f}%" if executed_trades else "0%")
+    logger.info(
+        f"   Success rate: {successful_trades / len(executed_trades) * 100:.1f}%"
+        if executed_trades
+        else "0%"
+    )
 
     # Critical validation: At least 1 successful trade
     if successful_trades >= 1:
@@ -285,11 +315,21 @@ async def test_live_trade_execution():
 
     # Validate trade data integrity
     for trade in executed_trades:
-        required_fields = ["timestamp", "symbol", "action", "quantity", "price", "total_value", "status"]
+        required_fields = [
+            "timestamp",
+            "symbol",
+            "action",
+            "quantity",
+            "price",
+            "total_value",
+            "status",
+        ]
         missing_fields = [field for field in required_fields if field not in trade]
 
         if missing_fields:
-            logger.error(f"❌ VALIDATION FAILED: Trade missing required fields: {missing_fields}")
+            logger.error(
+                f"❌ VALIDATION FAILED: Trade missing required fields: {missing_fields}"
+            )
             raise AssertionError(f"Trade missing required fields: {missing_fields}")
 
     logger.info("✅ All trade execution validations passed!")
@@ -299,7 +339,9 @@ async def test_live_trade_execution():
         "total_trades": len(executed_trades),
         "successful_trades": successful_trades,
         "failed_trades": len(executed_trades) - successful_trades,
-        "success_rate": successful_trades / len(executed_trades) if executed_trades else 0,
+        "success_rate": successful_trades / len(executed_trades)
+        if executed_trades
+        else 0,
         "symbols_traded": list(set(trade["symbol"] for trade in executed_trades)),
     }
 
@@ -336,7 +378,9 @@ async def test_market_data_integrity():
                 logger.error(f"❌ Invalid volume for {symbol}: {data['volume']}")
                 raise AssertionError(f"Invalid volume for {symbol}: {data['volume']}")
 
-            logger.info(f"   ✅ {symbol}: ${data['price']:.2f}, Volume: {data['volume']:,}")
+            logger.info(
+                f"   ✅ {symbol}: ${data['price']:.2f}, Volume: {data['volume']:,}"
+            )
 
     logger.info("✅ Market data integrity validation passed!")
 

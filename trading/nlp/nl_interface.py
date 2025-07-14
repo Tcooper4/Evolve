@@ -41,7 +41,9 @@ except Exception as e:
 # Add file handler for debug logs
 debug_handler = logging.FileHandler("trading/nlp/logs/nlp_debug.log")
 debug_handler.setLevel(logging.DEBUG)
-debug_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+debug_formatter = logging.Formatter(
+    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 debug_handler.setFormatter(debug_formatter)
 logger.addHandler(debug_handler)
 
@@ -56,7 +58,9 @@ class NLInterface:
             config_dir: Directory containing configuration files
         """
         self.logger = logging.getLogger(__name__)
-        self.config_dir = Path(config_dir) if config_dir else Path(__file__).parent / "config"
+        self.config_dir = (
+            Path(config_dir) if config_dir else Path(__file__).parent / "config"
+        )
 
         # Initialize components
         self.prompt_processor = PromptProcessor(self.config_dir)
@@ -71,7 +75,11 @@ class NLInterface:
         self.market_analyzer = MarketAnalyzer()
 
         # Load confidence thresholds
-        self.confidence_thresholds = {"intent_detection": 0.6, "entity_extraction": 0.7, "response_generation": 0.8}
+        self.confidence_thresholds = {
+            "intent_detection": 0.6,
+            "entity_extraction": 0.7,
+            "response_generation": 0.8,
+        }
 
         # Load fallback prompts
         self.fallback_prompts = {
@@ -80,9 +88,13 @@ class NLInterface:
             "response_fallback": "I'm having trouble generating a complete response. Here's what I can tell you: {partial_response}",
         }
 
-        logger.info("NLInterface initialized with confidence thresholds and fallback prompts")
+        logger.info(
+            "NLInterface initialized with confidence thresholds and fallback prompts"
+        )
 
-    def process_query(self, query: str, session_state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def process_query(
+        self, query: str, session_state: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """Process a natural language query.
 
         Args:
@@ -97,7 +109,9 @@ class NLInterface:
         try:
             # Extract intent and entities
             intent, intent_confidence = self._detect_intent(query)
-            logger.debug(f"Detected intent: {intent} (confidence: {intent_confidence:.2f})")
+            logger.debug(
+                f"Detected intent: {intent} (confidence: {intent_confidence:.2f})"
+            )
 
             # Check intent confidence
             if intent_confidence < self.confidence_thresholds["intent_detection"]:
@@ -184,13 +198,20 @@ class NLInterface:
 
         # Check confidence for each entity
         for entity, data in entities.items():
-            if "confidence" in data and data["confidence"] < self.confidence_thresholds["entity_extraction"]:
+            if (
+                "confidence" in data
+                and data["confidence"] < self.confidence_thresholds["entity_extraction"]
+            ):
                 return False
 
         return True
 
     def _generate_response(
-        self, query: str, intent: str, entities: Dict[str, Any], session_state: Optional[Dict[str, Any]] = None
+        self,
+        query: str,
+        intent: str,
+        entities: Dict[str, Any],
+        session_state: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Generate response based on intent and entities.
 
@@ -205,7 +226,9 @@ class NLInterface:
         """
         try:
             # Create response prompt
-            prompt = self.prompt_processor.create_response_prompt(query, intent, entities, session_state)
+            prompt = self.prompt_processor.create_response_prompt(
+                query, intent, entities, session_state
+            )
 
             # Generate response with streaming
             response_stream = self.llm_processor.process_stream(prompt)
@@ -224,7 +247,10 @@ class NLInterface:
             response_data = json.loads(response)
 
             # Check response confidence
-            if response_data.get("confidence", 0) < self.confidence_thresholds["response_generation"]:
+            if (
+                response_data.get("confidence", 0)
+                < self.confidence_thresholds["response_generation"]
+            ):
                 logger.warning("Low response confidence")
                 return self._handle_low_confidence("response", response_data)
 
@@ -248,13 +274,17 @@ class NLInterface:
         """
         try:
             # Get output format from session state or default to text
-            output_format = session_state.get("output_format", "text") if session_state else "text"
+            output_format = (
+                session_state.get("output_format", "text") if session_state else "text"
+            )
 
             # Get theme from session state or default to light
             theme = session_state.get("theme", "light") if session_state else "light"
 
             # Format response
-            formatted = self.response_formatter.format(response, output_format=output_format, theme=theme)
+            formatted = self.response_formatter.format(
+                response, output_format=output_format, theme=theme
+            )
 
             return formatted
 
@@ -281,13 +311,17 @@ class NLInterface:
         elif component == "response":
             return {
                 "type": "partial",
-                "message": self.fallback_prompts["response_fallback"].format(partial_response=data.get("partial", "")),
+                "message": self.fallback_prompts["response_fallback"].format(
+                    partial_response=data.get("partial", "")
+                ),
                 "confidence": data.get("confidence", 0),
             }
         else:
             return self._handle_error(f"Unknown component: {component}")
 
-    def _handle_missing_entities(self, entities: Dict[str, Any], query: str) -> Dict[str, Any]:
+    def _handle_missing_entities(
+        self, entities: Dict[str, Any], query: str
+    ) -> Dict[str, Any]:
         """Handle missing or low confidence entities.
 
         Args:
@@ -299,13 +333,18 @@ class NLInterface:
         """
         missing = []
         for entity, data in entities.items():
-            if "confidence" not in data or data["confidence"] < self.confidence_thresholds["entity_extraction"]:
+            if (
+                "confidence" not in data
+                or data["confidence"] < self.confidence_thresholds["entity_extraction"]
+            ):
                 missing.append(entity)
 
         if missing:
             return {
                 "type": "clarification",
-                "message": self.fallback_prompts["entity_clarification"].format(entity=", ".join(missing)),
+                "message": self.fallback_prompts["entity_clarification"].format(
+                    entity=", ".join(missing)
+                ),
                 "missing_entities": missing,
                 "original_query": query,
             }
@@ -333,7 +372,11 @@ class NLInterface:
         Returns:
             Error response
         """
-        return {"type": "error", "message": f"An error occurred: {error}", "timestamp": datetime.now().isoformat()}
+        return {
+            "type": "error",
+            "message": f"An error occurred: {error}",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _generate_forecast(self, prompt: ProcessedPrompt) -> ResponseData:
         """Generate forecast response."""
@@ -343,10 +386,14 @@ class NLInterface:
             asset = self.prompt_processor.get_entity_by_type(prompt, "asset")
 
             if not timeframe or not asset:
-                return self._create_error_response("Missing required information for forecast")
+                return self._create_error_response(
+                    "Missing required information for forecast"
+                )
 
             # Get historical data
-            historical_data = self.market_analyzer.get_historical_data(asset.value, timeframe.value)
+            historical_data = self.market_analyzer.get_historical_data(
+                asset.value, timeframe.value
+            )
 
             # Generate forecast
             forecast = self.model.predict(historical_data)
@@ -369,7 +416,11 @@ class NLInterface:
                 },
                 type="forecast",
                 confidence=prompt.confidence,
-                metadata={"timeframe": timeframe.value, "asset": asset.value, "model": self.model.__class__.__name__},
+                metadata={
+                    "timeframe": timeframe.value,
+                    "asset": asset.value,
+                    "model": self.model.__class__.__name__,
+                },
             )
         except Exception as e:
             self.logger.error(f"Error generating forecast: {e}")
@@ -382,7 +433,9 @@ class NLInterface:
             asset = self.prompt_processor.get_entity_by_type(prompt, "asset")
 
             if not asset:
-                return self._create_error_response("Missing required information for analysis")
+                return self._create_error_response(
+                    "Missing required information for analysis"
+                )
 
             # Get market data
             market_data = self.market_analyzer.get_market_data(asset.value)
@@ -427,7 +480,9 @@ class NLInterface:
             action = self.prompt_processor.get_entity_by_type(prompt, "action")
 
             if not asset or not action:
-                return self._create_error_response("Missing required information for recommendation")
+                return self._create_error_response(
+                    "Missing required information for recommendation"
+                )
 
             # Get market data
             market_data = self.market_analyzer.get_market_data(asset.value)
@@ -478,7 +533,9 @@ class NLInterface:
             topic = self.prompt_processor.get_entity_by_type(prompt, "topic")
 
             if not topic:
-                return self._create_error_response("Missing required information for explanation")
+                return self._create_error_response(
+                    "Missing required information for explanation"
+                )
 
             # Get topic explanation
             explanation = self.market_analyzer.explain_topic(topic.value)
@@ -495,7 +552,10 @@ class NLInterface:
                 },
                 type="explanation",
                 confidence=prompt.confidence,
-                metadata={"topic": topic.value, "source": self.market_analyzer.get_explanation_source()},
+                metadata={
+                    "topic": topic.value,
+                    "source": self.market_analyzer.get_explanation_source(),
+                },
             )
         except Exception as e:
             self.logger.error(f"Error generating explanation: {e}")
@@ -508,10 +568,14 @@ class NLInterface:
             assets = self.prompt_processor.get_entity_values(prompt, "asset")
 
             if not assets:
-                return self._create_error_response("Missing required information for comparison")
+                return self._create_error_response(
+                    "Missing required information for comparison"
+                )
 
             # Get market data for all assets
-            market_data = {asset: self.market_analyzer.get_market_data(asset) for asset in assets}
+            market_data = {
+                asset: self.market_analyzer.get_market_data(asset) for asset in assets
+            }
 
             # Calculate correlation matrix
             correlation_matrix = self.market_analyzer.calculate_correlation(market_data)
@@ -524,7 +588,9 @@ class NLInterface:
                     "assets": assets,
                     "timeframe": list(market_data.values())[0].index.freq,
                     "comparison": comparison,
-                    "differences": self.market_analyzer.get_key_differences(market_data),
+                    "differences": self.market_analyzer.get_key_differences(
+                        market_data
+                    ),
                     "confidence": prompt.confidence * 100,
                     "correlation_matrix": correlation_matrix.values,
                 },
@@ -547,20 +613,26 @@ class NLInterface:
             strategy = self.prompt_processor.get_entity_by_type(prompt, "strategy")
 
             if not strategy:
-                return self._create_error_response("Missing required information for optimization")
+                return self._create_error_response(
+                    "Missing required information for optimization"
+                )
 
             # Get strategy parameters
             parameters = self.strategy_manager.get_strategy_parameters(strategy.value)
 
             # Optimize strategy
-            optimization_result = self.strategy_manager.optimize_strategy(strategy.value, parameters)
+            optimization_result = self.strategy_manager.optimize_strategy(
+                strategy.value, parameters
+            )
 
             return ResponseData(
                 content={
                     "strategy": strategy.value,
                     "parameters": optimization_result.best_params,
                     "performance": optimization_result.best_score,
-                    "improvements": self.strategy_manager.get_improvements(optimization_result),
+                    "improvements": self.strategy_manager.get_improvements(
+                        optimization_result
+                    ),
                     "confidence": prompt.confidence * 100,
                     "x_values": optimization_result.all_scores,
                     "y_values": optimization_result.convergence_history,
@@ -586,7 +658,9 @@ class NLInterface:
             test = self.prompt_processor.get_entity_by_type(prompt, "test")
 
             if not test:
-                return self._create_error_response("Missing required information for validation")
+                return self._create_error_response(
+                    "Missing required information for validation"
+                )
 
             # Run validation test
             test_results = self.strategy_manager.validate_strategy(test.value)
@@ -619,7 +693,9 @@ class NLInterface:
             asset = self.prompt_processor.get_entity_by_type(prompt, "asset")
 
             if not asset:
-                return self._create_error_response("Missing required information for monitoring")
+                return self._create_error_response(
+                    "Missing required information for monitoring"
+                )
 
             # Get portfolio status
             portfolio_status = self.portfolio_manager.get_portfolio_status()
@@ -642,7 +718,11 @@ class NLInterface:
                 },
                 type="monitor",
                 confidence=prompt.confidence,
-                metadata={"asset": asset.value, "monitoring_time": pd.Timestamp.now(), "alerts_count": len(alerts)},
+                metadata={
+                    "asset": asset.value,
+                    "monitoring_time": pd.Timestamp.now(),
+                    "alerts_count": len(alerts),
+                },
             )
         except Exception as e:
             self.logger.error(f"Error generating monitoring: {e}")
@@ -654,5 +734,8 @@ class NLInterface:
             content={"error": error_message},
             type="error",
             confidence=0.0,
-            metadata={"error_type": "processing_error", "timestamp": pd.Timestamp.now()},
+            metadata={
+                "error_type": "processing_error",
+                "timestamp": pd.Timestamp.now(),
+            },
         )

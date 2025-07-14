@@ -17,7 +17,7 @@ import redis
 # Add the trading directory to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from report.report_generator import ReportGenerator, generate_trade_report
+from .report_generator import ReportGenerator, generate_trade_report
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,13 @@ class ReportClient:
     the automated report service.
     """
 
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, redis_db: int = 0, **kwargs):
+    def __init__(
+        self,
+        redis_host: str = "localhost",
+        redis_port: int = 6379,
+        redis_db: int = 0,
+        **kwargs,
+    ):
         """
         Initialize the ReportClient.
 
@@ -45,7 +51,9 @@ class ReportClient:
         self.redis_db = redis_db
 
         # Initialize Redis connection
-        self.redis_client = redis.Redis(host=redis_host, port=redis_port, db=redis_db, decode_responses=True)
+        self.redis_client = redis.Redis(
+            host=redis_host, port=redis_port, db=redis_db, decode_responses=True
+        )
 
         # Initialize report generator
         self.report_generator = ReportGenerator(**kwargs)
@@ -95,7 +103,9 @@ class ReportClient:
             logger.error(f"Error generating report: {e}")
             raise
 
-    def trigger_forecast_report(self, forecast_data: Dict[str, Any], symbol: str, timeframe: str, period: str) -> str:
+    def trigger_forecast_report(
+        self, forecast_data: Dict[str, Any], symbol: str, timeframe: str, period: str
+    ) -> str:
         """
         Trigger a forecast report generation.
 
@@ -175,7 +185,9 @@ class ReportClient:
             logger.error(f"Error triggering strategy report: {e}")
             raise
 
-    def trigger_backtest_report(self, backtest_data: Dict[str, Any], symbol: str, timeframe: str, period: str) -> str:
+    def trigger_backtest_report(
+        self, backtest_data: Dict[str, Any], symbol: str, timeframe: str, period: str
+    ) -> str:
         """
         Trigger a backtest report generation.
 
@@ -209,7 +221,9 @@ class ReportClient:
             logger.error(f"Error triggering backtest report: {e}")
             raise
 
-    def wait_for_report(self, event_id: str, timeout: int = 60) -> Optional[Dict[str, Any]]:
+    def wait_for_report(
+        self, event_id: str, timeout: int = 60
+    ) -> Optional[Dict[str, Any]]:
         """
         Wait for a report to be completed.
 
@@ -319,7 +333,9 @@ class ReportClient:
                         "report_id": file.stem,
                         "format": "markdown",
                         "file_path": str(file),
-                        "created": datetime.fromtimestamp(file.stat().st_mtime).isoformat(),
+                        "created": datetime.fromtimestamp(
+                            file.stat().st_mtime
+                        ).isoformat(),
                     }
                     reports.append(report_info)
 
@@ -331,7 +347,9 @@ class ReportClient:
                         "report_id": file.stem,
                         "format": "html",
                         "file_path": str(file),
-                        "created": datetime.fromtimestamp(file.stat().st_mtime).isoformat(),
+                        "created": datetime.fromtimestamp(
+                            file.stat().st_mtime
+                        ).isoformat(),
                     }
                     reports.append(report_info)
 
@@ -343,7 +361,9 @@ class ReportClient:
                         "report_id": file.stem,
                         "format": "pdf",
                         "file_path": str(file),
-                        "created": datetime.fromtimestamp(file.stat().st_mtime).isoformat(),
+                        "created": datetime.fromtimestamp(
+                            file.stat().st_mtime
+                        ).isoformat(),
                     }
                     reports.append(report_info)
 

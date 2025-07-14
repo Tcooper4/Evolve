@@ -16,7 +16,16 @@ def check_imports() -> Dict[str, bool]:
     """Check critical imports."""
     results = {}
 
-    critical_modules = ["streamlit", "pandas", "numpy", "yfinance", "plotly", "scikit-learn", "torch", "transformers"]
+    critical_modules = [
+        "streamlit",
+        "pandas",
+        "numpy",
+        "yfinance",
+        "plotly",
+        "scikit-learn",
+        "torch",
+        "transformers",
+    ]
 
     for module in critical_modules:
         try:
@@ -154,7 +163,9 @@ def check_config_loading() -> Dict[str, any]:
                     if validate_config_structure(config_data):
                         results["config_validation"] = True
                     else:
-                        results["errors"].append(f"Invalid config structure in {config_path}")
+                        results["errors"].append(
+                            f"Invalid config structure in {config_path}"
+                        )
 
                 except json.JSONDecodeError as e:
                     results["errors"].append(f"Invalid JSON in {config_path}: {e}")
@@ -162,7 +173,13 @@ def check_config_loading() -> Dict[str, any]:
                     results["errors"].append(f"Error reading {config_path}: {e}")
 
         # Check required environment variables
-        required_vars = ["OPENAI_API_KEY", "YAHOO_FINANCE_API_KEY", "REDIS_HOST", "REDIS_PORT", "DATABASE_URL"]
+        required_vars = [
+            "OPENAI_API_KEY",
+            "YAHOO_FINANCE_API_KEY",
+            "REDIS_HOST",
+            "REDIS_PORT",
+            "DATABASE_URL",
+        ]
 
         for var in required_vars:
             value = os.getenv(var)
@@ -170,10 +187,19 @@ def check_config_loading() -> Dict[str, any]:
                 results["required_vars"][var] = True
             else:
                 results["required_vars"][var] = False
-                results["errors"].append(f"Missing required environment variable: {var}")
+                results["errors"].append(
+                    f"Missing required environment variable: {var}"
+                )
 
         # Check optional environment variables
-        optional_vars = ["DEBUG", "LOG_LEVEL", "ENVIRONMENT", "APP_VERSION", "CORS_ORIGINS", "RATE_LIMIT"]
+        optional_vars = [
+            "DEBUG",
+            "LOG_LEVEL",
+            "ENVIRONMENT",
+            "APP_VERSION",
+            "CORS_ORIGINS",
+            "RATE_LIMIT",
+        ]
 
         for var in optional_vars:
             value = os.getenv(var)
@@ -243,7 +269,11 @@ def check_config_utility_functions() -> bool:
     """Check if config utility functions are working."""
     try:
         # Try to import config utilities
-        config_modules = ["utils.config_loader", "config.app_config", "trading.config.config_manager"]
+        config_modules = [
+            "utils.config_loader",
+            "config.app_config",
+            "trading.config.config_manager",
+        ]
 
         for module_name in config_modules:
             try:
@@ -393,7 +423,11 @@ def main():
 
     # Add config and permission checks
     config_success = sum(
-        [config_results["env_loading"], config_results["json_fallback"], config_results["config_validation"]]
+        [
+            config_results["env_loading"],
+            config_results["json_fallback"],
+            config_results["config_validation"],
+        ]
     )
     config_total = 3
 

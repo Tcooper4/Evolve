@@ -84,7 +84,9 @@ class RidgeModel(BaseModel):
 
         # Validate scikit-learn availability
         if not SKLEARN_AVAILABLE:
-            raise ImportError("Scikit-learn is required for Ridge models. Install with: pip install scikit-learn")
+            raise ImportError(
+                "Scikit-learn is required for Ridge models. Install with: pip install scikit-learn"
+            )
 
         # Set default configuration
         self.config = {
@@ -130,7 +132,9 @@ class RidgeModel(BaseModel):
         if self.config["lag_periods"] < 0:
             raise ValidationError("Lag periods must be non-negative")
 
-    def _add_lag_features(self, features: np.ndarray, target: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _add_lag_features(
+        self, features: np.ndarray, target: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Add lag features to the feature matrix and align target."""
         lag_periods = self.config.get("lag_periods", 5)
         if lag_periods == 0:
@@ -152,7 +156,9 @@ class RidgeModel(BaseModel):
         combined_features = np.column_stack([features, lag_features])
         return combined_features, target
 
-    def _prepare_data(self, data: pd.DataFrame, is_training: bool = True) -> Tuple[np.ndarray, np.ndarray]:
+    def _prepare_data(
+        self, data: pd.DataFrame, is_training: bool = True
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Prepare data for Ridge regression modeling.
 
@@ -188,7 +194,9 @@ class RidgeModel(BaseModel):
         features = features[valid_mask]
         target = target[valid_mask]
         if len(features) < 10:
-            raise ValidationError("Insufficient data for Ridge modeling. Need at least 10 observations.")
+            raise ValidationError(
+                "Insufficient data for Ridge modeling. Need at least 10 observations."
+            )
         # Create lag features if requested
         if self.config.get("use_lags", True) and is_training:
             features, target = self._add_lag_features(features, target)
@@ -200,7 +208,9 @@ class RidgeModel(BaseModel):
             features = self.scaler.fit_transform(features)
         else:
             features = self.scaler.transform(features)
-        logger.info(f"Prepared {len(features)} observations with {features.shape[1]} features for Ridge modeling")
+        logger.info(
+            f"Prepared {len(features)} observations with {features.shape[1]} features for Ridge modeling"
+        )
         return features, target
 
     def _add_polynomial_features(self, features: np.ndarray) -> np.ndarray:
@@ -224,7 +234,9 @@ class RidgeModel(BaseModel):
             return combined_features
 
         except Exception as e:
-            logger.warning(f"Error creating polynomial features: {e}. Using original features.")
+            logger.warning(
+                f"Error creating polynomial features: {e}. Using original features."
+            )
             return features
 
     def build_model(self) -> Ridge:
@@ -245,7 +257,11 @@ class RidgeModel(BaseModel):
         return model
 
     def train(
-        self, data: pd.DataFrame, target_col: str = "target", feature_cols: Optional[List[str]] = None, **kwargs
+        self,
+        data: pd.DataFrame,
+        target_col: str = "target",
+        feature_cols: Optional[List[str]] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
         """
         Train the Ridge regression model.
@@ -271,9 +287,13 @@ class RidgeModel(BaseModel):
 
             # Perform cross-validation if requested
             if kwargs.get("cross_validate", False):
-                cv_scores = cross_val_score(self.model, features, target, cv=5, scoring="r2")
+                cv_scores = cross_val_score(
+                    self.model, features, target, cv=5, scoring="r2"
+                )
                 self.cv_scores = cv_scores.tolist()
-                logger.info(f"Cross-validation scores: {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})")
+                logger.info(
+                    f"Cross-validation scores: {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})"
+                )
 
             # Fit the model
             self.model.fit(features, target)
@@ -285,7 +305,9 @@ class RidgeModel(BaseModel):
             # Calculate feature importance
             self._calculate_feature_importance(features)
 
-            logger.info(f"Ridge model training completed in {training_time:.2f} seconds")
+            logger.info(
+                f"Ridge model training completed in {training_time:.2f} seconds"
+            )
             logger.info(f"Training metrics: {metrics}")
 
             return {
@@ -301,7 +323,9 @@ class RidgeModel(BaseModel):
             logger.error(f"Error during Ridge model training: {e}")
             raise ModelError(f"Ridge training failed: {e}")
 
-    def _calculate_training_metrics(self, features: np.ndarray, target: np.ndarray) -> Dict[str, float]:
+    def _calculate_training_metrics(
+        self, features: np.ndarray, target: np.ndarray
+    ) -> Dict[str, float]:
         """Calculate training metrics for the Ridge model."""
         if self.model is None:
             return {}
@@ -314,9 +338,13 @@ class RidgeModel(BaseModel):
             metrics = {
                 "r2_score": float(r2_score(target, predictions)),
                 "mean_squared_error": float(mean_squared_error(target, predictions)),
-                "root_mean_squared_error": float(np.sqrt(mean_squared_error(target, predictions))),
+                "root_mean_squared_error": float(
+                    np.sqrt(mean_squared_error(target, predictions))
+                ),
                 "mean_absolute_error": float(mean_absolute_error(target, predictions)),
-                "mean_absolute_percentage_error": float(np.mean(np.abs((target - predictions) / target)) * 100),
+                "mean_absolute_percentage_error": float(
+                    np.mean(np.abs((target - predictions) / target)) * 100
+                ),
             }
 
             return metrics
@@ -339,10 +367,16 @@ class RidgeModel(BaseModel):
                 self.feature_names = [f"feature_{i}" for i in range(len(importance))]
 
             # Create importance dictionary
-            self.feature_importance = {name: float(imp) for name, imp in zip(self.feature_names, importance)}
+            self.feature_importance = {
+                name: float(imp) for name, imp in zip(self.feature_names, importance)
+            }
 
             # Sort by importance
-            self.feature_importance = dict(sorted(self.feature_importance.items(), key=lambda x: x[1], reverse=True))
+            self.feature_importance = dict(
+                sorted(
+                    self.feature_importance.items(), key=lambda x: x[1], reverse=True
+                )
+            )
 
         except Exception as e:
             logger.warning(f"Error calculating feature importance: {e}")
@@ -369,10 +403,18 @@ class RidgeModel(BaseModel):
                 if self.config.get("use_lags", True):
                     # Recreate lag features if possible
                     features_orig = (
-                        data.select_dtypes(include=[np.number]).drop(columns=["target"], errors="ignore").values
+                        data.select_dtypes(include=[np.number])
+                        .drop(columns=["target"], errors="ignore")
+                        .values
                     )
-                    target_orig = data["target"].values if "target" in data.columns else np.zeros(len(data))
-                    features_lagged, _ = self._add_lag_features(features_orig, target_orig)
+                    target_orig = (
+                        data["target"].values
+                        if "target" in data.columns
+                        else np.zeros(len(data))
+                    )
+                    features_lagged, _ = self._add_lag_features(
+                        features_orig, target_orig
+                    )
                     if features_lagged.shape[1] == expected_features:
                         features = features_lagged
                     else:
@@ -384,7 +426,9 @@ class RidgeModel(BaseModel):
                         f"Feature mismatch: model expects {expected_features} features, but got {features.shape[1]}. Please provide input data with the same feature structure as used in training."
                     )
             predictions = self.model.predict(features)
-            logger.info(f"Generated Ridge predictions for {len(predictions)} observations")
+            logger.info(
+                f"Generated Ridge predictions for {len(predictions)} observations"
+            )
             return predictions
         except Exception as e:
             logger.error(f"Error during Ridge prediction: {e}")
@@ -414,7 +458,9 @@ class RidgeModel(BaseModel):
             # Generate confidence intervals (simplified)
             # In practice, you might want to use bootstrap or other methods
             std_error = np.std(predictions) * 0.1  # Simplified
-            confidence_intervals = np.column_stack([predictions - 1.96 * std_error, predictions + 1.96 * std_error])
+            confidence_intervals = np.column_stack(
+                [predictions - 1.96 * std_error, predictions + 1.96 * std_error]
+            )
 
             forecast_results = {
                 "predictions": predictions,
@@ -431,7 +477,9 @@ class RidgeModel(BaseModel):
             logger.error(f"Error during Ridge forecasting: {e}")
             raise ModelError(f"Ridge forecasting failed: {e}")
 
-    def evaluate(self, data: pd.DataFrame, target_col: str = "target") -> Dict[str, float]:
+    def evaluate(
+        self, data: pd.DataFrame, target_col: str = "target"
+    ) -> Dict[str, float]:
         """
         Evaluate the Ridge model on test data.
 
@@ -456,9 +504,13 @@ class RidgeModel(BaseModel):
             metrics = {
                 "r2_score": float(r2_score(target, predictions)),
                 "mean_squared_error": float(mean_squared_error(target, predictions)),
-                "root_mean_squared_error": float(np.sqrt(mean_squared_error(target, predictions))),
+                "root_mean_squared_error": float(
+                    np.sqrt(mean_squared_error(target, predictions))
+                ),
                 "mean_absolute_error": float(mean_absolute_error(target, predictions)),
-                "mean_absolute_percentage_error": float(np.mean(np.abs((target - predictions) / target)) * 100),
+                "mean_absolute_percentage_error": float(
+                    np.mean(np.abs((target - predictions) / target)) * 100
+                ),
             }
 
             logger.info(f"Ridge model evaluation completed: {metrics}")

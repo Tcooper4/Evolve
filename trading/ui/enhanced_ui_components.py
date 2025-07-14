@@ -89,8 +89,12 @@ class EnhancedUIComponents:
                     if config.param_type == "int":
                         value = st.slider(
                             config.display_name,
-                            min_value=int(config.min_value) if config.min_value is not None else 0,
-                            max_value=int(config.max_value) if config.max_value is not None else 100,
+                            min_value=int(config.min_value)
+                            if config.min_value is not None
+                            else 0,
+                            max_value=int(config.max_value)
+                            if config.max_value is not None
+                            else 100,
                             value=int(config.default_value),
                             step=int(config.step) if config.step else 1,
                             help=config.description,
@@ -98,16 +102,30 @@ class EnhancedUIComponents:
 
                         # Validation
                         if config.validation_rules:
-                            if "min" in config.validation_rules and value < config.validation_rules["min"]:
-                                st.error(f"{config.display_name} must be at least {config.validation_rules['min']}")
-                            elif "max" in config.validation_rules and value > config.validation_rules["max"]:
-                                st.error(f"{config.display_name} must be at most {config.validation_rules['max']}")
+                            if (
+                                "min" in config.validation_rules
+                                and value < config.validation_rules["min"]
+                            ):
+                                st.error(
+                                    f"{config.display_name} must be at least {config.validation_rules['min']}"
+                                )
+                            elif (
+                                "max" in config.validation_rules
+                                and value > config.validation_rules["max"]
+                            ):
+                                st.error(
+                                    f"{config.display_name} must be at most {config.validation_rules['max']}"
+                                )
 
                     elif config.param_type == "float":
                         value = st.slider(
                             config.display_name,
-                            min_value=float(config.min_value) if config.min_value is not None else 0.0,
-                            max_value=float(config.max_value) if config.max_value is not None else 1.0,
+                            min_value=float(config.min_value)
+                            if config.min_value is not None
+                            else 0.0,
+                            max_value=float(config.max_value)
+                            if config.max_value is not None
+                            else 1.0,
                             value=float(config.default_value),
                             step=float(config.step) if config.step else 0.01,
                             help=config.description,
@@ -115,14 +133,26 @@ class EnhancedUIComponents:
 
                         # Validation
                         if config.validation_rules:
-                            if "min" in config.validation_rules and value < config.validation_rules["min"]:
-                                st.error(f"{config.display_name} must be at least {config.validation_rules['min']}")
-                            elif "max" in config.validation_rules and value > config.validation_rules["max"]:
-                                st.error(f"{config.display_name} must be at most {config.validation_rules['max']}")
+                            if (
+                                "min" in config.validation_rules
+                                and value < config.validation_rules["min"]
+                            ):
+                                st.error(
+                                    f"{config.display_name} must be at least {config.validation_rules['min']}"
+                                )
+                            elif (
+                                "max" in config.validation_rules
+                                and value > config.validation_rules["max"]
+                            ):
+                                st.error(
+                                    f"{config.display_name} must be at most {config.validation_rules['max']}"
+                                )
 
                     elif config.param_type == "bool":
                         value = st.checkbox(
-                            config.display_name, value=bool(config.default_value), help=config.description
+                            config.display_name,
+                            value=bool(config.default_value),
+                            help=config.description,
                         )
 
                     elif config.param_type == "select":
@@ -206,7 +236,9 @@ class EnhancedUIComponents:
                 )
 
                 # Sort by confidence
-                df["Confidence_Value"] = df["Confidence"].str.rstrip("%").astype(float) / 100
+                df["Confidence_Value"] = (
+                    df["Confidence"].str.rstrip("%").astype(float) / 100
+                )
                 df = df.sort_values("Confidence_Value", ascending=False)
                 df = df.drop("Confidence_Value", axis=1)
 
@@ -215,11 +247,15 @@ class EnhancedUIComponents:
                 # Confidence visualization
                 st.subheader("Confidence Distribution")
 
-                confidence_values = [data.get("confidence", 0) for data in breakdown_data.values()]
+                confidence_values = [
+                    data.get("confidence", 0) for data in breakdown_data.values()
+                ]
                 model_names = list(breakdown_data.keys())
 
                 # Create bar chart
-                chart_data = pd.DataFrame({"Model": model_names, "Confidence": confidence_values})
+                chart_data = pd.DataFrame(
+                    {"Model": model_names, "Confidence": confidence_values}
+                )
 
                 st.bar_chart(chart_data.set_index("Model"))
 
@@ -255,7 +291,10 @@ class EnhancedUIComponents:
             with col1:
                 # Session duration
                 session_duration = datetime.now() - self.session_state.ui_session_start
-                st.metric("Session Duration", f"{session_duration.seconds // 60}m {session_duration.seconds % 60}s")
+                st.metric(
+                    "Session Duration",
+                    f"{session_duration.seconds // 60}m {session_duration.seconds % 60}s",
+                )
 
             with col2:
                 # Selected ticker
@@ -293,7 +332,10 @@ class EnhancedUIComponents:
         st.markdown("---")
 
     def render_log_viewer(
-        self, logs: Optional[List[Dict[str, Any]]] = None, max_logs: int = 100, title: str = "System Logs"
+        self,
+        logs: Optional[List[Dict[str, Any]]] = None,
+        max_logs: int = 100,
+        title: str = "System Logs",
     ):
         """
         Render log viewer with expandable error details.
@@ -317,7 +359,9 @@ class EnhancedUIComponents:
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            log_level = st.selectbox("Log Level", ["All", "INFO", "WARNING", "ERROR", "DEBUG"], index=0)
+            log_level = st.selectbox(
+                "Log Level", ["All", "INFO", "WARNING", "ERROR", "DEBUG"], index=0
+            )
 
         with col2:
             search_term = st.text_input("Search Logs", "")
@@ -329,10 +373,16 @@ class EnhancedUIComponents:
         filtered_logs = logs
 
         if log_level != "All":
-            filtered_logs = [log for log in filtered_logs if log.get("level", "INFO") == log_level]
+            filtered_logs = [
+                log for log in filtered_logs if log.get("level", "INFO") == log_level
+            ]
 
         if search_term:
-            filtered_logs = [log for log in filtered_logs if search_term.lower() in log.get("message", "").lower()]
+            filtered_logs = [
+                log
+                for log in filtered_logs
+                if search_term.lower() in log.get("message", "").lower()
+            ]
 
         # Limit number of logs
         filtered_logs = filtered_logs[-max_logs:]
@@ -370,7 +420,9 @@ class EnhancedUIComponents:
             st.success("Logs cleared!")
             st.rerun()
 
-    def render_error_viewer(self, errors: Optional[List[Dict[str, Any]]] = None, title: str = "Error Viewer"):
+    def render_error_viewer(
+        self, errors: Optional[List[Dict[str, Any]]] = None, title: str = "Error Viewer"
+    ):
         """
         Render expandable error viewer.
 
@@ -382,7 +434,9 @@ class EnhancedUIComponents:
 
         if errors is None:
             # Get errors from logs
-            errors = [log for log in self.session_state.ui_logs if log.get("level") == "ERROR"]
+            errors = [
+                log for log in self.session_state.ui_logs if log.get("level") == "ERROR"
+            ]
 
         if not errors:
             st.success("No errors found!")
@@ -438,7 +492,12 @@ class EnhancedUIComponents:
         # Update last run
         self.session_state.ui_last_run = datetime.now()
 
-    def add_log_entry(self, message: str, level: str = "INFO", details: Optional[Dict[str, Any]] = None):
+    def add_log_entry(
+        self,
+        message: str,
+        level: str = "INFO",
+        details: Optional[Dict[str, Any]] = None,
+    ):
         """
         Add a log entry to the session state.
 
@@ -495,7 +554,12 @@ class EnhancedUIComponents:
                     issues.append("Required but not set")
 
                 validation_results.append(
-                    {"parameter": param_name, "value": value, "valid": is_valid, "issues": issues}
+                    {
+                        "parameter": param_name,
+                        "value": value,
+                        "valid": is_valid,
+                        "issues": issues,
+                    }
                 )
 
         # Display validation results
@@ -504,11 +568,15 @@ class EnhancedUIComponents:
                 if result["valid"]:
                     st.success(f"✅ {result['parameter']}: {result['value']}")
                 else:
-                    st.error(f"❌ {result['parameter']}: {result['value']} - {', '.join(result['issues'])}")
+                    st.error(
+                        f"❌ {result['parameter']}: {result['value']} - {', '.join(result['issues'])}"
+                    )
         else:
             st.info("No validation rules defined.")
 
-    def render_performance_metrics(self, metrics: Dict[str, Any], title: str = "Performance Metrics"):
+    def render_performance_metrics(
+        self, metrics: Dict[str, Any], title: str = "Performance Metrics"
+    ):
         """
         Render performance metrics with visual indicators.
 
@@ -531,13 +599,17 @@ class EnhancedUIComponents:
                 st.metric(
                     "Sharpe Ratio",
                     f"{sharpe:.2f}",
-                    delta=f"{sharpe - 1.0:.2f}" if sharpe > 1.0 else f"{sharpe - 1.0:.2f}",
+                    delta=f"{sharpe - 1.0:.2f}"
+                    if sharpe > 1.0
+                    else f"{sharpe - 1.0:.2f}",
                 )
 
         with col2:
             if "total_return" in metrics:
                 total_return = metrics["total_return"]
-                st.metric("Total Return", f"{total_return:.1%}", delta=f"{total_return:.1%}")
+                st.metric(
+                    "Total Return", f"{total_return:.1%}", delta=f"{total_return:.1%}"
+                )
 
         with col3:
             if "max_drawdown" in metrics:
@@ -550,13 +622,17 @@ class EnhancedUIComponents:
                 st.metric(
                     "Win Rate",
                     f"{win_rate:.1%}",
-                    delta=f"{win_rate - 0.5:.1%}" if win_rate > 0.5 else f"{win_rate - 0.5:.1%}",
+                    delta=f"{win_rate - 0.5:.1%}"
+                    if win_rate > 0.5
+                    else f"{win_rate - 0.5:.1%}",
                 )
 
         # Detailed metrics table
         if len(metrics) > 4:
             st.subheader("Detailed Metrics")
 
-            metrics_df = pd.DataFrame([{"Metric": key, "Value": value} for key, value in metrics.items()])
+            metrics_df = pd.DataFrame(
+                [{"Metric": key, "Value": value} for key, value in metrics.items()]
+            )
 
             st.dataframe(metrics_df, use_container_width=True)

@@ -60,7 +60,9 @@ def main():
     metrics_response = memory.get_metrics(selected_ticker)
 
     if not metrics_response.get("success", False):
-        st.error(f"Error loading metrics: {metrics_response.get('error', 'Unknown error')}")
+        st.error(
+            f"Error loading metrics: {metrics_response.get('error', 'Unknown error')}"
+        )
         return
 
     metrics = metrics_response.get("result", {})
@@ -96,18 +98,27 @@ def main():
     date_range = st.sidebar.date_input("📅 Date Filter", [min_date, max_date])
     safe_session_set("date_range", date_range)
     if len(date_range) == 2:
-        df = df[(df["Timestamp"] >= pd.to_datetime(date_range[0])) & (df["Timestamp"] <= pd.to_datetime(date_range[1]))]
+        df = df[
+            (df["Timestamp"] >= pd.to_datetime(date_range[0]))
+            & (df["Timestamp"] <= pd.to_datetime(date_range[1]))
+        ]
 
     models = df["Model"].unique()
-    selected_models = st.sidebar.multiselect("🎯 Filter by Model", models, default=list(models))
+    selected_models = st.sidebar.multiselect(
+        "🎯 Filter by Model", models, default=list(models)
+    )
     df = df[df["Model"].isin(selected_models)]
 
     apply_rolling = st.sidebar.checkbox("📉 Rolling Average (window=2)", value=False)
     if apply_rolling:
-        df["MSE"] = df.groupby("Model")["MSE"].transform(lambda x: x.rolling(2, min_periods=1).mean())
+        df["MSE"] = df.groupby("Model")["MSE"].transform(
+            lambda x: x.rolling(2, min_periods=1).mean()
+        )
 
     # ==== Tabs ====
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📉 MSE", "📈 Sharpe", "🎯 Win Rate", "🔥 Heatmap", "🔍 Detail"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["📉 MSE", "📈 Sharpe", "🎯 Win Rate", "🔥 Heatmap", "🔍 Detail"]
+    )
 
     with tab1:
         st.subheader("📉 MSE Trend")
@@ -117,7 +128,12 @@ def main():
             y="MSE",
             color="Model",
             markers=True,
-            hover_data=["Sharpe Ratio", "Win Rate", "Confidence Low", "Confidence High"],
+            hover_data=[
+                "Sharpe Ratio",
+                "Win Rate",
+                "Confidence Low",
+                "Confidence High",
+            ],
         )
         st.plotly_chart(fig1, use_container_width=True)
 
@@ -133,23 +149,35 @@ def main():
 
     with tab4:
         st.subheader("🔥 Model Comparison Heatmap")
-        heat_df = df.pivot_table(index="Model", values=["MSE", "Sharpe Ratio", "Win Rate"])
+        heat_df = df.pivot_table(
+            index="Model", values=["MSE", "Sharpe Ratio", "Win Rate"]
+        )
         fig4, ax = plt.subplots(figsize=(10, 6))
         sns.heatmap(heat_df, annot=True, cmap="YlGnBu", ax=ax)
         st.pyplot(fig4)
 
     with tab5:
         st.subheader("🔍 Detailed Drilldown")
-        selected_model = st.selectbox("🔎 Select Model", df["Model"].unique(), key=os.getenv("KEY", ""))
+        selected_model = st.selectbox(
+            "🔎 Select Model", df["Model"].unique(), key=os.getenv("KEY", "")
+        )
         safe_session_set("selected_model", selected_model)
         ts = st.selectbox(
             "🕒 Select Timestamp",
-            df[df["Model"] == selected_model]["Timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S").unique(),
+            df[df["Model"] == selected_model]["Timestamp"]
+            .dt.strftime("%Y-%m-%d %H:%M:%S")
+            .unique(),
             key=os.getenv("KEY", ""),
         )
-        row = df[(df["Model"] == selected_model) & (df["Timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S") == ts)]
+        row = df[
+            (df["Model"] == selected_model)
+            & (df["Timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S") == ts)
+        ]
         if not row.empty:
-            st.code("\n".join([f"{k}: {v}" for k, v in row.iloc[0].to_dict().items()]), language="yaml")
+            st.code(
+                "\n".join([f"{k}: {v}" for k, v in row.iloc[0].to_dict().items()]),
+                language="yaml",
+            )
 
     # ==== AI Commentary (GPT-based, optional) ====
     st.subheader("🧠 AI Strategy Commentary")
@@ -157,11 +185,15 @@ def main():
     if show_gpt:
         st.markdown("```text\n" + generate_strategy_commentary(df) + "\n```")
     else:
-        st.info("Enable the checkbox to generate a GPT-based summary of strategy performance.")
+        st.info(
+            "Enable the checkbox to generate a GPT-based summary of strategy performance."
+        )
 
     # ==== Retraining + Switch Suggestion ====
     st.subheader("🚦 Strategy Recommendations")
-    bad_models = df[(df["MSE"] > 0.1) | (df["Sharpe Ratio"] < 1.0) | (df["Win Rate"] < 0.6)]["Model"].unique()
+    bad_models = df[
+        (df["MSE"] > 0.1) | (df["Sharpe Ratio"] < 1.0) | (df["Win Rate"] < 0.6)
+    ]["Model"].unique()
 
     if bad_models.any():
         st.error(f"🚨 Suggest retraining or switching: {', '.join(bad_models)}")
@@ -172,7 +204,9 @@ def main():
     st.subheader("📉 Auto-Deactivate Poor Performers")
     toggle = st.toggle("Enable Auto-Deactivation", value=False)
     if toggle:
-        st.warning(f"The following models will be flagged as inactive: {', '.join(bad_models)}")
+        st.warning(
+            f"The following models will be flagged as inactive: {', '.join(bad_models)}"
+        )
         # memory.mark_inactive_models(bad_models) # implement if desired
     else:
         st.caption("All models remain active.")
@@ -188,16 +222,26 @@ def main():
     # ==== A/B Testing ====
     st.subheader("🧪 A/B Test Group Split")
     df["Group"] = df["Model"].apply(lambda x: "A" if "v1" in x.lower() else "B")
-    ab_summary = df.groupby("Group")[["MSE", "Sharpe Ratio", "Win Rate"]].mean().round(3)
+    ab_summary = (
+        df.groupby("Group")[["MSE", "Sharpe Ratio", "Win Rate"]].mean().round(3)
+    )
     st.dataframe(ab_summary)
     st.plotly_chart(
-        px.bar(ab_summary.reset_index().melt(id_vars="Group"), x="Group", y="value", color="variable", barmode="group")
+        px.bar(
+            ab_summary.reset_index().melt(id_vars="Group"),
+            x="Group",
+            y="value",
+            color="variable",
+            barmode="group",
+        )
     )
 
     # ==== Export ====
     st.subheader("📁 Export Report")
     st.download_button(
-        "⬇ Export CSV", df.to_csv(index=False).encode("utf-8"), file_name=f"{selected_ticker}_performance.csv"
+        "⬇ Export CSV",
+        df.to_csv(index=False).encode("utf-8"),
+        file_name=f"{selected_ticker}_performance.csv",
     )
 
 

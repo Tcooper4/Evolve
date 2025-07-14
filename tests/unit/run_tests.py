@@ -47,7 +47,9 @@ def run_tests_with_pytest(test_dir="tests/unit", verbose=True, coverage=True):
         )
 
     # Add additional options
-    cmd.extend(["--tb=short", "--strict-markers", "--disable-warnings", "--durations=10"])
+    cmd.extend(
+        ["--tb=short", "--strict-markers", "--disable-warnings", "--durations=10"]
+    )
 
     print(f"Command: {' '.join(cmd)}")
     print()
@@ -83,7 +85,14 @@ def parse_test_results(stdout):
     Returns:
         dict: Parsed test statistics
     """
-    stats = {"total_tests": 0, "passed": 0, "failed": 0, "skipped": 0, "errors": 0, "test_files": []}
+    stats = {
+        "total_tests": 0,
+        "passed": 0,
+        "failed": 0,
+        "skipped": 0,
+        "errors": 0,
+        "test_files": [],
+    }
 
     lines = stdout.split("\n")
 
@@ -100,7 +109,9 @@ def parse_test_results(stdout):
                 stats["passed"] = int(numbers[0])
                 stats["failed"] = int(numbers[1])
                 stats["skipped"] = int(numbers[2])
-                stats["total_tests"] = stats["passed"] + stats["failed"] + stats["skipped"]
+                stats["total_tests"] = (
+                    stats["passed"] + stats["failed"] + stats["skipped"]
+                )
 
         # Extract test file names
         if line.startswith("tests/unit/test_"):
@@ -185,7 +196,11 @@ def run_individual_test_suites():
             "test_prophet_forecaster.py",
             "test_hybrid_forecaster.py",
         ],
-        "Strategy Signals": ["test_rsi_signals.py", "test_macd_signals.py", "test_bollinger_signals.py"],
+        "Strategy Signals": [
+            "test_rsi_signals.py",
+            "test_macd_signals.py",
+            "test_bollinger_signals.py",
+        ],
         "Agents": ["test_prompt_agent.py"],
         "Backtesting": ["test_backtester.py"],
     }
@@ -206,25 +221,40 @@ def run_individual_test_suites():
 
                 cmd = ["python", "-m", "pytest", test_path, "-v", "--tb=no"]
                 try:
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                    result = subprocess.run(
+                        cmd, capture_output=True, text=True, timeout=60
+                    )
                     success = result.returncode == 0
                     status = "✅ PASS" if success else "❌ FAIL"
                     print(status)
 
                     suite_results.append(
-                        {"file": test_file, "success": success, "output": result.stdout, "error": result.stderr}
+                        {
+                            "file": test_file,
+                            "success": success,
+                            "output": result.stdout,
+                            "error": result.stderr,
+                        }
                     )
                 except subprocess.TimeoutExpired:
                     print("⏰ TIMEOUT")
                     suite_results.append(
-                        {"file": test_file, "success": False, "error": "Test timed out after 60 seconds"}
+                        {
+                            "file": test_file,
+                            "success": False,
+                            "error": "Test timed out after 60 seconds",
+                        }
                     )
                 except Exception as e:
                     print(f"❌ ERROR: {e}")
-                    suite_results.append({"file": test_file, "success": False, "error": str(e)})
+                    suite_results.append(
+                        {"file": test_file, "success": False, "error": str(e)}
+                    )
             else:
                 print(f"  ⚠️  {test_file} not found")
-                suite_results.append({"file": test_file, "success": False, "error": "File not found"})
+                suite_results.append(
+                    {"file": test_file, "success": False, "error": "File not found"}
+                )
 
         results[suite_name] = suite_results
 

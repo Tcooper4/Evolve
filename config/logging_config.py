@@ -96,7 +96,10 @@ class LoggingConfig:
             )
             logging.error(f"Error setting up logging: {e}")
             # Fallback to basic logging
-            logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            )
 
     def _get_log_level(self) -> int:
         """
@@ -197,7 +200,9 @@ class LoggingConfig:
         handler.setLevel(logging.INFO)
 
         # Custom formatter for performance logs
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
 
         # Create performance logger
@@ -225,7 +230,9 @@ class LoggingConfig:
         handler.setLevel(logging.INFO)
 
         # Custom formatter for audit logs
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         handler.setFormatter(formatter)
 
         # Create audit logger
@@ -488,7 +495,12 @@ def get_audit_logger() -> logging.Logger:
 # Convenience functions for common logging patterns
 
 
-def log_function_call(func_name: str, args: tuple = None, kwargs: dict = None, logger: logging.Logger = None) -> None:
+def log_function_call(
+    func_name: str,
+    args: tuple = None,
+    kwargs: dict = None,
+    logger: logging.Logger = None,
+) -> None:
     """
     Log function call.
 
@@ -506,7 +518,9 @@ def log_function_call(func_name: str, args: tuple = None, kwargs: dict = None, l
     logger.debug(f"Function call: {func_name}{args_str} {kwargs_str}")
 
 
-def log_performance(operation: str, duration: float, details: dict = None, logger: logging.Logger = None) -> None:
+def log_performance(
+    operation: str, duration: float, details: dict = None, logger: logging.Logger = None
+) -> None:
     """
     Log performance metrics.
 
@@ -519,7 +533,11 @@ def log_performance(operation: str, duration: float, details: dict = None, logge
     if logger is None:
         logger = get_performance_logger()
 
-    log_data = {"operation": operation, "duration_seconds": duration, "timestamp": datetime.now().isoformat()}
+    log_data = {
+        "operation": operation,
+        "duration_seconds": duration,
+        "timestamp": datetime.now().isoformat(),
+    }
 
     if details:
         log_data.update(details)
@@ -527,7 +545,12 @@ def log_performance(operation: str, duration: float, details: dict = None, logge
     logger.info(f"Performance: {json.dumps(log_data)}")
 
 
-def log_audit_event(event_type: str, user: str = None, details: dict = None, logger: logging.Logger = None) -> None:
+def log_audit_event(
+    event_type: str,
+    user: str = None,
+    details: dict = None,
+    logger: logging.Logger = None,
+) -> None:
     """
     Log audit event.
 
@@ -540,7 +563,11 @@ def log_audit_event(event_type: str, user: str = None, details: dict = None, log
     if logger is None:
         logger = get_audit_logger()
 
-    log_data = {"event_type": event_type, "user": user or "system", "timestamp": datetime.now().isoformat()}
+    log_data = {
+        "event_type": event_type,
+        "user": user or "system",
+        "timestamp": datetime.now().isoformat(),
+    }
 
     if details:
         log_data.update(details)

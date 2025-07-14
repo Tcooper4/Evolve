@@ -17,7 +17,7 @@ import xgboost as xgb
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, TimeSeriesSplit
 
-from trading.models.advanced.lstm.lstm_model import LSTMModel
+from trading.models.lstm_model import LSTMModel
 from trading.utils.logging_utils import setup_logger
 
 # Try to import optional dependencies
@@ -83,7 +83,10 @@ class HyperparameterOptimizer:
         # Initialize backend-specific components
         if backend == "optuna" and OPTUNA_AVAILABLE:
             self.study = optuna.create_study(
-                study_name=study_name, storage=storage, load_if_exists=True, direction="minimize"
+                study_name=study_name,
+                storage=storage,
+                load_if_exists=True,
+                direction="minimize",
             )
         elif backend == "skopt" and SKOPT_AVAILABLE:
             self.study = None  # skopt doesn't use study objects
@@ -92,7 +95,9 @@ class HyperparameterOptimizer:
 
         logger.info(f"Hyperparameter optimizer initialized with backend: {backend}")
 
-    def optimize_xgboost(self, X: pd.DataFrame, y: pd.Series, n_trials: int = 100) -> Dict[str, Any]:
+    def optimize_xgboost(
+        self, X: pd.DataFrame, y: pd.Series, n_trials: int = 100
+    ) -> Dict[str, Any]:
         """Optimize XGBoost hyperparameters using the selected backend.
 
         Args:
@@ -112,16 +117,22 @@ class HyperparameterOptimizer:
         elif self.backend == "grid":
             return self._optimize_xgboost_grid(X, y)
         else:
-            raise ValueError(f"Backend {self.backend} not available. Install required packages.")
+            raise ValueError(
+                f"Backend {self.backend} not available. Install required packages."
+            )
 
-    def _optimize_xgboost_optuna(self, X: pd.DataFrame, y: pd.Series, n_trials: int) -> Dict[str, Any]:
+    def _optimize_xgboost_optuna(
+        self, X: pd.DataFrame, y: pd.Series, n_trials: int
+    ) -> Dict[str, Any]:
         """Optimize XGBoost using Optuna (Bayesian optimization)."""
 
         def objective(trial):
             params = {
                 "n_estimators": trial.suggest_int("n_estimators", 50, 500),
                 "max_depth": trial.suggest_int("max_depth", 3, 10),
-                "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3, log=True),
+                "learning_rate": trial.suggest_float(
+                    "learning_rate", 0.01, 0.3, log=True
+                ),
                 "subsample": trial.suggest_float("subsample", 0.6, 1.0),
                 "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
                 "reg_alpha": trial.suggest_float("reg_alpha", 1e-8, 10.0, log=True),
@@ -132,7 +143,9 @@ class HyperparameterOptimizer:
             return self._evaluate_xgboost_params(X, y, params)
 
         try:
-            logger.info(f"Starting XGBoost optimization with Optuna ({n_trials} trials)")
+            logger.info(
+                f"Starting XGBoost optimization with Optuna ({n_trials} trials)"
+            )
             self.study.optimize(objective, n_trials=n_trials)
 
             best_params = self.study.best_params
@@ -150,7 +163,9 @@ class HyperparameterOptimizer:
             # Log parameter importance
             self._log_parameter_importance("xgboost_optuna")
 
-            logger.info(f"XGBoost Optuna optimization completed. Best RMSE: {best_score:.4f}")
+            logger.info(
+                f"XGBoost Optuna optimization completed. Best RMSE: {best_score:.4f}"
+            )
             return {
                 "best_params": best_params,
                 "best_score": best_score,
@@ -165,7 +180,9 @@ class HyperparameterOptimizer:
             logger.error(f"XGBoost Optuna optimization failed: {e}")
             return {"error": str(e)}
 
-    def _optimize_xgboost_skopt(self, X: pd.DataFrame, y: pd.Series, n_trials: int) -> Dict[str, Any]:
+    def _optimize_xgboost_skopt(
+        self, X: pd.DataFrame, y: pd.Series, n_trials: int
+    ) -> Dict[str, Any]:
         """Optimize XGBoost using scikit-optimize (Bayesian optimization)."""
         # Define search space
         space = [
@@ -192,7 +209,9 @@ class HyperparameterOptimizer:
             return self._evaluate_xgboost_params(X, y, param_dict)
 
         try:
-            logger.info(f"Starting XGBoost optimization with scikit-optimize ({n_trials} trials)")
+            logger.info(
+                f"Starting XGBoost optimization with scikit-optimize ({n_trials} trials)"
+            )
             result = gp_minimize(objective, space, n_calls=n_trials, random_state=42)
 
             best_params = {
@@ -211,7 +230,9 @@ class HyperparameterOptimizer:
             # Save optimization results
             self._save_skopt_results("xgboost_skopt", result, best_params)
 
-            logger.info(f"XGBoost scikit-optimize completed. Best RMSE: {result.fun:.4f}")
+            logger.info(
+                f"XGBoost scikit-optimize completed. Best RMSE: {result.fun:.4f}"
+            )
             return {
                 "best_params": best_params,
                 "best_score": result.fun,
@@ -224,7 +245,9 @@ class HyperparameterOptimizer:
             logger.error(f"XGBoost scikit-optimize failed: {e}")
             return {"error": str(e)}
 
-    def _optimize_xgboost_random(self, X: pd.DataFrame, y: pd.Series, n_trials: int) -> Dict[str, Any]:
+    def _optimize_xgboost_random(
+        self, X: pd.DataFrame, y: pd.Series, n_trials: int
+    ) -> Dict[str, Any]:
         """Optimize XGBoost using Random Search."""
         param_distributions = {
             "n_estimators": [50, 100, 200, 300, 400, 500],
@@ -319,7 +342,9 @@ class HyperparameterOptimizer:
             logger.error(f"XGBoost Grid Search failed: {e}")
             return {"error": str(e)}
 
-    def _evaluate_xgboost_params(self, X: pd.DataFrame, y: pd.Series, params: Dict[str, Any]) -> float:
+    def _evaluate_xgboost_params(
+        self, X: pd.DataFrame, y: pd.Series, params: Dict[str, Any]
+    ) -> float:
         """Evaluate XGBoost parameters using time series cross-validation."""
         try:
             tscv = TimeSeriesSplit(n_splits=5)
@@ -342,7 +367,9 @@ class HyperparameterOptimizer:
             logger.error(f"XGBoost evaluation error: {e}")
             return float("inf")
 
-    def optimize_lstm(self, X: np.ndarray, y: np.ndarray, n_trials: int = 50) -> Dict[str, Any]:
+    def optimize_lstm(
+        self, X: np.ndarray, y: np.ndarray, n_trials: int = 50
+    ) -> Dict[str, Any]:
         """Optimize LSTM hyperparameters using the selected backend."""
         if self.backend == "optuna" and OPTUNA_AVAILABLE:
             return self._optimize_lstm_optuna(X, y, n_trials)
@@ -353,17 +380,25 @@ class HyperparameterOptimizer:
         elif self.backend == "grid":
             return self._optimize_lstm_grid(X, y)
         else:
-            raise ValueError(f"Backend {self.backend} not available. Install required packages.")
+            raise ValueError(
+                f"Backend {self.backend} not available. Install required packages."
+            )
 
-    def _optimize_lstm_optuna(self, X: np.ndarray, y: np.ndarray, n_trials: int) -> Dict[str, Any]:
+    def _optimize_lstm_optuna(
+        self, X: np.ndarray, y: np.ndarray, n_trials: int
+    ) -> Dict[str, Any]:
         """Optimize LSTM using Optuna."""
 
         def objective(trial):
             params = {
                 "lstm_units": trial.suggest_int("lstm_units", 32, 256),
                 "dropout_rate": trial.suggest_float("dropout_rate", 0.1, 0.5),
-                "learning_rate": trial.suggest_float("learning_rate", 0.001, 0.01, log=True),
-                "batch_size": trial.suggest_categorical("batch_size", [16, 32, 64, 128]),
+                "learning_rate": trial.suggest_float(
+                    "learning_rate", 0.001, 0.01, log=True
+                ),
+                "batch_size": trial.suggest_categorical(
+                    "batch_size", [16, 32, 64, 128]
+                ),
                 "epochs": trial.suggest_int("epochs", 50, 200),
                 "sequence_length": trial.suggest_int("sequence_length", 10, 50),
             }
@@ -389,7 +424,9 @@ class HyperparameterOptimizer:
             # Log parameter importance
             self._log_parameter_importance("lstm_optuna")
 
-            logger.info(f"LSTM Optuna optimization completed. Best RMSE: {best_score:.4f}")
+            logger.info(
+                f"LSTM Optuna optimization completed. Best RMSE: {best_score:.4f}"
+            )
             return {
                 "best_params": best_params,
                 "best_score": best_score,
@@ -404,7 +441,9 @@ class HyperparameterOptimizer:
             logger.error(f"LSTM Optuna optimization failed: {e}")
             return {"error": str(e)}
 
-    def _optimize_lstm_skopt(self, X: np.ndarray, y: np.ndarray, n_trials: int) -> Dict[str, Any]:
+    def _optimize_lstm_skopt(
+        self, X: np.ndarray, y: np.ndarray, n_trials: int
+    ) -> Dict[str, Any]:
         """Optimize LSTM using scikit-optimize."""
         space = [
             Integer(32, 256, name="lstm_units"),
@@ -427,7 +466,9 @@ class HyperparameterOptimizer:
             return self._evaluate_lstm_params(X, y, param_dict)
 
         try:
-            logger.info(f"Starting LSTM optimization with scikit-optimize ({n_trials} trials)")
+            logger.info(
+                f"Starting LSTM optimization with scikit-optimize ({n_trials} trials)"
+            )
             result = gp_minimize(objective, space, n_calls=n_trials, random_state=42)
 
             best_params = {
@@ -457,7 +498,9 @@ class HyperparameterOptimizer:
             logger.error(f"LSTM scikit-optimize failed: {e}")
             return {"error": str(e)}
 
-    def _optimize_lstm_random(self, X: np.ndarray, y: np.ndarray, n_trials: int) -> Dict[str, Any]:
+    def _optimize_lstm_random(
+        self, X: np.ndarray, y: np.ndarray, n_trials: int
+    ) -> Dict[str, Any]:
         """Optimize LSTM using Random Search."""
         param_distributions = {
             "lstm_units": [32, 64, 128, 256],
@@ -552,7 +595,9 @@ class HyperparameterOptimizer:
             logger.error(f"LSTM Grid Search failed: {e}")
             return {"error": str(e)}
 
-    def _evaluate_lstm_params(self, X: np.ndarray, y: np.ndarray, params: Dict[str, Any]) -> float:
+    def _evaluate_lstm_params(
+        self, X: np.ndarray, y: np.ndarray, params: Dict[str, Any]
+    ) -> float:
         """Evaluate LSTM parameters using time series cross-validation."""
         try:
             sequence_length = params.get("sequence_length", 20)
@@ -575,7 +620,11 @@ class HyperparameterOptimizer:
             )
 
             model.fit(
-                X_train, y_train, epochs=params.get("epochs", 100), batch_size=params.get("batch_size", 32), verbose=0
+                X_train,
+                y_train,
+                epochs=params.get("epochs", 100),
+                batch_size=params.get("batch_size", 32),
+                verbose=0,
             )
 
             # Predict and evaluate
@@ -588,7 +637,9 @@ class HyperparameterOptimizer:
             logger.error(f"LSTM evaluation error: {e}")
             return float("inf")
 
-    def _prepare_sequences(self, X: np.ndarray, y: np.ndarray, sequence_length: int) -> tuple:
+    def _prepare_sequences(
+        self, X: np.ndarray, y: np.ndarray, sequence_length: int
+    ) -> tuple:
         """Prepare sequences for LSTM training."""
         X_seq, y_seq = [], []
         for i in range(sequence_length, len(X)):
@@ -639,7 +690,9 @@ class HyperparameterOptimizer:
                             "trial_number": trial.number,
                             "params": trial.params,
                             "value": trial.value,
-                            "datetime_start": trial.datetime_start.isoformat() if trial.datetime_start else None,
+                            "datetime_start": trial.datetime_start.isoformat()
+                            if trial.datetime_start
+                            else None,
                             "datetime_complete": trial.datetime_complete.isoformat()
                             if trial.datetime_complete
                             else None,
@@ -672,15 +725,27 @@ class HyperparameterOptimizer:
 
             # Plot optimization history
             fig = plot_optimization_history(self.study)
-            fig.write_html(str(self.plots_dir / f"{model_type}_optimization_history_{timestamp}.html"))
+            fig.write_html(
+                str(
+                    self.plots_dir
+                    / f"{model_type}_optimization_history_{timestamp}.html"
+                )
+            )
 
             # Plot parameter importances
             fig = plot_param_importances(self.study)
-            fig.write_html(str(self.plots_dir / f"{model_type}_param_importances_{timestamp}.html"))
+            fig.write_html(
+                str(self.plots_dir / f"{model_type}_param_importances_{timestamp}.html")
+            )
 
             # Plot parallel coordinate
             fig = plot_parallel_coordinate(self.study)
-            fig.write_html(str(self.plots_dir / f"{model_type}_parallel_coordinate_{timestamp}.html"))
+            fig.write_html(
+                str(
+                    self.plots_dir
+                    / f"{model_type}_parallel_coordinate_{timestamp}.html"
+                )
+            )
 
             logger.info(f"Parameter importance plots saved for {model_type}")
 
@@ -697,7 +762,9 @@ class HyperparameterOptimizer:
             importance = optuna.importance.get_param_importances(self.study)
 
             logger.info(f"Parameter importance for {model_type}:")
-            for param, imp in sorted(importance.items(), key=lambda x: x[1], reverse=True):
+            for param, imp in sorted(
+                importance.items(), key=lambda x: x[1], reverse=True
+            ):
                 logger.info(f"  {param}: {imp:.4f}")
 
         except Exception as e:
@@ -724,7 +791,12 @@ class HyperparameterOptimizer:
             for i, trial in enumerate(self.study.trials[: self.save_top_trials]):
                 if trial.state == optuna.trial.TrialState.COMPLETE:
                     top_trials.append(
-                        {"rank": i + 1, "trial_number": trial.number, "params": trial.params, "value": trial.value}
+                        {
+                            "rank": i + 1,
+                            "trial_number": trial.number,
+                            "params": trial.params,
+                            "value": trial.value,
+                        }
                     )
             return top_trials
         except Exception as e:

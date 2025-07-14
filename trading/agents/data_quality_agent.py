@@ -134,7 +134,10 @@ class DataQualityAgent(BaseAgent):
 
         # Data providers
         self.primary_provider = AlphaVantageProvider()
-        self.backup_providers = {"yfinance": YFinanceProvider(), "alpha_vantage": AlphaVantageProvider()}
+        self.backup_providers = {
+            "yfinance": YFinanceProvider(),
+            "alpha_vantage": AlphaVantageProvider(),
+        }
 
         # Configuration
         self.anomaly_thresholds = self.config_dict.get(
@@ -150,7 +153,8 @@ class DataQualityAgent(BaseAgent):
         )
 
         self.quality_thresholds = self.config_dict.get(
-            "quality_thresholds", {"excellent": 0.9, "good": 0.8, "fair": 0.7, "poor": 0.6}
+            "quality_thresholds",
+            {"excellent": 0.9, "good": 0.8, "fair": 0.7, "poor": 0.6},
         )
 
         # Anomaly detection methods
@@ -187,7 +191,10 @@ class DataQualityAgent(BaseAgent):
                 data_source = kwargs.get("data_source", "primary")
 
                 if data is None or symbol is None:
-                    return AgentResult(success=False, error_message="Missing required parameters: data and symbol")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameters: data and symbol",
+                    )
 
                 report = await self.assess_data_quality(data, symbol, data_source)
                 return AgentResult(
@@ -205,31 +212,46 @@ class DataQualityAgent(BaseAgent):
                 data_issues = kwargs.get("data_issues", [])
 
                 if symbol is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: symbol")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: symbol",
+                    )
 
                 backup_data = await self.route_to_backup_provider(symbol, data_issues)
                 if backup_data is not None:
                     return AgentResult(
                         success=True,
-                        data={"backup_data_shape": backup_data.shape, "backup_data_columns": list(backup_data.columns)},
+                        data={
+                            "backup_data_shape": backup_data.shape,
+                            "backup_data_columns": list(backup_data.columns),
+                        },
                     )
                 else:
-                    return AgentResult(success=False, error_message="No backup data available")
+                    return AgentResult(
+                        success=False, error_message="No backup data available"
+                    )
 
             elif action == "get_quality_summary":
                 symbol = kwargs.get("symbol")
 
                 if symbol is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: symbol")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: symbol",
+                    )
 
                 summary = self.get_quality_summary(symbol)
                 if summary:
                     return AgentResult(success=True, data={"quality_summary": summary})
                 else:
-                    return AgentResult(success=False, error_message="No quality summary available")
+                    return AgentResult(
+                        success=False, error_message="No quality summary available"
+                    )
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
@@ -262,14 +284,19 @@ class DataQualityAgent(BaseAgent):
 
             # Calculate overall score
             overall_score = (
-                0.3 * completeness_score + 0.3 * consistency_score + 0.2 * timeliness_score + 0.2 * accuracy_score
+                0.3 * completeness_score
+                + 0.3 * consistency_score
+                + 0.2 * timeliness_score
+                + 0.2 * accuracy_score
             )
 
             # Determine quality level
             quality_level = self._determine_quality_level(overall_score)
 
             # Generate recommendations
-            recommendations = self._generate_recommendations(data, anomalies, overall_score, symbol)
+            recommendations = self._generate_recommendations(
+                data, anomalies, overall_score, symbol
+            )
 
             # Create report
             report = DataQualityReport(
@@ -290,7 +317,8 @@ class DataQualityAgent(BaseAgent):
 
             # Log assessment
             self.logger.info(
-                f"Data quality assessment for {symbol}: {quality_level.value} " f"(score: {overall_score:.3f})"
+                f"Data quality assessment for {symbol}: {quality_level.value} "
+                f"(score: {overall_score:.3f})"
             )
 
             return report
@@ -299,7 +327,9 @@ class DataQualityAgent(BaseAgent):
             self.logger.error(f"Error assessing data quality: {str(e)}")
             return self._create_error_report(symbol, str(e))
 
-    async def _detect_anomalies(self, data: pd.DataFrame, symbol: str) -> List[DataAnomaly]:
+    async def _detect_anomalies(
+        self, data: pd.DataFrame, symbol: str
+    ) -> List[DataAnomaly]:
         """Detect anomalies in the data."""
         try:
             anomalies = []
@@ -330,7 +360,9 @@ class DataQualityAgent(BaseAgent):
             self.logger.error(f"Error detecting anomalies: {str(e)}")
             return []
 
-    def _detect_missing_data(self, data: pd.DataFrame, symbol: str) -> List[DataAnomaly]:
+    def _detect_missing_data(
+        self, data: pd.DataFrame, symbol: str
+    ) -> List[DataAnomaly]:
         """Detect missing data points."""
         try:
             anomalies = []
@@ -359,7 +391,9 @@ class DataQualityAgent(BaseAgent):
             self.logger.error(f"Error detecting missing data: {str(e)}")
             return []
 
-    def _detect_price_anomalies(self, data: pd.DataFrame, symbol: str) -> List[DataAnomaly]:
+    def _detect_price_anomalies(
+        self, data: pd.DataFrame, symbol: str
+    ) -> List[DataAnomaly]:
         """Detect price anomalies using multiple methods."""
         try:
             anomalies = []
@@ -368,7 +402,9 @@ class DataQualityAgent(BaseAgent):
                 return anomalies
 
             # Z-score method
-            z_score_anomalies = self._detect_z_score_anomalies(data["close"], symbol, "close")
+            z_score_anomalies = self._detect_z_score_anomalies(
+                data["close"], symbol, "close"
+            )
             anomalies.extend(z_score_anomalies)
 
             # IQR method
@@ -385,7 +421,9 @@ class DataQualityAgent(BaseAgent):
             self.logger.error(f"Error detecting price anomalies: {str(e)}")
             return []
 
-    def _detect_z_score_anomalies(self, series: pd.Series, symbol: str, column: str) -> List[DataAnomaly]:
+    def _detect_z_score_anomalies(
+        self, series: pd.Series, symbol: str, column: str
+    ) -> List[DataAnomaly]:
         """Detect anomalies using Z-score method."""
         try:
             anomalies = []
@@ -402,7 +440,7 @@ class DataQualityAgent(BaseAgent):
             outlier_indices = z_scores > threshold
 
             if outlier_indices.any():
-                outlier_values = series[outlier_indices]
+                series[outlier_indices]
                 max_z_score = z_scores.max()
 
                 anomaly = DataAnomaly(
@@ -423,7 +461,9 @@ class DataQualityAgent(BaseAgent):
             self.logger.error(f"Error detecting Z-score anomalies: {str(e)}")
             return []
 
-    def _detect_iqr_anomalies(self, series: pd.Series, symbol: str, column: str) -> List[DataAnomaly]:
+    def _detect_iqr_anomalies(
+        self, series: pd.Series, symbol: str, column: str
+    ) -> List[DataAnomaly]:
         """Detect anomalies using IQR method."""
         try:
             anomalies = []
@@ -501,7 +541,9 @@ class DataQualityAgent(BaseAgent):
             self.logger.error(f"Error detecting price gaps: {str(e)}")
             return []
 
-    def _detect_volume_anomalies(self, data: pd.DataFrame, symbol: str) -> List[DataAnomaly]:
+    def _detect_volume_anomalies(
+        self, data: pd.DataFrame, symbol: str
+    ) -> List[DataAnomaly]:
         """Detect volume anomalies."""
         try:
             anomalies = []
@@ -554,7 +596,9 @@ class DataQualityAgent(BaseAgent):
             self.logger.error(f"Error detecting volume anomalies: {str(e)}")
             return []
 
-    def _detect_consistency_anomalies(self, data: pd.DataFrame, symbol: str) -> List[DataAnomaly]:
+    def _detect_consistency_anomalies(
+        self, data: pd.DataFrame, symbol: str
+    ) -> List[DataAnomaly]:
         """Detect data consistency issues."""
         try:
             anomalies = []
@@ -579,7 +623,9 @@ class DataQualityAgent(BaseAgent):
                     anomalies.append(anomaly)
 
                 # Close should be between High and Low
-                invalid_close = (data["close"] > data["high"]) | (data["close"] < data["low"])
+                invalid_close = (data["close"] > data["high"]) | (
+                    data["close"] < data["low"]
+                )
                 if invalid_close.any():
                     invalid_count = invalid_close.sum()
 
@@ -601,7 +647,9 @@ class DataQualityAgent(BaseAgent):
             self.logger.error(f"Error detecting consistency anomalies: {str(e)}")
             return []
 
-    def _detect_duplicate_data(self, data: pd.DataFrame, symbol: str) -> List[DataAnomaly]:
+    def _detect_duplicate_data(
+        self, data: pd.DataFrame, symbol: str
+    ) -> List[DataAnomaly]:
         """Detect duplicate data entries."""
         try:
             anomalies = []
@@ -672,7 +720,9 @@ class DataQualityAgent(BaseAgent):
                 consistency_issues += invalid_hl / len(data)
 
                 # Close between High and Low
-                invalid_close = ((data["close"] > data["high"]) | (data["close"] < data["low"])).sum()
+                invalid_close = (
+                    (data["close"] > data["high"]) | (data["close"] < data["low"])
+                ).sum()
                 consistency_issues += invalid_close / len(data)
 
             # Check for negative values
@@ -722,7 +772,9 @@ class DataQualityAgent(BaseAgent):
             self.logger.error(f"Error calculating timeliness score: {str(e)}")
             return 0.5
 
-    def _calculate_accuracy_score(self, data: pd.DataFrame, anomalies: List[DataAnomaly]) -> float:
+    def _calculate_accuracy_score(
+        self, data: pd.DataFrame, anomalies: List[DataAnomaly]
+    ) -> float:
         """Calculate data accuracy score based on anomalies."""
         try:
             if not anomalies:
@@ -771,7 +823,11 @@ class DataQualityAgent(BaseAgent):
             return DataQualityLevel.FAIR
 
     def _generate_recommendations(
-        self, data: pd.DataFrame, anomalies: List[DataAnomaly], overall_score: float, symbol: str
+        self,
+        data: pd.DataFrame,
+        anomalies: List[DataAnomaly],
+        overall_score: float,
+        symbol: str,
     ) -> List[str]:
         """Generate recommendations for data quality improvement."""
         try:
@@ -788,7 +844,9 @@ class DataQualityAgent(BaseAgent):
             # Specific recommendations based on anomalies
             for anomaly in anomalies:
                 if anomaly.anomaly_type == AnomalyType.MISSING_DATA:
-                    recommendations.append("Fetch missing data from alternative sources")
+                    recommendations.append(
+                        "Fetch missing data from alternative sources"
+                    )
 
                 elif anomaly.anomaly_type == AnomalyType.OUTLIER:
                     recommendations.append("Implement outlier detection and handling")
@@ -808,7 +866,9 @@ class DataQualityAgent(BaseAgent):
             self.logger.error(f"Error generating recommendations: {str(e)}")
             return ["Review data quality manually"]
 
-    async def route_to_backup_provider(self, symbol: str, data_issues: List[DataAnomaly]) -> Optional[pd.DataFrame]:
+    async def route_to_backup_provider(
+        self, symbol: str, data_issues: List[DataAnomaly]
+    ) -> Optional[pd.DataFrame]:
         """Route data request to backup provider when primary fails."""
         try:
             self.logger.info(f"Routing {symbol} to backup provider due to data issues")
@@ -819,24 +879,37 @@ class DataQualityAgent(BaseAgent):
                     self.logger.info(f"Trying backup provider: {provider_name}")
 
                     # Get data from backup provider
-                    backup_data = await provider.get_historical_data(symbol=symbol, period="1y", interval="1d")
+                    backup_data = await provider.get_historical_data(
+                        symbol=symbol, period="1y", interval="1d"
+                    )
 
                     if backup_data is not None and not backup_data.empty:
                         # Assess quality of backup data
-                        backup_report = await self.assess_data_quality(backup_data, symbol, provider_name)
+                        backup_report = await self.assess_data_quality(
+                            backup_data, symbol, provider_name
+                        )
 
-                        if backup_report.quality_level in [DataQualityLevel.EXCELLENT, DataQualityLevel.GOOD]:
-                            self.logger.info(f"Successfully retrieved data from {provider_name}")
+                        if backup_report.quality_level in [
+                            DataQualityLevel.EXCELLENT,
+                            DataQualityLevel.GOOD,
+                        ]:
+                            self.logger.info(
+                                f"Successfully retrieved data from {provider_name}"
+                            )
 
                             # Store backup usage
                             self._store_backup_usage(symbol, provider_name, data_issues)
 
                             return backup_data
                         else:
-                            self.logger.warning(f"Backup data from {provider_name} has quality issues")
+                            self.logger.warning(
+                                f"Backup data from {provider_name} has quality issues"
+                            )
 
                 except Exception as e:
-                    self.logger.error(f"Error with backup provider {provider_name}: {str(e)}")
+                    self.logger.error(
+                        f"Error with backup provider {provider_name}: {str(e)}"
+                    )
                     continue
 
             self.logger.error(f"All backup providers failed for {symbol}")
@@ -858,18 +931,26 @@ class DataQualityAgent(BaseAgent):
 
             # Keep only recent reports
             cutoff_date = datetime.now() - timedelta(days=30)
-            self.quality_history[symbol] = [r for r in self.quality_history[symbol] if r.timestamp > cutoff_date]
+            self.quality_history[symbol] = [
+                r for r in self.quality_history[symbol] if r.timestamp > cutoff_date
+            ]
 
             # Store in memory
             memory_key = f"quality_report_{symbol}"
             self.memory.store(
-                memory_key, {"reports": [r.__dict__ for r in self.quality_history[symbol]], "timestamp": datetime.now()}
+                memory_key,
+                {
+                    "reports": [r.__dict__ for r in self.quality_history[symbol]],
+                    "timestamp": datetime.now(),
+                },
             )
 
         except Exception as e:
             self.logger.error(f"Error storing quality report: {str(e)}")
 
-    def _store_backup_usage(self, symbol: str, provider_name: str, data_issues: List[DataAnomaly]):
+    def _store_backup_usage(
+        self, symbol: str, provider_name: str, data_issues: List[DataAnomaly]
+    ):
         """Store backup provider usage information."""
         try:
             usage_data = {
@@ -884,7 +965,9 @@ class DataQualityAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error storing backup usage: {str(e)}")
 
-    def _create_error_report(self, symbol: str, error_message: str) -> DataQualityReport:
+    def _create_error_report(
+        self, symbol: str, error_message: str
+    ) -> DataQualityReport:
         """Create error report when assessment fails."""
         return DataQualityReport(
             symbol=symbol,
@@ -931,7 +1014,9 @@ class DataQualityAgent(BaseAgent):
                 with open(history_file, "r") as f:
                     data = json.load(f)
                     for symbol, reports in data.items():
-                        self.quality_history[symbol] = [DataQualityReport(**r) for r in reports]
+                        self.quality_history[symbol] = [
+                            DataQualityReport(**r) for r in reports
+                        ]
 
         except Exception as e:
             self.logger.error(f"Error loading quality history: {str(e)}")

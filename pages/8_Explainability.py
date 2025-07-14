@@ -24,7 +24,9 @@ def main():
     st.set_page_config(page_title="Model Explainability", page_icon="🔍", layout="wide")
 
     st.title("🔍 Model Explainability & Interpretability")
-    st.markdown("Understand how your models make predictions and which features are most important.")
+    st.markdown(
+        "Understand how your models make predictions and which features are most important."
+    )
 
     # Sidebar for model selection
     st.sidebar.header("Model Configuration")
@@ -38,19 +40,28 @@ def main():
 
     # Add explainer selection dropdown
     explainer_method = st.sidebar.selectbox(
-        "Explainability Method", ["SHAP", "LIME", "Integrated"], help="Choose the explainability engine"
+        "Explainability Method",
+        ["SHAP", "LIME", "Integrated"],
+        help="Choose the explainability engine",
     )
 
     # Data upload
     st.sidebar.subheader("Data Upload")
     uploaded_file = st.sidebar.file_uploader(
-        "Upload your data (CSV)", type=["csv"], help="Upload the data used for model training/prediction"
+        "Upload your data (CSV)",
+        type=["csv"],
+        help="Upload the data used for model training/prediction",
     )
 
     # Analysis type
     analysis_type = st.sidebar.selectbox(
         "Analysis Type",
-        ["Feature Importance", "SHAP Values", "Model Components", "Prediction Breakdown"],
+        [
+            "Feature Importance",
+            "SHAP Values",
+            "Model Components",
+            "Prediction Breakdown",
+        ],
         help="Choose the type of explainability analysis",
     )
 
@@ -58,7 +69,9 @@ def main():
         try:
             # Load data
             data = pd.read_csv(uploaded_file)
-            st.success(f"✅ Data loaded successfully: {data.shape[0]} rows, {data.shape[1]} columns")
+            st.success(
+                f"✅ Data loaded successfully: {data.shape[0]} rows, {data.shape[1]} columns"
+            )
 
             # Display data preview
             with st.expander("📊 Data Preview"):
@@ -143,8 +156,8 @@ def show_feature_importance(data, model_type):
     """Display feature importance analysis."""
 
     # Preprocess data
-    preprocessor = DataPreprocessor()
-    feature_engineer = FeatureEngineering()
+    DataPreprocessor()
+    FeatureEngineering()
 
     # Prepare features
     numeric_data = data.select_dtypes(include=[np.number])
@@ -159,7 +172,14 @@ def show_feature_importance(data, model_type):
 
         # Create visualization
         fig = go.Figure()
-        fig.add_trace(go.Bar(x=correlations.values, y=correlations.index, orientation="h", marker_color="lightblue"))
+        fig.add_trace(
+            go.Bar(
+                x=correlations.values,
+                y=correlations.index,
+                orientation="h",
+                marker_color="lightblue",
+            )
+        )
 
         fig.update_layout(
             title=f"Feature Importance ({model_type})",
@@ -173,7 +193,11 @@ def show_feature_importance(data, model_type):
         # Show feature importance table
         st.subheader("📋 Feature Importance Ranking")
         importance_df = pd.DataFrame(
-            {"Feature": correlations.index, "Importance": correlations.values, "Rank": range(1, len(correlations) + 1)}
+            {
+                "Feature": correlations.index,
+                "Importance": correlations.values,
+                "Rank": range(1, len(correlations) + 1),
+            }
         )
         st.dataframe(importance_df)
 
@@ -183,7 +207,9 @@ def show_feature_importance(data, model_type):
 
 def show_shap_analysis(data, model_type, explainer_method="SHAP"):
     """Display SHAP/LIME/Integrated analysis."""
-    st.info(f"🔍 {explainer_method} analysis requires a trained model. This is a demonstration.")
+    st.info(
+        f"🔍 {explainer_method} analysis requires a trained model. This is a demonstration."
+    )
     # Placeholder for backend integration
     fig = go.Figure()
     fig.add_annotation(
@@ -195,7 +221,9 @@ def show_shap_analysis(data, model_type, explainer_method="SHAP"):
         showarrow=False,
         font=dict(size=16, color="blue"),
     )
-    fig.update_layout(title=f"{explainer_method} Values Analysis", height=400, showlegend=False)
+    fig.update_layout(
+        title=f"{explainer_method} Values Analysis", height=400, showlegend=False
+    )
     st.plotly_chart(fig, use_container_width=True)
     st.markdown(
         f"""
@@ -222,20 +250,36 @@ def show_model_components(data, model_type):
             fig = make_subplots(
                 rows=3,
                 cols=1,
-                subplot_titles=("Original Data", "Trend Component", "Seasonal Component"),
+                subplot_titles=(
+                    "Original Data",
+                    "Trend Component",
+                    "Seasonal Component",
+                ),
                 vertical_spacing=0.1,
             )
 
             # Original data
-            fig.add_trace(go.Scatter(y=time_series, name="Original", line=dict(color="blue")), row=1, col=1)
+            fig.add_trace(
+                go.Scatter(y=time_series, name="Original", line=dict(color="blue")),
+                row=1,
+                col=1,
+            )
 
             # Mock trend (simple moving average)
-            trend = time_series.rolling(window=min(7, len(time_series) // 4), center=True).mean()
-            fig.add_trace(go.Scatter(y=trend, name="Trend", line=dict(color="red")), row=2, col=1)
+            trend = time_series.rolling(
+                window=min(7, len(time_series) // 4), center=True
+            ).mean()
+            fig.add_trace(
+                go.Scatter(y=trend, name="Trend", line=dict(color="red")), row=2, col=1
+            )
 
             # Mock seasonal (residuals)
             seasonal = time_series - trend
-            fig.add_trace(go.Scatter(y=seasonal, name="Seasonal", line=dict(color="green")), row=3, col=1)
+            fig.add_trace(
+                go.Scatter(y=seasonal, name="Seasonal", line=dict(color="green")),
+                row=3,
+                col=1,
+            )
 
             fig.update_layout(height=600, showlegend=False)
             st.plotly_chart(fig, use_container_width=True)
@@ -255,7 +299,9 @@ def show_model_components(data, model_type):
 def show_prediction_breakdown(data, model_type):
     """Display prediction breakdown analysis."""
 
-    st.info("🔍 Prediction breakdown requires model predictions. This is a demonstration.")
+    st.info(
+        "🔍 Prediction breakdown requires model predictions. This is a demonstration."
+    )
 
     # Create mock prediction breakdown
     if len(data) > 10:

@@ -75,7 +75,11 @@ class AgentHealthIndicator:
         }
 
     def get_health_status(
-        self, health_score: float, last_seen: datetime, error_count: int = 0, response_time: float = 0.0
+        self,
+        health_score: float,
+        last_seen: datetime,
+        error_count: int = 0,
+        response_time: float = 0.0,
     ) -> AgentHealthStatus:
         """Determine agent health status based on metrics.
 
@@ -114,15 +118,21 @@ class AgentHealthIndicator:
 
     def get_health_color(self, status: AgentHealthStatus) -> str:
         """Get color for health status."""
-        return self.health_colors.get(status, self.health_colors[AgentHealthStatus.UNKNOWN])
+        return self.health_colors.get(
+            status, self.health_colors[AgentHealthStatus.UNKNOWN]
+        )
 
     def get_health_icon(self, status: AgentHealthStatus) -> str:
         """Get icon for health status."""
-        return self.health_icons.get(status, self.health_icons[AgentHealthStatus.UNKNOWN])
+        return self.health_icons.get(
+            status, self.health_icons[AgentHealthStatus.UNKNOWN]
+        )
 
     def get_health_label(self, status: AgentHealthStatus) -> str:
         """Get label for health status."""
-        return self.health_labels.get(status, self.health_labels[AgentHealthStatus.UNKNOWN])
+        return self.health_labels.get(
+            status, self.health_labels[AgentHealthStatus.UNKNOWN]
+        )
 
 
 # Global health indicator
@@ -155,12 +165,16 @@ def get_agent_health_data():
 
                 # Extract health metrics
                 health_score = agent_data.get("health_score", 0.0)
-                last_seen = datetime.fromisoformat(agent_data.get("last_seen", datetime.now().isoformat()))
+                last_seen = datetime.fromisoformat(
+                    agent_data.get("last_seen", datetime.now().isoformat())
+                )
                 error_count = agent_data.get("error_count", 0)
                 response_time = agent_data.get("avg_response_time", 0.0)
 
                 # Determine health status
-                health_status = health_indicator.get_health_status(health_score, last_seen, error_count, response_time)
+                health_status = health_indicator.get_health_status(
+                    health_score, last_seen, error_count, response_time
+                )
 
                 # Add visual indicators
                 agent_info = {
@@ -206,8 +220,12 @@ def create_agent_health_summary(agents_data: List[Dict]) -> Dict:
                 "offline_count": 0,
                 "unknown_count": 0,
                 "overall_health": "unknown",
-                "overall_color": health_indicator.get_health_color(AgentHealthStatus.UNKNOWN),
-                "overall_icon": health_indicator.get_health_icon(AgentHealthStatus.UNKNOWN),
+                "overall_color": health_indicator.get_health_color(
+                    AgentHealthStatus.UNKNOWN
+                ),
+                "overall_icon": health_indicator.get_health_icon(
+                    AgentHealthStatus.UNKNOWN
+                ),
             }
 
         # Count agents by health status
@@ -292,8 +310,18 @@ def create_agent_health_plot(agents_data: List[Dict]):
         )
 
         # Add threshold lines
-        fig.add_hline(y=70, line_dash="dash", line_color="green", annotation_text="Healthy Threshold")
-        fig.add_hline(y=30, line_dash="dash", line_color="red", annotation_text="Critical Threshold")
+        fig.add_hline(
+            y=70,
+            line_dash="dash",
+            line_color="green",
+            annotation_text="Healthy Threshold",
+        )
+        fig.add_hline(
+            y=30,
+            line_dash="dash",
+            line_color="red",
+            annotation_text="Critical Threshold",
+        )
 
         return fig
 
@@ -348,9 +376,17 @@ def create_system_metrics_plot(df):
     """Create system metrics plot."""
     fig = make_subplots(rows=2, cols=1, subplot_titles=("CPU Usage", "Memory Usage"))
 
-    fig.add_trace(go.Scatter(x=df["timestamp"], y=df["system.cpu_usage"], name="CPU Usage"), row=1, col=1)
+    fig.add_trace(
+        go.Scatter(x=df["timestamp"], y=df["system.cpu_usage"], name="CPU Usage"),
+        row=1,
+        col=1,
+    )
 
-    fig.add_trace(go.Scatter(x=df["timestamp"], y=df["system.memory_usage"], name="Memory Usage"), row=2, col=1)
+    fig.add_trace(
+        go.Scatter(x=df["timestamp"], y=df["system.memory_usage"], name="Memory Usage"),
+        row=2,
+        col=1,
+    )
 
     fig.update_layout(height=600, title_text="System Metrics")
     return fig
@@ -358,11 +394,21 @@ def create_system_metrics_plot(df):
 
 def create_task_metrics_plot(df):
     """Create task metrics plot."""
-    fig = make_subplots(rows=2, cols=1, subplot_titles=("Task Success Rate", "Active Tasks"))
+    fig = make_subplots(
+        rows=2, cols=1, subplot_titles=("Task Success Rate", "Active Tasks")
+    )
 
-    fig.add_trace(go.Scatter(x=df["timestamp"], y=df["tasks.success_rate"], name="Success Rate"), row=1, col=1)
+    fig.add_trace(
+        go.Scatter(x=df["timestamp"], y=df["tasks.success_rate"], name="Success Rate"),
+        row=1,
+        col=1,
+    )
 
-    fig.add_trace(go.Scatter(x=df["timestamp"], y=df["tasks.active_tasks"], name="Active Tasks"), row=2, col=1)
+    fig.add_trace(
+        go.Scatter(x=df["timestamp"], y=df["tasks.active_tasks"], name="Active Tasks"),
+        row=2,
+        col=1,
+    )
 
     fig.update_layout(height=600, title_text="Task Metrics")
     return fig
@@ -370,12 +416,24 @@ def create_task_metrics_plot(df):
 
 def create_model_metrics_plot(df):
     """Create model metrics plot."""
-    fig = make_subplots(rows=2, cols=1, subplot_titles=("Model Accuracy", "Training Progress"))
-
-    fig.add_trace(go.Scatter(x=df["timestamp"], y=df["models.accuracy"], name="Accuracy"), row=1, col=1)
+    fig = make_subplots(
+        rows=2, cols=1, subplot_titles=("Model Accuracy", "Training Progress")
+    )
 
     fig.add_trace(
-        go.Scatter(x=df["timestamp"], y=df["models.training_progress"], name="Training Progress"), row=2, col=1
+        go.Scatter(x=df["timestamp"], y=df["models.accuracy"], name="Accuracy"),
+        row=1,
+        col=1,
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=df["timestamp"],
+            y=df["models.training_progress"],
+            name="Training Progress",
+        ),
+        row=2,
+        col=1,
     )
 
     fig.update_layout(height=600, title_text="Model Metrics")
@@ -397,7 +455,9 @@ def get_metrics():
         # Create plots
         system_plot = create_system_metrics_plot(df)
         task_plot = create_task_metrics_plot(df)
-        agent_plot = create_agent_health_plot(get_agent_health_data())  # Use the new function
+        agent_plot = create_agent_health_plot(
+            get_agent_health_data()
+        )  # Use the new function
         model_plot = create_model_metrics_plot(df)
 
         # Get alerts
@@ -424,7 +484,13 @@ def get_agent_health():
         agents_data = get_agent_health_data()
         health_summary = create_agent_health_summary(agents_data)
 
-        return jsonify({"agents": agents_data, "summary": health_summary, "timestamp": datetime.now().isoformat()})
+        return jsonify(
+            {
+                "agents": agents_data,
+                "summary": health_summary,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error getting agent health: {e}")
@@ -436,7 +502,9 @@ def get_agent_health_detail(agent_id):
     """Get detailed health information for a specific agent."""
     try:
         agents_data = get_agent_health_data()
-        agent_data = next((agent for agent in agents_data if agent["id"] == agent_id), None)
+        agent_data = next(
+            (agent for agent in agents_data if agent["id"] == agent_id), None
+        )
 
         if not agent_data:
             return jsonify({"error": "Agent not found"}), 404
@@ -456,7 +524,13 @@ def get_agent_health_detail(agent_id):
                 logger.error(f"Error parsing health history record: {e}")
                 continue
 
-        return jsonify({"agent": agent_data, "health_history": parsed_history, "timestamp": datetime.now().isoformat()})
+        return jsonify(
+            {
+                "agent": agent_data,
+                "health_history": parsed_history,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     except Exception as e:
         logger.error(f"Error getting agent health detail: {e}")
@@ -470,7 +544,9 @@ def get_agent_health_summary_endpoint():
         agents_data = get_agent_health_data()
         health_summary = create_agent_health_summary(agents_data)
 
-        return jsonify({"summary": health_summary, "timestamp": datetime.now().isoformat()})
+        return jsonify(
+            {"summary": health_summary, "timestamp": datetime.now().isoformat()}
+        )
 
     except Exception as e:
         logger.error(f"Error getting agent health summary: {e}")
@@ -534,7 +610,9 @@ def get_agent_health_status():
                 "agents": agents,
             }
 
-        return jsonify({"status_groups": status_summary, "timestamp": datetime.now().isoformat()})
+        return jsonify(
+            {"status_groups": status_summary, "timestamp": datetime.now().isoformat()}
+        )
 
     except Exception as e:
         logger.error(f"Error getting agent health status: {e}")
@@ -552,7 +630,9 @@ def get_alert_data():
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, security: SecurityManager = Depends(get_security_manager)):
+async def dashboard(
+    request: Request, security: SecurityManager = Depends(get_security_manager)
+):
     """Render dashboard page."""
     try:
         # Check permissions
@@ -566,7 +646,9 @@ async def dashboard(request: Request, security: SecurityManager = Depends(get_se
         alerts = await get_active_alerts()
 
         # Render template
-        return templates.TemplateResponse("dashboard.html", {"request": request, "metrics": metrics, "alerts": alerts})
+        return templates.TemplateResponse(
+            "dashboard.html", {"request": request, "metrics": metrics, "alerts": alerts}
+        )
 
     except Exception as e:
         logger.error(f"Error rendering dashboard: {str(e)}")
@@ -588,7 +670,9 @@ async def get_metrics(
             raise HTTPException(status_code=403, detail="Permission denied")
 
         # Get metrics
-        metrics = await metrics_collector.get_metrics(metric_type, start_time, end_time, limit)
+        metrics = await metrics_collector.get_metrics(
+            metric_type, start_time, end_time, limit
+        )
 
         return metrics
 
@@ -598,7 +682,9 @@ async def get_metrics(
 
 
 @router.get("/api/metrics/summary")
-async def get_metrics_summary(security: SecurityManager = Depends(get_security_manager)):
+async def get_metrics_summary(
+    security: SecurityManager = Depends(get_security_manager),
+):
     """Get metrics summary."""
     try:
         # Check permissions
@@ -635,7 +721,9 @@ async def get_alerts(
             raise HTTPException(status_code=403, detail="Permission denied")
 
         # Get alerts
-        alerts = await alert_manager.get_alert_history(rule_id, start_time, end_time, limit)
+        alerts = await alert_manager.get_alert_history(
+            rule_id, start_time, end_time, limit
+        )
 
         return alerts
 
@@ -653,7 +741,9 @@ async def get_active_alerts(security: SecurityManager = Depends(get_security_man
             raise HTTPException(status_code=403, detail="Permission denied")
 
         # Get alerts from last hour
-        alerts = await alert_manager.get_alert_history(start_time=datetime.now() - timedelta(hours=1))
+        alerts = await alert_manager.get_alert_history(
+            start_time=datetime.now() - timedelta(hours=1)
+        )
 
         return alerts
 
@@ -663,7 +753,9 @@ async def get_active_alerts(security: SecurityManager = Depends(get_security_man
 
 
 @router.post("/api/alerts/rules")
-async def create_alert_rule(rule: AlertRule, security: SecurityManager = Depends(get_security_manager)):
+async def create_alert_rule(
+    rule: AlertRule, security: SecurityManager = Depends(get_security_manager)
+):
     """Create alert rule."""
     try:
         # Check permissions
@@ -681,7 +773,11 @@ async def create_alert_rule(rule: AlertRule, security: SecurityManager = Depends
 
 
 @router.put("/api/alerts/rules/{rule_id}")
-async def update_alert_rule(rule_id: str, rule: AlertRule, security: SecurityManager = Depends(get_security_manager)):
+async def update_alert_rule(
+    rule_id: str,
+    rule: AlertRule,
+    security: SecurityManager = Depends(get_security_manager),
+):
     """Update alert rule."""
     try:
         # Check permissions
@@ -699,7 +795,9 @@ async def update_alert_rule(rule_id: str, rule: AlertRule, security: SecurityMan
 
 
 @router.delete("/api/alerts/rules/{rule_id}")
-async def delete_alert_rule(rule_id: str, security: SecurityManager = Depends(get_security_manager)):
+async def delete_alert_rule(
+    rule_id: str, security: SecurityManager = Depends(get_security_manager)
+):
     """Delete alert rule."""
     try:
         # Check permissions

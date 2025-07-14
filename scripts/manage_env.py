@@ -38,7 +38,9 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Environment Manager")
     parser.add_argument(
-        "command", choices=["create-template", "validate", "rotate-secret", "check-health"], help="Command to execute"
+        "command",
+        choices=["create-template", "validate", "rotate-secret", "check-health"],
+        help="Command to execute",
     )
     parser.add_argument("--env-file", default=".env", help="Path to .env file")
     parser.add_argument("--key", help="Secret key to rotate")
@@ -69,8 +71,12 @@ def main():
         elif args.command == "check-health":
             # Check Python version
             python_version = sys.version_info
-            if python_version.major < 3 or (python_version.major == 3 and python_version.minor < 10):
-                print(f"Error: Python version {python_version.major}.{python_version.minor} is not supported")
+            if python_version.major < 3 or (
+                python_version.major == 3 and python_version.minor < 10
+            ):
+                print(
+                    f"Error: Python version {python_version.major}.{python_version.minor} is not supported"
+                )
                 sys.exit(1)
 
             # Check required directories

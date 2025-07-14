@@ -51,7 +51,9 @@ class ARIMAModel(BaseModel):
             if self.seasonal_order:
                 from statsmodels.tsa.statespace.sarimax import SARIMAX
 
-                self.model = SARIMAX(data, order=self.order, seasonal_order=self.seasonal_order)
+                self.model = SARIMAX(
+                    data, order=self.order, seasonal_order=self.seasonal_order
+                )
             else:
                 self.model = ARIMA(data, order=self.order)
 
@@ -66,7 +68,12 @@ class ARIMAModel(BaseModel):
                 "model": self,
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": pd.Timestamp.now().isoformat(), "model": self}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": pd.Timestamp.now().isoformat(),
+                "model": self,
+            }
 
     def predict(self, steps: int = 1) -> Dict[str, Any]:
         """Make predictions.
@@ -106,10 +113,18 @@ class ARIMAModel(BaseModel):
             Dictionary with summary string and status
         """
         if not self.is_fitted:
-            return {"success": False, "summary": "Model not fitted", "timestamp": pd.Timestamp.now().isoformat()}
+            return {
+                "success": False,
+                "summary": "Model not fitted",
+                "timestamp": pd.Timestamp.now().isoformat(),
+            }
         try:
             summary = str(self.fitted_model.summary())
-            return {"success": True, "summary": summary, "timestamp": pd.Timestamp.now().isoformat()}
+            return {
+                "success": True,
+                "summary": summary,
+                "timestamp": pd.Timestamp.now().isoformat(),
+            }
         except Exception as e:
             return {
                 "success": False,
@@ -124,11 +139,24 @@ class ARIMAModel(BaseModel):
             Dictionary with AIC score and status
         """
         if not self.is_fitted:
-            return {"success": False, "aic": float("inf"), "timestamp": pd.Timestamp.now().isoformat()}
+            return {
+                "success": False,
+                "aic": float("inf"),
+                "timestamp": pd.Timestamp.now().isoformat(),
+            }
         try:
-            return {"success": True, "aic": self.fitted_model.aic, "timestamp": pd.Timestamp.now().isoformat()}
+            return {
+                "success": True,
+                "aic": self.fitted_model.aic,
+                "timestamp": pd.Timestamp.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "aic": float("inf"), "error": str(e), "timestamp": pd.Timestamp.now().isoformat()}
+            return {
+                "success": False,
+                "aic": float("inf"),
+                "error": str(e),
+                "timestamp": pd.Timestamp.now().isoformat(),
+            }
 
     def get_bic(self) -> Dict[str, Any]:
         """Get BIC score.
@@ -137,11 +165,24 @@ class ARIMAModel(BaseModel):
             Dictionary with BIC score and status
         """
         if not self.is_fitted:
-            return {"success": False, "bic": float("inf"), "timestamp": pd.Timestamp.now().isoformat()}
+            return {
+                "success": False,
+                "bic": float("inf"),
+                "timestamp": pd.Timestamp.now().isoformat(),
+            }
         try:
-            return {"success": True, "bic": self.fitted_model.bic, "timestamp": pd.Timestamp.now().isoformat()}
+            return {
+                "success": True,
+                "bic": self.fitted_model.bic,
+                "timestamp": pd.Timestamp.now().isoformat(),
+            }
         except Exception as e:
-            return {"success": False, "bic": float("inf"), "error": str(e), "timestamp": pd.Timestamp.now().isoformat()}
+            return {
+                "success": False,
+                "bic": float("inf"),
+                "error": str(e),
+                "timestamp": pd.Timestamp.now().isoformat(),
+            }
 
     def check_stationarity(self, data: pd.Series) -> Dict[str, Any]:
         """Check if the time series is stationary.
@@ -174,7 +215,9 @@ class ARIMAModel(BaseModel):
                 "timestamp": pd.Timestamp.now().isoformat(),
             }
 
-    def find_best_order(self, data: pd.Series, max_p: int = 3, max_d: int = 2, max_q: int = 3) -> Dict[str, Any]:
+    def find_best_order(
+        self, data: pd.Series, max_p: int = 3, max_d: int = 2, max_q: int = 3
+    ) -> Dict[str, Any]:
         """Find the best ARIMA order using AIC.
 
         Args:
@@ -199,7 +242,9 @@ class ARIMAModel(BaseModel):
                             best_aic = aic
                             best_order = (p, d, q)
                     except Exception as e:
-                        logging.error(f"Error fitting ARIMA model with order {(p, d, q)}: {e}")
+                        logging.error(
+                            f"Error fitting ARIMA model with order {(p, d, q)}: {e}"
+                        )
                         continue
         return {
             "success": True,
@@ -231,7 +276,11 @@ class ARIMAModel(BaseModel):
                 "timestamp": pd.Timestamp.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": pd.Timestamp.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": pd.Timestamp.now().isoformat(),
+            }
 
     def load_model(self, filepath: str) -> Dict[str, Any]:
         """Load a fitted model.
@@ -253,7 +302,11 @@ class ARIMAModel(BaseModel):
                 "timestamp": pd.Timestamp.now().isoformat(),
             }
         except Exception as e:
-            return {"success": False, "error": str(e), "timestamp": pd.Timestamp.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": pd.Timestamp.now().isoformat(),
+            }
 
     def forecast(self, data: pd.Series, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
@@ -306,7 +359,12 @@ class ARIMAModel(BaseModel):
             # Plot 1: Historical vs Predicted
             plt.subplot(2, 2, 1)
             plt.plot(data.index, data.values, label="Actual", color="blue")
-            plt.plot(data.index[-len(predictions) :], predictions, label="Predicted", color="red")
+            plt.plot(
+                data.index[-len(predictions) :],
+                predictions,
+                label="Predicted",
+                color="red",
+            )
             plt.title("ARIMA Model Predictions")
             plt.xlabel("Time")
             plt.ylabel("Value")
@@ -323,7 +381,14 @@ class ARIMAModel(BaseModel):
                 plt.ylabel("Residual")
                 plt.grid(True)
             else:
-                plt.text(0.5, 0.5, "Residuals not available", ha="center", va="center", transform=plt.gca().transAxes)
+                plt.text(
+                    0.5,
+                    0.5,
+                    "Residuals not available",
+                    ha="center",
+                    va="center",
+                    transform=plt.gca().transAxes,
+                )
                 plt.title("Model Residuals")
 
             # Plot 3: ACF of residuals
@@ -335,10 +400,24 @@ class ARIMAModel(BaseModel):
                     plt.title("ACF of Residuals")
                 except Exception as e:
                     logging.error(f"Error plotting ACF of residuals: {e}")
-                    plt.text(0.5, 0.5, "ACF not available", ha="center", va="center", transform=plt.gca().transAxes)
+                    plt.text(
+                        0.5,
+                        0.5,
+                        "ACF not available",
+                        ha="center",
+                        va="center",
+                        transform=plt.gca().transAxes,
+                    )
                     plt.title("ACF of Residuals")
             else:
-                plt.text(0.5, 0.5, "Model not fitted", ha="center", va="center", transform=plt.gca().transAxes)
+                plt.text(
+                    0.5,
+                    0.5,
+                    "Model not fitted",
+                    ha="center",
+                    va="center",
+                    transform=plt.gca().transAxes,
+                )
                 plt.title("ACF of Residuals")
 
             # Plot 4: Model information

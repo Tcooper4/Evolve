@@ -93,7 +93,9 @@ class AgentPerformance:
 
         if self.sortino_ratio == 0.0 and self.volatility != 0:
             # Simplified sortino calculation
-            self.sortino_ratio = self.total_return / self.volatility if self.volatility > 0 else 0.0
+            self.sortino_ratio = (
+                self.total_return / self.volatility if self.volatility > 0 else 0.0
+            )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -130,7 +132,11 @@ class AgentLeaderboard:
     Tracks agent/model performance, deprecates underperformers, and provides leaderboard data.
     """
 
-    def __init__(self, deprecation_thresholds: Optional[Dict[str, float]] = None, data_dir: str = "data/leaderboard"):
+    def __init__(
+        self,
+        deprecation_thresholds: Optional[Dict[str, float]] = None,
+        data_dir: str = "data/leaderboard",
+    ):
         """
         Initialize the agent leaderboard.
 
@@ -157,12 +163,19 @@ class AgentLeaderboard:
         }
 
         # Performance tracking
-        self.stats = {"total_agents": 0, "active_agents": 0, "deprecated_agents": 0, "last_update": None}
+        self.stats = {
+            "total_agents": 0,
+            "active_agents": 0,
+            "deprecated_agents": 0,
+            "last_update": None,
+        }
 
         # Load existing data
         self._load_data()
 
-        self.logger.info(f"AgentLeaderboard initialized with {len(self.leaderboard)} agents")
+        self.logger.info(
+            f"AgentLeaderboard initialized with {len(self.leaderboard)} agents"
+        )
 
     def _load_data(self) -> None:
         """Load leaderboard data from files."""
@@ -172,7 +185,10 @@ class AgentLeaderboard:
             if leaderboard_file.exists():
                 with open(leaderboard_file, "r") as f:
                     data = json.load(f)
-                    self.leaderboard = {name: AgentPerformance.from_dict(perf_data) for name, perf_data in data.items()}
+                    self.leaderboard = {
+                        name: AgentPerformance.from_dict(perf_data)
+                        for name, perf_data in data.items()
+                    }
 
             # Load history
             history_file = self.data_dir / "history.json"
@@ -191,7 +207,9 @@ class AgentLeaderboard:
         try:
             # Save leaderboard
             leaderboard_file = self.data_dir / "leaderboard.json"
-            leaderboard_data = {name: perf.to_dict() for name, perf in self.leaderboard.items()}
+            leaderboard_data = {
+                name: perf.to_dict() for name, perf in self.leaderboard.items()
+            }
             result = safe_save_historical_data(leaderboard_data, leaderboard_file)
             if not result["success"]:
                 self.logger.error(f"Failed to save leaderboard data: {result['error']}")
@@ -217,7 +235,9 @@ class AgentLeaderboard:
     def _update_stats(self) -> None:
         """Update internal statistics."""
         self.stats["total_agents"] = len(self.leaderboard)
-        self.stats["active_agents"] = sum(1 for a in self.leaderboard.values() if a.status == AgentStatus.ACTIVE)
+        self.stats["active_agents"] = sum(
+            1 for a in self.leaderboard.values() if a.status == AgentStatus.ACTIVE
+        )
         self.stats["deprecated_agents"] = sum(
             1 for a in self.leaderboard.values() if a.status == AgentStatus.DEPRECATED
         )
@@ -226,7 +246,9 @@ class AgentLeaderboard:
     def _update_ranking(self) -> None:
         """Update agent rankings based on performance."""
         # Sort agents by Sharpe ratio (primary metric)
-        sorted_agents = sorted(self.leaderboard.values(), key=lambda x: x.sharpe_ratio, reverse=True)
+        sorted_agents = sorted(
+            self.leaderboard.values(), key=lambda x: x.sharpe_ratio, reverse=True
+        )
 
         # Update ranking list
         self.ranking = [agent.agent_name for agent in sorted_agents]
@@ -258,10 +280,14 @@ class AgentLeaderboard:
         """
         try:
             # Calculate additional metrics
-            calmar_ratio = total_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
+            calmar_ratio = (
+                total_return / abs(max_drawdown) if max_drawdown != 0 else 0.0
+            )
             volatility = extra_metrics.get("volatility", 0.0) if extra_metrics else 0.0
             sortino_ratio = total_return / volatility if volatility > 0 else 0.0
-            profit_factor = extra_metrics.get("profit_factor", 0.0) if extra_metrics else 0.0
+            profit_factor = (
+                extra_metrics.get("profit_factor", 0.0) if extra_metrics else 0.0
+            )
 
             perf = AgentPerformance(
                 agent_name=agent_name,
@@ -275,8 +301,12 @@ class AgentLeaderboard:
                 volatility=volatility,
                 beta=extra_metrics.get("beta", 0.0) if extra_metrics else 0.0,
                 alpha=extra_metrics.get("alpha", 0.0) if extra_metrics else 0.0,
-                information_ratio=extra_metrics.get("information_ratio", 0.0) if extra_metrics else 0.0,
-                treynor_ratio=extra_metrics.get("treynor_ratio", 0.0) if extra_metrics else 0.0,
+                information_ratio=extra_metrics.get("information_ratio", 0.0)
+                if extra_metrics
+                else 0.0,
+                treynor_ratio=extra_metrics.get("treynor_ratio", 0.0)
+                if extra_metrics
+                else 0.0,
                 status=AgentStatus.ACTIVE,
                 extra_metrics=extra_metrics or {},
                 metadata=metadata or {},
@@ -310,7 +340,12 @@ class AgentLeaderboard:
 
         except Exception as e:
             self.logger.error(f"Error updating performance for {agent_name}: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat(), "agent": agent_name}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+                "agent": agent_name,
+            }
 
     def _check_deprecation(self, agent_name: str) -> Dict[str, Any]:
         """
@@ -352,7 +387,9 @@ class AgentLeaderboard:
                     f"Calmar ratio {perf.calmar_ratio:.2f} below threshold {self.deprecation_thresholds.get('calmar_ratio', 0.0)}"
                 )
 
-            if perf.sortino_ratio < self.deprecation_thresholds.get("sortino_ratio", 0.0):
+            if perf.sortino_ratio < self.deprecation_thresholds.get(
+                "sortino_ratio", 0.0
+            ):
                 deprecated = True
                 reasons.append(
                     f"Sortino ratio {perf.sortino_ratio:.2f} below threshold {self.deprecation_thresholds.get('sortino_ratio', 0.0)}"
@@ -361,15 +398,25 @@ class AgentLeaderboard:
             # Update status
             if deprecated:
                 perf.status = AgentStatus.DEPRECATED
-                self.logger.warning(f"Agent {agent_name} deprecated: {', '.join(reasons)}")
+                self.logger.warning(
+                    f"Agent {agent_name} deprecated: {', '.join(reasons)}"
+                )
             else:
                 perf.status = AgentStatus.ACTIVE
 
-            return {"deprecated": deprecated, "reasons": reasons, "timestamp": datetime.now().isoformat()}
+            return {
+                "deprecated": deprecated,
+                "reasons": reasons,
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
             self.logger.error(f"Error checking deprecation for {agent_name}: {e}")
-            return {"deprecated": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "deprecated": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_leaderboard(
         self,
@@ -399,7 +446,9 @@ class AgentLeaderboard:
                 agents = [a for a in agents if a.status == status_filter]
 
             # Sort agents
-            sorted_agents = sorted(agents, key=lambda x: x.get_score(sort_by), reverse=True)
+            sorted_agents = sorted(
+                agents, key=lambda x: x.get_score(sort_by), reverse=True
+            )
 
             return {
                 "success": True,
@@ -411,7 +460,11 @@ class AgentLeaderboard:
 
         except Exception as e:
             self.logger.error(f"Error getting leaderboard: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_agent_performance(self, agent_name: str) -> Dict[str, Any]:
         """
@@ -439,12 +492,20 @@ class AgentLeaderboard:
 
         except Exception as e:
             self.logger.error(f"Error getting performance for {agent_name}: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_deprecated_agents(self) -> Dict[str, Any]:
         """Get list of deprecated agents."""
         try:
-            deprecated = [a.to_dict() for a in self.leaderboard.values() if a.status == AgentStatus.DEPRECATED]
+            deprecated = [
+                a.to_dict()
+                for a in self.leaderboard.values()
+                if a.status == AgentStatus.DEPRECATED
+            ]
 
             return {
                 "success": True,
@@ -455,20 +516,39 @@ class AgentLeaderboard:
 
         except Exception as e:
             self.logger.error(f"Error getting deprecated agents: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_active_agents(self) -> Dict[str, Any]:
         """Get list of active agents."""
         try:
-            active = [a.to_dict() for a in self.leaderboard.values() if a.status == AgentStatus.ACTIVE]
+            active = [
+                a.to_dict()
+                for a in self.leaderboard.values()
+                if a.status == AgentStatus.ACTIVE
+            ]
 
-            return {"success": True, "result": active, "count": len(active), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": active,
+                "count": len(active),
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
             self.logger.error(f"Error getting active agents: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def get_history(self, agent_name: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    def get_history(
+        self, agent_name: Optional[str] = None, limit: int = 100
+    ) -> Dict[str, Any]:
         """
         Get performance history.
 
@@ -494,7 +574,11 @@ class AgentLeaderboard:
 
         except Exception as e:
             self.logger.error(f"Error getting history: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_stats(self) -> Dict[str, Any]:
         """Get leaderboard statistics."""
@@ -511,9 +595,15 @@ class AgentLeaderboard:
 
         except Exception as e:
             self.logger.error(f"Error getting stats: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
-    def as_dataframe(self, status_filter: Optional[AgentStatus] = None) -> Dict[str, Any]:
+    def as_dataframe(
+        self, status_filter: Optional[AgentStatus] = None
+    ) -> Dict[str, Any]:
         """
         Get leaderboard as pandas DataFrame.
 
@@ -531,11 +621,20 @@ class AgentLeaderboard:
             data = [a.to_dict() for a in agents]
             df = pd.DataFrame(data)
 
-            return {"success": True, "result": df, "shape": df.shape, "timestamp": datetime.now().isoformat()}
+            return {
+                "success": True,
+                "result": df,
+                "shape": df.shape,
+                "timestamp": datetime.now().isoformat(),
+            }
 
         except Exception as e:
             self.logger.error(f"Error creating DataFrame: {e}")
-            return {"success": False, "error": str(e), "timestamp": datetime.now().isoformat()}
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def export_data(self, filepath: str = "leaderboard_export.json") -> Dict[str, Any]:
         """Export leaderboard data to file.
@@ -553,7 +652,9 @@ class AgentLeaderboard:
             # Prepare export data
             export_data = {
                 "export_timestamp": datetime.utcnow().isoformat(),
-                "leaderboard": {name: perf.to_dict() for name, perf in self.leaderboard.items()},
+                "leaderboard": {
+                    name: perf.to_dict() for name, perf in self.leaderboard.items()
+                },
                 "history": self.history[-1000:],  # Last 1000 entries
                 "stats": self.stats,
                 "ranking": self.ranking,
@@ -574,7 +675,9 @@ class AgentLeaderboard:
             self.logger.error(f"Error exporting leaderboard data: {e}")
             return {"success": False, "error": str(e)}
 
-    def export_to_csv(self, filepath: str = "leaderboard_export.csv", include_history: bool = False) -> Dict[str, Any]:
+    def export_to_csv(
+        self, filepath: str = "leaderboard_export.csv", include_history: bool = False
+    ) -> Dict[str, Any]:
         """Export leaderboard to CSV format for analysis.
 
         Args:
@@ -611,7 +714,9 @@ class AgentLeaderboard:
                     "treynor_ratio": performance.treynor_ratio,
                     "status": performance.status.value,
                     "last_updated": performance.last_updated.isoformat(),
-                    "ranking": self.ranking.index(agent_name) + 1 if agent_name in self.ranking else None,
+                    "ranking": self.ranking.index(agent_name) + 1
+                    if agent_name in self.ranking
+                    else None,
                 }
 
                 # Add extra metrics
@@ -632,13 +737,21 @@ class AgentLeaderboard:
                             "win_rate": entry["performance"].get("win_rate", 0),
                             "total_return": entry["performance"].get("total_return", 0),
                             "calmar_ratio": entry["performance"].get("calmar_ratio", 0),
-                            "sortino_ratio": entry["performance"].get("sortino_ratio", 0),
-                            "profit_factor": entry["performance"].get("profit_factor", 0),
+                            "sortino_ratio": entry["performance"].get(
+                                "sortino_ratio", 0
+                            ),
+                            "profit_factor": entry["performance"].get(
+                                "profit_factor", 0
+                            ),
                             "volatility": entry["performance"].get("volatility", 0),
                             "beta": entry["performance"].get("beta", 0),
                             "alpha": entry["performance"].get("alpha", 0),
-                            "information_ratio": entry["performance"].get("information_ratio", 0),
-                            "treynor_ratio": entry["performance"].get("treynor_ratio", 0),
+                            "information_ratio": entry["performance"].get(
+                                "information_ratio", 0
+                            ),
+                            "treynor_ratio": entry["performance"].get(
+                                "treynor_ratio", 0
+                            ),
                             "status": entry["performance"].get("status", "unknown"),
                             "last_updated": entry.get("timestamp", ""),
                             "ranking": None,  # Historical entries don't have current ranking
@@ -659,8 +772,12 @@ class AgentLeaderboard:
                     "success": True,
                     "filepath": str(export_path),
                     "rows_exported": len(csv_data),
-                    "agents_exported": len([row for row in csv_data if not row.get("is_historical", False)]),
-                    "historical_entries": len([row for row in csv_data if row.get("is_historical", False)]),
+                    "agents_exported": len(
+                        [row for row in csv_data if not row.get("is_historical", False)]
+                    ),
+                    "historical_entries": len(
+                        [row for row in csv_data if row.get("is_historical", False)]
+                    ),
                 }
             else:
                 return {"success": False, "error": "No data to export"}
@@ -690,7 +807,9 @@ class AgentLeaderboard:
                 export_data = {
                     "export_timestamp": datetime.utcnow().isoformat(),
                     "export_format": "detailed",
-                    "leaderboard": {name: perf.to_dict() for name, perf in self.leaderboard.items()},
+                    "leaderboard": {
+                        name: perf.to_dict() for name, perf in self.leaderboard.items()
+                    },
                     "history": self.history[-1000:],
                     "stats": self.stats,
                     "ranking": self.ranking,
@@ -711,7 +830,9 @@ class AgentLeaderboard:
                         "win_rate": performance.win_rate,
                         "total_return": performance.total_return,
                         "status": performance.status.value,
-                        "ranking": self.ranking.index(agent_name) + 1 if agent_name in self.ranking else None,
+                        "ranking": self.ranking.index(agent_name) + 1
+                        if agent_name in self.ranking
+                        else None,
                     }
 
                 export_data["stats"] = self.stats
@@ -724,15 +845,26 @@ class AgentLeaderboard:
                     "export_format": "minimal",
                     "ranking": self.ranking,
                     "total_agents": len(self.leaderboard),
-                    "active_agents": len([p for p in self.leaderboard.values() if p.status == AgentStatus.ACTIVE]),
+                    "active_agents": len(
+                        [
+                            p
+                            for p in self.leaderboard.values()
+                            if p.status == AgentStatus.ACTIVE
+                        ]
+                    ),
                 }
             else:
-                return {"success": False, "error": f"Unknown format type: {format_type}"}
+                return {
+                    "success": False,
+                    "error": f"Unknown format type: {format_type}",
+                }
 
             with open(export_path, "w") as f:
                 json.dump(export_data, f, indent=2)
 
-            self.logger.info(f"Leaderboard exported to JSON ({format_type}): {export_path}")
+            self.logger.info(
+                f"Leaderboard exported to JSON ({format_type}): {export_path}"
+            )
             return {
                 "success": True,
                 "filepath": str(export_path),
@@ -745,7 +877,9 @@ class AgentLeaderboard:
             self.logger.error(f"Error exporting leaderboard to JSON: {e}")
             return {"success": False, "error": str(e)}
 
-    def export_performance_report(self, filepath: str = "performance_report.json") -> Dict[str, Any]:
+    def export_performance_report(
+        self, filepath: str = "performance_report.json"
+    ) -> Dict[str, Any]:
         """Export a comprehensive performance report.
 
         Args:
@@ -759,8 +893,14 @@ class AgentLeaderboard:
             export_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Generate performance analysis
-            active_agents = [p for p in self.leaderboard.values() if p.status == AgentStatus.ACTIVE]
-            deprecated_agents = [p for p in self.leaderboard.values() if p.status == AgentStatus.DEPRECATED]
+            active_agents = [
+                p for p in self.leaderboard.values() if p.status == AgentStatus.ACTIVE
+            ]
+            deprecated_agents = [
+                p
+                for p in self.leaderboard.values()
+                if p.status == AgentStatus.DEPRECATED
+            ]
 
             # Calculate aggregate statistics
             if active_agents:
@@ -784,27 +924,39 @@ class AgentLeaderboard:
                     "avg_total_return": avg_return,
                 },
                 "top_performers": {
-                    "by_sharpe": sorted(active_agents, key=lambda x: x.sharpe_ratio, reverse=True)[:5],
-                    "by_return": sorted(active_agents, key=lambda x: x.total_return, reverse=True)[:5],
-                    "by_win_rate": sorted(active_agents, key=lambda x: x.win_rate, reverse=True)[:5],
+                    "by_sharpe": sorted(
+                        active_agents, key=lambda x: x.sharpe_ratio, reverse=True
+                    )[:5],
+                    "by_return": sorted(
+                        active_agents, key=lambda x: x.total_return, reverse=True
+                    )[:5],
+                    "by_win_rate": sorted(
+                        active_agents, key=lambda x: x.win_rate, reverse=True
+                    )[:5],
                 },
                 "deprecated_analysis": {
                     "count": len(deprecated_agents),
                     "reasons": self._analyze_deprecation_reasons(deprecated_agents),
                 },
                 "performance_distribution": {
-                    "sharpe_ranges": self._calculate_performance_distribution([p.sharpe_ratio for p in active_agents]),
+                    "sharpe_ranges": self._calculate_performance_distribution(
+                        [p.sharpe_ratio for p in active_agents]
+                    ),
                     "drawdown_ranges": self._calculate_performance_distribution(
                         [p.max_drawdown for p in active_agents]
                     ),
-                    "win_rate_ranges": self._calculate_performance_distribution([p.win_rate for p in active_agents]),
+                    "win_rate_ranges": self._calculate_performance_distribution(
+                        [p.win_rate for p in active_agents]
+                    ),
                 },
                 "recommendations": self._generate_recommendations(),
             }
 
             # Convert dataclasses to dictionaries
             for category in ["by_sharpe", "by_return", "by_win_rate"]:
-                report["top_performers"][category] = [p.to_dict() for p in report["top_performers"][category]]
+                report["top_performers"][category] = [
+                    p.to_dict() for p in report["top_performers"][category]
+                ]
 
             with open(export_path, "w") as f:
                 json.dump(report, f, indent=2, default=str)
@@ -821,7 +973,9 @@ class AgentLeaderboard:
             self.logger.error(f"Error exporting performance report: {e}")
             return {"success": False, "error": str(e)}
 
-    def _analyze_deprecation_reasons(self, deprecated_agents: List[AgentPerformance]) -> Dict[str, int]:
+    def _analyze_deprecation_reasons(
+        self, deprecated_agents: List[AgentPerformance]
+    ) -> Dict[str, int]:
         """Analyze reasons for agent deprecation."""
         reasons = {}
         for agent in deprecated_agents:
@@ -833,7 +987,9 @@ class AgentLeaderboard:
                 reasons["low_win_rate"] = reasons.get("low_win_rate", 0) + 1
         return reasons
 
-    def _calculate_performance_distribution(self, values: List[float]) -> Dict[str, int]:
+    def _calculate_performance_distribution(
+        self, values: List[float]
+    ) -> Dict[str, int]:
         """Calculate distribution of performance values."""
         if not values:
             return {}
@@ -841,7 +997,13 @@ class AgentLeaderboard:
         min_val, max_val = min(values), max(values)
         range_size = (max_val - min_val) / 5 if max_val != min_val else 1
 
-        distribution = {"low": 0, "medium_low": 0, "medium": 0, "medium_high": 0, "high": 0}
+        distribution = {
+            "low": 0,
+            "medium_low": 0,
+            "medium": 0,
+            "medium_high": 0,
+            "high": 0,
+        }
 
         for value in values:
             if value < min_val + range_size:
@@ -861,18 +1023,26 @@ class AgentLeaderboard:
         """Generate recommendations based on current performance."""
         recommendations = []
 
-        active_agents = [p for p in self.leaderboard.values() if p.status == AgentStatus.ACTIVE]
+        active_agents = [
+            p for p in self.leaderboard.values() if p.status == AgentStatus.ACTIVE
+        ]
 
         if len(active_agents) < 5:
-            recommendations.append("Consider adding more agents to improve diversification")
+            recommendations.append(
+                "Consider adding more agents to improve diversification"
+            )
 
         low_performers = [p for p in active_agents if p.sharpe_ratio < 0.5]
         if len(low_performers) > len(active_agents) * 0.3:
-            recommendations.append("High number of low-performing agents - consider optimization")
+            recommendations.append(
+                "High number of low-performing agents - consider optimization"
+            )
 
         high_drawdown_agents = [p for p in active_agents if p.max_drawdown > 0.2]
         if high_drawdown_agents:
-            recommendations.append(f"{len(high_drawdown_agents)} agents have high drawdown - review risk management")
+            recommendations.append(
+                f"{len(high_drawdown_agents)} agents have high drawdown - review risk management"
+            )
 
         return recommendations
 

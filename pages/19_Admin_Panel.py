@@ -17,7 +17,9 @@ import pandas as pd
 import streamlit as st
 
 # Add the system directory to the path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "system", "infra", "agents"))
+sys.path.append(
+    os.path.join(os.path.dirname(__file__), "..", "system", "infra", "agents")
+)
 
 
 def main():
@@ -42,7 +44,14 @@ def main():
 
         admin_section = st.selectbox(
             "Admin Section",
-            ["Dashboard", "User Management", "System Configuration", "Audit Trail", "Security", "Performance"],
+            [
+                "Dashboard",
+                "User Management",
+                "System Configuration",
+                "Audit Trail",
+                "Security",
+                "Performance",
+            ],
         )
 
     # Main content based on selection
@@ -130,10 +139,14 @@ def render_user_management():
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            role_filter = st.selectbox("Filter by Role", ["All"] + list(df["role"].unique()))
+            role_filter = st.selectbox(
+                "Filter by Role", ["All"] + list(df["role"].unique())
+            )
 
         with col2:
-            status_filter = st.selectbox("Filter by Status", ["All"] + list(df["status"].unique()))
+            status_filter = st.selectbox(
+                "Filter by Status", ["All"] + list(df["status"].unique())
+            )
 
         with col3:
             search_term = st.text_input("Search Users", "")
@@ -301,7 +314,9 @@ def render_alerts_config():
         st.checkbox("Slack Alerts", value=False)
 
     with col2:
-        st.number_input("Alert Threshold", value=0.8, min_value=0.0, max_value=1.0, step=0.1)
+        st.number_input(
+            "Alert Threshold", value=0.8, min_value=0.0, max_value=1.0, step=0.1
+        )
         st.number_input("Alert Cooldown (minutes)", value=15, min_value=1)
         st.text_input("Alert Email", value="alerts@evolve.com")
 
@@ -324,13 +339,19 @@ def render_audit_trail():
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            action_filter = st.selectbox("Filter by Action", ["All"] + list(df["action"].unique()))
+            action_filter = st.selectbox(
+                "Filter by Action", ["All"] + list(df["action"].unique())
+            )
 
         with col2:
-            user_filter = st.selectbox("Filter by User", ["All"] + list(df["user"].unique()))
+            user_filter = st.selectbox(
+                "Filter by User", ["All"] + list(df["user"].unique())
+            )
 
         with col3:
-            level_filter = st.selectbox("Filter by Level", ["All"] + list(df["level"].unique()))
+            level_filter = st.selectbox(
+                "Filter by Level", ["All"] + list(df["level"].unique())
+            )
 
         with col4:
             date_filter = st.date_input("Filter by Date", value=datetime.now().date())
@@ -391,8 +412,12 @@ def render_security_monitoring():
 
     if security_events:
         for event in security_events:
-            color = {"info": "🔵", "warning": "🟡", "error": "🔴", "critical": "🟣"}.get(event["level"], "⚪")
-            st.markdown(f"{color} **{event['time']}** - {event['user']}: {event['description']}")
+            color = {"info": "🔵", "warning": "🟡", "error": "🔴", "critical": "🟣"}.get(
+                event["level"], "⚪"
+            )
+            st.markdown(
+                f"{color} **{event['time']}** - {event['user']}: {event['description']}"
+            )
 
     # Security actions
     st.subheader("Security Actions")
@@ -438,13 +463,13 @@ def render_performance_metrics():
         st.subheader("Application Metrics")
 
         # Response Time
-        response_time = st.metric("Avg Response Time", "1.2s", "-0.1s")
+        st.metric("Avg Response Time", "1.2s", "-0.1s")
 
         # Throughput
-        throughput = st.metric("Requests/sec", "156", "+12")
+        st.metric("Requests/sec", "156", "+12")
 
         # Error Rate
-        error_rate = st.metric("Error Rate", "0.5%", "-0.1%")
+        st.metric("Error Rate", "0.5%", "-0.1%")
 
     # Performance charts
     st.subheader("Performance Trends")
@@ -533,7 +558,13 @@ def load_audit_logs():
 
 def load_system_metrics():
     """Load system metrics."""
-    return {"cpu_usage": 45, "memory_usage": 62, "disk_usage": 28, "active_users": 24, "system_uptime": 99.8}
+    return {
+        "cpu_usage": 45,
+        "memory_usage": 62,
+        "disk_usage": 28,
+        "active_users": 24,
+        "system_uptime": 99.8,
+    }
 
 
 def load_security_events():
@@ -591,7 +622,9 @@ def show_user_activity():
 def export_audit_logs_csv(df):
     """Export audit logs to CSV."""
     csv = df.to_csv(index=False)
-    st.download_button(label="Download CSV", data=csv, file_name="audit_logs.csv", mime="text/csv")
+    st.download_button(
+        label="Download CSV", data=csv, file_name="audit_logs.csv", mime="text/csv"
+    )
 
 
 def show_audit_statistics(df):

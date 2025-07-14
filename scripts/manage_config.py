@@ -43,7 +43,6 @@ import yaml
 from cryptography.fernet import Fernet
 
 
-
 class ConfigManager:
     def __init__(self, config_path: str = "config/app_config.yaml"):
         """Initialize the configuration manager."""
@@ -114,9 +113,19 @@ class ConfigManager:
                 config = yaml.safe_load(f)
 
             # Validate required sections
-            required_sections = ["app", "server", "database", "api_keys", "security", "monitoring", "feature_flags"]
+            required_sections = [
+                "app",
+                "server",
+                "database",
+                "api_keys",
+                "security",
+                "monitoring",
+                "feature_flags",
+            ]
 
-            missing_sections = [section for section in required_sections if section not in config]
+            missing_sections = [
+                section for section in required_sections if section not in config
+            ]
 
             if missing_sections:
                 raise ValueError(f"Missing required sections: {missing_sections}")
@@ -155,7 +164,10 @@ class ConfigManager:
 
             # Save validation results
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            results_file = self.config_dir / f"validation_{Path(config_path).stem}_{timestamp}.json"
+            results_file = (
+                self.config_dir
+                / f"validation_{Path(config_path).stem}_{timestamp}.json"
+            )
 
             with open(results_file, "w") as f:
                 json.dump(validation_results, f, indent=2)
@@ -263,16 +275,26 @@ class ConfigManager:
 
                 for key, value in config.items():
                     if isinstance(value, (str, int, float, bool)):
-                        ssm.put_parameter(Name=f"/trading/{key}", Value=str(value), Type="String", Overwrite=True)
+                        ssm.put_parameter(
+                            Name=f"/trading/{key}",
+                            Value=str(value),
+                            Type="String",
+                            Overwrite=True,
+                        )
                     elif isinstance(value, dict):
                         for subkey, subvalue in value.items():
                             ssm.put_parameter(
-                                Name=f"/trading/{key}/{subkey}", Value=str(subvalue), Type="String", Overwrite=True
+                                Name=f"/trading/{key}/{subkey}",
+                                Value=str(subvalue),
+                                Type="String",
+                                Overwrite=True,
                             )
 
             elif target == "vault":
                 # Sync to HashiCorp Vault
-                client = hvac.Client(url=self.config["vault"]["url"], token=self.config["vault"]["token"])
+                client = hvac.Client(
+                    url=self.config["vault"]["url"], token=self.config["vault"]["token"]
+                )
 
                 for key, value in config.items():
                     if isinstance(value, (str, int, float, bool)):
@@ -282,7 +304,8 @@ class ConfigManager:
                     elif isinstance(value, dict):
                         for subkey, subvalue in value.items():
                             client.secrets.kv.v2.create_or_update_secret(
-                                path=f"trading/{key}/{subkey}", secret=dict(value=str(subvalue))
+                                path=f"trading/{key}/{subkey}",
+                                secret=dict(value=str(subvalue)),
                             )
 
             elif target == "kubernetes":
@@ -299,16 +322,24 @@ class ConfigManager:
                         for subkey, subvalue in value.items():
                             config_data[f"{key}.{subkey}"] = str(subvalue)
 
-                config_map = client.V1ConfigMap(metadata=client.V1ObjectMeta(name="trading-config"), data=config_data)
+                config_map = client.V1ConfigMap(
+                    metadata=client.V1ObjectMeta(name="trading-config"),
+                    data=config_data,
+                )
                 v1.create_namespaced_config_map(namespace="default", body=config_map)
 
                 # Create Secret for sensitive data
                 secret_data = {}
                 for key, value in config.get("secrets", {}).items():
                     if isinstance(value, (str, int, float, bool)):
-                        secret_data[key] = base64.b64encode(str(value).encode()).decode()
+                        secret_data[key] = base64.b64encode(
+                            str(value).encode()
+                        ).decode()
 
-                secret = client.V1Secret(metadata=client.V1ObjectMeta(name="trading-secrets"), data=secret_data)
+                secret = client.V1Secret(
+                    metadata=client.V1ObjectMeta(name="trading-secrets"),
+                    data=secret_data,
+                )
                 v1.create_namespaced_secret(namespace="default", body=secret)
 
             else:
@@ -356,13 +387,21 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Configuration Manager")
     parser.add_argument(
-        "command", choices=["generate", "validate", "encrypt", "decrypt", "sync"], help="Command to execute"
+        "command",
+        choices=["generate", "validate", "encrypt", "decrypt", "sync"],
+        help="Command to execute",
     )
-    parser.add_argument("--template", default="default", help="Configuration template to use")
+    parser.add_argument(
+        "--template", default="default", help="Configuration template to use"
+    )
     parser.add_argument("--config-path", help="Path to configuration file")
     parser.add_argument("--secrets", type=json.loads, help="Secrets to encrypt/decrypt")
     parser.add_argument("--key", help="Encryption/decryption key")
-    parser.add_argument("--target", choices=["aws", "vault", "kubernetes"], help="Target system for configuration sync")
+    parser.add_argument(
+        "--target",
+        choices=["aws", "vault", "kubernetes"],
+        help="Target system for configuration sync",
+    )
 
     args = parser.parse_args()
     manager = ConfigManager()

@@ -81,7 +81,9 @@ class RateLimiter:
                 self._call_timestamps[key].append(time.time())
             return True
         else:
-            logger.warning(f"Rate limit exceeded for {key}. Retry after {retry_after} seconds.")
+            logger.warning(
+                f"Rate limit exceeded for {key}. Retry after {retry_after} seconds."
+            )
             return False
 
     def get_status(self, key: str) -> Dict[str, any]:

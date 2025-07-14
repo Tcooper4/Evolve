@@ -39,8 +39,18 @@ def execution_agent():
             "risk_monitoring_enabled": True,
             "auto_exit_enabled": True,
             "risk_controls": {
-                "stop_loss": {"threshold_type": "percentage", "value": 0.02, "atr_multiplier": 2.0, "atr_period": 14},
-                "take_profit": {"threshold_type": "percentage", "value": 0.06, "atr_multiplier": 3.0, "atr_period": 14},
+                "stop_loss": {
+                    "threshold_type": "percentage",
+                    "value": 0.02,
+                    "atr_multiplier": 2.0,
+                    "atr_period": 14,
+                },
+                "take_profit": {
+                    "threshold_type": "percentage",
+                    "value": 0.06,
+                    "atr_multiplier": 3.0,
+                    "atr_period": 14,
+                },
                 "max_position_size": 0.2,
                 "max_portfolio_risk": 0.05,
                 "max_daily_loss": 0.02,
@@ -58,9 +68,24 @@ def execution_agent():
 def sample_market_data():
     """Create sample market data for testing."""
     return {
-        "AAPL": {"price": 150.25, "volatility": 0.15, "volume": 1000000, "price_change": 0.01},
-        "TSLA": {"price": 245.50, "volatility": 0.25, "volume": 2000000, "price_change": -0.02},
-        "NVDA": {"price": 420.75, "volatility": 0.20, "volume": 1500000, "price_change": 0.015},
+        "AAPL": {
+            "price": 150.25,
+            "volatility": 0.15,
+            "volume": 1000000,
+            "price_change": 0.01,
+        },
+        "TSLA": {
+            "price": 245.50,
+            "volatility": 0.25,
+            "volume": 2000000,
+            "price_change": -0.02,
+        },
+        "NVDA": {
+            "price": 420.75,
+            "volatility": 0.20,
+            "volume": 1500000,
+            "price_change": 0.015,
+        },
     }
 
 
@@ -108,7 +133,11 @@ class TestRiskControls:
     def test_risk_threshold_calculation(self, execution_agent, sample_market_data):
         """Test risk threshold calculations."""
         # Create a mock position
-        position = type("Position", (), {"symbol": "AAPL", "direction": TradeDirection.LONG, "entry_price": 150.00})()
+        position = type(
+            "Position",
+            (),
+            {"symbol": "AAPL", "direction": TradeDirection.LONG, "entry_price": 150.00},
+        )()
 
         # Test percentage-based stop loss
         stop_loss_price = execution_agent._calculate_stop_loss_price(
@@ -127,20 +156,47 @@ class TestRiskControls:
     def test_atr_based_thresholds(self, execution_agent, sample_market_data):
         """Test ATR-based threshold calculations."""
         # Set up price history for ATR calculation
-        execution_agent.price_history["AAPL"] = [145, 148, 152, 149, 151, 150, 153, 147, 150, 155, 148, 152, 149, 150]
+        execution_agent.price_history["AAPL"] = [
+            145,
+            148,
+            152,
+            149,
+            151,
+            150,
+            153,
+            147,
+            150,
+            155,
+            148,
+            152,
+            149,
+            150,
+        ]
 
         # Create ATR-based risk controls
         atr_controls = RiskControls(
-            stop_loss=RiskThreshold(RiskThresholdType.ATR_BASED, 0.0, atr_multiplier=2.0),
-            take_profit=RiskThreshold(RiskThresholdType.ATR_BASED, 0.0, atr_multiplier=3.0),
+            stop_loss=RiskThreshold(
+                RiskThresholdType.ATR_BASED, 0.0, atr_multiplier=2.0
+            ),
+            take_profit=RiskThreshold(
+                RiskThresholdType.ATR_BASED, 0.0, atr_multiplier=3.0
+            ),
         )
 
         # Create a mock position
-        position = type("Position", (), {"symbol": "AAPL", "direction": TradeDirection.LONG, "entry_price": 150.00})()
+        position = type(
+            "Position",
+            (),
+            {"symbol": "AAPL", "direction": TradeDirection.LONG, "entry_price": 150.00},
+        )()
 
         # Calculate ATR-based thresholds
-        stop_loss_price = execution_agent._calculate_stop_loss_price(position, atr_controls, sample_market_data)
-        take_profit_price = execution_agent._calculate_take_profit_price(position, atr_controls, sample_market_data)
+        stop_loss_price = execution_agent._calculate_stop_loss_price(
+            position, atr_controls, sample_market_data
+        )
+        take_profit_price = execution_agent._calculate_take_profit_price(
+            position, atr_controls, sample_market_data
+        )
 
         # Verify ATR-based calculations
         assert stop_loss_price < 150.00  # Stop loss below entry
@@ -152,22 +208,30 @@ class TestRiskControls:
         long_position = type("Position", (), {"direction": TradeDirection.LONG})()
 
         # Test stop loss for long position
-        should_exit = execution_agent._should_exit_position(long_position, 147.00, 148.00, "stop_loss")
+        should_exit = execution_agent._should_exit_position(
+            long_position, 147.00, 148.00, "stop_loss"
+        )
         assert should_exit is True  # Current price below stop loss
 
         # Test take profit for long position
-        should_exit = execution_agent._should_exit_position(long_position, 160.00, 159.00, "take_profit")
+        should_exit = execution_agent._should_exit_position(
+            long_position, 160.00, 159.00, "take_profit"
+        )
         assert should_exit is True  # Current price above take profit
 
         # Test short position exit logic
         short_position = type("Position", (), {"direction": TradeDirection.SHORT})()
 
         # Test stop loss for short position
-        should_exit = execution_agent._should_exit_position(short_position, 155.00, 154.00, "stop_loss")
+        should_exit = execution_agent._should_exit_position(
+            short_position, 155.00, 154.00, "stop_loss"
+        )
         assert should_exit is True  # Current price above stop loss
 
         # Test take profit for short position
-        should_exit = execution_agent._should_exit_position(short_position, 140.00, 141.00, "take_profit")
+        should_exit = execution_agent._should_exit_position(
+            short_position, 140.00, 141.00, "take_profit"
+        )
         assert should_exit is True  # Current price below take profit
 
 
@@ -179,18 +243,28 @@ class TestRiskMonitoring:
         """Test that risk monitoring works when enabled."""
         # Create a position first
         signal = TradeSignal(
-            symbol="AAPL", direction=TradeDirection.LONG, strategy="test", confidence=0.8, entry_price=150.00
+            symbol="AAPL",
+            direction=TradeDirection.LONG,
+            strategy="test",
+            confidence=0.8,
+            entry_price=150.00,
         )
 
         # Execute trade
-        result = await execution_agent.execute(signals=[signal], market_data=sample_market_data, risk_check=True)
+        result = await execution_agent.execute(
+            signals=[signal], market_data=sample_market_data, risk_check=True
+        )
 
         assert result.success is True
 
         # Test risk monitoring with price that should trigger stop loss
-        stop_loss_market_data = {"AAPL": {"price": 147.00, "volatility": 0.15}}  # -2% from entry
+        stop_loss_market_data = {
+            "AAPL": {"price": 147.00, "volatility": 0.15}
+        }  # -2% from entry
 
-        result = await execution_agent.execute(signals=[], market_data=stop_loss_market_data, risk_check=True)
+        result = await execution_agent.execute(
+            signals=[], market_data=stop_loss_market_data, risk_check=True
+        )
 
         assert result.success is True
 
@@ -207,13 +281,24 @@ class TestRiskMonitoring:
         # This would normally close all positions
         assert execution_agent.daily_pnl == -0.025  # Should remain unchanged in test
 
-    def test_portfolio_correlation_calculation(self, execution_agent, sample_market_data):
+    def test_portfolio_correlation_calculation(
+        self, execution_agent, sample_market_data
+    ):
         """Test portfolio correlation calculation."""
         # Set up price history for correlation calculation
         execution_agent.price_history["AAPL"] = [100, 101, 102, 103, 104, 105]
-        execution_agent.price_history["TSLA"] = [200, 202, 204, 206, 208, 210]  # Highly correlated
+        execution_agent.price_history["TSLA"] = [
+            200,
+            202,
+            204,
+            206,
+            208,
+            210,
+        ]  # Highly correlated
 
-        correlation = execution_agent._calculate_portfolio_correlation(sample_market_data)
+        correlation = execution_agent._calculate_portfolio_correlation(
+            sample_market_data
+        )
 
         # Should return a correlation value between -1 and 1
         assert -1 <= correlation <= 1
@@ -223,10 +308,14 @@ class TestRiskMonitoring:
         # Mock portfolio state
         execution_agent.portfolio_manager.state.equity = 10000.0
         execution_agent.portfolio_manager.state.open_positions = [
-            type("Position", (), {"symbol": "AAPL", "size": 10, "entry_price": 150.00})()
+            type(
+                "Position", (), {"symbol": "AAPL", "size": 10, "entry_price": 150.00}
+            )()
         ]
 
-        risk_exposure = execution_agent._calculate_portfolio_risk_exposure(sample_market_data)
+        risk_exposure = execution_agent._calculate_portfolio_risk_exposure(
+            sample_market_data
+        )
 
         # Should return a percentage between 0 and 1
         assert 0 <= risk_exposure <= 1
@@ -300,9 +389,15 @@ class TestExitEvents:
         """Test risk summary generation."""
         # Create mock exit events
         mock_events = [
-            type("ExitEvent", (), {"exit_reason": ExitReason.STOP_LOSS, "pnl": -30.00})(),
-            type("ExitEvent", (), {"exit_reason": ExitReason.TAKE_PROFIT, "pnl": 45.00})(),
-            type("ExitEvent", (), {"exit_reason": ExitReason.STOP_LOSS, "pnl": -20.00})(),
+            type(
+                "ExitEvent", (), {"exit_reason": ExitReason.STOP_LOSS, "pnl": -30.00}
+            )(),
+            type(
+                "ExitEvent", (), {"exit_reason": ExitReason.TAKE_PROFIT, "pnl": 45.00}
+            )(),
+            type(
+                "ExitEvent", (), {"exit_reason": ExitReason.STOP_LOSS, "pnl": -20.00}
+            )(),
         ]
 
         execution_agent.exit_events = mock_events
@@ -343,7 +438,11 @@ class TestMarketDataCache:
         assert "market_regime" in execution_agent.global_metrics
 
         # Should be 'normal' volatility regime with given data
-        assert execution_agent.global_metrics["volatility_regime"] in ["low", "normal", "high"]
+        assert execution_agent.global_metrics["volatility_regime"] in [
+            "low",
+            "normal",
+            "high",
+        ]
 
 
 class TestRiskControlsIntegration:
@@ -355,7 +454,9 @@ class TestRiskControlsIntegration:
         # Create signal with custom risk controls
         risk_controls = RiskControls(
             stop_loss=RiskThreshold(RiskThresholdType.PERCENTAGE, 0.03),  # 3% stop loss
-            take_profit=RiskThreshold(RiskThresholdType.PERCENTAGE, 0.09),  # 9% take profit
+            take_profit=RiskThreshold(
+                RiskThresholdType.PERCENTAGE, 0.09
+            ),  # 9% take profit
             max_position_size=0.1,
             volatility_limit=0.3,
         )
@@ -393,7 +494,9 @@ class TestRiskControlsIntegration:
         with pytest.raises(ValueError):
             RiskThreshold("invalid_type", 0.02)
 
-    def test_stop_loss_and_max_drawdown_triggers(self, execution_agent, sample_market_data):
+    def test_stop_loss_and_max_drawdown_triggers(
+        self, execution_agent, sample_market_data
+    ):
         """Test that stop-loss and max drawdown rules trigger correctly."""
         print("\n🛑 Testing Stop-Loss and Max Drawdown Triggers")
 
@@ -414,7 +517,9 @@ class TestRiskControlsIntegration:
         # Set up risk controls
         risk_controls = RiskControls(
             stop_loss=RiskThreshold(RiskThresholdType.PERCENTAGE, 0.02),  # 2% stop loss
-            take_profit=RiskThreshold(RiskThresholdType.PERCENTAGE, 0.06),  # 6% take profit
+            take_profit=RiskThreshold(
+                RiskThresholdType.PERCENTAGE, 0.06
+            ),  # 6% take profit
             max_position_size=0.15,
             max_daily_loss=0.03,  # 3% max daily loss
             volatility_limit=0.4,
@@ -447,7 +552,9 @@ class TestRiskControlsIntegration:
         }
 
         # Test max drawdown trigger
-        should_exit_drawdown = execution_agent._check_max_drawdown_trigger(position, risk_controls)
+        should_exit_drawdown = execution_agent._check_max_drawdown_trigger(
+            position, risk_controls
+        )
 
         assert should_exit_drawdown, "Should exit when max drawdown is exceeded"
         print(
@@ -457,7 +564,9 @@ class TestRiskControlsIntegration:
         # Test daily loss limit trigger
         print("  Testing daily loss limit trigger...")
 
-        should_exit_daily_loss = execution_agent._check_daily_loss_limit(position, risk_controls)
+        should_exit_daily_loss = execution_agent._check_daily_loss_limit(
+            position, risk_controls
+        )
 
         assert should_exit_daily_loss, "Should exit when daily loss limit is exceeded"
         print(
@@ -476,7 +585,9 @@ class TestRiskControlsIntegration:
         )
 
         assert should_exit_take_profit, "Should exit when price rises above take profit"
-        print(f"  ✅ Take-profit triggered at {current_price} (above {take_profit_price})")
+        print(
+            f"  ✅ Take-profit triggered at {current_price} (above {take_profit_price})"
+        )
 
         # Test that triggers work for short positions
         print("  Testing triggers for short positions...")
@@ -502,8 +613,12 @@ class TestRiskControlsIntegration:
             short_position, short_current_price, short_stop_loss_price, "stop_loss"
         )
 
-        assert should_exit_short_stop_loss, "Should exit short when price rises above stop loss"
-        print(f"  ✅ Short stop-loss triggered at {short_current_price} (above {short_stop_loss_price})")
+        assert (
+            should_exit_short_stop_loss
+        ), "Should exit short when price rises above stop loss"
+        print(
+            f"  ✅ Short stop-loss triggered at {short_current_price} (above {short_stop_loss_price})"
+        )
 
         # Test trigger priority
         print("  Testing trigger priority...")
@@ -518,7 +633,9 @@ class TestRiskControlsIntegration:
         }
 
         # Check which trigger has highest priority
-        exit_reason = execution_agent._determine_exit_reason(position, 146.50, stop_loss_price, risk_controls)
+        exit_reason = execution_agent._determine_exit_reason(
+            position, 146.50, stop_loss_price, risk_controls
+        )
 
         assert exit_reason is not None, "Should determine an exit reason"
         print(f"  ✅ Exit reason determined: {exit_reason}")
@@ -533,7 +650,9 @@ class TestRiskControlsIntegration:
         )
 
         assert not should_not_exit, "Should not exit when price is above stop loss"
-        print(f"  ✅ Stop-loss not triggered at {current_price_above_stop} (above {stop_loss_price})")
+        print(
+            f"  ✅ Stop-loss not triggered at {current_price_above_stop} (above {stop_loss_price})"
+        )
 
         # Test portfolio state just below limits (should not trigger)
         execution_agent.portfolio_state = {
@@ -544,11 +663,19 @@ class TestRiskControlsIntegration:
             "max_drawdown": -0.05,
         }
 
-        should_not_exit_daily = execution_agent._check_daily_loss_limit(position, risk_controls)
-        should_not_exit_drawdown = execution_agent._check_max_drawdown_trigger(position, risk_controls)
+        should_not_exit_daily = execution_agent._check_daily_loss_limit(
+            position, risk_controls
+        )
+        should_not_exit_drawdown = execution_agent._check_max_drawdown_trigger(
+            position, risk_controls
+        )
 
-        assert not should_not_exit_daily, "Should not exit when daily loss is below limit"
-        assert not should_not_exit_drawdown, "Should not exit when drawdown is below limit"
+        assert (
+            not should_not_exit_daily
+        ), "Should not exit when daily loss is below limit"
+        assert (
+            not should_not_exit_drawdown
+        ), "Should not exit when drawdown is below limit"
         print(
             f"  ✅ Limits respected: daily_pnl={execution_agent.portfolio_state['daily_pnl']}, drawdown={execution_agent.portfolio_state['current_drawdown']:.1%}"
         )

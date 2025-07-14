@@ -11,7 +11,9 @@ import pandas as pd
 import seaborn as sns
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -30,7 +32,10 @@ class DataVisualizer:
         self.dpi = 100
 
     def plot_data_overview(
-        self, data: pd.DataFrame, title: str = "Data Overview", save_path: Optional[Union[str, Path]] = None
+        self,
+        data: pd.DataFrame,
+        title: str = "Data Overview",
+        save_path: Optional[Union[str, Path]] = None,
     ) -> None:
         """
         Plot data overview with basic statistics.
@@ -59,7 +64,9 @@ class DataVisualizer:
             # Plot 3: Correlation matrix
             if len(numeric_cols) > 1:
                 corr_matrix = data[numeric_cols].corr()
-                sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", center=0, ax=axes[1, 0])
+                sns.heatmap(
+                    corr_matrix, annot=True, cmap="coolwarm", center=0, ax=axes[1, 0]
+                )
                 axes[1, 0].set_title("Correlation Matrix")
 
             # Plot 4: Data types
@@ -202,7 +209,10 @@ class DataVisualizer:
             logger.error(f"Error plotting scatter matrix: {str(e)}")
 
     def plot_summary_statistics(
-        self, data: pd.DataFrame, title: str = "Summary Statistics", save_path: Optional[Union[str, Path]] = None
+        self,
+        data: pd.DataFrame,
+        title: str = "Summary Statistics",
+        save_path: Optional[Union[str, Path]] = None,
     ) -> None:
         """
         Plot summary statistics.
@@ -278,7 +288,10 @@ class MarketVisualizer:
         self.dpi = 100
 
     def plot_price_data(
-        self, data: pd.DataFrame, title: str = "Price Data", save_path: Optional[Union[str, Path]] = None
+        self,
+        data: pd.DataFrame,
+        title: str = "Price Data",
+        save_path: Optional[Union[str, Path]] = None,
     ) -> None:
         """
         Plot price data with volume.
@@ -290,7 +303,11 @@ class MarketVisualizer:
         """
         try:
             fig, (ax1, ax2) = plt.subplots(
-                2, 1, figsize=self.figsize, dpi=self.dpi, gridspec_kw={"height_ratios": [3, 1]}
+                2,
+                1,
+                figsize=self.figsize,
+                dpi=self.dpi,
+                gridspec_kw={"height_ratios": [3, 1]},
             )
 
             # Plot price data
@@ -337,7 +354,11 @@ class MarketVisualizer:
         """
         try:
             fig, (ax1, ax2) = plt.subplots(
-                2, 1, figsize=self.figsize, dpi=self.dpi, gridspec_kw={"height_ratios": [3, 1]}
+                2,
+                1,
+                figsize=self.figsize,
+                dpi=self.dpi,
+                gridspec_kw={"height_ratios": [3, 1]},
             )
 
             # Plot price data
@@ -387,7 +408,11 @@ class MarketVisualizer:
         """
         try:
             fig, (ax1, ax2) = plt.subplots(
-                2, 1, figsize=self.figsize, dpi=self.dpi, gridspec_kw={"height_ratios": [3, 1]}
+                2,
+                1,
+                figsize=self.figsize,
+                dpi=self.dpi,
+                gridspec_kw={"height_ratios": [3, 1]},
             )
 
             # Plot price data
@@ -457,7 +482,11 @@ class MarketVisualizer:
             logger.error(f"Error plotting correlation matrix: {str(e)}")
 
     def plot_distribution(
-        self, data: pd.DataFrame, column: str, title: Optional[str] = None, save_path: Optional[Union[str, Path]] = None
+        self,
+        data: pd.DataFrame,
+        column: str,
+        title: Optional[str] = None,
+        save_path: Optional[Union[str, Path]] = None,
     ) -> None:
         """
         Plot distribution of a column.

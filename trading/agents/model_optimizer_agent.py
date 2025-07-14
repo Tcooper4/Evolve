@@ -120,7 +120,9 @@ class ModelOptimizerAgent(BaseAgent):
 
         # Configuration
         self.default_timeout = self.config_dict.get("default_timeout", 3600)
-        self.max_concurrent_optimizations = self.config_dict.get("max_concurrent_optimizations", 3)
+        self.max_concurrent_optimizations = self.config_dict.get(
+            "max_concurrent_optimizations", 3
+        )
         self.improvement_threshold = self.config_dict.get("improvement_threshold", 0.05)
 
         # Storage
@@ -149,7 +151,10 @@ class ModelOptimizerAgent(BaseAgent):
                 optimization_config = kwargs.get("optimization_config")
 
                 if not model_id or not optimization_config:
-                    return AgentResult(success=False, error_message="Missing model_id or optimization_config")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing model_id or optimization_config",
+                    )
 
                 result = await self.optimize_model(model_id, optimization_config)
                 return AgentResult(
@@ -164,12 +169,17 @@ class ModelOptimizerAgent(BaseAgent):
             elif action == "get_optimization_history":
                 model_id = kwargs.get("model_id")
                 history = self.get_optimization_history(model_id)
-                return AgentResult(success=True, data={"optimization_history": [opt.__dict__ for opt in history]})
+                return AgentResult(
+                    success=True,
+                    data={"optimization_history": [opt.__dict__ for opt in history]},
+                )
 
             elif action == "get_optimization_status":
                 optimization_id = kwargs.get("optimization_id")
                 if not optimization_id:
-                    return AgentResult(success=False, error_message="Missing optimization_id")
+                    return AgentResult(
+                        success=False, error_message="Missing optimization_id"
+                    )
 
                 status = self.get_optimization_status(optimization_id)
                 return AgentResult(success=True, data={"optimization_status": status})
@@ -177,7 +187,9 @@ class ModelOptimizerAgent(BaseAgent):
             elif action == "cancel_optimization":
                 optimization_id = kwargs.get("optimization_id")
                 if not optimization_id:
-                    return AgentResult(success=False, error_message="Missing optimization_id")
+                    return AgentResult(
+                        success=False, error_message="Missing optimization_id"
+                    )
 
                 cancelled = self.cancel_optimization(optimization_id)
                 return AgentResult(success=True, data={"cancelled": cancelled})
@@ -185,15 +197,21 @@ class ModelOptimizerAgent(BaseAgent):
             elif action == "get_optimization_recommendations":
                 model_id = kwargs.get("model_id")
                 recommendations = self.get_optimization_recommendations(model_id)
-                return AgentResult(success=True, data={"recommendations": recommendations})
+                return AgentResult(
+                    success=True, data={"recommendations": recommendations}
+                )
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
 
-    async def optimize_model(self, model_id: str, optimization_config: Dict[str, Any]) -> OptimizationResult:
+    async def optimize_model(
+        self, model_id: str, optimization_config: Dict[str, Any]
+    ) -> OptimizationResult:
         """
         Optimize a model based on the configuration.
 
@@ -205,18 +223,28 @@ class ModelOptimizerAgent(BaseAgent):
             Optimization result
         """
         try:
-            optimization_id = f"opt_{model_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            optimization_id = (
+                f"opt_{model_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            )
             self.current_optimization_id = optimization_id
 
             self.logger.info(f"Starting optimization for model {model_id}")
 
             # Create optimization config
             config = OptimizationConfig(
-                optimization_type=OptimizationType(optimization_config.get("type", "hyperparameter_tuning")),
-                objective_metric=optimization_config.get("objective_metric", "sharpe_ratio"),
+                optimization_type=OptimizationType(
+                    optimization_config.get("type", "hyperparameter_tuning")
+                ),
+                objective_metric=optimization_config.get(
+                    "objective_metric", "sharpe_ratio"
+                ),
                 max_iterations=optimization_config.get("max_iterations", 100),
-                timeout_seconds=optimization_config.get("timeout_seconds", self.default_timeout),
-                early_stopping_patience=optimization_config.get("early_stopping_patience", 10),
+                timeout_seconds=optimization_config.get(
+                    "timeout_seconds", self.default_timeout
+                ),
+                early_stopping_patience=optimization_config.get(
+                    "early_stopping_patience", 10
+                ),
                 validation_split=optimization_config.get("validation_split", 0.2),
                 random_state=optimization_config.get("random_state", 42),
                 custom_params=optimization_config.get("custom_params", {}),
@@ -232,20 +260,31 @@ class ModelOptimizerAgent(BaseAgent):
             try:
                 # Run optimization based on type
                 if config.optimization_type == OptimizationType.HYPERPARAMETER_TUNING:
-                    optimized_metrics = await self._optimize_hyperparameters(model_id, config)
+                    optimized_metrics = await self._optimize_hyperparameters(
+                        model_id, config
+                    )
                 elif config.optimization_type == OptimizationType.FEATURE_SELECTION:
                     optimized_metrics = await self._optimize_features(model_id, config)
                 elif config.optimization_type == OptimizationType.ENSEMBLE_OPTIMIZATION:
                     optimized_metrics = await self._optimize_ensemble(model_id, config)
-                elif config.optimization_type == OptimizationType.ARCHITECTURE_OPTIMIZATION:
-                    optimized_metrics = await self._optimize_architecture(model_id, config)
+                elif (
+                    config.optimization_type
+                    == OptimizationType.ARCHITECTURE_OPTIMIZATION
+                ):
+                    optimized_metrics = await self._optimize_architecture(
+                        model_id, config
+                    )
                 else:
-                    raise ValueError(f"Unsupported optimization type: {config.optimization_type}")
+                    raise ValueError(
+                        f"Unsupported optimization type: {config.optimization_type}"
+                    )
 
                 end_time = datetime.now()
 
                 # Calculate improvement
-                improvement = self._calculate_improvement(original_metrics, optimized_metrics)
+                improvement = self._calculate_improvement(
+                    original_metrics, optimized_metrics
+                )
 
                 # Create result
                 result = OptimizationResult(
@@ -265,7 +304,9 @@ class ModelOptimizerAgent(BaseAgent):
                 self.optimization_history.append(result)
                 self._store_optimization_result(result)
 
-                self.logger.info(f"Completed optimization for model {model_id}: {improvement}")
+                self.logger.info(
+                    f"Completed optimization for model {model_id}: {improvement}"
+                )
 
                 return result
 
@@ -300,7 +341,9 @@ class ModelOptimizerAgent(BaseAgent):
             self.logger.error(f"Error optimizing model {model_id}: {str(e)}")
             raise
 
-    async def _optimize_hyperparameters(self, model_id: str, config: OptimizationConfig) -> Dict[str, float]:
+    async def _optimize_hyperparameters(
+        self, model_id: str, config: OptimizationConfig
+    ) -> Dict[str, float]:
         """Optimize model hyperparameters."""
         try:
             # Get model
@@ -329,12 +372,20 @@ class ModelOptimizerAgent(BaseAgent):
             if len(param_space) <= 6:
                 # Use Bayesian optimization for smaller spaces
                 best_params = await asyncio.get_event_loop().run_in_executor(
-                    None, self.bayesian_optimizer.optimize, objective, param_space, config.max_iterations
+                    None,
+                    self.bayesian_optimizer.optimize,
+                    objective,
+                    param_space,
+                    config.max_iterations,
                 )
             else:
                 # Use genetic optimization for larger spaces
                 best_params = await asyncio.get_event_loop().run_in_executor(
-                    None, self.genetic_optimizer.optimize, objective, param_space, config.max_iterations
+                    None,
+                    self.genetic_optimizer.optimize,
+                    objective,
+                    param_space,
+                    config.max_iterations,
                 )
 
             # Apply best parameters
@@ -348,7 +399,9 @@ class ModelOptimizerAgent(BaseAgent):
             self.logger.error(f"Error optimizing hyperparameters: {str(e)}")
             raise
 
-    async def _optimize_features(self, model_id: str, config: OptimizationConfig) -> Dict[str, float]:
+    async def _optimize_features(
+        self, model_id: str, config: OptimizationConfig
+    ) -> Dict[str, float]:
         """Optimize feature selection."""
         try:
             # Get model and data
@@ -375,7 +428,11 @@ class ModelOptimizerAgent(BaseAgent):
 
             # Run feature selection optimization
             best_features = await asyncio.get_event_loop().run_in_executor(
-                None, self.genetic_optimizer.optimize_feature_selection, objective, feature_data, config.max_iterations
+                None,
+                self.genetic_optimizer.optimize_feature_selection,
+                objective,
+                feature_data,
+                config.max_iterations,
             )
 
             # Apply best features
@@ -389,7 +446,9 @@ class ModelOptimizerAgent(BaseAgent):
             self.logger.error(f"Error optimizing features: {str(e)}")
             raise
 
-    async def _optimize_ensemble(self, model_id: str, config: OptimizationConfig) -> Dict[str, float]:
+    async def _optimize_ensemble(
+        self, model_id: str, config: OptimizationConfig
+    ) -> Dict[str, float]:
         """Optimize ensemble configuration."""
         try:
             # Get ensemble model
@@ -431,7 +490,9 @@ class ModelOptimizerAgent(BaseAgent):
             self.logger.error(f"Error optimizing ensemble: {str(e)}")
             raise
 
-    async def _optimize_architecture(self, model_id: str, config: OptimizationConfig) -> Dict[str, float]:
+    async def _optimize_architecture(
+        self, model_id: str, config: OptimizationConfig
+    ) -> Dict[str, float]:
         """Optimize model architecture."""
         try:
             # Get model
@@ -446,19 +507,27 @@ class ModelOptimizerAgent(BaseAgent):
             def objective(architecture):
                 try:
                     # Create new model with architecture
-                    new_model = self._create_model_with_architecture(model_id, architecture)
+                    new_model = self._create_model_with_architecture(
+                        model_id, architecture
+                    )
 
                     # Evaluate new model
                     metrics = self._evaluate_model(new_model.model_id)
                     return metrics.get(config.objective_metric, 0.0)
 
                 except Exception as e:
-                    self.logger.warning(f"Architecture optimization objective failed: {e}")
+                    self.logger.warning(
+                        f"Architecture optimization objective failed: {e}"
+                    )
                     return 0.0
 
             # Run architecture optimization
             best_architecture = await asyncio.get_event_loop().run_in_executor(
-                None, self.genetic_optimizer.optimize_architecture, objective, arch_space, config.max_iterations
+                None,
+                self.genetic_optimizer.optimize_architecture,
+                objective,
+                arch_space,
+                config.max_iterations,
             )
 
             # Apply best architecture
@@ -477,7 +546,12 @@ class ModelOptimizerAgent(BaseAgent):
         try:
             # This would typically get metrics from the model evaluator
             # For now, return default metrics
-            return {"sharpe_ratio": 0.5, "max_drawdown": 0.1, "win_rate": 0.6, "profit_factor": 1.2}
+            return {
+                "sharpe_ratio": 0.5,
+                "max_drawdown": 0.1,
+                "win_rate": 0.6,
+                "profit_factor": 1.2,
+            }
         except Exception as e:
             self.logger.error(f"Error getting model metrics: {str(e)}")
             return {}
@@ -510,7 +584,9 @@ class ModelOptimizerAgent(BaseAgent):
                     optimized_val = optimized_metrics[metric]
 
                     if original_val != 0:
-                        improvement[metric] = (optimized_val - original_val) / abs(original_val)
+                        improvement[metric] = (optimized_val - original_val) / abs(
+                            original_val
+                        )
                     else:
                         improvement[metric] = 0.0
 
@@ -520,21 +596,38 @@ class ModelOptimizerAgent(BaseAgent):
             self.logger.error(f"Error calculating improvement: {str(e)}")
             return {}
 
-    def _get_hyperparameter_space(self, model_id: str, config: OptimizationConfig) -> Dict[str, Any]:
+    def _get_hyperparameter_space(
+        self, model_id: str, config: OptimizationConfig
+    ) -> Dict[str, Any]:
         """Get hyperparameter search space for a model."""
         # This would be model-specific
-        return {"learning_rate": [0.001, 0.01, 0.1], "batch_size": [16, 32, 64, 128], "epochs": [50, 100, 200]}
+        return {
+            "learning_rate": [0.001, 0.01, 0.1],
+            "batch_size": [16, 32, 64, 128],
+            "epochs": [50, 100, 200],
+        }
 
     def _get_feature_data(self, model_id: str) -> Dict[str, Any]:
         """Get feature data for optimization."""
         # This would get feature importance or correlation data
-        return {"features": ["feature1", "feature2", "feature3"], "importance": [0.8, 0.6, 0.4]}
+        return {
+            "features": ["feature1", "feature2", "feature3"],
+            "importance": [0.8, 0.6, 0.4],
+        }
 
-    def _get_architecture_space(self, model_id: str, config: OptimizationConfig) -> Dict[str, Any]:
+    def _get_architecture_space(
+        self, model_id: str, config: OptimizationConfig
+    ) -> Dict[str, Any]:
         """Get architecture search space."""
-        return {"layers": [1, 2, 3, 4], "units": [64, 128, 256, 512], "dropout": [0.1, 0.2, 0.3, 0.4]}
+        return {
+            "layers": [1, 2, 3, 4],
+            "units": [64, 128, 256, 512],
+            "dropout": [0.1, 0.2, 0.3, 0.4],
+        }
 
-    def _create_model_with_architecture(self, model_id: str, architecture: Dict[str, Any]):
+    def _create_model_with_architecture(
+        self, model_id: str, architecture: Dict[str, Any]
+    ):
         """Create a new model with given architecture."""
         # This would create a new model instance
 
@@ -542,10 +635,14 @@ class ModelOptimizerAgent(BaseAgent):
         """Apply architecture changes to existing model."""
         # This would modify the existing model
 
-    def get_optimization_history(self, model_id: Optional[str] = None) -> List[OptimizationResult]:
+    def get_optimization_history(
+        self, model_id: Optional[str] = None
+    ) -> List[OptimizationResult]:
         """Get optimization history for a model or all models."""
         if model_id:
-            return [opt for opt in self.optimization_history if opt.model_id == model_id]
+            return [
+                opt for opt in self.optimization_history if opt.model_id == model_id
+            ]
         return self.optimization_history.copy()
 
     def get_optimization_status(self, optimization_id: str) -> Optional[Dict[str, Any]]:
@@ -558,7 +655,9 @@ class ModelOptimizerAgent(BaseAgent):
                         "optimization_id": optimization_id,
                         "status": opt.status.value,
                         "start_time": opt.start_timestamp.isoformat(),
-                        "end_time": opt.end_timestamp.isoformat() if opt.end_timestamp else None,
+                        "end_time": opt.end_timestamp.isoformat()
+                        if opt.end_timestamp
+                        else None,
                         "improvement": opt.improvement,
                         "error_message": opt.error_message,
                     }
@@ -606,20 +705,30 @@ class ModelOptimizerAgent(BaseAgent):
             recommendations = []
 
             # Get model history
-            model_history = [opt for opt in self.optimization_history if opt.model_id == model_id]
+            model_history = [
+                opt for opt in self.optimization_history if opt.model_id == model_id
+            ]
 
             if not model_history:
-                recommendations.append("No optimization history found - consider hyperparameter tuning")
+                recommendations.append(
+                    "No optimization history found - consider hyperparameter tuning"
+                )
                 return recommendations
 
             # Analyze recent optimizations
-            recent_optimizations = sorted(model_history, key=lambda x: x.start_timestamp)[-5:]
+            recent_optimizations = sorted(
+                model_history, key=lambda x: x.start_timestamp
+            )[-5:]
 
             # Check for improvement trends
-            improvements = [opt.improvement.get("sharpe_ratio", 0) for opt in recent_optimizations]
+            improvements = [
+                opt.improvement.get("sharpe_ratio", 0) for opt in recent_optimizations
+            ]
 
             if improvements and max(improvements) < self.improvement_threshold:
-                recommendations.append("Recent optimizations show minimal improvement - consider different approach")
+                recommendations.append(
+                    "Recent optimizations show minimal improvement - consider different approach"
+                )
 
             # Check optimization types used
             types_used = set(opt.optimization_type for opt in recent_optimizations)
@@ -640,7 +749,8 @@ class ModelOptimizerAgent(BaseAgent):
         """Store optimization result in memory."""
         try:
             self.memory.store(
-                f"optimization_{result.optimization_id}", {"result": result.__dict__, "timestamp": datetime.now()}
+                f"optimization_{result.optimization_id}",
+                {"result": result.__dict__, "timestamp": datetime.now()},
             )
         except Exception as e:
             self.logger.error(f"Error storing optimization result: {str(e)}")
@@ -651,7 +761,9 @@ class ModelOptimizerAgent(BaseAgent):
             # Load recent optimizations
             optimization_data = self.memory.get("optimization_history")
             if optimization_data:
-                self.optimization_history = [OptimizationResult(**opt) for opt in optimization_data]
+                self.optimization_history = [
+                    OptimizationResult(**opt) for opt in optimization_data
+                ]
         except Exception as e:
             self.logger.error(f"Error loading optimization history: {str(e)}")
 

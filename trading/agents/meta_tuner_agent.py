@@ -123,8 +123,16 @@ class MetaTunerAgent(BaseAgent):
                 "oversold": Integer(10, 30),
                 "smoothing": Integer(1, 5),
             },
-            "macd": {"fast_period": Integer(8, 16), "slow_period": Integer(20, 40), "signal_period": Integer(8, 16)},
-            "bollinger": {"period": Integer(10, 30), "std_dev": Real(1.5, 3.0), "smoothing": Integer(1, 5)},
+            "macd": {
+                "fast_period": Integer(8, 16),
+                "slow_period": Integer(20, 40),
+                "signal_period": Integer(8, 16),
+            },
+            "bollinger": {
+                "period": Integer(10, 30),
+                "std_dev": Real(1.5, 3.0),
+                "smoothing": Integer(1, 5),
+            },
         }
 
         # Optimization settings
@@ -159,10 +167,13 @@ class MetaTunerAgent(BaseAgent):
 
                 if model_type is None or objective_function is None:
                     return AgentResult(
-                        success=False, error_message="Missing required parameters: model_type, objective_function"
+                        success=False,
+                        error_message="Missing required parameters: model_type, objective_function",
                     )
 
-                result = self.tune_hyperparameters(model_type, objective_function, n_trials, method)
+                result = self.tune_hyperparameters(
+                    model_type, objective_function, n_trials, method
+                )
                 return AgentResult(
                     success=True,
                     data={
@@ -177,20 +188,32 @@ class MetaTunerAgent(BaseAgent):
                 model_type = kwargs.get("model_type")
                 history = self.get_tuning_history(model_type)
                 return AgentResult(
-                    success=True, data={"tuning_history": {k: [r.__dict__ for r in v] for k, v in history.items()}}
+                    success=True,
+                    data={
+                        "tuning_history": {
+                            k: [r.__dict__ for r in v] for k, v in history.items()
+                        }
+                    },
                 )
 
             elif action == "get_best_hyperparameters":
                 model_type = kwargs.get("model_type")
 
                 if model_type is None:
-                    return AgentResult(success=False, error_message="Missing required parameter: model_type")
+                    return AgentResult(
+                        success=False,
+                        error_message="Missing required parameter: model_type",
+                    )
 
                 best_params = self.get_best_hyperparameters(model_type)
                 if best_params:
-                    return AgentResult(success=True, data={"best_hyperparameters": best_params})
+                    return AgentResult(
+                        success=True, data={"best_hyperparameters": best_params}
+                    )
                 else:
-                    return AgentResult(success=False, error_message="No hyperparameters found")
+                    return AgentResult(
+                        success=False, error_message="No hyperparameters found"
+                    )
 
             elif action == "add_parameter_space":
                 model_type = kwargs.get("model_type")
@@ -198,27 +221,40 @@ class MetaTunerAgent(BaseAgent):
 
                 if model_type is None or param_space is None:
                     return AgentResult(
-                        success=False, error_message="Missing required parameters: model_type, param_space"
+                        success=False,
+                        error_message="Missing required parameters: model_type, param_space",
                     )
 
                 self.add_parameter_space(model_type, param_space)
-                return AgentResult(success=True, data={"message": f"Added parameter space for {model_type}"})
+                return AgentResult(
+                    success=True,
+                    data={"message": f"Added parameter space for {model_type}"},
+                )
 
             elif action == "clear_history":
                 model_type = kwargs.get("model_type")
                 self.clear_history(model_type)
                 return AgentResult(
-                    success=True, data={"message": f"Cleared history for {model_type if model_type else 'all models'}"}
+                    success=True,
+                    data={
+                        "message": f"Cleared history for {model_type if model_type else 'all models'}"
+                    },
                 )
 
             else:
-                return AgentResult(success=False, error_message=f"Unknown action: {action}")
+                return AgentResult(
+                    success=False, error_message=f"Unknown action: {action}"
+                )
 
         except Exception as e:
             return self.handle_error(e)
 
     def tune_hyperparameters(
-        self, model_type: str, objective_function: Callable, n_trials: Optional[int] = None, method: str = "auto"
+        self,
+        model_type: str,
+        objective_function: Callable,
+        n_trials: Optional[int] = None,
+        method: str = "auto",
     ) -> TuningResult:
         """Tune hyperparameters for a given model type.
 
@@ -232,7 +268,9 @@ class MetaTunerAgent(BaseAgent):
             Tuning result with best hyperparameters
         """
         tuning_id = str(uuid.uuid4())
-        self.logger.info(f"Starting hyperparameter tuning for {model_type} with ID: {tuning_id}")
+        self.logger.info(
+            f"Starting hyperparameter tuning for {model_type} with ID: {tuning_id}"
+        )
 
         start_time = datetime.now()
 
@@ -241,7 +279,9 @@ class MetaTunerAgent(BaseAgent):
             best_historical = self._get_best_historical_params(model_type)
             if best_historical and self._should_reuse_historical(best_historical):
                 self.logger.info(f"Reusing historical best parameters for {model_type}")
-                return self._create_result_from_historical(tuning_id, model_type, best_historical)
+                return self._create_result_from_historical(
+                    tuning_id, model_type, best_historical
+                )
 
             # Determine optimization method
             if method == "auto":
@@ -250,15 +290,23 @@ class MetaTunerAgent(BaseAgent):
             # Get parameter space
             param_space = self.parameter_spaces.get(model_type, {})
             if not param_space:
-                raise ValueError(f"No parameter space defined for model type: {model_type}")
+                raise ValueError(
+                    f"No parameter space defined for model type: {model_type}"
+                )
 
             # Run optimization
             if method == "bayesian":
-                result = self._bayesian_optimization(tuning_id, model_type, objective_function, param_space, n_trials)
+                result = self._bayesian_optimization(
+                    tuning_id, model_type, objective_function, param_space, n_trials
+                )
             elif method == "grid":
-                result = self._grid_search(tuning_id, model_type, objective_function, param_space, n_trials)
+                result = self._grid_search(
+                    tuning_id, model_type, objective_function, param_space, n_trials
+                )
             elif method == "random":
-                result = self._random_search(tuning_id, model_type, objective_function, param_space, n_trials)
+                result = self._random_search(
+                    tuning_id, model_type, objective_function, param_space, n_trials
+                )
             else:
                 raise ValueError(f"Unknown optimization method: {method}")
 
@@ -347,7 +395,11 @@ class MetaTunerAgent(BaseAgent):
 
         # Run optimization
         result = gp_minimize(
-            objective, dimensions, n_calls=n_trials, random_state=42, n_jobs=self.optimization_config["n_jobs"]
+            objective,
+            dimensions,
+            n_calls=n_trials,
+            random_state=42,
+            n_jobs=self.optimization_config["n_jobs"],
         )
 
         # Get best parameters
@@ -461,7 +513,9 @@ class MetaTunerAgent(BaseAgent):
             timestamp=datetime.now().isoformat(),
         )
 
-    def _generate_param_combinations(self, param_space: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _generate_param_combinations(
+        self, param_space: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Generate parameter combinations for grid search."""
         import itertools
 
@@ -566,9 +620,13 @@ class MetaTunerAgent(BaseAgent):
 
         # Keep only last 50 results per model type
         if len(self.tuning_history[result.model_type]) > 50:
-            self.tuning_history[result.model_type] = self.tuning_history[result.model_type][-50:]
+            self.tuning_history[result.model_type] = self.tuning_history[
+                result.model_type
+            ][-50:]
 
-    def get_tuning_history(self, model_type: Optional[str] = None) -> Dict[str, List[TuningResult]]:
+    def get_tuning_history(
+        self, model_type: Optional[str] = None
+    ) -> Dict[str, List[TuningResult]]:
         """Get tuning history for all models or a specific model type."""
         if model_type:
             return {model_type: self.tuning_history.get(model_type, [])}

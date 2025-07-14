@@ -24,7 +24,9 @@ from trading.utils.logging_utils import log_manager
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "your-secret-key-change-in-production")
+app.config["SECRET_KEY"] = os.environ.get(
+    "FLASK_SECRET_KEY", "your-secret-key-change-in-production"
+)
 
 # CORS configuration
 CORS(
@@ -48,7 +50,9 @@ def add_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers[
+        "Strict-Transport-Security"
+    ] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = "default-src 'self'"
     return response
 
@@ -83,7 +87,9 @@ class AssetRequest(BaseModel):
 
 
 class BacktestRequest(BaseModel):
-    strategy: str = Field(..., description="Strategy name", min_length=1, max_length=100)
+    strategy: str = Field(
+        ..., description="Strategy name", min_length=1, max_length=100
+    )
     data: Dict[str, Any] = Field(..., description="Historical data for backtesting")
     start_date: Optional[datetime] = Field(None, description="Start date for backtest")
     end_date: Optional[datetime] = Field(None, description="End date for backtest")
@@ -91,7 +97,9 @@ class BacktestRequest(BaseModel):
     @validator("strategy")
     def validate_strategy(cls, v: str) -> str:
         if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-            raise ValueError("Strategy name must be alphanumeric with underscores and hyphens only")
+            raise ValueError(
+                "Strategy name must be alphanumeric with underscores and hyphens only"
+            )
         return v
 
     @validator("data")
@@ -104,8 +112,12 @@ class BacktestRequest(BaseModel):
 
 
 class RiskAnalysisRequest(BaseModel):
-    portfolio_data: Dict[str, Any] = Field(..., description="Portfolio data for risk analysis")
-    confidence_level: float = Field(0.95, ge=0.5, le=0.99, description="Confidence level for VaR")
+    portfolio_data: Dict[str, Any] = Field(
+        ..., description="Portfolio data for risk analysis"
+    )
+    confidence_level: float = Field(
+        0.95, ge=0.5, le=0.99, description="Confidence level for VaR"
+    )
 
     @validator("portfolio_data")
     def validate_portfolio_data(cls, v: Dict[str, Any]) -> Dict[str, Any]:
@@ -131,9 +143,15 @@ def validate_request(model_class: type[BaseModel]):
                 else:
                     raise APIError("Request must be JSON", 400)
             except ValidationError as e:
-                return jsonify({"error": "Validation error", "details": e.errors()}), 400
+                return (
+                    jsonify({"error": "Validation error", "details": e.errors()}),
+                    400,
+                )
             except Exception as e:
-                return jsonify({"error": "Request validation failed", "message": str(e)}), 400
+                return (
+                    jsonify({"error": "Request validation failed", "message": str(e)}),
+                    400,
+                )
             return f(*args, **kwargs)
 
         return decorated
@@ -179,7 +197,9 @@ def token_required(f: Callable) -> Callable:
 
         try:
             token = token.split(" ")[1]  # Remove 'Bearer ' prefix
-            data = jwt.decode(token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
+            data = jwt.decode(
+                token, current_app.config["SECRET_KEY"], algorithms=["HS256"]
+            )
             current_user = data["user"]
 
             # Validate user permissions if needed
@@ -210,8 +230,8 @@ def rate_limit(max_requests: int = 100, window: int = 3600):
         @wraps(f)
         def decorated(*args: Any, **kwargs: Any) -> Any:
             # Simple in-memory rate limiting (use Redis in production)
-            client_ip = request.remote_addr
-            current_time = datetime.now()
+            request.remote_addr
+            datetime.now()
 
             # This is a simplified implementation
             # In production, use Redis or similar for rate limiting
@@ -235,7 +255,11 @@ class APIError(Exception):
 @app.errorhandler(APIError)
 def handle_api_error(error: APIError) -> Any:
     response = jsonify(
-        {"error": error.message, "status_code": error.status_code, "timestamp": datetime.now().isoformat()}
+        {
+            "error": error.message,
+            "status_code": error.status_code,
+            "timestamp": datetime.now().isoformat(),
+        }
     )
     response.status_code = error.status_code
     return response
@@ -244,7 +268,11 @@ def handle_api_error(error: APIError) -> Any:
 @app.errorhandler(ValidationError)
 def handle_validation_error(error: ValidationError) -> Any:
     response = jsonify(
-        {"error": "Validation error", "details": error.errors(), "timestamp": datetime.now().isoformat()}
+        {
+            "error": "Validation error",
+            "details": error.errors(),
+            "timestamp": datetime.now().isoformat(),
+        }
     )
     response.status_code = 400
     return response
@@ -252,13 +280,31 @@ def handle_validation_error(error: ValidationError) -> Any:
 
 @app.errorhandler(404)
 def not_found(error) -> Any:
-    return jsonify({"error": "Endpoint not found", "status_code": 404, "timestamp": datetime.now().isoformat()}), 404
+    return (
+        jsonify(
+            {
+                "error": "Endpoint not found",
+                "status_code": 404,
+                "timestamp": datetime.now().isoformat(),
+            }
+        ),
+        404,
+    )
 
 
 @app.errorhandler(500)
 def internal_error(error) -> Any:
     log_manager.logger.error(f"Internal server error: {str(error)}")
-    return jsonify({"error": "Internal server error", "status_code": 500, "timestamp": datetime.now().isoformat()}), 500
+    return (
+        jsonify(
+            {
+                "error": "Internal server error",
+                "status_code": 500,
+                "timestamp": datetime.now().isoformat(),
+            }
+        ),
+        500,
+    )
 
 
 # Service initialization
@@ -284,7 +330,13 @@ def get_backtester() -> Backtester:
 @app.route("/health", methods=["GET"])
 def health_check() -> Any:
     """Health check endpoint."""
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat(), "version": "1.0.0"})
+    return jsonify(
+        {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": "1.0.0",
+        }
+    )
 
 
 # Enhanced routes with validation
@@ -371,18 +423,21 @@ def analyze_risk(current_user: str) -> Any:
     """Analyze portfolio risk using OpenAI."""
     try:
         data = request.validated_data
-        openai_key = request.openai_key
+        request.openai_key
 
         # Use OpenAI key for risk analysis
         # This is where you would integrate with OpenAI API
-        risk_manager = get_risk_manager()
+        get_risk_manager()
 
         return jsonify(
             {
                 "message": "Risk analysis completed",
                 "analysis": {
                     "risk_score": 0.75,
-                    "recommendations": ["Diversify portfolio", "Reduce exposure to tech stocks"],
+                    "recommendations": [
+                        "Diversify portfolio",
+                        "Reduce exposure to tech stocks",
+                    ],
                     "confidence": data.confidence_level,
                 },
                 "timestamp": datetime.now().isoformat(),

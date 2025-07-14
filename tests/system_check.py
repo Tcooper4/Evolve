@@ -27,9 +27,15 @@ def test_function_call(module_name, function_name, description=""):
             if callable(func):
                 return True, f"✅ {module_name}.{function_name} - {description}"
             else:
-                return False, f"❌ {module_name}.{function_name} - {description}: Not callable"
+                return (
+                    False,
+                    f"❌ {module_name}.{function_name} - {description}: Not callable",
+                )
         else:
-            return False, f"❌ {module_name}.{function_name} - {description}: Function not found"
+            return (
+                False,
+                f"❌ {module_name}.{function_name} - {description}: Function not found",
+            )
     except Exception as e:
         return False, f"❌ {module_name}.{function_name} - {description}: {str(e)}"
 
@@ -155,7 +161,10 @@ def main():
         ("system.infra.agents.monitoring", "Monitoring agents"),
         ("system.infra.agents.notifications", "Notification agents"),
         ("system.infra.agents.notifications.handlers", "Notification handlers"),
-        ("system.infra.agents.notifications.notification_service", "Notification service"),
+        (
+            "system.infra.agents.notifications.notification_service",
+            "Notification service",
+        ),
         ("system.infra.agents.scripts", "Script agents"),
         ("system.infra.agents.scripts.deploy_services", "Deploy services"),
         ("system.infra.agents.scripts.manage_secrets", "Manage secrets"),
@@ -292,19 +301,35 @@ def main():
         ("trading.execution.execution_engine", "ExecutionEngine", "Execution engine"),
         ("trading.llm.agent", "LLMAgent", "LLM agent"),
         ("trading.risk.risk_analyzer", "RiskAnalyzer", "Risk analyzer"),
-        ("trading.portfolio.portfolio_manager", "PortfolioManager", "Portfolio manager"),
+        (
+            "trading.portfolio.portfolio_manager",
+            "PortfolioManager",
+            "Portfolio manager",
+        ),
         ("trading.strategies.gatekeeper", "StrategyGatekeeper", "Strategy gatekeeper"),
         ("trading.models.forecast_router", "ForecastRouter", "Forecast router"),
-        ("trading.optimization.bayesian_optimizer", "BayesianOptimizer", "Bayesian optimizer"),
+        (
+            "trading.optimization.bayesian_optimizer",
+            "BayesianOptimizer",
+            "Bayesian optimizer",
+        ),
         ("trading.report.report_generator", "ReportGenerator", "Report generator"),
         ("trading.services.base_service", "BaseService", "Base service"),
         ("trading.ui.components", "TradingUI", "Trading UI"),
         ("trading.visualization.plotting", "TradingPlotter", "Trading plotter"),
         ("trading.nlp.nl_interface", "NLInterface", "Natural language interface"),
-        ("trading.feature_engineering.feature_engineer", "FeatureEngineer", "Feature engineer"),
+        (
+            "trading.feature_engineering.feature_engineer",
+            "FeatureEngineer",
+            "Feature engineer",
+        ),
         ("trading.backtesting.backtester", "Backtester", "Backtester"),
         ("trading.data.data_loader", "DataLoader", "Data loader"),
-        ("trading.analytics.alpha_attribution_engine", "AlphaAttributionEngine", "Alpha attribution"),
+        (
+            "trading.analytics.alpha_attribution_engine",
+            "AlphaAttributionEngine",
+            "Alpha attribution",
+        ),
         ("trading.knowledge_base.trading_rules", "TradingRules", "Trading rules"),
         ("trading.logs.audit_logger", "AuditLogger", "Audit logger"),
         ("trading.meta_agents.agents.agent_router", "AgentRouter", "Agent router"),
@@ -314,19 +339,35 @@ def main():
         ("rl.rl_trader", "RLTrader", "RL trader"),
         ("causal.causal_model", "CausalModel", "Causal model"),
         ("causal.driver_analysis", "DriverAnalysis", "Driver analysis"),
-        ("agents.model_generator_agent", "ModelGeneratorAgent", "Model generator agent"),
+        (
+            "agents.model_generator_agent",
+            "ModelGeneratorAgent",
+            "Model generator agent",
+        ),
         ("llm.llm_summary", "LLMSummary", "LLM summary"),
         ("risk.advanced_risk", "AdvancedRisk", "Advanced risk"),
         ("risk.tail_risk", "TailRisk", "Tail risk"),
-        ("execution.live_trading_interface", "LiveTradingInterface", "Live trading interface"),
+        (
+            "execution.live_trading_interface",
+            "LiveTradingInterface",
+            "Live trading interface",
+        ),
         ("market_analysis.market_analyzer", "MarketAnalyzer", "Market analyzer"),
         ("memory.model_monitor", "ModelMonitor", "Model monitor"),
         ("memory.goals.status", "GoalStatus", "Goal status"),
         ("models.forecast_router", "ForecastRouter", "Forecast router"),
         ("optimization.bayesian_optimizer", "BayesianOptimizer", "Bayesian optimizer"),
         ("optimization.genetic_optimizer", "GeneticOptimizer", "Genetic optimizer"),
-        ("optimization.strategies.strategy_optimizer", "StrategyOptimizer", "Strategy optimizer"),
-        ("optimization.visualization.optimization_visualizer", "OptimizationVisualizer", "Optimization visualizer"),
+        (
+            "optimization.strategies.strategy_optimizer",
+            "StrategyOptimizer",
+            "Strategy optimizer",
+        ),
+        (
+            "optimization.visualization.optimization_visualizer",
+            "OptimizationVisualizer",
+            "Optimization visualizer",
+        ),
         ("optimization.utils.consolidator", "Consolidator", "Consolidator"),
         ("strategies.gatekeeper", "StrategyGatekeeper", "Strategy gatekeeper"),
         ("reporting.pnl_attribution", "PnLAttribution", "PnL attribution"),
@@ -342,13 +383,37 @@ def main():
         ("system.infra.agents.alert_manager", "AlertManager", "Alert manager"),
         ("system.infra.agents.api.metrics_api", "MetricsAPI", "Metrics API"),
         ("system.infra.agents.api.task_api", "TaskAPI", "Task API"),
-        ("system.infra.agents.auth.session_manager", "SessionManager", "Session manager"),
+        (
+            "system.infra.agents.auth.session_manager",
+            "SessionManager",
+            "Session manager",
+        ),
         ("system.infra.agents.auth.user_manager", "UserManager", "User manager"),
-        ("system.infra.agents.config.config_manager", "ConfigManager", "Config manager"),
-        ("system.infra.agents.logs.automation_logging", "AutomationLogging", "Automation logging"),
-        ("system.infra.agents.notifications.notification_service", "NotificationService", "Notification service"),
-        ("system.infra.agents.scripts.deploy_services", "DeployServices", "Deploy services"),
-        ("system.infra.agents.scripts.manage_secrets", "ManageSecrets", "Manage secrets"),
+        (
+            "system.infra.agents.config.config_manager",
+            "ConfigManager",
+            "Config manager",
+        ),
+        (
+            "system.infra.agents.logs.automation_logging",
+            "AutomationLogging",
+            "Automation logging",
+        ),
+        (
+            "system.infra.agents.notifications.notification_service",
+            "NotificationService",
+            "Notification service",
+        ),
+        (
+            "system.infra.agents.scripts.deploy_services",
+            "DeployServices",
+            "Deploy services",
+        ),
+        (
+            "system.infra.agents.scripts.manage_secrets",
+            "ManageSecrets",
+            "Manage secrets",
+        ),
     ]
 
     for module_name, function_name, description in function_tests:

@@ -51,7 +51,9 @@ class ServiceStatus:
             "pid": self.pid,
             "status": self.status,
             "start_time": self.start_time.isoformat() if self.start_time else None,
-            "last_heartbeat": self.last_heartbeat.isoformat() if self.last_heartbeat else None,
+            "last_heartbeat": self.last_heartbeat.isoformat()
+            if self.last_heartbeat
+            else None,
             "restart_count": self.restart_count,
             "error_message": self.error_message,
         }
@@ -123,7 +125,10 @@ class InstitutionalSystemLauncher:
                     "health_check_interval": 30,
                 },
                 "signal_center": {
-                    "command": ["python", "trading/services/real_time_signal_center.py"],
+                    "command": [
+                        "python",
+                        "trading/services/real_time_signal_center.py",
+                    ],
                     "auto_restart": True,
                     "max_restarts": 5,
                     "health_check_interval": 60,
@@ -135,7 +140,12 @@ class InstitutionalSystemLauncher:
                     "health_check_interval": 300,
                 },
             },
-            "monitoring": {"enabled": True, "check_interval": 30, "max_memory_usage": 0.8, "max_cpu_usage": 0.9},
+            "monitoring": {
+                "enabled": True,
+                "check_interval": 30,
+                "max_memory_usage": 0.8,
+                "max_cpu_usage": 0.9,
+            },
             "logging": {"level": "INFO", "file": "logs/system.log"},
         }
 
@@ -152,7 +162,9 @@ class InstitutionalSystemLauncher:
 
             # Start monitoring thread
             if self.config.get("monitoring", {}).get("enabled", True):
-                self.monitoring_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
+                self.monitoring_thread = threading.Thread(
+                    target=self._monitoring_loop, daemon=True
+                )
                 self.monitoring_thread.start()
                 logger.info("Monitoring thread started")
 
@@ -173,15 +185,25 @@ class InstitutionalSystemLauncher:
                 return False
 
             # Check if service is already running
-            if service_name in self.processes and self.processes[service_name].poll() is None:
+            if (
+                service_name in self.processes
+                and self.processes[service_name].poll() is None
+            ):
                 logger.info(f"Service {service_name} is already running")
                 return True
 
             # Start the service
-            logger.info(f"Starting service {service_name} with command: {' '.join(command)}")
+            logger.info(
+                f"Starting service {service_name} with command: {' '.join(command)}"
+            )
 
             process = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
             )
 
             # Update service status
@@ -201,7 +223,9 @@ class InstitutionalSystemLauncher:
             time.sleep(2)
             if process.poll() is None:
                 self.services[service_name].status = "running"
-                logger.info(f"Service {service_name} started successfully (PID: {process.pid})")
+                logger.info(
+                    f"Service {service_name} started successfully (PID: {process.pid})"
+                )
                 return True
             else:
                 stdout, stderr = process.communicate()
@@ -239,7 +263,9 @@ class InstitutionalSystemLauncher:
                     try:
                         process.wait(timeout=10)
                     except subprocess.TimeoutExpired:
-                        logger.warning(f"Service {service_name} did not terminate gracefully, forcing kill")
+                        logger.warning(
+                            f"Service {service_name} did not terminate gracefully, forcing kill"
+                        )
                         process.kill()
                         process.wait()
 
@@ -327,9 +353,13 @@ class InstitutionalSystemLauncher:
                                 logger.info(f"Auto-restarting service {service_name}")
                                 self.restart_service(service_name)
                             else:
-                                logger.error(f"Service {service_name} exceeded max restart attempts")
+                                logger.error(
+                                    f"Service {service_name} exceeded max restart attempts"
+                                )
                                 service_status.status = "error"
-                                service_status.error_message = "Max restart attempts exceeded"
+                                service_status.error_message = (
+                                    "Max restart attempts exceeded"
+                                )
 
                 # Update heartbeat
                 service_status.last_heartbeat = datetime.now()
@@ -379,7 +409,9 @@ class InstitutionalSystemLauncher:
             status = {
                 "timestamp": datetime.now().isoformat(),
                 "running": self.running,
-                "services": {name: status.to_dict() for name, status in self.services.items()},
+                "services": {
+                    name: status.to_dict() for name, status in self.services.items()
+                },
                 "system_resources": {
                     "memory_usage": psutil.virtual_memory().percent,
                     "cpu_usage": psutil.cpu_percent(),
@@ -392,7 +424,11 @@ class InstitutionalSystemLauncher:
 
         except Exception as e:
             logger.error(f"Error getting system status: {e}")
-            return {"timestamp": datetime.now().isoformat(), "running": self.running, "error": str(e)}
+            return {
+                "timestamp": datetime.now().isoformat(),
+                "running": self.running,
+                "error": str(e),
+            }
 
     def _get_uptime(self) -> str:
         """Get system uptime."""
@@ -434,7 +470,9 @@ class InstitutionalSystemLauncher:
 
 def main():
     """Main function."""
-    parser = argparse.ArgumentParser(description="Institutional Trading System Launcher")
+    parser = argparse.ArgumentParser(
+        description="Institutional Trading System Launcher"
+    )
     parser.add_argument("--config", help="Path to configuration file")
     parser.add_argument(
         "--command",
@@ -443,7 +481,9 @@ def main():
         help="Command to execute",
     )
     parser.add_argument("--service", help="Specific service name for restart command")
-    parser.add_argument("--wait", type=int, default=60, help="Wait time for services to be ready")
+    parser.add_argument(
+        "--wait", type=int, default=60, help="Wait time for services to be ready"
+    )
 
     args = parser.parse_args()
 

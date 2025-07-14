@@ -25,16 +25,21 @@ def main():
 
         # Strategy selection
         strategies = get_available_strategies()
-        selected_strategies = st.multiselect("Select Strategies", strategies, default=strategies[:3])
+        selected_strategies = st.multiselect(
+            "Select Strategies", strategies, default=strategies[:3]
+        )
 
         # Time period
         time_period = st.selectbox(
-            "Time Period", ["Last 24 Hours", "Last 7 Days", "Last 30 Days", "Last 90 Days", "Custom"]
+            "Time Period",
+            ["Last 24 Hours", "Last 7 Days", "Last 30 Days", "Last 90 Days", "Custom"],
         )
 
         if time_period == "Custom":
-            start_date = st.date_input("Start Date", datetime.now() - timedelta(days=30))
-            end_date = st.date_input("End Date", datetime.now())
+            start_date = st.date_input(
+                "Start Date", datetime.now() - timedelta(days=30)
+            )
+            st.date_input("End Date", datetime.now())
 
         # Health metrics
         st.subheader("Health Metrics")
@@ -46,8 +51,8 @@ def main():
         # Actions
         st.subheader("Actions")
         refresh_data = st.button("🔄 Refresh Data", type="primary")
-        export_report = st.button("📊 Export Report")
-        optimize_strategies = st.button("⚡ Optimize Selected")
+        st.button("📊 Export Report")
+        st.button("⚡ Optimize Selected")
 
     # Main content
     if not selected_strategies:
@@ -61,19 +66,31 @@ def main():
 
     with col1:
         total_strategies = len(selected_strategies)
-        healthy_strategies = len([s for s in selected_strategies if get_strategy_health(s)["status"] == "Healthy"])
+        healthy_strategies = len(
+            [
+                s
+                for s in selected_strategies
+                if get_strategy_health(s)["status"] == "Healthy"
+            ]
+        )
         st.metric("Total Strategies", total_strategies)
 
     with col2:
-        health_percentage = (healthy_strategies / total_strategies * 100) if total_strategies > 0 else 0
+        health_percentage = (
+            (healthy_strategies / total_strategies * 100) if total_strategies > 0 else 0
+        )
         st.metric("Healthy", f"{health_percentage:.1f}%")
 
     with col3:
-        avg_performance = np.mean([get_strategy_performance(s)["total_return"] for s in selected_strategies])
+        avg_performance = np.mean(
+            [get_strategy_performance(s)["total_return"] for s in selected_strategies]
+        )
         st.metric("Avg Performance", f"{avg_performance:.2f}%")
 
     with col4:
-        avg_risk = np.mean([get_strategy_risk(s)["var_95"] for s in selected_strategies])
+        avg_risk = np.mean(
+            [get_strategy_risk(s)["var_95"] for s in selected_strategies]
+        )
         st.metric("Avg Risk (VaR)", f"{avg_risk:.2f}%")
 
     # Strategy health table
@@ -109,7 +126,9 @@ def main():
         health = get_strategy_health(strategy)
 
         # Create expandable section for each strategy
-        with st.expander(f"📊 {strategy} - Score: {health['score']:.1f} ({health['status']})"):
+        with st.expander(
+            f"📊 {strategy} - Score: {health['score']:.1f} ({health['status']})"
+        ):
             col1, col2 = st.columns(2)
 
             with col1:
@@ -139,7 +158,9 @@ def main():
 
                 # Overall score with color coding
                 if health["score"] >= 90:
-                    st.success(f"**Excellent Performance** - Score: {health['score']:.1f}")
+                    st.success(
+                        f"**Excellent Performance** - Score: {health['score']:.1f}"
+                    )
                 elif health["score"] >= 80:
                     st.info(f"**Healthy Performance** - Score: {health['score']:.1f}")
                 elif health["score"] >= 70:
@@ -197,10 +218,16 @@ def main():
         with col1:
             st.error(f"**Current Score: {rsi_health['score']:.1f} (Warning Level)**")
             st.write("**Why RSI Mean Reversion has a low score:**")
-            st.write("• **Performance Score (75.0)**: Poor performance in trending markets")
+            st.write(
+                "• **Performance Score (75.0)**: Poor performance in trending markets"
+            )
             st.write("• **Risk Score (72.0)**: High false signals leading to losses")
-            st.write("• **Execution Score (85.0)**: Good execution but poor signal quality")
-            st.write("• **Data Quality Score (83.0)**: Adequate data but needs better preprocessing")
+            st.write(
+                "• **Execution Score (85.0)**: Good execution but poor signal quality"
+            )
+            st.write(
+                "• **Data Quality Score (83.0)**: Adequate data but needs better preprocessing"
+            )
 
         with col2:
             st.write("**Primary Issues:**")
@@ -215,7 +242,9 @@ def main():
     st.markdown("### 🎯 Why Other Strategies Don't Have Higher Scores")
 
     # Get the top 3 strategies by score
-    strategy_scores = [(s, get_strategy_health(s)["score"]) for s in selected_strategies]
+    strategy_scores = [
+        (s, get_strategy_health(s)["score"]) for s in selected_strategies
+    ]
     strategy_scores.sort(key=lambda x: x[1], reverse=True)
     top_strategies = strategy_scores[:3]
 
@@ -236,7 +265,9 @@ def main():
             }
 
             min_component = min(components.items(), key=lambda x: x[1])
-            st.write(f"• **Lowest component**: {min_component[0]} ({min_component[1]:.1f})")
+            st.write(
+                f"• **Lowest component**: {min_component[0]} ({min_component[1]:.1f})"
+            )
 
             # Show specific issues
             if health["issues"]:
@@ -246,9 +277,13 @@ def main():
 
             # Show improvement potential
             improvement_potential = 100 - score
-            st.write(f"• **Improvement potential**: +{improvement_potential:.1f} points")
+            st.write(
+                f"• **Improvement potential**: +{improvement_potential:.1f} points"
+            )
         else:
-            st.success(f"✅ **Excellent performance** - This strategy is performing at optimal levels!")
+            st.success(
+                f"✅ **Excellent performance** - This strategy is performing at optimal levels!"
+            )
 
     # Overall portfolio health insights
     st.markdown("### 📊 Portfolio Health Insights")
@@ -270,7 +305,9 @@ def main():
 
     # Portfolio recommendations
     if avg_score < 85:
-        st.warning("**Portfolio Health Alert**: Overall strategy health is below optimal levels. Consider:")
+        st.warning(
+            "**Portfolio Health Alert**: Overall strategy health is below optimal levels. Consider:"
+        )
         st.write("• Optimizing underperforming strategies")
         st.write("• Rebalancing strategy allocations")
         st.write("• Implementing risk management improvements")
@@ -294,7 +331,9 @@ def main():
 
     with col2:
         # Performance vs Risk scatter
-        performance_data = [get_strategy_performance(s)["total_return"] for s in selected_strategies]
+        performance_data = [
+            get_strategy_performance(s)["total_return"] for s in selected_strategies
+        ]
         risk_data = [get_strategy_risk(s)["var_95"] for s in selected_strategies]
 
         fig = px.scatter(
@@ -328,7 +367,9 @@ def main():
                     )
 
             fig.update_layout(
-                title="Strategy Performance Over Time", xaxis_title="Date", yaxis_title="Cumulative Return (%)"
+                title="Strategy Performance Over Time",
+                xaxis_title="Date",
+                yaxis_title="Cumulative Return (%)",
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -341,7 +382,11 @@ def main():
                 performance = get_strategy_performance(strategy)
                 for metric in perf_metrics:
                     perf_data.append(
-                        {"Strategy": strategy, "Metric": metric.replace("_", " ").title(), "Value": performance[metric]}
+                        {
+                            "Strategy": strategy,
+                            "Metric": metric.replace("_", " ").title(),
+                            "Value": performance[metric],
+                        }
                     )
 
             perf_df = pd.DataFrame(perf_data)
@@ -377,7 +422,11 @@ def main():
                         )
                     )
 
-            fig.update_layout(title="Risk Metrics Over Time", xaxis_title="Date", yaxis_title="VaR (%)")
+            fig.update_layout(
+                title="Risk Metrics Over Time",
+                xaxis_title="Date",
+                yaxis_title="VaR (%)",
+            )
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
@@ -389,13 +438,22 @@ def main():
                 risk = get_strategy_risk(strategy)
                 for metric in risk_metrics:
                     risk_data.append(
-                        {"Strategy": strategy, "Metric": metric.replace("_", " ").title(), "Value": risk[metric]}
+                        {
+                            "Strategy": strategy,
+                            "Metric": metric.replace("_", " ").title(),
+                            "Value": risk[metric],
+                        }
                     )
 
             risk_df = pd.DataFrame(risk_data)
 
             fig = px.bar(
-                risk_df, x="Strategy", y="Value", color="Metric", title="Risk Metrics Comparison", barmode="group"
+                risk_df,
+                x="Strategy",
+                y="Value",
+                color="Metric",
+                title="Risk Metrics Comparison",
+                barmode="group",
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -408,7 +466,11 @@ def main():
             # Technical indicators health
             tech_health = get_technical_health(selected_strategies)
 
-            fig = px.imshow(tech_health, title="Technical Indicators Health", color_continuous_scale="RdYlGn")
+            fig = px.imshow(
+                tech_health,
+                title="Technical Indicators Health",
+                color_continuous_scale="RdYlGn",
+            )
             st.plotly_chart(fig, use_container_width=True)
 
         with col2:
@@ -448,7 +510,11 @@ def main():
             behavioral_scores = get_behavioral_scores(selected_strategies)
 
             fig = px.scatter(
-                behavioral_scores, x="Metric", y="Score", color="Strategy", title="Behavioral Health Scores"
+                behavioral_scores,
+                x="Metric",
+                y="Score",
+                color="Strategy",
+                title="Behavioral Health Scores",
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -505,7 +571,10 @@ def get_strategy_health(strategy_name):
             "risk_score": 90.0,
             "execution_score": 92.0,
             "data_quality_score": 88.0,
-            "issues": ["Slight underperformance in volatile markets", "Band width optimization needed"],
+            "issues": [
+                "Slight underperformance in volatile markets",
+                "Band width optimization needed",
+            ],
             "recommendations": [
                 "Implement dynamic volatility adjustment",
                 "Add volume-weighted band calculation",
@@ -519,7 +588,10 @@ def get_strategy_health(strategy_name):
             "risk_score": 92.0,
             "execution_score": 96.0,
             "data_quality_score": 94.0,
-            "issues": ["Minor lag in trend changes", "False signals in sideways markets"],
+            "issues": [
+                "Minor lag in trend changes",
+                "False signals in sideways markets",
+            ],
             "recommendations": [
                 "Implement adaptive MA periods based on volatility",
                 "Add momentum confirmation filter",
@@ -551,7 +623,10 @@ def get_strategy_health(strategy_name):
             "risk_score": 88.0,
             "execution_score": 94.0,
             "data_quality_score": 93.0,
-            "issues": ["Occasional whipsaws in sideways markets", "Signal lag in fast-moving markets"],
+            "issues": [
+                "Occasional whipsaws in sideways markets",
+                "Signal lag in fast-moving markets",
+            ],
             "recommendations": [
                 "Add signal strength filter using histogram divergence",
                 "Implement adaptive MACD parameters based on volatility",
@@ -583,7 +658,10 @@ def get_strategy_health(strategy_name):
             "risk_score": 92.0,
             "execution_score": 95.0,
             "data_quality_score": 94.0,
-            "issues": ["Slight underperformance in strong trends", "Entry timing optimization needed"],
+            "issues": [
+                "Slight underperformance in strong trends",
+                "Entry timing optimization needed",
+            ],
             "recommendations": [
                 "Add trend strength filter using multiple indicators",
                 "Implement adaptive reversion thresholds",
@@ -612,7 +690,10 @@ def get_strategy_health(strategy_name):
             "risk_score": 96.0,
             "execution_score": 98.0,
             "data_quality_score": 96.0,
-            "issues": ["Limited opportunities in current market", "Execution speed optimization needed"],
+            "issues": [
+                "Limited opportunities in current market",
+                "Execution speed optimization needed",
+            ],
             "recommendations": [
                 "Expand to more asset pairs and markets",
                 "Implement high-frequency execution optimization",
@@ -627,7 +708,10 @@ def get_strategy_health(strategy_name):
             "risk_score": 90.0,
             "execution_score": 94.0,
             "data_quality_score": 92.0,
-            "issues": ["Some pairs showing reduced correlation", "Cointegration testing needed"],
+            "issues": [
+                "Some pairs showing reduced correlation",
+                "Cointegration testing needed",
+            ],
             "recommendations": [
                 "Implement dynamic pair selection based on correlation",
                 "Add cointegration testing for pair stability",
@@ -642,7 +726,10 @@ def get_strategy_health(strategy_name):
             "risk_score": 85.0,
             "execution_score": 90.0,
             "data_quality_score": 87.0,
-            "issues": ["Model performance needs continuous monitoring", "Feature engineering requires regular updates"],
+            "issues": [
+                "Model performance needs continuous monitoring",
+                "Feature engineering requires regular updates",
+            ],
             "recommendations": [
                 "Implement online learning for model updates",
                 "Add ensemble methods for improved predictions",
@@ -663,7 +750,10 @@ def get_strategy_health(strategy_name):
             "execution_score": 80.0,
             "data_quality_score": 80.0,
             "issues": ["Strategy requires implementation and optimization"],
-            "recommendations": ["Implement proper strategy framework", "Add data collection and validation"],
+            "recommendations": [
+                "Implement proper strategy framework",
+                "Add data collection and validation",
+            ],
         },
     )
 
@@ -878,18 +968,25 @@ def get_performance_timeline(strategies):
     for strategy in strategies:
         # Generate realistic cumulative returns
         np.random.seed(hash(strategy) % 1000)  # Consistent seed for each strategy
-        daily_returns = np.random.normal(0.0005, 0.02, len(dates))  # 0.05% daily return, 2% volatility
+        daily_returns = np.random.normal(
+            0.0005, 0.02, len(dates)
+        )  # 0.05% daily return, 2% volatility
 
         # Add some trend and seasonality
         trend = np.linspace(0, 0.1, len(dates))  # 10% annual trend
-        seasonality = 0.005 * np.sin(2 * np.pi * np.arange(len(dates)) / 252)  # Annual seasonality
+        seasonality = 0.005 * np.sin(
+            2 * np.pi * np.arange(len(dates)) / 252
+        )  # Annual seasonality
 
         daily_returns += trend + seasonality
 
         # Calculate cumulative returns
         cumulative_returns = np.cumprod(1 + daily_returns) - 1
 
-        timeline_data[strategy] = {"dates": dates, "returns": cumulative_returns * 100}  # Convert to percentage
+        timeline_data[strategy] = {
+            "dates": dates,
+            "returns": cumulative_returns * 100,
+        }  # Convert to percentage
 
     return timeline_data
 
@@ -919,7 +1016,6 @@ def get_risk_timeline(strategies):
 def get_technical_health(strategies):
     """Get technical health indicators."""
     # Create realistic technical health matrix
-    indicators = ["Signal Quality", "Execution Speed", "Data Latency", "System Uptime", "Error Rate"]
 
     data = []
     for strategy in strategies:
@@ -947,7 +1043,13 @@ def get_system_performance(strategies):
         response_time = np.random.uniform(50, 200)
         status = "Healthy" if response_time < 150 else "Warning"
 
-        data.append({"Strategy": strategy, "Response Time (ms)": response_time, "Status": status})
+        data.append(
+            {
+                "Strategy": strategy,
+                "Response Time (ms)": response_time,
+                "Status": status,
+            }
+        )
 
     return pd.DataFrame(data)
 
@@ -973,13 +1075,25 @@ def get_behavioral_analysis(strategies):
 def get_behavioral_scores(strategies):
     """Get behavioral health scores."""
     # Create realistic behavioral health scores
-    metrics = ["Risk Management", "Discipline", "Adaptability", "Consistency", "Innovation"]
+    metrics = [
+        "Risk Management",
+        "Discipline",
+        "Adaptability",
+        "Consistency",
+        "Innovation",
+    ]
     data = []
 
     for strategy in strategies:
         np.random.seed(hash(strategy) % 1000 + 500)
         for metric in metrics:
-            data.append({"Strategy": strategy, "Metric": metric, "Score": np.random.uniform(70, 95)})
+            data.append(
+                {
+                    "Strategy": strategy,
+                    "Metric": metric,
+                    "Score": np.random.uniform(70, 95),
+                }
+            )
 
     return pd.DataFrame(data)
 
@@ -1025,7 +1139,10 @@ def get_health_recommendations(strategies):
 
         if health["recommendations"]:
             recommendations.append(
-                {"strategy": strategy, "recommendation": health["recommendations"][0]}  # Use first recommendation
+                {
+                    "strategy": strategy,
+                    "recommendation": health["recommendations"][0],
+                }  # Use first recommendation
             )
 
     return recommendations

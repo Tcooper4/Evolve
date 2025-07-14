@@ -140,7 +140,9 @@ class CommentaryEngine:
             },
         }
 
-    async def generate_commentary(self, request: CommentaryRequest) -> CommentaryResponse:
+    async def generate_commentary(
+        self, request: CommentaryRequest
+    ) -> CommentaryResponse:
         """
         Generate comprehensive commentary based on request type.
 
@@ -151,7 +153,9 @@ class CommentaryEngine:
             Commentary response with analysis and insights
         """
         try:
-            self.logger.info(f"Generating {request.commentary_type.value} commentary for {request.symbol}")
+            self.logger.info(
+                f"Generating {request.commentary_type.value} commentary for {request.symbol}"
+            )
 
             # Generate request ID
             request_id = f"commentary_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{request.symbol}"
@@ -160,15 +164,23 @@ class CommentaryEngine:
             if request.commentary_type == CommentaryType.TRADE_EXPLANATION:
                 response = await self._generate_trade_explanation(request, request_id)
             elif request.commentary_type == CommentaryType.PERFORMANCE_ANALYSIS:
-                response = await self._generate_performance_analysis(request, request_id)
+                response = await self._generate_performance_analysis(
+                    request, request_id
+                )
             elif request.commentary_type == CommentaryType.MARKET_REGIME:
-                response = await self._generate_market_regime_commentary(request, request_id)
+                response = await self._generate_market_regime_commentary(
+                    request, request_id
+                )
             elif request.commentary_type == CommentaryType.RISK_ASSESSMENT:
                 response = await self._generate_risk_assessment(request, request_id)
             elif request.commentary_type == CommentaryType.STRATEGY_RECOMMENDATION:
-                response = await self._generate_strategy_recommendation(request, request_id)
+                response = await self._generate_strategy_recommendation(
+                    request, request_id
+                )
             elif request.commentary_type == CommentaryType.COUNTERFACTUAL_ANALYSIS:
-                response = await self._generate_counterfactual_analysis(request, request_id)
+                response = await self._generate_counterfactual_analysis(
+                    request, request_id
+                )
             elif request.commentary_type == CommentaryType.DAILY_SUMMARY:
                 response = await self._generate_daily_summary(request, request_id)
             elif request.commentary_type == CommentaryType.PORTFOLIO_OVERVIEW:
@@ -188,7 +200,9 @@ class CommentaryEngine:
             self.logger.error(f"Error generating commentary: {str(e)}")
             return self._create_error_response(request, str(e))
 
-    async def _generate_trade_explanation(self, request: CommentaryRequest, request_id: str) -> CommentaryResponse:
+    async def _generate_trade_explanation(
+        self, request: CommentaryRequest, request_id: str
+    ) -> CommentaryResponse:
         """Generate trade explanation commentary."""
         try:
             trade_data = request.trade_data
@@ -209,7 +223,9 @@ class CommentaryEngine:
 
             # Extract insights and recommendations
             key_insights = self._extract_trade_insights(trade_data, trade_context)
-            recommendations = self._generate_trade_recommendations(trade_data, trade_context)
+            recommendations = self._generate_trade_recommendations(
+                trade_data, trade_context
+            )
             risk_warnings = self._extract_trade_risks(trade_data, trade_context)
 
             # Calculate confidence
@@ -233,7 +249,9 @@ class CommentaryEngine:
             self.logger.error(f"Error generating trade explanation: {str(e)}")
             raise
 
-    async def _generate_performance_analysis(self, request: CommentaryRequest, request_id: str) -> CommentaryResponse:
+    async def _generate_performance_analysis(
+        self, request: CommentaryRequest, request_id: str
+    ) -> CommentaryResponse:
         """Generate performance analysis commentary."""
         try:
             performance_data = request.performance_data
@@ -244,7 +262,9 @@ class CommentaryEngine:
             performance_analysis = self._analyze_performance_metrics(performance_data)
 
             # Create prompt
-            prompt = self._create_performance_analysis_prompt(performance_data, performance_analysis)
+            prompt = self._create_performance_analysis_prompt(
+                performance_data, performance_analysis
+            )
 
             # Get LLM response
             llm_response = await self.llm_interface.generate_response(prompt)
@@ -253,8 +273,12 @@ class CommentaryEngine:
             analysis = self._parse_llm_response(llm_response)
 
             # Extract insights and recommendations
-            key_insights = self._extract_performance_insights(performance_data, performance_analysis)
-            recommendations = self._generate_performance_recommendations(performance_data, performance_analysis)
+            key_insights = self._extract_performance_insights(
+                performance_data, performance_analysis
+            )
+            recommendations = self._generate_performance_recommendations(
+                performance_data, performance_analysis
+            )
             risk_warnings = self._extract_performance_risks(performance_data)
 
             # Calculate confidence
@@ -271,14 +295,19 @@ class CommentaryEngine:
                 recommendations=recommendations,
                 risk_warnings=risk_warnings,
                 confidence_score=confidence,
-                metadata={"performance_data": performance_data, "analysis": performance_analysis},
+                metadata={
+                    "performance_data": performance_data,
+                    "analysis": performance_analysis,
+                },
             )
 
         except Exception as e:
             self.logger.error(f"Error generating performance analysis: {str(e)}")
             raise
 
-    def _analyze_trade_context(self, trade_data: Dict[str, Any], market_data: Optional[pd.DataFrame]) -> Dict[str, Any]:
+    def _analyze_trade_context(
+        self, trade_data: Dict[str, Any], market_data: Optional[pd.DataFrame]
+    ) -> Dict[str, Any]:
         """Analyze trade context and market conditions."""
         context = {
             "trade_timing": trade_data.get("timestamp", datetime.now()),
@@ -294,8 +323,11 @@ class CommentaryEngine:
             context.update(
                 {
                     "volatility": returns.std() * np.sqrt(252),
-                    "trend": "up" if market_data["close"].iloc[-1] > market_data["close"].iloc[-20] else "down",
-                    "volume_trend": market_data["volume"].iloc[-5:].mean() / market_data["volume"].iloc[-20:].mean()
+                    "trend": "up"
+                    if market_data["close"].iloc[-1] > market_data["close"].iloc[-20]
+                    else "down",
+                    "volume_trend": market_data["volume"].iloc[-5:].mean()
+                    / market_data["volume"].iloc[-20:].mean()
                     if "volume" in market_data.columns
                     else 1.0,
                 }
@@ -303,7 +335,9 @@ class CommentaryEngine:
 
         return context
 
-    def _create_trade_explanation_prompt(self, trade_data: Dict[str, Any], context: Dict[str, Any]) -> str:
+    def _create_trade_explanation_prompt(
+        self, trade_data: Dict[str, Any], context: Dict[str, Any]
+    ) -> str:
         """Create prompt for trade explanation."""
         return f"""
         Analyze the following trade and provide a comprehensive explanation:
@@ -346,12 +380,17 @@ class CommentaryEngine:
                     else:
                         analysis += line + "\n"
 
-            return {"summary": summary or "Analysis completed", "analysis": analysis.strip() or response}
+            return {
+                "summary": summary or "Analysis completed",
+                "analysis": analysis.strip() or response,
+            }
         except Exception as e:
             self.logger.error(f"Error parsing LLM response: {e}")
             return {"summary": "Analysis completed", "analysis": response}
 
-    def _extract_trade_insights(self, trade_data: Dict[str, Any], context: Dict[str, Any]) -> List[str]:
+    def _extract_trade_insights(
+        self, trade_data: Dict[str, Any], context: Dict[str, Any]
+    ) -> List[str]:
         """Extract key insights from trade data."""
         insights = []
 
@@ -378,7 +417,9 @@ class CommentaryEngine:
 
         return insights
 
-    def _generate_trade_recommendations(self, trade_data: Dict[str, Any], context: Dict[str, Any]) -> List[str]:
+    def _generate_trade_recommendations(
+        self, trade_data: Dict[str, Any], context: Dict[str, Any]
+    ) -> List[str]:
         """Generate recommendations based on trade analysis."""
         recommendations = []
 
@@ -395,7 +436,9 @@ class CommentaryEngine:
 
         return recommendations
 
-    def _extract_trade_risks(self, trade_data: Dict[str, Any], context: Dict[str, Any]) -> List[str]:
+    def _extract_trade_risks(
+        self, trade_data: Dict[str, Any], context: Dict[str, Any]
+    ) -> List[str]:
         """Extract risk warnings from trade data."""
         warnings = []
 
@@ -407,7 +450,9 @@ class CommentaryEngine:
         # Signal strength warnings
         signal_strength = trade_data.get("signal_strength", 0)
         if signal_strength < 0.5:
-            warnings.append("Low signal strength - consider waiting for stronger signals")
+            warnings.append(
+                "Low signal strength - consider waiting for stronger signals"
+            )
 
         # Volatility warnings
         volatility = context.get("volatility", 0)
@@ -416,7 +461,9 @@ class CommentaryEngine:
 
         return warnings
 
-    def _calculate_trade_confidence(self, trade_data: Dict[str, Any], context: Dict[str, Any]) -> float:
+    def _calculate_trade_confidence(
+        self, trade_data: Dict[str, Any], context: Dict[str, Any]
+    ) -> float:
         """Calculate confidence score for trade explanation."""
         confidence = 0.5  # Base confidence
 
@@ -456,11 +503,15 @@ class CommentaryEngine:
                 "recommendations": response.recommendations,
                 "risk_warnings": response.risk_warnings,
             },
-            confidence_level=ConfidenceLevel.HIGH if response.confidence_score > 0.8 else ConfidenceLevel.MEDIUM,
+            confidence_level=ConfidenceLevel.HIGH
+            if response.confidence_score > 0.8
+            else ConfidenceLevel.MEDIUM,
             metadata=response.metadata,
         )
 
-    def _create_error_response(self, request: CommentaryRequest, error_message: str) -> CommentaryResponse:
+    def _create_error_response(
+        self, request: CommentaryRequest, error_message: str
+    ) -> CommentaryResponse:
         """Create error response when commentary generation fails."""
         return CommentaryResponse(
             request_id=f"error_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
@@ -509,6 +560,8 @@ class CommentaryEngine:
 # Convenience function for creating commentary engine
 
 
-def create_commentary_engine(config: Optional[Dict[str, Any]] = None) -> CommentaryEngine:
+def create_commentary_engine(
+    config: Optional[Dict[str, Any]] = None
+) -> CommentaryEngine:
     """Create a configured commentary engine."""
     return CommentaryEngine(config)

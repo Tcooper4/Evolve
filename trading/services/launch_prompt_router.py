@@ -23,7 +23,10 @@ from services.prompt_router_service import PromptRouterService
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("logs/prompt_router_service.log"), logging.StreamHandler()],
+    handlers=[
+        logging.FileHandler("logs/prompt_router_service.log"),
+        logging.StreamHandler(),
+    ],
 )
 
 logger = logging.getLogger(__name__)
@@ -90,7 +93,9 @@ class PromptValidationHandler:
             return {
                 "valid": False,
                 "error": "Prompt is too long (maximum 1000 characters)",
-                "suggestions": ["Please provide a more concise prompt focusing on one specific request."],
+                "suggestions": [
+                    "Please provide a more concise prompt focusing on one specific request."
+                ],
             }
 
         # Check for basic structure
@@ -110,7 +115,11 @@ class PromptValidationHandler:
                 "suggestions": self._get_general_suggestions(),
             }
 
-        return {"valid": True, "intent": intent, "confidence": self._calculate_confidence(prompt, intent)}
+        return {
+            "valid": True,
+            "intent": intent,
+            "confidence": self._calculate_confidence(prompt, intent),
+        }
 
     def _has_action_words(self, prompt: str) -> bool:
         """Check if prompt contains action words."""
@@ -192,7 +201,9 @@ class PromptValidationHandler:
         error_msg += "• Be specific about what you want to analyze\n"
         error_msg += "• Include the asset symbol or name\n"
         error_msg += "• Specify the time frame if relevant\n"
-        error_msg += "• Use clear action words like 'forecast', 'analyze', 'calculate'\n"
+        error_msg += (
+            "• Use clear action words like 'forecast', 'analyze', 'calculate'\n"
+        )
 
         return error_msg
 
@@ -218,7 +229,10 @@ def main():
 
         # Initialize the service with prompt validation
         service = PromptRouterService(
-            redis_host="localhost", redis_port=6379, redis_db=0, prompt_validator=prompt_handler
+            redis_host="localhost",
+            redis_port=6379,
+            redis_db=0,
+            prompt_validator=prompt_handler,
         )
 
         # Store service reference for signal handler
@@ -232,7 +246,9 @@ def main():
         service.start()
 
         logger.info("PromptRouterService started successfully")
-        logger.info(f"Listening on channels: {service.input_channel}, {service.control_channel}")
+        logger.info(
+            f"Listening on channels: {service.input_channel}, {service.control_channel}"
+        )
         logger.info("Prompt validation and suggestions enabled")
 
         # Keep the service running

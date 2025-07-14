@@ -67,7 +67,9 @@ class ProviderManager:
         # Initialize Alpha Vantage provider
         if alpha_vantage_key:
             try:
-                self.providers["alpha_vantage"] = AlphaVantageProvider(alpha_vantage_config)
+                self.providers["alpha_vantage"] = AlphaVantageProvider(
+                    alpha_vantage_config
+                )
                 logger.info("Alpha Vantage provider initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize Alpha Vantage provider: {e}")
@@ -210,7 +212,9 @@ class DataLoader:
 
         raise RuntimeError(f"All providers failed for {symbol}")
 
-    def _load_data_from_source(self, symbol: str, source: str, interval: str, **kwargs) -> pd.DataFrame:
+    def _load_data_from_source(
+        self, symbol: str, source: str, interval: str, **kwargs
+    ) -> pd.DataFrame:
         """Load data from a specific source.
 
         Args:
@@ -264,9 +268,13 @@ class DataLoader:
         if source == "auto":
             return self._load_multiple_data_auto(symbols, interval, **kwargs)
         else:
-            return self._load_multiple_data_from_source(symbols, source, interval, **kwargs)
+            return self._load_multiple_data_from_source(
+                symbols, source, interval, **kwargs
+            )
 
-    def _load_multiple_data_auto(self, symbols: List[str], interval: str, **kwargs) -> Dict[str, pd.DataFrame]:
+    def _load_multiple_data_auto(
+        self, symbols: List[str], interval: str, **kwargs
+    ) -> Dict[str, pd.DataFrame]:
         """Load multiple symbols using automatic provider selection.
 
         Args:
@@ -376,7 +384,9 @@ def load_multiple_data(
     Returns:
         Dictionary mapping symbols to DataFrames
     """
-    return _data_loader.load_multiple_data(symbols, source, start_date, end_date, interval)
+    return _data_loader.load_multiple_data(
+        symbols, source, start_date, end_date, interval
+    )
 
 
 def get_available_providers() -> Dict[str, bool]:
@@ -385,7 +395,10 @@ def get_available_providers() -> Dict[str, bool]:
     Returns:
         Dictionary mapping provider names to availability status
     """
-    return {name: _provider_manager.is_provider_available(name) for name in ["alpha_vantage", "yfinance", "fallback"]}
+    return {
+        name: _provider_manager.is_provider_available(name)
+        for name in ["alpha_vantage", "yfinance", "fallback"]
+    }
 
 
 def get_provider_status() -> Dict[str, Dict[str, Any]]:

@@ -41,14 +41,26 @@ class FallbackMarketRegimeAgent:
             Dict[str, Dict[str, float]]: Regime detection thresholds
         """
         return {
-            "trending": {"volatility_threshold": 0.02, "momentum_threshold": 0.01, "correlation_threshold": 0.7},
+            "trending": {
+                "volatility_threshold": 0.02,
+                "momentum_threshold": 0.01,
+                "correlation_threshold": 0.7,
+            },
             "mean_reversion": {
                 "volatility_threshold": 0.015,
                 "momentum_threshold": -0.005,
                 "correlation_threshold": 0.3,
             },
-            "volatile": {"volatility_threshold": 0.03, "momentum_threshold": 0.005, "correlation_threshold": 0.5},
-            "sideways": {"volatility_threshold": 0.01, "momentum_threshold": 0.0, "correlation_threshold": 0.2},
+            "volatile": {
+                "volatility_threshold": 0.03,
+                "momentum_threshold": 0.005,
+                "correlation_threshold": 0.5,
+            },
+            "sideways": {
+                "volatility_threshold": 0.01,
+                "momentum_threshold": 0.0,
+                "correlation_threshold": 0.2,
+            },
         }
 
     def classify_regime(self, data: pd.DataFrame) -> str:
@@ -75,24 +87,31 @@ class FallbackMarketRegimeAgent:
 
             # Calculate rolling correlation with market (simplified)
             if len(returns) > 20:
-                rolling_corr = returns.rolling(20).corr(returns.shift(1)).mean()
+                returns.rolling(20).corr(returns.shift(1)).mean()
             else:
-                rolling_corr = 0.5
+                pass
 
             # Determine regime based on characteristics
             if volatility > self._regime_thresholds["volatile"]["volatility_threshold"]:
                 regime = "volatile"
-            elif abs(momentum) > self._regime_thresholds["trending"]["momentum_threshold"]:
+            elif (
+                abs(momentum)
+                > self._regime_thresholds["trending"]["momentum_threshold"]
+            ):
                 if momentum > 0:
                     regime = "trending"
                 else:
                     regime = "mean_reversion"
-            elif volatility < self._regime_thresholds["sideways"]["volatility_threshold"]:
+            elif (
+                volatility < self._regime_thresholds["sideways"]["volatility_threshold"]
+            ):
                 regime = "sideways"
             else:
                 regime = "normal"
 
-            logger.info(f"Detected regime: {regime} (vol: {volatility:.4f}, mom: {momentum:.4f})")
+            logger.info(
+                f"Detected regime: {regime} (vol: {volatility:.4f}, mom: {momentum:.4f})"
+            )
             return regime
 
         except Exception as e:
@@ -180,7 +199,9 @@ class FallbackMarketRegimeAgent:
                 "risk_level": "Unknown",
             }
 
-    def detect_regime_change(self, current_data: pd.DataFrame, historical_data: pd.DataFrame) -> Dict[str, Any]:
+    def detect_regime_change(
+        self, current_data: pd.DataFrame, historical_data: pd.DataFrame
+    ) -> Dict[str, Any]:
         """
         Detect if there has been a regime change (fallback implementation).
 
@@ -218,10 +239,16 @@ class FallbackMarketRegimeAgent:
             }
 
             if regime_change_detected:
-                result["reason"] = f"Regime changed from {historical_regime} to {current_regime}"
-                logger.info(f"Regime change detected: {historical_regime} -> {current_regime}")
+                result[
+                    "reason"
+                ] = f"Regime changed from {historical_regime} to {current_regime}"
+                logger.info(
+                    f"Regime change detected: {historical_regime} -> {current_regime}"
+                )
             else:
-                result["reason"] = f"No regime change detected, remains {current_regime}"
+                result[
+                    "reason"
+                ] = f"No regime change detected, remains {current_regime}"
 
             return result
 
@@ -234,7 +261,9 @@ class FallbackMarketRegimeAgent:
                 "fallback_mode": True,
             }
 
-    def get_regime_history(self, data: pd.DataFrame, window: int = 30) -> List[Dict[str, Any]]:
+    def get_regime_history(
+        self, data: pd.DataFrame, window: int = 30
+    ) -> List[Dict[str, Any]]:
         """
         Get regime history over time (fallback implementation).
 
@@ -291,4 +320,9 @@ class FallbackMarketRegimeAgent:
             }
         except Exception as e:
             logger.error(f"Error getting fallback market regime agent health: {e}")
-            return {"status": "error", "available_regimes": 0, "fallback_mode": True, "error": str(e)}
+            return {
+                "status": "error",
+                "available_regimes": 0,
+                "fallback_mode": True,
+                "error": str(e),
+            }

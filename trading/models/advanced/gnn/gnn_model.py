@@ -31,7 +31,9 @@ class GNNLayer(nn.Module):
         try:
             from torch_geometric.nn import GCNConv
         except ImportError:
-            raise ImportError("torch_geometric is not installed. Please install it with 'pip install torch-geometric'.")
+            raise ImportError(
+                "torch_geometric is not installed. Please install it with 'pip install torch-geometric'."
+            )
         super().__init__()
         self.conv = GCNConv(in_channels, out_channels)
         self.bn = nn.BatchNorm1d(out_channels)
@@ -50,7 +52,9 @@ class GNNLayer(nn.Module):
         try:
             pass
         except ImportError:
-            raise ImportError("torch_geometric is not installed. Please install it with 'pip install torch-geometric'.")
+            raise ImportError(
+                "torch_geometric is not installed. Please install it with 'pip install torch-geometric'."
+            )
         x = self.conv(x, edge_index)
         x = self.bn(x)
         x = F.relu(x)
@@ -81,7 +85,9 @@ class GNNForecaster(BaseModel):
         try:
             pass
         except ImportError:
-            raise ImportError("torch_geometric is not installed. Please install it with 'pip install torch-geometric'.")
+            raise ImportError(
+                "torch_geometric is not installed. Please install it with 'pip install torch-geometric'."
+            )
         if config is None:
             config = {}
 
@@ -155,11 +161,23 @@ class GNNForecaster(BaseModel):
         layers = []
 
         # Input layer
-        layers.append(GNNLayer(self.config["input_size"], self.config["hidden_size"], self.config["dropout"]))
+        layers.append(
+            GNNLayer(
+                self.config["input_size"],
+                self.config["hidden_size"],
+                self.config["dropout"],
+            )
+        )
 
         # Hidden layers
         for _ in range(self.config["num_layers"] - 1):
-            layers.append(GNNLayer(self.config["hidden_size"], self.config["hidden_size"], self.config["dropout"]))
+            layers.append(
+                GNNLayer(
+                    self.config["hidden_size"],
+                    self.config["hidden_size"],
+                    self.config["dropout"],
+                )
+            )
 
         # Output layer
         self.gnn_layers = nn.ModuleList(layers)
@@ -225,13 +243,17 @@ class GNNForecaster(BaseModel):
         batch_size = x.size(0)
         seq_len = x.size(1)
         node_features = node_features.reshape(batch_size, seq_len, -1)
-        pooled = global_mean_pool(node_features, torch.zeros(batch_size, dtype=torch.long, device=self.device))
+        pooled = global_mean_pool(
+            node_features, torch.zeros(batch_size, dtype=torch.long, device=self.device)
+        )
 
         # Output layer
         out = self.fc(pooled)
         return out
 
-    def _prepare_data(self, data: pd.DataFrame, is_training: bool) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _prepare_data(
+        self, data: pd.DataFrame, is_training: bool
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Prepare data for training or prediction.
 
         Args:
@@ -248,7 +270,9 @@ class GNNForecaster(BaseModel):
             raise ValidationError("Data contains missing values")
 
         # Check if all required columns exist
-        missing_cols = [col for col in self.config["feature_columns"] if col not in data.columns]
+        missing_cols = [
+            col for col in self.config["feature_columns"] if col not in data.columns
+        ]
         if missing_cols:
             raise ValidationError(f"Missing required columns: {missing_cols}")
 
@@ -353,7 +377,9 @@ class GNNForecaster(BaseModel):
             val_features, val_adj = val_data
 
         # Training setup
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.config.get("learning_rate", 0.001))
+        optimizer = torch.optim.Adam(
+            self.parameters(), lr=self.config.get("learning_rate", 0.001)
+        )
         criterion = nn.MSELoss()
 
         # Training loop
@@ -426,7 +452,7 @@ class GNNForecaster(BaseModel):
         """
         try:
             # Make initial prediction
-            predictions = self.predict(data)
+            self.predict(data)
 
             # Generate multi-step forecast
             forecast_values = []
@@ -439,8 +465,12 @@ class GNNForecaster(BaseModel):
 
                 # Update data for next iteration
                 new_row = current_data.iloc[-1].copy()
-                new_row[self.config.get("target_column", "close")] = pred[-1]  # Update with prediction
-                current_data = pd.concat([current_data, pd.DataFrame([new_row])], ignore_index=True)
+                new_row[self.config.get("target_column", "close")] = pred[
+                    -1
+                ]  # Update with prediction
+                current_data = pd.concat(
+                    [current_data, pd.DataFrame([new_row])], ignore_index=True
+                )
                 current_data = current_data.iloc[1:]  # Remove oldest row
 
             return {
@@ -467,7 +497,9 @@ class GNNForecaster(BaseModel):
         try:
             import shap
         except ImportError:
-            logger.warning("SHAP is not installed. Please install it with 'pip install shap'.")
+            logger.warning(
+                "SHAP is not installed. Please install it with 'pip install shap'."
+            )
             return
         explainer = shap.DeepExplainer(self.model, X_sample)
         shap_values = explainer.shap_values(X_sample)
@@ -479,7 +511,11 @@ class GNNForecaster(BaseModel):
         import pandas as pd
 
         n = 100
-        df = pd.DataFrame({"close": np.sin(np.linspace(0, 10, n)), "volume": np.random.rand(n)})
+        df = pd.DataFrame(
+            {"close": np.sin(np.linspace(0, 10, n)), "volume": np.random.rand(n)}
+        )
         self.fit(df.iloc[:80], df.iloc[80:])
         y_pred = self.predict(df.iloc[80:])
-        logger.info(f'Synthetic test MSE: {((y_pred.flatten() - df["close"].iloc[80:].values) ** 2).mean()}')
+        logger.info(
+            f'Synthetic test MSE: {((y_pred.flatten() - df["close"].iloc[80:].values) ** 2).mean()}'
+        )

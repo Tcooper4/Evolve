@@ -104,9 +104,7 @@ except ImportError as e:
     AGENTS_AVAILABLE = False
 
 try:
-    from trading.utils import (
-        ModelEvaluator,
-    )
+    from trading.utils import ModelEvaluator
 
     UTILS_AVAILABLE = True
 except ImportError as e:
@@ -223,7 +221,7 @@ def discover_available_modules():
     import logging
     import os
 
-    logger = logging.getLogger(__name__)
+    logging.getLogger(__name__)
     discovered_modules = {}
 
     # Define subcomponent directories to scan
@@ -266,7 +264,8 @@ def discover_available_modules():
 
                 # Check if it's a Python file or directory with __init__.py
                 if (item.endswith(".py") and not item.startswith("__")) or (
-                    os.path.isdir(item_path) and os.path.exists(os.path.join(item_path, "__init__.py"))
+                    os.path.isdir(item_path)
+                    and os.path.exists(os.path.join(item_path, "__init__.py"))
                 ):
                     module_name = item.replace(".py", "")
                     if module_name not in ["__init__", "__pycache__"]:

@@ -43,17 +43,23 @@ def _log_rendering_time(func):
         try:
             result = func(*args, **kwargs)
             rendering_time = time.time() - start_time
-            logger.debug(f"Chart rendering completed in {rendering_time:.3f}s: {func.__name__}")
+            logger.debug(
+                f"Chart rendering completed in {rendering_time:.3f}s: {func.__name__}"
+            )
             return result
         except Exception as e:
             rendering_time = time.time() - start_time
-            logger.error(f"Chart rendering failed after {rendering_time:.3f}s: {func.__name__} - {str(e)}")
+            logger.error(
+                f"Chart rendering failed after {rendering_time:.3f}s: {func.__name__} - {str(e)}"
+            )
             raise
 
     return wrapper
 
 
-def _create_fallback_figure(title: str, error_message: str = "Visualization not available") -> Union[go.Figure, Figure]:
+def _create_fallback_figure(
+    title: str, error_message: str = "Visualization not available"
+) -> Union[go.Figure, Figure]:
     """Create a fallback figure when visualization backend is not available.
 
     Args:
@@ -78,7 +84,16 @@ def _create_fallback_figure(title: str, error_message: str = "Visualization not 
         return fig
     elif MATPLOTLIB_AVAILABLE:
         fig, ax = plt.subplots(figsize=(10, 6))
-        ax.text(0.5, 0.5, error_message, ha="center", va="center", transform=ax.transAxes, fontsize=16, color="red")
+        ax.text(
+            0.5,
+            0.5,
+            error_message,
+            ha="center",
+            va="center",
+            transform=ax.transAxes,
+            fontsize=16,
+            color="red",
+        )
         ax.set_title(title)
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
@@ -107,12 +122,18 @@ def plot_forecast(
         Plotly figure or Matplotlib figure
     """
     if not PLOTLY_AVAILABLE and not MATPLOTLIB_AVAILABLE:
-        return _create_fallback_figure("Price Forecast", "No visualization backend available")
+        return _create_fallback_figure(
+            "Price Forecast", "No visualization backend available"
+        )
 
     if PLOTLY_AVAILABLE:
-        return _plot_forecast_plotly(data, predictions, show_confidence, confidence_intervals)
+        return _plot_forecast_plotly(
+            data, predictions, show_confidence, confidence_intervals
+        )
     else:
-        return _plot_forecast_matplotlib(data, predictions, show_confidence, confidence_intervals)
+        return _plot_forecast_matplotlib(
+            data, predictions, show_confidence, confidence_intervals
+        )
 
 
 def _plot_forecast_plotly(
@@ -125,12 +146,19 @@ def _plot_forecast_plotly(
     fig = go.Figure()
 
     # Plot actual values
-    fig.add_trace(go.Scatter(x=data.index, y=data["close"], name="Actual", line=dict(color="blue")))
+    fig.add_trace(
+        go.Scatter(
+            x=data.index, y=data["close"], name="Actual", line=dict(color="blue")
+        )
+    )
 
     # Plot predictions
     fig.add_trace(
         go.Scatter(
-            x=data.index[-len(predictions) :], y=predictions, name="Predicted", line=dict(color="red", dash="dash")
+            x=data.index[-len(predictions) :],
+            y=predictions,
+            name="Predicted",
+            line=dict(color="red", dash="dash"),
         )
     )
 
@@ -158,7 +186,12 @@ def _plot_forecast_plotly(
             )
         )
 
-    fig.update_layout(title="Price Forecast", xaxis_title="Date", yaxis_title="Price", hovermode="x unified")
+    fig.update_layout(
+        title="Price Forecast",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        hovermode="x unified",
+    )
 
     return fig
 
@@ -176,13 +209,24 @@ def _plot_forecast_matplotlib(
     ax.plot(data.index, data["close"], label="Actual", color="blue")
 
     # Plot predictions
-    ax.plot(data.index[-len(predictions) :], predictions, label="Predicted", color="red", linestyle="--")
+    ax.plot(
+        data.index[-len(predictions) :],
+        predictions,
+        label="Predicted",
+        color="red",
+        linestyle="--",
+    )
 
     # Add confidence intervals if requested
     if show_confidence and confidence_intervals is not None:
         lower, upper = confidence_intervals
         ax.fill_between(
-            data.index[-len(predictions) :], lower, upper, alpha=0.3, color="green", label="Confidence Interval"
+            data.index[-len(predictions) :],
+            lower,
+            upper,
+            alpha=0.3,
+            color="green",
+            label="Confidence Interval",
         )
 
     ax.set_title("Price Forecast")
@@ -212,7 +256,10 @@ def plot_attention_heatmap(model: Any, data: pd.DataFrame) -> Union[go.Figure, F
         Plotly figure or Matplotlib figure
     """
     if not hasattr(model, "attention_heatmap"):
-        return _create_fallback_figure("Attention Weights Heatmap", "Model does not support attention visualization")
+        return _create_fallback_figure(
+            "Attention Weights Heatmap",
+            "Model does not support attention visualization",
+        )
 
     try:
         attention_weights = model.attention_heatmap(data)
@@ -222,13 +269,17 @@ def plot_attention_heatmap(model: Any, data: pd.DataFrame) -> Union[go.Figure, F
         elif MATPLOTLIB_AVAILABLE:
             return _plot_attention_heatmap_matplotlib(attention_weights, data)
         else:
-            return _create_fallback_figure("Attention Weights Heatmap", "No visualization backend available")
+            return _create_fallback_figure(
+                "Attention Weights Heatmap", "No visualization backend available"
+            )
     except Exception as e:
         logger.error(f"Failed to generate attention heatmap: {str(e)}")
         return _create_fallback_figure("Attention Weights Heatmap", f"Error: {str(e)}")
 
 
-def _plot_attention_heatmap_plotly(attention_weights: np.ndarray, data: pd.DataFrame) -> go.Figure:
+def _plot_attention_heatmap_plotly(
+    attention_weights: np.ndarray, data: pd.DataFrame
+) -> go.Figure:
     """Plot attention heatmap using Plotly."""
     fig = go.Figure(
         data=go.Heatmap(
@@ -239,12 +290,18 @@ def _plot_attention_heatmap_plotly(attention_weights: np.ndarray, data: pd.DataF
         )
     )
 
-    fig.update_layout(title="Attention Weights Heatmap", xaxis_title="Time Steps", yaxis_title="Attention Heads")
+    fig.update_layout(
+        title="Attention Weights Heatmap",
+        xaxis_title="Time Steps",
+        yaxis_title="Attention Heads",
+    )
 
     return fig
 
 
-def _plot_attention_heatmap_matplotlib(attention_weights: np.ndarray, data: pd.DataFrame) -> Figure:
+def _plot_attention_heatmap_matplotlib(
+    attention_weights: np.ndarray, data: pd.DataFrame
+) -> Figure:
     """Plot attention heatmap using Matplotlib."""
     fig, ax = plt.subplots(figsize=(12, 8))
 
@@ -281,10 +338,14 @@ def plot_shap_values(model: Any, data: pd.DataFrame) -> Union[go.Figure, Figure]
         SHAP_AVAILABLE = False
 
     if not SHAP_AVAILABLE:
-        return _create_fallback_figure("SHAP Values Analysis", "SHAP not available. Install with: pip install shap")
+        return _create_fallback_figure(
+            "SHAP Values Analysis", "SHAP not available. Install with: pip install shap"
+        )
 
     if not hasattr(model, "shap_interpret"):
-        return _create_fallback_figure("SHAP Values Analysis", "Model does not support SHAP interpretation")
+        return _create_fallback_figure(
+            "SHAP Values Analysis", "Model does not support SHAP interpretation"
+        )
 
     try:
         shap_values = model.shap_interpret(data)
@@ -294,17 +355,23 @@ def plot_shap_values(model: Any, data: pd.DataFrame) -> Union[go.Figure, Figure]
         elif MATPLOTLIB_AVAILABLE:
             return _plot_shap_values_matplotlib(shap_values, data)
         else:
-            return _create_fallback_figure("SHAP Values Analysis", "No visualization backend available")
+            return _create_fallback_figure(
+                "SHAP Values Analysis", "No visualization backend available"
+            )
 
     except Exception as e:
         logger.error(f"SHAP calculation failed: {str(e)}")
-        return _create_fallback_figure("SHAP Values Analysis", f"SHAP calculation failed: {str(e)}")
+        return _create_fallback_figure(
+            "SHAP Values Analysis", f"SHAP calculation failed: {str(e)}"
+        )
 
 
 def _plot_shap_values_plotly(shap_values: np.ndarray, data: pd.DataFrame) -> go.Figure:
     """Plot SHAP values using Plotly."""
     # Create subplot for SHAP summary plot
-    fig = make_subplots(rows=2, cols=1, subplot_titles=("SHAP Summary Plot", "Feature Importance"))
+    fig = make_subplots(
+        rows=2, cols=1, subplot_titles=("SHAP Summary Plot", "Feature Importance")
+    )
 
     # Add SHAP summary plot
     for i, feature in enumerate(data.columns):
@@ -314,7 +381,9 @@ def _plot_shap_values_plotly(shap_values: np.ndarray, data: pd.DataFrame) -> go.
                 y=[feature] * len(shap_values),
                 mode="markers",
                 name=feature,
-                marker=dict(size=8, color=data[feature], colorscale="Viridis", showscale=True),
+                marker=dict(
+                    size=8, color=data[feature], colorscale="Viridis", showscale=True
+                ),
             ),
             row=1,
             col=1,
@@ -322,7 +391,11 @@ def _plot_shap_values_plotly(shap_values: np.ndarray, data: pd.DataFrame) -> go.
 
     # Add feature importance bar plot
     feature_importance = np.abs(shap_values).mean(axis=0)
-    fig.add_trace(go.Bar(x=data.columns, y=feature_importance, name="Feature Importance"), row=2, col=1)
+    fig.add_trace(
+        go.Bar(x=data.columns, y=feature_importance, name="Feature Importance"),
+        row=2,
+        col=1,
+    )
 
     fig.update_layout(title="SHAP Values Analysis", height=800, showlegend=False)
 
@@ -335,7 +408,13 @@ def _plot_shap_values_matplotlib(shap_values: np.ndarray, data: pd.DataFrame) ->
 
     # SHAP summary plot
     for i, feature in enumerate(data.columns):
-        ax1.scatter(shap_values[:, i], [feature] * len(shap_values), c=data[feature], cmap="viridis", alpha=0.6)
+        ax1.scatter(
+            shap_values[:, i],
+            [feature] * len(shap_values),
+            c=data[feature],
+            cmap="viridis",
+            alpha=0.6,
+        )
 
     ax1.set_title("SHAP Summary Plot")
     ax1.set_xlabel("SHAP Value")
@@ -364,7 +443,9 @@ def plot_backtest_results(results: pd.DataFrame) -> Union[go.Figure, Figure]:
         Plotly figure or Matplotlib figure
     """
     if not PLOTLY_AVAILABLE and not MATPLOTLIB_AVAILABLE:
-        return _create_fallback_figure("Backtest Results", "No visualization backend available")
+        return _create_fallback_figure(
+            "Backtest Results", "No visualization backend available"
+        )
 
     if PLOTLY_AVAILABLE:
         return _plot_backtest_results_plotly(results)
@@ -374,11 +455,21 @@ def plot_backtest_results(results: pd.DataFrame) -> Union[go.Figure, Figure]:
 
 def _plot_backtest_results_plotly(results: pd.DataFrame) -> go.Figure:
     """Plot backtest results using Plotly."""
-    fig = make_subplots(rows=2, cols=1, subplot_titles=("Cumulative Returns", "Drawdown"), vertical_spacing=0.1)
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        subplot_titles=("Cumulative Returns", "Drawdown"),
+        vertical_spacing=0.1,
+    )
 
     # Plot cumulative returns
     fig.add_trace(
-        go.Scatter(x=results.index, y=results["cumulative_returns"], name="Strategy Returns", line=dict(color="blue")),
+        go.Scatter(
+            x=results.index,
+            y=results["cumulative_returns"],
+            name="Strategy Returns",
+            line=dict(color="blue"),
+        ),
         row=1,
         col=1,
     )
@@ -397,7 +488,13 @@ def _plot_backtest_results_plotly(results: pd.DataFrame) -> go.Figure:
 
     # Plot drawdown
     fig.add_trace(
-        go.Scatter(x=results.index, y=results["drawdown"], name="Drawdown", line=dict(color="red"), fill="tonexty"),
+        go.Scatter(
+            x=results.index,
+            y=results["drawdown"],
+            name="Drawdown",
+            line=dict(color="red"),
+            fill="tonexty",
+        ),
         row=2,
         col=1,
     )
@@ -412,9 +509,20 @@ def _plot_backtest_results_matplotlib(results: pd.DataFrame) -> Figure:
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
 
     # Plot cumulative returns
-    ax1.plot(results.index, results["cumulative_returns"], label="Strategy Returns", color="blue")
+    ax1.plot(
+        results.index,
+        results["cumulative_returns"],
+        label="Strategy Returns",
+        color="blue",
+    )
     if "benchmark_returns" in results.columns:
-        ax1.plot(results.index, results["benchmark_returns"], label="Benchmark Returns", color="gray", linestyle="--")
+        ax1.plot(
+            results.index,
+            results["benchmark_returns"],
+            label="Benchmark Returns",
+            color="gray",
+            linestyle="--",
+        )
     ax1.set_title("Cumulative Returns")
     ax1.set_ylabel("Returns")
     ax1.legend()
@@ -450,7 +558,9 @@ def plot_model_components(model: Any, data: pd.DataFrame) -> Union[go.Figure, Fi
         Plotly figure or Matplotlib figure
     """
     if not hasattr(model, "get_components"):
-        return _create_fallback_figure("Model Components", "Model does not support component analysis")
+        return _create_fallback_figure(
+            "Model Components", "Model does not support component analysis"
+        )
 
     try:
         components = model.get_components(data)
@@ -460,31 +570,47 @@ def plot_model_components(model: Any, data: pd.DataFrame) -> Union[go.Figure, Fi
         elif MATPLOTLIB_AVAILABLE:
             return _plot_model_components_matplotlib(components, data)
         else:
-            return _create_fallback_figure("Model Components", "No visualization backend available")
+            return _create_fallback_figure(
+                "Model Components", "No visualization backend available"
+            )
     except Exception as e:
         logger.error(f"Failed to plot model components: {str(e)}")
         return _create_fallback_figure("Model Components", f"Error: {str(e)}")
 
 
-def _plot_model_components_plotly(components: Dict[str, np.ndarray], data: pd.DataFrame) -> go.Figure:
+def _plot_model_components_plotly(
+    components: Dict[str, np.ndarray], data: pd.DataFrame
+) -> go.Figure:
     """Plot model components using Plotly."""
-    fig = make_subplots(rows=len(components), cols=1, subplot_titles=list(components.keys()), vertical_spacing=0.05)
+    fig = make_subplots(
+        rows=len(components),
+        cols=1,
+        subplot_titles=list(components.keys()),
+        vertical_spacing=0.05,
+    )
 
     for i, (name, values) in enumerate(components.items(), 1):
         fig.add_trace(
             go.Scatter(
-                x=data.index, y=values, name=name, line=dict(color=f"rgb({50 + i*50}, {100 + i*30}, {150 + i*20})")
+                x=data.index,
+                y=values,
+                name=name,
+                line=dict(color=f"rgb({50 + i*50}, {100 + i*30}, {150 + i*20})"),
             ),
             row=i,
             col=1,
         )
 
-    fig.update_layout(title="Model Components", height=200 * len(components), showlegend=False)
+    fig.update_layout(
+        title="Model Components", height=200 * len(components), showlegend=False
+    )
 
     return fig
 
 
-def _plot_model_components_matplotlib(components: Dict[str, np.ndarray], data: pd.DataFrame) -> Figure:
+def _plot_model_components_matplotlib(
+    components: Dict[str, np.ndarray], data: pd.DataFrame
+) -> Figure:
     """Plot model components using Matplotlib."""
     fig, axes = plt.subplots(len(components), 1, figsize=(12, 3 * len(components)))
     if len(components) == 1:
@@ -502,7 +628,9 @@ def _plot_model_components_matplotlib(components: Dict[str, np.ndarray], data: p
 
 
 @_log_rendering_time
-def plot_performance_over_time(performance_data: pd.DataFrame) -> Union[go.Figure, Figure]:
+def plot_performance_over_time(
+    performance_data: pd.DataFrame,
+) -> Union[go.Figure, Figure]:
     """Plot performance metrics over time.
 
     Args:
@@ -512,7 +640,9 @@ def plot_performance_over_time(performance_data: pd.DataFrame) -> Union[go.Figur
         Plotly figure or Matplotlib figure
     """
     if not PLOTLY_AVAILABLE and not MATPLOTLIB_AVAILABLE:
-        return _create_fallback_figure("Performance Over Time", "No visualization backend available")
+        return _create_fallback_figure(
+            "Performance Over Time", "No visualization backend available"
+        )
 
     if PLOTLY_AVAILABLE:
         return _plot_performance_over_time_plotly(performance_data)
@@ -526,7 +656,10 @@ def _plot_performance_over_time_plotly(performance_data: pd.DataFrame) -> go.Fig
         rows=2,
         cols=2,
         subplot_titles=("Sharpe Ratio", "Returns", "Volatility", "Drawdown"),
-        specs=[[{"secondary_y": False}, {"secondary_y": False}], [{"secondary_y": False}, {"secondary_y": False}]],
+        specs=[
+            [{"secondary_y": False}, {"secondary_y": False}],
+            [{"secondary_y": False}, {"secondary_y": False}],
+        ],
     )
 
     metrics = ["sharpe_ratio", "returns", "volatility", "drawdown"]
@@ -539,13 +672,17 @@ def _plot_performance_over_time_plotly(performance_data: pd.DataFrame) -> go.Fig
                     x=performance_data.index,
                     y=performance_data[metric],
                     name=metric.replace("_", " ").title(),
-                    line=dict(color=f"rgb({50 + len(metric)*20}, {100 + len(metric)*15}, {150 + len(metric)*10})"),
+                    line=dict(
+                        color=f"rgb({50 + len(metric)*20}, {100 + len(metric)*15}, {150 + len(metric)*10})"
+                    ),
                 ),
                 row=pos[0],
                 col=pos[1],
             )
 
-    fig.update_layout(title="Performance Metrics Over Time", height=800, showlegend=True)
+    fig.update_layout(
+        title="Performance Metrics Over Time", height=800, showlegend=True
+    )
 
     return fig
 
@@ -579,7 +716,9 @@ def plot_model_comparison(metrics: pd.DataFrame) -> Union[go.Figure, Figure]:
         Plotly figure or Matplotlib figure
     """
     if not PLOTLY_AVAILABLE and not MATPLOTLIB_AVAILABLE:
-        return _create_fallback_figure("Model Comparison", "No visualization backend available")
+        return _create_fallback_figure(
+            "Model Comparison", "No visualization backend available"
+        )
 
     if PLOTLY_AVAILABLE:
         return _plot_model_comparison_plotly(metrics)
@@ -602,7 +741,12 @@ def _plot_model_comparison_plotly(metrics: pd.DataFrame) -> go.Figure:
             )
         )
 
-    fig.update_layout(title="Model Comparison", xaxis_title="Metrics", yaxis_title="Values", barmode="group")
+    fig.update_layout(
+        title="Model Comparison",
+        xaxis_title="Metrics",
+        yaxis_title="Values",
+        barmode="group",
+    )
 
     return fig
 
@@ -629,7 +773,9 @@ def _plot_model_comparison_matplotlib(metrics: pd.DataFrame) -> Figure:
     return fig
 
 
-def save_figure(fig: Union[go.Figure, Figure], filepath: str, format: str = "png") -> bool:
+def save_figure(
+    fig: Union[go.Figure, Figure], filepath: str, format: str = "png"
+) -> bool:
     """Save figure to file.
 
     Args:

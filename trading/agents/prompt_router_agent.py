@@ -200,7 +200,11 @@ class PromptRouterAgent(BaseAgent):
             context = kwargs.get("context", {})
 
             if not user_request:
-                return AgentResult(success=False, error_message="No user request provided", error_type="MissingRequest")
+                return AgentResult(
+                    success=False,
+                    error_message="No user request provided",
+                    error_type="MissingRequest",
+                )
 
             # Route the request
             decision = self.route_request(user_request, context)
@@ -300,7 +304,9 @@ class PromptRouterAgent(BaseAgent):
 
         self.logger.info(f"Initialized {len(self.available_agents)} agents in registry")
 
-    def route_request(self, user_request: str, context: Optional[Dict[str, Any]] = None) -> RoutingDecision:
+    def route_request(
+        self, user_request: str, context: Optional[Dict[str, Any]] = None
+    ) -> RoutingDecision:
         """
         Route a user request to the most appropriate agent(s).
 
@@ -321,11 +327,17 @@ class PromptRouterAgent(BaseAgent):
             suitable_agents = self._find_suitable_agents(request_type, user_request)
 
             # Select primary and fallback agents
-            primary_agent, fallback_agents = self._select_agents(suitable_agents, context)
+            primary_agent, fallback_agents = self._select_agents(
+                suitable_agents, context
+            )
 
             # Calculate confidence and expected response time
-            confidence = self._calculate_routing_confidence(request_type, primary_agent, suitable_agents)
-            expected_response_time = self._estimate_response_time(primary_agent, request_type)
+            confidence = self._calculate_routing_confidence(
+                request_type, primary_agent, suitable_agents
+            )
+            expected_response_time = self._estimate_response_time(
+                primary_agent, request_type
+            )
 
             # Determine priority
             priority = self._determine_priority(request_type, context)
@@ -337,7 +349,9 @@ class PromptRouterAgent(BaseAgent):
                 primary_agent=primary_agent,
                 fallback_agents=fallback_agents,
                 confidence=confidence,
-                reasoning=self._generate_routing_reasoning(request_type, primary_agent, suitable_agents),
+                reasoning=self._generate_routing_reasoning(
+                    request_type, primary_agent, suitable_agents
+                ),
                 expected_response_time=expected_response_time,
                 priority=priority,
                 timestamp=datetime.now(),
@@ -354,7 +368,9 @@ class PromptRouterAgent(BaseAgent):
             # Update performance metrics
             self._update_performance_metrics(decision)
 
-            self.logger.info(f"Routed request to {primary_agent} with confidence {confidence:.2f}")
+            self.logger.info(
+                f"Routed request to {primary_agent} with confidence {confidence:.2f}"
+            )
 
             return decision
 
@@ -385,7 +401,9 @@ class PromptRouterAgent(BaseAgent):
 
         return RequestType.GENERAL
 
-    def _find_suitable_agents(self, request_type: RequestType, user_request: str) -> List[AgentInfo]:
+    def _find_suitable_agents(
+        self, request_type: RequestType, user_request: str
+    ) -> List[AgentInfo]:
         """Find agents suitable for handling the request."""
         suitable_agents = []
 
@@ -401,7 +419,9 @@ class PromptRouterAgent(BaseAgent):
             RequestType.UNKNOWN: [AgentCapability.GENERAL_QUERY],
         }
 
-        required_capabilities = capability_mapping.get(request_type, [AgentCapability.GENERAL_QUERY])
+        required_capabilities = capability_mapping.get(
+            request_type, [AgentCapability.GENERAL_QUERY]
+        )
 
         for agent in self.available_agents.values():
             if not agent.is_available:
@@ -414,7 +434,10 @@ class PromptRouterAgent(BaseAgent):
         # If no specific agents found, include general query agents
         if not suitable_agents:
             for agent in self.available_agents.values():
-                if AgentCapability.GENERAL_QUERY in agent.capabilities and agent.is_available:
+                if (
+                    AgentCapability.GENERAL_QUERY in agent.capabilities
+                    and agent.is_available
+                ):
                     suitable_agents.append(agent)
 
         return suitable_agents
@@ -443,7 +466,9 @@ class PromptRouterAgent(BaseAgent):
 
         return primary_agent, fallback_agents
 
-    def _calculate_agent_score(self, agent: AgentInfo, context: Optional[Dict[str, Any]] = None) -> float:
+    def _calculate_agent_score(
+        self, agent: AgentInfo, context: Optional[Dict[str, Any]] = None
+    ) -> float:
         """Calculate a score for an agent based on multiple factors."""
         score = 0.0
 
@@ -455,7 +480,9 @@ class PromptRouterAgent(BaseAgent):
         score += availability_score * 0.2
 
         # Response time (20% weight)
-        response_score = max(0, 1.0 - (agent.avg_response_time / 30.0))  # Normalize to 30s max
+        response_score = max(
+            0, 1.0 - (agent.avg_response_time / 30.0)
+        )  # Normalize to 30s max
         score += response_score * 0.2
 
         # Priority (10% weight)
@@ -470,7 +497,10 @@ class PromptRouterAgent(BaseAgent):
         return score
 
     def _calculate_routing_confidence(
-        self, request_type: RequestType, primary_agent: str, suitable_agents: List[AgentInfo]
+        self,
+        request_type: RequestType,
+        primary_agent: str,
+        suitable_agents: List[AgentInfo],
     ) -> float:
         """Calculate confidence in the routing decision."""
         if not suitable_agents:
@@ -497,7 +527,9 @@ class PromptRouterAgent(BaseAgent):
 
         return min(1.0, max(0.0, base_confidence))
 
-    def _estimate_response_time(self, primary_agent: str, request_type: RequestType) -> float:
+    def _estimate_response_time(
+        self, primary_agent: str, request_type: RequestType
+    ) -> float:
         """Estimate expected response time."""
         agent_info = self.available_agents.get(primary_agent)
         if not agent_info:
@@ -520,7 +552,9 @@ class PromptRouterAgent(BaseAgent):
         multiplier = complexity_multipliers.get(request_type, 1.0)
         return base_time * multiplier
 
-    def _determine_priority(self, request_type: RequestType, context: Optional[Dict[str, Any]] = None) -> int:
+    def _determine_priority(
+        self, request_type: RequestType, context: Optional[Dict[str, Any]] = None
+    ) -> int:
         """Determine the priority of the request."""
         # Base priority from request type
         base_priorities = {
@@ -546,7 +580,10 @@ class PromptRouterAgent(BaseAgent):
         return priority
 
     def _generate_routing_reasoning(
-        self, request_type: RequestType, primary_agent: str, suitable_agents: List[AgentInfo]
+        self,
+        request_type: RequestType,
+        primary_agent: str,
+        suitable_agents: List[AgentInfo],
     ) -> str:
         """Generate reasoning for the routing decision."""
         reasoning_parts = []
@@ -560,8 +597,12 @@ class PromptRouterAgent(BaseAgent):
             # Add agent-specific reasoning
             primary_agent_info = self.available_agents.get(primary_agent)
             if primary_agent_info:
-                reasoning_parts.append(f"{primary_agent} has {primary_agent_info.success_rate:.1%} success rate")
-                reasoning_parts.append(f"Expected response time: {primary_agent_info.avg_response_time:.1f}s")
+                reasoning_parts.append(
+                    f"{primary_agent} has {primary_agent_info.success_rate:.1%} success rate"
+                )
+                reasoning_parts.append(
+                    f"Expected response time: {primary_agent_info.avg_response_time:.1f}s"
+                )
 
         return "; ".join(reasoning_parts)
 
@@ -585,10 +626,14 @@ class PromptRouterAgent(BaseAgent):
                     f"Primary agent: {decision.primary_agent}",
                     f"Fallback agents: {', '.join(decision.fallback_agents)}",
                 ],
-                "alternatives_considered": [f"Could have used: {', '.join(decision.fallback_agents)}"],
+                "alternatives_considered": [
+                    f"Could have used: {', '.join(decision.fallback_agents)}"
+                ],
                 "confidence_explanation": f"Confidence {decision.confidence:.1%} based on agent capabilities and performance",
             },
-            confidence_level=ConfidenceLevel.HIGH if decision.confidence > 0.8 else ConfidenceLevel.MEDIUM,
+            confidence_level=ConfidenceLevel.HIGH
+            if decision.confidence > 0.8
+            else ConfidenceLevel.MEDIUM,
             metadata=decision.metadata,
         )
 
@@ -609,7 +654,9 @@ class PromptRouterAgent(BaseAgent):
             self.performance_metrics["agent_usage"][primary_agent] = 0
         self.performance_metrics["agent_usage"][primary_agent] += 1
 
-    def _create_fallback_decision(self, request_id: str, user_request: str) -> RoutingDecision:
+    def _create_fallback_decision(
+        self, request_id: str, user_request: str
+    ) -> RoutingDecision:
         """Create a fallback routing decision when normal routing fails."""
         return RoutingDecision(
             request_id=request_id,
@@ -632,27 +679,39 @@ class PromptRouterAgent(BaseAgent):
             "avg_response_time": self.performance_metrics["avg_response_time"],
             "agent_usage": self.performance_metrics["agent_usage"],
             "recent_decisions": len(self.routing_history),
-            "available_agents": len([a for a in self.available_agents.values() if a.is_available]),
+            "available_agents": len(
+                [a for a in self.available_agents.values() if a.is_available]
+            ),
         }
 
-    def update_agent_status(self, agent_name: str, is_available: bool, current_load: int = 0):
+    def update_agent_status(
+        self, agent_name: str, is_available: bool, current_load: int = 0
+    ):
         """Update the status of an agent."""
         if agent_name in self.available_agents:
             self.available_agents[agent_name].is_available = is_available
             self.available_agents[agent_name].current_load = current_load
-            self.logger.info(f"Updated {agent_name} status: available={is_available}, load={current_load}")
+            self.logger.info(
+                f"Updated {agent_name} status: available={is_available}, load={current_load}"
+            )
 
-    def record_agent_performance(self, agent_name: str, success: bool, response_time: float):
+    def record_agent_performance(
+        self, agent_name: str, success: bool, response_time: float
+    ):
         """Record performance metrics for an agent."""
         if agent_name in self.available_agents:
             agent = self.available_agents[agent_name]
 
             # Update success rate with exponential moving average
             alpha = 0.1
-            agent.success_rate = alpha * (1.0 if success else 0.0) + (1 - alpha) * agent.success_rate
+            agent.success_rate = (
+                alpha * (1.0 if success else 0.0) + (1 - alpha) * agent.success_rate
+            )
 
             # Update response time with exponential moving average
-            agent.avg_response_time = alpha * response_time + (1 - alpha) * agent.avg_response_time
+            agent.avg_response_time = (
+                alpha * response_time + (1 - alpha) * agent.avg_response_time
+            )
 
             # Update last used time
             agent.last_used = datetime.now()
@@ -677,7 +736,9 @@ class PromptRouterAgent(BaseAgent):
 
             # Create a response message based on the routing decision
             message = f"Request routed to {decision.primary_agent} with {decision.confidence:.1%} confidence. "
-            message += f"Expected response time: {decision.expected_response_time:.1f}s. "
+            message += (
+                f"Expected response time: {decision.expected_response_time:.1f}s. "
+            )
             message += f"Reasoning: {decision.reasoning}"
 
             return AgentResult(
@@ -700,7 +761,9 @@ class PromptRouterAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error handling prompt: {e}")
             return AgentResult(
-                success=False, error_message=f"Error processing prompt: {str(e)}", error_type="PromptProcessingError"
+                success=False,
+                error_message=f"Error processing prompt: {str(e)}",
+                error_type="PromptProcessingError",
             )
 
 

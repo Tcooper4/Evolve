@@ -12,7 +12,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -28,7 +27,9 @@ class BaseNotifier:
         """Check if the notifier is enabled."""
         return self.enabled
 
-    def send_notification(self, message: str, level: str = "info", recipients: Optional[List[str]] = None):
+    def send_notification(
+        self, message: str, level: str = "info", recipients: Optional[List[str]] = None
+    ):
         """Send notification to specified recipients.
 
         Args:
@@ -160,7 +161,9 @@ class TradeLogger:
         # Send notifications
         self._send_notifications(trade_data)
 
-        logger.info(f"✅ Trade logged: {trade_data.get('symbol', 'Unknown')} - {trade_data.get('action', 'Unknown')}")
+        logger.info(
+            f"✅ Trade logged: {trade_data.get('symbol', 'Unknown')} - {trade_data.get('action', 'Unknown')}"
+        )
         return {
             "success": True,
             "result": {
@@ -185,7 +188,9 @@ class TradeLogger:
         price = trade_data.get("price", 0)
         timestamp = trade_data.get("timestamp", "Unknown")
 
-        message = f"🔔 Trade Alert: {action} {quantity} {symbol} @ ${price:.2f} at {timestamp}"
+        message = (
+            f"🔔 Trade Alert: {action} {quantity} {symbol} @ ${price:.2f} at {timestamp}"
+        )
 
         # Send to all notifiers
         notifications_sent = 0
@@ -202,7 +207,9 @@ class TradeLogger:
                     if success:
                         notifications_sent += 1
                 except Exception as e:
-                    logger.error(f"❌ Error sending notification via {type(notifier).__name__}: {e}")
+                    logger.error(
+                        f"❌ Error sending notification via {type(notifier).__name__}: {e}"
+                    )
 
         return {
             "success": True,
@@ -239,7 +246,11 @@ class TradeLogger:
         total_volume = sum(trade.get("quantity", 0) for trade in self.trade_log)
         last_trade = self.trade_log[-1] if self.trade_log else None
 
-        return {"total_trades": total_trades, "total_volume": total_volume, "last_trade": last_trade}
+        return {
+            "total_trades": total_trades,
+            "total_volume": total_volume,
+            "last_trade": last_trade,
+        }
 
 
 # Global trade logger instance

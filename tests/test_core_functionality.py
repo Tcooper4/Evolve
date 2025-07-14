@@ -44,7 +44,7 @@ def test_config_loader():
     try:
         from utils.config_loader import ConfigLoader
 
-        config = ConfigLoader()
+        ConfigLoader()
         print("✅ Configuration loader successful")
         return True
     except ImportError as e:

@@ -93,7 +93,12 @@ class AlertConfig:
 class RealTimeSignalCenter:
     """Advanced real-time signal center with streaming and alerts."""
 
-    def __init__(self, websocket_port: int = 8765, max_signals: int = 1000, alert_check_interval: int = 30):
+    def __init__(
+        self,
+        websocket_port: int = 8765,
+        max_signals: int = 1000,
+        alert_check_interval: int = 30,
+    ):
         """Initialize the real-time signal center.
 
         Args:
@@ -123,20 +128,42 @@ class RealTimeSignalCenter:
 
         logger.info("Real-Time Signal Center initialized successfully")
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _initialize_default_alerts(self):
         """Initialize default alert configurations."""
         self.alert_configs = [
-            AlertConfig(alert_type="high_confidence_signal", conditions={"confidence_threshold": 0.8}, enabled=True),
             AlertConfig(
-                alert_type="large_position_change", conditions={"position_change_threshold": 0.1}, enabled=True
+                alert_type="high_confidence_signal",
+                conditions={"confidence_threshold": 0.8},
+                enabled=True,
             ),
-            AlertConfig(alert_type="significant_loss", conditions={"loss_threshold": -0.05}, enabled=True),
-            AlertConfig(alert_type="market_volatility", conditions={"volatility_threshold": 0.3}, enabled=True),
+            AlertConfig(
+                alert_type="large_position_change",
+                conditions={"position_change_threshold": 0.1},
+                enabled=True,
+            ),
+            AlertConfig(
+                alert_type="significant_loss",
+                conditions={"loss_threshold": -0.05},
+                enabled=True,
+            ),
+            AlertConfig(
+                alert_type="market_volatility",
+                conditions={"volatility_threshold": 0.3},
+                enabled=True,
+            ),
         ]
 
-        return {"success": True, "message": "Initialization completed", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Initialization completed",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def start(self):
         """Start the real-time signal center."""
@@ -157,7 +184,10 @@ class RealTimeSignalCenter:
             self._start_websocket_server()
 
             logger.info("Real-Time Signal Center started successfully")
-            return {"status": "success", "message": "Real-Time Signal Center started successfully"}
+            return {
+                "status": "success",
+                "message": "Real-Time Signal Center started successfully",
+            }
 
         except Exception as e:
             logger.error(f"Error starting signal center: {e}")
@@ -179,7 +209,10 @@ class RealTimeSignalCenter:
                 asyncio.run(self.websocket_server.close())
 
             logger.info("Real-Time Signal Center stopped")
-            return {"status": "success", "message": "Real-Time Signal Center stopped successfully"}
+            return {
+                "status": "success",
+                "message": "Real-Time Signal Center stopped successfully",
+            }
 
         except Exception as e:
             logger.error(f"Error stopping signal center: {e}")
@@ -210,7 +243,10 @@ class RealTimeSignalCenter:
 
         return {
             "success": True,
-            "result": {"status": "completed", "message": "Signal processing loop ended"},
+            "result": {
+                "status": "completed",
+                "message": "Signal processing loop ended",
+            },
             "message": "Operation completed successfully",
             "timestamp": datetime.now().isoformat(),
         }
@@ -258,13 +294,21 @@ class RealTimeSignalCenter:
                 self._notify_subscribers(signal)
 
             logger.info(f"Processed signal: {signal.signal_id} for {signal.symbol}")
-            return {"status": "success", "signal_id": signal.signal_id, "symbol": signal.symbol}
+            return {
+                "status": "success",
+                "signal_id": signal.signal_id,
+                "symbol": signal.symbol,
+            }
 
         except Exception as e:
             logger.error(f"Error processing signal: {e}")
             return {
                 "success": True,
-                "result": {"status": "error", "message": str(e), "signal_id": signal.signal_id},
+                "result": {
+                    "status": "error",
+                    "message": str(e),
+                    "signal_id": signal.signal_id,
+                },
                 "message": "Operation completed successfully",
                 "timestamp": datetime.now().isoformat(),
             }
@@ -274,7 +318,7 @@ class RealTimeSignalCenter:
         try:
             alert_type = alert.get("type")
             message = alert.get("message")
-            priority = alert.get("priority", "medium")
+            alert.get("priority", "medium")
 
             # Send webhook notifications
             self._send_webhook_alert(alert)
@@ -292,7 +336,11 @@ class RealTimeSignalCenter:
             logger.error(f"Error processing alert: {e}")
             return {
                 "success": True,
-                "result": {"status": "error", "message": str(e), "alert_type": alert.get("type")},
+                "result": {
+                    "status": "error",
+                    "message": str(e),
+                    "alert_type": alert.get("type"),
+                },
                 "message": "Operation completed successfully",
                 "timestamp": datetime.now().isoformat(),
             }
@@ -347,7 +395,11 @@ class RealTimeSignalCenter:
                     )
 
             # Check for high signal volume
-            recent_signals = [s for s in self.signals if s.timestamp > datetime.now() - timedelta(minutes=5)]
+            recent_signals = [
+                s
+                for s in self.signals
+                if s.timestamp > datetime.now() - timedelta(minutes=5)
+            ]
 
             if len(recent_signals) > 10:
                 self._queue_alert(
@@ -381,7 +433,9 @@ class RealTimeSignalCenter:
                         "data": alert.get("data", {}),
                     }
 
-                    response = requests.post(config.webhook_url, json=payload, timeout=10)
+                    response = requests.post(
+                        config.webhook_url, json=payload, timeout=10
+                    )
 
                     if response.status_code != 200:
                         logger.warning(f"Webhook alert failed: {response.status_code}")
@@ -410,7 +464,9 @@ class RealTimeSignalCenter:
                         "icon_emoji": ":chart_with_upwards_trend:",
                     }
 
-                    response = requests.post(config.slack_webhook, json=payload, timeout=10)
+                    response = requests.post(
+                        config.slack_webhook, json=payload, timeout=10
+                    )
 
                     if response.status_code != 200:
                         logger.warning(f"Slack alert failed: {response.status_code}")
@@ -492,9 +548,13 @@ class RealTimeSignalCenter:
         """Update active trade information."""
         try:
             pnl = (
-                (current_price - entry_price) * quantity if side == "buy" else (entry_price - current_price) * quantity
+                (current_price - entry_price) * quantity
+                if side == "buy"
+                else (entry_price - current_price) * quantity
             )
-            pnl_percent = pnl / (entry_price * quantity) if entry_price * quantity > 0 else 0
+            pnl_percent = (
+                pnl / (entry_price * quantity) if entry_price * quantity > 0 else 0
+            )
 
             trade = ActiveTrade(
                 trade_id=trade_id,
@@ -556,7 +616,10 @@ class RealTimeSignalCenter:
             logger.error(f"Error removing signal subscriber: {e}")
 
     def get_recent_signals(
-        self, symbol: Optional[str] = None, signal_type: Optional[SignalType] = None, hours: int = 24
+        self,
+        symbol: Optional[str] = None,
+        signal_type: Optional[SignalType] = None,
+        hours: int = 24,
     ) -> List[TradingSignal]:
         """Get recent signals with optional filtering."""
         try:
@@ -569,7 +632,9 @@ class RealTimeSignalCenter:
                     recent_signals = [s for s in recent_signals if s.symbol == symbol]
 
                 if signal_type:
-                    recent_signals = [s for s in recent_signals if s.signal_type == signal_type]
+                    recent_signals = [
+                        s for s in recent_signals if s.signal_type == signal_type
+                    ]
 
                 return sorted(recent_signals, key=lambda x: x.timestamp, reverse=True)
 
@@ -596,11 +661,17 @@ class RealTimeSignalCenter:
         """Get summary of signal activity."""
         try:
             with self.lock:
-                recent_signals = [s for s in self.signals if s.timestamp > datetime.now() - timedelta(hours=24)]
+                recent_signals = [
+                    s
+                    for s in self.signals
+                    if s.timestamp > datetime.now() - timedelta(hours=24)
+                ]
 
                 signal_counts = {}
                 for signal_type in SignalType:
-                    signal_counts[signal_type.value] = len([s for s in recent_signals if s.signal_type == signal_type])
+                    signal_counts[signal_type.value] = len(
+                        [s for s in recent_signals if s.signal_type == signal_type]
+                    )
 
                 return {
                     "total_signals_24h": len(recent_signals),
@@ -636,7 +707,9 @@ class RealTimeSignalCenter:
     def remove_alert_config(self, alert_type: str):
         """Remove alert configuration."""
         try:
-            self.alert_configs = [c for c in self.alert_configs if c.alert_type != alert_type]
+            self.alert_configs = [
+                c for c in self.alert_configs if c.alert_type != alert_type
+            ]
             logger.info(f"Removed alert config: {alert_type}")
 
         except Exception as e:

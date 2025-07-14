@@ -124,7 +124,10 @@ class TestARIMAForecaster:
         # Should fail gracefully with clear error message
         assert result["success"] is False
         assert "error" in result
-        assert any(keyword in result["error"].lower() for keyword in ["insufficient", "at least", "minimum", "20"])
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["insufficient", "at least", "minimum", "20"]
+        )
 
     def test_constant_series_handling(self, arima_model, constant_time_series):
         """Test handling of constant time series."""
@@ -138,7 +141,10 @@ class TestARIMAForecaster:
             assert len(forecast_result["predictions"]) == 5
         else:
             # If it fails, should be due to constant series
-            assert "constant" in result.get("error", "").lower() or "stationary" in result.get("error", "").lower()
+            assert (
+                "constant" in result.get("error", "").lower()
+                or "stationary" in result.get("error", "").lower()
+            )
 
     def test_nan_series_handling(self, arima_model, nan_time_series):
         """Test handling of time series with NaN values."""
@@ -147,7 +153,10 @@ class TestARIMAForecaster:
         # Should fail gracefully with clear error message
         assert result["success"] is False
         assert "error" in result
-        assert any(keyword in result["error"].lower() for keyword in ["nan", "missing", "invalid"])
+        assert any(
+            keyword in result["error"].lower()
+            for keyword in ["nan", "missing", "invalid"]
+        )
 
     def test_model_summary(self, arima_model, synthetic_time_series):
         """Test that model summary is generated correctly."""
@@ -194,7 +203,9 @@ class TestARIMAForecaster:
 
     def test_find_best_order(self, arima_model, synthetic_time_series):
         """Test automatic order selection."""
-        result = arima_model.find_best_order(synthetic_time_series, max_p=2, max_d=1, max_q=2)
+        result = arima_model.find_best_order(
+            synthetic_time_series, max_p=2, max_d=1, max_q=2
+        )
 
         assert result["success"] is True
         assert "best_order" in result
@@ -246,7 +257,9 @@ class TestARIMAForecaster:
 
         assert forecast1["success"] is True
         assert forecast2["success"] is True
-        np.testing.assert_array_almost_equal(forecast1["predictions"], forecast2["predictions"], decimal=10)
+        np.testing.assert_array_almost_equal(
+            forecast1["predictions"], forecast2["predictions"], decimal=10
+        )
 
     def test_trend_detection(self, arima_model):
         """Test that model correctly identifies trends."""
@@ -277,7 +290,9 @@ class TestARIMAForecaster:
             assert not np.isnan(forecast["predictions"]).any()
 
     @pytest.mark.parametrize("horizon", [1, 5, 10, 30])
-    def test_different_forecast_horizons(self, arima_model, synthetic_time_series, horizon):
+    def test_different_forecast_horizons(
+        self, arima_model, synthetic_time_series, horizon
+    ):
         """Test forecasting with different horizons."""
         arima_model.fit(synthetic_time_series)
 
@@ -288,7 +303,11 @@ class TestARIMAForecaster:
 
     def test_model_configuration(self):
         """Test different model configurations."""
-        configs = [{"order": (1, 1, 1)}, {"order": (2, 1, 2)}, {"order": (1, 1, 1), "seasonal_order": (1, 1, 1, 12)}]
+        configs = [
+            {"order": (1, 1, 1)},
+            {"order": (2, 1, 2)},
+            {"order": (1, 1, 1), "seasonal_order": (1, 1, 1, 12)},
+        ]
 
         for config in configs:
             model = ARIMAModel(config=config)

@@ -27,7 +27,11 @@ class TaskDashboard:
         self.task_memory = task_memory
         self._setup_session_state()
 
-        return {"success": True, "message": "Task dashboard initialized", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Task dashboard initialized",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _setup_session_state(self):
         """Setup Streamlit session state variables."""
@@ -43,10 +47,14 @@ class TaskDashboard:
         st.title("Task Dashboard")
 
         # Auto-refresh toggle
-        st.session_state.auto_refresh = st.sidebar.checkbox("Auto-refresh", value=st.session_state.auto_refresh)
+        st.session_state.auto_refresh = st.sidebar.checkbox(
+            "Auto-refresh", value=st.session_state.auto_refresh
+        )
 
         # Refresh interval
-        refresh_interval = st.sidebar.slider("Refresh interval (seconds)", min_value=5, max_value=60, value=10, step=5)
+        refresh_interval = st.sidebar.slider(
+            "Refresh interval (seconds)", min_value=5, max_value=60, value=10, step=5
+        )
 
         # Manual refresh button
         if st.sidebar.button("Refresh Now"):
@@ -55,7 +63,9 @@ class TaskDashboard:
         # Auto-refresh logic
         if st.session_state.auto_refresh:
             current_time = datetime.now()
-            if (current_time - st.session_state.last_refresh).total_seconds() >= refresh_interval:
+            if (
+                current_time - st.session_state.last_refresh
+            ).total_seconds() >= refresh_interval:
                 self._refresh_data()
 
         # Display task statistics
@@ -70,14 +80,22 @@ class TaskDashboard:
         # Display task details
         self._show_task_details()
 
-        return {"success": True, "message": "Operation completed successfully", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _refresh_data(self):
         """Refresh the dashboard data."""
         st.session_state.last_refresh = datetime.now()
         st.experimental_rerun()
 
-        return {"success": True, "message": "Operation completed successfully", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _show_statistics(self):
         """Display task statistics."""
@@ -85,7 +103,9 @@ class TaskDashboard:
 
         # Calculate statistics
         total_tasks = len(self.task_memory.tasks)
-        completed_tasks = len(self.task_memory.get_tasks_by_status(TaskStatus.COMPLETED))
+        completed_tasks = len(
+            self.task_memory.get_tasks_by_status(TaskStatus.COMPLETED)
+        )
         pending_tasks = len(self.task_memory.get_tasks_by_status(TaskStatus.PENDING))
         failed_tasks = len(self.task_memory.get_tasks_by_status(TaskStatus.FAILED))
 
@@ -108,7 +128,11 @@ class TaskDashboard:
                     st.progress(task.completion_pct)
                     st.text(f"Task {task.task_id}: {task.completion_pct:.1f}% complete")
 
-        return {"success": True, "message": "Operation completed successfully", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _show_task_timeline(self):
         """Display task timeline."""
@@ -124,7 +148,9 @@ class TaskDashboard:
                     "Status": task.status.value,
                     "Agent": task.agent,
                     "Start": task.created_at,
-                    "End": task.updated_at if task.status == TaskStatus.COMPLETED else datetime.now(),
+                    "End": task.updated_at
+                    if task.status == TaskStatus.COMPLETED
+                    else datetime.now(),
                 }
             )
 
@@ -132,15 +158,31 @@ class TaskDashboard:
             df = pd.DataFrame(tasks_data)
 
             # Create timeline
-            fig = px.timeline(df, x_start="Start", x_end="End", y="Task", color="Status", hover_data=["Type", "Agent"])
+            fig = px.timeline(
+                df,
+                x_start="Start",
+                x_end="End",
+                y="Task",
+                color="Status",
+                hover_data=["Type", "Agent"],
+            )
 
-            fig.update_layout(title="Task Timeline", xaxis_title="Time", yaxis_title="Task", height=400)
+            fig.update_layout(
+                title="Task Timeline",
+                xaxis_title="Time",
+                yaxis_title="Task",
+                height=400,
+            )
 
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("No tasks available for timeline")
 
-        return {"success": True, "message": "Operation completed successfully", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _show_task_list(self):
         """Display the list of tasks."""
@@ -164,11 +206,20 @@ class TaskDashboard:
             df = pd.DataFrame(tasks_data)
 
             # Add task selection
-            selected_rows = st.dataframe(df, use_container_width=True, hide_index=True, on_click=self._on_task_select)
+            selected_rows = st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True,
+                on_click=self._on_task_select,
+            )
         else:
             st.info("No tasks found")
 
-        return {"success": True, "message": "Operation completed successfully", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _on_task_select(self, selected_rows):
         """Handle task selection.
@@ -179,7 +230,11 @@ class TaskDashboard:
         if selected_rows:
             st.session_state.selected_task = selected_rows[0]["ID"]
 
-        return {"success": True, "message": "Operation completed successfully", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
     def _show_task_details(self):
         """Display detailed information for selected tasks."""
@@ -227,7 +282,11 @@ class TaskDashboard:
         else:
             st.info("Select a task to view details")
 
-        return {"success": True, "message": "Operation completed successfully", "timestamp": datetime.now().isoformat()}
+        return {
+            "success": True,
+            "message": "Operation completed successfully",
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def get_active_tasks() -> List[Dict[str, Any]]:
@@ -237,7 +296,9 @@ def get_active_tasks() -> List[Dict[str, Any]]:
         List of active task dictionaries
     """
     task_memory = TaskMemory()
-    active_tasks = task_memory.get_tasks_by_status([TaskStatus.PENDING, TaskStatus.IN_PROGRESS])
+    active_tasks = task_memory.get_tasks_by_status(
+        [TaskStatus.PENDING, TaskStatus.IN_PROGRESS]
+    )
 
     return [task.to_dict() for task in active_tasks]
 

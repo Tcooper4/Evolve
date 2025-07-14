@@ -83,23 +83,31 @@ class QuantGPT:
         self.config = config
 
         # Setup logging
-        logging.basicConfig(level=getattr(logging, config.log_level), format=config.log_format)
+        logging.basicConfig(
+            level=getattr(logging, config.log_level), format=config.log_format
+        )
 
         # Initialize service client
-        self.client = ServiceClient(config.redis_host, config.redis_port, config.redis_db)
+        self.client = ServiceClient(
+            config.redis_host, config.redis_port, config.redis_db
+        )
 
         # Initialize memory system
         self.memory = AgentMemory()
 
         # Initialize cache manager
         self.cache_manager = CacheManager(
-            redis_client=self.client.redis_client if hasattr(self.client, "redis_client") else None,
+            redis_client=self.client.redis_client
+            if hasattr(self.client, "redis_client")
+            else None,
             cache_enabled=config.cache_enabled,
             ttl=config.cache_ttl,
         )
 
         # Initialize rate limiter
-        self.rate_limiter = RateLimiter(max_calls=config.rate_limit_calls, time_window=config.rate_limit_period)
+        self.rate_limiter = RateLimiter(
+            max_calls=config.rate_limit_calls, time_window=config.rate_limit_period
+        )
 
         # Initialize modular components
         self.query_parser = QueryParser(config.openai_api_key)
@@ -122,7 +130,9 @@ class QuantGPT:
         # Validate query
         if self.config.validate_inputs:
             if not query or not isinstance(query, str):
-                raise ValidationError("Invalid query: must be a non-empty string", "query", query)
+                raise ValidationError(
+                    "Invalid query: must be a non-empty string", "query", query
+                )
 
             query = query.strip()
             if not query:
@@ -186,7 +196,8 @@ class QuantGPT:
             except Exception as e:
                 if attempt == self.config.max_retries - 1:
                     raise QueryParsingError(
-                        f"Failed to parse query after {self.config.max_retries} attempts: {e}", query
+                        f"Failed to parse query after {self.config.max_retries} attempts: {e}",
+                        query,
                     )
                 time.sleep(self.config.retry_delay)
 
@@ -198,15 +209,20 @@ class QuantGPT:
             except Exception as e:
                 if attempt == self.config.max_retries - 1:
                     raise ActionExecutionError(
-                        f"Failed to execute action after {self.config.max_retries} attempts: {e}", parsed.get("intent")
+                        f"Failed to execute action after {self.config.max_retries} attempts: {e}",
+                        parsed.get("intent"),
                     )
                 time.sleep(self.config.retry_delay)
 
-    def _generate_commentary_with_retry(self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]) -> str:
+    def _generate_commentary_with_retry(
+        self, query: str, parsed: Dict[str, Any], result: Dict[str, Any]
+    ) -> str:
         """Generate commentary with retry logic."""
         for attempt in range(self.config.max_retries):
             try:
-                return self.commentary_generator.generate_commentary(query, parsed, result)
+                return self.commentary_generator.generate_commentary(
+                    query, parsed, result
+                )
             except Exception as e:
                 if attempt == self.config.max_retries - 1:
                     raise CommentaryGenerationError(
@@ -241,7 +257,9 @@ class QuantGPT:
         """
         return {
             "cache_stats": self.cache_manager.get_stats(),
-            "rate_limit_status": {"query_processing": self.rate_limiter.get_status("query_processing")},
+            "rate_limit_status": {
+                "query_processing": self.rate_limiter.get_status("query_processing")
+            },
             "configuration": self.config.to_dict(),
         }
 
@@ -276,7 +294,9 @@ def main() -> Dict[str, Any]:
     import argparse
     import json
 
-    parser = argparse.ArgumentParser(description="QuantGPT - Natural Language Trading Interface")
+    parser = argparse.ArgumentParser(
+        description="QuantGPT - Natural Language Trading Interface"
+    )
     parser.add_argument("--query", required=True, help="Natural language query")
     parser.add_argument("--config-file", help="Configuration file path")
     parser.add_argument("--openai-key", help="OpenAI API key")
@@ -295,7 +315,10 @@ def main() -> Dict[str, Any]:
 
         # Initialize QuantGPT
         quant_gpt = QuantGPT(
-            config=config, openai_api_key=args.openai_key, redis_host=args.redis_host, redis_port=args.redis_port
+            config=config,
+            openai_api_key=args.openai_key,
+            redis_host=args.redis_host,
+            redis_port=args.redis_port,
         )
 
         if args.stats:
@@ -314,7 +337,11 @@ def main() -> Dict[str, Any]:
 
     except KeyboardInterrupt:
         logger.info("\nInterrupted by user")
-        return {"status": "interrupted", "query": args.query, "result": "user_interrupted"}
+        return {
+            "status": "interrupted",
+            "query": args.query,
+            "result": "user_interrupted",
+        }
     except QuantGPTException as e:
         logger.error(f"QuantGPT error: {e.message}")
         return {

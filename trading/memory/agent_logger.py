@@ -200,13 +200,27 @@ class AgentLogger:
                 )
 
                 # Create indexes for better performance
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON agent_logs(timestamp)")
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_name ON agent_logs(agent_name)")
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_agent_type ON agent_logs(agent_type)")
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_action ON agent_logs(action)")
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_level ON agent_logs(level)")
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_task_id ON agent_logs(task_id)")
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_session_id ON agent_logs(session_id)")
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_timestamp ON agent_logs(timestamp)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_agent_name ON agent_logs(agent_name)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_agent_type ON agent_logs(agent_type)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_action ON agent_logs(action)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_level ON agent_logs(level)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_task_id ON agent_logs(task_id)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_session_id ON agent_logs(session_id)"
+                )
 
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
@@ -221,7 +235,11 @@ class AgentLogger:
         if self.enable_debug_logs:
             debug_handler = logging.FileHandler(self.log_dir / "agent_debug.log")
             debug_handler.setLevel(logging.DEBUG)
-            debug_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+            debug_handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                )
+            )
             logger.addHandler(debug_handler)
 
         # Error log file
@@ -232,18 +250,27 @@ class AgentLogger:
         if self.enable_performance_logs:
             perf_handler = logging.FileHandler(self.log_dir / "agent_performance.log")
             perf_handler.setLevel(logging.INFO)
-            perf_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+            perf_handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                )
+            )
             logger.addHandler(perf_handler)
 
         # Formatter
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
 
         for handler in [main_handler, error_handler]:
             handler.setFormatter(formatter)
             logger.addHandler(handler)
 
     def register_agent_context(
-        self, agent_name: str, agent_type: AgentType, context: Optional[Dict[str, Any]] = None
+        self,
+        agent_name: str,
+        agent_type: AgentType,
+        context: Optional[Dict[str, Any]] = None,
     ) -> AgentContext:
         """Register context for an agent.
 
@@ -264,7 +291,9 @@ class AgentLogger:
                 configuration=context.get("configuration", {}) if context else {},
             )
             self.agent_contexts[agent_name] = agent_context
-            logger.info(f"Registered context for agent: {agent_name} ({agent_type.value})")
+            logger.info(
+                f"Registered context for agent: {agent_name} ({agent_type.value})"
+            )
             return agent_context
 
     def update_agent_context(self, agent_name: str, updates: Dict[str, Any]):
@@ -386,7 +415,9 @@ class AgentLogger:
                         json.dumps(log_entry.context.to_dict()),
                         log_entry.session_id,
                         log_entry.user_id,
-                        json.dumps(log_entry.performance_metrics) if log_entry.performance_metrics else None,
+                        json.dumps(log_entry.performance_metrics)
+                        if log_entry.performance_metrics
+                        else None,
                         log_entry.error_details,
                         log_entry.task_id,
                         log_entry.correlation_id,
@@ -400,7 +431,10 @@ class AgentLogger:
         try:
             log_message = f"[{log_entry.agent_name}:{log_entry.agent_type.value}] {log_entry.message}"
 
-            if log_entry.level == LogLevel.ERROR or log_entry.level == LogLevel.CRITICAL:
+            if (
+                log_entry.level == LogLevel.ERROR
+                or log_entry.level == LogLevel.CRITICAL
+            ):
                 logger.error(log_message)
             elif log_entry.level == LogLevel.WARNING:
                 logger.warning(log_message)
@@ -498,10 +532,14 @@ class AgentLogger:
                             level=LogLevel(row[5]),
                             message=row[6],
                             data=json.loads(row[7]) if row[7] else {},
-                            context=AgentContext(**json.loads(row[8])) if row[8] else None,
+                            context=AgentContext(**json.loads(row[8]))
+                            if row[8]
+                            else None,
                             session_id=row[9],
                             user_id=row[10],
-                            performance_metrics=json.loads(row[11]) if row[11] else None,
+                            performance_metrics=json.loads(row[11])
+                            if row[11]
+                            else None,
                             error_details=row[12],
                             task_id=row[13],
                             correlation_id=row[14],
@@ -545,7 +583,9 @@ class AgentLogger:
 
         return self.get_logs_with_filter(log_filter)
 
-    def get_logs_by_session(self, session_id: str, limit: int = 100) -> List[AgentLogEntry]:
+    def get_logs_by_session(
+        self, session_id: str, limit: int = 100
+    ) -> List[AgentLogEntry]:
         """Get logs for a specific session.
 
         Args:
@@ -587,7 +627,10 @@ class AgentLogger:
             start_time = end_time - timedelta(hours=hours)
 
             log_filter = LogFilter(
-                start_time=start_time, end_time=end_time, include_performance=True, max_results=10000
+                start_time=start_time,
+                end_time=end_time,
+                include_performance=True,
+                max_results=10000,
             )
 
             logs = self.get_logs_with_filter(log_filter)
@@ -595,7 +638,9 @@ class AgentLogger:
             # Calculate summary statistics
             summary = {
                 "total_logs": len(logs),
-                "error_count": len([l for l in logs if l.level in [LogLevel.ERROR, LogLevel.CRITICAL]]),
+                "error_count": len(
+                    [l for l in logs if l.level in [LogLevel.ERROR, LogLevel.CRITICAL]]
+                ),
                 "warning_count": len([l for l in logs if l.level == LogLevel.WARNING]),
                 "agent_activity": {},
                 "action_distribution": {},
@@ -621,14 +666,17 @@ class AgentLogger:
 
                 if (
                     summary["agent_activity"][agent_name]["last_action"] is None
-                    or log.timestamp > summary["agent_activity"][agent_name]["last_action"]
+                    or log.timestamp
+                    > summary["agent_activity"][agent_name]["last_action"]
                 ):
                     summary["agent_activity"][agent_name]["last_action"] = log.timestamp
 
             # Action distribution
             for log in logs:
                 action = log.action.value
-                summary["action_distribution"][action] = summary["action_distribution"].get(action, 0) + 1
+                summary["action_distribution"][action] = (
+                    summary["action_distribution"].get(action, 0) + 1
+                )
 
             # Performance metrics
             perf_logs = [l for l in logs if l.performance_metrics]
@@ -660,7 +708,10 @@ class AgentLogger:
             cutoff_date = datetime.now() - timedelta(days=days)
 
             with sqlite3.connect(self.db_path) as conn:
-                conn.execute("DELETE FROM agent_logs WHERE timestamp < ?", (cutoff_date.isoformat(),))
+                conn.execute(
+                    "DELETE FROM agent_logs WHERE timestamp < ?",
+                    (cutoff_date.isoformat(),),
+                )
                 deleted_count = conn.total_changes
 
             logger.info(f"Cleared {deleted_count} old log entries")
@@ -684,7 +735,9 @@ class AgentLogger:
             end_date: End date for export
         """
         try:
-            log_filter = LogFilter(start_time=start_date, end_time=end_date, max_results=100000)
+            log_filter = LogFilter(
+                start_time=start_date, end_time=end_date, max_results=100000
+            )
 
             logs = self.get_logs_with_filter(log_filter)
 
@@ -739,7 +792,9 @@ class AgentLogger:
                 "task_priority": context.task_priority,
                 "memory_usage": context.memory_usage,
                 "cpu_usage": context.cpu_usage,
-                "last_heartbeat": context.last_heartbeat.isoformat() if context.last_heartbeat else None,
+                "last_heartbeat": context.last_heartbeat.isoformat()
+                if context.last_heartbeat
+                else None,
                 "dependencies": context.dependencies,
             }
 
@@ -756,6 +811,8 @@ def get_agent_logger() -> AgentLogger:
     return _agent_logger
 
 
-def log_agent_action(agent_name: str, action: AgentAction, message: str, **kwargs) -> Optional[AgentLogEntry]:
+def log_agent_action(
+    agent_name: str, action: AgentAction, message: str, **kwargs
+) -> Optional[AgentLogEntry]:
     """Convenience function to log an agent action."""
     return get_agent_logger().log_action(agent_name, action, message, **kwargs)

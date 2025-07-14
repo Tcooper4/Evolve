@@ -191,7 +191,9 @@ class DataQualityManager:
             self.logger.error(f"Failed to load schema: {e}")
             raise
 
-    def _validate_schema(self, data: PandasDataset, schema: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_schema(
+        self, data: PandasDataset, schema: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Validate data against schema."""
         results = []
         success = True
@@ -200,31 +202,56 @@ class DataQualityManager:
             # Validate column types
             for column, type_info in schema["columns"].items():
                 if column not in data.columns:
-                    results.append({"type": "error", "message": f"Column {column} not found in data"})
+                    results.append(
+                        {
+                            "type": "error",
+                            "message": f"Column {column} not found in data",
+                        }
+                    )
                     success = False
                     continue
 
                 if type_info["type"] == "numeric":
                     if not data[column].dtype in ["int64", "float64"]:
-                        results.append({"type": "error", "message": f"Column {column} is not numeric"})
+                        results.append(
+                            {
+                                "type": "error",
+                                "message": f"Column {column} is not numeric",
+                            }
+                        )
                         success = False
                 elif type_info["type"] == "categorical":
                     if not data[column].dtype == "object":
-                        results.append({"type": "error", "message": f"Column {column} is not categorical"})
+                        results.append(
+                            {
+                                "type": "error",
+                                "message": f"Column {column} is not categorical",
+                            }
+                        )
                         success = False
 
             # Validate constraints
             for constraint in schema.get("constraints", []):
                 if constraint["type"] == "unique":
-                    if not data.expect_column_values_to_be_unique(constraint["column"]).success:
+                    if not data.expect_column_values_to_be_unique(
+                        constraint["column"]
+                    ).success:
                         results.append(
-                            {"type": "error", "message": f"Column {constraint['column']} contains duplicate values"}
+                            {
+                                "type": "error",
+                                "message": f"Column {constraint['column']} contains duplicate values",
+                            }
                         )
                         success = False
                 elif constraint["type"] == "not_null":
-                    if not data.expect_column_values_to_not_be_null(constraint["column"]).success:
+                    if not data.expect_column_values_to_not_be_null(
+                        constraint["column"]
+                    ).success:
                         results.append(
-                            {"type": "error", "message": f"Column {constraint['column']} contains null values"}
+                            {
+                                "type": "error",
+                                "message": f"Column {constraint['column']} contains null values",
+                            }
                         )
                         success = False
                 elif constraint["type"] == "range":
@@ -232,7 +259,10 @@ class DataQualityManager:
                         constraint["column"], constraint["min"], constraint["max"]
                     ).success:
                         results.append(
-                            {"type": "error", "message": f"Column {constraint['column']} contains values outside range"}
+                            {
+                                "type": "error",
+                                "message": f"Column {constraint['column']} contains values outside range",
+                            }
                         )
                         success = False
 
@@ -252,16 +282,26 @@ class DataQualityManager:
                 missing_ratio = data[column].isnull().mean()
                 if missing_ratio > 0.1:  # More than 10% missing
                     results.append(
-                        {"type": "warning", "message": f"Column {column} has {missing_ratio:.2%} missing values"}
+                        {
+                            "type": "warning",
+                            "message": f"Column {column} has {missing_ratio:.2%} missing values",
+                        }
                     )
 
             # Check for outliers
             numeric_columns = data.select_dtypes(include=["int64", "float64"]).columns
             for column in numeric_columns:
-                z_scores = np.abs((data[column] - data[column].mean()) / data[column].std())
+                z_scores = np.abs(
+                    (data[column] - data[column].mean()) / data[column].std()
+                )
                 outlier_ratio = (z_scores > 3).mean()
                 if outlier_ratio > 0.05:  # More than 5% outliers
-                    results.append({"type": "warning", "message": f"Column {column} has {outlier_ratio:.2%} outliers"})
+                    results.append(
+                        {
+                            "type": "warning",
+                            "message": f"Column {column} has {outlier_ratio:.2%} outliers",
+                        }
+                    )
 
             # Check for data consistency
             for column in data.columns:
@@ -287,28 +327,39 @@ class DataQualityManager:
             cleaned_data = data.copy()
 
             # Handle missing values
-            numeric_columns = cleaned_data.select_dtypes(include=["int64", "float64"]).columns
+            numeric_columns = cleaned_data.select_dtypes(
+                include=["int64", "float64"]
+            ).columns
             categorical_columns = cleaned_data.select_dtypes(include=["object"]).columns
 
             # Impute numeric columns with mean
             if len(numeric_columns) > 0:
                 imputer = SimpleImputer(strategy="mean")
-                cleaned_data[numeric_columns] = imputer.fit_transform(cleaned_data[numeric_columns])
+                cleaned_data[numeric_columns] = imputer.fit_transform(
+                    cleaned_data[numeric_columns]
+                )
 
             # Impute categorical columns with mode
             if len(categorical_columns) > 0:
                 imputer = SimpleImputer(strategy="most_frequent")
-                cleaned_data[categorical_columns] = imputer.fit_transform(cleaned_data[categorical_columns])
+                cleaned_data[categorical_columns] = imputer.fit_transform(
+                    cleaned_data[categorical_columns]
+                )
 
             # Handle outliers
             for column in numeric_columns:
-                z_scores = np.abs((cleaned_data[column] - cleaned_data[column].mean()) / cleaned_data[column].std())
+                z_scores = np.abs(
+                    (cleaned_data[column] - cleaned_data[column].mean())
+                    / cleaned_data[column].std()
+                )
                 cleaned_data.loc[z_scores > 3, column] = cleaned_data[column].mean()
 
             # Scale numeric features
             if len(numeric_columns) > 0:
                 scaler = StandardScaler()
-                cleaned_data[numeric_columns] = scaler.fit_transform(cleaned_data[numeric_columns])
+                cleaned_data[numeric_columns] = scaler.fit_transform(
+                    cleaned_data[numeric_columns]
+                )
 
             return cleaned_data
         except Exception as e:
@@ -324,7 +375,8 @@ class DataQualityManager:
                 "dtypes": {col: str(dtype) for col, dtype in data.dtypes.items()},
                 "numeric_stats": data.describe().to_dict(),
                 "categorical_stats": {
-                    col: data[col].value_counts().to_dict() for col in data.select_dtypes(include=["object"]).columns
+                    col: data[col].value_counts().to_dict()
+                    for col in data.select_dtypes(include=["object"]).columns
                 },
             }
             return stats
@@ -336,7 +388,9 @@ class DataQualityManager:
         """Get data quality metrics."""
         try:
             metrics = {
-                "missing_values": {col: data[col].isnull().sum() for col in data.columns},
+                "missing_values": {
+                    col: data[col].isnull().sum() for col in data.columns
+                },
                 "unique_values": {col: data[col].nunique() for col in data.columns},
                 "duplicate_rows": data.duplicated().sum(),
             }
@@ -455,7 +509,9 @@ class DataQualityManager:
 def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="Data Quality Manager")
-    parser.add_argument("command", choices=["validate", "clean", "analyze"], help="Command to execute")
+    parser.add_argument(
+        "command", choices=["validate", "clean", "analyze"], help="Command to execute"
+    )
     parser.add_argument("--data-path", required=True, help="Path to input data file")
     parser.add_argument("--schema-path", help="Path to data schema file")
     parser.add_argument("--output-path", help="Path to output file")

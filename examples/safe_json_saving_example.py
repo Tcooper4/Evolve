@@ -11,10 +11,7 @@ from pathlib import Path
 # Add the project root to the path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from utils.safe_json_saver import (
-    safe_json_save,
-    safe_save_historical_data,
-)
+from utils.safe_json_saver import safe_json_save, safe_save_historical_data
 
 
 def example_basic_safe_saving():
@@ -25,7 +22,10 @@ def example_basic_safe_saving():
     valid_data = {
         "timestamp": "2024-01-15T10:30:00",
         "metrics": {"sharpe_ratio": 1.25, "max_drawdown": 0.15, "win_rate": 0.65},
-        "history": [{"date": "2024-01-14", "return": 0.02}, {"date": "2024-01-15", "return": 0.01}],
+        "history": [
+            {"date": "2024-01-14", "return": 0.02},
+            {"date": "2024-01-15", "return": 0.01},
+        ],
     }
 
     result = safe_json_save(valid_data, "examples/valid_data.json")
@@ -64,10 +64,18 @@ def example_historical_data_saving():
                 "metadata": {"strategy": "momentum"},
             },
         ],
-        "trends": {"sharpe_ratio": {"trend_direction": "improving", "trend_strength": 0.8, "period_days": 30}},
+        "trends": {
+            "sharpe_ratio": {
+                "trend_direction": "improving",
+                "trend_strength": 0.8,
+                "period_days": 30,
+            }
+        },
     }
 
-    result = safe_save_historical_data(historical_data, "examples/performance_history.json")
+    result = safe_save_historical_data(
+        historical_data, "examples/performance_history.json"
+    )
     print(f"Historical data save result: {result}")
 
     # Example 2: Invalid historical data (empty list)
@@ -92,7 +100,10 @@ def example_custom_validation():
             missing_fields = [field for field in required_fields if field not in data]
 
             if missing_fields:
-                return {"valid": False, "error": f"Missing required fields: {missing_fields}"}
+                return {
+                    "valid": False,
+                    "error": f"Missing required fields: {missing_fields}",
+                }
 
             # Check for reasonable values
             if data.get("price", 0) <= 0:
@@ -104,12 +115,19 @@ def example_custom_validation():
         return {"valid": True}
 
     # Valid trading data
-    valid_trading_data = {"symbol": "AAPL", "price": 150.25, "volume": 1000, "timestamp": "2024-01-15T10:30:00"}
+    valid_trading_data = {
+        "symbol": "AAPL",
+        "price": 150.25,
+        "volume": 1000,
+        "timestamp": "2024-01-15T10:30:00",
+    }
 
     from utils.safe_json_saver import safe_json_save_with_validation
 
     result = safe_json_save_with_validation(
-        valid_trading_data, "examples/trading_data.json", validation_func=validate_trading_data
+        valid_trading_data,
+        "examples/trading_data.json",
+        validation_func=validate_trading_data,
     )
     print(f"Valid trading data save result: {result}")
 
@@ -121,7 +139,9 @@ def example_custom_validation():
     }
 
     result = safe_json_save_with_validation(
-        invalid_trading_data, "examples/invalid_trading_data.json", validation_func=validate_trading_data
+        invalid_trading_data,
+        "examples/invalid_trading_data.json",
+        validation_func=validate_trading_data,
     )
     print(f"Invalid trading data save result: {result}")
 
@@ -132,12 +152,16 @@ def example_backup_protection():
 
     # Create initial data
     initial_data = {"version": 1, "data": "important information"}
-    result = safe_json_save(initial_data, "examples/backup_test.json", backup_existing=True)
+    result = safe_json_save(
+        initial_data, "examples/backup_test.json", backup_existing=True
+    )
     print(f"Initial save result: {result}")
 
     # Update data (this will create a backup of the previous version)
     updated_data = {"version": 2, "data": "updated information"}
-    result = safe_json_save(updated_data, "examples/backup_test.json", backup_existing=True)
+    result = safe_json_save(
+        updated_data, "examples/backup_test.json", backup_existing=True
+    )
     print(f"Updated save result: {result}")
 
     # Check if backup was created
@@ -172,7 +196,9 @@ def example_minimum_data_size():
         "metric5": "value5",
     }
 
-    result = safe_json_save(adequate_data, "examples/adequate_data.json", min_data_size=5)
+    result = safe_json_save(
+        adequate_data, "examples/adequate_data.json", min_data_size=5
+    )
     print(f"Adequate data save result: {result}")
 
 

@@ -52,7 +52,11 @@ class SessionManager:
         self.logger = logging.getLogger(__name__)
 
     async def create_session(
-        self, user_id: str, ip_address: str, user_agent: str, metadata: Optional[Dict] = None
+        self,
+        user_id: str,
+        ip_address: str,
+        user_agent: str,
+        metadata: Optional[Dict] = None,
     ) -> Session:
         """Create a new session for a user."""
         try:
@@ -82,7 +86,9 @@ class SessionManager:
             )
 
             # Store in Redis
-            await self.redis.set(f"session:{session_id}", session.json(), ex=self.session_expiry)
+            await self.redis.set(
+                f"session:{session_id}", session.json(), ex=self.session_expiry
+            )
 
             # Add to user's sessions
             await self.redis.sadd(f"user:sessions:{user_id}", session_id)
@@ -137,7 +143,9 @@ class SessionManager:
 
             # Update last activity
             session.last_activity = datetime.now()
-            await self.redis.set(f"session:{session_id}", session.json(), ex=self.session_expiry)
+            await self.redis.set(
+                f"session:{session_id}", session.json(), ex=self.session_expiry
+            )
 
             return True
 
@@ -177,7 +185,10 @@ class SessionManager:
 
     def _generate_token(self, user_id: str) -> str:
         """Generate a JWT token."""
-        payload = {"user_id": user_id, "exp": datetime.utcnow() + timedelta(seconds=self.token_expiry)}
+        payload = {
+            "user_id": user_id,
+            "exp": datetime.utcnow() + timedelta(seconds=self.token_expiry),
+        }
         return jwt.encode(payload, self.secret_key, algorithm="HS256")
 
     def verify_token(self, token: str) -> Optional[Dict]:

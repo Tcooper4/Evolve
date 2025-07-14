@@ -9,11 +9,7 @@ from cachetools import TTLCache
 from pydantic import BaseModel, Field
 from ratelimit import limits, sleep_and_retry
 
-from system.infra.agents.core.models.task import (
-    TaskPriority,
-    TaskStatus,
-    TaskType,
-)
+from system.infra.agents.core.models.task import TaskPriority, TaskStatus, TaskType
 from trading.automation_core import AutomationCore
 from trading.automation_tasks import AutomationTasks
 
@@ -58,7 +54,10 @@ class AutomationWorkflows:
     """Workflow management functionality."""
 
     def __init__(
-        self, core: AutomationCore, tasks: AutomationTasks, config_path: str = "automation/config/workflows.json"
+        self,
+        core: AutomationCore,
+        tasks: AutomationTasks,
+        config_path: str = "automation/config/workflows.json",
     ):
         """Initialize workflow management."""
         self.core = core
@@ -90,7 +89,10 @@ class AutomationWorkflows:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "workflows.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "workflows.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def setup_cache(self):
@@ -100,7 +102,11 @@ class AutomationWorkflows:
     @sleep_and_retry
     @limits(calls=100, period=60)
     async def create_workflow(
-        self, name: str, description: str, steps: List[WorkflowStep], metadata: Optional[Dict[str, Any]] = None
+        self,
+        name: str,
+        description: str,
+        steps: List[WorkflowStep],
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Create a new workflow."""
         try:

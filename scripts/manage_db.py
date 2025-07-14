@@ -201,7 +201,11 @@ class DatabaseManager:
 
             # Get memory usage
             info = self.redis_client.info()
-            memory_usage = info["used_memory"] / info["maxmemory"] * 100 if info["maxmemory"] > 0 else 0
+            memory_usage = (
+                info["used_memory"] / info["maxmemory"] * 100
+                if info["maxmemory"] > 0
+                else 0
+            )
 
             # Check memory usage
             if memory_usage > 80:
@@ -209,7 +213,9 @@ class DatabaseManager:
 
             # Check connected clients
             if info["connected_clients"] > 100:
-                self.logger.warning(f"High number of connected clients: {info['connected_clients']}")
+                self.logger.warning(
+                    f"High number of connected clients: {info['connected_clients']}"
+                )
 
             self.logger.info("Database health check completed")
             return True
@@ -255,7 +261,9 @@ def main():
 
     commands = {
         "backup": lambda: manager.backup_database(args.backup_name),
-        "restore": lambda: manager.restore_database(args.backup_name) if args.backup_name else False,
+        "restore": lambda: manager.restore_database(args.backup_name)
+        if args.backup_name
+        else False,
         "clear": manager.clear_database,
         "info": manager.get_database_info,
         "optimize": manager.optimize_database,

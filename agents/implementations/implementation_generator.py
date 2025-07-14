@@ -324,20 +324,34 @@ class {model_name}:
             return candidate
 
         except Exception as e:
-            logger.error(f"Error generating implementation for paper {paper.arxiv_id}: {e}")
+            logger.error(
+                f"Error generating implementation for paper {paper.arxiv_id}: {e}"
+            )
             return None
 
     def _classify_model_type(self, paper: ResearchPaper) -> str:
         """Classify the type of model based on paper content."""
         text_lower = (paper.title + " " + paper.abstract).lower()
 
-        if any(keyword in text_lower for keyword in ["transformer", "attention", "bert", "gpt"]):
+        if any(
+            keyword in text_lower
+            for keyword in ["transformer", "attention", "bert", "gpt"]
+        ):
             return "transformer"
-        elif any(keyword in text_lower for keyword in ["lstm", "rnn", "recurrent", "long short-term"]):
+        elif any(
+            keyword in text_lower
+            for keyword in ["lstm", "rnn", "recurrent", "long short-term"]
+        ):
             return "lstm"
-        elif any(keyword in text_lower for keyword in ["reinforcement", "q-learning", "policy gradient"]):
+        elif any(
+            keyword in text_lower
+            for keyword in ["reinforcement", "q-learning", "policy gradient"]
+        ):
             return "rl"
-        elif any(keyword in text_lower for keyword in ["ensemble", "voting", "bagging", "boosting"]):
+        elif any(
+            keyword in text_lower
+            for keyword in ["ensemble", "voting", "bagging", "boosting"]
+        ):
             return "ensemble"
         elif any(keyword in text_lower for keyword in ["attention", "self-attention"]):
             return "attention"
@@ -373,7 +387,9 @@ class {model_name}:
 
         return code
 
-    def _generate_hyperparameters(self, paper: ResearchPaper, model_type: str) -> Dict[str, Any]:
+    def _generate_hyperparameters(
+        self, paper: ResearchPaper, model_type: str
+    ) -> Dict[str, Any]:
         """Generate hyperparameters based on model type and paper content."""
         base_params = {"random_state": 42, "verbose": False}
 
@@ -401,7 +417,12 @@ class {model_name}:
                 "epochs": 100,
             }
         elif model_type == "ensemble":
-            params = {"n_estimators": 100, "max_depth": 10, "learning_rate": 0.1, "subsample": 0.8}
+            params = {
+                "n_estimators": 100,
+                "max_depth": 10,
+                "learning_rate": 0.1,
+                "subsample": 0.8,
+            }
         elif model_type == "rl":
             params = {
                 "state_size": 10,
@@ -417,10 +438,18 @@ class {model_name}:
         params.update(base_params)
         return params
 
-    def _estimate_performance(self, paper: ResearchPaper, model_type: str) -> Dict[str, float]:
+    def _estimate_performance(
+        self, paper: ResearchPaper, model_type: str
+    ) -> Dict[str, float]:
         """Estimate expected performance based on paper and model type."""
         # Base performance estimates
-        base_performance = {"mse": 0.1, "mae": 0.05, "r2_score": 0.7, "sharpe_ratio": 1.2, "max_drawdown": 0.15}
+        base_performance = {
+            "mse": 0.1,
+            "mae": 0.05,
+            "r2_score": 0.7,
+            "sharpe_ratio": 1.2,
+            "max_drawdown": 0.15,
+        }
 
         # Adjust based on complexity
         if paper.implementation_complexity == "high":
@@ -443,7 +472,11 @@ class {model_name}:
 
         # Ensure values are within reasonable bounds
         base_performance["r2_score"] = max(0.0, min(1.0, base_performance["r2_score"]))
-        base_performance["sharpe_ratio"] = max(0.0, min(3.0, base_performance["sharpe_ratio"]))
-        base_performance["max_drawdown"] = max(0.0, min(0.5, base_performance["max_drawdown"]))
+        base_performance["sharpe_ratio"] = max(
+            0.0, min(3.0, base_performance["sharpe_ratio"])
+        )
+        base_performance["max_drawdown"] = max(
+            0.0, min(0.5, base_performance["max_drawdown"])
+        )
 
         return base_performance

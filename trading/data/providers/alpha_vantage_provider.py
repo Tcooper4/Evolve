@@ -72,7 +72,12 @@ def cache_data(symbol: str, data: pd.DataFrame) -> None:
 
 def log_data_request(symbol: str, success: bool, error: Optional[str] = None) -> None:
     """Log data request details."""
-    log_entry = {"timestamp": datetime.now().isoformat(), "symbol": symbol, "success": success, "error": error}
+    log_entry = {
+        "timestamp": datetime.now().isoformat(),
+        "symbol": symbol,
+        "success": success,
+        "error": error,
+    }
 
     log_path = Path("memory/logs/data_requests.log")
     log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -83,7 +88,6 @@ def log_data_request(symbol: str, success: bool, error: Optional[str] = None) ->
 
 class AlphaVantageError(Exception):
     """Custom exception for Alpha Vantage API errors."""
-
 
 
 class RateLimiter:
@@ -116,7 +120,9 @@ class RateLimiter:
 class AlphaVantageProvider(BaseDataProvider):
     """Provider for fetching data from Alpha Vantage with fallback to Yahoo Finance."""
 
-    def __init__(self, config: Optional[ProviderConfig] = None, api_key: Optional[str] = None):
+    def __init__(
+        self, config: Optional[ProviderConfig] = None, api_key: Optional[str] = None
+    ):
         """Initialize the provider.
 
         Args:
@@ -135,11 +141,17 @@ class AlphaVantageProvider(BaseDataProvider):
             )
 
         super().__init__(config)
-        self.api_key = api_key or config.custom_config.get("api_key") if config.custom_config else None
+        self.api_key = (
+            api_key or config.custom_config.get("api_key")
+            if config.custom_config
+            else None
+        )
         if not self.api_key:
             raise ValueError("API key is required for Alpha Vantage provider")
 
-        self.delay = config.custom_config.get("delay", 1.0) if config.custom_config else 1.0
+        self.delay = (
+            config.custom_config.get("delay", 1.0) if config.custom_config else 1.0
+        )
         self.session = requests.Session()
         self.session.headers.update(
             {
@@ -156,7 +168,9 @@ class AlphaVantageProvider(BaseDataProvider):
                 import os
 
                 redis_password = os.getenv("REDIS_PASSWORD")
-                self.redis_client = redis.Redis(host="localhost", port=6379, db=0, password=redis_password)
+                self.redis_client = redis.Redis(
+                    host="localhost", port=6379, db=0, password=redis_password
+                )
                 self.redis_client.ping()
             except (redis.ConnectionError, redis.TimeoutError) as e:
                 self.logger.debug(f"Redis connection failed: {e}")
@@ -169,7 +183,9 @@ class AlphaVantageProvider(BaseDataProvider):
         """Setup method called during initialization."""
         # Only log if delay attribute exists
         if hasattr(self, "delay"):
-            self.logger.info(f"Initialized Alpha Vantage provider with delay: {self.delay}s")
+            self.logger.info(
+                f"Initialized Alpha Vantage provider with delay: {self.delay}s"
+            )
         else:
             self.logger.info("Initialized Alpha Vantage provider")
 
@@ -228,7 +244,10 @@ class AlphaVantageProvider(BaseDataProvider):
 
         except ValueError:
             # Response is not JSON
-            if "API call frequency" in response.text or "premium" in response.text.lower():
+            if (
+                "API call frequency" in response.text
+                or "premium" in response.text.lower()
+            ):
                 return True
             return False
         except Exception as e:
@@ -298,7 +317,9 @@ class AlphaVantageProvider(BaseDataProvider):
                     # Check for rate limit
                     if self._handle_rate_limit(response):
                         backoff = self._exponential_backoff(attempt)
-                        self.logger.warning(f"Rate limited, backing off for {backoff:.2f} seconds")
+                        self.logger.warning(
+                            f"Rate limited, backing off for {backoff:.2f} seconds"
+                        )
                         time.sleep(backoff)
                         continue
 
@@ -308,7 +329,9 @@ class AlphaVantageProvider(BaseDataProvider):
                         raise ValueError("Invalid response format")
 
                     # Convert to DataFrame
-                    df = pd.DataFrame.from_dict(data["Time Series (Daily)"], orient="index")
+                    df = pd.DataFrame.from_dict(
+                        data["Time Series (Daily)"], orient="index"
+                    )
                     df.index = pd.to_datetime(df.index)
                     df.columns = [col.split(". ")[1] for col in df.columns]
 
@@ -334,13 +357,17 @@ class AlphaVantageProvider(BaseDataProvider):
                     if attempt == MAX_RETRIES - 1:
                         raise
                     backoff = self._exponential_backoff(attempt)
-                    self.logger.warning(f"Request failed, backing off for {backoff:.2f} seconds: {e}")
+                    self.logger.warning(
+                        f"Request failed, backing off for {backoff:.2f} seconds: {e}"
+                    )
                     time.sleep(backoff)
 
         except Exception as e:
             error_msg = str(e)
             self._update_status_on_failure(error_msg)
-            self.logger.error(f"Error fetching data from Alpha Vantage for {symbol}: {error_msg}")
+            self.logger.error(
+                f"Error fetching data from Alpha Vantage for {symbol}: {error_msg}"
+            )
             log_data_request(symbol, False, error_msg)
 
             # Fallback to Yahoo Finance
@@ -350,12 +377,16 @@ class AlphaVantageProvider(BaseDataProvider):
                 log_data_request(symbol, True, "Fallback to Yahoo Finance successful")
                 return df
             except Exception as fallback_error:
-                error_msg = f"Both Alpha Vantage and Yahoo Finance failed: {fallback_error}"
+                error_msg = (
+                    f"Both Alpha Vantage and Yahoo Finance failed: {fallback_error}"
+                )
                 self.logger.error(error_msg)
                 log_data_request(symbol, False, error_msg)
                 raise RuntimeError(error_msg)
 
-    def fetch_multiple(self, symbols: List[str], interval: str = "1d", **kwargs) -> Dict[str, pd.DataFrame]:
+    def fetch_multiple(
+        self, symbols: List[str], interval: str = "1d", **kwargs
+    ) -> Dict[str, pd.DataFrame]:
         """Fetch data for multiple symbols with fallback.
 
         Args:
@@ -389,7 +420,11 @@ class AlphaVantageProvider(BaseDataProvider):
         return results
 
     def get_data(
-        self, symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None, interval: str = "1d"
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        interval: str = "1d",
     ) -> pd.DataFrame:
         """Legacy method for backward compatibility.
 
@@ -411,7 +446,11 @@ class AlphaVantageProvider(BaseDataProvider):
         return self.fetch(symbol, interval, **kwargs)
 
     def get_multiple_data(
-        self, symbols: list, start_date: Optional[str] = None, end_date: Optional[str] = None, interval: str = "1d"
+        self,
+        symbols: list,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        interval: str = "1d",
     ) -> Dict[str, pd.DataFrame]:
         """Legacy method for backward compatibility.
 
@@ -456,11 +495,17 @@ class AlphaVantageProvider(BaseDataProvider):
             self.rate_limiter.wait_if_needed()
 
             # Prepare request
-            params = {"function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": self.api_key}
+            params = {
+                "function": "GLOBAL_QUOTE",
+                "symbol": symbol,
+                "apikey": self.api_key,
+            }
 
             # Make request
             async with aiohttp.ClientSession() as session:
-                async with session.get("https://www.alphavantage.co/query", params=params) as response:
+                async with session.get(
+                    "https://www.alphavantage.co/query", params=params
+                ) as response:
                     response.raise_for_status()
                     data = await response.json()
 

@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Any, Dict
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Configuration
@@ -48,7 +50,12 @@ class NLPSandbox:
             self.processor = PromptProcessor()
 
             logger.info("Initializing LLMProcessor...")
-            llm_config = {"model": MODEL, "temperature": TEMPERATURE, "moderation": MODERATION, "max_tokens": 256}
+            llm_config = {
+                "model": MODEL,
+                "temperature": TEMPERATURE,
+                "moderation": MODERATION,
+                "max_tokens": 256,
+            }
             self.llm = LLMProcessor(llm_config)
 
             # Test model loading
@@ -73,14 +80,14 @@ class NLPSandbox:
             test_prompt = "Hello, this is a test."
 
             # Test prompt processing
-            entities = self.processor.extract_entities(test_prompt)
-            intent = self.processor.classify_intent(test_prompt)
+            self.processor.extract_entities(test_prompt)
+            self.processor.classify_intent(test_prompt)
 
             logger.info("Prompt processing test passed")
 
             # Test LLM processing (with timeout)
             try:
-                response = self.llm.process(test_prompt)
+                self.llm.process(test_prompt)
                 logger.info("LLM processing test passed")
             except Exception as e:
                 logger.warning(f"LLM processing test failed: {e}")
@@ -126,7 +133,9 @@ class NLPSandbox:
 
             # Route to agent
             try:
-                result["routed"] = self.processor.route_to_agent(result["entities"], result["intent"])
+                result["routed"] = self.processor.route_to_agent(
+                    result["entities"], result["intent"]
+                )
             except Exception as e:
                 error_msg = f"Agent routing failed: {e}"
                 logger.error(error_msg)
@@ -153,7 +162,11 @@ class NLPSandbox:
 
         except Exception as e:
             logger.error(f"Unexpected error in prompt processing: {e}")
-            return {"prompt": prompt, "error": f"Unexpected error: {e}", "success": False}
+            return {
+                "prompt": prompt,
+                "error": f"Unexpected error: {e}",
+                "success": False,
+            }
 
     def interactive_mode(self):
         """Run interactive mode with proper error handling."""

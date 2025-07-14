@@ -18,7 +18,11 @@ def fix_updater_agent():
     )
 
     # Fix other malformed return statements
-    content = re.sub(r"return \{'success': True, 'result': ([^,]+), 'message': [^}]+\}", r"return \1", content)
+    content = re.sub(
+        r"return \{'success': True, 'result': ([^,]+), 'message': [^}]+\}",
+        r"return \1",
+        content,
+    )
 
     with open("trading/agents/updater_agent.py", "w", encoding="utf-8") as f:
         f.write(content)
@@ -33,10 +37,16 @@ def fix_updater_utils():
 
     # Fix malformed return statements
     content = re.sub(
-        r"return \{'success': True, 'result': ([^,]+), ([^,]+), 'message': [^}]+\}", r"return \1, \2", content
+        r"return \{'success': True, 'result': ([^,]+), ([^,]+), 'message': [^}]+\}",
+        r"return \1, \2",
+        content,
     )
 
-    content = re.sub(r"return \{'success': True, 'result': ([^,]+), 'message': [^}]+\}", r"return \1", content)
+    content = re.sub(
+        r"return \{'success': True, 'result': ([^,]+), 'message': [^}]+\}",
+        r"return \1",
+        content,
+    )
 
     with open("trading/agents/updater/utils.py", "w", encoding="utf-8") as f:
         f.write(content)

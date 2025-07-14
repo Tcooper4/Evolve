@@ -18,7 +18,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -80,7 +79,9 @@ class ScheduledTask:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
         result = asdict(self)
-        result["func"] = self.func.__name__ if hasattr(self.func, "__name__") else str(self.func)
+        result["func"] = (
+            self.func.__name__ if hasattr(self.func, "__name__") else str(self.func)
+        )
         result["last_run"] = self.last_run.isoformat() if self.last_run else None
         result["next_run"] = self.next_run.isoformat() if self.next_run else None
         return result
@@ -89,7 +90,9 @@ class ScheduledTask:
 class TaskScheduler:
     """Advanced task scheduler with comprehensive features."""
 
-    def __init__(self, max_workers: int = 4, task_queue_size: int = 100, test_mode: bool = False):
+    def __init__(
+        self, max_workers: int = 4, task_queue_size: int = 100, test_mode: bool = False
+    ):
         """
         Initialize the task scheduler.
 
@@ -122,7 +125,9 @@ class TaskScheduler:
         signal.signal(signal.SIGTERM, self._signal_handler)
 
         mode_str = "TEST MODE" if test_mode else "NORMAL MODE"
-        self.logger.info(f"TaskScheduler initialized with {max_workers} workers in {mode_str}")
+        self.logger.info(
+            f"TaskScheduler initialized with {max_workers} workers in {mode_str}"
+        )
 
     def _signal_handler(self, signum, frame):
         """Handle shutdown signals."""
@@ -276,7 +281,9 @@ class TaskScheduler:
             self.workers.append(worker)
 
         # Start scheduler thread
-        self.scheduler_thread = threading.Thread(target=self._scheduler_loop, daemon=True)
+        self.scheduler_thread = threading.Thread(
+            target=self._scheduler_loop, daemon=True
+        )
         self.scheduler_thread.start()
 
         self.logger.info(f"Scheduler started with {self.max_workers} workers")
@@ -359,7 +366,7 @@ class TaskScheduler:
                     future = executor.submit(task.func)
                     result = future.result(timeout=task.timeout)
             else:
-                result = task.func()
+                task.func()
 
             # Task completed successfully
             task.status = TaskStatus.COMPLETED
@@ -369,7 +376,9 @@ class TaskScheduler:
             task.total_runtime += time.time() - start_time
 
             self.stats["successful_tasks"] += 1
-            self.logger.info(f"Task {task.name} completed successfully in {time.time() - start_time:.2f}s")
+            self.logger.info(
+                f"Task {task.name} completed successfully in {time.time() - start_time:.2f}s"
+            )
 
         except Exception as e:
             # Task failed
@@ -389,7 +398,9 @@ class TaskScheduler:
                 self.logger.info(f"Task {task.name} will be retried at {retry_time}")
             else:
                 task.status = TaskStatus.FAILED
-                self.logger.error(f"Task {task.name} failed permanently after {task.max_retries} retries")
+                self.logger.error(
+                    f"Task {task.name} failed permanently after {task.max_retries} retries"
+                )
 
         finally:
             self.stats["total_tasks_executed"] += 1
@@ -407,7 +418,9 @@ class TaskScheduler:
             elif task.schedule_type == ScheduleType.DAILY:
                 time_str = task.schedule_config.get("time", "00:00")
                 hour, minute = map(int, time_str.split(":"))
-                next_run = current_time.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                next_run = current_time.replace(
+                    hour=hour, minute=minute, second=0, microsecond=0
+                )
                 if next_run <= current_time:
                     next_run += timedelta(days=1)
                 return next_run
@@ -422,7 +435,9 @@ class TaskScheduler:
                     days_ahead += 7
 
                 next_run = current_time + timedelta(days=days_ahead)
-                next_run = next_run.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                next_run = next_run.replace(
+                    hour=hour, minute=minute, second=0, microsecond=0
+                )
                 return next_run
 
             elif task.schedule_type == ScheduleType.MONTHLY:
@@ -430,7 +445,9 @@ class TaskScheduler:
                 time_str = task.schedule_config.get("time", "00:00")
                 hour, minute = map(int, time_str.split(":"))
 
-                next_run = current_time.replace(day=day, hour=hour, minute=minute, second=0, microsecond=0)
+                next_run = current_time.replace(
+                    day=day, hour=hour, minute=minute, second=0, microsecond=0
+                )
                 if next_run <= current_time:
                     # Move to next month
                     if current_time.month == 12:
@@ -447,10 +464,14 @@ class TaskScheduler:
             return None
 
         except Exception as e:
-            self.logger.error(f"Error calculating next run time for task {task.name}: {e}")
+            self.logger.error(
+                f"Error calculating next run time for task {task.name}: {e}"
+            )
             return None
 
-    def _parse_cron_expression(self, cron_expr: str, current_time: datetime) -> datetime:
+    def _parse_cron_expression(
+        self, cron_expr: str, current_time: datetime
+    ) -> datetime:
         """Parse a simple cron expression and return next run time."""
         try:
             parts = cron_expr.split()
@@ -490,7 +511,9 @@ class TaskScheduler:
         """Save scheduler state to file."""
         try:
             state = {
-                "tasks": {task_id: task.to_dict() for task_id, task in self.tasks.items()},
+                "tasks": {
+                    task_id: task.to_dict() for task_id, task in self.tasks.items()
+                },
                 "stats": self.stats,
                 "timestamp": datetime.now().isoformat(),
             }
@@ -528,7 +551,9 @@ class TaskScheduler:
     def enable_test_mode(self) -> None:
         """Enable test mode to simulate scheduling without running jobs."""
         self.test_mode = True
-        self.logger.info("Test mode enabled - tasks will be simulated without execution")
+        self.logger.info(
+            "Test mode enabled - tasks will be simulated without execution"
+        )
 
     def disable_test_mode(self) -> None:
         """Disable test mode to allow normal task execution."""
@@ -545,7 +570,11 @@ class TaskScheduler:
             "test_mode_enabled": self.test_mode,
             "test_mode_executions": self.stats.get("test_mode_executions", 0),
             "simulated_tasks": len(
-                [t for t in self.tasks.values() if t.status == TaskStatus.COMPLETED and self.test_mode]
+                [
+                    t
+                    for t in self.tasks.values()
+                    if t.status == TaskStatus.COMPLETED and self.test_mode
+                ]
             ),
         }
 
@@ -566,18 +595,32 @@ def get_scheduler() -> TaskScheduler:
 
 
 def schedule_task(
-    task_id: str, name: str, func: Callable, schedule_type: ScheduleType, schedule_config: Dict[str, Any], **kwargs
+    task_id: str,
+    name: str,
+    func: Callable,
+    schedule_type: ScheduleType,
+    schedule_config: Dict[str, Any],
+    **kwargs,
 ) -> bool:
     """Schedule a task using the global scheduler."""
-    return get_scheduler().add_task(task_id, name, func, schedule_type, schedule_config, **kwargs)
+    return get_scheduler().add_task(
+        task_id, name, func, schedule_type, schedule_config, **kwargs
+    )
 
 
 async def schedule_task_async(
-    task_id: str, name: str, func: Callable, schedule_type: ScheduleType, schedule_config: Dict[str, Any], **kwargs
+    task_id: str,
+    name: str,
+    func: Callable,
+    schedule_type: ScheduleType,
+    schedule_config: Dict[str, Any],
+    **kwargs,
 ) -> bool:
     """Async convenience function to schedule a task."""
     scheduler = get_scheduler()
-    return scheduler.add_task(task_id, name, func, schedule_type, schedule_config, **kwargs)
+    return scheduler.add_task(
+        task_id, name, func, schedule_type, schedule_config, **kwargs
+    )
 
 
 def start_scheduler() -> None:
@@ -631,7 +674,9 @@ class UpdateScheduler:
 
             self.scheduler.start()
             self.running = True
-            self.logger.info(f"Update scheduler started with {self.check_interval} hour intervals")
+            self.logger.info(
+                f"Update scheduler started with {self.check_interval} hour intervals"
+            )
 
         except Exception as e:
             self.logger.error(f"Error starting update scheduler: {e}")

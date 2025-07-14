@@ -75,7 +75,9 @@ def smooth_weights(weights: dict, ticker: str):
     with open(WEIGHT_HISTORY_PATH, "r") as f:
         history = json.load(f)
 
-    df = pd.DataFrame([entry[ticker] for ts, entry in sorted(history.items()) if ticker in entry])
+    df = pd.DataFrame(
+        [entry[ticker] for ts, entry in sorted(history.items()) if ticker in entry]
+    )
 
     df = df.tail(5).append(weights, ignore_index=True)  # add current
     smoothed = df.ewm(span=3).mean().iloc[-1].to_dict()
@@ -166,7 +168,9 @@ def detect_weight_drift(history: dict, sensitivity=0.1):
             new = current[ticker].get(model, 0)
             drift = abs(new - old)
             if drift > sensitivity:
-                logger.warning(f"[DRIFT] {model} weight changed by {drift:.2f} on {ticker}")
+                logger.warning(
+                    f"[DRIFT] {model} weight changed by {drift:.2f} on {ticker}"
+                )
 
 
 def get_latest_weights():

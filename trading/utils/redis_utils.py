@@ -339,7 +339,9 @@ def with_redis_retry(max_retries: int = 3, delay: float = 1.0) -> Callable:
                 except (ConnectionError, TimeoutError) as e:
                     if attempt == max_retries - 1:
                         raise
-                    logger.warning(f"Redis operation failed (attempt {attempt + 1}/{max_retries}): {e}")
+                    logger.warning(
+                        f"Redis operation failed (attempt {attempt + 1}/{max_retries}): {e}"
+                    )
                     time.sleep(delay)
             return None
 

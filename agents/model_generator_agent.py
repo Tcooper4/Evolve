@@ -91,7 +91,12 @@ class BenchmarkResult:
 class ArxivResearchFetcher:
     """Fetches research papers from arXiv API."""
 
-    def __init__(self, search_terms: Optional[List[str]] = None, max_results: int = 100, days_back: int = 30):
+    def __init__(
+        self,
+        search_terms: Optional[List[str]] = None,
+        max_results: int = 100,
+        days_back: int = 30,
+    ):
         """Initialize research fetcher.
 
         Args:
@@ -118,7 +123,9 @@ class ArxivResearchFetcher:
         self.cache_file = Path("agents/research_cache.json")
         self._load_cache()
 
-        logger.info(f"Initialized ArxivResearchFetcher with {len(self.search_terms)} search terms")
+        logger.info(
+            f"Initialized ArxivResearchFetcher with {len(self.search_terms)} search terms"
+        )
 
     def _load_cache(self):
         """Load cached papers."""
@@ -140,7 +147,9 @@ class ArxivResearchFetcher:
         except Exception as e:
             logger.error(f"Error saving cache: {e}")
 
-    def _calculate_relevance_score(self, title: str, abstract: str, categories: List[str]) -> float:
+    def _calculate_relevance_score(
+        self, title: str, abstract: str, categories: List[str]
+    ) -> float:
         """Calculate relevance score for a paper."""
         score = 0.0
 
@@ -195,7 +204,13 @@ class ArxivResearchFetcher:
         complexity_indicators = {
             "low": ["simple", "linear", "regression", "basic", "traditional"],
             "medium": ["neural", "network", "ensemble", "gradient", "optimization"],
-            "high": ["transformer", "attention", "reinforcement", "complex", "advanced"],
+            "high": [
+                "transformer",
+                "attention",
+                "reinforcement",
+                "complex",
+                "advanced",
+            ],
         }
 
         text_lower = (title + " " + abstract).lower()
@@ -207,10 +222,18 @@ class ArxivResearchFetcher:
         # Return complexity with highest score
         return max(scores, key=scores.get)
 
-    def _assess_potential_impact(self, title: str, abstract: str, relevance_score: float) -> str:
+    def _assess_potential_impact(
+        self, title: str, abstract: str, relevance_score: float
+    ) -> str:
         """Assess potential impact of the research."""
         impact_indicators = {
-            "high": ["novel", "breakthrough", "state-of-the-art", "sota", "improvement"],
+            "high": [
+                "novel",
+                "breakthrough",
+                "state-of-the-art",
+                "sota",
+                "improvement",
+            ],
             "medium": ["improved", "enhanced", "better", "effective"],
             "low": ["comparison", "analysis", "study", "review"],
         }
@@ -249,14 +272,18 @@ class ArxivResearchFetcher:
                         xml_content = await response.text()
                         return self._parse_arxiv_xml(xml_content, search_term)
                     else:
-                        logger.warning(f"Failed to fetch papers for '{search_term}': {response.status}")
+                        logger.warning(
+                            f"Failed to fetch papers for '{search_term}': {response.status}"
+                        )
                         return []
 
         except Exception as e:
             logger.error(f"Error fetching papers for '{search_term}': {e}")
             return []
 
-    def _parse_arxiv_xml(self, xml_content: str, search_term: str) -> List[ResearchPaper]:
+    def _parse_arxiv_xml(
+        self, xml_content: str, search_term: str
+    ) -> List[ResearchPaper]:
         """Parse arXiv XML response."""
         papers = []
 
@@ -295,9 +322,15 @@ class ArxivResearchFetcher:
                         continue
 
                     # Calculate scores
-                    relevance_score = self._calculate_relevance_score(title, abstract, categories)
-                    implementation_complexity = self._assess_implementation_complexity(title, abstract)
-                    potential_impact = self._assess_potential_impact(title, abstract, relevance_score)
+                    relevance_score = self._calculate_relevance_score(
+                        title, abstract, categories
+                    )
+                    implementation_complexity = self._assess_implementation_complexity(
+                        title, abstract
+                    )
+                    potential_impact = self._assess_potential_impact(
+                        title, abstract, relevance_score
+                    )
 
                     # Create paper object
                     paper = ResearchPaper(
@@ -358,13 +391,16 @@ class ArxivResearchFetcher:
         relevant_papers = [
             paper
             for paper in all_papers
-            if paper.relevance_score > 0.3 and paper.potential_impact in ["medium", "high"]
+            if paper.relevance_score > 0.3
+            and paper.potential_impact in ["medium", "high"]
         ]
 
         # Sort by relevance score
         relevant_papers.sort(key=lambda x: x.relevance_score, reverse=True)
 
-        logger.info(f"Found {len(relevant_papers)} relevant papers out of {len(all_papers)} total")
+        logger.info(
+            f"Found {len(relevant_papers)} relevant papers out of {len(all_papers)} total"
+        )
         return relevant_papers[:50]  # Return top 50
 
 
@@ -503,20 +539,30 @@ class ModelImplementationGenerator:
             return candidate
 
         except Exception as e:
-            logger.error(f"Error generating implementation for paper {paper.arxiv_id}: {e}")
+            logger.error(
+                f"Error generating implementation for paper {paper.arxiv_id}: {e}"
+            )
             return None
 
     def _classify_model_type(self, paper: ResearchPaper) -> str:
         """Classify the type of model from paper content."""
         content = (paper.title + " " + paper.abstract).lower()
 
-        if any(term in content for term in ["lstm", "long short-term memory", "recurrent"]):
+        if any(
+            term in content for term in ["lstm", "long short-term memory", "recurrent"]
+        ):
             return "lstm"
-        elif any(term in content for term in ["transformer", "attention", "self-attention"]):
+        elif any(
+            term in content for term in ["transformer", "attention", "self-attention"]
+        ):
             return "transformer"
-        elif any(term in content for term in ["ensemble", "boosting", "bagging", "stacking"]):
+        elif any(
+            term in content for term in ["ensemble", "boosting", "bagging", "stacking"]
+        ):
             return "ensemble"
-        elif any(term in content for term in ["reinforcement", "rl", "q-learning", "policy"]):
+        elif any(
+            term in content for term in ["reinforcement", "rl", "q-learning", "policy"]
+        ):
             return "reinforcement"
         elif any(term in content for term in ["neural", "deep learning", "cnn", "mlp"]):
             return "transformer"  # Default to transformer for neural networks
@@ -545,7 +591,9 @@ model_config = {{
 """
         return code
 
-    def _generate_hyperparameters(self, paper: ResearchPaper, model_type: str) -> Dict[str, Any]:
+    def _generate_hyperparameters(
+        self, paper: ResearchPaper, model_type: str
+    ) -> Dict[str, Any]:
         """Generate hyperparameters based on paper and model type."""
         base_params = {"random_state": 42, "verbose": True}
 
@@ -573,16 +621,38 @@ model_config = {{
                 }
             )
         elif model_type == "ensemble":
-            base_params.update({"n_estimators": 100, "max_depth": 10, "learning_rate": 0.1, "subsample": 0.8})
+            base_params.update(
+                {
+                    "n_estimators": 100,
+                    "max_depth": 10,
+                    "learning_rate": 0.1,
+                    "subsample": 0.8,
+                }
+            )
         elif model_type == "sklearn":
-            base_params.update({"n_estimators": 100, "max_depth": 10, "min_samples_split": 2, "min_samples_leaf": 1})
+            base_params.update(
+                {
+                    "n_estimators": 100,
+                    "max_depth": 10,
+                    "min_samples_split": 2,
+                    "min_samples_leaf": 1,
+                }
+            )
 
         return base_params
 
-    def _estimate_performance(self, paper: ResearchPaper, model_type: str) -> Dict[str, float]:
+    def _estimate_performance(
+        self, paper: ResearchPaper, model_type: str
+    ) -> Dict[str, float]:
         """Estimate expected performance based on paper and model type."""
         # Base estimates
-        base_performance = {"mse": 0.01, "mae": 0.08, "r2_score": 0.7, "sharpe_ratio": 1.2, "max_drawdown": 0.15}
+        base_performance = {
+            "mse": 0.01,
+            "mae": 0.08,
+            "r2_score": 0.7,
+            "sharpe_ratio": 1.2,
+            "max_drawdown": 0.15,
+        }
 
         # Adjust based on paper characteristics
         if paper.potential_impact == "high":
@@ -602,7 +672,12 @@ model_config = {{
 class ModelBenchmarker:
     """Benchmarks model performance against current best."""
 
-    def __init__(self, benchmark_data: pd.DataFrame, target_column: str = "returns", current_best_score: float = 1.0):
+    def __init__(
+        self,
+        benchmark_data: pd.DataFrame,
+        target_column: str = "returns",
+        current_best_score: float = 1.0,
+    ):
         """Initialize benchmarker.
 
         Args:
@@ -617,7 +692,9 @@ class ModelBenchmarker:
         # Performance history
         self.benchmark_history = []
 
-        logger.info(f"Initialized Model Benchmarker with current best score: {current_best_score}")
+        logger.info(
+            f"Initialized Model Benchmarker with current best score: {current_best_score}"
+        )
 
     def benchmark_model(
         self, model_candidate: ModelCandidate, test_data: Optional[pd.DataFrame] = None
@@ -635,7 +712,7 @@ class ModelBenchmarker:
             test_data = self.benchmark_data
 
         try:
-            start_time = time.time()
+            time.time()
 
             # Prepare data
             X, y = self._prepare_benchmark_data(test_data)
@@ -655,7 +732,8 @@ class ModelBenchmarker:
             self.benchmark_history.append(result)
 
             logger.info(
-                f"Benchmark completed for {model_candidate.name}: " f"Overall score = {result.overall_score:.3f}"
+                f"Benchmark completed for {model_candidate.name}: "
+                f"Overall score = {result.overall_score:.3f}"
             )
 
             return result
@@ -676,7 +754,9 @@ class ModelBenchmarker:
                 benchmark_date=datetime.now().isoformat(),
             )
 
-    def _prepare_benchmark_data(self, data: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    def _prepare_benchmark_data(
+        self, data: pd.DataFrame
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Prepare data for benchmarking."""
         # Select features
         feature_columns = [col for col in data.columns if col != self.target_column]
@@ -733,7 +813,9 @@ class ModelBenchmarker:
             r2_scores.append(r2_score(y_test, y_pred))
 
         # Calculate trading metrics
-        sharpe_ratio, max_drawdown = self._calculate_trading_metrics(y, model.predict(X))
+        sharpe_ratio, max_drawdown = self._calculate_trading_metrics(
+            y, model.predict(X)
+        )
 
         return BenchmarkResult(
             model_name=model_candidate.name,
@@ -793,12 +875,14 @@ class ModelBenchmarker:
             benchmark_date=datetime.now().isoformat(),
         )
 
-    def _calculate_trading_metrics(self, y_true: np.ndarray, y_pred: np.ndarray) -> Tuple[float, float]:
+    def _calculate_trading_metrics(
+        self, y_true: np.ndarray, y_pred: np.ndarray
+    ) -> Tuple[float, float]:
         """Calculate trading-specific metrics."""
         try:
             # Calculate returns
             returns = np.diff(y_true)
-            pred_returns = np.diff(y_pred)
+            np.diff(y_pred)
 
             # Sharpe ratio
             if len(returns) > 0 and returns.std() > 0:
@@ -873,7 +957,9 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
         # Initialize components
         self.research_fetcher = ArxivResearchFetcher()
         self.model_generator = ModelImplementationGenerator()
-        self.benchmarker = ModelBenchmarker(benchmark_data, target_column, current_best_score)
+        self.benchmarker = ModelBenchmarker(
+            benchmark_data, target_column, current_best_score
+        )
 
         # Results storage
         self.candidates = []
@@ -904,7 +990,9 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
                     self.candidates = data.get("candidates", [])
                     self.benchmark_results = data.get("benchmark_results", [])
                     self.deployed_models = data.get("deployed_models", [])
-                logger.info(f"Loaded {len(self.candidates)} previous models from storage")
+                logger.info(
+                    f"Loaded {len(self.candidates)} previous models from storage"
+                )
         except Exception as e:
             logger.warning(f"Could not load previous models: {e}")
 
@@ -939,7 +1027,11 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
         """
         try:
             if not self.validate_input(prompt, **kwargs):
-                return AgentResult(success=False, message="Invalid input parameters", data={"error": "Invalid input"})
+                return AgentResult(
+                    success=False,
+                    message="Invalid input parameters",
+                    data={"error": "Invalid input"},
+                )
 
             # Parse parameters from prompt or kwargs
             improvement_threshold = kwargs.get("improvement_threshold", 0.1)
@@ -1007,21 +1099,29 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
 
         return results
 
-    def select_best_models(self, improvement_threshold: float = 0.1) -> List[BenchmarkResult]:
+    def select_best_models(
+        self, improvement_threshold: float = 0.1
+    ) -> List[BenchmarkResult]:
         """Select models that improve over current best."""
         if not self.benchmark_results:
             return []
 
         # Sort by overall score
-        sorted_results = sorted(self.benchmark_results, key=lambda x: x.overall_score, reverse=True)
+        sorted_results = sorted(
+            self.benchmark_results, key=lambda x: x.overall_score, reverse=True
+        )
 
         # Select models that improve over current best
         best_models = []
         for result in sorted_results:
-            if result.overall_score > self.current_best_score * (1 + improvement_threshold):
+            if result.overall_score > self.current_best_score * (
+                1 + improvement_threshold
+            ):
                 best_models.append(result)
 
-        logger.info(f"Selected {len(best_models)} models that improve over current best")
+        logger.info(
+            f"Selected {len(best_models)} models that improve over current best"
+        )
         return best_models
 
     def deploy_models(self, selected_models: List[BenchmarkResult]) -> List[str]:
@@ -1031,7 +1131,9 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
         for result in selected_models:
             try:
                 # Find corresponding candidate
-                candidate = next((c for c in self.candidates if c.name == result.model_name), None)
+                candidate = next(
+                    (c for c in self.candidates if c.name == result.model_name), None
+                )
 
                 if candidate:
                     # Save model implementation
@@ -1073,7 +1175,9 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
         self.deployed_models.extend(deployed)
         return deployed
 
-    async def run_evolution_cycle(self, improvement_threshold: float = 0.1) -> Dict[str, Any]:
+    async def run_evolution_cycle(
+        self, improvement_threshold: float = 0.1
+    ) -> Dict[str, Any]:
         """Run complete evolution cycle."""
         logger.info("Starting evolution cycle...")
 
@@ -1097,19 +1201,29 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
                 "candidates_benchmarked": len(benchmark_results),
                 "models_selected": len(best_models),
                 "models_deployed": len(deployed_models),
-                "best_score": max([r.overall_score for r in benchmark_results]) if benchmark_results else 0.0,
-                "improvement_over_current": max([r.overall_score for r in benchmark_results]) - self.current_best_score
+                "best_score": max([r.overall_score for r in benchmark_results])
+                if benchmark_results
+                else 0.0,
+                "improvement_over_current": max(
+                    [r.overall_score for r in benchmark_results]
+                )
+                - self.current_best_score
                 if benchmark_results
                 else 0.0,
                 "deployed_models": deployed_models,
             }
 
             # Save cycle results
-            cycle_path = self.output_dir / f"evolution_cycle_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            cycle_path = (
+                self.output_dir
+                / f"evolution_cycle_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            )
             with open(cycle_path, "w") as f:
                 json.dump(results, f, indent=2, default=str)
 
-            logger.info(f"Evolution cycle completed. Deployed {len(deployed_models)} new models")
+            logger.info(
+                f"Evolution cycle completed. Deployed {len(deployed_models)} new models"
+            )
             return results
 
         except Exception as e:
@@ -1118,7 +1232,9 @@ class AutoEvolutionaryModelGenerator(BaseAgent):
 
 
 async def run_model_evolution(
-    benchmark_data: pd.DataFrame, target_column: str = "returns", current_best_score: float = 1.0
+    benchmark_data: pd.DataFrame,
+    target_column: str = "returns",
+    current_best_score: float = 1.0,
 ) -> Dict[str, Any]:
     """Run model evolution process.
 
@@ -1150,7 +1266,9 @@ async def run_model_evolution(
 
 
 def run_model_evolution_sync(
-    benchmark_data: pd.DataFrame, target_column: str = "returns", current_best_score: float = 1.0
+    benchmark_data: pd.DataFrame,
+    target_column: str = "returns",
+    current_best_score: float = 1.0,
 ) -> Dict[str, Any]:
     """Synchronous wrapper for model evolution process.
 
@@ -1163,7 +1281,9 @@ def run_model_evolution_sync(
         Evolution results
     """
     try:
-        return asyncio.run(run_model_evolution(benchmark_data, target_column, current_best_score))
+        return asyncio.run(
+            run_model_evolution(benchmark_data, target_column, current_best_score)
+        )
     except Exception as e:
         logger.error(f"Error in model evolution: {e}")
         return {"error": str(e)}

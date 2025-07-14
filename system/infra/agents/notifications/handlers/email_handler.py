@@ -11,7 +11,13 @@ logger = logging.getLogger(__name__)
 
 class EmailHandler:
     def __init__(
-        self, smtp_host: str, smtp_port: int, username: str, password: str, from_email: str, use_tls: bool = True
+        self,
+        smtp_host: str,
+        smtp_port: int,
+        username: str,
+        password: str,
+        from_email: str,
+        use_tls: bool = True,
     ):
         self.smtp_host = smtp_host
         self.smtp_port = smtp_port
@@ -71,7 +77,9 @@ class EmailHandler:
     async def _send_email(self, message: MIMEMultipart) -> None:
         """Send the email message."""
         try:
-            async with aiosmtplib.SMTP(hostname=self.smtp_host, port=self.smtp_port, use_tls=self.use_tls) as smtp:
+            async with aiosmtplib.SMTP(
+                hostname=self.smtp_host, port=self.smtp_port, use_tls=self.use_tls
+            ) as smtp:
                 await smtp.login(self.username, self.password)
                 await smtp.send_message(message)
         except Exception as e:

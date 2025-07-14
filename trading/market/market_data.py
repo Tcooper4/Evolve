@@ -24,20 +24,16 @@ class MarketDataError(Exception):
     """Base exception for market data errors."""
 
 
-
 class NetworkError(MarketDataError):
     """Network-related errors."""
-
 
 
 class ValidationError(MarketDataError):
     """Data validation errors."""
 
 
-
 class FormatError(MarketDataError):
     """Data format errors."""
-
 
 
 class MarketData:
@@ -50,7 +46,9 @@ class MarketData:
         self.logger = logging.getLogger(self.__class__.__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.INFO)
@@ -74,23 +72,40 @@ class MarketData:
             if field not in self.config:
                 raise ValueError(f"Missing required config field: {field}")
 
-        if not isinstance(self.config["cache_size"], int) or self.config["cache_size"] <= 0:
+        if (
+            not isinstance(self.config["cache_size"], int)
+            or self.config["cache_size"] <= 0
+        ):
             raise ValueError("cache_size must be a positive integer")
 
-        if not isinstance(self.config["update_threshold"], int) or self.config["update_threshold"] <= 0:
+        if (
+            not isinstance(self.config["update_threshold"], int)
+            or self.config["update_threshold"] <= 0
+        ):
             raise ValueError("update_threshold must be a positive integer")
 
-        if not isinstance(self.config["max_retries"], int) or self.config["max_retries"] <= 0:
+        if (
+            not isinstance(self.config["max_retries"], int)
+            or self.config["max_retries"] <= 0
+        ):
             raise ValueError("max_retries must be a positive integer")
 
     def _classify_error(self, error: Exception) -> str:
         """Classify error into categories."""
         error_str = str(error).lower()
-        if any(network_term in error_str for network_term in ["connection", "timeout", "network", "http"]):
+        if any(
+            network_term in error_str
+            for network_term in ["connection", "timeout", "network", "http"]
+        ):
             return "network"
-        elif any(validation_term in error_str for validation_term in ["validation", "invalid", "missing"]):
+        elif any(
+            validation_term in error_str
+            for validation_term in ["validation", "invalid", "missing"]
+        ):
             return "validation"
-        elif any(format_term in error_str for format_term in ["format", "parse", "json"]):
+        elif any(
+            format_term in error_str for format_term in ["format", "parse", "json"]
+        ):
             return "format"
         return "other"
 
@@ -120,7 +135,12 @@ class MarketData:
         """Calculate exponential backoff delay."""
         return min(300, (2**attempt) + np.random.uniform(0, 1))
 
-    def fetch_data(self, symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
+    def fetch_data(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> pd.DataFrame:
         """Fetch market data with fallback mechanisms."""
         start_time = time.time()
         attempt = 0
@@ -140,7 +160,9 @@ class MarketData:
                 # Calculate metrics
                 fetch_time = time.time() - start_time
                 row_count = len(data)
-                missing_ratio = data.isnull().sum().sum() / (data.shape[0] * data.shape[1])
+                missing_ratio = data.isnull().sum().sum() / (
+                    data.shape[0] * data.shape[1]
+                )
 
                 # Log metrics if enabled
                 if self.config.get("metrics_enabled", False):
@@ -171,7 +193,9 @@ class MarketData:
                     # Try fallback to Alpha Vantage
                     if self.alpha_vantage and error_type == "network":
                         try:
-                            data, _ = self.alpha_vantage.get_daily(symbol=symbol, outputsize="full")
+                            data, _ = self.alpha_vantage.get_daily(
+                                symbol=symbol, outputsize="full"
+                            )
                             data = pd.DataFrame(data).astype(float)
                             data.index = pd.to_datetime(data.index)
                             return data
@@ -183,9 +207,13 @@ class MarketData:
                 else:
                     # If all retries failed, try to return cached data
                     if symbol in self.cache:
-                        self.logger.warning(f"Using cached data for {symbol} after {attempt} failed attempts")
+                        self.logger.warning(
+                            f"Using cached data for {symbol} after {attempt} failed attempts"
+                        )
                         return self.cache[symbol]
-                    raise MarketDataError(f"Failed to fetch data for {symbol} after {attempt} attempts")
+                    raise MarketDataError(
+                        f"Failed to fetch data for {symbol} after {attempt} attempts"
+                    )
 
     def auto_update_all(self) -> Dict[str, Any]:
         """Auto-update all cached symbols that exceed update threshold."""
@@ -258,7 +286,9 @@ class MarketData:
         if not data.index.is_monotonic_increasing:
             raise ValueError("Data index must be sorted in ascending order")
 
-    def add_data(self, symbol: str, data: pd.DataFrame, metadata: Optional[Dict[str, Any]] = None) -> None:
+    def add_data(
+        self, symbol: str, data: pd.DataFrame, metadata: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Add market data for a symbol.
 
         Args:
@@ -276,7 +306,12 @@ class MarketData:
             self.logger.error(f"Error adding data for {symbol}: {str(e)}")
             raise
 
-    def get_data(self, symbol: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> pd.DataFrame:
+    def get_data(
+        self,
+        symbol: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+    ) -> pd.DataFrame:
         """Get market data for a symbol.
 
         Args:
@@ -320,7 +355,9 @@ class MarketData:
             if symbol in self.cache:
                 # Merge new data with existing data
                 self.cache[symbol] = pd.concat([self.cache[symbol], new_data])
-                self.cache[symbol] = self.cache[symbol][~self.cache[symbol].index.duplicated(keep="last")]
+                self.cache[symbol] = self.cache[symbol][
+                    ~self.cache[symbol].index.duplicated(keep="last")
+                ]
                 self.cache[symbol] = self.cache[symbol].sort_index()
             else:
                 self.cache[symbol] = new_data

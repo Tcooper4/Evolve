@@ -14,10 +14,7 @@ import pandas as pd
 warnings.filterwarnings("ignore")
 
 
-from .rsi_utils import (
-    generate_rsi_signals_core,
-    validate_rsi_parameters,
-)
+from .rsi_utils import generate_rsi_signals_core, validate_rsi_parameters
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -58,7 +55,9 @@ def validate_dataframe_index(df: pd.DataFrame) -> bool:
     return True
 
 
-def align_signals_with_index(signals: pd.DataFrame, original_index: pd.DatetimeIndex) -> pd.DataFrame:
+def align_signals_with_index(
+    signals: pd.DataFrame, original_index: pd.DatetimeIndex
+) -> pd.DataFrame:
     """Ensure signals DataFrame aligns with original index after transformations.
 
     Args:
@@ -79,7 +78,12 @@ def align_signals_with_index(signals: pd.DataFrame, original_index: pd.DatetimeI
         # For numeric columns, forward fill then backward fill
         numeric_columns = aligned_signals.select_dtypes(include=[np.number]).columns
         for col in numeric_columns:
-            aligned_signals[col] = aligned_signals[col].fillna(method="ffill").fillna(method="bfill").fillna(0)
+            aligned_signals[col] = (
+                aligned_signals[col]
+                .fillna(method="ffill")
+                .fillna(method="bfill")
+                .fillna(0)
+            )
 
         # For non-numeric columns, fill with appropriate defaults
         non_numeric_columns = aligned_signals.select_dtypes(exclude=[np.number]).columns
@@ -89,7 +93,9 @@ def align_signals_with_index(signals: pd.DataFrame, original_index: pd.DatetimeI
             else:
                 aligned_signals[col] = aligned_signals[col].fillna("")
 
-        logger.debug(f"Aligned signals from {len(signals)} to {len(aligned_signals)} rows")
+        logger.debug(
+            f"Aligned signals from {len(signals)} to {len(aligned_signals)} rows"
+        )
         return aligned_signals
 
     except Exception as e:
@@ -122,7 +128,9 @@ def validate_empty_slices(df: pd.DataFrame, period: int) -> bool:
         if col in df.columns:
             non_null_count = df[col].notna().sum()
             if non_null_count < period:
-                logger.error(f"Insufficient non-null values in {col}: {non_null_count}, need at least {period}")
+                logger.error(
+                    f"Insufficient non-null values in {col}: {non_null_count}, need at least {period}"
+                )
                 return False
 
     return True
@@ -208,13 +216,18 @@ def generate_rsi_signals(
                 logger.info(f"Using optimized RSI settings for {ticker}")
 
         # Validate parameters
-        is_valid, error_msg = validate_rsi_parameters(period, buy_threshold, sell_threshold)
+        is_valid, error_msg = validate_rsi_parameters(
+            period, buy_threshold, sell_threshold
+        )
         if not is_valid:
             raise ValueError(f"Invalid RSI parameters: {error_msg}")
 
         # Use shared core function
         result_df = generate_rsi_signals_core(
-            df, period=period, buy_threshold=buy_threshold, sell_threshold=sell_threshold
+            df,
+            period=period,
+            buy_threshold=buy_threshold,
+            sell_threshold=sell_threshold,
         )
 
         # Ensure signals align with original index
@@ -225,7 +238,9 @@ def generate_rsi_signals(
             raise ValueError("Generated signals DataFrame is empty")
 
         if len(result_df) != len(original_index):
-            logger.warning(f"Signal length mismatch: {len(result_df)} vs {len(original_index)}")
+            logger.warning(
+                f"Signal length mismatch: {len(result_df)} vs {len(original_index)}"
+            )
 
         return result_df
 
@@ -275,7 +290,11 @@ def generate_signals(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
 
         # Generate RSI signals
         result_df = generate_rsi_signals(
-            df, ticker=ticker, period=period, buy_threshold=buy_threshold, sell_threshold=sell_threshold
+            df,
+            ticker=ticker,
+            period=period,
+            buy_threshold=buy_threshold,
+            sell_threshold=sell_threshold,
         )
 
         # Ensure we have all required columns
@@ -288,7 +307,12 @@ def generate_signals(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         # Add metadata columns
         result_df["strategy_name"] = "RSI"
         result_df["strategy_params"] = json.dumps(
-            {"period": period, "buy_threshold": buy_threshold, "sell_threshold": sell_threshold, "ticker": ticker}
+            {
+                "period": period,
+                "buy_threshold": buy_threshold,
+                "sell_threshold": sell_threshold,
+                "ticker": ticker,
+            }
         )
 
         # Final validation
@@ -296,7 +320,9 @@ def generate_signals(df: pd.DataFrame, **kwargs) -> pd.DataFrame:
             logger.warning("Duplicate indices in final result, removing duplicates")
             result_df = result_df[~result_df.index.duplicated(keep="first")]
 
-        logger.info(f"Successfully generated RSI signals for {len(result_df)} data points")
+        logger.info(
+            f"Successfully generated RSI signals for {len(result_df)} data points"
+        )
         return result_df
 
     except Exception as e:
@@ -322,7 +348,9 @@ def calculate_rsi_fallback(prices: pd.Series, period: int = 14) -> pd.Series:
             raise ValueError("Price series is None or empty")
 
         if len(prices) < period:
-            raise ValueError(f"Insufficient data: {len(prices)} points, need at least {period}")
+            raise ValueError(
+                f"Insufficient data: {len(prices)} points, need at least {period}"
+            )
 
         # Store original index
         original_index = prices.index.copy()

@@ -65,7 +65,9 @@ class TradingEnvironment:
         # Define action and observation spaces
         if GYMNASIUM_AVAILABLE:
             self.action_space = spaces.Discrete(3)  # Buy, Sell, Hold
-            self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(10,), dtype=np.float32)
+            self.observation_space = spaces.Box(
+                low=-np.inf, high=np.inf, shape=(10,), dtype=np.float32
+            )
         else:
             self.action_space = None
             self.observation_space = None
@@ -177,7 +179,11 @@ class TradingEnvironment:
 
         # Calculate return
         if self.current_step > 0:
-            prev_value = self.total_value - self.returns[-1] if self.returns else self.initial_balance
+            prev_value = (
+                self.total_value - self.returns[-1]
+                if self.returns
+                else self.initial_balance
+            )
             return_val = (self.total_value - prev_value) / prev_value
             self.returns.append(return_val)
         else:
@@ -246,7 +252,9 @@ class TrainingCallback(BaseCallback):
                 pass
 
 
-def create_rl_environment(data: pd.DataFrame, config: Optional[Dict[str, Any]] = None) -> TradingEnvironment:
+def create_rl_environment(
+    data: pd.DataFrame, config: Optional[Dict[str, Any]] = None
+) -> TradingEnvironment:
     """Create RL trading environment.
 
     Args:
@@ -265,7 +273,10 @@ def create_rl_environment(data: pd.DataFrame, config: Optional[Dict[str, Any]] =
     max_position = config.get("max_position", 0.2)
 
     return TradingEnvironment(
-        data=data, initial_balance=initial_balance, transaction_fee=transaction_fee, max_position=max_position
+        data=data,
+        initial_balance=initial_balance,
+        transaction_fee=transaction_fee,
+        max_position=max_position,
     )
 
 
@@ -319,7 +330,9 @@ def train_rl_strategy(
         return None
 
 
-def evaluate_rl_strategy(model: Any, env: TradingEnvironment, num_episodes: int = 10) -> Dict[str, float]:
+def evaluate_rl_strategy(
+    model: Any, env: TradingEnvironment, num_episodes: int = 10
+) -> Dict[str, float]:
     """Evaluate trained RL strategy.
 
     Args:
@@ -360,7 +373,9 @@ def evaluate_rl_strategy(model: Any, env: TradingEnvironment, num_episodes: int 
             "mean_return": np.mean(total_returns),
             "std_return": np.std(total_returns),
             "mean_final_value": np.mean(final_values),
-            "sharpe_ratio": np.mean(total_returns) / np.std(total_returns) if np.std(total_returns) > 0 else 0,
+            "sharpe_ratio": np.mean(total_returns) / np.std(total_returns)
+            if np.std(total_returns) > 0
+            else 0,
         }
 
         logger.info(f"RL strategy evaluation: {metrics}")

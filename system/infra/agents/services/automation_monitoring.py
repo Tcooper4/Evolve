@@ -69,20 +69,35 @@ class AutomationMonitoring:
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(log_path / "monitoring.log"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(log_path / "monitoring.log"),
+                logging.StreamHandler(),
+            ],
         )
 
     def setup_metrics(self):
         """Setup Prometheus metrics."""
         # Task metrics
-        self.task_counter = Counter("automation_tasks_total", "Total number of tasks", ["type", "status"])
-        self.task_duration = Histogram("automation_task_duration_seconds", "Task execution duration", ["type"])
-        self.task_queue_size = Gauge("automation_task_queue_size", "Number of tasks in queue")
+        self.task_counter = Counter(
+            "automation_tasks_total", "Total number of tasks", ["type", "status"]
+        )
+        self.task_duration = Histogram(
+            "automation_task_duration_seconds", "Task execution duration", ["type"]
+        )
+        self.task_queue_size = Gauge(
+            "automation_task_queue_size", "Number of tasks in queue"
+        )
 
         # Workflow metrics
-        self.workflow_counter = Counter("automation_workflows_total", "Total number of workflows", ["status"])
-        self.workflow_duration = Histogram("automation_workflow_duration_seconds", "Workflow execution duration")
-        self.workflow_queue_size = Gauge("automation_workflow_queue_size", "Number of workflows in queue")
+        self.workflow_counter = Counter(
+            "automation_workflows_total", "Total number of workflows", ["status"]
+        )
+        self.workflow_duration = Histogram(
+            "automation_workflow_duration_seconds", "Workflow execution duration"
+        )
+        self.workflow_queue_size = Gauge(
+            "automation_workflow_queue_size", "Number of workflows in queue"
+        )
 
         # System metrics
         self.cpu_usage = Gauge("automation_cpu_usage", "CPU usage percentage")
@@ -90,7 +105,9 @@ class AutomationMonitoring:
         self.disk_usage = Gauge("automation_disk_usage", "Disk usage percentage")
 
         # Error metrics
-        self.error_counter = Counter("automation_errors_total", "Total number of errors", ["type"])
+        self.error_counter = Counter(
+            "automation_errors_total", "Total number of errors", ["type"]
+        )
 
     def setup_cache(self):
         """Setup metrics caching."""
@@ -109,7 +126,9 @@ class AutomationMonitoring:
                 for task_id in running_tasks:
                     task = await self.core.get_task(task_id)
                     if task:
-                        self.task_counter.labels(type=task.type.value, status=task.status.value).inc()
+                        self.task_counter.labels(
+                            type=task.type.value, status=task.status.value
+                        ).inc()
 
                 # Collect workflow metrics
                 running_workflows = await self.workflows.get_running_workflows()
@@ -156,20 +175,31 @@ class AutomationMonitoring:
         try:
             # Check CPU usage
             if self.cpu_usage._value.get() > self.config.alert_threshold * 100:
-                await self._create_alert("high_cpu_usage", f"CPU usage is {self.cpu_usage._value.get()}%")
+                await self._create_alert(
+                    "high_cpu_usage", f"CPU usage is {self.cpu_usage._value.get()}%"
+                )
 
             # Check memory usage
             if self.memory_usage._value.get() > self.config.alert_threshold * 100:
-                await self._create_alert("high_memory_usage", f"Memory usage is {self.memory_usage._value.get()}%")
+                await self._create_alert(
+                    "high_memory_usage",
+                    f"Memory usage is {self.memory_usage._value.get()}%",
+                )
 
             # Check disk usage
             if self.disk_usage._value.get() > self.config.alert_threshold * 100:
-                await self._create_alert("high_disk_usage", f"Disk usage is {self.disk_usage._value.get()}%")
+                await self._create_alert(
+                    "high_disk_usage", f"Disk usage is {self.disk_usage._value.get()}%"
+                )
 
             # Check error rate
-            error_rate = self.error_counter._value.get() / self.task_counter._value.get()
+            error_rate = (
+                self.error_counter._value.get() / self.task_counter._value.get()
+            )
             if error_rate > self.config.alert_threshold:
-                await self._create_alert("high_error_rate", f"Error rate is {error_rate:.2%}")
+                await self._create_alert(
+                    "high_error_rate", f"Error rate is {error_rate:.2%}"
+                )
 
         except Exception as e:
             logger.error(f"Failed to check alerts: {str(e)}")
@@ -203,7 +233,10 @@ class AutomationMonitoring:
             await self.collect_metrics()
 
             metrics = {
-                "tasks": {"total": self.task_counter._value.get(), "queue_size": self.task_queue_size._value.get()},
+                "tasks": {
+                    "total": self.task_counter._value.get(),
+                    "queue_size": self.task_queue_size._value.get(),
+                },
                 "workflows": {
                     "total": self.workflow_counter._value.get(),
                     "queue_size": self.workflow_queue_size._value.get(),

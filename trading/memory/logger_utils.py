@@ -133,13 +133,17 @@ def log_execution_time(func):
             return result
         except Exception as e:
             execution_time = time.time() - start_time
-            logger.error(f"{func.__name__} failed after {execution_time:.4f} seconds: {e}")
+            logger.error(
+                f"{func.__name__} failed after {execution_time:.4f} seconds: {e}"
+            )
             raise
 
     return wrapper
 
 
-def setup_trading_logger(strategy_name: str, log_dir: str = "logs/strategies") -> logging.Logger:
+def setup_trading_logger(
+    strategy_name: str, log_dir: str = "logs/strategies"
+) -> logging.Logger:
     """
     Setup a logger specifically for a trading strategy.
 
@@ -160,11 +164,16 @@ def setup_trading_logger(strategy_name: str, log_dir: str = "logs/strategies") -
     # Create file handler for strategy
     strategy_log_file = log_path / f"{strategy_name}.log"
     file_handler = logging.handlers.RotatingFileHandler(
-        strategy_log_file, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"  # 5MB
+        strategy_log_file,
+        maxBytes=5 * 1024 * 1024,
+        backupCount=3,
+        encoding="utf-8",  # 5MB
     )
 
     # Create formatter
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     file_handler.setFormatter(formatter)
 
     # Add handler to logger
@@ -195,11 +204,18 @@ def log_trade_execution(
         timestamp: Trade timestamp
         strategy_name: Name of the strategy that executed the trade
     """
-    logger.info(f"TRADE_EXECUTED: {strategy_name} - {side} {quantity} {symbol} @ {price} " f"at {timestamp}")
+    logger.info(
+        f"TRADE_EXECUTED: {strategy_name} - {side} {quantity} {symbol} @ {price} "
+        f"at {timestamp}"
+    )
 
 
 def log_portfolio_update(
-    logger: logging.Logger, portfolio_value: float, cash: float, positions: Dict[str, float], timestamp: str
+    logger: logging.Logger,
+    portfolio_value: float,
+    cash: float,
+    positions: Dict[str, float],
+    timestamp: str,
 ) -> None:
     """
     Log portfolio update details.
@@ -212,12 +228,18 @@ def log_portfolio_update(
         timestamp: Update timestamp
     """
     logger.info(
-        f"PORTFOLIO_UPDATE: Value={portfolio_value:.2f}, Cash={cash:.2f}, " f"Positions={positions} at {timestamp}"
+        f"PORTFOLIO_UPDATE: Value={portfolio_value:.2f}, Cash={cash:.2f}, "
+        f"Positions={positions} at {timestamp}"
     )
 
 
 def log_signal_generated(
-    logger: logging.Logger, symbol: str, signal_type: str, signal_strength: float, strategy_name: str, timestamp: str
+    logger: logging.Logger,
+    symbol: str,
+    signal_type: str,
+    signal_strength: float,
+    strategy_name: str,
+    timestamp: str,
 ) -> None:
     """
     Log trading signal generation.

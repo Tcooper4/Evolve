@@ -88,7 +88,11 @@ class RoutingEngine:
         route_type = self._determine_route_type(task)
 
         # Get appropriate handlers
-        handlers = self.cognitive_handlers if route_type == RouteType.COGNITIVE else self.operational_handlers
+        handlers = (
+            self.cognitive_handlers
+            if route_type == RouteType.COGNITIVE
+            else self.operational_handlers
+        )
 
         # Find best matching handler
         best_handler = None
@@ -114,7 +118,9 @@ class RoutingEngine:
                 message=f"Routed to {best_handler.__name__}",
             )
 
-        return RouteResult(success=False, route_type=route_type, message="No suitable handler found")
+        return RouteResult(
+            success=False, route_type=route_type, message="No suitable handler found"
+        )
 
     def _determine_route_type(self, task: Dict[str, Any]) -> RouteType:
         """Determine the type of routing needed for a task.

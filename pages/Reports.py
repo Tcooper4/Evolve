@@ -30,7 +30,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Page config
-st.set_page_config(page_title="Reports - Evolve AI Trading", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="Reports - Evolve AI Trading",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
 
 # Custom CSS for clean styling
 st.markdown(
@@ -111,7 +115,9 @@ def initialize_session_state():
         st.session_state.current_report = None
 
 
-def generate_performance_report(symbol: str, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+def generate_performance_report(
+    symbol: str, start_date: datetime, end_date: datetime
+) -> Dict[str, Any]:
     """Generate comprehensive performance report."""
     try:
         # Generate mock performance data
@@ -132,7 +138,9 @@ def generate_performance_report(symbol: str, start_date: datetime, end_date: dat
         excess_return = total_return - benchmark_return
 
         volatility = np.std(portfolio_returns) * np.sqrt(252)
-        sharpe_ratio = (np.mean(portfolio_returns) * 252) / volatility if volatility > 0 else 0
+        sharpe_ratio = (
+            (np.mean(portfolio_returns) * 252) / volatility if volatility > 0 else 0
+        )
 
         # Maximum drawdown
         cumulative = portfolio_values
@@ -147,7 +155,8 @@ def generate_performance_report(symbol: str, start_date: datetime, end_date: dat
         # Win rate and other metrics
         win_rate = np.mean(portfolio_returns > 0)
         profit_factor = (
-            np.sum(portfolio_returns[portfolio_returns > 0]) / abs(np.sum(portfolio_returns[portfolio_returns < 0]))
+            np.sum(portfolio_returns[portfolio_returns > 0])
+            / abs(np.sum(portfolio_returns[portfolio_returns < 0]))
             if np.sum(portfolio_returns[portfolio_returns < 0]) != 0
             else float("inf")
         )
@@ -189,7 +198,9 @@ def generate_performance_report(symbol: str, start_date: datetime, end_date: dat
         return {}
 
 
-def generate_risk_report(symbol: str, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
+def generate_risk_report(
+    symbol: str, start_date: datetime, end_date: datetime
+) -> Dict[str, Any]:
     """Generate comprehensive risk analysis report."""
     try:
         # Generate mock risk data
@@ -206,12 +217,16 @@ def generate_risk_report(symbol: str, start_date: datetime, end_date: datetime) 
 
         # Calculate portfolio risk metrics
         portfolio_beta = sum(pos["size"] * pos["beta"] for pos in positions.values())
-        portfolio_volatility = np.sqrt(sum((pos["size"] * pos["volatility"]) ** 2 for pos in positions.values()))
+        portfolio_volatility = np.sqrt(
+            sum((pos["size"] * pos["volatility"]) ** 2 for pos in positions.values())
+        )
 
         # Generate correlation matrix
         symbols = list(positions.keys())
         correlation_matrix = pd.DataFrame(
-            np.random.uniform(0.3, 0.8, (len(symbols), len(symbols))), index=symbols, columns=symbols
+            np.random.uniform(0.3, 0.8, (len(symbols), len(symbols))),
+            index=symbols,
+            columns=symbols,
         )
         np.fill_diagonal(correlation_matrix.values, 1.0)
 
@@ -265,7 +280,11 @@ def generate_strategy_report(
 
         # Risk metrics
         strategy_volatility = np.std(strategy_returns) * np.sqrt(252)
-        strategy_sharpe = (np.mean(strategy_returns) * 252) / strategy_volatility if strategy_volatility > 0 else 0
+        strategy_sharpe = (
+            (np.mean(strategy_returns) * 252) / strategy_volatility
+            if strategy_volatility > 0
+            else 0
+        )
 
         # Maximum drawdown
         cumulative = strategy_values
@@ -360,7 +379,10 @@ def plot_performance_report(report_data: Dict[str, Any]):
         # Returns distribution
         fig.add_trace(
             go.Histogram(
-                x=report_data["portfolio_returns"], name="Portfolio Returns", marker_color="#e74c3c", nbinsx=30
+                x=report_data["portfolio_returns"],
+                name="Portfolio Returns",
+                marker_color="#e74c3c",
+                nbinsx=30,
             ),
             row=1,
             col=2,
@@ -385,9 +407,13 @@ def plot_performance_report(report_data: Dict[str, Any]):
         )
 
         # Rolling Sharpe ratio
-        returns_series = pd.Series(report_data["portfolio_returns"], index=report_data["dates"])
+        returns_series = pd.Series(
+            report_data["portfolio_returns"], index=report_data["dates"]
+        )
         rolling_sharpe = (
-            returns_series.rolling(window=30).mean() / returns_series.rolling(window=30).std() * np.sqrt(252)
+            returns_series.rolling(window=30).mean()
+            / returns_series.rolling(window=30).std()
+            * np.sqrt(252)
         )
 
         fig.add_trace(
@@ -403,12 +429,16 @@ def plot_performance_report(report_data: Dict[str, Any]):
         )
 
         # Monthly returns heatmap
-        returns_df = pd.DataFrame({"date": report_data["dates"], "returns": report_data["portfolio_returns"]})
+        returns_df = pd.DataFrame(
+            {"date": report_data["dates"], "returns": report_data["portfolio_returns"]}
+        )
         returns_df["date"] = pd.to_datetime(returns_df["date"])
         returns_df["year"] = returns_df["date"].dt.year
         returns_df["month"] = returns_df["date"].dt.month
 
-        monthly_returns = returns_df.groupby(["year", "month"])["returns"].sum().unstack()
+        monthly_returns = (
+            returns_df.groupby(["year", "month"])["returns"].sum().unstack()
+        )
 
         fig.add_trace(
             go.Heatmap(
@@ -641,11 +671,19 @@ def main():
 
         # Report type selection
         report_type = st.selectbox(
-            "Report Type", ["Performance Report", "Risk Analysis", "Strategy Report", "Model Evaluation"]
+            "Report Type",
+            [
+                "Performance Report",
+                "Risk Analysis",
+                "Strategy Report",
+                "Model Evaluation",
+            ],
         )
 
         # Symbol input
-        symbol = st.text_input("Symbol", value="AAPL", placeholder="e.g., AAPL, TSLA, Portfolio")
+        symbol = st.text_input(
+            "Symbol", value="AAPL", placeholder="e.g., AAPL, TSLA, Portfolio"
+        )
 
         # Date range
         end_date = datetime.now()
@@ -660,7 +698,13 @@ def main():
         # Strategy selection (for strategy reports)
         if report_type == "Strategy Report":
             strategy_name = st.selectbox(
-                "Strategy", ["RSI Mean Reversion", "MACD Crossover", "Bollinger Bands", "Moving Average Crossover"]
+                "Strategy",
+                [
+                    "RSI Mean Reversion",
+                    "MACD Crossover",
+                    "Bollinger Bands",
+                    "Moving Average Crossover",
+                ],
             )
 
         # Generate report button
@@ -671,13 +715,19 @@ def main():
                     end_dt = datetime.combine(end_date, datetime.min.time())
 
                     if report_type == "Performance Report":
-                        report_data = generate_performance_report(symbol, start_dt, end_dt)
+                        report_data = generate_performance_report(
+                            symbol, start_dt, end_dt
+                        )
                     elif report_type == "Risk Analysis":
                         report_data = generate_risk_report(symbol, start_dt, end_dt)
                     elif report_type == "Strategy Report":
-                        report_data = generate_strategy_report(strategy_name, symbol, start_dt, end_dt)
+                        report_data = generate_strategy_report(
+                            strategy_name, symbol, start_dt, end_dt
+                        )
                     else:
-                        report_data = generate_performance_report(symbol, start_dt, end_dt)  # Default
+                        report_data = generate_performance_report(
+                            symbol, start_dt, end_dt
+                        )  # Default
 
                     if report_data:
                         st.session_state.current_report = report_data
@@ -708,15 +758,23 @@ def main():
                 with col1:
                     st.metric("Portfolio Beta", f"{risk_metrics['Portfolio_Beta']:.2f}")
                 with col2:
-                    st.metric("Portfolio Volatility", f"{risk_metrics['Portfolio_Volatility']:.2%}")
+                    st.metric(
+                        "Portfolio Volatility",
+                        f"{risk_metrics['Portfolio_Volatility']:.2%}",
+                    )
                 with col3:
-                    st.metric("Concentration Risk", f"{risk_metrics['Concentration_Risk']:.1%}")
+                    st.metric(
+                        "Concentration Risk",
+                        f"{risk_metrics['Concentration_Risk']:.1%}",
+                    )
                 with col4:
                     st.metric("VaR (95%)", f"{risk_metrics['VaR_95']:.2%}")
 
                 # Correlation matrix
                 st.markdown("### Correlation Matrix")
-                correlation_matrix = st.session_state.current_report["correlation_matrix"]
+                correlation_matrix = st.session_state.current_report[
+                    "correlation_matrix"
+                ]
                 st.dataframe(correlation_matrix, use_container_width=True)
 
             elif report_type == "Strategy Report":
@@ -725,7 +783,9 @@ def main():
 
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("Strategy Return", f"{metrics['Strategy_Total_Return']:.2%}")
+                    st.metric(
+                        "Strategy Return", f"{metrics['Strategy_Total_Return']:.2%}"
+                    )
                 with col2:
                     st.metric("Excess Return", f"{metrics['Excess_Return']:.2%}")
                 with col3:
@@ -786,9 +846,15 @@ def main():
                 ):
                     if "metrics" in report:
                         metrics = report["metrics"]
-                        st.markdown(f"**Total Return:** {metrics.get('Total_Return', 0):.2%}")
-                        st.markdown(f"**Sharpe Ratio:** {metrics.get('Sharpe_Ratio', 0):.2f}")
-                        st.markdown(f"**Max Drawdown:** {metrics.get('Max_Drawdown', 0):.2%}")
+                        st.markdown(
+                            f"**Total Return:** {metrics.get('Total_Return', 0):.2%}"
+                        )
+                        st.markdown(
+                            f"**Sharpe Ratio:** {metrics.get('Sharpe_Ratio', 0):.2f}"
+                        )
+                        st.markdown(
+                            f"**Max Drawdown:** {metrics.get('Max_Drawdown', 0):.2%}"
+                        )
 
                     if st.button(f"Load Report", key=f"load_{i}"):
                         st.session_state.current_report = report
@@ -798,8 +864,18 @@ def main():
         st.markdown("### Quick Stats")
         if st.session_state.report_history:
             total_reports = len(st.session_state.report_history)
-            avg_return = np.mean([r.get("metrics", {}).get("Total_Return", 0) for r in st.session_state.report_history])
-            avg_sharpe = np.mean([r.get("metrics", {}).get("Sharpe_Ratio", 0) for r in st.session_state.report_history])
+            avg_return = np.mean(
+                [
+                    r.get("metrics", {}).get("Total_Return", 0)
+                    for r in st.session_state.report_history
+                ]
+            )
+            avg_sharpe = np.mean(
+                [
+                    r.get("metrics", {}).get("Sharpe_Ratio", 0)
+                    for r in st.session_state.report_history
+                ]
+            )
 
             st.metric("Total Reports", total_reports)
             st.metric("Avg Return", f"{avg_return:.2%}")

@@ -40,13 +40,21 @@ def parse_args() -> argparse.Namespace:
         help="Model type to retrain",
     )
     parser.add_argument("--data", type=str, required=True, help="Path to training data")
-    parser.add_argument("--force", action="store_true", help="Force retraining regardless of conditions")
-    parser.add_argument("--days", type=int, default=30, help="Number of days of data to use")
-    parser.add_argument("--threshold", type=float, default=0.1, help="Performance degradation threshold")
+    parser.add_argument(
+        "--force", action="store_true", help="Force retraining regardless of conditions"
+    )
+    parser.add_argument(
+        "--days", type=int, default=30, help="Number of days of data to use"
+    )
+    parser.add_argument(
+        "--threshold", type=float, default=0.1, help="Performance degradation threshold"
+    )
     return parser.parse_args()
 
 
-def check_retraining_needed(model_type: str, performance_history: pd.DataFrame, threshold: float) -> bool:
+def check_retraining_needed(
+    model_type: str, performance_history: pd.DataFrame, threshold: float
+) -> bool:
     """Check if model needs retraining."""
     if performance_history.empty:
         return True
@@ -59,14 +67,18 @@ def check_retraining_needed(model_type: str, performance_history: pd.DataFrame, 
     return mse_trend > threshold
 
 
-def retrain_model(model_type: str, data: pd.DataFrame, router: ForecastRouter, **kwargs) -> Dict[str, Any]:
+def retrain_model(
+    model_type: str, data: pd.DataFrame, router: ForecastRouter, **kwargs
+) -> Dict[str, Any]:
     """Retrain a specific model."""
     try:
         logger.info(f"Retraining {model_type} model")
         # Prepare data
         prepared_data = prepare_forecast_data(data)
         # Get forecast to trigger retraining
-        result = router.get_forecast(data=prepared_data, model_type=model_type, **kwargs)
+        result = router.get_forecast(
+            data=prepared_data, model_type=model_type, **kwargs
+        )
         return {
             "model": model_type,
             "status": "success",
@@ -75,7 +87,12 @@ def retrain_model(model_type: str, data: pd.DataFrame, router: ForecastRouter, *
         }
     except Exception as e:
         logger.error(f"Error retraining {model_type}: {str(e)}")
-        return {"model": model_type, "status": "error", "error": str(e), "timestamp": datetime.now().isoformat()}
+        return {
+            "model": model_type,
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+        }
 
 
 def main():
@@ -100,7 +117,9 @@ def main():
                     logger.info(f"Skipping {model_type} - no retraining needed")
                     continue
             # Retrain model
-            result = retrain_model(model_type=model_type, data=data, router=router, days=args.days)
+            result = retrain_model(
+                model_type=model_type, data=data, router=router, days=args.days
+            )
             results.append(result)
         # Log results
         logger.info(f"Retraining completed: {results}")
@@ -109,7 +128,9 @@ def main():
         raise
 
 
-def trigger_retraining_if_needed(weights: Dict[str, float], threshold: float = 0.1) -> bool:
+def trigger_retraining_if_needed(
+    weights: Dict[str, float], threshold: float = 0.1
+) -> bool:
     """Trigger model retraining if needed."""
     try:
         # Simple logic: trigger retraining if any weight is below threshold
@@ -136,7 +157,9 @@ from typing import Any, Dict
 logger = logging.getLogger(__name__)
 
 
-def trigger_retraining_if_needed(weights: Dict[str, float], threshold: float = 0.1) -> bool:
+def trigger_retraining_if_needed(
+    weights: Dict[str, float], threshold: float = 0.1
+) -> bool:
     """
     Trigger model retraining if needed.
 

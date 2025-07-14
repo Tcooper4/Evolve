@@ -107,13 +107,19 @@ class AgentStatus:
             "state": self.state.value,
             "is_running": self.is_running,
             "last_run": self.last_run.isoformat() if self.last_run else None,
-            "last_success": self.last_success.isoformat() if self.last_success else None,
-            "last_failure": self.last_failure.isoformat() if self.last_failure else None,
+            "last_success": self.last_success.isoformat()
+            if self.last_success
+            else None,
+            "last_failure": self.last_failure.isoformat()
+            if self.last_failure
+            else None,
             "total_runs": self.total_runs,
             "successful_runs": self.successful_runs,
             "failed_runs": self.failed_runs,
             "current_error": self.current_error,
-            "current_run_start": self.current_run_start.isoformat() if self.current_run_start else None,
+            "current_run_start": self.current_run_start.isoformat()
+            if self.current_run_start
+            else None,
             "average_execution_time": self.average_execution_time,
             "total_execution_time": self.total_execution_time,
         }
@@ -190,7 +196,9 @@ class BaseAgent(ABC):
         """
         self.config = config
         self.logger = logging.getLogger(f"{__name__}.{config.name}")
-        self.status = AgentStatus(name=config.name, enabled=config.enabled, state=AgentState.IDLE)
+        self.status = AgentStatus(
+            name=config.name, enabled=config.enabled, state=AgentState.IDLE
+        )
 
         # Performance tracking
         self.execution_history: List[AgentResult] = []
@@ -390,17 +398,26 @@ class BaseAgent(ABC):
 
             # Validate specific fields
             if "max_concurrent_runs" in new_config:
-                if not isinstance(new_config["max_concurrent_runs"], int) or new_config["max_concurrent_runs"] < 1:
+                if (
+                    not isinstance(new_config["max_concurrent_runs"], int)
+                    or new_config["max_concurrent_runs"] < 1
+                ):
                     self.logger.error("max_concurrent_runs must be a positive integer")
                     return False
 
             if "timeout_seconds" in new_config:
-                if not isinstance(new_config["timeout_seconds"], int) or new_config["timeout_seconds"] < 1:
+                if (
+                    not isinstance(new_config["timeout_seconds"], int)
+                    or new_config["timeout_seconds"] < 1
+                ):
                     self.logger.error("timeout_seconds must be a positive integer")
                     return False
 
             if "retry_attempts" in new_config:
-                if not isinstance(new_config["retry_attempts"], int) or new_config["retry_attempts"] < 0:
+                if (
+                    not isinstance(new_config["retry_attempts"], int)
+                    or new_config["retry_attempts"] < 0
+                ):
                     self.logger.error("retry_attempts must be a non-negative integer")
                     return False
 

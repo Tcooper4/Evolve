@@ -259,7 +259,9 @@ class TrendAnalyzer:
     def _calculate_momentum(self, price_data: pd.Series, period: int = 10) -> float:
         """Calculate momentum indicator."""
         try:
-            return (price_data.iloc[-1] - price_data.iloc[-period]) / price_data.iloc[-period]
+            return (price_data.iloc[-1] - price_data.iloc[-period]) / price_data.iloc[
+                -period
+            ]
         except:
             return 0.0
 
@@ -305,7 +307,9 @@ class ModelSelector:
 
         self.performance_history = {}
 
-    def select_optimal_model(self, market_conditions: MarketConditions, available_models: List[str]) -> str:
+    def select_optimal_model(
+        self, market_conditions: MarketConditions, available_models: List[str]
+    ) -> str:
         """Select optimal model based on market conditions.
 
         Args:
@@ -326,7 +330,9 @@ class ModelSelector:
             # Select model with highest score
             if model_scores:
                 best_model = max(model_scores, key=model_scores.get)
-                logger.info(f"Selected model: {best_model} (score: {model_scores[best_model]:.3f})")
+                logger.info(
+                    f"Selected model: {best_model} (score: {model_scores[best_model]:.3f})"
+                )
                 return best_model
             else:
                 # Fallback to LSTM
@@ -337,7 +343,9 @@ class ModelSelector:
             logger.error(f"Error selecting optimal model: {e}")
             return "LSTM"
 
-    def _calculate_model_score(self, model_name: str, market_conditions: MarketConditions) -> float:
+    def _calculate_model_score(
+        self, model_name: str, market_conditions: MarketConditions
+    ) -> float:
         """Calculate suitability score for a model.
 
         Args:
@@ -351,24 +359,45 @@ class ModelSelector:
             model_config = self.model_registry[model_name]
 
             # Regime compatibility
-            regime_score = 1.0 if market_conditions.volatility_regime in model_config["preferred_regimes"] else 0.3
+            regime_score = (
+                1.0
+                if market_conditions.volatility_regime
+                in model_config["preferred_regimes"]
+                else 0.3
+            )
 
             # Trend compatibility
-            trend_score = 1.0 if market_conditions.market_trend in model_config["preferred_trends"] else 0.3
+            trend_score = (
+                1.0
+                if market_conditions.market_trend in model_config["preferred_trends"]
+                else 0.3
+            )
 
             # Volatility range compatibility
             vol_min, vol_max = model_config["volatility_range"]
-            vol_compatibility = 1.0 if vol_min <= market_conditions.volatility_score <= vol_max else 0.5
+            vol_compatibility = (
+                1.0 if vol_min <= market_conditions.volatility_score <= vol_max else 0.5
+            )
 
             # Trend range compatibility
             trend_min, trend_max = model_config["trend_range"]
-            trend_compatibility = 1.0 if trend_min <= market_conditions.trend_score <= trend_max else 0.5
+            trend_compatibility = (
+                1.0 if trend_min <= market_conditions.trend_score <= trend_max else 0.5
+            )
 
             # Historical performance (if available)
-            performance_score = self._get_historical_performance(model_name, market_conditions)
+            performance_score = self._get_historical_performance(
+                model_name, market_conditions
+            )
 
             # Calculate weighted score
-            weights = {"regime": 0.25, "trend": 0.25, "volatility": 0.2, "trend_range": 0.15, "performance": 0.15}
+            weights = {
+                "regime": 0.25,
+                "trend": 0.25,
+                "volatility": 0.2,
+                "trend_range": 0.15,
+                "performance": 0.15,
+            }
 
             total_score = (
                 regime_score * weights["regime"]
@@ -384,7 +413,9 @@ class ModelSelector:
             logger.error(f"Error calculating model score: {e}")
             return 0.5
 
-    def _get_historical_performance(self, model_name: str, market_conditions: MarketConditions) -> float:
+    def _get_historical_performance(
+        self, model_name: str, market_conditions: MarketConditions
+    ) -> float:
         """Get historical performance for model in similar conditions.
 
         Args:
@@ -403,7 +434,9 @@ class ModelSelector:
 
             for performance in self.performance_history[model_name]:
                 # Check if conditions are similar
-                regime_match = performance.regime_performance.get(str(market_conditions.volatility_regime.value), 0.5)
+                regime_match = performance.regime_performance.get(
+                    str(market_conditions.volatility_regime.value), 0.5
+                )
                 similar_performances.append(regime_match)
 
             if similar_performances:
@@ -456,7 +489,9 @@ class StrategySelector:
 
         self.performance_history = {}
 
-    def select_optimal_strategy(self, market_conditions: MarketConditions, available_strategies: List[str]) -> str:
+    def select_optimal_strategy(
+        self, market_conditions: MarketConditions, available_strategies: List[str]
+    ) -> str:
         """Select optimal strategy based on market conditions.
 
         Args:
@@ -471,13 +506,17 @@ class StrategySelector:
 
             for strategy_name in available_strategies:
                 if strategy_name in self.strategy_registry:
-                    score = self._calculate_strategy_score(strategy_name, market_conditions)
+                    score = self._calculate_strategy_score(
+                        strategy_name, market_conditions
+                    )
                     strategy_scores[strategy_name] = score
 
             # Select strategy with highest score
             if strategy_scores:
                 best_strategy = max(strategy_scores, key=strategy_scores.get)
-                logger.info(f"Selected strategy: {best_strategy} (score: {strategy_scores[best_strategy]:.3f})")
+                logger.info(
+                    f"Selected strategy: {best_strategy} (score: {strategy_scores[best_strategy]:.3f})"
+                )
                 return best_strategy
             else:
                 # Fallback to RSI
@@ -488,7 +527,9 @@ class StrategySelector:
             logger.error(f"Error selecting optimal strategy: {e}")
             return "RSI Mean Reversion"
 
-    def _calculate_strategy_score(self, strategy_name: str, market_conditions: MarketConditions) -> float:
+    def _calculate_strategy_score(
+        self, strategy_name: str, market_conditions: MarketConditions
+    ) -> float:
         """Calculate suitability score for a strategy.
 
         Args:
@@ -502,24 +543,45 @@ class StrategySelector:
             strategy_config = self.strategy_registry[strategy_name]
 
             # Regime compatibility
-            regime_score = 1.0 if market_conditions.volatility_regime in strategy_config["preferred_regimes"] else 0.3
+            regime_score = (
+                1.0
+                if market_conditions.volatility_regime
+                in strategy_config["preferred_regimes"]
+                else 0.3
+            )
 
             # Trend compatibility
-            trend_score = 1.0 if market_conditions.market_trend in strategy_config["preferred_trends"] else 0.3
+            trend_score = (
+                1.0
+                if market_conditions.market_trend in strategy_config["preferred_trends"]
+                else 0.3
+            )
 
             # Volatility range compatibility
             vol_min, vol_max = strategy_config["volatility_range"]
-            vol_compatibility = 1.0 if vol_min <= market_conditions.volatility_score <= vol_max else 0.5
+            vol_compatibility = (
+                1.0 if vol_min <= market_conditions.volatility_score <= vol_max else 0.5
+            )
 
             # Trend range compatibility
             trend_min, trend_max = strategy_config["trend_range"]
-            trend_compatibility = 1.0 if trend_min <= market_conditions.trend_score <= trend_max else 0.5
+            trend_compatibility = (
+                1.0 if trend_min <= market_conditions.trend_score <= trend_max else 0.5
+            )
 
             # Historical performance
-            performance_score = self._get_historical_performance(strategy_name, market_conditions)
+            performance_score = self._get_historical_performance(
+                strategy_name, market_conditions
+            )
 
             # Calculate weighted score
-            weights = {"regime": 0.25, "trend": 0.25, "volatility": 0.2, "trend_range": 0.15, "performance": 0.15}
+            weights = {
+                "regime": 0.25,
+                "trend": 0.25,
+                "volatility": 0.2,
+                "trend_range": 0.15,
+                "performance": 0.15,
+            }
 
             total_score = (
                 regime_score * weights["regime"]
@@ -535,7 +597,9 @@ class StrategySelector:
             logger.error(f"Error calculating strategy score: {e}")
             return 0.5
 
-    def _get_historical_performance(self, strategy_name: str, market_conditions: MarketConditions) -> float:
+    def _get_historical_performance(
+        self, strategy_name: str, market_conditions: MarketConditions
+    ) -> float:
         """Get historical performance for strategy in similar conditions."""
         try:
             if strategy_name not in self.performance_history:
@@ -544,7 +608,9 @@ class StrategySelector:
             similar_performances = []
 
             for performance in self.performance_history[strategy_name]:
-                regime_match = performance.regime_performance.get(str(market_conditions.volatility_regime.value), 0.5)
+                regime_match = performance.regime_performance.get(
+                    str(market_conditions.volatility_regime.value), 0.5
+                )
                 similar_performances.append(regime_match)
 
             if similar_performances:
@@ -569,7 +635,9 @@ class HybridEnsembleOptimizer:
         self.reweight_period = reweight_period
         self.weight_history = {}
 
-    def optimize_weights(self, models: List[str], performance_data: Dict[str, ModelPerformance]) -> Dict[str, float]:
+    def optimize_weights(
+        self, models: List[str], performance_data: Dict[str, ModelPerformance]
+    ) -> Dict[str, float]:
         """Optimize model weights based on recent performance.
 
         Args:
@@ -628,13 +696,23 @@ class HybridEnsembleOptimizer:
         """
         try:
             # Weight different metrics
-            weights = {"sharpe_ratio": 0.3, "win_rate": 0.25, "profit_factor": 0.2, "max_drawdown": 0.15, "rmse": 0.1}
+            weights = {
+                "sharpe_ratio": 0.3,
+                "win_rate": 0.25,
+                "profit_factor": 0.2,
+                "max_drawdown": 0.15,
+                "rmse": 0.1,
+            }
 
             # Normalize metrics
-            sharpe_score = max(0, min(1, performance.sharpe_ratio / 2))  # Normalize to 0-1
+            sharpe_score = max(
+                0, min(1, performance.sharpe_ratio / 2)
+            )  # Normalize to 0-1
             win_rate_score = performance.win_rate
             profit_factor_score = min(1, performance.profit_factor / 3)
-            drawdown_score = max(0, 1 - performance.max_drawdown / 0.3)  # Lower is better
+            drawdown_score = max(
+                0, 1 - performance.max_drawdown / 0.3
+            )  # Lower is better
             rmse_score = max(0, 1 - performance.rmse / 0.1)  # Lower is better
 
             # Calculate weighted score
@@ -652,7 +730,9 @@ class HybridEnsembleOptimizer:
             logger.error(f"Error calculating performance score: {e}")
             return 0.5
 
-    def get_weight_history(self, model_name: str, days_back: int = 30) -> List[Tuple[datetime, float]]:
+    def get_weight_history(
+        self, model_name: str, days_back: int = 30
+    ) -> List[Tuple[datetime, float]]:
         """Get weight history for a specific model.
 
         Args:
@@ -720,7 +800,9 @@ class AdaptiveSelector:
 
             # Analyze volatility
             volatility_regime = self.volatility_analyzer.analyze_volatility(price_data)
-            volatility_score = self.volatility_analyzer.calculate_volatility_score(price_data)
+            volatility_score = self.volatility_analyzer.calculate_volatility_score(
+                price_data
+            )
 
             # Analyze trend
             market_trend = self.trend_analyzer.analyze_trend(price_data)
@@ -744,7 +826,9 @@ class AdaptiveSelector:
             # Cache results
             self.market_conditions_cache[cache_key] = (datetime.now(), conditions)
 
-            logger.info(f"Market conditions: {volatility_regime.value} volatility, {market_trend.value} trend")
+            logger.info(
+                f"Market conditions: {volatility_regime.value} volatility, {market_trend.value} trend"
+            )
 
             return conditions
 
@@ -762,7 +846,10 @@ class AdaptiveSelector:
             )
 
     def select_optimal_configuration(
-        self, price_data: pd.Series, available_models: List[str], available_strategies: List[str]
+        self,
+        price_data: pd.Series,
+        available_models: List[str],
+        available_strategies: List[str],
     ) -> Dict[str, Any]:
         """Select optimal model and strategy configuration.
 
@@ -779,10 +866,14 @@ class AdaptiveSelector:
             market_conditions = self.analyze_market_conditions(price_data)
 
             # Select optimal model
-            optimal_model = self.model_selector.select_optimal_model(market_conditions, available_models)
+            optimal_model = self.model_selector.select_optimal_model(
+                market_conditions, available_models
+            )
 
             # Select optimal strategy
-            optimal_strategy = self.strategy_selector.select_optimal_strategy(market_conditions, available_strategies)
+            optimal_strategy = self.strategy_selector.select_optimal_strategy(
+                market_conditions, available_strategies
+            )
 
             # Determine if hybrid ensemble is needed
             use_hybrid = self._should_use_hybrid(market_conditions, available_models)
@@ -798,7 +889,9 @@ class AdaptiveSelector:
             if use_hybrid:
                 # Get performance data for weight optimization
                 performance_data = self._get_model_performance_data(available_models)
-                optimized_weights = self.ensemble_optimizer.optimize_weights(available_models, performance_data)
+                optimized_weights = self.ensemble_optimizer.optimize_weights(
+                    available_models, performance_data
+                )
                 configuration["ensemble_weights"] = optimized_weights
 
             logger.info(
@@ -812,7 +905,13 @@ class AdaptiveSelector:
             # Return default configuration
             return {
                 "market_conditions": MarketConditions(
-                    VolatilityRegime.MEDIUM, MarketTrend.NEUTRAL, 0.5, 0.0, 0.5, 0.0, datetime.now()
+                    VolatilityRegime.MEDIUM,
+                    MarketTrend.NEUTRAL,
+                    0.5,
+                    0.0,
+                    0.5,
+                    0.0,
+                    datetime.now(),
                 ),
                 "selected_model": "LSTM",
                 "selected_strategy": "RSI Mean Reversion",
@@ -820,7 +919,9 @@ class AdaptiveSelector:
                 "confidence": 0.5,
             }
 
-    def _should_use_hybrid(self, market_conditions: MarketConditions, available_models: List[str]) -> bool:
+    def _should_use_hybrid(
+        self, market_conditions: MarketConditions, available_models: List[str]
+    ) -> bool:
         """Determine if hybrid ensemble should be used.
 
         Args:
@@ -832,7 +933,10 @@ class AdaptiveSelector:
         """
         try:
             # Use hybrid for high volatility or uncertain conditions
-            if market_conditions.volatility_regime in [VolatilityRegime.HIGH, VolatilityRegime.EXTREME]:
+            if market_conditions.volatility_regime in [
+                VolatilityRegime.HIGH,
+                VolatilityRegime.EXTREME,
+            ]:
                 return True
 
             # Use hybrid if multiple models are available
@@ -840,7 +944,10 @@ class AdaptiveSelector:
                 return True
 
             # Use hybrid for neutral/volatile trends
-            if market_conditions.market_trend in [MarketTrend.NEUTRAL, MarketTrend.VOLATILE]:
+            if market_conditions.market_trend in [
+                MarketTrend.NEUTRAL,
+                MarketTrend.VOLATILE,
+            ]:
                 return True
 
             return False
@@ -849,7 +956,9 @@ class AdaptiveSelector:
             logger.error(f"Error determining hybrid usage: {e}")
             return False
 
-    def _calculate_selection_confidence(self, market_conditions: MarketConditions) -> float:
+    def _calculate_selection_confidence(
+        self, market_conditions: MarketConditions
+    ) -> float:
         """Calculate confidence in the selection.
 
         Args:
@@ -863,7 +972,10 @@ class AdaptiveSelector:
             confidence = 0.5
 
             # Adjust based on volatility regime clarity
-            if market_conditions.volatility_regime in [VolatilityRegime.LOW, VolatilityRegime.EXTREME]:
+            if market_conditions.volatility_regime in [
+                VolatilityRegime.LOW,
+                VolatilityRegime.EXTREME,
+            ]:
                 confidence += 0.2
 
             # Adjust based on trend clarity
@@ -893,8 +1005,12 @@ class AdaptiveSelector:
         """Calculate momentum score."""
         try:
             # Calculate momentum over different periods
-            momentum_5 = (price_data.iloc[-1] - price_data.iloc[-5]) / price_data.iloc[-5]
-            momentum_10 = (price_data.iloc[-1] - price_data.iloc[-10]) / price_data.iloc[-10]
+            momentum_5 = (price_data.iloc[-1] - price_data.iloc[-5]) / price_data.iloc[
+                -5
+            ]
+            momentum_10 = (
+                price_data.iloc[-1] - price_data.iloc[-10]
+            ) / price_data.iloc[-10]
 
             # Combine momentum signals
             combined_momentum = (momentum_5 + momentum_10) / 2
@@ -902,7 +1018,9 @@ class AdaptiveSelector:
         except:
             return 0.0
 
-    def _get_model_performance_data(self, models: List[str]) -> Dict[str, ModelPerformance]:
+    def _get_model_performance_data(
+        self, models: List[str]
+    ) -> Dict[str, ModelPerformance]:
         """Get performance data for models."""
         try:
             # This would fetch actual performance data
