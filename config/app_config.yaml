@@ -105,6 +105,80 @@ risk:
   var_confidence: "${VAR_CONFIDENCE:-0.95}"
   stress_test_scenarios: "${STRESS_TEST_SCENARIOS:-10}"
 
+# Portfolio Management
+portfolio:
+  max_weight: "${MAX_WEIGHT:-0.3}"
+  min_weight: "${MIN_WEIGHT:-0.01}"
+  target_volatility: "${TARGET_VOLATILITY:-0.15}"
+  risk_free_rate: "${RISK_FREE_RATE:-0.02}"
+  max_iterations: "${MAX_ITERATIONS:-1000}"
+  tolerance: "${TOLERANCE:-1e-6}"
+  kelly_fraction: "${KELLY_FRACTION:-0.25}"
+  max_kelly_weight: "${MAX_KELLY_WEIGHT:-0.5}"
+
+risk_management:
+  max_drawdown: "${MAX_DRAWDOWN:-0.15}"
+  max_exposure: "${MAX_EXPOSURE:-0.3}"
+  max_leverage: "${MAX_LEVERAGE:-2.0}"
+  target_volatility: "${TARGET_VOLATILITY:-0.15}"
+  var_limit: "${VAR_LIMIT:-0.02}"
+  max_correlation: "${MAX_CORRELATION:-0.7}"
+  sector_limit: "${SECTOR_LIMIT:-0.4}"
+  liquidity_limit: "${LIQUIDITY_LIMIT:-0.1}"
+  var_confidence: "${VAR_CONFIDENCE:-0.95}"
+  lookback_period: "${LOOKBACK_PERIOD:-252}"
+  rebalancing_frequency: "${REBALANCING_FREQUENCY:-daily}"
+
+# Execution Engine Settings
+execution:
+  mode: "${EXECUTION_MODE:-simulation}"  # simulation, live, paper
+  spread_multiplier: "${SPREAD_MULTIPLIER:-1.0}"
+  slippage_bps: "${SLIPPAGE_BPS:-5}"
+  execution_delay_ms: "${EXECUTION_DELAY_MS:-100}"
+  commission_rate: "${COMMISSION_RATE:-0.001}"
+  min_commission: "${MIN_COMMISSION:-1.0}"
+  max_position_size: "${MAX_POSITION_SIZE:-0.1}"
+  max_order_size: "${MAX_ORDER_SIZE:-10000}"
+  max_daily_trades: "${MAX_DAILY_TRADES:-100}"
+  market_volatility: "${MARKET_VOLATILITY:-0.02}"
+  price_impact_factor: "${PRICE_IMPACT_FACTOR:-0.0001}"
+  broker:
+    type: "${BROKER_TYPE:-simulation}"
+    alpaca:
+      api_key: "${ALPACA_API_KEY:-null}"
+      secret_key: "${ALPACA_SECRET_KEY:-null}"
+      base_url: "${ALPACA_BASE_URL:-https://paper-api.alpaca.markets}"
+    ibkr:
+      host: "${IBKR_HOST:-127.0.0.1}"
+      port: "${IBKR_PORT:-7497}"
+      client_id: "${IBKR_CLIENT_ID:-1}"
+    polygon:
+      api_key: "${POLYGON_API_KEY:-null}"
+
+# Audit Trail Settings
+audit:
+  output_formats: "${AUDIT_OUTPUT_FORMATS:-['json', 'csv']}"
+  batch_size: "${AUDIT_BATCH_SIZE:-100}"
+  flush_interval: "${AUDIT_FLUSH_INTERVAL:-60}"  # seconds
+  max_events: "${AUDIT_MAX_EVENTS:-10000}"
+  real_time_logging: "${AUDIT_REAL_TIME_LOGGING:-true}"
+  log_to_console: "${AUDIT_LOG_TO_CONSOLE:-false}"
+  enabled_event_types: "${AUDIT_ENABLED_EVENTS:-['signal_generated', 'model_selected', 'forecast_made', 'trade_decision', 'order_submitted', 'order_executed', 'risk_check']}"
+  min_confidence_threshold: "${AUDIT_MIN_CONFIDENCE:-0.0}"
+  session_retention_days: "${AUDIT_RETENTION_DAYS:-30}"
+
+# Explainability Settings
+explainer:
+  llm_enabled: "${EXPLAINER_LLM_ENABLED:-false}"
+  llm_model: "${EXPLAINER_LLM_MODEL:-gpt-3.5-turbo}"
+  llm_max_tokens: "${EXPLAINER_LLM_MAX_TOKENS:-500}"
+  llm_temperature: "${EXPLAINER_LLM_TEMPERATURE:-0.7}"
+  openai_api_key: "${OPENAI_API_KEY:-null}"
+  explanation_levels: "${EXPLAINER_LEVELS:-['basic', 'detailed', 'expert']}"
+  auto_explain: "${EXPLAINER_AUTO_EXPLAIN:-true}"
+  explanation_retention_days: "${EXPLAINER_RETENTION_DAYS:-90}"
+  performance_tracking: "${EXPLAINER_PERFORMANCE_TRACKING:-true}"
+
 # Agent Settings
 agents:
   goal_planner:
@@ -197,5 +271,4 @@ development:
   hot_reload: "${HOT_RELOAD:-false}"
   profiling: "${PROFILING:-false}"
   test_mode: "${TEST_MODE:-false}"
-  mock_data: "${MOCK_DATA:-false}"
-  seed_data: "${SEED_DATA:-false}" 
+  mock_data: "${MOCK_DATA:-false}" 

@@ -1,0 +1,208 @@
+{
+  "model_rebuild": {
+    "performance_threshold": 0.6,
+    "time_threshold_hours": 24,
+    "error_threshold": 0.1,
+    "market_volatility_threshold": 0.3,
+    "min_models": 3,
+    "max_models": 10,
+    "performance_degradation_threshold": 0.1,
+    "consecutive_failures_threshold": 5,
+    "market_regime_change_threshold": 0.5
+  },
+  "strategy_tune": {
+    "performance_threshold": 0.5,
+    "time_threshold_hours": 12,
+    "drawdown_threshold": 0.1,
+    "sharpe_threshold": 1.0,
+    "max_drawdown_threshold": 0.2,
+    "win_rate_threshold": 0.55,
+    "profit_factor_threshold": 1.2,
+    "strategy_correlation_threshold": 0.8,
+    "market_adaptation_threshold": 0.3
+  },
+  "sentiment_fetch": {
+    "time_threshold_hours": 1,
+    "sentiment_volatility_threshold": 0.2,
+    "market_events_threshold": 0.5,
+    "ticker_count": 20,
+    "max_sources_per_ticker": 4,
+    "sentiment_correlation_threshold": 0.7,
+    "news_volume_threshold": 10,
+    "social_volume_threshold": 50,
+    "sentiment_extremity_threshold": 0.8
+  },
+  "report_generate": {
+    "time_threshold_hours": 6,
+    "performance_change_threshold": 0.05,
+    "trade_count_threshold": 10,
+    "error_count_threshold": 5,
+    "system_health_threshold": 0.8,
+    "market_volatility_threshold": 0.4,
+    "portfolio_change_threshold": 0.02,
+    "risk_metrics_threshold": 0.15,
+    "compliance_check_threshold": 0.9
+  },
+  "system_health_check": {
+    "time_threshold_hours": 1,
+    "error_rate_threshold": 0.05,
+    "response_time_threshold": 5.0,
+    "cpu_usage_threshold": 80.0,
+    "memory_usage_threshold": 80.0,
+    "disk_usage_threshold": 90.0,
+    "network_latency_threshold": 100.0,
+    "uptime_threshold_hours": 168.0,
+    "component_health_threshold": 0.8
+  },
+  "performance_optimization": {
+    "cpu_usage_threshold": 70.0,
+    "memory_usage_threshold": 75.0,
+    "response_time_threshold": 3.0,
+    "cache_hit_rate_threshold": 0.8,
+    "database_connection_threshold": 0.9,
+    "api_rate_limit_threshold": 0.8,
+    "disk_io_threshold": 0.7,
+    "network_bandwidth_threshold": 0.8,
+    "optimization_frequency_hours": 4
+  },
+  "risk_management": {
+    "max_position_size": 0.1,
+    "max_portfolio_risk": 0.02,
+    "var_threshold": 0.05,
+    "drawdown_limit": 0.15,
+    "correlation_limit": 0.7,
+    "volatility_limit": 0.3,
+    "liquidity_threshold": 1000000,
+    "concentration_limit": 0.2,
+    "leverage_limit": 2.0
+  },
+  "portfolio_rebalance": {
+    "time_threshold_hours": 24,
+    "drift_threshold": 0.05,
+    "risk_violation_threshold": 1,
+    "performance_threshold": 0.6,
+    "allocation_change_threshold": 0.02,
+    "correlation_change_threshold": 0.1,
+    "volatility_change_threshold": 0.05,
+    "sector_drift_threshold": 0.03,
+    "rebalancing_cost_threshold": 0.001
+  },
+  "allocation_optimization": {
+    "sharpe_degradation_threshold": 0.1,
+    "time_threshold_hours": 168,
+    "market_regime_change_threshold": 0.2,
+    "performance_degradation_threshold": 0.05,
+    "correlation_increase_threshold": 0.15,
+    "diversification_decrease_threshold": 0.1,
+    "volatility_increase_threshold": 0.05,
+    "strategy_rotation_threshold": 0.3,
+    "optimization_confidence_threshold": 0.7
+  },
+  "market_conditions": {
+    "high_volatility_threshold": 0.4,
+    "low_volatility_threshold": 0.1,
+    "trend_strength_threshold": 0.6,
+    "correlation_threshold": 0.8,
+    "volume_spike_threshold": 2.0,
+    "gap_threshold": 0.05,
+    "momentum_threshold": 0.3,
+    "mean_reversion_threshold": 0.2,
+    "regime_change_threshold": 0.5
+  },
+  "data_quality": {
+    "missing_data_threshold": 0.05,
+    "outlier_threshold": 3.0,
+    "data_freshness_hours": 1,
+    "consistency_threshold": 0.95,
+    "completeness_threshold": 0.98,
+    "accuracy_threshold": 0.99,
+    "duplicate_threshold": 0.01,
+    "format_validation_threshold": 0.99,
+    "source_reliability_threshold": 0.8
+  },
+  "compliance": {
+    "position_limit_threshold": 0.95,
+    "exposure_limit_threshold": 0.9,
+    "risk_limit_threshold": 0.8,
+    "reporting_frequency_hours": 24,
+    "audit_trail_retention_days": 90,
+    "data_retention_days": 365,
+    "access_control_threshold": 0.99,
+    "encryption_threshold": 0.99,
+    "backup_frequency_hours": 6
+  },
+  "notifications": {
+    "email_threshold": 0.7,
+    "sms_threshold": 0.9,
+    "slack_threshold": 0.5,
+    "dashboard_threshold": 0.3,
+    "alert_cooldown_minutes": 30,
+    "escalation_threshold": 0.8,
+    "priority_levels": {
+      "critical": 0.9,
+      "high": 0.7,
+      "medium": 0.5,
+      "low": 0.3
+    },
+    "notification_channels": {
+      "system_errors": ["email", "slack"],
+      "performance_alerts": ["dashboard", "slack"],
+      "risk_alerts": ["email", "sms", "slack"],
+      "compliance_alerts": ["email", "dashboard"],
+      "portfolio_alerts": ["email", "slack"],
+      "rebalancing_alerts": ["dashboard", "slack"]
+    }
+  },
+  "action_priorities": {
+    "model_rebuild": 4,
+    "strategy_tune": 3,
+    "sentiment_fetch": 2,
+    "report_generate": 2,
+    "system_health_check": 5,
+    "performance_optimization": 3,
+    "risk_management": 5,
+    "portfolio_rebalance": 4,
+    "allocation_optimization": 3,
+    "data_quality_check": 4,
+    "compliance_check": 5,
+    "emergency_shutdown": 5
+  },
+  "time_windows": {
+    "short_term": 1,
+    "medium_term": 6,
+    "long_term": 24,
+    "ultra_short": 0.25,
+    "weekly": 168,
+    "monthly": 720
+  },
+  "market_hours": {
+    "pre_market_start": "04:00",
+    "market_open": "09:30",
+    "market_close": "16:00",
+    "after_hours_end": "20:00",
+    "weekend_override": false,
+    "holiday_override": false
+  },
+  "adaptive_thresholds": {
+    "enabled": true,
+    "learning_rate": 0.1,
+    "update_frequency_hours": 24,
+    "min_data_points": 100,
+    "confidence_threshold": 0.8,
+    "regression_window_days": 30,
+    "seasonality_adjustment": true,
+    "market_regime_detection": true
+  },
+  "fallback_mechanisms": {
+    "enabled": true,
+    "max_retries": 3,
+    "retry_delay_minutes": 5,
+    "circuit_breaker_threshold": 0.5,
+    "graceful_degradation": true,
+    "manual_override": true,
+    "emergency_contacts": [
+      "admin@evolve.com",
+      "support@evolve.com"
+    ]
+  }
+} 

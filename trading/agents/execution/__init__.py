@@ -1,55 +1,35 @@
 """
-Execution Module
+Execution Agent Package
 
-This module contains modularized execution components extracted from execution_agent.py.
+This package contains the modularized execution agent components:
+- Core execution agent
+- Risk controls
+- Trade signals
+- Execution providers
+- Position management
 """
 
-from .risk_controls import (
-    RiskControls,
-    RiskThreshold,
-    RiskThresholdType,
-    ExitReason,
-    ExitEvent,
-    create_default_risk_controls,
-)
-from .trade_signals import TradeSignal
-from .execution_models import ExecutionRequest, ExecutionResult
-from .risk_calculator import RiskCalculator
-from .execution_providers import (
-    ExecutionMode,
-    ExecutionProvider,
-    SimulationProvider,
-    AlpacaProvider,
-    InteractiveBrokersProvider,
-    RobinhoodProvider,
-    create_execution_provider,
-)
+from .execution_agent import ExecutionAgent, create_execution_agent
+from .risk_controls import RiskControls, RiskThreshold, RiskThresholdType
+from .trade_signals import TradeSignal, ExecutionRequest, ExecutionResult
+from .execution_providers import ExecutionProvider, SimulationProvider, AlpacaProvider, IBProvider, RobinhoodProvider
+from .position_manager import PositionManager, ExitEvent, ExitReason
 
 __all__ = [
-    # Risk Controls
-    "RiskControls",
-    "RiskThreshold", 
-    "RiskThresholdType",
-    "ExitReason",
-    "ExitEvent",
-    "create_default_risk_controls",
-    
-    # Trade Signals
-    "TradeSignal",
-    
-    # Execution Models
-    "ExecutionRequest",
-    "ExecutionResult",
-    
-    # Risk Calculator
-    "RiskCalculator",
-    
-    # Execution Providers
-    "ExecutionMode",
-    "ExecutionProvider",
-    "SimulationProvider",
-    "AlpacaProvider",
-    "InteractiveBrokersProvider", 
-    "RobinhoodProvider",
-    "create_execution_provider",
+    'ExecutionAgent',
+    'create_execution_agent',
+    'RiskControls',
+    'RiskThreshold',
+    'RiskThresholdType',
+    'TradeSignal',
+    'ExecutionRequest',
+    'ExecutionResult',
+    'ExecutionProvider',
+    'SimulationProvider',
+    'AlpacaProvider',
+    'IBProvider',
+    'RobinhoodProvider',
+    'PositionManager',
+    'ExitEvent',
+    'ExitReason'
 ] 

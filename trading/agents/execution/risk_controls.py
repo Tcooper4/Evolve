@@ -1,9 +1,11 @@
-"""Risk Controls Module.
+"""
+Risk Controls Module
 
-This module contains risk control classes and logic extracted from execution_agent.py.
+This module contains risk control classes and configurations for the execution agent.
+Extracted from the original execution_agent.py for modularity.
 """
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, Optional
@@ -106,7 +108,6 @@ class ExitEvent:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        from dataclasses import asdict
         exit_dict = asdict(self)
         exit_dict["timestamp"] = self.timestamp.isoformat()
         exit_dict["exit_reason"] = self.exit_reason.value
@@ -125,20 +126,16 @@ class ExitEvent:
 
 
 def create_default_risk_controls() -> RiskControls:
-    """Create default risk controls."""
-    stop_loss = RiskThreshold(
-        threshold_type=RiskThresholdType.PERCENTAGE,
-        value=0.02,  # 2% stop loss
-    )
-    
-    take_profit = RiskThreshold(
-        threshold_type=RiskThresholdType.PERCENTAGE,
-        value=0.06,  # 6% take profit
-    )
-    
+    """Create default risk controls configuration."""
     return RiskControls(
-        stop_loss=stop_loss,
-        take_profit=take_profit,
+        stop_loss=RiskThreshold(
+            threshold_type=RiskThresholdType.PERCENTAGE,
+            value=0.02,  # 2% stop loss
+        ),
+        take_profit=RiskThreshold(
+            threshold_type=RiskThresholdType.PERCENTAGE,
+            value=0.06,  # 6% take profit
+        ),
         max_position_size=0.2,
         max_portfolio_risk=0.05,
         max_daily_loss=0.02,
