@@ -199,7 +199,7 @@ def main():
         ("ccxt", "CCXT crypto trading"),
         ("alpaca_trade_api", "Alpaca trading API"),
         ("speech_recognition", "Speech recognition"),
-        ("empyrical", "Empyrical financial metrics"),
+        ("utils.performance_metrics", "Custom performance metrics"),
         ("scipy", "SciPy scientific computing"),
         ("matplotlib", "Matplotlib plotting"),
         ("seaborn", "Seaborn statistical plotting"),

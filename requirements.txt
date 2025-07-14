@@ -12,7 +12,7 @@ cachetools==5.5.2
 catboost==1.2.8
 ccxt==4.4.91
 chardet==5.2.0
-consul==0.1.0
+python-consul2==0.1.5
 croniter==6.0.0
 cryptography==45.0.5
 cvxpy==1.6.5
@@ -21,10 +21,10 @@ dash_bootstrap_components==2.0.3
 deap==1.4.3
 dnspython==2.7.0
 docx==0.2.4
-dowhy==0.13
+dowhy==0.8
 elasticsearch==9.0.2
-empyrical==0.5.5
-faiss==1.5.3
+
+faiss-cpu==1.7.4
 fastapi==0.116.1
 filelock==3.18.0
 Flask==3.1.1
@@ -34,7 +34,7 @@ flask_socketio==5.5.1
 fpdf==1.7.2
 fredapi==0.5.2
 genetic_optimizer==0.1.8
-great_expectations==1.5.5
+great_expectations==0.16.16
 gymnasium==1.1.1
 holidays==0.73
 huggingface_hub==0.32.0
@@ -43,7 +43,7 @@ ipdb==0.13.13
 Jinja2==3.1.6
 joblib==1.4.2
 jose==1.0.0
-kserve==0.15.2
+
 librosa==0.11.0
 lightgbm==4.6.0
 lime==0.2.0.1
@@ -79,11 +79,11 @@ python_dateutil==2.9.0.post0
 pytorch_lightning==2.5.2
 pyttsx3==2.99
 pytz==2025.2
-PyYAML==6.0.2
+PyYAML==6.0.1
 quart==0.20.0
 questionary==2.1.0
 ratelimit==2.2.1
-ray==2.47.1
+# ray>=2.0.0,<3.0.0  # Optional: Install separately if needed for optimization
 redis==6.2.0
 Requests==2.32.4
 rich==14.0.0
@@ -111,7 +111,6 @@ torch==2.6.0
 torch_geometric==2.6.1
 torchserve==0.12.0
 transformers==4.52.4
-triton==3.3.1
 twilio==9.6.5
 typer==0.16.0
 uvicorn==0.35.0

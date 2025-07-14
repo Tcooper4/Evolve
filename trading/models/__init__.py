@@ -3,6 +3,7 @@ from .advanced.rl.strategy_optimizer import DQNStrategyOptimizer
 from .advanced.transformer.time_series_transformer import TransformerForecaster
 from .arima_model import ARIMAModel
 from .base_model import BaseModel
+from .forecast_router import ForecastRouter
 from .garch_model import GARCHModel, create_garch_model
 from .lstm_model import LSTMModel
 from .ridge_model import RidgeModel, create_ridge_model
@@ -22,4 +23,5 @@ __all__ = [
     "TransformerForecaster",
     "DQNStrategyOptimizer",
     "GNNForecaster",
+    "ForecastRouter",
 ]
