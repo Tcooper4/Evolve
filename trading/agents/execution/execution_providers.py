@@ -1,15 +1,15 @@
-"""Execution Providers Module.
+"""
+Execution Providers Module
 
-This module contains execution provider classes extracted from execution_agent.py.
+This module contains execution provider classes for different trading platforms.
+Extracted from the original execution_agent.py for modularity.
 """
 
-import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from .execution_models import ExecutionResult
 from .trade_signals import TradeSignal
 
 
@@ -23,16 +23,25 @@ class ExecutionMode(Enum):
 
 
 class ExecutionProvider(ABC):
-    """Base class for execution providers."""
+    """Abstract base class for execution providers."""
 
     def __init__(self, config: Dict[str, Any]):
-        """Initialize execution provider."""
         self.config = config
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.is_connected = False
 
     @abstractmethod
-    async def execute_trade(self, signal: TradeSignal, execution_price: float) -> ExecutionResult:
-        """Execute a trade."""
+    async def connect(self) -> bool:
+        """Connect to the execution platform."""
+        pass
+
+    @abstractmethod
+    async def disconnect(self) -> None:
+        """Disconnect from the execution platform."""
+        pass
+
+    @abstractmethod
+    async def execute_trade(self, signal: TradeSignal) -> Dict[str, Any]:
+        """Execute a trade based on the signal."""
         pass
 
     @abstractmethod
@@ -47,78 +56,55 @@ class ExecutionProvider(ABC):
 
 
 class SimulationProvider(ExecutionProvider):
-    """Simulation execution provider."""
+    """Simulation execution provider for testing."""
 
     def __init__(self, config: Dict[str, Any]):
-        """Initialize simulation provider."""
         super().__init__(config)
-        self.account_balance = config.get("initial_balance", 100000.0)
+        self.trades = []
         self.positions = {}
-        self.trade_history = []
+        self.account_balance = config.get("initial_balance", 100000.0)
 
-    async def execute_trade(self, signal: TradeSignal, execution_price: float) -> ExecutionResult:
+    async def connect(self) -> bool:
+        """Connect to simulation environment."""
+        self.is_connected = True
+        return True
+
+    async def disconnect(self) -> None:
+        """Disconnect from simulation environment."""
+        self.is_connected = False
+
+    async def execute_trade(self, signal: TradeSignal) -> Dict[str, Any]:
         """Execute a simulated trade."""
-        try:
-            # Calculate position size
-            position_size = signal.get_risk_adjusted_size(self.account_balance)
-            
-            # Create position
-            from trading.portfolio.portfolio_manager import Position, TradeDirection
-            
-            position = Position(
-                symbol=signal.symbol,
-                size=position_size,
-                entry_price=execution_price,
-                direction=signal.direction,
-                timestamp=datetime.utcnow(),
-                strategy=signal.strategy,
-            )
+        if not self.is_connected:
+            raise RuntimeError("Simulation provider not connected")
 
-            # Update account balance
-            trade_value = position_size * execution_price
-            self.account_balance -= trade_value
-
-            # Store position
-            self.positions[signal.symbol] = position
-
-            # Log trade
-            self.trade_history.append({
-                "timestamp": datetime.utcnow(),
-                "symbol": signal.symbol,
-                "direction": signal.direction.value,
-                "size": position_size,
-                "price": execution_price,
-                "value": trade_value,
-            })
-
-            return ExecutionResult(
-                success=True,
-                signal=signal,
-                position=position,
-                execution_price=execution_price,
-                message="Simulated trade executed successfully",
-            )
-
-        except Exception as e:
-            self.logger.error(f"Error executing simulated trade: {e}")
-            return ExecutionResult(
-                success=False,
-                signal=signal,
-                error=str(e),
-                message="Failed to execute simulated trade",
-            )
+        # Simulate trade execution
+        execution_price = signal.entry_price
+        fees = execution_price * 0.001  # 0.1% fee simulation
+        
+        trade_result = {
+            "success": True,
+            "execution_price": execution_price,
+            "fees": fees,
+            "timestamp": datetime.utcnow().isoformat(),
+            "order_id": f"sim_{len(self.trades) + 1}",
+            "slippage": 0.0
+        }
+        
+        self.trades.append(trade_result)
+        return trade_result
 
     async def get_account_info(self) -> Dict[str, Any]:
-        """Get simulation account information."""
+        """Get simulated account information."""
         return {
             "balance": self.account_balance,
-            "equity": self.account_balance,
             "buying_power": self.account_balance,
-            "cash": self.account_balance,
+            "equity": self.account_balance,
+            "cash": self.account_balance
         }
 
     async def get_positions(self) -> Dict[str, Any]:
-        """Get simulation positions."""
+        """Get simulated positions."""
         return self.positions
 
 
@@ -126,131 +112,282 @@ class AlpacaProvider(ExecutionProvider):
     """Alpaca execution provider."""
 
     def __init__(self, config: Dict[str, Any]):
-        """Initialize Alpaca provider."""
         super().__init__(config)
         self.api_key = config.get("api_key")
         self.secret_key = config.get("secret_key")
         self.base_url = config.get("base_url", "https://paper-api.alpaca.markets")
-        self.client = None
 
-    async def execute_trade(self, signal: TradeSignal, execution_price: float) -> ExecutionResult:
-        """Execute trade via Alpaca."""
+    async def connect(self) -> bool:
+        """Connect to Alpaca API."""
         try:
-            # This would integrate with Alpaca API
-            # For now, return simulation result
-            self.logger.warning("Alpaca integration not implemented, using simulation")
-            
-            simulation_provider = SimulationProvider(self.config)
-            return await simulation_provider.execute_trade(signal, execution_price)
-
-        except Exception as e:
-            self.logger.error(f"Error executing Alpaca trade: {e}")
-            return ExecutionResult(
-                success=False,
-                signal=signal,
-                error=str(e),
-                message="Failed to execute Alpaca trade",
+            # Import alpaca-trade-api here to avoid dependency issues
+            import alpaca_trade_api as tradeapi
+            self.api = tradeapi.REST(
+                self.api_key,
+                self.secret_key,
+                self.base_url,
+                api_version='v2'
             )
+            self.is_connected = True
+            return True
+        except Exception as e:
+            print(f"Failed to connect to Alpaca: {e}")
+            return False
+
+    async def disconnect(self) -> None:
+        """Disconnect from Alpaca API."""
+        self.is_connected = False
+
+    async def execute_trade(self, signal: TradeSignal) -> Dict[str, Any]:
+        """Execute a trade via Alpaca."""
+        if not self.is_connected:
+            raise RuntimeError("Alpaca provider not connected")
+
+        try:
+            # Place order via Alpaca API
+            order = self.api.submit_order(
+                symbol=signal.symbol,
+                qty=signal.size,
+                side='buy' if signal.direction.value == 'long' else 'sell',
+                type='market',
+                time_in_force='day'
+            )
+            
+            return {
+                "success": True,
+                "execution_price": signal.entry_price,
+                "fees": 0.0,
+                "timestamp": datetime.utcnow().isoformat(),
+                "order_id": order.id,
+                "slippage": 0.0
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
 
     async def get_account_info(self) -> Dict[str, Any]:
         """Get Alpaca account information."""
-        # This would call Alpaca API
-        return {"balance": 0.0, "equity": 0.0, "buying_power": 0.0, "cash": 0.0}
+        if not self.is_connected:
+            return {}
+        
+        try:
+            account = self.api.get_account()
+            return {
+                "balance": float(account.cash),
+                "buying_power": float(account.buying_power),
+                "equity": float(account.equity),
+                "cash": float(account.cash)
+            }
+        except Exception as e:
+            return {"error": str(e)}
 
     async def get_positions(self) -> Dict[str, Any]:
         """Get Alpaca positions."""
-        # This would call Alpaca API
-        return {}
+        if not self.is_connected:
+            return {}
+        
+        try:
+            positions = self.api.list_positions()
+            return {pos.symbol: {
+                "quantity": float(pos.qty),
+                "avg_entry_price": float(pos.avg_entry_price),
+                "market_value": float(pos.market_value)
+            } for pos in positions}
+        except Exception as e:
+            return {"error": str(e)}
 
 
-class InteractiveBrokersProvider(ExecutionProvider):
+class IBProvider(ExecutionProvider):
     """Interactive Brokers execution provider."""
 
     def __init__(self, config: Dict[str, Any]):
-        """Initialize IB provider."""
         super().__init__(config)
+        self.host = config.get("host", "127.0.0.1")
         self.port = config.get("port", 7497)
         self.client_id = config.get("client_id", 1)
 
-    async def execute_trade(self, signal: TradeSignal, execution_price: float) -> ExecutionResult:
-        """Execute trade via Interactive Brokers."""
+    async def connect(self) -> bool:
+        """Connect to Interactive Brokers TWS/Gateway."""
         try:
-            # This would integrate with IB API
-            # For now, return simulation result
-            self.logger.warning("Interactive Brokers integration not implemented, using simulation")
-            
-            simulation_provider = SimulationProvider(self.config)
-            return await simulation_provider.execute_trade(signal, execution_price)
-
+            # Import ib_insync here to avoid dependency issues
+            from ib_insync import IB
+            self.ib = IB()
+            self.ib.connect(self.host, self.port, clientId=self.client_id)
+            self.is_connected = True
+            return True
         except Exception as e:
-            self.logger.error(f"Error executing IB trade: {e}")
-            return ExecutionResult(
-                success=False,
-                signal=signal,
-                error=str(e),
-                message="Failed to execute IB trade",
-            )
+            print(f"Failed to connect to IB: {e}")
+            return False
+
+    async def disconnect(self) -> None:
+        """Disconnect from Interactive Brokers."""
+        if hasattr(self, 'ib'):
+            self.ib.disconnect()
+        self.is_connected = False
+
+    async def execute_trade(self, signal: TradeSignal) -> Dict[str, Any]:
+        """Execute a trade via Interactive Brokers."""
+        if not self.is_connected:
+            raise RuntimeError("IB provider not connected")
+
+        try:
+            # Place order via IB API
+            from ib_insync import Stock, MarketOrder
+            contract = Stock(signal.symbol, 'SMART', 'USD')
+            order = MarketOrder('BUY' if signal.direction.value == 'long' else 'SELL', signal.size)
+            
+            trade = self.ib.placeOrder(contract, order)
+            self.ib.sleep(1)  # Wait for order to be processed
+            
+            return {
+                "success": trade.orderStatus.status == "Filled",
+                "execution_price": signal.entry_price,
+                "fees": 0.0,
+                "timestamp": datetime.utcnow().isoformat(),
+                "order_id": str(trade.order.orderId),
+                "slippage": 0.0
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
 
     async def get_account_info(self) -> Dict[str, Any]:
         """Get IB account information."""
-        # This would call IB API
-        return {"balance": 0.0, "equity": 0.0, "buying_power": 0.0, "cash": 0.0}
+        if not self.is_connected:
+            return {}
+        
+        try:
+            account_values = self.ib.accountSummary()
+            return {
+                "balance": float([av for av in account_values if av.tag == "NetLiquidation"][0].value),
+                "buying_power": float([av for av in account_values if av.tag == "BuyingPower"][0].value),
+                "equity": float([av for av in account_values if av.tag == "NetLiquidation"][0].value),
+                "cash": float([av for av in account_values if av.tag == "AvailableFunds"][0].value)
+            }
+        except Exception as e:
+            return {"error": str(e)}
 
     async def get_positions(self) -> Dict[str, Any]:
         """Get IB positions."""
-        # This would call IB API
-        return {}
+        if not self.is_connected:
+            return {}
+        
+        try:
+            positions = self.ib.positions()
+            return {pos.contract.symbol: {
+                "quantity": pos.position,
+                "avg_entry_price": pos.avgCost,
+                "market_value": pos.position * pos.avgCost
+            } for pos in positions if pos.position != 0}
+        except Exception as e:
+            return {"error": str(e)}
 
 
 class RobinhoodProvider(ExecutionProvider):
     """Robinhood execution provider."""
 
     def __init__(self, config: Dict[str, Any]):
-        """Initialize Robinhood provider."""
         super().__init__(config)
         self.username = config.get("username")
         self.password = config.get("password")
         self.mfa_code = config.get("mfa_code")
 
-    async def execute_trade(self, signal: TradeSignal, execution_price: float) -> ExecutionResult:
-        """Execute trade via Robinhood."""
+    async def connect(self) -> bool:
+        """Connect to Robinhood API."""
         try:
-            # This would integrate with Robinhood API
-            # For now, return simulation result
-            self.logger.warning("Robinhood integration not implemented, using simulation")
-            
-            simulation_provider = SimulationProvider(self.config)
-            return await simulation_provider.execute_trade(signal, execution_price)
-
+            # Import robin_stocks here to avoid dependency issues
+            import robin_stocks.robinhood as rh
+            rh.login(self.username, self.password, mfa_code=self.mfa_code)
+            self.is_connected = True
+            return True
         except Exception as e:
-            self.logger.error(f"Error executing Robinhood trade: {e}")
-            return ExecutionResult(
-                success=False,
-                signal=signal,
-                error=str(e),
-                message="Failed to execute Robinhood trade",
+            print(f"Failed to connect to Robinhood: {e}")
+            return False
+
+    async def disconnect(self) -> None:
+        """Disconnect from Robinhood API."""
+        self.is_connected = False
+
+    async def execute_trade(self, signal: TradeSignal) -> Dict[str, Any]:
+        """Execute a trade via Robinhood."""
+        if not self.is_connected:
+            raise RuntimeError("Robinhood provider not connected")
+
+        try:
+            # Place order via Robinhood API
+            import robin_stocks.robinhood as rh
+            
+            side = "buy" if signal.direction.value == 'long' else "sell"
+            order = rh.order_market(
+                symbol=signal.symbol,
+                side=side,
+                quantity=signal.size
             )
+            
+            return {
+                "success": order.get("state") == "filled",
+                "execution_price": signal.entry_price,
+                "fees": 0.0,
+                "timestamp": datetime.utcnow().isoformat(),
+                "order_id": order.get("id"),
+                "slippage": 0.0
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
 
     async def get_account_info(self) -> Dict[str, Any]:
         """Get Robinhood account information."""
-        # This would call Robinhood API
-        return {"balance": 0.0, "equity": 0.0, "buying_power": 0.0, "cash": 0.0}
+        if not self.is_connected:
+            return {}
+        
+        try:
+            import robin_stocks.robinhood as rh
+            account = rh.load_account_profile()
+            return {
+                "balance": float(account.get("cash", 0)),
+                "buying_power": float(account.get("buying_power", 0)),
+                "equity": float(account.get("equity", 0)),
+                "cash": float(account.get("cash", 0))
+            }
+        except Exception as e:
+            return {"error": str(e)}
 
     async def get_positions(self) -> Dict[str, Any]:
         """Get Robinhood positions."""
-        # This would call Robinhood API
-        return {}
+        if not self.is_connected:
+            return {}
+        
+        try:
+            import robin_stocks.robinhood as rh
+            positions = rh.get_open_stock_positions()
+            return {pos.get("symbol"): {
+                "quantity": float(pos.get("quantity", 0)),
+                "avg_entry_price": float(pos.get("average_buy_price", 0)),
+                "market_value": float(pos.get("quantity", 0)) * float(pos.get("average_buy_price", 0))
+            } for pos in positions if float(pos.get("quantity", 0)) > 0}
+        except Exception as e:
+            return {"error": str(e)}
 
 
 def create_execution_provider(mode: ExecutionMode, config: Dict[str, Any]) -> ExecutionProvider:
-    """Create execution provider based on mode."""
+    """Factory function to create execution providers."""
     if mode == ExecutionMode.SIMULATION:
         return SimulationProvider(config)
     elif mode == ExecutionMode.ALPACA:
         return AlpacaProvider(config)
     elif mode == ExecutionMode.INTERACTIVE_BROKERS:
-        return InteractiveBrokersProvider(config)
+        return IBProvider(config)
     elif mode == ExecutionMode.ROBINHOOD:
         return RobinhoodProvider(config)
     else:
-        raise ValueError(f"Unknown execution mode: {mode}") 
+        raise ValueError(f"Unsupported execution mode: {mode}") 

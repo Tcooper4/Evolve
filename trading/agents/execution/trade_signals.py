@@ -1,14 +1,15 @@
-"""Trade Signals Module.
+"""
+Trade Signals Module
 
-This module contains trade signal classes and logic extracted from execution_agent.py.
+This module contains trade signal classes and execution request/result models.
+Extracted from the original execution_agent.py for modularity.
 """
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
 from trading.portfolio.portfolio_manager import TradeDirection
-from .risk_controls import RiskControls
 
 
 @dataclass
@@ -25,12 +26,11 @@ class TradeSignal:
     stop_loss: Optional[float] = None
     max_holding_period: Optional[timedelta] = None
     market_data: Optional[Dict[str, Any]] = None
-    risk_controls: Optional[RiskControls] = None
+    risk_controls: Optional[Any] = None  # RiskControls type
     timestamp: datetime = datetime.utcnow()
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        from dataclasses import asdict
         signal_dict = asdict(self)
         signal_dict["timestamp"] = self.timestamp.isoformat()
         if self.max_holding_period:
@@ -57,30 +57,43 @@ class TradeSignal:
 
         # Convert risk controls
         if "risk_controls" in data and data["risk_controls"]:
+            from .risk_controls import RiskControls
             data["risk_controls"] = RiskControls.from_dict(data["risk_controls"])
 
         return cls(**data)
 
-    def validate(self) -> bool:
-        """Validate the trade signal."""
-        if not self.symbol or not self.symbol.strip():
-            return False
-        
-        if self.confidence < 0 or self.confidence > 1:
-            return False
-        
-        if self.entry_price <= 0:
-            return False
-        
-        if self.direction not in [TradeDirection.LONG, TradeDirection.SHORT]:
-            return False
-        
-        return True
 
-    def get_risk_adjusted_size(self, portfolio_value: float) -> float:
-        """Calculate risk-adjusted position size."""
-        if self.size is not None:
-            return min(self.size, portfolio_value * 0.2)  # Max 20% of portfolio
-        
-        # Default to 5% of portfolio
-        return portfolio_value * 0.05 
+@dataclass
+class ExecutionRequest:
+    """Request for execution agent operations."""
+
+    operation_type: str  # 'execute', 'exit', 'status', etc.
+    signal: Optional[TradeSignal] = None
+    market_data: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    timestamp: datetime = datetime.utcnow()
+
+
+@dataclass
+class ExecutionResult:
+    """Execution result data class."""
+
+    success: bool
+    signal: TradeSignal
+    position: Optional[Any] = None  # Position type
+    execution_price: Optional[float] = None
+    slippage: float = 0.0
+    fees: float = 0.0
+    message: str = ""
+    error: Optional[str] = None
+    risk_metrics: Optional[Dict[str, float]] = None
+    timestamp: datetime = datetime.utcnow()
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        result_dict = asdict(self)
+        result_dict["timestamp"] = self.timestamp.isoformat()
+        result_dict["signal"] = self.signal.to_dict()
+        if self.position:
+            result_dict["position"] = self.position.to_dict()
+        return result_dict 

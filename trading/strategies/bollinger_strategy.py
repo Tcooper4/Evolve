@@ -44,57 +44,97 @@ class BollingerStrategy:
 
         return upper_band, middle_band, lower_band
 
-    def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Generate trading signals based on Bollinger Bands."""
-        if not isinstance(data, pd.DataFrame):
+    def generate_signals(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
+        """
+        Generate trading signals based on Bollinger Bands.
+        
+        Args:
+            df: Price data DataFrame with required columns
+            **kwargs: Additional parameters (overrides config)
+            
+        Returns:
+            DataFrame with signals and Bollinger Bands components
+            
+        Raises:
+            ValueError: If required columns are missing or data is invalid
+        """
+        # Validate input
+        if not isinstance(df, pd.DataFrame):
             raise ValueError("Input must be a pandas DataFrame")
-
-        # Add validation for Close column
-        if "Close" not in data.columns and "close" not in data.columns:
-            raise ValueError("Missing Close column for Bollinger Band strategy")
-
-        # Normalize column names
-        if "Close" in data.columns:
-            data = data.rename(columns={"Close": "close"})
-
+        
+        if df.empty:
+            raise ValueError("DataFrame is empty")
+        
+        # Check for required columns (case-insensitive)
+        df_lower = df.copy()
+        df_lower.columns = df_lower.columns.str.lower()
+        
         required_columns = ["close", "volume"]
-        if not all(col in data.columns for col in required_columns):
-            raise ValueError(f"Data must contain columns: {required_columns}")
+        missing_columns = [col for col in required_columns if col not in df_lower.columns]
+        if missing_columns:
+            raise ValueError(f"Data must contain columns: {missing_columns}")
+        
+        # Handle NaN values
+        if df_lower["close"].isna().any():
+            df_lower["close"] = df_lower["close"].fillna(method='ffill').fillna(method='bfill')
+        
+        if df_lower["volume"].isna().any():
+            df_lower["volume"] = df_lower["volume"].fillna(0)
+        
+        # Update config with kwargs if provided
+        config = self.config
+        if kwargs:
+            config = BollingerConfig(
+                window=kwargs.get('window', self.config.window),
+                num_std=kwargs.get('num_std', self.config.num_std),
+                min_volume=kwargs.get('min_volume', self.config.min_volume),
+                min_price=kwargs.get('min_price', self.config.min_price),
+                squeeze_threshold=kwargs.get('squeeze_threshold', self.config.squeeze_threshold),
+            )
 
-        # Calculate Bollinger Bands
-        upper_band, middle_band, lower_band = self.calculate_bands(data)
+        try:
+            # Calculate Bollinger Bands
+            upper_band, middle_band, lower_band = calculate_bollinger_bands(
+                df_lower["close"], config.window, config.num_std
+            )
 
-        # Calculate squeeze condition (bandwidth)
-        bandwidth = (upper_band - lower_band) / middle_band
-        squeeze_condition = bandwidth < self.config.squeeze_threshold
+            # Calculate squeeze condition (bandwidth)
+            bandwidth = (upper_band - lower_band) / middle_band
+            squeeze_condition = bandwidth < config.squeeze_threshold
 
-        # Initialize signals DataFrame
-        signals = pd.DataFrame(index=data.index)
-        signals["signal"] = 0
+            # Initialize signals DataFrame
+            signals = pd.DataFrame(index=df.index)
+            signals["signal"] = 0
 
-        # Generate signals (avoid trades during squeeze)
-        buy_condition = (data["close"] < lower_band) & ~squeeze_condition
-        sell_condition = (data["close"] > upper_band) & ~squeeze_condition
+            # Generate signals (avoid trades during squeeze)
+            buy_condition = (df_lower["close"] < lower_band) & ~squeeze_condition
+            sell_condition = (df_lower["close"] > upper_band) & ~squeeze_condition
 
-        signals.loc[buy_condition, "signal"] = 1  # Buy signal
-        signals.loc[sell_condition, "signal"] = -1  # Sell signal
+            signals.loc[buy_condition, "signal"] = 1  # Buy signal
+            signals.loc[sell_condition, "signal"] = -1  # Sell signal
 
-        # Add squeeze information
-        signals["bandwidth"] = bandwidth
-        signals["squeeze"] = squeeze_condition
+            # Add squeeze information
+            signals["bandwidth"] = bandwidth
+            signals["squeeze"] = squeeze_condition
 
-        # Add bands to signals
-        signals["upper_band"] = upper_band
-        signals["middle_band"] = middle_band
-        signals["lower_band"] = lower_band
+            # Add bands to signals
+            signals["upper_band"] = upper_band
+            signals["middle_band"] = middle_band
+            signals["lower_band"] = lower_band
 
-        # Filter signals based on volume and price
-        volume_mask = data["volume"] >= self.config.min_volume
-        price_mask = data["close"] >= self.config.min_price
-        signals.loc[~(volume_mask & price_mask), "signal"] = 0
+            # Filter signals based on volume and price
+            volume_mask = df_lower["volume"] >= config.min_volume
+            price_mask = df_lower["close"] >= config.min_price
+            signals.loc[~(volume_mask & price_mask), "signal"] = 0
 
-        self.signals = signals
-        return signals
+            # Handle any remaining NaN values in signals
+            signals = signals.fillna(0)
+
+            self.signals = signals
+            return signals
+            
+        except Exception as e:
+            raise ValueError(f"Error generating Bollinger Bands signals: {str(e)}")
 
     def calculate_positions(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate trading positions based on signals."""
@@ -117,6 +157,7 @@ class BollingerStrategy:
             "num_std": self.config.num_std,
             "min_volume": self.config.min_volume,
             "min_price": self.config.min_price,
+            "squeeze_threshold": self.config.squeeze_threshold,
         }
 
     def set_parameters(self, params: Dict) -> Dict:

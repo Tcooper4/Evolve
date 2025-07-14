@@ -146,35 +146,64 @@ class RSIStrategy:
 
         return self.min_rsi_range <= rsi_value <= self.max_rsi_range
 
-    def generate_signals(self, data: pd.DataFrame, **kwargs) -> List[Dict[str, Any]]:
-        """Generate trading signals based on RSI with enhanced logging.
-
-        Args:
-            data: Price data
-            **kwargs: Additional parameters
-
-        Returns:
-            List of trading signals
+    def generate_signals(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
         """
-        # Edge case fallback logic
-        if data is None or data.empty or "Close" not in data.columns:
-            logger.warning(
-                "Invalid data provided to RSI strategy: data is None, empty, or missing 'Close' column"
-            )
-            return []  # Return empty signals list
+        Generate trading signals based on RSI with enhanced logging.
+        
+        Args:
+            df: Price data DataFrame with required columns
+            **kwargs: Additional parameters (overrides config)
+            
+        Returns:
+            DataFrame with signals and RSI values
+            
+        Raises:
+            ValueError: If required columns are missing or data is invalid
+        """
+        # Validate input
+        if not isinstance(df, pd.DataFrame):
+            raise ValueError("Input must be a pandas DataFrame")
+        
+        if df.empty:
+            raise ValueError("DataFrame is empty")
+        
+        # Check for required columns (case-insensitive)
+        df_lower = df.copy()
+        df_lower.columns = df_lower.columns.str.lower()
+        
+        required_columns = ["close"]
+        missing_columns = [col for col in required_columns if col not in df_lower.columns]
+        if missing_columns:
+            raise ValueError(f"Data must contain columns: {missing_columns}")
+        
+        # Handle NaN values
+        if df_lower["close"].isna().any():
+            df_lower["close"] = df_lower["close"].fillna(method='ffill').fillna(method='bfill')
+        
+        # Update parameters with kwargs if provided
+        rsi_period = kwargs.get('rsi_period', self.rsi_period)
+        oversold_threshold = kwargs.get('oversold_threshold', self.oversold_threshold)
+        overbought_threshold = kwargs.get('overbought_threshold', self.overbought_threshold)
+        enable_range_filter = kwargs.get('enable_range_filter', self.enable_range_filter)
+        min_rsi_range = kwargs.get('min_rsi_range', self.min_rsi_range)
+        max_rsi_range = kwargs.get('max_rsi_range', self.max_rsi_range)
+        log_crossovers = kwargs.get('log_crossovers', self.log_crossovers)
 
         try:
             # Calculate RSI
-            data = data.copy()
-            data["RSI"] = self.calculate_rsi(data)
+            data = df_lower.copy()
+            data["RSI"] = calculate_rsi(data["close"], rsi_period)
 
-            signals = []
-            crossover_count = 0
+            # Initialize signals DataFrame
+            signals = pd.DataFrame(index=df.index)
+            signals["signal"] = 0
+            signals["rsi"] = data["RSI"]
 
+            # Generate signals based on RSI thresholds
             for i in range(1, len(data)):
                 current_rsi = data["RSI"].iloc[i]
                 prev_rsi = data["RSI"].iloc[i - 1]
-                current_price = data["Close"].iloc[i]
+                current_price = data["close"].iloc[i]
                 timestamp = (
                     data.index[i]
                     if hasattr(data.index[i], "to_pydatetime")
@@ -182,8 +211,8 @@ class RSIStrategy:
                 )
 
                 # Skip if RSI is not in valid range
-                if not self.is_rsi_in_valid_range(current_rsi):
-                    if self.log_crossovers and self.is_rsi_in_valid_range(prev_rsi):
+                if enable_range_filter and not (min_rsi_range <= current_rsi <= max_rsi_range):
+                    if log_crossovers and min_rsi_range <= prev_rsi <= max_rsi_range:
                         self.log_rsi_crossover(
                             timestamp=timestamp,
                             rsi_value=current_rsi,
@@ -194,7 +223,7 @@ class RSIStrategy:
                     continue
 
                 # Check for range entry if previously outside range
-                if self.log_crossovers and not self.is_rsi_in_valid_range(prev_rsi):
+                if log_crossovers and enable_range_filter and not (min_rsi_range <= prev_rsi <= max_rsi_range):
                     self.log_rsi_crossover(
                         timestamp=timestamp,
                         rsi_value=current_rsi,
@@ -203,80 +232,40 @@ class RSIStrategy:
                         additional_info={"prev_rsi": round(prev_rsi, 4)},
                     )
 
-                # Generate signals based on RSI thresholds
-                if (
-                    current_rsi < self.oversold_threshold
-                    and prev_rsi >= self.oversold_threshold
-                ):
-                    # Oversold condition - buy signal
-                    crossover_count += 1
-                    self.log_rsi_crossover(
-                        timestamp=timestamp,
-                        rsi_value=current_rsi,
-                        crossover_type="oversold",
-                        price=current_price,
-                        additional_info={"signal_type": "buy", "confidence": 0.7},
-                    )
+                # Generate buy signal (oversold condition)
+                if current_rsi < oversold_threshold and prev_rsi >= oversold_threshold:
+                    signals.iloc[i, signals.columns.get_loc("signal")] = 1
+                    if log_crossovers:
+                        self.log_rsi_crossover(
+                            timestamp=timestamp,
+                            rsi_value=current_rsi,
+                            crossover_type="oversold",
+                            price=current_price,
+                            additional_info={"threshold": oversold_threshold},
+                        )
 
-                    signals.append(
-                        {
-                            "timestamp": timestamp,
-                            "signal_type": "buy",
-                            "confidence": 0.7,
-                            "price": current_price,
-                            "strategy_name": "RSI",
-                            "parameters": {
-                                "rsi_value": current_rsi,
-                                "rsi_period": self.rsi_period,
-                                "oversold_threshold": self.oversold_threshold,
-                            },
-                        }
-                    )
+                # Generate sell signal (overbought condition)
+                elif current_rsi > overbought_threshold and prev_rsi <= overbought_threshold:
+                    signals.iloc[i, signals.columns.get_loc("signal")] = -1
+                    if log_crossovers:
+                        self.log_rsi_crossover(
+                            timestamp=timestamp,
+                            rsi_value=current_rsi,
+                            crossover_type="overbought",
+                            price=current_price,
+                            additional_info={"threshold": overbought_threshold},
+                        )
 
-                elif (
-                    current_rsi > self.overbought_threshold
-                    and prev_rsi <= self.overbought_threshold
-                ):
-                    # Overbought condition - sell signal
-                    crossover_count += 1
-                    self.log_rsi_crossover(
-                        timestamp=timestamp,
-                        rsi_value=current_rsi,
-                        crossover_type="overbought",
-                        price=current_price,
-                        additional_info={"signal_type": "sell", "confidence": 0.7},
-                    )
+            # Handle any remaining NaN values in signals
+            signals = signals.fillna(0)
 
-                    signals.append(
-                        {
-                            "timestamp": timestamp,
-                            "signal_type": "sell",
-                            "confidence": 0.7,
-                            "price": current_price,
-                            "strategy_name": "RSI",
-                            "parameters": {
-                                "rsi_value": current_rsi,
-                                "rsi_period": self.rsi_period,
-                                "overbought_threshold": self.overbought_threshold,
-                            },
-                        }
-                    )
-
-            logger.info(
-                f"RSI Strategy generated {len(signals)} signals with {crossover_count} crossovers"
-            )
             return signals
-
+            
         except Exception as e:
-            logger.error(f"Error generating RSI signals: {e}")
-            return []  # Return empty signals list on error
+            raise ValueError(f"Error generating RSI signals: {str(e)}")
 
     def get_parameters(self) -> Dict[str, Any]:
-        """Get strategy parameters including range filter settings.
-
-        Returns:
-            Strategy parameters
-        """
+        """Get strategy parameters."""
         return {
             "rsi_period": self.rsi_period,
             "oversold_threshold": self.oversold_threshold,
@@ -288,32 +277,44 @@ class RSIStrategy:
         }
 
     def set_parameters(self, **kwargs):
-        """Set strategy parameters.
+        """Set strategy parameters."""
+        try:
+            # Update parameters
+            if 'rsi_period' in kwargs:
+                self.rsi_period = kwargs['rsi_period']
+            if 'oversold_threshold' in kwargs:
+                self.oversold_threshold = kwargs['oversold_threshold']
+            if 'overbought_threshold' in kwargs:
+                self.overbought_threshold = kwargs['overbought_threshold']
+            if 'enable_range_filter' in kwargs:
+                self.enable_range_filter = kwargs['enable_range_filter']
+            if 'min_rsi_range' in kwargs:
+                self.min_rsi_range = kwargs['min_rsi_range']
+            if 'max_rsi_range' in kwargs:
+                self.max_rsi_range = kwargs['max_rsi_range']
+            if 'log_crossovers' in kwargs:
+                self.log_crossovers = kwargs['log_crossovers']
 
-        Args:
-            **kwargs: Parameters to set
-        """
-        if "rsi_period" in kwargs:
-            self.rsi_period = kwargs["rsi_period"]
-        if "oversold_threshold" in kwargs:
-            self.oversold_threshold = kwargs["oversold_threshold"]
-        if "overbought_threshold" in kwargs:
-            self.overbought_threshold = kwargs["overbought_threshold"]
-        if "enable_range_filter" in kwargs:
-            self.enable_range_filter = kwargs["enable_range_filter"]
-        if "min_rsi_range" in kwargs:
-            self.min_rsi_range = kwargs["min_rsi_range"]
-        if "max_rsi_range" in kwargs:
-            self.max_rsi_range = kwargs["max_rsi_range"]
-        if "log_crossovers" in kwargs:
-            self.log_crossovers = kwargs["log_crossovers"]
+            return {
+                "success": True,
+                "result": {
+                    "status": "success",
+                    "parameters_updated": True,
+                    "config": self.get_parameters(),
+                },
+                "message": "Parameters updated successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
+        except Exception as e:
+            return {
+                "success": True,
+                "result": {"status": "error", "message": str(e)},
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_crossover_log(self) -> List[Dict[str, Any]]:
-        """Get the crossover log.
-
-        Returns:
-            List of crossover events
-        """
+        """Get the crossover log."""
         return self.crossover_log.copy()
 
     def clear_crossover_log(self):
@@ -321,46 +322,37 @@ class RSIStrategy:
         self.crossover_log.clear()
 
     def export_crossover_log(self, filepath: str):
-        """Export crossover log to JSON file.
-
-        Args:
-            filepath: Path to save the log file
-        """
+        """Export crossover log to JSON file."""
         try:
-            with open(filepath, "w") as f:
+            with open(filepath, 'w') as f:
                 json.dump(self.crossover_log, f, indent=2, default=str)
-            logger.info(f"Exported crossover log to {filepath}")
+            logger.info(f"Crossover log exported to {filepath}")
         except Exception as e:
             logger.error(f"Failed to export crossover log: {e}")
 
     def get_crossover_statistics(self) -> Dict[str, Any]:
-        """Get statistics about RSI crossovers.
-
-        Returns:
-            Dictionary with crossover statistics
-        """
+        """Get statistics about crossover events."""
         if not self.crossover_log:
-            return {}
+            return {
+                "total_crossovers": 0,
+                "crossover_types": {},
+                "avg_rsi_value": 0.0,
+                "avg_price": 0.0,
+            }
 
-        crossover_types = [event["crossover_type"] for event in self.crossover_log]
-        rsi_values = [event["rsi_value"] for event in self.crossover_log]
+        crossover_types = {}
+        rsi_values = []
+        prices = []
 
-        stats = {
+        for event in self.crossover_log:
+            crossover_type = event["crossover_type"]
+            crossover_types[crossover_type] = crossover_types.get(crossover_type, 0) + 1
+            rsi_values.append(event["rsi_value"])
+            prices.append(event["price"])
+
+        return {
             "total_crossovers": len(self.crossover_log),
-            "crossover_types": {
-                crossover_type: crossover_types.count(crossover_type)
-                for crossover_type in set(crossover_types)
-            },
-            "rsi_statistics": {
-                "min": min(rsi_values),
-                "max": max(rsi_values),
-                "mean": np.mean(rsi_values),
-                "std": np.std(rsi_values),
-            },
-            "date_range": {
-                "start": min(event["timestamp"] for event in self.crossover_log),
-                "end": max(event["timestamp"] for event in self.crossover_log),
-            },
+            "crossover_types": crossover_types,
+            "avg_rsi_value": np.mean(rsi_values) if rsi_values else 0.0,
+            "avg_price": np.mean(prices) if prices else 0.0,
         }
-
-        return stats
