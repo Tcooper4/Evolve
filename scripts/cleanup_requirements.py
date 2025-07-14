@@ -92,7 +92,7 @@ class RequirementsCleaner:
             "additional": [
                 "pydantic",
                 "finta",
-                "empyrical",
+
                 "scipy",
                 "xgboost",
                 "arch",

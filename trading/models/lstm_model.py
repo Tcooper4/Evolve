@@ -370,46 +370,52 @@ class LSTMForecaster(BaseModel):
         self.logger = logging.getLogger(__name__)
 
     def build_model(self) -> nn.Module:
-        """Build and return the LSTM model.
-
-        Returns:
-            nn.Module: The built LSTM model
-        """
-        model = nn.Sequential(
-            nn.LSTM(
-                input_size=self.config["input_size"],
-                hidden_size=self.config["hidden_size"],
-                num_layers=self.config["num_layers"],
-                batch_first=True,
-                dropout=self.config["dropout"] if self.config["num_layers"] > 1 else 0,
-            ),
-            nn.Linear(self.config["hidden_size"], 1),
-        )
-
-        # Add attention if enabled
-        if self.config.get("use_attention", False):
-            model.add_module(
-                "attention",
-                nn.MultiheadAttention(
-                    embed_dim=self.config["hidden_size"],
-                    num_heads=self.config.get("num_attention_heads", 4),
-                    dropout=self.config.get("attention_dropout", 0.1),
-                ),
-            )
-
-        # Add batch normalization if enabled
-        if self.config.get("use_batch_norm", False):
-            model.add_module("batch_norm", nn.BatchNorm1d(self.config["hidden_size"]))
-
-        # Add layer normalization if enabled
-        if self.config.get("use_layer_norm", False):
-            model.add_module("layer_norm", nn.LayerNorm(self.config["hidden_size"]))
-
-        # Add dropout if enabled
-        if self.config.get("additional_dropout", 0) > 0:
-            model.add_module("dropout", nn.Dropout(self.config["additional_dropout"]))
-
-        return model
+        """Build and return the LSTM model using PyTorch."""
+        input_size = len(self.config["feature_columns"])
+        hidden_size = self.config["hidden_size"]
+        num_layers = self.config.get("num_layers", 1)
+        dropout = self.config["dropout"]
+        use_batch_norm = self.config.get("use_batch_norm", False)
+        use_layer_norm = self.config.get("use_layer_norm", False)
+        additional_dropout = self.config.get("additional_dropout", 0)
+        
+        class LSTMForecasterModel(nn.Module):
+            def __init__(self, input_size, hidden_size, num_layers, dropout, use_batch_norm, use_layer_norm, additional_dropout):
+                super().__init__()
+                self.lstm = nn.LSTM(
+                    input_size, 
+                    hidden_size, 
+                    num_layers=num_layers, 
+                    batch_first=True, 
+                    dropout=dropout if num_layers > 1 else 0
+                )
+                
+                # Additional layers for enhanced functionality
+                self.batch_norm = nn.BatchNorm1d(hidden_size) if use_batch_norm else None
+                self.layer_norm = nn.LayerNorm(hidden_size) if use_layer_norm else None
+                self.dropout_layer = nn.Dropout(additional_dropout)
+                self.fc = nn.Linear(hidden_size, 1)
+                
+            def forward(self, x):
+                # LSTM forward pass
+                lstm_out, _ = self.lstm(x)
+                
+                # Use only the final timestep's output
+                final_output = lstm_out[:, -1, :]
+                
+                # Apply normalization if enabled
+                if self.batch_norm is not None:
+                    final_output = self.batch_norm(final_output)
+                if self.layer_norm is not None:
+                    final_output = self.layer_norm(final_output)
+                
+                # Apply additional dropout
+                final_output = self.dropout_layer(final_output)
+                
+                # Final prediction
+                return self.fc(final_output)
+        
+        return LSTMForecasterModel(input_size, hidden_size, num_layers, dropout, use_batch_norm, use_layer_norm, additional_dropout)
 
     def _validate_config(self):
         """Validate model configuration."""
@@ -584,239 +590,133 @@ class LSTMForecaster(BaseModel):
         learning_rate: float = 0.001,
         validation_split: float = 0.2,
     ) -> Dict[str, List[float]]:
-        """Train the model with robust error handling.
-
-        Args:
-            X (pd.DataFrame): Input features
-            y (pd.Series): Target values
-            epochs (int, optional): Number of epochs. Defaults to 100.
-            batch_size (int, optional): Batch size. Defaults to 32.
-            learning_rate (float, optional): Learning rate. Defaults to 0.001.
-
-        Returns:
-            Dict[str, List[float]]: Training history
-
-        Raises:
-            ValueError: If data is missing or malformed
-            RuntimeError: If training fails
-        """
-        try:
-            # Validate input data
-            if X is None or X.empty:
-                raise ValueError("Input features DataFrame is empty or None")
-
-            if y is None or y.empty:
-                raise ValueError("Target Series is empty or None")
-
-            if len(X) != len(y):
-                raise ValueError(
-                    f"Length mismatch: X has {len(X)} rows, y has {len(y)} rows"
-                )
-
-            # Check for NaN values
-            if X.isnull().any().any():
-                self.logger.warning(
-                    "NaN values found in input features, attempting to clean"
-                )
-                X = X.dropna()
-                y = y[X.index]  # Align target with cleaned features
-                if X.empty:
-                    raise ValueError(
-                        "No valid data remaining after removing NaN values"
-                    )
-
-            if y.isnull().any():
-                self.logger.warning("NaN values found in target, attempting to clean")
-                y = y.dropna()
-                X = X[y.index]  # Align features with cleaned target
-                if y.empty:
-                    raise ValueError(
-                        "No valid data remaining after removing NaN values"
-                    )
-
-            # Validate data size
-            if len(X) < self.config["sequence_length"]:
-                raise ValueError(
-                    f"Data length {len(X)} is less than sequence length {self.config['sequence_length']}"
-                )
-
-            # Validate batch size
-            if batch_size > len(X):
-                self.logger.warning(
-                    f"Batch size {batch_size} is larger than data size {len(X)}, reducing to {len(X)}"
-                )
-                batch_size = len(X)
-
-            # Validate epochs
-            if epochs <= 0:
-                raise ValueError("Epochs must be positive")
-
-            if epochs > self.config.get("max_epochs", 1000):
-                self.logger.warning(
-                    f"Epochs {epochs} exceeds maximum allowed {self.config.get('max_epochs', 1000)}, reducing"
-                )
-                epochs = self.config.get("max_epochs", 1000)
-
-            # Prepare data
-            X_seq, y_seq = self._prepare_data(X, is_training=True)
-
-            # Split data for validation
-            split_idx = int(len(X_seq) * (1 - validation_split))
-            X_train, X_val = X_seq[:split_idx], X_seq[split_idx:]
-            y_train, y_val = y_seq[:split_idx], y_seq[split_idx:]
-
-            # Create DataLoaders
-            train_dataset = TensorDataset(X_train, y_train)
-            val_dataset = TensorDataset(X_val, y_val)
-            train_dataloader = DataLoader(
-                train_dataset, batch_size=batch_size, shuffle=True
-            )
-            val_dataloader = DataLoader(
-                val_dataset, batch_size=batch_size, shuffle=False
-            )
-
-            # Initialize optimizer and loss function
-            optimizer = Adam(self.model.parameters(), lr=learning_rate)
-            criterion = nn.MSELoss()
-
-            # Training history
-            history = {"train_loss": [], "val_loss": []}
-
-            # Training loop
-            self.model.train()
-            for epoch in range(epochs):
-                # Training phase
-                train_loss = 0.0
-                for batch_X, batch_y in train_dataloader:
-                    # Move batch to device
+        """Train the model with robust error handling and input validation."""
+        # Input validation: Drop NaNs
+        X = X.copy()
+        y = y.copy()
+        nan_mask = ~(X.isnull().any(axis=1) | y.isnull())
+        X = X[nan_mask]
+        y = y[nan_mask]
+        if len(X) < 20:
+            raise ValueError("At least 20 data points are required after cleaning.")
+        
+        # Log volatility and autocorrelation
+        volatility = X.std().mean()
+        autocorr = X.apply(lambda col: col.autocorr(lag=1)).mean()
+        self.logger.info(f"Input volatility: {volatility:.6f}, autocorrelation: {autocorr:.6f}")
+        
+        # Prepare data for LSTM (reshape to [samples, timesteps, features])
+        seq_len = self.config["sequence_length"]
+        X_seq = []
+        y_seq = []
+        for i in range(len(X) - seq_len):
+            X_seq.append(X.iloc[i:i+seq_len].values)
+            y_seq.append(y.iloc[i+seq_len])
+        X_seq = np.array(X_seq)
+        y_seq = np.array(y_seq)
+        
+        # Train/validation split
+        split_idx = int(len(X_seq) * (1 - validation_split))
+        X_train, X_val = X_seq[:split_idx], X_seq[split_idx:]
+        y_train, y_val = y_seq[:split_idx], y_seq[split_idx:]
+        
+        # Convert to PyTorch tensors
+        X_train_tensor = torch.FloatTensor(X_train)
+        y_train_tensor = torch.FloatTensor(y_train).unsqueeze(1)
+        X_val_tensor = torch.FloatTensor(X_val)
+        y_val_tensor = torch.FloatTensor(y_val).unsqueeze(1)
+        
+        # Create data loaders
+        train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+        val_dataset = TensorDataset(X_val_tensor, y_val_tensor)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        
+        # Setup training
+        optimizer = Adam(self.model.parameters(), lr=learning_rate)
+        criterion = nn.MSELoss()
+        scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True)
+        
+        # Training history
+        history = {"train_loss": [], "val_loss": []}
+        
+        # Training loop
+        self.model.train()
+        for epoch in range(epochs):
+            # Training phase
+            train_loss = 0.0
+            for batch_X, batch_y in train_loader:
+                batch_X = batch_X.to(self.device)
+                batch_y = batch_y.to(self.device)
+                
+                optimizer.zero_grad()
+                outputs = self.model(batch_X)
+                loss = criterion(outputs, batch_y)
+                loss.backward()
+                optimizer.step()
+                
+                train_loss += loss.item()
+            
+            # Validation phase
+            val_loss = 0.0
+            self.model.eval()
+            with torch.no_grad():
+                for batch_X, batch_y in val_loader:
                     batch_X = batch_X.to(self.device)
                     batch_y = batch_y.to(self.device)
-
-                    # Forward pass
-                    optimizer.zero_grad()
+                    
                     outputs = self.model(batch_X)
                     loss = criterion(outputs, batch_y)
-
-                    # Backward pass
-                    loss.backward()
-                    optimizer.step()
-
-                    train_loss += loss.item()
-
-                # Validation phase
-                val_loss = 0.0
-                self.model.eval()
-                with torch.no_grad():
-                    for batch_X, batch_y in val_dataloader:
-                        batch_X = batch_X.to(self.device)
-                        batch_y = batch_y.to(self.device)
-
-                        outputs = self.model(batch_X)
-                        loss = criterion(outputs, batch_y)
-                        val_loss += loss.item()
-
-                # Calculate average losses
-                avg_train_loss = train_loss / len(train_dataloader)
-                avg_val_loss = val_loss / len(val_dataloader)
-
-                history["train_loss"].append(avg_train_loss)
-                history["val_loss"].append(avg_val_loss)
-
-                # Log progress
-                if (epoch + 1) % 10 == 0:
-                    self.logger.info(
-                        f"Epoch [{epoch+1}/{epochs}], Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}"
-                    )
-
-                # Set model back to training mode
-                self.model.train()
-
-            self.logger.info(
-                f"LSTM model training completed successfully with {len(X)} data points"
-            )
-            return history
-
-        except Exception as e:
-            self.logger.error(f"Error training LSTM model: {e}")
-            raise RuntimeError(f"LSTM model training failed: {e}")
+                    val_loss += loss.item()
+            
+            # Calculate average losses
+            avg_train_loss = train_loss / len(train_loader)
+            avg_val_loss = val_loss / len(val_loader)
+            
+            # Update scheduler
+            scheduler.step(avg_val_loss)
+            
+            # Store history
+            history["train_loss"].append(avg_train_loss)
+            history["val_loss"].append(avg_val_loss)
+            
+            # Log progress
+            if (epoch + 1) % 10 == 0:
+                self.logger.info(f"Epoch [{epoch+1}/{epochs}], Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
+        
+        return history
 
     def predict(self, data: pd.DataFrame) -> np.ndarray:
-        """Make predictions with fallback guards.
-
-        Args:
-            data: Input features
-
-        Returns:
-            np.ndarray: Predicted values
-        """
-        try:
-            # Check if input dataframe is empty or has NaNs
-            if data is None or data.empty:
-                import logging
-
-                logging.warning(
-                    "LSTM predict: Input dataframe is empty, returning empty result"
-                )
-                return np.array([])
-
-            # Check for NaN values
-            if data.isnull().any().any():
-                import logging
-
-                logging.warning(
-                    "LSTM predict: NaN values found in input data, attempting to clean"
-                )
-                data = data.dropna()
-                if data.empty:
-                    logging.warning(
-                        "LSTM predict: No valid data after cleaning, returning empty result"
-                    )
-                    return np.array([])
-
-            # Validate data size
-            if len(data) < self.config["sequence_length"]:
-                import logging
-
-                logging.warning(
-                    f"LSTM predict: Data length {len(data)} is less than sequence length {self.config['sequence_length']}, returning empty result"
-                )
-                return np.array([])
-
-            # Prepare data
-            X_seq, _ = self._prepare_data(data, is_training=False)
-
-            # Check if prepared data is empty
-            if len(X_seq) == 0:
-                import logging
-
-                logging.warning(
-                    "LSTM predict: No valid sequences could be created, returning empty result"
-                )
-                return np.array([])
-
-            # Move to device
-            X_seq = X_seq.to(self.device)
-
-            # Set model to evaluation mode
-            self.model.eval()
-
-            # Make predictions
-            with torch.no_grad():
-                predictions = self.model(X_seq)
-
-            # Convert predictions to numpy array
-            predictions = predictions.cpu().numpy()
-
-            # Inverse transform predictions
-            predictions = self.scaler.inverse_transform(predictions)
-
-            return predictions
-
-        except Exception as e:
-            import logging
-
-            logging.error(f"Error in LSTM predict: {e}")
-            return np.array([])
+        """Predict using the LSTM model with input validation and logging."""
+        # Input validation: Drop NaNs
+        data = data.copy()
+        data = data.dropna()
+        if len(data) < 20:
+            raise ValueError("At least 20 data points are required for prediction.")
+        
+        # Log volatility and autocorrelation
+        volatility = data.std().mean()
+        autocorr = data.apply(lambda col: col.autocorr(lag=1)).mean()
+        self.logger.info(f"Prediction input volatility: {volatility:.6f}, autocorrelation: {autocorr:.6f}")
+        
+        # Prepare data for LSTM (reshape to [samples, timesteps, features])
+        seq_len = self.config["sequence_length"]
+        X_seq = []
+        for i in range(len(data) - seq_len + 1):
+            X_seq.append(data.iloc[i:i+seq_len].values)
+        X_seq = np.array(X_seq)
+        
+        # Convert to PyTorch tensor
+        X_tensor = torch.FloatTensor(X_seq)
+        X_tensor = X_tensor.to(self.device)
+        
+        # Predict
+        self.model.eval()
+        with torch.no_grad():
+            preds = self.model(X_tensor)
+            preds = preds.cpu().numpy()
+        
+        return preds.flatten()
 
     def save(self, path: str) -> None:
         """Save the model.
@@ -839,12 +739,26 @@ class LSTMForecaster(BaseModel):
         Args:
             path (str): Path to load the model from
         """
-        checkpoint = torch.load(path)
-        self.config = checkpoint["config"]
-        self.model = self.build_model()
-        self.model.load_state_dict(checkpoint["model_state_dict"])
-        self.scaler = checkpoint["scaler"]
-        self.model.to(self.device)
+        try:
+            # Try loading with weights_only=True first (PyTorch 2.6+ default)
+            checkpoint = torch.load(path, weights_only=True)
+            self.config = checkpoint["config"]
+            self.model = self.build_model()
+            self.model.load_state_dict(checkpoint["model_state_dict"])
+            # Note: scaler will need to be recreated since it's not allowed with weights_only=True
+            self.scaler = StandardScaler()
+            self.model.to(self.device)
+        except Exception as e:
+            # Fallback to weights_only=False for older PyTorch versions or compatibility
+            try:
+                checkpoint = torch.load(path, weights_only=False)
+                self.config = checkpoint["config"]
+                self.model = self.build_model()
+                self.model.load_state_dict(checkpoint["model_state_dict"])
+                self.scaler = checkpoint.get("scaler", StandardScaler())
+                self.model.to(self.device)
+            except Exception as e2:
+                raise RuntimeError(f"Failed to load model from {path}: {e2}")
 
     @cache_model_operation
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
