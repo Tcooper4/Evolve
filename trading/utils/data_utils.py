@@ -204,7 +204,7 @@ class DataPreprocessor:
 def resample_data(
     df: pd.DataFrame, freq: str, agg_dict: Optional[Dict[str, str]] = None
 ) -> pd.DataFrame:
-    """Resample time series data.
+    """Resample time series data with index checks and safe copy.
 
     Args:
         df: DataFrame to resample
@@ -214,6 +214,14 @@ def resample_data(
     Returns:
         Resampled DataFrame
     """
+    df = df.copy()
+    if not isinstance(df.index, pd.DatetimeIndex):
+        try:
+            df.index = pd.to_datetime(df.index, errors='coerce')
+        except Exception as e:
+            logging.error(f"Failed to convert index to DatetimeIndex: {e}")
+            raise
+    assert isinstance(df.index, pd.DatetimeIndex), "Index must be a DatetimeIndex for resampling."
     if agg_dict is None:
         agg_dict = {
             "open": "first",
@@ -222,7 +230,6 @@ def resample_data(
             "close": "last",
             "volume": "sum",
         }
-
     return df.resample(freq).agg(agg_dict)
 
 

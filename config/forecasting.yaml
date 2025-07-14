@@ -1,0 +1,98 @@
+# Forecasting Configuration
+# This file contains all forecasting-related configuration settings
+
+forecasting:
+  # General forecasting settings
+  enabled: true
+  default_horizon_days: 30
+  max_horizon_days: 90
+  min_data_points: 100
+  validation_split: 0.2
+  
+  # Model settings
+  models:
+    lstm:
+      enabled: true
+      default_layers: [50, 25]
+      default_dropout: 0.2
+      default_epochs: 100
+      batch_size: 32
+      sequence_length: 60
+      early_stopping_patience: 10
+      
+    xgboost:
+      enabled: true
+      default_n_estimators: 100
+      default_max_depth: 6
+      default_learning_rate: 0.1
+      cross_validation_folds: 5
+      feature_importance_threshold: 0.01
+      
+    prophet:
+      enabled: true
+      default_changepoint_prior_scale: 0.05
+      default_seasonality_prior_scale: 10
+      default_holidays_prior_scale: 10
+      default_seasonality_mode: "additive"
+      
+    arima:
+      enabled: true
+      auto_arima: true
+      max_p: 5
+      max_d: 2
+      max_q: 5
+      seasonal: true
+      m: 12  # seasonal period
+      
+    ensemble:
+      enabled: true
+      default_methods: ["lstm", "xgboost", "prophet"]
+      default_weights: [0.4, 0.3, 0.3]
+      voting_method: "weighted_average"
+      
+  # Feature engineering
+  features:
+    technical_indicators:
+      enabled: true
+      indicators: ["sma", "ema", "rsi", "macd", "bollinger"]
+      lookback_periods: [5, 10, 20, 50]
+      
+    sentiment_features:
+      enabled: true
+      sources: ["news", "social", "earnings"]
+      aggregation_window: "1d"
+      
+    market_features:
+      enabled: true
+      include_volume: true
+      include_volatility: true
+      include_correlation: true
+      
+  # Validation and evaluation
+  validation:
+    backtest_periods: [30, 60, 90, 180]
+    metrics: ["mae", "rmse", "mape", "r2"]
+    confidence_intervals: true
+    confidence_level: 0.95
+    
+  # Performance thresholds
+  thresholds:
+    min_sharpe_ratio: 0.5
+    max_drawdown: 0.2
+    min_win_rate: 0.4
+    min_r2_score: 0.3
+    
+  # Optimization
+  optimization:
+    enabled: true
+    method: "bayesian"
+    max_trials: 50
+    timeout_minutes: 30
+    objective: "minimize_rmse"
+    
+  # Monitoring
+  monitoring:
+    performance_tracking: true
+    model_drift_detection: true
+    retraining_threshold: 0.1
+    retraining_frequency_days: 7 

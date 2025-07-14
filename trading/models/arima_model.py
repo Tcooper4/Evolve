@@ -32,9 +32,11 @@ class ARIMAModel(BaseModel):
         self.order = config.get("order", (1, 1, 1)) if config else (1, 1, 1)
         self.seasonal_order = config.get("seasonal_order", None) if config else None
         self.is_fitted = False
+        self.use_auto_arima = config.get("use_auto_arima", True) if config else True
+        self.auto_arima_config = config.get("auto_arima_config", {}) if config else {}
 
     def fit(self, data: pd.Series) -> Dict[str, Any]:
-        """Fit the ARIMA model.
+        """Fit the ARIMA model using auto_arima if enabled.
 
         Args:
             data: Time series data
@@ -47,6 +49,82 @@ class ARIMAModel(BaseModel):
             if len(data) < 20:
                 raise ValueError("ARIMA requires at least 20 data points.")
 
+            # Use pmdarima.auto_arima if enabled
+            if self.use_auto_arima:
+                return self._fit_auto_arima(data)
+            else:
+                return self._fit_manual_arima(data)
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": pd.Timestamp.now().isoformat(),
+                "model": self,
+            }
+
+    def _fit_auto_arima(self, data: pd.Series) -> Dict[str, Any]:
+        """Fit ARIMA model using pmdarima.auto_arima for automatic parameter selection."""
+        try:
+            import pmdarima as pm
+            
+            logger.info("Using pmdarima.auto_arima for automatic parameter selection...")
+            
+            # Default auto_arima configuration
+            default_config = {
+                'start_p': 0, 'start_q': 0, 'max_p': 5, 'max_q': 5, 'max_d': 2,
+                'seasonal': True, 'm': 12, 'D': 1, 'trace': True,
+                'error_action': 'ignore', 'suppress_warnings': True,
+                'stepwise': True, 'random_state': 42
+            }
+            
+            # Merge with user config
+            config = {**default_config, **self.auto_arima_config}
+            
+            # Fit auto_arima
+            auto_model = pm.auto_arima(data, **config)
+            
+            # Extract the best model
+            self.fitted_model = auto_model
+            self.order = auto_model.order
+            self.seasonal_order = auto_model.seasonal_order
+            self.is_fitted = True
+            
+            # Log model selection results
+            logger.info(f"Auto ARIMA selected order: {self.order}")
+            if self.seasonal_order:
+                logger.info(f"Auto ARIMA selected seasonal order: {self.seasonal_order}")
+            
+            # Log AIC/BIC values
+            aic_result = self.get_aic()
+            bic_result = self.get_bic()
+            
+            logger.info(f"Model AIC: {aic_result.get('aic', 'N/A')}")
+            logger.info(f"Model BIC: {bic_result.get('bic', 'N/A')}")
+            
+            return {
+                "success": True,
+                "message": "Auto ARIMA model fitted successfully",
+                "timestamp": pd.Timestamp.now().isoformat(),
+                "model": self,
+                "order": self.order,
+                "seasonal_order": self.seasonal_order,
+                "aic": aic_result.get('aic'),
+                "bic": bic_result.get('bic')
+            }
+            
+        except ImportError:
+            logger.warning("pmdarima not available, falling back to manual ARIMA")
+            return self._fit_manual_arima(data)
+        except Exception as e:
+            logger.error(f"Auto ARIMA fitting failed: {e}")
+            return self._fit_manual_arima(data)
+
+    def _fit_manual_arima(self, data: pd.Series) -> Dict[str, Any]:
+        """Fit ARIMA model with manually specified parameters."""
+        try:
+            logger.info(f"Fitting manual ARIMA with order: {self.order}")
+            
             # Create ARIMA model
             if self.seasonal_order:
                 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -61,11 +139,22 @@ class ARIMAModel(BaseModel):
             self.fitted_model = self.model.fit()
             self.is_fitted = True
 
+            # Log AIC/BIC values
+            aic_result = self.get_aic()
+            bic_result = self.get_bic()
+            
+            logger.info(f"Model AIC: {aic_result.get('aic', 'N/A')}")
+            logger.info(f"Model BIC: {bic_result.get('bic', 'N/A')}")
+
             return {
                 "success": True,
-                "message": "ARIMA model fitted successfully",
+                "message": "Manual ARIMA model fitted successfully",
                 "timestamp": pd.Timestamp.now().isoformat(),
                 "model": self,
+                "order": self.order,
+                "seasonal_order": self.seasonal_order,
+                "aic": aic_result.get('aic'),
+                "bic": bic_result.get('bic')
             }
         except Exception as e:
             return {
@@ -75,14 +164,15 @@ class ARIMAModel(BaseModel):
                 "model": self,
             }
 
-    def predict(self, steps: int = 1) -> Dict[str, Any]:
-        """Make predictions.
+    def predict(self, steps: int = 1, confidence_level: float = 0.95) -> Dict[str, Any]:
+        """Make predictions with confidence intervals.
 
         Args:
             steps: Number of steps to predict
+            confidence_level: Confidence level for intervals (default: 0.95)
 
         Returns:
-            Dictionary with predictions and status
+            Dictionary with predictions, confidence intervals, and status
         """
         if not self.is_fitted:
             return {
@@ -91,14 +181,51 @@ class ARIMAModel(BaseModel):
                 "timestamp": pd.Timestamp.now().isoformat(),
             }
         try:
-            forecast = self.fitted_model.forecast(steps=steps)
-            return {
+            # Get forecast with confidence intervals
+            if hasattr(self.fitted_model, 'forecast'):
+                # For pmdarima models
+                forecast_result = self.fitted_model.forecast(steps=steps, return_conf_int=True, alpha=1-confidence_level)
+                if isinstance(forecast_result, tuple):
+                    forecast_values = forecast_result[0]
+                    conf_int = forecast_result[1]
+                else:
+                    forecast_values = forecast_result
+                    conf_int = None
+            else:
+                # For statsmodels ARIMA
+                forecast_values = self.fitted_model.forecast(steps=steps)
+                conf_int = self.fitted_model.get_forecast(steps=steps).conf_int(alpha=1-confidence_level)
+            
+            # Convert to numpy arrays if needed
+            if hasattr(forecast_values, 'values'):
+                forecast_values = forecast_values.values
+            if conf_int is not None and hasattr(conf_int, 'values'):
+                conf_int = conf_int.values
+            
+            result = {
                 "success": True,
-                "predictions": forecast.values,
+                "predictions": forecast_values,
                 "timestamp": pd.Timestamp.now().isoformat(),
                 "steps": steps,
+                "confidence_level": confidence_level,
             }
+            
+            # Add confidence intervals if available
+            if conf_int is not None:
+                result["confidence_intervals"] = {
+                    "lower": conf_int[:, 0] if conf_int.ndim > 1 else conf_int[0],
+                    "upper": conf_int[:, 1] if conf_int.ndim > 1 else conf_int[1]
+                }
+            
+            # Log prediction summary
+            logger.info(f"ARIMA prediction completed for {steps} steps")
+            if conf_int is not None:
+                logger.info(f"Confidence intervals calculated at {confidence_level*100}% level")
+            
+            return result
+            
         except Exception as e:
+            logger.error(f"Error in ARIMA prediction: {e}")
             return {
                 "success": False,
                 "error": str(e),

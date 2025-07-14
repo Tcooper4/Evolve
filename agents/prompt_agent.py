@@ -45,6 +45,8 @@ from trading.utils.reasoning_logger import (
     DecisionType,
     ReasoningLogger,
 )
+from logs.prompt_trace_logger import PromptTraceLogger, ActionStatus
+from trading.llm.parser_engine import ParserEngine, ParsedIntent
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +189,17 @@ class PromptAgent:
         # Initialize components
         self.memory = AgentMemory()
         self.reasoning_logger = ReasoningLogger()
+        self.prompt_trace_logger = PromptTraceLogger()
+        
+        # Initialize parser engine
+        self.parser_engine = ParserEngine(
+            openai_api_key=openai_api_key,
+            huggingface_model=huggingface_model,
+            enable_debug_mode=enable_debug_mode,
+            use_regex_first=use_regex_first,
+            use_local_llm=use_local_llm,
+            use_openai_fallback=use_openai_fallback,
+        )
         
         # Performance tracking
         self.performance_metrics = {
@@ -203,17 +216,10 @@ class PromptAgent:
         # Available agents
         self.available_agents: Dict[str, AgentInfo] = {}
         
-        # Initialize LLM providers
-        self._initialize_providers()
-        
-        # Initialize classification patterns
-        self._initialize_patterns()
-        
         # Initialize agent registry
         self._initialize_agent_registry()
         
-        logger.info(f"PromptAgent initialized with providers: regex={self.use_regex_first}, "
-                   f"local_llm={self.use_local_llm}, openai={self.use_openai_fallback}")
+        logger.info(f"PromptAgent initialized with parser engine integration")
 
     def _initialize_providers(self):
         """Initialize LLM providers."""
@@ -444,6 +450,11 @@ class PromptAgent:
         routing_suggestions = self._generate_routing_suggestions(
             request_type, extracted_parameters
         )
+        
+        # Get strategy route from parser engine
+        strategy_route = self.parser_engine.route_strategy(
+            parsed_intent.intent, extracted_parameters
+        )
 
         processing_time = (datetime.now() - start_time).total_seconds()
 
@@ -465,7 +476,7 @@ class PromptAgent:
 
     def parse_intent(self, prompt: str) -> ParsedIntent:
         """
-        Parse intent using the fallback chain: Regex → Local LLM → OpenAI.
+        Parse intent using the parser engine with fallback chain.
 
         Args:
             prompt: User prompt
@@ -473,41 +484,226 @@ class PromptAgent:
         Returns:
             ParsedIntent: Parsed intent with provider information
         """
-        # Step 1: Try regex parsing first (fastest)
-        if self.use_regex_first:
-            try:
-                result = self.parse_intent_regex(prompt)
-                if result.confidence > 0.7:  # High confidence threshold for regex
-                    self.performance_metrics["provider_usage"]["regex"] += 1
-                    return result
-            except Exception as e:
-                logger.warning(f"Regex parsing failed: {e}")
+        try:
+            # Use parser engine for intent parsing
+            result = self.parser_engine.parse_intent(prompt)
+            
+            # Update performance metrics
+            self.performance_metrics["provider_usage"][result.provider] += 1
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Parser engine failed: {e}")
+            
+            # Fallback to basic regex parsing
+            logger.warning("Using basic regex fallback")
+            result = self._basic_regex_fallback(prompt)
+            self.performance_metrics["provider_usage"]["fallback"] += 1
+            return result
 
-        # Step 2: Try local LLM (medium speed, good accuracy)
-        if self.use_local_llm:
-            try:
-                result = self.parse_intent_huggingface(prompt)
-                if result and result.confidence > 0.6:
-                    self.performance_metrics["provider_usage"]["huggingface"] += 1
-                    return result
-            except Exception as e:
-                logger.warning(f"Local LLM parsing failed: {e}")
+    def _basic_regex_fallback(self, prompt: str) -> ParsedIntent:
+        """Basic regex fallback when parser engine fails."""
+        try:
+            # Simple keyword matching
+            prompt_lower = prompt.lower()
+            
+            if any(word in prompt_lower for word in ['forecast', 'predict', 'future']):
+                intent = 'forecasting'
+                confidence = 0.6
+            elif any(word in prompt_lower for word in ['strategy', 'trade', 'buy', 'sell']):
+                intent = 'strategy'
+                confidence = 0.6
+            elif any(word in prompt_lower for word in ['analyze', 'analysis', 'study']):
+                intent = 'analysis'
+                confidence = 0.6
+            elif any(word in prompt_lower for word in ['optimize', 'tune', 'improve']):
+                intent = 'optimization'
+                confidence = 0.6
+            elif any(word in prompt_lower for word in ['portfolio', 'allocation']):
+                intent = 'portfolio'
+                confidence = 0.6
+            else:
+                intent = 'general'
+                confidence = 0.5
+            
+            return ParsedIntent(
+                intent=intent,
+                confidence=confidence,
+                args={},
+                provider='basic_regex_fallback',
+                raw_response=prompt,
+                error=None
+            )
+            
+        except Exception as e:
+            logger.error(f"Basic regex fallback failed: {e}")
+            return ParsedIntent(
+                intent='general',
+                confidence=0.0,
+                args={},
+                provider='basic_regex_fallback',
+                raw_response=prompt,
+                error=str(e)
+            )
 
-        # Step 3: Try OpenAI (slowest, most accurate)
-        if self.use_openai_fallback:
-            try:
-                result = self.parse_intent_openai(prompt)
-                if result:
-                    self.performance_metrics["provider_usage"]["openai"] += 1
-                    return result
-            except Exception as e:
-                logger.warning(f"OpenAI parsing failed: {e}")
-
-        # Final fallback: Use regex with lower confidence
-        logger.warning("All LLM providers failed, using regex fallback")
-        result = self.parse_intent_regex(prompt)
-        self.performance_metrics["provider_usage"]["regex"] += 1
-        return result
+    def _fallback_regex_router(self, prompt: str) -> ParsedIntent:
+        """Enhanced fallback regex router with comprehensive pattern matching.
+        
+        Args:
+            prompt: User prompt text
+            
+        Returns:
+            ParsedIntent with fallback routing
+        """
+        try:
+            # Enhanced regex patterns for fallback routing
+            fallback_patterns = {
+                # Forecasting patterns
+                r'\b(forecast|predict|future|trend|outlook)\b.*\b(price|stock|market|value)\b': {
+                    'intent': 'forecasting',
+                    'confidence': 0.8,
+                    'args': {'type': 'price_forecast'}
+                },
+                r'\b(forecast|predict)\b.*\b(\d+)\s*(days?|weeks?|months?)\b': {
+                    'intent': 'forecasting',
+                    'confidence': 0.85,
+                    'args': {'horizon': 'extracted'}
+                },
+                
+                # Strategy patterns
+                r'\b(strategy|strategy|approach|method)\b.*\b(trading|investment|portfolio)\b': {
+                    'intent': 'strategy',
+                    'confidence': 0.8,
+                    'args': {'type': 'trading_strategy'}
+                },
+                r'\b(buy|sell|hold|position)\b.*\b(signal|recommendation|advice)\b': {
+                    'intent': 'strategy',
+                    'confidence': 0.9,
+                    'args': {'action': 'signal'}
+                },
+                
+                # Analysis patterns
+                r'\b(analyze|analysis|examine|study)\b.*\b(market|stock|performance|data)\b': {
+                    'intent': 'research',
+                    'confidence': 0.8,
+                    'args': {'type': 'market_analysis'}
+                },
+                r'\b(technical|fundamental|sentiment)\b.*\b(analysis|indicator|metric)\b': {
+                    'intent': 'research',
+                    'confidence': 0.85,
+                    'args': {'analysis_type': 'extracted'}
+                },
+                
+                # Optimization patterns
+                r'\b(optimize|optimization|improve|enhance)\b.*\b(strategy|portfolio|performance)\b': {
+                    'intent': 'tuning',
+                    'confidence': 0.8,
+                    'args': {'type': 'performance_optimization'}
+                },
+                r'\b(parameter|hyperparameter|tune|adjust)\b.*\b(model|strategy|algorithm)\b': {
+                    'intent': 'tuning',
+                    'confidence': 0.85,
+                    'args': {'type': 'parameter_tuning'}
+                },
+                
+                # Portfolio patterns
+                r'\b(portfolio|allocation|diversification|rebalance)\b': {
+                    'intent': 'portfolio',
+                    'confidence': 0.8,
+                    'args': {'type': 'portfolio_management'}
+                },
+                r'\b(risk|volatility|sharpe|return)\b.*\b(portfolio|allocation)\b': {
+                    'intent': 'risk',
+                    'confidence': 0.85,
+                    'args': {'type': 'risk_analysis'}
+                },
+                
+                # System patterns
+                r'\b(system|status|health|monitor|check)\b': {
+                    'intent': 'general',
+                    'confidence': 0.8,
+                    'args': {'type': 'system_status'}
+                },
+                r'\b(error|issue|problem|fix|debug)\b': {
+                    'intent': 'general',
+                    'confidence': 0.9,
+                    'args': {'type': 'troubleshooting'}
+                },
+                
+                # General patterns
+                r'\b(help|assist|support|guide)\b': {
+                    'intent': 'general',
+                    'confidence': 0.7,
+                    'args': {'type': 'help_request'}
+                },
+                r'\b(what|how|why|when|where)\b': {
+                    'intent': 'general',
+                    'confidence': 0.6,
+                    'args': {'type': 'question'}
+                }
+            }
+            
+            # Test patterns against prompt
+            best_match = None
+            best_confidence = 0.0
+            
+            for pattern, config in fallback_patterns.items():
+                if re.search(pattern, prompt, re.IGNORECASE):
+                    confidence = config['confidence']
+                    if confidence > best_confidence:
+                        best_confidence = confidence
+                        best_match = config
+            
+            if best_match:
+                # Extract additional parameters
+                args = best_match['args'].copy()
+                
+                # Extract time horizons
+                time_match = re.search(r'(\d+)\s*(days?|weeks?|months?)', prompt, re.IGNORECASE)
+                if time_match:
+                    args['horizon'] = int(time_match.group(1))
+                    args['horizon_unit'] = time_match.group(2)
+                
+                # Extract ticker symbols
+                ticker_match = re.search(r'\b([A-Z]{1,5})\b', prompt)
+                if ticker_match:
+                    args['ticker'] = ticker_match.group(1)
+                
+                # Extract action words
+                action_match = re.search(r'\b(buy|sell|hold|long|short)\b', prompt, re.IGNORECASE)
+                if action_match:
+                    args['action'] = action_match.group(1).lower()
+                
+                return ParsedIntent(
+                    intent=best_match['intent'],
+                    confidence=best_confidence,
+                    args=args,
+                    provider='fallback_regex',
+                    raw_response=prompt,
+                    error=None
+                )
+            
+            # Default fallback
+            return ParsedIntent(
+                intent='general',
+                confidence=0.5,
+                args={'type': 'general_query'},
+                provider='fallback_regex',
+                raw_response=prompt,
+                error=None
+            )
+            
+        except Exception as e:
+            logger.error(f"Fallback regex router failed: {e}")
+            return ParsedIntent(
+                intent='general',
+                confidence=0.0,
+                args={},
+                provider='fallback_regex',
+                raw_response=prompt,
+                error=str(e)
+            )
 
     def parse_intent_regex(self, prompt: str) -> ParsedIntent:
         """Parse intent using regex patterns."""
@@ -1001,7 +1197,7 @@ class PromptAgent:
 
     def handle_prompt(self, prompt: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Main entry point for prompt handling.
+        Main entry point for prompt handling with comprehensive trace logging.
 
         Args:
             prompt: User prompt
@@ -1010,15 +1206,68 @@ class PromptAgent:
         Returns:
             Dictionary with routing decision and processing results
         """
+        start_time = datetime.now()
+        
+        # Start trace logging
+        trace_id = f"trace_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+        session_id = context.get('session_id') if context else None
+        user_id = context.get('user_id') if context else None
+        
+        trace = self.prompt_trace_logger.start_trace(
+            trace_id=trace_id,
+            session_id=session_id,
+            user_id=user_id,
+            original_prompt=prompt,
+            context=context
+        )
+        
         try:
             # Process the prompt
             processed = self.process_prompt(prompt)
             
+            # Parse intent and update trace
+            parsed_intent = self.parse_intent(prompt)
+            self.prompt_trace_logger.update_intent(
+                trace=trace,
+                detection_method=parsed_intent.provider,
+                intent=parsed_intent.intent,
+                confidence=parsed_intent.confidence,
+                parameters=parsed_intent.args,
+                normalized_prompt=processed.original_prompt
+            )
+            
             # Route the request
             routing_decision = self.route_request(prompt, context)
             
+            # Update trace with action execution
+            action_duration = (datetime.now() - start_time).total_seconds()
+            self.prompt_trace_logger.update_action(
+                trace=trace,
+                action=f"route_to_{routing_decision.primary_agent}",
+                status=ActionStatus.SUCCESS if routing_decision.confidence > 0.5 else ActionStatus.PARTIAL,
+                result={
+                    'primary_agent': routing_decision.primary_agent,
+                    'fallback_agents': routing_decision.fallback_agents,
+                    'confidence': routing_decision.confidence,
+                    'reasoning': routing_decision.reasoning
+                },
+                duration=action_duration
+            )
+            
+            # Update provider usage in trace
+            self.prompt_trace_logger.update_provider_usage(
+                trace=trace,
+                provider=parsed_intent.provider,
+                count=1
+            )
+            
+            # Complete trace logging
+            processing_time = (datetime.now() - start_time).total_seconds()
+            self.prompt_trace_logger.complete_trace(trace, processing_time)
+            
             return {
                 "success": True,
+                "trace_id": trace_id,
                 "processed_prompt": {
                     "request_type": processed.request_type.value,
                     "confidence": processed.confidence,
@@ -1039,6 +1288,27 @@ class PromptAgent:
             
         except Exception as e:
             logger.error(f"Error handling prompt: {e}")
+            
+            # Update trace with error
+            self.prompt_trace_logger.add_error(trace, str(e))
+            self.prompt_trace_logger.update_action(
+                trace=trace,
+                action="error_handling",
+                status=ActionStatus.FAILED,
+                result={'error': str(e)},
+                duration=(datetime.now() - start_time).total_seconds()
+            )
+            
+            # Complete trace logging
+            processing_time = (datetime.now() - start_time).total_seconds()
+            self.prompt_trace_logger.complete_trace(trace, processing_time)
+            
+            return {
+                "success": False,
+                "trace_id": trace_id,
+                "error": str(e),
+                "processing_time": processing_time,
+            }
             return {
                 "success": False,
                 "error": str(e),

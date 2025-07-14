@@ -176,65 +176,139 @@ class AtomicCounter:
 
 
 class ThreadSafeCache:
-    """Thread-safe cache with TTL and size limits."""
+    """Thread-safe cache with TTL, size limits, and LRU eviction."""
 
-    def __init__(self, max_size: int = 1000, default_ttl: int = 3600):
+    def __init__(self, max_size: int = 1000, default_ttl: int = 3600, eviction_policy: str = "lru"):
         self.max_size = max_size
         self.default_ttl = default_ttl
+        self.eviction_policy = eviction_policy
         self.cache = {}
         self.access_times = {}
+        self.access_order = []  # For LRU tracking
         self.lock = threading.RLock()
         self.access_counter = AtomicCounter()
+        self.eviction_counter = AtomicCounter()
+        
+        # Memory usage tracking
+        self.memory_usage = AtomicCounter()
+        self.max_memory_mb = 100  # Default 100MB limit
 
     def get(self, key: str) -> Optional[Any]:
-        """Get value from cache."""
+        """Get value from cache with LRU tracking."""
         with self.lock:
             if key in self.cache:
                 # Check TTL
                 if time.time() - self.access_times[key] > self.default_ttl:
-                    del self.cache[key]
-                    del self.access_times[key]
+                    self._remove_item(key)
                     return None
 
-                # Update access time
+                # Update access time and LRU order
                 self.access_times[key] = time.time()
+                if key in self.access_order:
+                    self.access_order.remove(key)
+                self.access_order.append(key)  # Move to end (most recently used)
+                
                 self.access_counter.increment()
                 return self.cache[key]
             return None
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
-        """Set value in cache."""
+        """Set value in cache with memory usage tracking and LRU eviction."""
         with self.lock:
-            # Evict if cache is full
+            # Estimate memory usage of the value
+            value_size = self._estimate_memory_usage(value)
+            
+            # Check if adding this item would exceed memory limit
+            if self.memory_usage.get() + value_size > self.max_memory_mb * 1024 * 1024:
+                logger.warning(f"Memory limit reached ({self.max_memory_mb}MB), evicting items")
+                self._evict_until_space_available(value_size)
+            
+            # Evict if cache is full (count-based)
             if len(self.cache) >= self.max_size and key not in self.cache:
                 self._evict_oldest()
 
+            # Add to cache
             self.cache[key] = value
             self.access_times[key] = time.time()
+            
+            # Update LRU order
+            if key in self.access_order:
+                self.access_order.remove(key)
+            self.access_order.append(key)
+            
+            # Update memory usage
+            self.memory_usage.increment(value_size)
+            
             return True
 
     def _evict_oldest(self):
-        """Evict oldest accessed item."""
-        if not self.access_times:
+        """Evict oldest accessed item using LRU policy."""
+        if not self.access_order:
             return
 
-        oldest_key = min(self.access_times.keys(), key=lambda k: self.access_times[k])
-        del self.cache[oldest_key]
-        del self.access_times[oldest_key]
+        oldest_key = self.access_order[0]  # Least recently used
+        self._remove_item(oldest_key)
+        self.eviction_counter.increment()
+        
+        logger.debug(f"Evicted oldest item: {oldest_key}")
+
+    def _evict_until_space_available(self, required_space: int):
+        """Evict items until enough space is available."""
+        while (self.memory_usage.get() + required_space > self.max_memory_mb * 1024 * 1024 
+               and self.access_order):
+            self._evict_oldest()
+
+    def _remove_item(self, key: str):
+        """Remove item from cache and update tracking."""
+        if key in self.cache:
+            # Update memory usage
+            value_size = self._estimate_memory_usage(self.cache[key])
+            self.memory_usage.decrement(value_size)
+            
+            # Remove from all tracking structures
+            del self.cache[key]
+            del self.access_times[key]
+            if key in self.access_order:
+                self.access_order.remove(key)
+
+    def _estimate_memory_usage(self, value: Any) -> int:
+        """Estimate memory usage of a value in bytes."""
+        try:
+            import sys
+            return sys.getsizeof(value)
+        except:
+            # Fallback estimation
+            if isinstance(value, str):
+                return len(value.encode('utf-8'))
+            elif isinstance(value, (list, tuple)):
+                return sum(self._estimate_memory_usage(item) for item in value)
+            elif isinstance(value, dict):
+                return sum(self._estimate_memory_usage(k) + self._estimate_memory_usage(v) 
+                          for k, v in value.items())
+            else:
+                return 1024  # Default 1KB estimate
 
     def clear(self):
         """Clear all cache entries."""
         with self.lock:
             self.cache.clear()
             self.access_times.clear()
+            self.access_order.clear()
+            self.memory_usage.set(0)
+            self.eviction_counter.set(0)
 
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
         with self.lock:
+            memory_usage_mb = self.memory_usage.get() / (1024 * 1024)
             return {
                 "size": len(self.cache),
                 "max_size": self.max_size,
                 "access_count": self.access_counter.get(),
+                "eviction_count": self.eviction_counter.get(),
+                "memory_usage_mb": round(memory_usage_mb, 2),
+                "max_memory_mb": self.max_memory_mb,
+                "memory_utilization": round(memory_usage_mb / self.max_memory_mb * 100, 2),
                 "utilization": len(self.cache) / self.max_size * 100,
             }
 
@@ -775,6 +849,11 @@ class AgentMemoryManager:
                         with open(file_path, "r") as f:
                             file_data = json.load(f)
 
+                        # Validate JSON structure
+                        if not self._validate_memory_data(file_data, data_type, file_path):
+                            logger.warning(f"Skipping corrupted file {file_path}")
+                            continue
+
                         for item in file_data:
                             if len(data) >= limit:
                                 break
@@ -804,6 +883,11 @@ class AgentMemoryManager:
                                 continue
 
                             data.append(item)
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Corrupted JSON in file {file_path}: {e}")
+                        # Try to backup and remove corrupted file
+                        self._handle_corrupted_file(file_path)
+                        continue
                     except Exception as e:
                         logger.warning(f"Error reading file {file_path}: {e}")
                         continue
@@ -1428,6 +1512,68 @@ class AgentMemoryManager:
         except Exception as e:
             logger.error(f"Failed to restore memory snapshot: {e}")
             return {"success": False, "error": str(e), "snapshot_id": snapshot_id}
+
+    def _validate_memory_data(self, data: Any, data_type: str, file_path: str) -> bool:
+        """Validate memory data structure and content."""
+        try:
+            if not isinstance(data, list):
+                logger.error(f"Invalid data structure in {file_path}: expected list, got {type(data)}")
+                return False
+
+            if len(data) == 0:
+                return True  # Empty file is valid
+
+            # Validate first item structure
+            first_item = data[0]
+            required_fields = self._get_required_fields(data_type)
+            
+            for field in required_fields:
+                if field not in first_item:
+                    logger.error(f"Missing required field '{field}' in {file_path}")
+                    return False
+
+            # Validate timestamp format
+            for i, item in enumerate(data):
+                try:
+                    datetime.fromisoformat(item["timestamp"])
+                except (KeyError, ValueError) as e:
+                    logger.error(f"Invalid timestamp in item {i} of {file_path}: {e}")
+                    return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error validating memory data in {file_path}: {e}")
+            return False
+
+    def _get_required_fields(self, data_type: str) -> List[str]:
+        """Get required fields for a data type."""
+        base_fields = ["timestamp"]
+        
+        if data_type == "interaction":
+            return base_fields + ["agent_type", "prompt", "response", "confidence", "success"]
+        elif data_type == "strategy":
+            return base_fields + ["strategy_name", "performance", "confidence", "success"]
+        elif data_type == "model":
+            return base_fields + ["model_name", "performance", "confidence", "success"]
+        else:
+            return base_fields
+
+    def _handle_corrupted_file(self, file_path: str):
+        """Handle corrupted memory file by backing up and removing."""
+        try:
+            # Create backup directory
+            backup_dir = Path(file_path).parent / "corrupted_backups"
+            backup_dir.mkdir(exist_ok=True)
+            
+            # Move corrupted file to backup
+            backup_path = backup_dir / f"{Path(file_path).name}.corrupted_{int(time.time())}"
+            Path(file_path).rename(backup_path)
+            
+            logger.info(f"Moved corrupted file {file_path} to backup {backup_path}")
+            
+        except Exception as e:
+            logger.error(f"Failed to handle corrupted file {file_path}: {e}")
 
     def get_memory_state_hash(self) -> str:
         """Generate a hash of current memory state for change detection.

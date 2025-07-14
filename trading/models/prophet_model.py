@@ -3,12 +3,21 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import numpy as np
 import pandas as pd
 
 from .base_model import BaseModel, ModelRegistry
+from utils.time_utils import (
+    parse_datetime,
+    format_datetime_for_prophet,
+    calculate_forecast_horizon,
+    validate_date_column,
+    get_holiday_dates,
+    add_time_features,
+    detect_seasonality,
+)
 
 # Try to import Prophet, but make it optional
 try:
@@ -330,12 +339,12 @@ if PROPHET_AVAILABLE:
                 logger.error(f"Error adding custom holidays: {e}")
                 raise
 
-        def predict(self, data: pd.DataFrame, horizon: int = 1):
-            """Make predictions with fallback guards.
+        def predict(self, data: pd.DataFrame, horizon: Optional[int] = None):
+            """Make predictions with fallback guards and dynamic horizon.
 
             Args:
                 data: Input data
-                horizon: Prediction horizon
+                horizon: Prediction horizon (if None, auto-calculate)
 
             Returns:
                 Predicted values
@@ -352,6 +361,13 @@ if PROPHET_AVAILABLE:
                 if self.config["date_column"] not in data.columns:
                     logger.warning(
                         f"Prophet predict: Missing required column '{self.config['date_column']}', returning empty result"
+                    )
+                    return np.array([])
+
+                # Validate date column using time utilities
+                if not validate_date_column(data, self.config["date_column"]):
+                    logger.warning(
+                        f"Prophet predict: Invalid date column '{self.config['date_column']}', returning empty result"
                     )
                     return np.array([])
 
@@ -380,14 +396,23 @@ if PROPHET_AVAILABLE:
                     )
                     return np.array([])
 
+                # Calculate dynamic forecast horizon if not provided
+                if horizon is None:
+                    horizon = calculate_forecast_horizon(
+                        data, 
+                        self.config["date_column"],
+                        target_horizon=self.config.get("default_horizon"),
+                        max_horizon=self.config.get("max_horizon", 365)
+                    )
+                    logger.info(f"Using dynamic forecast horizon: {horizon} periods")
+
                 # Prepare data for prediction
                 future = data[[self.config["date_column"]]].rename(
                     columns={self.config["date_column"]: "ds"}
                 )
 
-                # Validate date format
-                if future["ds"].dtype != "datetime64[ns]":
-                    future["ds"] = pd.to_datetime(future["ds"])
+                # Validate date format using time utilities
+                future["ds"] = pd.to_datetime(future["ds"])
 
                 # Make prediction
                 forecast = self.model.predict(future)
@@ -397,12 +422,12 @@ if PROPHET_AVAILABLE:
                 logger.error(f"Error in Prophet predict: {e}")
                 return np.array([])
 
-        def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
-            """Generate forecast for future time steps.
+        def forecast(self, data: pd.DataFrame, horizon: Optional[int] = None) -> Dict[str, Any]:
+            """Generate forecast for future time steps with dynamic horizon.
 
             Args:
                 data: Historical data DataFrame
-                horizon: Number of time steps to forecast
+                horizon: Number of time steps to forecast (if None, auto-calculate)
 
             Returns:
                 Dictionary containing forecast results
@@ -411,8 +436,18 @@ if PROPHET_AVAILABLE:
                 if not self.fitted:
                     raise RuntimeError("Model must be fit before forecasting.")
 
-                # Create future dates for forecasting
-                last_date = data[self.config["date_column"]].iloc[-1]
+                # Calculate dynamic forecast horizon if not provided
+                if horizon is None:
+                    horizon = calculate_forecast_horizon(
+                        data, 
+                        self.config["date_column"],
+                        target_horizon=self.config.get("default_horizon"),
+                        max_horizon=self.config.get("max_horizon", 365)
+                    )
+                    logger.info(f"Using dynamic forecast horizon: {horizon} periods")
+
+                # Create future dates for forecasting using time utilities
+                last_date = parse_datetime(data[self.config["date_column"]].iloc[-1])
                 future_dates = pd.date_range(
                     start=last_date, periods=horizon + 1, freq="D"
                 )[1:]

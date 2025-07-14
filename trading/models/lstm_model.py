@@ -600,6 +600,10 @@ class LSTMForecaster(BaseModel):
         if len(X) < 20:
             raise ValueError("At least 20 data points are required after cleaning.")
         
+        # Check if data has been normalized
+        if not self._check_data_normalization(X):
+            self.logger.warning("Data appears to be unnormalized. Consider scaling before training.")
+        
         # Log volatility and autocorrelation
         volatility = X.std().mean()
         autocorr = X.apply(lambda col: col.autocorr(lag=1)).mean()
@@ -686,13 +690,17 @@ class LSTMForecaster(BaseModel):
         
         return history
 
-    def predict(self, data: pd.DataFrame) -> np.ndarray:
-        """Predict using the LSTM model with input validation and logging."""
+    def predict(self, data: pd.DataFrame, batch_size: int = 32) -> np.ndarray:
+        """Predict using the LSTM model with input validation, logging, and batch-wise evaluation."""
         # Input validation: Drop NaNs
         data = data.copy()
         data = data.dropna()
         if len(data) < 20:
             raise ValueError("At least 20 data points are required for prediction.")
+        
+        # Check if data has been normalized
+        if not self._check_data_normalization(data):
+            self.logger.warning("Data appears to be unnormalized. Consider scaling before prediction.")
         
         # Log volatility and autocorrelation
         volatility = data.std().mean()
@@ -708,15 +716,63 @@ class LSTMForecaster(BaseModel):
         
         # Convert to PyTorch tensor
         X_tensor = torch.FloatTensor(X_seq)
-        X_tensor = X_tensor.to(self.device)
         
-        # Predict
+        # Create dataset and dataloader for batch-wise evaluation
+        dataset = TensorDataset(X_tensor)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+        
+        # Predict in batches to reduce memory usage
         self.model.eval()
-        with torch.no_grad():
-            preds = self.model(X_tensor)
-            preds = preds.cpu().numpy()
+        predictions = []
         
-        return preds.flatten()
+        with torch.no_grad():
+            for (batch_X,) in dataloader:
+                batch_X = batch_X.to(self.device)
+                batch_preds = self.model(batch_X)
+                predictions.append(batch_preds.cpu().numpy())
+        
+        # Concatenate all batch predictions
+        all_predictions = np.concatenate(predictions, axis=0)
+        return all_predictions.flatten()
+
+    def _check_data_normalization(self, data: pd.DataFrame) -> bool:
+        """Check if data appears to be normalized (mean close to 0, std close to 1)."""
+        try:
+            mean_abs = data.mean().abs().mean()
+            std_val = data.std().mean()
+            
+            # Check if data is roughly normalized
+            is_normalized = mean_abs < 0.1 and 0.5 < std_val < 2.0
+            
+            self.logger.info(f"Data normalization check - Mean abs: {mean_abs:.4f}, Std: {std_val:.4f}, Normalized: {is_normalized}")
+            
+            return is_normalized
+        except Exception as e:
+            self.logger.warning(f"Could not check data normalization: {e}")
+            return False
+
+    def _log_input_statistics(self, X: pd.DataFrame, y: pd.Series):
+        """Log comprehensive input statistics for monitoring."""
+        try:
+            stats = {
+                "X_shape": X.shape,
+                "y_shape": y.shape,
+                "X_mean": X.mean().mean(),
+                "X_std": X.std().mean(),
+                "X_min": X.min().min(),
+                "X_max": X.max().max(),
+                "y_mean": y.mean(),
+                "y_std": y.std(),
+                "y_min": y.min(),
+                "y_max": y.max(),
+                "X_nan_count": X.isnull().sum().sum(),
+                "y_nan_count": y.isnull().sum(),
+            }
+            
+            self.logger.info(f"Input statistics: {stats}")
+            
+        except Exception as e:
+            self.logger.warning(f"Could not log input statistics: {e}")
 
     def save(self, path: str) -> None:
         """Save the model.

@@ -121,6 +121,17 @@ class MACDStrategy:
             signals.loc[buy_condition, "signal"] = 1  # Buy signal
             signals.loc[sell_condition, "signal"] = -1  # Sell signal
 
+            # Apply smoothing using short EMA window to reduce noise
+            smoothing_window = kwargs.get('smoothing_window', 3)
+            if smoothing_window > 1:
+                signals["signal"] = signals["signal"].rolling(
+                    window=smoothing_window, center=True, min_periods=1
+                ).mean()
+                
+                # Re-quantize smoothed signals
+                signals["signal"] = np.where(signals["signal"] > 0.1, 1,
+                                           np.where(signals["signal"] < -0.1, -1, 0))
+
             # Drop duplicate consecutive signals to avoid over-trading
             signals["signal"] = signals["signal"].loc[
                 ~(signals["signal"] == signals["signal"].shift(1))
@@ -136,6 +147,13 @@ class MACDStrategy:
             price_mask = df_lower["close"] >= config.min_price
             signals.loc[~(volume_mask & price_mask), "signal"] = 0
 
+            # Handle NaN alignment issues when joining with price data
+            # Ensure signals align with original data index
+            if len(signals) != len(df):
+                # Reindex to match original data
+                signals = signals.reindex(df.index, method='ffill')
+                signals = signals.fillna(0)
+            
             # Handle any remaining NaN values in signals
             signals = signals.fillna(0)
 
