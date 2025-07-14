@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 
 from .base_model import BaseModel
+from utils.model_cache import cache_model_operation, get_model_cache
 
 logger = logging.getLogger(__name__)
 
@@ -462,3 +463,49 @@ class XGBoostModel(BaseModel):
             "config": self.config,
             "timestamp": datetime.now().isoformat(),
         }
+
+    @cache_model_operation
+    def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
+        """Generate forecast for future time steps with caching.
+
+        Args:
+            data: Historical data DataFrame
+            horizon: Number of time steps to forecast
+
+        Returns:
+            Dictionary containing forecast results
+        """
+        try:
+            if not self.is_trained:
+                # Train the model if not already trained
+                self.train(data)
+
+            # Generate multi-step forecast
+            forecast_values = []
+            current_data = data.copy()
+
+            for i in range(horizon):
+                # Get prediction for next step
+                pred = self.predict(current_data)
+                forecast_values.append(pred[-1])
+
+                # Update data for next iteration
+                new_row = current_data.iloc[-1].copy()
+                new_row["close"] = pred[-1]  # Update with prediction
+                current_data = pd.concat(
+                    [current_data, pd.DataFrame([new_row])], ignore_index=True
+                )
+                current_data = current_data.iloc[1:]  # Remove oldest row
+
+            return {
+                "forecast": np.array(forecast_values),
+                "confidence": 0.85,  # XGBoost confidence
+                "model": "XGBoost",
+                "horizon": horizon,
+                "feature_importance": self.get_feature_importance(),
+                "metadata": self.get_metadata(),
+            }
+
+        except Exception as e:
+            logger.error(f"Error in XGBoost model forecast: {e}")
+            raise RuntimeError(f"XGBoost model forecasting failed: {e}")

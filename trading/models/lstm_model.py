@@ -17,6 +17,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 # Local imports
 from .base_model import BaseModel
+from utils.model_cache import cache_model_operation, get_model_cache
 
 
 class LSTMModel(nn.Module):
@@ -845,6 +846,7 @@ class LSTMForecaster(BaseModel):
         self.scaler = checkpoint["scaler"]
         self.model.to(self.device)
 
+    @cache_model_operation
     def forecast(self, data: pd.DataFrame, horizon: int = 30) -> Dict[str, Any]:
         """Generate forecast for future time steps.
 

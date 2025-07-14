@@ -15,7 +15,8 @@ __license__ = "MIT"
 
 # Core imports with error handling
 try:
-    pass
+    from .models import forecast_router
+    from .models.forecast_router import ForecastRouter
 
     MODELS_AVAILABLE = True
 except ImportError as e:
@@ -27,7 +28,8 @@ except ImportError as e:
     raise ImportError("Model modules failed to load. Check logs.")
 
 try:
-    pass
+    from .strategies import bollinger_strategy, rsi_strategy, macd_strategy, sma_strategy
+    from .strategies.ensemble import WeightedEnsembleStrategy
 
     STRATEGIES_AVAILABLE = True
 except ImportError as e:
@@ -38,7 +40,8 @@ except ImportError as e:
     STRATEGIES_AVAILABLE = False
 
 try:
-    pass
+    from .data import DataProviderManager, get_data_provider
+    from .data.providers import AlphaVantageProvider, YFinanceProvider
 
     DATA_AVAILABLE = True
 except ImportError as e:
@@ -49,7 +52,8 @@ except ImportError as e:
     DATA_AVAILABLE = False
 
 try:
-    pass
+    from .backtesting import backtester, performance_analysis
+    from .backtesting.backtester import Backtester
 
     BACKTESTING_AVAILABLE = True
 except ImportError as e:
@@ -60,7 +64,8 @@ except ImportError as e:
     BACKTESTING_AVAILABLE = False
 
 try:
-    pass
+    from .optimization import strategy_optimizer, base_optimizer
+    from .optimization.strategy_optimizer import StrategyOptimizer
 
     OPTIMIZATION_AVAILABLE = True
 except ImportError as e:
@@ -71,7 +76,8 @@ except ImportError as e:
     OPTIMIZATION_AVAILABLE = False
 
 try:
-    pass
+    from .risk import risk_analyzer, risk_manager
+    from .risk.risk_analyzer import RiskAnalyzer
 
     RISK_AVAILABLE = True
 except ImportError as e:
@@ -82,7 +88,8 @@ except ImportError as e:
     RISK_AVAILABLE = False
 
 try:
-    pass
+    from .portfolio import portfolio_manager, position_sizer
+    from .portfolio.portfolio_manager import PortfolioManager
 
     PORTFOLIO_AVAILABLE = True
 except ImportError as e:
@@ -93,7 +100,8 @@ except ImportError as e:
     PORTFOLIO_AVAILABLE = False
 
 try:
-    pass
+    from .agents import agent_manager, agent_registry
+    from .agents.agent_manager import AgentManager
 
     AGENTS_AVAILABLE = True
 except ImportError as e:
@@ -135,7 +143,8 @@ def get_version_info():
 
 # Additional imports with error handling
 try:
-    pass
+    from .market import market_analyzer, market_data
+    from .market.market_analyzer import MarketAnalyzer
 
     MARKET_AVAILABLE = True
 except ImportError as e:
@@ -146,7 +155,8 @@ except ImportError as e:
     MARKET_AVAILABLE = False
 
 try:
-    pass
+    from .data.preprocessing import DataPreprocessor, FeatureEngineering
+    from .data.preprocessing import DataValidator, DataScaler
 
     PREPROCESSING_AVAILABLE = True
 except ImportError as e:
@@ -157,7 +167,7 @@ except ImportError as e:
     PREPROCESSING_AVAILABLE = False
 
 try:
-    pass
+    from .agents.updater_agent import UpdaterAgent
 
     UPDATER_AVAILABLE = True
 except ImportError as e:
@@ -168,7 +178,8 @@ except ImportError as e:
     UPDATER_AVAILABLE = False
 
 try:
-    pass
+    from .nlp import llm_processor, nl_interface
+    from .nlp.llm_processor import LLMProcessor
 
     NLP_AVAILABLE = True
 except ImportError as e:
