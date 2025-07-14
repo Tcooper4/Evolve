@@ -24,8 +24,8 @@ import pandas as pd
 
 matplotlib.use("Agg")  # Use non-interactive backend
 
-from ..backtesting.performance_analysis import PerformanceAnalyzer
-from ..backtesting.risk_metrics import RiskMetricsEngine
+from trading.backtesting.performance_analysis import PerformanceAnalyzer
+from trading.backtesting.risk_metrics import RiskMetricsEngine
 
 # Local imports
 from .report_generator import ReportGenerator

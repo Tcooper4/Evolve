@@ -832,7 +832,47 @@ def main():
 
             with col_export4:
                 if st.button("Generate PDF"):
-                    st.info("PDF generation feature coming soon!")
+                    try:
+                        # Convert report data to DataFrame format for the exporter
+                        from utils.report_exporter import export_trade_report
+                        
+                        # Create a DataFrame from the report data
+                        if "trade_data" in st.session_state.current_report:
+                            trade_df = pd.DataFrame(st.session_state.current_report["trade_data"])
+                        else:
+                            # Create a summary DataFrame if no trade data
+                            metrics = st.session_state.current_report.get("metrics", {})
+                            trade_df = pd.DataFrame([{
+                                "timestamp": datetime.now(),
+                                "symbol": symbol,
+                                "strategy": "Report Summary",
+                                "signal": "SUMMARY",
+                                "total_return": metrics.get("Total_Return", 0),
+                                "sharpe_ratio": metrics.get("Sharpe_Ratio", 0),
+                                "max_drawdown": metrics.get("Max_Drawdown", 0),
+                                "win_rate": metrics.get("Win_Rate", 0)
+                            }])
+                        
+                        # Export to PDF
+                        export_path = export_trade_report(
+                            signals=trade_df,
+                            format="PDF",
+                            include_summary=True
+                        )
+                        
+                        # Create download button for PDF
+                        with open(export_path, "rb") as f:
+                            pdf_data = f.read()
+                        
+                        st.download_button(
+                            label="Download PDF",
+                            data=pdf_data,
+                            file_name=f"{symbol}_report_{datetime.now().strftime('%Y%m%d')}.pdf",
+                            mime="application/pdf",
+                        )
+                        
+                    except Exception as e:
+                        st.error(f"PDF generation failed: {str(e)}")
         else:
             st.info("Generate a report using the sidebar controls")
 

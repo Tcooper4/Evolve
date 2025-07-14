@@ -1,0 +1,2 @@
+total_trades,winning_trades,losing_trades,win_rate,total_pnl,avg_pnl,max_profit,max_loss,pnl_std,sharpe_ratio,max_drawdown,start_date,end_date
+20,10,10,0.5,-27.386965012155002,-1.3693482506077501,234.07463341030464,-261.9745104089744,113.50342406986908,-0.01206437833773916,-318.9235063249032,2025-06-13,2025-07-02
