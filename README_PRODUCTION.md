@@ -1,394 +1,456 @@
-# 🚀 Evolve Trading Platform - Production Deployment Guide
+# Evolve: Production-Ready Agentic Forecasting Platform
 
-## Overview
+## 🚀 Overview
 
-The Evolve Trading Platform is a production-ready, autonomous financial forecasting and trading system with institutional-grade capabilities. This guide provides comprehensive instructions for deploying the system in production environments.
+Evolve is a comprehensive, production-ready agentic forecasting and trading strategy platform designed for institutional deployment. The system combines advanced machine learning models, intelligent agent orchestration, and robust risk management to deliver automated trading insights and execution capabilities.
 
 ## 🏗️ Architecture
 
+### Core Components
+
+1. **Agent System** (`/agents/`)
+   - Consolidated prompt routing with fallback chain
+   - Intelligent request classification and routing
+   - Performance tracking and load balancing
+
+2. **Forecasting Engine** (`/forecasting/`)
+   - Multi-model ensemble forecasting
+   - Cached model operations for performance
+   - Hybrid weight optimization
+
+3. **Strategy Engine** (`/strategies/`)
+   - Standardized strategy interfaces
+   - Real-time signal generation
+   - Risk management and position sizing
+
+4. **Cache Management** (`/utils/cache_utils.py`)
+   - Centralized model operation caching
+   - Performance optimization
+   - Automatic cache cleanup
+
+5. **Weight Registry** (`/utils/weight_registry.py`)
+   - Hybrid model weight management
+   - Performance history tracking
+   - Automated weight optimization
+
+## 🔄 Agent Workflow
+
+### 1. Request Processing Flow
+
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Web Interface │    │   API Gateway   │    │   Data Sources  │
-│   (Streamlit)   │◄──►│   (FastAPI)     │◄──►│   (YFinance,    │
-│                 │    │                 │    │    AlphaVantage)│
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Agent Hub     │    │   Model Engine  │    │   Risk Manager  │
-│   (Routing)     │    │   (Forecasting) │    │   (Position     │
-│                 │    │                 │    │    Sizing)      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Strategy      │    │   Backtesting   │    │   Portfolio     │
-│   Engine        │    │   Engine        │    │   Manager       │
-│   (Execution)   │    │   (Validation)  │    │   (Tracking)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+User Request → Prompt Agent → Intent Classification → Agent Routing → Execution → Response
 ```
 
-## 🚀 Quick Start
+**Detailed Flow:**
+1. **Input Validation**: User request validation and preprocessing
+2. **Intent Classification**: Regex → Local LLM → OpenAI fallback chain
+3. **Agent Selection**: Capability matching and load balancing
+4. **Execution**: Parallel agent execution with timeout management
+5. **Response Aggregation**: Result consolidation and formatting
 
-### Prerequisites
+### 2. Prompt-to-Action Flow
 
-- Python 3.10+
-- 8GB+ RAM
-- 4+ CPU cores
-- 50GB+ storage
-- Internet connection for data feeds
+```
+Natural Language → Structured Intent → Parameter Extraction → Action Execution → Result Formatting
+```
 
-### Installation
+**Components:**
+- **Prompt Agent**: Consolidated routing with intelligent fallback
+- **Intent Parser**: Multi-provider intent classification
+- **Parameter Extractor**: Automated parameter identification
+- **Action Executor**: Safe execution with error handling
+- **Response Formatter**: Structured output generation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-org/evolve-trading-platform.git
-   cd evolve-trading-platform
-   ```
+## 📊 Forecasting Ensemble Logic
 
-2. **Create virtual environment**
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
+### Model Architecture
 
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.production.txt
-   ```
+```
+Input Data → Feature Engineering → Multi-Model Prediction → Weight Optimization → Ensemble Output
+```
 
-4. **Configure environment variables**
-   ```bash
-   cp env.example .env
-   # Edit .env with your API keys
-   ```
+**Models Supported:**
+- **LSTM**: Long-term sequence modeling
+- **XGBoost**: Gradient boosting for structured data
+- **Prophet**: Time series forecasting
+- **Hybrid**: Weighted ensemble combinations
 
-5. **Run the application**
-   ```bash
-   streamlit run unified_interface.py
-   ```
+### Caching Strategy
 
-## 🔧 Configuration
+```python
+@cache_forecast_operation("lstm")
+def forecast_lstm(data, params):
+    # LSTM forecasting with automatic caching
+    return forecast_result
+```
 
-### Environment Variables
+**Cache Features:**
+- **Automatic Caching**: Decorator-based cache management
+- **TTL Management**: Configurable time-to-live
+- **Size Control**: Automatic cache eviction
+- **Performance Tracking**: Hit/miss statistics
 
-Create a `.env` file with the following variables:
+### Weight Optimization
 
-```env
-# Required API Keys
-OPENAI_API_KEY=your_openai_api_key
-ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key
-BINANCE_API_KEY=your_binance_api_key
-BINANCE_SECRET_KEY=your_binance_secret
+```python
+# Automatic weight optimization based on performance
+optimized_weights = optimize_ensemble_weights(
+    model_names=["lstm", "xgboost", "prophet"],
+    method="performance_weighted",
+    target_metric="sharpe_ratio"
+)
+```
 
-# Optional Configuration
-REDIS_URL=redis://localhost:6379
-DATABASE_URL=postgresql://user:pass@localhost:5432/evolve
-SLACK_WEBHOOK_URL=your_slack_webhook
-EMAIL_PASSWORD=your_email_password
+**Optimization Methods:**
+- **Performance Weighted**: Based on historical accuracy
+- **Risk Parity**: Equal risk contribution
+- **Equal Weight**: Simple averaging
 
-# System Configuration
-LOG_LEVEL=INFO
-DEBUG_MODE=false
-ENABLE_GPU=true
-MAX_WORKERS=4
+## 🎯 Strategy Engine
+
+### Standardized Interfaces
+
+All strategies implement the consistent interface:
+
+```python
+def generate_signals(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
+    """
+    Generate trading signals with standardized interface.
+    
+    Args:
+        df: Price data with required columns
+        **kwargs: Strategy-specific parameters
+        
+    Returns:
+        DataFrame with signals and indicators
+    """
+```
+
+**Supported Strategies:**
+- **MACD**: Moving Average Convergence Divergence
+- **RSI**: Relative Strength Index
+- **Bollinger Bands**: Volatility-based signals
+- **SMA**: Simple Moving Average crossovers
+
+### Signal Generation Process
+
+```
+Market Data → Technical Indicators → Signal Logic → Risk Filtering → Position Sizing → Execution
+```
+
+**Features:**
+- **NaN Protection**: Automatic handling of missing data
+- **Parameter Validation**: Input validation and sanitization
+- **Error Handling**: Graceful degradation on failures
+- **Performance Logging**: Detailed execution metrics
+
+## 🔧 Production Configuration
+
+### Environment Setup
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variables
+export OPENAI_API_KEY="your_openai_key"
+export HUGGINGFACE_API_KEY="your_hf_key"
+export DATABASE_URL="your_db_url"
+
+# Initialize cache and registry
+python -c "from utils.cache_utils import cleanup_cache; cleanup_cache()"
+python -c "from utils.weight_registry import get_weight_registry; get_weight_registry()"
 ```
 
 ### Configuration Files
 
-- `config/system_config.yaml` - Main system configuration
-- `config/app_config.yaml` - Application-specific settings
-- `.streamlit/config.toml` - Streamlit configuration
+**app_config.yaml:**
+```yaml
+# Agent Configuration
+agents:
+  prompt_agent:
+    use_regex_first: true
+    use_local_llm: true
+    use_openai_fallback: true
+    enable_debug_mode: false
 
-## 🏭 Production Deployment
+# Cache Configuration
+cache:
+  max_size_mb: 1024
+  ttl_hours: 24
+  compression_level: 3
+
+# Strategy Configuration
+strategies:
+  default_risk_level: "medium"
+  position_sizing: "kelly"
+  max_positions: 10
+```
+
+### Monitoring and Logging
+
+```python
+# Performance monitoring
+from utils.cache_utils import get_cache_stats
+from utils.weight_registry import get_registry_summary
+
+# Get system statistics
+cache_stats = get_cache_stats()
+registry_summary = get_registry_summary()
+```
+
+## 🚀 Deployment
 
 ### Docker Deployment
 
-1. **Build the image**
-   ```bash
-   docker build -t evolve-trading-platform .
-   ```
+```dockerfile
+FROM python:3.9-slim
 
-2. **Run the container**
-   ```bash
-   docker run -d \
-     --name evolve-platform \
-     -p 8501:8501 \
-     --env-file .env \
-     evolve-trading-platform
-   ```
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+EXPOSE 8000
+
+CMD ["python", "app.py"]
+```
 
 ### Kubernetes Deployment
 
-1. **Apply the deployment**
-   ```bash
-   kubectl apply -f kubernetes/deployment.yaml
-   kubectl apply -f kubernetes/service.yaml
-   kubectl apply -f kubernetes/ingress.yaml
-   ```
-
-2. **Check deployment status**
-   ```bash
-   kubectl get pods -l app=evolve-trading-platform
-   kubectl logs -f deployment/evolve-trading-platform
-   ```
-
-### Cloud Deployment
-
-#### Heroku
-```bash
-heroku create evolve-trading-platform
-heroku config:set $(cat .env | xargs)
-git push heroku main
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evolve-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: evolve
+  template:
+    metadata:
+      labels:
+        app: evolve
+    spec:
+      containers:
+      - name: evolve
+        image: evolve:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: evolve-secrets
+              key: openai-key
 ```
 
-#### AWS ECS
-```bash
-aws ecs create-cluster --cluster-name evolve-cluster
-aws ecs register-task-definition --cli-input-json file://task-definition.json
-aws ecs create-service --cluster evolve-cluster --service-name evolve-service --task-definition evolve-trading-platform
+### Health Checks
+
+```python
+# Health check endpoint
+@app.route("/health")
+def health_check():
+    return {
+        "status": "healthy",
+        "cache_stats": get_cache_stats(),
+        "registry_summary": get_registry_summary(),
+        "timestamp": datetime.now().isoformat()
+    }
 ```
-
-#### Google Cloud Run
-```bash
-gcloud builds submit --tag gcr.io/PROJECT_ID/evolve-trading-platform
-gcloud run deploy evolve-trading-platform --image gcr.io/PROJECT_ID/evolve-trading-platform --platform managed
-```
-
-## 📊 Monitoring & Health Checks
-
-### Health Check Endpoints
-
-- **Application Health**: `http://localhost:8501/_stcore/health`
-- **System Metrics**: `http://localhost:8501/metrics`
-- **API Status**: `http://localhost:8501/api/health`
-
-### Monitoring Dashboard
-
-Access the monitoring dashboard at `http://localhost:8501/system` to view:
-- System health status
-- Performance metrics
-- Error logs
-- Resource usage
-
-### Logging
-
-Logs are stored in the `logs/` directory:
-- `logs/app.log` - Application logs
-- `logs/error.log` - Error logs
-- `logs/performance.log` - Performance metrics
-
-## 🔒 Security
-
-### API Key Management
-
-- Store API keys in environment variables
-- Use secret management services in production
-- Rotate keys regularly
-- Monitor API usage
-
-### Access Control
-
-- Implement authentication for production deployments
-- Use HTTPS in production
-- Configure CORS appropriately
-- Enable rate limiting
-
-### Data Security
-
-- Encrypt sensitive data at rest
-- Use secure connections for data transmission
-- Implement audit logging
-- Regular security updates
-
-## 🧪 Testing
-
-### Run Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=trading --cov=core --cov-report=html
-
-# Run specific test categories
-pytest tests/test_models/
-pytest tests/test_strategies/
-pytest tests/test_integration/
-```
-
-### Test Coverage
-
-The system maintains 80%+ test coverage across:
-- Model implementations
-- Strategy logic
-- API endpoints
-- Data processing
-- Error handling
 
 ## 📈 Performance Optimization
 
-### GPU Acceleration
+### Caching Strategy
 
-Enable GPU acceleration for model training:
-```python
-import tensorflow as tf
-if tf.config.list_physical_devices('GPU'):
-    tf.config.experimental.set_memory_growth(tf.config.list_physical_devices('GPU')[0], True)
-```
+1. **Model Operations**: Cache expensive model computations
+2. **Data Preprocessing**: Cache feature engineering results
+3. **Strategy Signals**: Cache strategy calculations
+4. **API Responses**: Cache external API calls
 
-### Caching
+### Load Balancing
 
-Redis caching is enabled by default for:
-- Model predictions
-- Market data
-- Strategy results
-- User sessions
+1. **Agent Distribution**: Distribute load across available agents
+2. **Request Queuing**: Queue requests during high load
+3. **Timeout Management**: Prevent hanging requests
+4. **Circuit Breakers**: Fail fast on service issues
 
-### Parallel Processing
+### Memory Management
 
-Configure parallel processing for:
-- Model training
-- Backtesting
-- Data processing
-- Report generation
+1. **Cache Eviction**: Automatic cleanup of old cache entries
+2. **Data Streaming**: Process large datasets in chunks
+3. **Garbage Collection**: Regular memory cleanup
+4. **Resource Limits**: Set memory and CPU limits
 
-## 🔄 Backup & Recovery
+## 🔒 Security Considerations
 
-### Automated Backups
+### API Security
 
-Backups are automatically created:
-- Daily at 2 AM
-- 30-day retention
-- Stored in `backups/` directory
+1. **Authentication**: JWT-based authentication
+2. **Rate Limiting**: Prevent API abuse
+3. **Input Validation**: Sanitize all inputs
+4. **Error Handling**: Don't expose sensitive information
 
-### Manual Backup
+### Data Security
+
+1. **Encryption**: Encrypt sensitive data at rest
+2. **Access Control**: Role-based access control
+3. **Audit Logging**: Log all data access
+4. **Data Retention**: Automatic data cleanup
+
+## 🧪 Testing Strategy
+
+### Unit Tests
 
 ```bash
-python scripts/backup_system.py
+# Run unit tests
+pytest tests/unit/ -v
+
+# Run with coverage
+pytest tests/unit/ --cov=. --cov-report=html
 ```
 
-### Recovery
+### Integration Tests
 
 ```bash
-python scripts/restore_system.py --backup-file backup_2024-01-01.tar.gz
+# Run integration tests
+pytest tests/integration/ -v
+
+# Test agent workflows
+pytest tests/integration/test_agent_workflows.py
 ```
+
+### Performance Tests
+
+```bash
+# Run performance benchmarks
+pytest tests/performance/ -v
+
+# Load testing
+python -m pytest tests/performance/test_load.py
+```
+
+## 📊 Monitoring and Alerting
+
+### Key Metrics
+
+1. **Response Time**: Average request processing time
+2. **Throughput**: Requests per second
+3. **Error Rate**: Percentage of failed requests
+4. **Cache Hit Rate**: Cache effectiveness
+5. **Model Accuracy**: Forecasting accuracy metrics
+
+### Alerting Rules
+
+```yaml
+alerts:
+  - name: "High Error Rate"
+    condition: "error_rate > 5%"
+    duration: "5m"
+    
+  - name: "Slow Response Time"
+    condition: "avg_response_time > 2s"
+    duration: "10m"
+    
+  - name: "Low Cache Hit Rate"
+    condition: "cache_hit_rate < 70%"
+    duration: "15m"
+```
+
+## 🔄 Maintenance Procedures
+
+### Regular Maintenance
+
+1. **Cache Cleanup**: Daily cache cleanup
+2. **Log Rotation**: Weekly log rotation
+3. **Performance Review**: Monthly performance analysis
+4. **Security Updates**: Regular security patches
+
+### Backup Procedures
+
+1. **Configuration Backup**: Backup configuration files
+2. **Data Backup**: Backup critical data
+3. **Model Backup**: Backup trained models
+4. **Registry Backup**: Backup weight registry
 
 ## 🚨 Troubleshooting
 
 ### Common Issues
 
-1. **Import Errors**
-   ```bash
-   pip install -r requirements.production.txt --force-reinstall
-   ```
-
-2. **API Key Issues**
-   - Verify API keys in `.env` file
-   - Check API key permissions
-   - Monitor API usage limits
-
-3. **Memory Issues**
-   - Increase system RAM
-   - Enable swap space
-   - Optimize model parameters
-
-4. **Performance Issues**
-   - Enable GPU acceleration
-   - Increase worker processes
-   - Optimize database queries
+1. **High Memory Usage**: Check cache size and cleanup
+2. **Slow Response Times**: Monitor agent load and optimize
+3. **Cache Misses**: Review cache configuration
+4. **Model Errors**: Check model dependencies and data quality
 
 ### Debug Mode
 
-Enable debug mode for troubleshooting:
-```bash
-export DEBUG_MODE=true
-streamlit run unified_interface.py
-```
+```python
+# Enable debug mode
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
-### Log Analysis
-
-```bash
-# View recent logs
-tail -f logs/app.log
-
-# Search for errors
-grep "ERROR" logs/app.log
-
-# Monitor performance
-grep "PERFORMANCE" logs/performance.log
+# Enable agent debug mode
+from agents.prompt_agent import create_prompt_agent
+agent = create_prompt_agent(enable_debug_mode=True)
 ```
 
 ## 📚 API Documentation
 
 ### Core Endpoints
 
-- `POST /api/forecast` - Generate forecasts
-- `POST /api/strategy` - Execute strategies
-- `POST /api/backtest` - Run backtests
-- `GET /api/health` - Health check
-- `GET /api/metrics` - System metrics
+- `POST /api/v1/forecast`: Generate forecasts
+- `POST /api/v1/signals`: Generate trading signals
+- `GET /api/v1/health`: Health check
+- `GET /api/v1/stats`: System statistics
 
-### Example API Usage
+### Example Usage
 
 ```python
 import requests
 
 # Generate forecast
-response = requests.post('http://localhost:8501/api/forecast', json={
-    'symbol': 'AAPL',
-    'days': 30,
-    'model': 'ensemble'
+response = requests.post("/api/v1/forecast", json={
+    "symbol": "AAPL",
+    "timeframe": "1d",
+    "periods": 30,
+    "models": ["lstm", "xgboost"]
 })
 
-# Execute strategy
-response = requests.post('http://localhost:8501/api/strategy', json={
-    'symbol': 'TSLA',
-    'strategy': 'RSI',
-    'action': 'BUY'
+# Generate signals
+response = requests.post("/api/v1/signals", json={
+    "symbol": "AAPL",
+    "strategies": ["rsi", "macd"],
+    "timeframe": "1h"
 })
 ```
 
-## 🤝 Contributing
+## 🎯 Success Metrics
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
+### Performance Targets
 
-### Development Setup
+- **Response Time**: < 2 seconds for standard requests
+- **Availability**: > 99.9% uptime
+- **Accuracy**: > 70% forecast accuracy
+- **Throughput**: > 1000 requests/minute
 
-```bash
-# Install development dependencies
-pip install -r requirements-dev.txt
+### Business Metrics
 
-# Run pre-commit hooks
-pre-commit install
-
-# Run linting
-flake8 trading/ core/ unified_interface.py
-
-# Run type checking
-mypy trading/ core/ unified_interface.py
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-- **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/your-org/evolve-trading-platform/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/evolve-trading-platform/discussions)
-- **Email**: support@evolve-trading.com
-
-## 🔄 Changelog
-
-See [CHANGELOG.md](CHANGELOG.md) for a complete list of changes and version history.
+- **Signal Quality**: Sharpe ratio > 1.0
+- **Risk Management**: Max drawdown < 10%
+- **Cost Efficiency**: < $0.01 per request
+- **User Satisfaction**: > 90% positive feedback
 
 ---
 
-**⚠️ Disclaimer**: This software is for educational and research purposes. Use at your own risk. The authors are not responsible for any financial losses incurred through the use of this software. 
+## 📞 Support
+
+For production support and deployment assistance:
+
+- **Documentation**: [docs.evolve.ai](https://docs.evolve.ai)
+- **Support**: [support@evolve.ai](mailto:support@evolve.ai)
+- **Emergency**: [emergency@evolve.ai](mailto:emergency@evolve.ai)
+
+---
+
+*Evolve Platform v2.0 - Production Ready* 

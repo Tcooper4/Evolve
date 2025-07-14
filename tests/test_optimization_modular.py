@@ -1,415 +1,327 @@
-"""Tests for modularized optimization components."""
+"""
+Test Optimization Modular Components
+
+This module tests the modular optimization components.
+Updated for the new modular structure.
+"""
 
 import pytest
-import numpy as np
-import pandas as pd
-from unittest.mock import Mock, patch
+from datetime import datetime
+from typing import Dict, Any
 
-from trading.optimization import (
-    StrategyOptimizer,
-    GridSearch,
-    BayesianOptimization,
-    GeneticAlgorithm,
-    ParticleSwarmOptimization,
-    RayTuneOptimization,
-    OptimizationResult,
+from trading.agents.optimization.parameter_validator import ParameterValidator, OptimizationParameter
+from trading.agents.optimization.strategy_optimizer import (
+    StrategyOptimizer, StrategyConfig, OptimizationType, OptimizationMetric,
+    OptimizationConfig
 )
+from trading.agents.optimization.performance_analyzer import PerformanceAnalyzer, OptimizationResult
 
 
-class TestGridSearch:
-    """Test GridSearch optimization method."""
+class TestParameterValidator:
+    """Test ParameterValidator functionality."""
 
-    def setup_method(self):
-        """Setup test method."""
-        self.optimizer = GridSearch()
-        self.param_space = {
-            "param1": [1, 2, 3],
-            "param2": {"start": 0.1, "end": 0.5, "n_points": 3},
-        }
-        self.data = pd.DataFrame({
-            "Close": np.random.randn(100).cumsum() + 100,
-            "Volume": np.random.randint(1000, 10000, 100),
-        })
-
-    def test_optimize_basic(self):
-        """Test basic optimization."""
-        def objective(params, data):
-            return params["param1"] + params["param2"]
-
-        result = self.optimizer.optimize(objective, self.param_space, self.data)
-
-        assert isinstance(result, OptimizationResult)
-        assert result.best_params is not None
-        assert result.best_score is not None
-        assert result.optimization_time > 0
-        assert result.n_iterations > 0
-
-    def test_optimize_with_max_points(self):
-        """Test optimization with max points limit."""
-        def objective(params, data):
-            return params["param1"] + params["param2"]
-
-        result = self.optimizer.optimize(
-            objective, self.param_space, self.data, max_points=5
+    def test_parameter_creation(self):
+        """Test optimization parameter creation."""
+        param = OptimizationParameter(
+            name="rsi_period",
+            min_value=10,
+            max_value=30,
+            step=2,
+            parameter_type="int"
         )
-
-        assert result.n_iterations <= 5
-
-    def test_validate_param_space(self):
-        """Test parameter space validation."""
-        # Test empty param space
-        with pytest.raises(ValueError):
-            self.optimizer._validate_param_space({})
-
-        # Test invalid range
-        invalid_space = {"param": {"start": 10, "end": 5}}
-        with pytest.raises(ValueError):
-            self.optimizer._validate_param_space(invalid_space)
-
-    def test_early_stopping(self):
-        """Test early stopping functionality."""
-        scores = [1.0, 0.9, 0.8, 0.8, 0.8, 0.8, 0.8]
-        assert self.optimizer._check_early_stopping(scores, patience=3, min_delta=0.01)
-
-
-class TestBayesianOptimization:
-    """Test BayesianOptimization method."""
-
-    def setup_method(self):
-        """Setup test method."""
-        self.optimizer = BayesianOptimization()
-        self.param_space = {
-            "param1": {"start": 0.1, "end": 1.0},
-            "param2": {"start": 1, "end": 10},
-        }
-        self.data = pd.DataFrame({
-            "Close": np.random.randn(100).cumsum() + 100,
-        })
-
-    @patch("trading.optimization.bayesian_optimizer.gp_minimize")
-    def test_optimize_basic(self, mock_gp_minimize):
-        """Test basic Bayesian optimization."""
-        # Mock the optimization result
-        mock_result = Mock()
-        mock_result.x = [0.5, 5]
-        mock_result.fun = 0.1
-        mock_result.func_vals = [-0.1, -0.2, -0.15]
-        mock_result.x_iters = [[0.3, 3], [0.7, 7], [0.5, 5]]
-        mock_gp_minimize.return_value = mock_result
-
-        def objective(params, data):
-            return params["param1"] + params["param2"]
-
-        result = self.optimizer.optimize(objective, self.param_space, self.data)
-
-        assert isinstance(result, OptimizationResult)
-        assert result.best_params is not None
-        assert result.best_score is not None
-
-    def test_optimize_missing_dependency(self):
-        """Test optimization without scikit-optimize."""
-        with patch("trading.optimization.bayesian_optimizer.gp_minimize", side_effect=ImportError):
-            def objective(params, data):
-                return params["param1"] + params["param2"]
-
-            with pytest.raises(ImportError):
-                self.optimizer.optimize(objective, self.param_space, self.data)
-
-
-class TestGeneticAlgorithm:
-    """Test GeneticAlgorithm method."""
-
-    def setup_method(self):
-        """Setup test method."""
-        self.optimizer = GeneticAlgorithm()
-        self.param_space = {
-            "param1": [1, 2, 3, 4, 5],
-            "param2": {"start": 0.1, "end": 1.0},
-        }
-        self.data = pd.DataFrame({
-            "Close": np.random.randn(100).cumsum() + 100,
-        })
-
-    def test_optimize_basic(self):
-        """Test basic genetic algorithm optimization."""
-        def objective(params, data):
-            return params["param1"] + params["param2"]
-
-        result = self.optimizer.optimize(
-            objective, 
-            self.param_space, 
-            self.data,
-            population_size=10,
-            n_generations=5,
-        )
-
-        assert isinstance(result, OptimizationResult)
-        assert result.best_params is not None
-        assert result.best_score is not None
-        assert result.n_iterations == 5
-
-    def test_initialize_population(self):
-        """Test population initialization."""
-        population = self.optimizer._initialize_population(self.param_space, 5)
         
-        assert len(population) == 5
-        for individual in population:
-            assert "param1" in individual
-            assert "param2" in individual
-            assert individual["param1"] in [1, 2, 3, 4, 5]
-            assert 0.1 <= individual["param2"] <= 1.0
+        assert param.name == "rsi_period"
+        assert param.min_value == 10
+        assert param.max_value == 30
+        assert param.step == 2
+        assert param.parameter_type == "int"
 
-    def test_selection(self):
-        """Test selection process."""
-        population = [
-            {"param1": 1, "param2": 0.1},
-            {"param1": 2, "param2": 0.2},
-            {"param1": 3, "param2": 0.3},
+    def test_parameter_validation(self):
+        """Test parameter validation."""
+        validator = ParameterValidator()
+        
+        # Valid parameter
+        valid_param = OptimizationParameter(
+            name="rsi_period",
+            min_value=10,
+            max_value=30,
+            step=2,
+            parameter_type="int"
+        )
+        
+        validated_params = validator.validate_optimization_parameters([valid_param])
+        assert len(validated_params) == 1
+        assert validated_params[0].name == "rsi_period"
+        
+        # Invalid parameter (min >= max)
+        invalid_param = OptimizationParameter(
+            name="invalid_param",
+            min_value=30,
+            max_value=10,  # Invalid: min > max
+            step=2,
+            parameter_type="int"
+        )
+        
+        validated_params = validator.validate_optimization_parameters([invalid_param])
+        assert len(validated_params) == 0
+
+    def test_parameter_range_generation(self):
+        """Test parameter range generation."""
+        validator = ParameterValidator()
+        
+        param = OptimizationParameter(
+            name="rsi_period",
+            min_value=10,
+            max_value=20,
+            step=2,
+            parameter_type="int"
+        )
+        
+        param_range = validator.generate_parameter_range(param)
+        expected_range = [10, 12, 14, 16, 18, 20]
+        
+        assert param_range == expected_range
+
+    def test_categorical_parameter(self):
+        """Test categorical parameter validation."""
+        validator = ParameterValidator()
+        
+        categorical_param = OptimizationParameter(
+            name="strategy_type",
+            min_value=0,
+            max_value=0,
+            step=0,
+            parameter_type="categorical",
+            categories=["rsi", "macd", "bollinger"]
+        )
+        
+        validated_params = validator.validate_optimization_parameters([categorical_param])
+        assert len(validated_params) == 1
+        
+        param_range = validator.generate_parameter_range(categorical_param)
+        assert param_range == ["rsi", "macd", "bollinger"]
+
+    def test_parameter_combination_validation(self):
+        """Test parameter combination validation."""
+        validator = ParameterValidator()
+        
+        params = [
+            OptimizationParameter(
+                name="macd_fast",
+                min_value=5,
+                max_value=15,
+                step=1,
+                parameter_type="int"
+            ),
+            OptimizationParameter(
+                name="macd_slow",
+                min_value=20,
+                max_value=30,
+                step=1,
+                parameter_type="int"
+            )
         ]
-        scores = [0.3, 0.2, 0.1]  # Lower is better
         
-        selected = self.optimizer._selection(population, scores, elite_size=1)
+        # Valid combination
+        valid_combination = {"macd_fast": 10, "macd_slow": 25}
+        assert validator.validate_parameter_combination(valid_combination, params)
         
-        assert len(selected) == len(population)
-        # Best individual should be in elite
-        assert selected[0]["param1"] == 3
-
-
-class TestParticleSwarmOptimization:
-    """Test ParticleSwarmOptimization method."""
-
-    def setup_method(self):
-        """Setup test method."""
-        self.optimizer = ParticleSwarmOptimization()
-        self.param_space = {
-            "param1": {"start": 0.1, "end": 1.0},
-            "param2": {"start": 1, "end": 10},
-        }
-        self.data = pd.DataFrame({
-            "Close": np.random.randn(100).cumsum() + 100,
-        })
-
-    def test_optimize_basic(self):
-        """Test basic PSO optimization."""
-        def objective(params, data):
-            return params["param1"] + params["param2"]
-
-        result = self.optimizer.optimize(
-            objective,
-            self.param_space,
-            self.data,
-            n_particles=5,
-            n_iterations=3,
-        )
-
-        assert isinstance(result, OptimizationResult)
-        assert result.best_params is not None
-        assert result.best_score is not None
-        assert result.n_iterations == 3
-
-    def test_initialize_particles(self):
-        """Test particle initialization."""
-        particles, velocities = self.optimizer._initialize_particles(self.param_space, 3)
-        
-        assert len(particles) == 3
-        assert len(velocities) == 3
-        
-        for particle in particles:
-            assert 0.1 <= particle["param1"] <= 1.0
-            assert 1 <= particle["param2"] <= 10
-
-
-class TestRayTuneOptimization:
-    """Test RayTuneOptimization method."""
-
-    def setup_method(self):
-        """Setup test method."""
-        self.optimizer = RayTuneOptimization()
-        self.param_space = {
-            "param1": {"start": 0.1, "end": 1.0},
-            "param2": {"start": 1, "end": 10},
-        }
-        self.data = pd.DataFrame({
-            "Close": np.random.randn(100).cumsum() + 100,
-        })
-
-    @patch("trading.optimization.ray_optimizer.tune.run")
-    def test_optimize_basic(self, mock_tune_run):
-        """Test basic Ray Tune optimization."""
-        # Mock the analysis result
-        mock_analysis = Mock()
-        mock_best_trial = Mock()
-        mock_best_trial.config = {"param1": 0.5, "param2": 5}
-        mock_best_trial.last_result = {"score": 0.1}
-        mock_analysis.get_best_trial.return_value = mock_best_trial
-        mock_analysis.trials = [mock_best_trial]
-        mock_tune_run.return_value = mock_analysis
-
-        def objective(params, data):
-            return params["param1"] + params["param2"]
-
-        result = self.optimizer.optimize(objective, self.param_space, self.data)
-
-        assert isinstance(result, OptimizationResult)
-        assert result.best_params is not None
-        assert result.best_score is not None
-
-    def test_optimize_missing_dependency(self):
-        """Test optimization without Ray Tune."""
-        with patch("trading.optimization.ray_optimizer.tune", side_effect=ImportError):
-            def objective(params, data):
-                return params["param1"] + params["param2"]
-
-            with pytest.raises(ImportError):
-                self.optimizer.optimize(objective, self.param_space, self.data)
+        # Invalid combination (fast >= slow)
+        invalid_combination = {"macd_fast": 25, "macd_slow": 10}
+        assert not validator.validate_parameter_combination(invalid_combination, params)
 
 
 class TestStrategyOptimizer:
-    """Test StrategyOptimizer orchestrator."""
+    """Test StrategyOptimizer functionality."""
 
-    def setup_method(self):
-        """Setup test method."""
-        self.optimizer = StrategyOptimizer()
-        self.param_space = {
-            "param1": [1, 2, 3],
-            "param2": {"start": 0.1, "end": 0.5},
-        }
-        self.data = pd.DataFrame({
-            "Close": np.random.randn(100).cumsum() + 100,
-        })
-
-    def test_optimize_single_method(self):
-        """Test optimization with single method."""
-        def objective(params, data):
-            return params["param1"] + params["param2"]
-
-        result = self.optimizer.optimize(
-            objective, self.param_space, self.data, method="grid_search"
+    def test_strategy_config_creation(self):
+        """Test strategy configuration creation."""
+        config = StrategyConfig(
+            strategy_name="rsi_strategy",
+            enabled=True,
+            weight=1.0,
+            parameters={"rsi_period": 14, "overbought": 70, "oversold": 30}
         )
+        
+        assert config.strategy_name == "rsi_strategy"
+        assert config.enabled is True
+        assert config.weight == 1.0
+        assert config.parameters["rsi_period"] == 14
 
-        assert isinstance(result, OptimizationResult)
-        assert result.best_params is not None
-
-    def test_optimize_invalid_method(self):
-        """Test optimization with invalid method."""
-        def objective(params, data):
-            return params["param1"] + params["param2"]
-
-        with pytest.raises(ValueError):
-            self.optimizer.optimize(
-                objective, self.param_space, self.data, method="invalid_method"
+    def test_optimization_config_creation(self):
+        """Test optimization configuration creation."""
+        strategy_configs = [
+            StrategyConfig(strategy_name="rsi_strategy", enabled=True),
+            StrategyConfig(strategy_name="macd_strategy", enabled=True)
+        ]
+        
+        parameters = [
+            OptimizationParameter(
+                name="rsi_period",
+                min_value=10,
+                max_value=30,
+                step=2,
+                parameter_type="int"
             )
-
-    def test_optimize_multiple_methods(self):
-        """Test optimization with multiple methods."""
-        def objective(params, data):
-            return params["param1"] + params["param2"]
-
-        results = self.optimizer.optimize_multiple_methods(
-            objective, self.param_space, self.data, methods=["grid_search", "genetic"]
-        )
-
-        assert isinstance(results, dict)
-        assert "grid_search" in results
-        assert "genetic" in results
-
-    def test_get_best_result(self):
-        """Test getting best result from multiple methods."""
-        # Create mock results
-        result1 = OptimizationResult(
-            best_params={"param1": 1},
-            best_score=0.5,
-            all_scores=[0.5, 0.6],
-            all_params=[{"param1": 1}, {"param1": 2}],
-            optimization_time=1.0,
-            n_iterations=2,
-            convergence_history=[0.6, 0.5],
+        ]
+        
+        config = OptimizationConfig(
+            optimization_type=OptimizationType.THRESHOLD_OPTIMIZATION,
+            target_metric=OptimizationMetric.SHARPE_RATIO,
+            symbols=["AAPL", "GOOGL"],
+            time_periods=[{"start_date": "2023-01-01", "end_date": "2023-12-31"}],
+            strategy_configs=strategy_configs,
+            parameters_to_optimize=parameters
         )
         
-        result2 = OptimizationResult(
-            best_params={"param1": 2},
-            best_score=0.3,
-            all_scores=[0.3, 0.4],
-            all_params=[{"param1": 2}, {"param1": 3}],
-            optimization_time=1.0,
-            n_iterations=2,
-            convergence_history=[0.4, 0.3],
-        )
+        assert config.optimization_type == OptimizationType.THRESHOLD_OPTIMIZATION
+        assert config.target_metric == OptimizationMetric.SHARPE_RATIO
+        assert len(config.symbols) == 2
+        assert len(config.strategy_configs) == 2
 
-        results = {"method1": result1, "method2": result2}
-        best_method, best_result = self.optimizer.get_best_result(results)
-
-        assert best_method == "method2"  # Lower score is better
-        assert best_result == result2
-
-    def test_compare_methods(self):
-        """Test method comparison."""
-        # Create mock results
-        result1 = OptimizationResult(
-            best_params={"param1": 1},
-            best_score=0.5,
-            all_scores=[0.5, 0.6],
-            all_params=[{"param1": 1}, {"param1": 2}],
-            optimization_time=1.0,
-            n_iterations=2,
-            convergence_history=[0.6, 0.5],
-        )
+    def test_strategy_combinations_generation(self):
+        """Test strategy combinations generation."""
+        optimizer = StrategyOptimizer({})
         
-        result2 = OptimizationResult(
-            best_params={"param1": 2},
-            best_score=0.3,
-            all_scores=[0.3, 0.4],
-            all_params=[{"param1": 2}, {"param1": 3}],
-            optimization_time=2.0,
-            n_iterations=2,
-            convergence_history=[0.4, 0.3],
+        strategy_configs = [
+            StrategyConfig(strategy_name="rsi_strategy", enabled=True),
+            StrategyConfig(strategy_name="macd_strategy", enabled=True),
+            StrategyConfig(strategy_name="bollinger_strategy", enabled=True)
+        ]
+        
+        combinations = optimizer._generate_strategy_combinations(strategy_configs)
+        
+        # Should generate combinations of 1, 2, and 3 strategies
+        assert len(combinations) == 7  # 3C1 + 3C2 + 3C3 = 3 + 3 + 1 = 7
+
+    def test_parameter_combinations_generation(self):
+        """Test parameter combinations generation."""
+        optimizer = StrategyOptimizer({})
+        
+        parameters = [
+            OptimizationParameter(
+                name="rsi_period",
+                min_value=10,
+                max_value=12,
+                step=1,
+                parameter_type="int"
+            ),
+            OptimizationParameter(
+                name="overbought",
+                min_value=70,
+                max_value=75,
+                step=5,
+                parameter_type="int"
+            )
+        ]
+        
+        combinations = optimizer._generate_parameter_combinations(parameters)
+        
+        # Should generate 3 * 2 = 6 combinations
+        assert len(combinations) == 6
+
+    def test_optimization_score_calculation(self):
+        """Test optimization score calculation."""
+        optimizer = StrategyOptimizer({})
+        
+        metrics = {
+            "sharpe_ratio": 1.5,
+            "total_return": 0.15,
+            "max_drawdown": 0.10,
+            "win_rate": 0.65
+        }
+        
+        # Test Sharpe ratio optimization
+        score = optimizer._calculate_optimization_score(
+            metrics, OptimizationMetric.SHARPE_RATIO
         )
-
-        results = {"method1": result1, "method2": result2}
-        comparison = self.optimizer.compare_methods(results)
-
-        assert isinstance(comparison, pd.DataFrame)
-        assert len(comparison) == 2
-        assert "method" in comparison.columns
-        assert "best_score" in comparison.columns
-
-    def test_get_available_methods(self):
-        """Test getting available methods."""
-        methods = self.optimizer.get_available_methods()
+        assert score == 1.5
         
-        expected_methods = ["grid_search", "bayesian", "genetic", "pso", "ray_tune"]
-        for method in expected_methods:
-            assert method in methods
-
-    def test_get_method_info(self):
-        """Test getting method information."""
-        info = self.optimizer.get_method_info("grid_search")
-        
-        assert "name" in info
-        assert "class" in info
-        assert info["name"] == "grid_search"
-        assert info["class"] == "GridSearch"
+        # Test composite score
+        score = optimizer._calculate_optimization_score(
+            metrics, OptimizationMetric.COMPOSITE_SCORE
+        )
+        assert score > 0  # Should be positive
 
 
-class TestOptimizationResult:
-    """Test OptimizationResult dataclass."""
+class TestPerformanceAnalyzer:
+    """Test PerformanceAnalyzer functionality."""
 
     def test_optimization_result_creation(self):
-        """Test OptimizationResult creation."""
+        """Test optimization result creation."""
         result = OptimizationResult(
-            best_params={"param1": 1, "param2": 0.5},
-            best_score=0.1,
-            all_scores=[0.2, 0.1, 0.3],
-            all_params=[{"param1": 2}, {"param1": 1}, {"param1": 3}],
-            optimization_time=1.5,
-            n_iterations=3,
-            convergence_history=[0.2, 0.1, 0.1],
+            parameter_combination={"rsi_period": 14, "overbought": 70},
+            performance_metrics={"sharpe_ratio": 1.5, "total_return": 0.15},
+            backtest_results={"trades": 100, "win_rate": 0.65},
+            optimization_score=1.5
         )
+        
+        assert result.parameter_combination["rsi_period"] == 14
+        assert result.performance_metrics["sharpe_ratio"] == 1.5
+        assert result.optimization_score == 1.5
 
-        assert result.best_params == {"param1": 1, "param2": 0.5}
-        assert result.best_score == 0.1
-        assert len(result.all_scores) == 3
-        assert len(result.all_params) == 3
-        assert result.optimization_time == 1.5
-        assert result.n_iterations == 3
-        assert len(result.convergence_history) == 3 
+    def test_performance_analyzer_initialization(self):
+        """Test performance analyzer initialization."""
+        analyzer = PerformanceAnalyzer()
+        
+        assert len(analyzer.optimization_history) == 0
+        assert len(analyzer.best_results) == 0
+
+    def test_add_optimization_result(self):
+        """Test adding optimization result."""
+        analyzer = PerformanceAnalyzer()
+        
+        result = OptimizationResult(
+            parameter_combination={"rsi_period": 14},
+            performance_metrics={"sharpe_ratio": 1.5},
+            backtest_results={},
+            optimization_score=1.5
+        )
+        
+        analyzer.add_optimization_result(result)
+        
+        assert len(analyzer.optimization_history) == 1
+        assert analyzer.best_results["best_score"] == 1.5
+
+    def test_get_optimization_stats(self):
+        """Test getting optimization statistics."""
+        analyzer = PerformanceAnalyzer()
+        
+        # Add some results
+        for i in range(5):
+            result = OptimizationResult(
+                parameter_combination={"param": i},
+                performance_metrics={"sharpe_ratio": 1.0 + i * 0.1},
+                backtest_results={},
+                optimization_score=1.0 + i * 0.1
+            )
+            analyzer.add_optimization_result(result)
+        
+        stats = analyzer.get_optimization_stats()
+        
+        assert stats["total_optimizations"] == 5
+        assert stats["best_score"] == 1.4
+        assert stats["average_score"] > 1.0
+
+    def test_find_optimal_parameters(self):
+        """Test finding optimal parameters."""
+        analyzer = PerformanceAnalyzer()
+        
+        # Add results with different metrics
+        for i in range(3):
+            result = OptimizationResult(
+                parameter_combination={"rsi_period": 10 + i * 5},
+                performance_metrics={"sharpe_ratio": 1.0 + i * 0.2},
+                backtest_results={},
+                optimization_score=1.0 + i * 0.2
+            )
+            analyzer.add_optimization_result(result)
+        
+        optimal_params = analyzer.find_optimal_parameters("sharpe_ratio", top_n=2)
+        
+        assert len(optimal_params) == 2
+        assert optimal_params[0]["performance_metrics"]["sharpe_ratio"] > optimal_params[1]["performance_metrics"]["sharpe_ratio"]
+
+
+if __name__ == "__main__":
+    pytest.main([__file__]) 

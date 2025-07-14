@@ -1,0 +1,448 @@
+# Task Schedule Configuration
+# This file defines the scheduling and execution parameters for all platform agents
+
+orchestrator:
+  enabled: true
+  max_concurrent_tasks: 5
+  default_timeout_minutes: 15
+  health_check_interval_minutes: 5
+  performance_monitoring: true
+  error_alerting: true
+  log_level: "INFO"
+  metrics_retention_days: 30
+
+# Task Definitions
+tasks:
+  # Model Innovation Agent - Daily model improvement and innovation
+  model_innovation:
+    enabled: true
+    interval_minutes: 1440  # 24 hours
+    priority: "medium"
+    max_duration_minutes: 60
+    retry_count: 2
+    retry_delay_minutes: 30
+    timeout_minutes: 45
+    concurrent_execution: false
+    error_threshold: 3
+    performance_threshold: 0.7
+    dependencies:
+      - "data_sync"
+      - "performance_analysis"
+    conditions:
+      market_hours: false  # Run during off-hours
+      system_health: 0.8
+      low_activity: true
+    parameters:
+      innovation_mode: "exploratory"
+      model_types: ["lstm", "transformer", "ensemble"]
+      validation_split: 0.2
+      max_iterations: 100
+
+  # Strategy Research Agent - Market research and strategy development
+  strategy_research:
+    enabled: true
+    interval_minutes: 720  # 12 hours
+    priority: "high"
+    max_duration_minutes: 45
+    retry_count: 3
+    retry_delay_minutes: 15
+    timeout_minutes: 30
+    concurrent_execution: true
+    error_threshold: 5
+    performance_threshold: 0.8
+    dependencies:
+      - "sentiment_fetch"
+      - "data_sync"
+    conditions:
+      market_volatility: "normal"
+      news_events: false
+      system_health: 0.7
+    parameters:
+      research_depth: "comprehensive"
+      asset_classes: ["stocks", "crypto", "forex"]
+      timeframes: ["1h", "4h", "1d"]
+      include_fundamentals: true
+
+  # Sentiment Fetcher - Real-time sentiment analysis
+  sentiment_fetch:
+    enabled: true
+    interval_minutes: 30
+    priority: "medium"
+    max_duration_minutes: 10
+    retry_count: 5
+    retry_delay_minutes: 5
+    timeout_minutes: 8
+    concurrent_execution: true
+    error_threshold: 10
+    performance_threshold: 0.6
+    dependencies: []
+    conditions:
+      market_hours: true
+      system_health: 0.6
+    parameters:
+      sources: ["news", "social", "reddit", "twitter"]
+      sentiment_threshold: 0.1
+      batch_size: 100
+      cache_duration_minutes: 15
+
+  # Meta Controller - System-wide coordination and control
+  meta_control:
+    enabled: true
+    interval_minutes: 5
+    priority: "critical"
+    max_duration_minutes: 2
+    retry_count: 10
+    retry_delay_minutes: 1
+    timeout_minutes: 3
+    concurrent_execution: false
+    error_threshold: 20
+    performance_threshold: 0.5
+    dependencies: []
+    conditions:
+      system_health: 0.7
+    parameters:
+      control_mode: "adaptive"
+      monitoring_interval_seconds: 30
+      alert_threshold: 0.8
+      auto_recovery: true
+
+  # Risk Management - Portfolio risk monitoring and control
+  risk_management:
+    enabled: true
+    interval_minutes: 15
+    priority: "high"
+    max_duration_minutes: 5
+    retry_count: 5
+    retry_delay_minutes: 3
+    timeout_minutes: 8
+    concurrent_execution: false
+    error_threshold: 8
+    performance_threshold: 0.9
+    dependencies:
+      - "meta_control"
+    conditions:
+      market_hours: true
+      position_count: ">0"
+      system_health: 0.8
+    parameters:
+      risk_metrics: ["var", "cvar", "drawdown", "correlation"]
+      position_limits: true
+      stop_loss_enforcement: true
+      portfolio_rebalancing: true
+      stress_testing: true
+
+  # Execution Agent - Order execution and trade management
+  execution:
+    enabled: true
+    interval_minutes: 1
+    priority: "critical"
+    max_duration_minutes: 1
+    retry_count: 20
+    retry_delay_minutes: 0.5
+    timeout_minutes: 2
+    concurrent_execution: false
+    error_threshold: 50
+    performance_threshold: 0.95
+    dependencies:
+      - "risk_management"
+    conditions:
+      market_hours: true
+      pending_orders: true
+      system_health: 0.9
+    parameters:
+      execution_mode: "smart"
+      slippage_tolerance: 0.001
+      max_order_size: 10000
+      retry_failed_orders: true
+      execution_quality_monitoring: true
+
+  # Explainer Agent - Generate explanations for decisions
+  explanation:
+    enabled: true
+    interval_minutes: 60
+    priority: "low"
+    max_duration_minutes: 10
+    retry_count: 3
+    retry_delay_minutes: 10
+    timeout_minutes: 12
+    concurrent_execution: true
+    error_threshold: 5
+    performance_threshold: 0.7
+    dependencies:
+      - "execution"
+    conditions:
+      new_trades: true
+      system_health: 0.6
+    parameters:
+      explanation_types: ["model_selection", "trade_decision", "risk_assessment"]
+      detail_level: "detailed"
+      include_llm: true
+      auto_generate: true
+
+  # System Health Monitor - System health and performance monitoring
+  system_health:
+    enabled: true
+    interval_minutes: 5
+    priority: "high"
+    max_duration_minutes: 2
+    retry_count: 10
+    retry_delay_minutes: 1
+    timeout_minutes: 3
+    concurrent_execution: false
+    error_threshold: 20
+    performance_threshold: 0.5
+    dependencies: []
+    conditions: {}
+    parameters:
+      health_metrics: ["cpu", "memory", "disk", "network"]
+      alert_thresholds:
+        cpu_usage: 80
+        memory_usage: 85
+        disk_usage: 90
+      auto_restart: true
+      health_history_retention_hours: 24
+
+  # Data Synchronization - Market data and system data sync
+  data_sync:
+    enabled: true
+    interval_minutes: 10
+    priority: "medium"
+    max_duration_minutes: 5
+    retry_count: 5
+    retry_delay_minutes: 2
+    timeout_minutes: 8
+    concurrent_execution: true
+    error_threshold: 10
+    performance_threshold: 0.8
+    dependencies: []
+    conditions:
+      market_hours: true
+      system_health: 0.6
+    parameters:
+      data_sources: ["yfinance", "alpha_vantage", "polygon"]
+      sync_types: ["market_data", "fundamentals", "news"]
+      cache_management: true
+      data_validation: true
+
+  # Performance Analysis - Comprehensive performance analysis
+  performance_analysis:
+    enabled: true
+    interval_minutes: 120  # 2 hours
+    priority: "low"
+    max_duration_minutes: 15
+    retry_count: 2
+    retry_delay_minutes: 30
+    timeout_minutes: 20
+    concurrent_execution: true
+    error_threshold: 3
+    performance_threshold: 0.6
+    dependencies:
+      - "execution"
+    conditions:
+      trading_activity: true
+      system_health: 0.7
+    parameters:
+      analysis_period: "1d"
+      metrics: ["sharpe_ratio", "max_drawdown", "win_rate", "profit_factor"]
+      generate_reports: true
+      alert_on_anomalies: true
+
+  # Portfolio Rebalancing - Automatic portfolio rebalancing
+  portfolio_rebalancing:
+    enabled: true
+    interval_minutes: 240  # 4 hours
+    priority: "medium"
+    max_duration_minutes: 10
+    retry_count: 3
+    retry_delay_minutes: 15
+    timeout_minutes: 12
+    concurrent_execution: false
+    error_threshold: 5
+    performance_threshold: 0.8
+    dependencies:
+      - "risk_management"
+      - "performance_analysis"
+    conditions:
+      market_hours: true
+      position_count: ">1"
+      system_health: 0.8
+    parameters:
+      rebalancing_threshold: 0.05
+      target_weights: "dynamic"
+      max_trade_size: 0.1
+      slippage_tolerance: 0.002
+
+  # Market Analysis - Deep market analysis and insights
+  market_analysis:
+    enabled: true
+    interval_minutes: 180  # 3 hours
+    priority: "medium"
+    max_duration_minutes: 20
+    retry_count: 2
+    retry_delay_minutes: 20
+    timeout_minutes: 25
+    concurrent_execution: true
+    error_threshold: 4
+    performance_threshold: 0.7
+    dependencies:
+      - "data_sync"
+      - "sentiment_fetch"
+    conditions:
+      market_hours: true
+      system_health: 0.7
+    parameters:
+      analysis_depth: "comprehensive"
+      include_technical: true
+      include_fundamental: true
+      include_sentiment: true
+      generate_insights: true
+
+  # Alert Manager - System alerts and notifications
+  alert_manager:
+    enabled: true
+    interval_minutes: 2
+    priority: "high"
+    max_duration_minutes: 1
+    retry_count: 15
+    retry_delay_minutes: 0.5
+    timeout_minutes: 2
+    concurrent_execution: false
+    error_threshold: 30
+    performance_threshold: 0.5
+    dependencies: []
+    conditions:
+      system_health: 0.5
+    parameters:
+      alert_channels: ["email", "slack", "webhook"]
+      alert_levels: ["info", "warning", "error", "critical"]
+      alert_cooldown_minutes: 5
+      alert_grouping: true
+
+  # Cache Management - System cache optimization
+  cache_management:
+    enabled: true
+    interval_minutes: 60
+    priority: "low"
+    max_duration_minutes: 5
+    retry_count: 3
+    retry_delay_minutes: 10
+    timeout_minutes: 8
+    concurrent_execution: true
+    error_threshold: 5
+    performance_threshold: 0.6
+    dependencies: []
+    conditions:
+      system_health: 0.6
+    parameters:
+      cache_types: ["market_data", "model_predictions", "sentiment"]
+      cleanup_strategy: "lru"
+      max_cache_size_mb: 1000
+      compression_enabled: true
+
+  # Model Validation - Model performance validation
+  model_validation:
+    enabled: true
+    interval_minutes: 360  # 6 hours
+    priority: "medium"
+    max_duration_minutes: 30
+    retry_count: 2
+    retry_delay_minutes: 60
+    timeout_minutes: 35
+    concurrent_execution: true
+    error_threshold: 3
+    performance_threshold: 0.7
+    dependencies:
+      - "performance_analysis"
+      - "data_sync"
+    conditions:
+      market_hours: false
+      system_health: 0.8
+    parameters:
+      validation_metrics: ["accuracy", "precision", "recall", "f1"]
+      cross_validation_folds: 5
+      backtest_period: "30d"
+      model_comparison: true
+
+  # Strategy Backtesting - Strategy performance backtesting
+  strategy_backtesting:
+    enabled: true
+    interval_minutes: 480  # 8 hours
+    priority: "low"
+    max_duration_minutes: 45
+    retry_count: 2
+    retry_delay_minutes: 60
+    timeout_minutes: 50
+    concurrent_execution: true
+    error_threshold: 3
+    performance_threshold: 0.6
+    dependencies:
+      - "data_sync"
+      - "model_validation"
+    conditions:
+      market_hours: false
+      system_health: 0.8
+    parameters:
+      backtest_period: "90d"
+      strategies: ["momentum", "mean_reversion", "ml_ensemble"]
+      include_transaction_costs: true
+      monte_carlo_simulation: true
+
+# Environment-specific overrides
+environments:
+  development:
+    max_concurrent_tasks: 3
+    default_timeout_minutes: 30
+    error_threshold_multiplier: 2
+    performance_threshold_multiplier: 0.8
+
+  testing:
+    max_concurrent_tasks: 2
+    default_timeout_minutes: 60
+    error_threshold_multiplier: 3
+    performance_threshold_multiplier: 0.7
+
+  production:
+    max_concurrent_tasks: 5
+    default_timeout_minutes: 15
+    error_threshold_multiplier: 1
+    performance_threshold_multiplier: 1.0
+
+# Alert Configuration
+alerts:
+  email:
+    enabled: true
+    recipients: ["admin@evolve.com", "alerts@evolve.com"]
+    smtp_server: "smtp.gmail.com"
+    smtp_port: 587
+    use_tls: true
+
+  slack:
+    enabled: true
+    webhook_url: "https://hooks.slack.com/services/xxx/yyy/zzz"
+    channel: "#trading-alerts"
+    username: "Evolve Bot"
+
+  webhook:
+    enabled: false
+    url: "https://api.example.com/webhook"
+    headers:
+      Authorization: "Bearer token"
+    timeout_seconds: 10
+
+# Performance Monitoring
+monitoring:
+  metrics_retention_days: 30
+  alert_on_performance_degradation: true
+  performance_degradation_threshold: 0.2
+  auto_restart_failed_agents: true
+  health_check_interval_seconds: 300
+  detailed_logging: true
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/orchestrator.log"
+  max_size_mb: 100
+  backup_count: 5
+  console_output: true 

@@ -79,6 +79,15 @@ except ImportError as e:
     logger.warning(f"Some modules not available: {e}")
     CORE_COMPONENTS_AVAILABLE = False
 
+# Add Task Orchestrator integration after the existing imports
+try:
+    from core.task_orchestrator import TaskOrchestrator
+    from system.orchestrator_integration import get_system_integration_status
+    ORCHESTRATOR_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Task Orchestrator not available: {e}")
+    ORCHESTRATOR_AVAILABLE = False
+
 # Enhanced ChatGPT-like styling
 st.markdown(
     """
@@ -361,7 +370,7 @@ with st.sidebar:
     with st.expander("🔧 Advanced", expanded=False):
         advanced_nav = st.radio(
             "",
-            ["⚙️ Settings", "📊 Monitor", "📈 Analytics", "🛡️ Risk"],
+            ["⚙️ Settings", "📊 Monitor", "📈 Analytics", "🛡️ Risk", "🤖 Orchestrator"],
             key=os.getenv("KEY", ""),
         )
 
@@ -1093,6 +1102,132 @@ if "advanced_nav" in locals():
             st.metric("Correlation", "0.67", "Acceptable")
             st.metric("Concentration", "23%", "High")
             st.metric("Leverage", "1.05", "Low")
+
+    elif advanced_nav == "🤖 Orchestrator":
+        st.markdown("### Task Orchestrator Monitor")
+        
+        if ORCHESTRATOR_AVAILABLE:
+            # Get orchestrator status
+            orchestrator_status = get_system_integration_status()
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown(
+                    """
+                <div class="result-card">
+                    <h3>Orchestrator Status</h3>
+                    <p>Task Orchestrator system status and health.</p>
+                </div>
+                """,
+                    unsafe_allow_html=True,
+                )
+                
+                # Display orchestrator status
+                status_icon = {
+                    "available": "🟢",
+                    "not_available": "🔴",
+                    "not_configured": "🟡",
+                    "error": "🔴"
+                }.get(orchestrator_status.get("status", "unknown"), "❓")
+                
+                st.markdown(f"{status_icon} **Status:** {orchestrator_status.get('status', 'unknown').title()}")
+                
+                if orchestrator_status.get("status") == "available":
+                    st.metric("Total Tasks", orchestrator_status.get("total_tasks", 0))
+                    st.metric("Enabled Tasks", orchestrator_status.get("enabled_tasks", 0))
+                    st.metric("System Health", f"{orchestrator_status.get('overall_health', 0):.1%}")
+                else:
+                    st.warning(orchestrator_status.get("message", "Orchestrator not available"))
+            
+            with col2:
+                st.markdown(
+                    """
+                <div class="result-card">
+                    <h3>Quick Actions</h3>
+                    <p>Orchestrator control and monitoring.</p>
+                </div>
+                """,
+                    unsafe_allow_html=True,
+                )
+                
+                # Quick action buttons
+                col2a, col2b = st.columns(2)
+                
+                with col2a:
+                    if st.button("🔄 Refresh Status", key="refresh_orchestrator"):
+                        st.rerun()
+                    
+                    if st.button("📊 Export Report", key="export_orchestrator"):
+                        st.info("Orchestrator report export functionality would be implemented here")
+                
+                with col2b:
+                    if st.button("⚡ Execute Task", key="execute_task"):
+                        st.info("Task execution interface would be implemented here")
+                    
+                    if st.button("⚙️ Configure", key="configure_orchestrator"):
+                        st.info("Orchestrator configuration interface would be implemented here")
+            
+            # Task monitoring section
+            st.markdown("---")
+            st.markdown("### Task Monitoring")
+            
+            if orchestrator_status.get("status") == "available":
+                # Mock task status data
+                task_data = {
+                    "Model Innovation": {"status": "🟢", "last_run": "2 hours ago", "next_run": "22 hours"},
+                    "Strategy Research": {"status": "🟢", "last_run": "1 hour ago", "next_run": "11 hours"},
+                    "Sentiment Fetch": {"status": "🟢", "last_run": "5 minutes ago", "next_run": "25 minutes"},
+                    "Risk Management": {"status": "🟢", "last_run": "10 minutes ago", "next_run": "5 minutes"},
+                    "Execution": {"status": "🟢", "last_run": "1 minute ago", "next_run": "1 minute"},
+                    "Data Sync": {"status": "🟡", "last_run": "15 minutes ago", "next_run": "5 minutes"},
+                }
+                
+                # Display task status in a table
+                task_df = pd.DataFrame([
+                    {
+                        "Task": task,
+                        "Status": data["status"],
+                        "Last Run": data["last_run"],
+                        "Next Run": data["next_run"]
+                    }
+                    for task, data in task_data.items()
+                ])
+                
+                st.dataframe(task_df, use_container_width=True)
+                
+            else:
+                st.warning("Task monitoring not available - orchestrator not running")
+                
+        else:
+            st.error("Task Orchestrator not available")
+            st.info("To enable Task Orchestrator monitoring, ensure the orchestrator components are properly installed and configured.")
+            
+            # Installation instructions
+            with st.expander("📋 Installation Instructions"):
+                st.markdown("""
+                **To install Task Orchestrator:**
+                
+                1. Ensure all dependencies are installed:
+                ```bash
+                pip install -r requirements.txt
+                ```
+                
+                2. Configure the orchestrator:
+                ```bash
+                cp config/task_schedule.yaml.example config/task_schedule.yaml
+                ```
+                
+                3. Start the orchestrator:
+                ```bash
+                python main.py --orchestrator
+                ```
+                
+                4. Or integrate with existing system:
+                ```bash
+                python scripts/integrate_orchestrator.py
+                ```
+                """)
 
 # Footer
 st.markdown("---")

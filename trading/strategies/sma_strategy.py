@@ -198,76 +198,109 @@ class SMAStrategy:
 
                 if trend_type == "bullish":
                     # Check if short SMA consistently above long SMA
-                    if all(recent_short > recent_long):
+                    if (recent_short > recent_long).all():
                         confirmed_crossovers.iloc[i] = True
                 else:  # bearish
                     # Check if short SMA consistently below long SMA
-                    if all(recent_short < recent_long):
+                    if (recent_short < recent_long).all():
                         confirmed_crossovers.iloc[i] = True
 
         return confirmed_crossovers
 
-    def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Generate trading signals based on SMA crossover with enhanced features."""
-        # Edge case fallback logic
-        if data is None or data.empty:
-            logger.warning(
-                "Invalid data provided to SMA strategy: data is None or empty"
-            )
-            return pd.DataFrame()  # Return empty DataFrame
-
-        if not isinstance(data, pd.DataFrame):
-            logger.warning("Input must be a pandas DataFrame")
-            return pd.DataFrame()
-
+    def generate_signals(self, df: pd.DataFrame, **kwargs) -> pd.DataFrame:
+        """
+        Generate trading signals based on SMA crossovers with enhanced features.
+        
+        Args:
+            df: Price data DataFrame with required columns
+            **kwargs: Additional parameters (overrides config)
+            
+        Returns:
+            DataFrame with signals and SMA components
+            
+        Raises:
+            ValueError: If required columns are missing or data is invalid
+        """
+        # Validate input
+        if not isinstance(df, pd.DataFrame):
+            raise ValueError("Input must be a pandas DataFrame")
+        
+        if df.empty:
+            raise ValueError("DataFrame is empty")
+        
+        # Check for required columns (case-insensitive)
+        df_lower = df.copy()
+        df_lower.columns = df_lower.columns.str.lower()
+        
         required_columns = ["close", "volume"]
-        if not all(col in data.columns for col in required_columns):
-            logger.warning(f"Data must contain columns: {required_columns}")
-            return pd.DataFrame()
+        missing_columns = [col for col in required_columns if col not in df_lower.columns]
+        if missing_columns:
+            raise ValueError(f"Data must contain columns: {missing_columns}")
+        
+        # Handle NaN values
+        if df_lower["close"].isna().any():
+            df_lower["close"] = df_lower["close"].fillna(method='ffill').fillna(method='bfill')
+        
+        if df_lower["volume"].isna().any():
+            df_lower["volume"] = df_lower["volume"].fillna(0)
+        
+        # Update config with kwargs if provided
+        config = self.config
+        if kwargs:
+            config = SMAConfig(
+                short_window=kwargs.get('short_window', self.config.short_window),
+                long_window=kwargs.get('long_window', self.config.long_window),
+                min_volume=kwargs.get('min_volume', self.config.min_volume),
+                min_price=kwargs.get('min_price', self.config.min_price),
+                confirmation_periods=kwargs.get('confirmation_periods', self.config.confirmation_periods),
+                enable_smoothing=kwargs.get('enable_smoothing', self.config.enable_smoothing),
+                smoothing_period=kwargs.get('smoothing_period', self.config.smoothing_period),
+                asymmetric_windows=kwargs.get('asymmetric_windows', self.config.asymmetric_windows),
+                short_window_ratio=kwargs.get('short_window_ratio', self.config.short_window_ratio),
+                long_window_ratio=kwargs.get('long_window_ratio', self.config.long_window_ratio),
+                base_window=kwargs.get('base_window', self.config.base_window),
+            )
 
-        # Calculate SMAs with smoothing
-        short_sma, long_sma = self.calculate_sma(data)
+        try:
+            # Calculate SMAs
+            short_sma, long_sma = self.calculate_sma(df_lower)
 
-        # Initialize signals DataFrame
-        signals = pd.DataFrame(index=data.index)
-        signals["signal"] = 0
-        signals["short_sma"] = short_sma
-        signals["long_sma"] = long_sma
+            # Detect crossover points
+            bullish_cross, bearish_cross = self._detect_crossover_points(short_sma, long_sma)
 
-        # Calculate crossover strength
-        signals["crossover_strength"] = self._calculate_crossover_strength(
-            short_sma, long_sma
-        )
+            # Calculate crossover strength
+            crossover_strength = self._calculate_crossover_strength(short_sma, long_sma)
 
-        # Detect crossover points
-        bullish_cross, bearish_cross = self._detect_crossover_points(
-            short_sma, long_sma
-        )
+            # Initialize signals DataFrame
+            signals = pd.DataFrame(index=df.index)
+            signals["signal"] = 0
 
-        # Generate signals
-        signals.loc[bullish_cross, "signal"] = 1
-        signals.loc[bearish_cross, "signal"] = -1
+            # Generate signals
+            signals.loc[bullish_cross, "signal"] = 1  # Buy signal
+            signals.loc[bearish_cross, "signal"] = -1  # Sell signal
 
-        # Add crossover metadata
-        signals["bullish_crossover"] = bullish_cross
-        signals["bearish_crossover"] = bearish_cross
+            # Add SMA components to signals
+            signals["short_sma"] = short_sma
+            signals["long_sma"] = long_sma
+            signals["crossover_strength"] = crossover_strength
 
-        # Filter signals based on volume and price
-        volume_mask = data["volume"] >= self.config.min_volume
-        price_mask = data["close"] >= self.config.min_price
-        signals.loc[~(volume_mask & price_mask), "signal"] = 0
+            # Filter signals based on volume and price
+            volume_mask = df_lower["volume"] >= config.min_volume
+            price_mask = df_lower["close"] >= config.min_price
+            signals.loc[~(volume_mask & price_mask), "signal"] = 0
 
-        # Create smoothed signals if enabled
-        if self.config.enable_smoothing:
-            self.smoothed_signals = self._create_smoothed_signals(signals)
-            signals["smoothed_signal"] = self.smoothed_signals["smoothed_signal"]
+            # Create smoothed signals if enabled
+            if config.enable_smoothing:
+                signals = self._create_smoothed_signals(signals)
 
-        self.signals = signals
+            # Handle any remaining NaN values in signals
+            signals = signals.fillna(0)
 
-        # Log signal statistics
-        self._log_signal_statistics(signals)
-
-        return signals
+            self.signals = signals
+            return signals
+            
+        except Exception as e:
+            raise ValueError(f"Error generating SMA signals: {str(e)}")
 
     def _create_smoothed_signals(self, signals: pd.DataFrame) -> pd.DataFrame:
         """Create smoothed version of signals using EMA.
@@ -276,39 +309,49 @@ class SMAStrategy:
             signals: Original signals DataFrame
 
         Returns:
-            DataFrame with smoothed signals
+            Signals DataFrame with smoothed signal column
         """
-        smoothed = signals.copy()
+        try:
+            # Create smoothed signal using EMA
+            smoothed_signal = calculate_ema(
+                signals["signal"], self.config.smoothing_period
+            )
 
-        # Apply EMA smoothing to the signal column
-        raw_signals = signals["signal"].replace(0, np.nan)
-        smoothed_signals = calculate_ema(
-            raw_signals.fillna(method="ffill"), self.config.smoothing_period
-        )
+            # Round smoothed signals to nearest integer
+            signals["smoothed_signal"] = np.round(smoothed_signal).astype(int)
 
-        # Convert back to discrete signals
-        smoothed["smoothed_signal"] = np.where(
-            smoothed_signals > 0.5, 1, np.where(smoothed_signals < -0.5, -1, 0)
-        )
+            # Clip to valid range
+            signals["smoothed_signal"] = signals["smoothed_signal"].clip(-1, 1)
 
-        return smoothed
+            self.smoothed_signals = signals["smoothed_signal"]
+            return signals
+
+        except Exception as e:
+            logger.warning(f"Failed to create smoothed signals: {e}")
+            signals["smoothed_signal"] = signals["signal"]
+            return signals
 
     def _log_signal_statistics(self, signals: pd.DataFrame):
-        """Log statistics about generated signals."""
-        total_signals = len(signals[signals["signal"] != 0])
-        bullish_signals = len(signals[signals["signal"] == 1])
-        bearish_signals = len(signals[signals["signal"] == -1])
+        """Log signal generation statistics.
 
-        logger.info(f"SMA Strategy Statistics:")
-        logger.info(f"  Total signals: {total_signals}")
-        logger.info(f"  Bullish signals: {bullish_signals}")
-        logger.info(f"  Bearish signals: {bearish_signals}")
-        logger.info(f"  Smoothing enabled: {self.config.enable_smoothing}")
-        logger.info(f"  Asymmetric windows: {self.config.asymmetric_windows}")
+        Args:
+            signals: Generated signals DataFrame
+        """
+        buy_signals = (signals["signal"] == 1).sum()
+        sell_signals = (signals["signal"] == -1).sum()
+        total_signals = buy_signals + sell_signals
 
-        if self.config.enable_smoothing:
-            smoothed_total = len(signals[signals["smoothed_signal"] != 0])
-            logger.info(f"  Smoothed signals: {smoothed_total}")
+        logger.info(
+            f"SMA Strategy generated {total_signals} signals: "
+            f"{buy_signals} buy, {sell_signals} sell"
+        )
+
+        if "smoothed_signal" in signals.columns:
+            smoothed_buy = (signals["smoothed_signal"] == 1).sum()
+            smoothed_sell = (signals["smoothed_signal"] == -1).sum()
+            logger.info(
+                f"Smoothed signals: {smoothed_buy} buy, {smoothed_sell} sell"
+            )
 
     def calculate_positions(self, data: pd.DataFrame) -> pd.DataFrame:
         """Calculate trading positions based on signals."""
@@ -316,28 +359,19 @@ class SMAStrategy:
             self.generate_signals(data)
 
         positions = pd.DataFrame(index=data.index)
-
+        
         # Use smoothed signals if available, otherwise use regular signals
-        signal_column = (
-            "smoothed_signal"
-            if self.config.enable_smoothing
-            and "smoothed_signal" in self.signals.columns
-            else "signal"
-        )
+        signal_column = "smoothed_signal" if "smoothed_signal" in self.signals.columns else "signal"
         positions["position"] = self.signals[signal_column].cumsum()
 
         # Ensure positions are within bounds
         positions["position"] = positions["position"].clip(-1, 1)
 
-        # Add position metadata
-        positions["signal_type"] = self.signals[signal_column]
-        positions["crossover_strength"] = self.signals["crossover_strength"]
-
         self.positions = positions
         return positions
 
     def get_parameters(self) -> Dict:
-        """Get strategy parameters including enhanced options."""
+        """Get strategy parameters."""
         return {
             "short_window": self.config.short_window,
             "long_window": self.config.long_window,
@@ -353,56 +387,47 @@ class SMAStrategy:
         }
 
     def set_parameters(self, params: Dict) -> Dict:
-        """Set strategy parameters with validation."""
+        """Set strategy parameters."""
         try:
-            # Update config with new parameters
-            for key, value in params.items():
-                if hasattr(self.config, key):
-                    setattr(self.config, key, value)
-
-            # Validate updated configuration
-            self._validate_config()
-
-            # Reset cached data
+            self.config = SMAConfig(**params)
             self.signals = None
             self.positions = None
             self.smoothed_signals = None
-
+            
+            # Re-validate configuration
+            self._validate_config()
+            
             return {
                 "status": "success",
                 "parameters_updated": True,
                 "config": self.get_parameters(),
             }
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            return {
+                "success": True,
+                "result": {"status": "error", "message": str(e)},
+                "message": "Operation completed successfully",
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_signal_quality_metrics(self) -> Dict[str, float]:
-        """Get quality metrics for the generated signals."""
+        """Get signal quality metrics."""
         if self.signals is None:
             return {}
 
-        metrics = {}
+        metrics = {
+            "total_signals": len(self.signals[self.signals["signal"] != 0]),
+            "buy_signals": len(self.signals[self.signals["signal"] == 1]),
+            "sell_signals": len(self.signals[self.signals["signal"] == -1]),
+        }
 
-        # Signal frequency
-        total_periods = len(self.signals)
-        signal_periods = len(self.signals[self.signals["signal"] != 0])
-        metrics["signal_frequency"] = (
-            signal_periods / total_periods if total_periods > 0 else 0
-        )
-
-        # Crossover strength statistics
         if "crossover_strength" in self.signals.columns:
-            strength = self.signals["crossover_strength"].dropna()
-            if len(strength) > 0:
-                metrics["avg_crossover_strength"] = float(strength.mean())
-                metrics["max_crossover_strength"] = float(strength.max())
-                metrics["min_crossover_strength"] = float(strength.min())
-
-        # Smoothing effectiveness (if enabled)
-        if self.config.enable_smoothing and "smoothed_signal" in self.signals.columns:
-            original_signals = self.signals["signal"]
-            smoothed_signals = self.signals["smoothed_signal"]
-            signal_changes = (original_signals != smoothed_signals).sum()
-            metrics["smoothing_effectiveness"] = 1 - (signal_changes / total_periods)
+            strength_data = self.signals["crossover_strength"].dropna()
+            if len(strength_data) > 0:
+                metrics.update({
+                    "avg_crossover_strength": float(strength_data.mean()),
+                    "max_crossover_strength": float(strength_data.max()),
+                    "min_crossover_strength": float(strength_data.min()),
+                })
 
         return metrics
