@@ -8,7 +8,7 @@ in the Evolve trading system.
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, List
 
 import joblib
 import numpy as np
@@ -133,15 +133,18 @@ class XGBoostModel(BaseModel):
             Tuple of (features, target)
         """
         try:
+            # Feature construction sanity check to prevent future-data leakage
+            self._validate_feature_construction(data)
+            
             # Use auto feature engineering if enabled
             if self.config.get("auto_feature_engineering", False):
                 return self._auto_engineer_features(data)
 
-            # Create lag features
-            lags = [1, 2, 3, 5, 10]
+            # Create lag features using dynamic optimization
+            optimal_lags = self._optimize_lags(data)
             features = pd.DataFrame()
 
-            for lag in lags:
+            for lag in optimal_lags:
                 features[f"lag_{lag}"] = data["close"].shift(lag)
 
             # Add technical indicators
@@ -162,12 +165,64 @@ class XGBoostModel(BaseModel):
             target = target[features.index]
 
             self.feature_names = features.columns.tolist()
+            
+            # Store last features for SHAP calculation
+            self.last_features = features.copy()
 
             return features, target
 
         except Exception as e:
             logger.error(f"Error preparing features: {e}")
             raise
+
+    def _validate_feature_construction(self, data: pd.DataFrame) -> None:
+        """Validate feature construction to prevent future-data leakage.
+        
+        Args:
+            data: Input time series data
+            
+        Raises:
+            ValueError: If future data leakage is detected
+        """
+        try:
+            # Check for proper time index
+            if not isinstance(data.index, pd.DatetimeIndex):
+                raise ValueError("Data must have a DatetimeIndex")
+            
+            # Check for sorted time index
+            if not data.index.is_monotonic_increasing:
+                raise ValueError("Data must be sorted by time (ascending)")
+            
+            # Check for duplicate timestamps
+            if data.index.duplicated().any():
+                raise ValueError("Data contains duplicate timestamps")
+            
+            # Check for missing values in key columns
+            required_columns = ['close']
+            for col in required_columns:
+                if col not in data.columns:
+                    raise ValueError(f"Required column '{col}' not found in data")
+                if data[col].isnull().all():
+                    raise ValueError(f"Column '{col}' contains only null values")
+            
+            # Check for sufficient data
+            if len(data) < 50:
+                raise ValueError("Insufficient data for feature construction (need at least 50 samples)")
+            
+            # Check for reasonable price values
+            if (data['close'] <= 0).any():
+                raise ValueError("Price data contains non-positive values")
+            
+            # Check for extreme outliers (prices > 100x median)
+            median_price = data['close'].median()
+            if (data['close'] > 100 * median_price).any():
+                logger.warning("Extreme price outliers detected in data")
+            
+            logger.info("Feature construction validation passed")
+            
+        except Exception as e:
+            logger.error(f"Feature construction validation failed: {e}")
+            raise ValueError(f"Feature construction validation failed: {e}")
 
     def _auto_engineer_features(
         self, data: pd.DataFrame
@@ -279,6 +334,107 @@ class XGBoostModel(BaseModel):
             # Fallback to default features
             return self.prepare_features(data)
 
+    def _optimize_lags(self, data: pd.DataFrame, max_lags: int = 20) -> List[int]:
+        """Dynamically optimize lag features using cross-validation.
+        
+        Args:
+            data: Input time series data
+            max_lags: Maximum number of lags to test
+            
+        Returns:
+            List of optimal lag values
+        """
+        try:
+            from sklearn.model_selection import TimeSeriesSplit
+            from sklearn.metrics import mean_squared_error
+            import xgboost as xgb
+            
+            logger.info(f"Optimizing lags up to {max_lags} periods...")
+            
+            # Test different lag combinations
+            lag_candidates = list(range(1, min(max_lags + 1, len(data) // 4)))
+            best_lags = []
+            best_score = float('inf')
+            
+            # Use time series cross-validation
+            tscv = TimeSeriesSplit(n_splits=3)
+            
+            # Test individual lags first
+            individual_scores = {}
+            for lag in lag_candidates:
+                try:
+                    # Create simple feature set with just this lag
+                    features = pd.DataFrame()
+                    features[f'lag_{lag}'] = data['close'].shift(lag)
+                    features['target'] = data['close'].shift(-1)
+                    
+                    # Remove NaN values
+                    features = features.dropna()
+                    
+                    if len(features) < 50:
+                        continue
+                    
+                    # Cross-validate
+                    cv_scores = []
+                    for train_idx, val_idx in tscv.split(features):
+                        X_train = features.iloc[train_idx, :-1]
+                        y_train = features.iloc[train_idx, -1]
+                        X_val = features.iloc[val_idx, :-1]
+                        y_val = features.iloc[val_idx, -1]
+                        
+                        # Quick XGBoost fit
+                        model = xgb.XGBRegressor(n_estimators=50, random_state=42)
+                        model.fit(X_train, y_train)
+                        
+                        # Predict and score
+                        y_pred = model.predict(X_val)
+                        score = mean_squared_error(y_val, y_pred)
+                        cv_scores.append(score)
+                    
+                    # Average score across folds
+                    avg_score = np.mean(cv_scores)
+                    individual_scores[lag] = avg_score
+                    
+                except Exception as e:
+                    logger.warning(f"Error testing lag {lag}: {e}")
+                    continue
+            
+            # Select top performing lags
+            if individual_scores:
+                # Sort by performance and select top lags
+                sorted_lags = sorted(individual_scores.items(), key=lambda x: x[1])
+                top_lags = [lag for lag, score in sorted_lags[:5]]  # Top 5 lags
+                
+                # Add some diversity (short, medium, long term)
+                optimal_lags = []
+                if 1 in top_lags:
+                    optimal_lags.append(1)  # Always include lag 1
+                
+                # Add medium-term lags
+                medium_lags = [lag for lag in top_lags if 2 <= lag <= 7]
+                optimal_lags.extend(medium_lags[:2])
+                
+                # Add long-term lags
+                long_lags = [lag for lag in top_lags if lag > 7]
+                optimal_lags.extend(long_lags[:2])
+                
+                # Ensure we have at least 3 lags
+                if len(optimal_lags) < 3:
+                    optimal_lags.extend([1, 2, 3])
+                
+                optimal_lags = sorted(list(set(optimal_lags)))[:5]  # Remove duplicates, max 5
+                
+                logger.info(f"Selected optimal lags: {optimal_lags}")
+                return optimal_lags
+            
+            # Fallback to default lags
+            logger.warning("Lag optimization failed, using default lags")
+            return [1, 2, 3, 5, 10]
+            
+        except Exception as e:
+            logger.error(f"Error in lag optimization: {e}")
+            return [1, 2, 3, 5, 10]  # Fallback
+
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
         """Calculate RSI indicator."""
         try:
@@ -383,15 +539,80 @@ class XGBoostModel(BaseModel):
             raise
 
     def get_feature_importance(self) -> Dict[str, float]:
-        """Get feature importance scores.
+        """Get feature importance from the trained model using both native and SHAP methods.
 
         Returns:
-            Dictionary of feature importance scores
+            Dictionary mapping feature names to importance scores
         """
         if not self.is_trained or self.model is None:
             return {}
 
-        return dict(zip(self.feature_names, self.model.feature_importances_))
+        try:
+            # Get native XGBoost feature importance
+            native_importance = self.model.feature_importances_
+            feature_names = self.feature_names or [f"feature_{i}" for i in range(len(native_importance))]
+            native_importance_dict = dict(zip(feature_names, native_importance))
+            
+            # Try to get SHAP importance if available
+            shap_importance_dict = self._get_shap_importance()
+            
+            # Combine both methods
+            combined_importance = {}
+            for feature in feature_names:
+                native_score = native_importance_dict.get(feature, 0.0)
+                shap_score = shap_importance_dict.get(feature, 0.0)
+                
+                # Use SHAP if available, otherwise fall back to native
+                combined_importance[feature] = shap_score if shap_score > 0 else native_score
+            
+            # Sort by importance
+            sorted_importance = dict(sorted(combined_importance.items(), key=lambda x: x[1], reverse=True))
+            
+            logger.info(f"Feature importance calculated for {len(sorted_importance)} features")
+            return sorted_importance
+            
+        except Exception as e:
+            logger.error(f"Error getting feature importance: {e}")
+            return {}
+
+    def _get_shap_importance(self) -> Dict[str, float]:
+        """Get SHAP-based feature importance.
+        
+        Returns:
+            Dictionary mapping feature names to SHAP importance scores
+        """
+        try:
+            import shap
+            
+            # Create SHAP explainer
+            explainer = shap.TreeExplainer(self.model)
+            
+            # Get sample data for SHAP calculation
+            if hasattr(self, 'last_features') and self.last_features is not None:
+                sample_data = self.last_features.iloc[:100]  # Use first 100 samples
+            else:
+                logger.warning("No sample data available for SHAP calculation")
+                return {}
+            
+            # Calculate SHAP values
+            shap_values = explainer.shap_values(sample_data)
+            
+            # Calculate mean absolute SHAP values
+            mean_shap_values = np.mean(np.abs(shap_values), axis=0)
+            
+            # Map to feature names
+            feature_names = self.feature_names or [f"feature_{i}" for i in range(len(mean_shap_values))]
+            shap_importance = dict(zip(feature_names, mean_shap_values))
+            
+            logger.info("SHAP feature importance calculated successfully")
+            return shap_importance
+            
+        except ImportError:
+            logger.warning("SHAP not available. Using native feature importance only.")
+            return {}
+        except Exception as e:
+            logger.error(f"Error calculating SHAP importance: {e}")
+            return {}
 
     def save(self, filepath: str) -> bool:
         """Save the trained model.

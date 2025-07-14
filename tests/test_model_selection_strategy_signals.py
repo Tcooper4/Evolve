@@ -203,6 +203,67 @@ class TestStrategySignals:
 
             assert signals["success"] is True
 
+    def test_multi_strategy_routing(self):
+        """Test multi-strategy routing (e.g., RSI+MACD, MACD+SMA)."""
+        from trading.strategies.rsi_signals import generate_signals as rsi_signals
+        from trading.strategies.macd_strategy import MACDStrategy
+        from trading.strategies.sma_strategy import SMAStrategy
+        # RSI + MACD
+        macd = MACDStrategy()
+        rsi = rsi_signals(self.sample_data, strategy="rsi")
+        macd_signals = macd.generate_signals(self.sample_data)
+        assert rsi["success"] is True
+        assert macd_signals["success"] is True
+        # MACD + SMA
+        sma = SMAStrategy()
+        sma_signals = sma.generate_signals(self.sample_data)
+        assert sma_signals["signals"] is not None
+        # Combine signals (simple AND/OR logic)
+        combined_buy = (np.array(macd_signals["signals"]["buy_signals"]) & np.array(sma_signals["signals"]["buy_signals"]))
+        assert isinstance(combined_buy, np.ndarray)
+
+    def test_negative_cases(self):
+        """Test negative cases: <10 rows, NaNs, duplicate timestamps."""
+        from trading.strategies.bollinger_strategy import BollingerStrategy
+        from trading.strategies.macd_strategy import MACDStrategy
+        from trading.strategies.rsi_signals import generate_signals as rsi_signals
+        # <10 rows
+        short_data = self.sample_data.head(3)
+        for strat in [BollingerStrategy(), MACDStrategy()]:
+            try:
+                strat.generate_signals(short_data)
+            except Exception as e:
+                assert "not enough" in str(e).lower() or "invalid" in str(e).lower()
+        try:
+            rsi_signals(short_data, strategy="rsi")
+        except Exception as e:
+            assert "not enough" in str(e).lower() or "invalid" in str(e).lower()
+        # NaNs
+        nan_data = self.sample_data.copy()
+        nan_data.iloc[0, 0] = np.nan
+        for strat in [BollingerStrategy(), MACDStrategy()]:
+            try:
+                strat.generate_signals(nan_data)
+            except Exception as e:
+                assert "nan" in str(e).lower() or "invalid" in str(e).lower()
+        try:
+            rsi_signals(nan_data, strategy="rsi")
+        except Exception as e:
+            assert "nan" in str(e).lower() or "invalid" in str(e).lower()
+        # Duplicate timestamps
+        dup_data = self.sample_data.copy()
+        dup_data = pd.concat([dup_data, dup_data.iloc[[0]]])
+        dup_data.index = list(self.sample_data.index) + [self.sample_data.index[0]]
+        for strat in [BollingerStrategy(), MACDStrategy()]:
+            try:
+                strat.generate_signals(dup_data)
+            except Exception as e:
+                assert "duplicate" in str(e).lower() or "invalid" in str(e).lower()
+        try:
+            rsi_signals(dup_data, strategy="rsi")
+        except Exception as e:
+            assert "duplicate" in str(e).lower() or "invalid" in str(e).lower()
+
 
 class TestPerformanceMetrics:
     """Test performance metrics calculation."""

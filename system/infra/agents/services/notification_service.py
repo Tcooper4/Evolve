@@ -5,6 +5,16 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 from uuid import uuid4
 
+import aiohttp
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+    after_log,
+)
+
 from automation.notifications.notification_manager import (
     NotificationManager,
     NotificationPriority,
@@ -439,6 +449,37 @@ class NotificationDelivery(BaseModel):
         except Exception as e:
             logger.error(f"Error validating delivery {self.id}: {str(e)}")
             return False
+
+
+class MessageChannel(str, Enum):
+    """Supported message channels."""
+    EMAIL = "email"
+    SLACK = "slack"
+    WEBHOOK = "webhook"
+    SMS = "sms"
+    PUSH = "push"
+
+
+class MessageConfig(BaseModel):
+    """Configuration for message sending."""
+    channel: MessageChannel
+    timeout: int = Field(default=10, ge=1, le=60)  # 10s default timeout
+    max_retries: int = Field(default=3, ge=0, le=10)
+    retry_delay: float = Field(default=1.0, ge=0.1, le=60.0)
+    exponential_base: float = Field(default=2.0, ge=1.1, le=10.0)
+    headers: Optional[Dict[str, str]] = None
+    auth: Optional[Dict[str, str]] = None
+
+
+class SendMessageResult(BaseModel):
+    """Result of message sending operation."""
+    success: bool
+    message_id: str
+    channel: MessageChannel
+    error: Optional[str] = None
+    attempts: int = 0
+    response_time: Optional[float] = None
+    status_code: Optional[int] = None
 
 
 class NotificationService:
@@ -1308,6 +1349,216 @@ class NotificationService:
 
             # Audit
             await self.audit_service.record_audit("delivery_update", "error", str(e))
+
+    async def send_message(
+        self,
+        message: str,
+        title: str,
+        channel: MessageChannel,
+        recipients: List[str],
+        config: Optional[MessageConfig] = None,
+        template_vars: Optional[Dict[str, Any]] = None,
+    ) -> SendMessageResult:
+        """Consolidated message sending function with timeout, retry, and error handling.
+        
+        Args:
+            message: Message content
+            title: Message title
+            channel: Target channel (email, slack, webhook, etc.)
+            recipients: List of recipient identifiers
+            config: Message configuration (timeout, retries, etc.)
+            template_vars: Template variables for message formatting
+            
+        Returns:
+            SendMessageResult with success status and details
+        """
+        message_id = str(uuid4())
+        config = config or MessageConfig(channel=channel)
+        template_vars = template_vars or {}
+        
+        # Format message with template variables
+        try:
+            formatted_message = message.format(**template_vars)
+            formatted_title = title.format(**template_vars)
+        except KeyError as e:
+            error_msg = f"Missing template variable: {e}"
+            logger.error(f"Message formatting failed for {message_id}: {error_msg}")
+            return SendMessageResult(
+                success=False,
+                message_id=message_id,
+                channel=channel,
+                error=error_msg,
+                attempts=0
+            )
+        
+        # Log attempt
+        logger.info(f"Sending message {message_id} via {channel} to {len(recipients)} recipients")
+        
+        # Retry decorator configuration
+        retry_decorator = retry(
+            stop=stop_after_attempt(config.max_retries),
+            wait=wait_exponential(
+                multiplier=config.retry_delay,
+                exp_base=config.exponential_base
+            ),
+            retry=retry_if_exception_type((
+                aiohttp.ClientError,
+                asyncio.TimeoutError,
+                ConnectionError,
+                OSError
+            )),
+            before_sleep=before_sleep_log(logger, logging.WARNING),
+            after=after_log(logger, logging.INFO)
+        )
+        
+        @retry_decorator
+        async def _send_with_retry() -> Dict[str, Any]:
+            """Internal retry function for sending messages."""
+            start_time = datetime.utcnow()
+            
+            try:
+                async with aiohttp.ClientSession(
+                    timeout=aiohttp.ClientTimeout(total=config.timeout)
+                ) as session:
+                    if channel == MessageChannel.EMAIL:
+                        return await self._send_email_internal(
+                            session, recipients, formatted_title, formatted_message, config
+                        )
+                    elif channel == MessageChannel.SLACK:
+                        return await self._send_slack_internal(
+                            session, recipients, formatted_title, formatted_message, config
+                        )
+                    elif channel == MessageChannel.WEBHOOK:
+                        return await self._send_webhook_internal(
+                            session, recipients, formatted_title, formatted_message, config
+                        )
+                    else:
+                        raise ValueError(f"Unsupported channel: {channel}")
+                        
+            except asyncio.TimeoutError:
+                raise asyncio.TimeoutError(f"Request timeout after {config.timeout}s")
+            except aiohttp.ClientError as e:
+                raise aiohttp.ClientError(f"HTTP client error: {e}")
+            except Exception as e:
+                raise Exception(f"Unexpected error: {e}")
+        
+        try:
+            result = await _send_with_retry()
+            response_time = (datetime.utcnow() - start_time).total_seconds()
+            
+            logger.info(f"Message {message_id} sent successfully via {channel} in {response_time:.2f}s")
+            
+            return SendMessageResult(
+                success=True,
+                message_id=message_id,
+                channel=channel,
+                attempts=result.get("attempts", 1),
+                response_time=response_time,
+                status_code=result.get("status_code")
+            )
+            
+        except Exception as e:
+            error_msg = f"Failed to send message via {channel}: {str(e)}"
+            logger.error(f"Message {message_id} failed: {error_msg}")
+            
+            # Log detailed error context
+            logger.error(f"Error context - Channel: {channel}, Recipients: {recipients}, "
+                        f"Config: {config.dict()}, Error: {type(e).__name__}: {str(e)}")
+            
+            return SendMessageResult(
+                success=False,
+                message_id=message_id,
+                channel=channel,
+                error=error_msg,
+                attempts=config.max_retries
+            )
+
+    async def _send_email_internal(
+        self,
+        session: aiohttp.ClientSession,
+        recipients: List[str],
+        title: str,
+        message: str,
+        config: MessageConfig,
+    ) -> Dict[str, Any]:
+        """Internal email sending with aiohttp."""
+        # This would integrate with your email service (SendGrid, AWS SES, etc.)
+        # For now, we'll simulate the API call
+        email_data = {
+            "to": recipients,
+            "subject": title,
+            "text": message,
+            "html": f"<h1>{title}</h1><p>{message}</p>"
+        }
+        
+        # Simulate API call with timeout
+        async with session.post(
+            "https://api.emailservice.com/send",
+            json=email_data,
+            headers=config.headers or {"Content-Type": "application/json"},
+            timeout=aiohttp.ClientTimeout(total=config.timeout)
+        ) as response:
+            if response.status == 200:
+                return {"status_code": 200, "attempts": 1}
+            else:
+                raise aiohttp.ClientError(f"Email API returned {response.status}")
+
+    async def _send_slack_internal(
+        self,
+        session: aiohttp.ClientSession,
+        recipients: List[str],
+        title: str,
+        message: str,
+        config: MessageConfig,
+    ) -> Dict[str, Any]:
+        """Internal Slack sending with aiohttp."""
+        slack_data = {
+            "channel": recipients[0] if recipients else "#general",
+            "text": f"*{title}*\n{message}",
+            "username": "Trading Bot",
+            "icon_emoji": ":robot_face:"
+        }
+        
+        # Simulate Slack API call with timeout
+        async with session.post(
+            "https://hooks.slack.com/services/YOUR/WEBHOOK/URL",
+            json=slack_data,
+            headers=config.headers or {"Content-Type": "application/json"},
+            timeout=aiohttp.ClientTimeout(total=config.timeout)
+        ) as response:
+            if response.status == 200:
+                return {"status_code": 200, "attempts": 1}
+            else:
+                raise aiohttp.ClientError(f"Slack API returned {response.status}")
+
+    async def _send_webhook_internal(
+        self,
+        session: aiohttp.ClientSession,
+        recipients: List[str],
+        title: str,
+        message: str,
+        config: MessageConfig,
+    ) -> Dict[str, Any]:
+        """Internal webhook sending with aiohttp."""
+        webhook_data = {
+            "title": title,
+            "message": message,
+            "timestamp": datetime.utcnow().isoformat(),
+            "recipients": recipients
+        }
+        
+        # Send to each webhook URL
+        for webhook_url in recipients:
+            async with session.post(
+                webhook_url,
+                json=webhook_data,
+                headers=config.headers or {"Content-Type": "application/json"},
+                timeout=aiohttp.ClientTimeout(total=config.timeout)
+            ) as response:
+                if response.status not in [200, 201, 202]:
+                    raise aiohttp.ClientError(f"Webhook {webhook_url} returned {response.status}")
+        
+        return {"status_code": 200, "attempts": 1}
 
     async def notify_task_created(
         self, task_id: str, task_name: str, user_id: str
